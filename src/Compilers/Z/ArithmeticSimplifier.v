@@ -415,14 +415,14 @@ Section language.
                            (Op (OpConst v) TT, Op (OpConst c) TT)%expr
                       | Some (c, gen_expr x, y)
                         => let y' := match y with
-                                     | const_of y => if (y <? 0)%Z
+                                     | const_of y => if (y <=? 0)%Z
                                                      then Some (Op (OpConst (-y)) TT)
                                                      else None
                                      | neg_expr y => Some y
                                      | gen_expr _ => None
                                      end in
                            let c' := match c with
-                                     | const_of c => if (c <? 0)%Z
+                                     | const_of c => if (c <=? 0)%Z
                                                      then Some (Op (OpConst (-c)) TT)
                                                      else None
                                      | neg_expr c => Some c
