@@ -1,3 +1,25 @@
-λ _ : word64 * word64 * word64 * word64,
-(opp_subproof0, opp_subproof1, opp_subproof2, opp_subproof3)%core
-     : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64
+λ x : word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x5, x6, x4, x2)%core,
+ ℤ x7 = Op (Syntax.Opp (Syntax.TWord 6) Syntax.TZ) (Return x2);
+ uint64_t x9, ℤ x10 = addcarryx_u64ℤ(0x0, 0x0, x7);
+ ℤ x11 = Op (Syntax.Opp (Syntax.TWord 6) Syntax.TZ) (Return x4);
+ uint64_t x13, ℤ x14 = addcarryx_u64ℤ(x10, 0x0, x11);
+ ℤ x15 = Op (Syntax.Opp (Syntax.TWord 6) Syntax.TZ) (Return x6);
+ uint64_t x17, ℤ x18 = addcarryx_u64ℤ(x14, 0x0, x15);
+ ℤ x19 = Op (Syntax.Opp (Syntax.TWord 6) Syntax.TZ) (Return x5);
+ uint64_t x21, ℤ x22 = addcarryx_u64ℤ(x18, 0x0, x19);
+ uint64_t x23 = (uint64_t) (x22 == 0 ? 0x0 : 0xffffffffffffffffL);
+ uint64_t x24 = x23 & 0xffffffffffffffffL;
+ uint64_t x26, uint8_t x27 = addcarryx_u64(0x0, x9, x24);
+ uint64_t x28 = x23 & 0xffffffff;
+ uint64_t x30, uint8_t x31 = addcarryx_u64(x27, x13, x28);
+ uint64_t x33, uint8_t x34 = addcarryx_u64(x31, x17, 0x0);
+ ℤ x35 = 0x10000000000000000L *ℤ x22;
+ uint64_t x36 = x23 & 0xffffffff00000001L;
+ uint64_t x38, ℤ _ = addcarryx_u64ℤ(x21, x35, x36);
+ uint64_t x41, uint8_t _ = addcarryx_u64(0x0, x34, x38);
+ (Return x41, Return x33, Return x30, Return x26))
+x
+     : word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t)
