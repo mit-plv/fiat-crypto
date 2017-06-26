@@ -681,6 +681,7 @@ Section API.
 
   Definition zero {n:nat} : T n := B.Positional.zeros n.
 
+  (** Returns 0 iff all limbs are 0 *)
   Definition nonzero_cps {n} (p : T n) {cpsT} (f : Z -> cpsT) : cpsT
     := CPSUtil.to_list_cps _ p (fun p => CPSUtil.fold_right_cps runtime_lor 0%Z p f).
   Definition nonzero {n} (p : T n) : Z
@@ -747,7 +748,6 @@ Section API.
 
     Lemma nonzero_id n p {cpsT} f : @nonzero_cps n p cpsT f = f (@nonzero n p).
     Proof. cbv [nonzero nonzero_cps]. prove_id. Qed.
-
 
     Lemma join0_id n p R f :
       @join0_cps n p R f = f (join0 p).
