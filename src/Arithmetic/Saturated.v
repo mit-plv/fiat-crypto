@@ -1049,7 +1049,7 @@ Section API.
              | _ => omega
              end.
     Qed.
-    
+
     Lemma eval_sub_then_maybe_add n mask p q r:
       small p -> small q -> small r ->
       (map (Z.land mask) r = r) ->
@@ -1059,16 +1059,16 @@ Section API.
       destruct n; [|solve[auto using eval_sub_then_maybe_add_nz]].
       destruct p, q, r; reflexivity.
     Qed.
-    
+
    Lemma small_sub_then_maybe_add n mask (p q r : T n) :
       small (sub_then_maybe_add mask p q r).
    Proof.
      cbv [sub_then_maybe_add_cps sub_then_maybe_add]; intros.
      repeat progress autounfold. autorewrite with uncps push_id.
      apply small_compact.
-   Qed. 
+   Qed.
 
-   (* TODO : remove if unneeded when all admits are proven 
+   (* TODO : remove if unneeded when all admits are proven
     Lemma small_highest_zero_iff {n} (p: T (S n)) (Hsmall : small p) :
       (left_hd p = 0 <-> eval p < uweight bound n).
     Proof.
@@ -1085,7 +1085,13 @@ Section API.
 
     Lemma map2_zselect n cond x y :
       Tuple.map2 (n:=n) (Z.zselect cond) x y = if dec (cond = 0) then x else y.
-    Admitted.
+    Proof.
+      unfold Z.zselect.
+      break_innermost_match; Z.ltb_to_lt; subst; try omega;
+        [ rewrite Tuple.map2_fst, Tuple.map_id
+        | rewrite Tuple.map2_snd, Tuple.map_id ];
+        reflexivity.
+    Qed.
 
     Lemma eval_conditional_sub_nz n (p:T (S n)) (q:T n)
           (n_nonzero: (n <> 0)%nat) (psmall : small p) (qsmall : small q):
@@ -1098,12 +1104,12 @@ Section API.
       cbv [eval] in *. autorewrite with uncps push_id push_basesystem_eval.
       rewrite map2_zselect.
       let H := fresh "H" in let X := fresh "P" in
-      match goal with |- context [?x / ?y] => 
+      match goal with |- context [?x / ?y] =>
                       pose proof (div_nonzero_neg_iff x y) end;
         repeat match type of H with ?P -> _ =>
                              assert P as X by omega; specialize (H X);
                                clear X end.
-      
+
       break_match;
         repeat match goal with
                | _ => progress cbv [eval]
