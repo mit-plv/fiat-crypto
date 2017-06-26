@@ -312,7 +312,7 @@ Definition nonzero : { f:Tuple.tuple Z sz -> Z
 Proof.
   exists (proj1_sig nonzero').
   abstract (
-      intros eval A H **; rewrite (proj2_sig nonzero'), eval_nonzero by eassumption;
+      intros eval A H **; rewrite (proj2_sig nonzero'), (@eval_nonzero r) by (eassumption || reflexivity);
       subst eval;
       unfold montgomery_to_F, Saturated.uweight in *; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul;
       rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_p256;
