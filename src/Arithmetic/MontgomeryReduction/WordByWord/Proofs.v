@@ -322,7 +322,7 @@ Section WordByWordMontgomery.
     Proof. unfold nonzero, nonzero_cps; autorewrite with uncps; reflexivity. Qed.
 
     Lemma eval_nonzero Av : small Av -> @nonzero R_numlimbs Av = 0 <-> eval Av = 0.
-    Proof. apply eval_nonzero. Qed.
+    Proof. apply eval_nonzero; lia. Qed.
   End nonzero.
 End WordByWordMontgomery.
 
