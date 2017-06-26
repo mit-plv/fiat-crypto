@@ -24,6 +24,9 @@ Definition m' : Z := Eval vm_compute in Option.invert_Some (Z.modinv_fueled 10 (
 Definition m'_correct := eq_refl : ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)%Z.
 Definition m_p256 := eq_refl (Z.pos m) <: Z.pos m = Saturated.eval (n:=sz) (Z.pos r) p256.
 
+Lemma r'_pow_correct : ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod Saturated.eval (n:=sz) (Z.pos r) p256 = 1)%Z.
+Proof. vm_compute; reflexivity. Qed.
+
 Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                         | forall (A B : Tuple.tuple Z sz),
                                f A B =
@@ -301,7 +304,6 @@ Proof.
     ).
 Defined.
 
-Axiom proof_admitted : False.
 Definition nonzero : { f:Tuple.tuple Z sz -> Z
                      | let eval := Saturated.eval (Z.pos r) in
                        forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
@@ -317,7 +319,10 @@ Proof.
       let H := fresh in
       split; intro H;
       [ rewrite H; autorewrite with zsimplify_const; reflexivity
-      | repeat match goal with H : _ |- _ => revert H end; case proof_admitted ]
+      | cut ((Saturated.eval (Z.pos r) A * (r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz)) mod Saturated.eval (n:=sz) (Z.pos r) p256 = 0)%Z;
+        [ rewrite Z.mul_mod, r'_pow_correct; autorewrite with zsimplify_const; pull_Zmod; [ | vm_compute; congruence ];
+          rewrite Z.mod_small; [ trivial | split; try assumption; apply Saturated.eval_small; try assumption; lia ]
+        | rewrite Z.mul_assoc, Z.mul_mod, H by (vm_compute; congruence); autorewrite with zsimplify_const; reflexivity ] ]
     ).
 Defined.
 
