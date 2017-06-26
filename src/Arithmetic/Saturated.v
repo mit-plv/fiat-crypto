@@ -831,7 +831,9 @@ Section API.
       intros x H; apply repeat_spec in H; subst x; omega.
     Qed.
 
-    Axiom proof_admitted : False.
+    Lemma eval_pair n (p : T (S (S n))) : small p -> (snd p = 0 /\ eval (n:=S n) (fst p) = 0) <-> eval p = 0.
+    Admitted.
+
     Lemma eval_nonzero n p : small p -> @nonzero n p = 0 <-> eval p = 0.
     Proof.
       destruct n as [|n].
@@ -851,7 +853,7 @@ Section API.
         rewrite Z.lor_eq_0_iff, IHn
           by (hnf in Hsmall |- *; simpl in *; eauto);
           clear IHn.
-        subst k; abstract case proof_admitted. }
+        exact (eval_pair n (ps, p) Hsmall). }
     Qed.
 
     Lemma eval_join0 n p
