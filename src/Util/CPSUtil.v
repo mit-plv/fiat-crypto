@@ -276,16 +276,6 @@ Module Tuple.
     | S n' => fun xs ys T f =>
                 map2_cps g (tl xs) (tl ys) (fun zs => f (append (g (hd xs) (hd ys)) zs))
     end.
-
-  Lemma map2_append n A B C f xs ys x y :
-    @map2 (S n) A B C f (append x xs) (append y ys)
-    = append (f x y) (map2 f xs ys).
-  Proof.
-    destruct n; try reflexivity.
-    cbn [append].
-    rewrite map2_S'.
-    reflexivity.
-  Qed.
   Lemma map2_cps_correct {n A B C} g xs ys : forall {T} f,
       @map2_cps n A B C g xs ys T f = f (map2 g xs ys).
   Proof.
