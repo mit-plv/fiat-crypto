@@ -100,14 +100,16 @@ Interp-η
  uint64_t x298, uint8_t x299 = addcarryx_u64(x296, x262, x283);
  uint64_t x301, uint8_t x302 = addcarryx_u64(x299, x265, x286);
  uint8_t x303 = x302 + x266;
- uint64_t x304 = (uint64_t) (x303 == 0 ? 0x0 : 0xffffffffffffffffL);
- uint64_t x305 = x304 & 0xffffffffffffffffL;
- uint64_t x307, uint8_t x308 = subborrow_u64(0x0, x292, x305);
- uint64_t x309 = x304 & 0xffffffff;
- uint64_t x311, uint8_t x312 = subborrow_u64(x308, x295, x309);
- uint64_t x314, uint8_t x315 = subborrow_u64(x312, x298, 0x0);
- uint64_t x316 = x304 & 0xffffffff00000001L;
- uint64_t x318, uint8_t _ = subborrow_u64(x315, x301, x316);
- (Return x318, Return x314, Return x311, Return x307))
+ uint64_t x305, uint8_t x306 = subborrow_u64(0x0, x292, 0xffffffffffffffffL);
+ uint64_t x308, uint8_t x309 = subborrow_u64(x306, x295, 0xffffffff);
+ uint64_t x311, uint8_t x312 = subborrow_u64(x309, x298, 0x0);
+ uint64_t x314, uint8_t x315 = subborrow_u64(x312, x301, 0xffffffff00000001L);
+ ℤ x316 = Op (Syntax.Opp (Syntax.TWord 3) Syntax.TZ) (Return x315);
+ uint64_t _, ℤ x319 = addcarryx_u64ℤ(0x0, x316, x303);
+ uint64_t x320 = x319 == 0 ? x314 : x301;
+ uint64_t x321 = x319 == 0 ? x311 : x298;
+ uint64_t x322 = x319 == 0 ? x308 : x295;
+ uint64_t x323 = x319 == 0 ? x305 : x292;
+ return (x320, x321, x322, x323))
 (x, x0)%core
      : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t)

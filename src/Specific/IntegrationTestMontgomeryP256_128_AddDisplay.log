@@ -4,11 +4,12 @@ Interp-η
  λ '(x4, x5, (x6, x7))%core,
  uint128_t x9, uint8_t x10 = addcarryx_u128(0x0, x5, x7);
  uint128_t x12, uint8_t x13 = addcarryx_u128(x10, x4, x6);
- uint128_t x14 = (uint128_t) (x13 == 0 ? 0x0 : 0xffffffffffffffffffffffffffffffffL);
- uint128_t x15 = x14 & 0xffffffffffffffffffffffffL;
- uint128_t x17, uint8_t x18 = subborrow_u128(0x0, x9, x15);
- uint128_t x19 = x14 & 0xffffffff000000010000000000000000L;
- uint128_t x21, uint8_t _ = subborrow_u128(x18, x12, x19);
- (Return x21, Return x17))
+ uint128_t x15, uint8_t x16 = subborrow_u128(0x0, x9, 0xffffffffffffffffffffffffL);
+ uint128_t x18, uint8_t x19 = subborrow_u128(x16, x12, 0xffffffff000000010000000000000000L);
+ ℤ x20 = Op (Syntax.Opp (Syntax.TWord 3) Syntax.TZ) (Return x19);
+ uint128_t _, ℤ x23 = addcarryx_u128ℤ(0x0, x20, x13);
+ uint128_t x24 = x23 == 0 ? x18 : x12;
+ uint128_t x25 = x23 == 0 ? x15 : x9;
+ return (x24, x25))
 (x, x0)%core
      : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)
