@@ -315,7 +315,7 @@ Section WordByWordMontgomery.
     Proof. t. Qed.
     Lemma eval_opp_mod_N : eval opp mod eval N = (-eval Av) mod eval N.
     Proof. t. Qed.
-End add_sub.
+  End add_sub.
 End WordByWordMontgomery.
 
 Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id add_cps_id sub_cps_id opp_cps_id : uncps.
