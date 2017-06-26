@@ -76,9 +76,10 @@ Require Import Crypto.Util.Sigma.MapProjections.
 (** *** Definition of the Post-Wf Pipeline *)
 (** We define the record that holds various options to customize the
     pipeline. *)
-Record PipelineOptions := { anf : bool }.
+Record PipelineOptions := { anf : bool ; adc_fusion : bool }.
 Definition default_PipelineOptions :=
-  {| anf := false |}.
+  {| anf := false ;
+     adc_fusion := true |}.
 (** Do not change the name or the type of these two definitions *)
 (** The definition [PostWfPreBoundsPipeline] is for the part of the
     pipeline that comes before [MapCast]; it must preserve the type of
@@ -98,7 +99,7 @@ Definition PostWfPreBoundsPipeline
      let e := InlineConst (Linearize (SimplifyArith false e)) in
      let e := InlineConst (Linearize (SimplifyArith false e)) in
      let e := if opts.(anf) then InlineConst (ANormal e) else e in
-     let e := RewriteAdc e in
+     let e := if opts.(adc_fusion) then RewriteAdc e else e in
      let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
      let e := if opts.(anf) then InlineConstAndOpp (ANormal e) else e in
      let e := InlineConstAndOpp (Linearize (SimplifyArith true e)) in
@@ -178,7 +179,7 @@ Section with_round_up_list.
              (Hside : to_prop (InterpSideConditions e' v))
     : Bounds.is_bounded_by b (Interp interp_op e v)
       /\ cast_back_flat_const (Interp interp_op e'' v') = Interp interp_op e v.
-  Proof.
+  Proof using Type.
     (** These first two lines probably shouldn't change much *)
     unfold PostWfBoundsPipeline, PostWfPreBoundsPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *; subst e'.
     repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage

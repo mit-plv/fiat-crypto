@@ -43,7 +43,9 @@ Ltac refine_reflectively64_with_uint8 := refine_reflectively64_with_uint8_with d
 Ltac refine_reflectively32_with_uint8 := refine_reflectively32_with_uint8_with default_PipelineOptions.
 
 (** Convenience notations for options *)
-Definition anf := {| Pipeline.Definition.anf := true |}.
+Definition anf := {| Pipeline.Definition.anf := true ; Pipeline.Definition.adc_fusion := true |}.
+Definition anf_without_adc_fusion := {| Pipeline.Definition.anf := true ; Pipeline.Definition.adc_fusion := false |}.
+Definition adc_fusion := {| Pipeline.Definition.anf := true ; Pipeline.Definition.adc_fusion := false |}.
 Definition default := default_PipelineOptions.
 
 (** The default *)
