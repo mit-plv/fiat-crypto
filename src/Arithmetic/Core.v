@@ -307,6 +307,8 @@ Definition runtime_and := Z.land.
 Global Notation "a &' b" := (runtime_and a%RT b%RT) : runtime_scope.
 Definition runtime_shr := Z.shiftr.
 Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope.
+Definition runtime_lor := Z.lor.
+Global Arguments runtime_lor (_ _)%RT.
 
 Module B.
   Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)

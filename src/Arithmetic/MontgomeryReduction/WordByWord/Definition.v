@@ -97,6 +97,10 @@ Section WordByWordMontgomery.
     := sub_cps zero A rest.
   Definition opp (A : T R_numlimbs) : T R_numlimbs
     := opp_cps A id.
+  Definition nonzero_cps (A : T R_numlimbs) {cpsT} (f : Z -> cpsT) : cpsT
+    := @nonzero_cps R_numlimbs A cpsT f.
+  Definition nonzero (A : T R_numlimbs) : Z
+    := nonzero_cps A id.
 End WordByWordMontgomery.
 
-Hint Opaque redc pre_redc redc_body redc_loop add sub opp : uncps.
+Hint Opaque redc pre_redc redc_body redc_loop add sub opp nonzero : uncps.

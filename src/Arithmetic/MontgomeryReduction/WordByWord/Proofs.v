@@ -316,6 +316,14 @@ Section WordByWordMontgomery.
     Lemma eval_opp_mod_N : eval opp mod eval N = (-eval Av) mod eval N.
     Proof. t. Qed.
   End add_sub.
+
+  Section nonzero.
+    Lemma nonzero_cps_id Av {cpsT} f : @nonzero_cps R_numlimbs Av cpsT f = f (@nonzero R_numlimbs Av).
+    Proof. unfold nonzero, nonzero_cps; autorewrite with uncps; reflexivity. Qed.
+
+    Lemma eval_nonzero Av : small Av -> @nonzero R_numlimbs Av = 0 <-> eval Av = 0.
+    Proof. apply eval_nonzero. Qed.
+  End nonzero.
 End WordByWordMontgomery.
 
 Hint Rewrite redc_body_cps_id redc_loop_cps_id pre_redc_cps_id redc_cps_id add_cps_id sub_cps_id opp_cps_id : uncps.
