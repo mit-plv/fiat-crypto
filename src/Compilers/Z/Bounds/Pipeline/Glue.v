@@ -93,7 +93,11 @@ Ltac pattern_proj1_sig_in_sig :=
   eapply proj2_sig_map;
   [ let a := fresh in
     let H := fresh in
-    intros a H; pattern (proj1_sig a);
+    intros a H;
+    lazymatch goal with
+    | [ |- context[@proj1_sig ?A ?P a] ]
+      => pattern (@proj1_sig A P a)
+    end;
     lazymatch goal with
     | [ |- ?P ?p1a ]
       => cut (dlet p := P in p p1a);

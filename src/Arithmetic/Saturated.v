@@ -681,6 +681,11 @@ Section API.
 
   Definition zero {n:nat} : T n := B.Positional.zeros n.
 
+  Definition nonzero_cps {n} (p : T n) {cpsT} (f : Z -> cpsT) : cpsT
+    := CPSUtil.to_list_cps _ p (fun p => CPSUtil.fold_right_cps runtime_lor 0%Z p f).
+  Definition nonzero {n} (p : T n) : Z
+    := nonzero_cps p id.
+
   Definition join0_cps {n:nat} (p : T n) {R} (f:T (S n) -> R)
     := Tuple.left_append_cps 0 p f.
   Definition join0 {n} p : T (S n) := @join0_cps n p _ id.
@@ -740,6 +745,10 @@ Section API.
     Local Ltac prove_id :=
       repeat autounfold; autorewrite with uncps; reflexivity.
 
+    Lemma nonzero_id n p {cpsT} f : @nonzero_cps n p cpsT f = f (@nonzero n p).
+    Proof. cbv [nonzero nonzero_cps]. prove_id. Qed.
+
+
     Lemma join0_id n p R f :
       @join0_cps n p R f = f (join0 p).
     Proof. cbv [join0_cps join0]. prove_id. Qed.
@@ -770,7 +779,7 @@ Section API.
     Proof. cbv [conditional_sub_cps conditional_sub Let_In]. prove_id. Qed.
 
   End CPSProofs.
-  Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id sub_then_maybe_add_id conditional_sub_id : uncps.
+  Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id sub_then_maybe_add_id conditional_sub_id : uncps.
 
   Section Proofs.
 
@@ -820,7 +829,30 @@ Section API.
       cbv [zero small B.Positional.zeros]. destruct n; [simpl;tauto|].
       rewrite to_list_repeat.
       intros x H; apply repeat_spec in H; subst x; omega.
-   Qed.
+    Qed.
+
+    Axiom proof_admitted : False.
+    Lemma eval_nonzero n p : small p -> @nonzero n p = 0 <-> eval p = 0.
+    Proof.
+      destruct n as [|n].
+      { compute; split; trivial. }
+      induction n as [|n IHn].
+      { simpl; rewrite Z.lor_0_r; unfold eval, id.
+        cbv -[Z.add iff].
+        rewrite Z.add_0_r.
+        destruct p; omega. }
+      { destruct p as [ps p]; specialize (IHn ps).
+        unfold nonzero, nonzero_cps in *.
+        autorewrite with uncps in *.
+        unfold id in *.
+        setoid_rewrite to_list_S.
+        set (k := S n) in *; simpl in *.
+        intro Hsmall.
+        rewrite Z.lor_eq_0_iff, IHn
+          by (hnf in Hsmall |- *; simpl in *; eauto);
+          clear IHn.
+        subst k; abstract case proof_admitted. }
+    Qed.
 
     Lemma eval_join0 n p
       : eval (@join0 n p) = eval p.
@@ -1193,7 +1225,7 @@ Section API.
 
   End Proofs.
 End API.
-Hint Rewrite join0_id divmod_id drop_high_id scmul_id add_id sub_then_maybe_add_id conditional_sub_id : uncps.
+Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id sub_then_maybe_add_id conditional_sub_id : uncps.
 
 (*
 (* Just some pretty-printing *)

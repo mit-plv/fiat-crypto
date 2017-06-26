@@ -161,6 +161,17 @@ Proof.
   reflexivity.
 Defined.
 
+Definition nonzero' : { f:Tuple.tuple Z sz -> Z
+                      | forall (A : Tuple.tuple Z sz),
+                          f A =
+                          (nonzero (R_numlimbs:=sz) A)
+                      }.
+Proof.
+  eapply (lift1_sig (fun A c => c = _)); eexists.
+  cbv -[runtime_lor Let_In].
+  reflexivity.
+Defined.
+
 Import ModularArithmetic.
 
 (*Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
@@ -289,5 +300,25 @@ Proof.
     ).
 Defined.
 
-Local Definition for_assumptions := (mulmod_256, add, sub, opp).
+Axiom proof_admitted : False.
+Definition nonzero : { f:Tuple.tuple Z sz -> Z
+                     | let eval := Saturated.eval (Z.pos r) in
+                       forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
+                         (eval A < eval p256
+                          -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }.
+Proof.
+  exists (proj1_sig nonzero').
+  abstract (
+      intros eval A H **; rewrite (proj2_sig nonzero'), eval_nonzero by eassumption;
+      subst eval;
+      unfold montgomery_to_F, Saturated.uweight in *; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul;
+      rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_p256;
+      let H := fresh in
+      split; intro H;
+      [ rewrite H; autorewrite with zsimplify_const; reflexivity
+      | repeat match goal with H : _ |- _ => revert H end; case proof_admitted ]
+    ).
+Defined.
+
+Local Definition for_assumptions := (mulmod_256, add, sub, opp, nonzero).
 Print Assumptions for_assumptions.
