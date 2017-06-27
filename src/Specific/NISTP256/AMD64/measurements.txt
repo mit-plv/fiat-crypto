@@ -1,1 +1,2 @@
+1576	ashryn-noht-notb-ac-broadwell	2.60ghz	7.1.1	5397ade1
 1576	ashryn-noht-notb-noac-broadwell	2.60ghz	7.1.1	cac291e0

@@ -72,26 +72,33 @@ Module Jacobian.
       let '(X1, Y1, Z1) := P in
       let '(X2, Y2) := Q in
       dlet ZZ : F := Z1^2 in
+      dlet P1z := if dec (Z1 = 0) then true else false in
       dlet U2 : F := ZZ * X2 in
+      dlet X2z := if dec (X2 = 0) then true else false in
       dlet ZZZ: F := ZZ * Z1 in
       dlet H : F := U2 - X1 in
       dlet Z3 : F := Z1 * H in
+      dlet P2z := if dec (Y2 = 0) then X2z else false in
       dlet S2 : F := ZZZ * Y2 in
       dlet R : F := S2 - Y1 in
       dlet HH : F := H^2 in
       dlet RR : F := R^2 in
       dlet HHH: F := HH*H in
+      dlet Z3 := if P1z then 1 else Z3 in
+      dlet Z3 := if P2z then Z1 else Z3 in
       dlet HHX : F := HH * X1 in
       dlet T10 : F := HHX + HHX in
       dlet E4 : F := RR - T10 in
       dlet X3 : F := E4 - HHH in
+      dlet X3 := if P1z then X2 else X3 in
+      dlet X3 := if P2z then X1 else X3 in
       dlet T13 : F := HHH * Y1 in
       dlet T11 : F := HHX - X3 in
       dlet T12 : F := T11 * R in
       dlet Y3 : F := T12 - T13 in
-      if dec (X2 = 0 /\ Y2 = 0) then P else
-        if dec (Z1 = 0) then (X2, Y2, 1)
-        else (X3, Y3, Z3).
+      dlet Y3 := if P1z then Y2 else Y3 in
+      dlet Y3 := if P2z then Y1 else Y3 in
+      (X3, Y3, Z3).
 
     Definition affine_of_table (P:F*F) :=
       let '(x, y) := P in if dec (x = 0 /\ y = 0) then inr tt else inl (x,y).
@@ -112,7 +119,7 @@ Module Jacobian.
           (HPQ:~ W.eq (to_affine P) Q)
       : let '(X, Y, Z) := add_affine_coordinates (proj1_sig P) q in
         if dec (Z = 0) then True else Y^2 = X^3 + a * X * (Z^2)^2 + b * (Z^3)^2.
-    Proof. prept; not_and_t. par: abstract fsatz. Qed.
+    Proof. prept; not_and_t. all: try abstract fsatz. Qed.
       
     Lemma add_affine_coordinates_correct
           (P:point) (q:F*F) pf (Q:=exist _ (affine_of_table q) pf)
