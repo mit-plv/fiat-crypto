@@ -162,7 +162,19 @@ third_party/openssl-nistz256/measure:  third_party/openssl-nistz256/compiler.sh 
 third_party/openssl-nistz256/measurements.txt: third_party/openssl-nistz256/measure
 	./capture.sh third_party/openssl-nistz256
 
-bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-nistz256/measurements.txt
+src/Specific/NISTP256/AMD64/measure: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/bench_madd.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/bench_madd.c -I src/Specific/NISTP256/AMD64 measure.c -D TIMINGS=2047 -D UUT=bench_madd
+
+src/Specific/NISTP256/AMD64/measurements.txt: src/Specific/NISTP256/AMD64/measure
+	./capture.sh src/Specific/NISTP256/AMD64
+
+src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c
+	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/measure src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c -I src/Specific/NISTP256/AMD64 measure.c -D TIMINGS=2047 -D UUT=bench_madd
+
+src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/icc/measure
+	./capture.sh src/Specific/NISTP256/AMD64/icc
+
+bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-nistz256/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt
 	head -999999 $?
 
 clean::
