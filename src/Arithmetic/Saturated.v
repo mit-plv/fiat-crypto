@@ -667,6 +667,46 @@ Section UniformWeight.
     apply Z.lt_gt, Z.pow_pos_nonneg; rewrite ?Nat2Z.inj_succ; omega.
   Qed.
 
+  (* TODO : move to Positional *)
+  Lemma eval_from_eq {n} (p:Z^n) wt offset :
+    (forall i, wt i = uweight (i + offset)) ->
+    B.Positional.eval wt p = B.Positional.eval_from uweight offset p.
+  Proof. cbv [B.Positional.eval_from]. auto using B.Positional.eval_wt_equiv. Qed.
+
+  Lemma uweight_eval_from {n} (p:Z^n): forall offset, 
+    B.Positional.eval_from uweight offset p = uweight offset * B.Positional.eval uweight p.
+  Proof.
+    induction n; intros; cbv [B.Positional.eval_from];
+      [|rewrite (subst_append p)];
+    repeat match goal with
+           | _ => destruct p
+           | _ => rewrite B.Positional.eval_unit; [ ]
+           | _ => rewrite B.Positional.eval_step; [ ]
+           | _ => rewrite IHn; [ ] 
+           | _ => rewrite eval_from_eq with (offset0:=S offset)
+               by (intros; f_equal; omega)
+           | _ => rewrite eval_from_eq with
+                  (wt:=fun i => uweight (S i)) (offset0:=1%nat)
+               by (intros; f_equal; omega)
+           | _ => ring
+           end.
+    repeat match goal with
+           | _ => cbv [uweight]; progress autorewrite with natsimplify
+           | _ => progress (rewrite ?Nat2Z.inj_succ, ?Nat2Z.inj_0, ?Z.pow_0_r)
+           | _ => rewrite !Z.pow_succ_r by (try apply Nat2Z.is_nonneg; omega)
+           | _ => ring
+           end.
+  Qed.
+
+  Lemma uweight_eval_step {n} (p:Z^S n):
+    B.Positional.eval uweight p = hd p + bound * B.Positional.eval uweight (tl p).
+  Proof.
+    rewrite (subst_append p) at 1; rewrite B.Positional.eval_step.
+    rewrite eval_from_eq with (offset := 1%nat) by (intros; f_equal; omega).
+    rewrite uweight_eval_from. cbv [uweight]; rewrite Z.pow_0_r, Z.pow_1_r.
+    ring.
+  Qed.
+
 End UniformWeight.
 
 Section API.
@@ -1207,20 +1247,32 @@ Section API.
       reflexivity.
     Qed.
 
+    Lemma small_hd n p : @small (S n) p -> 0 <= hd p < bound.
+    Proof.
+      cbv [small]. let H := fresh "H" in intro H; apply H.
+      rewrite (subst_append p). rewrite to_list_append, hd_append.
+      apply in_eq.
+    Qed.
+
+
     Lemma eval_div n p : small p -> eval (fst (@divmod n p)) = eval p / bound.
     Proof.
-      repeat match goal with
-             | _ => progress (intros; cbv [divmod_cps divmod eval]; repeat autounfold)
-             | _ => progress autorewrite with uncps push_id cancel_pair push_basesystem_eval
-             end.
+      cbv [divmod divmod_cps eval]. intros.
+      autorewrite with uncps push_id cancel_pair.
       rewrite (subst_append p) at 2.
-      rewrite B.Positional.eval_step.
-      rewrite uweight_0.
-    Admitted.
+      rewrite uweight_eval_step. rewrite hd_append, tl_append.
+      rewrite Z.div_add' by omega. rewrite Z.div_small by auto using small_hd.
+      ring.
+    Qed.
 
     Lemma eval_mod n p : small p -> snd (@divmod n p) = eval p mod bound.
     Proof.
-    Admitted.
+      cbv [divmod divmod_cps eval]. intros.
+      autorewrite with uncps push_id cancel_pair.
+      rewrite (subst_append p) at 2.
+      rewrite uweight_eval_step, Z.mod_add'_full, hd_append.
+      rewrite Z.mod_small by auto using small_hd. reflexivity.
+    Qed.
 
     Lemma small_div n v : small v -> small (fst (@divmod n v)).
     Admitted.
