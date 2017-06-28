@@ -52,26 +52,51 @@ Module Z.
     Qed.
   End with_bitwidth.
 
-  Local Hint Unfold Z.add_get_carry_full Z.add_get_carry
-        Z.add_with_get_carry Z.get_carry Z.add_with_carry.
+  Local Ltac easypeasy :=
+    repeat progress autounfold;
+    break_match; autorewrite with cancel_pair zsimplify;
+    solve [repeat (f_equal; try ring)].
+
+  Local Hint Unfold Z.get_carry Z.get_borrow
+        Z.add_get_carry_full Z.add_with_get_carry_full
+        Z.add_get_carry Z.add_with_get_carry Z.add_with_carry
+        Z.sub_get_borrow_full Z.sub_with_get_borrow_full
+        Z.sub_get_borrow Z.sub_with_get_borrow Z.sub_with_borrow.
+  
   Lemma add_get_carry_full_mod s x y :
     fst (Z.add_get_carry_full s x y)  = (x + y) mod s.
-  Proof.
-    repeat progress autounfold.
-    break_match; autorewrite with cancel_pair zsimplify;
-      reflexivity.
-  Qed.
+  Proof. easypeasy. Qed.
 
   Lemma add_get_carry_full_div s x y :
     snd (Z.add_get_carry_full s x y)  = (x + y) / s.
-  Proof.
-    repeat progress autounfold.
-    break_match; autorewrite with cancel_pair zsimplify;
-      reflexivity.
-  Qed.
+  Proof. easypeasy. Qed.
+
+  Lemma add_with_get_carry_full_mod s c x y :
+    fst (Z.add_with_get_carry_full s c x y)  = (c + x + y) mod s.
+  Proof. easypeasy. Qed.
+
+  Lemma add_with_get_carry_full_div s c x y :
+    snd (Z.add_with_get_carry_full s c x y)  = (c + x + y) / s.
+  Proof. easypeasy. Qed.
 
   Lemma sub_with_borrow_to_add_get_carry c x y
     : Z.sub_with_borrow c x y = Z.add_with_carry (-c) x (-y).
   Proof. reflexivity. Qed.
+
+  Lemma sub_get_borrow_full_mod s x y :
+    fst (Z.sub_get_borrow_full s x y)  = (x - y) mod s.
+  Proof. easypeasy. Qed.
+
+  Lemma sub_get_borrow_full_div s x y :
+    snd (Z.sub_get_borrow_full s x y)  = - ((x - y) / s).
+  Proof. easypeasy. Qed.
+
+  Lemma sub_with_get_borrow_full_mod s c x y :
+    fst (Z.sub_with_get_borrow_full s c x y)  = (x - y - c) mod s.
+  Proof. easypeasy. Qed.
+
+  Lemma sub_with_get_borrow_full_div s c x y :
+    snd (Z.sub_with_get_borrow_full s c x y)  = - ((x - y - c) / s).
+  Proof. easypeasy. Qed.
 
 End Z.

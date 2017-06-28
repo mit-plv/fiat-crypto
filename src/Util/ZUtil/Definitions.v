@@ -35,6 +35,18 @@ Module Z.
     := if dec (2 ^ (Z.log2 bound) = bound)
        then add_get_carry (Z.log2 bound) x y
        else ((x + y) mod bound, (x + y) / bound).
+  Definition add_with_get_carry_full (bound : Z) (c x y : Z) : Z * Z
+    := if dec (2 ^ (Z.log2 bound) = bound)
+       then add_with_get_carry (Z.log2 bound) c x y
+       else ((c + x + y) mod bound, (c + x + y) / bound).
+  Definition sub_get_borrow_full (bound : Z) (x y : Z) : Z * Z
+    := if dec (2 ^ (Z.log2 bound) = bound)
+       then sub_get_borrow (Z.log2 bound) x y
+       else ((x - y) mod bound, -((x - y) / bound)).
+  Definition sub_with_get_borrow_full (bound : Z) (c x y : Z) : Z * Z
+    := if dec (2 ^ (Z.log2 bound) = bound)
+       then sub_with_get_borrow (Z.log2 bound) c x y
+       else ((x - y - c) mod bound, -((x - y - c) / bound)).
 
   Definition mul_split_at_bitwidth (bitwidth : Z) (x y : Z) : Z * Z
     := dlet xy := x * y in
