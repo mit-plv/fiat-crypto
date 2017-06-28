@@ -171,6 +171,94 @@ Hint Opaque Associational.mul Associational.multerm : uncps.
 Hint Rewrite @Associational.mul_id @Associational.multerm_id : uncps.
 Hint Rewrite @Associational.eval_mul @Associational.eval_map_multerm using (omega || assumption) : push_basesystem_eval.
 
+Module Positional.
+  Section Positional.
+    Context (weight : nat->Z) {s:Z}. (* s is number at which to split *)
+    Section GenericOp.
+      Context {op : Z -> Z -> Z}
+              {op_get_carry : Z -> Z -> Z * Z} (* no carry in, carry out *)
+              {op_with_carry : Z -> Z -> Z -> Z * Z}. (* carry in, carry out  *)
+
+      Fixpoint chain_op'_cps {n}:
+        option Z->Z^n->Z^n->forall T, (Z*Z^n->T)->T :=
+        match n with
+        | O => fun c p _ _ f =>
+                 let carry := match c with | None => 0 | Some x => x end in
+                 f (carry,p)
+        | S n' =>
+          fun c p q _ f =>
+            (* for the first call, use op_get_carry, then op_with_carry *)
+            let op' := match c with
+                       | None => op_get_carry
+                       | Some x => op_with_carry x end in
+            dlet carry_result := op' (hd p) (hd q) in
+              chain_op'_cps (Some (fst carry_result)) (tl p) (tl q) _
+                            (fun carry_pq =>
+                               f (fst carry_pq,
+                                  append (snd carry_result) (snd carry_pq)))
+        end.
+      Definition chain_op' {n} c p q := @chain_op'_cps n c p q _ id.
+      Definition chain_op_cps {n} p q {T} f := @chain_op'_cps n None p q T f.
+      Definition chain_op {n} p q : Z * Z^n := chain_op_cps p q id.
+
+      Lemma chain_op'_id {n} : forall c p q T f,
+        @chain_op'_cps n c p q T f = f (chain_op' c p q).
+      Proof.
+        cbv [chain_op']; induction n; intros; destruct c;
+          simpl chain_op'_cps; cbv [Let_In]; try reflexivity.
+        { etransitivity; rewrite IHn; reflexivity. }
+        { etransitivity; rewrite IHn; reflexivity. }
+      Qed.
+
+      Lemma chain_op_id {n} p q T f :
+        @chain_op_cps n p q T f = f (chain_op p q).
+      Proof. apply chain_op'_id. Qed.
+    End GenericOp.
+
+    Section AddSub.
+      Local Definition eval {n} := B.Positional.eval (n:=n) weight.
+      
+      Definition sat_add_cps {n} p q T (f:Z*Z^n->T) :=
+        chain_op_cps (op_get_carry := Z.add_get_carry_full s)
+                     (op_with_carry := Z.add_with_get_carry_full s)
+                     p q f.
+      Definition sat_add {n} p q := @sat_add_cps n p q _ id.
+
+      Lemma sat_add_id n p q T f :
+        @sat_add_cps n p q T f = f (sat_add p q).
+      Proof. cbv [sat_add sat_add_cps]. rewrite !chain_op_id. reflexivity. Qed.
+
+      Lemma sat_add_mod n p q :
+        eval (snd (@sat_add n p q)) = (eval p + eval q) mod s.
+      Admitted.
+
+      Lemma sat_add_div n p q :
+        fst (@sat_add n p q) = (eval p + eval q) / s.
+      Admitted.
+      
+      Definition sat_sub_cps {n} p q T (f:Z*Z^n->T) :=
+        chain_op_cps (op_get_carry := Z.sub_get_borrow_full s)
+                     (op_with_carry := Z.sub_with_get_borrow_full s)
+                     p q f.
+      Definition sat_sub {n} p q := @sat_sub_cps n p q _ id.
+
+      Lemma sat_sub_id n p q T f :
+        @sat_sub_cps n p q T f = f (sat_sub p q).
+      Proof. cbv [sat_sub sat_sub_cps]. rewrite !chain_op_id. reflexivity. Qed.
+
+      Lemma sat_sub_mod n p q :
+        eval (snd (@sat_sub n p q)) = (eval p - eval q) mod s.
+      Admitted.
+
+      Lemma sat_sub_div n p q :
+        fst (@sat_sub n p q) = - ((eval p - eval q) / s).
+      Admitted.
+                 
+    End Add.
+  End Positional.
+End Positional.
+
+
 Module Columns.
   Section Columns.
     Context (weight : nat->Z)
