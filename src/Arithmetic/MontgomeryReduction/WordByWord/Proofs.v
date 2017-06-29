@@ -16,8 +16,8 @@ Section WordByWordMontgomery.
           (R_numlimbs : nat).
   Local Notation small := (@small (Z.pos r)).
   Local Notation eval := (@eval (Z.pos r)).
-  Local Notation addT' := (fun n => @Saturated.add (Z.pos r) (S n) n (S n)).
-  Local Notation addT := (fun n => @Saturated.add (Z.pos r) n n n).
+  Local Notation addT' := (@Saturated.add_S1 (Z.pos r)).
+  Local Notation addT := (@Saturated.add (Z.pos r)).
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
   Local Notation small_zero := (@small_zero r (Zorder.Zgt_pos_0 _)).
@@ -65,7 +65,7 @@ Section WordByWordMontgomery.
   Qed.
   Local Lemma small_addT' : forall n a b, small a -> small b -> small (@addT' n a b).
   Proof.
-    intros; apply Saturated.small_add; auto; lia.
+    intros; apply Saturated.small_add_S1; auto; lia.
   Qed.
 
   Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ V N _).
@@ -225,7 +225,7 @@ Section WordByWordMontgomery.
     Local Notation eval_sub_then_maybe_add :=
       (fun p q smp smq => @eval_sub_then_maybe_add (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) p q N smp smq small_N N_mask).
     Local Notation small_sub_then_maybe_add :=
-      (fun p q => @small_sub_then_maybe_add (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) p q N).
+      (fun p q => @small_sub_then_maybe_add (Z.pos r) (*(Zorder.Zgt_pos_0 _)*) _ (Z.pos r - 1) p q N).
 
     Definition add_no_cps_bound : 0 <= eval add_no_cps < eval N
       := @add_bound T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.

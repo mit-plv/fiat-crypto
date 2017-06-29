@@ -34,7 +34,7 @@ Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple
                             }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   (*
   cbv [
       r wt sz p256
@@ -139,7 +139,7 @@ Definition add' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                  }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   reflexivity.
 Defined.
 
@@ -150,7 +150,7 @@ Definition sub' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                  }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   reflexivity.
 Defined.
 
@@ -161,7 +161,7 @@ Definition opp' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
                  }.
 Proof.
   eapply (lift1_sig (fun A c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   reflexivity.
 Defined.
 
