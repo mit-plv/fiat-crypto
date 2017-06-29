@@ -34,7 +34,7 @@ Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple
                             }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   (*
   cbv [
       r wt sz p256
@@ -42,9 +42,10 @@ Proof.
        CPSUtil.to_list_cps CPSUtil.to_list'_cps CPSUtil.to_list_cps' CPSUtil.flat_map_cps CPSUtil.fold_right_cps
        CPSUtil.map_cps CPSUtil.Tuple.left_append_cps CPSUtil.firstn_cps CPSUtil.combine_cps CPSUtil.on_tuple_cps CPSUtil.update_nth_cps CPSUtil.from_list_default_cps CPSUtil.from_list_default'_cps
        fst snd length List.seq List.hd List.app
-       redc redc_cps redc_loop_cps redc_body_cps
+       redc pre_redc_cps redc_cps redc_loop_cps redc_body_cps
        Positional.to_associational_cps
        Saturated.divmod_cps
+       Saturated.conditional_sub_cps
        Saturated.scmul_cps
        Saturated.uweight
        Saturated.Columns.mul_cps
@@ -52,13 +53,19 @@ Proof.
        (*Z.of_nat Pos.of_succ_nat  Nat.pred
        Z.pow Z.pow_pos Z.mul Pos.iter Pos.mul Pos.succ*)
        Tuple.hd Tuple.append Tuple.tl Tuple.hd' Tuple.tl' CPSUtil.Tuple.left_tl_cps CPSUtil.Tuple.left_hd_cps CPSUtil.Tuple.hd_cps CPSUtil.Tuple.tl_cps
+       CPSUtil.Tuple.map2_cps
        Saturated.Columns.from_associational_cps
        Saturated.Associational.multerm_cps
+       Saturated.Positional.sat_add_cps
+       Saturated.Positional.sat_sub_cps
+       Saturated.Positional.chain_op_cps
+       Saturated.Positional.chain_op'_cps
        Saturated.Columns.compact_cps
        Saturated.Columns.compact_step_cps
        Saturated.Columns.compact_digit_cps
        Saturated.drop_high_cps
        Saturated.add_cps
+       Saturated.add_S1_cps
        Saturated.Columns.add_cps
        Saturated.Columns.cons_to_nth_cps
        Nat.pred
@@ -138,7 +145,7 @@ Definition add' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                  }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   reflexivity.
 Defined.
 
@@ -149,7 +156,7 @@ Definition sub' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                  }.
 Proof.
   eapply (lift2_sig (fun A B c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   reflexivity.
 Defined.
 
@@ -160,7 +167,7 @@ Definition opp' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
                  }.
 Proof.
   eapply (lift1_sig (fun A c => c = _)); eexists.
-  cbv -[Definitions.Z.add_get_carry Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
+  cbv -[Definitions.Z.add_with_get_carry Definitions.Z.add_with_carry Definitions.Z.sub_with_get_borrow Definitions.Z.sub_with_borrow Definitions.Z.mul_split_at_bitwidth Definitions.Z.zselect runtime_add runtime_mul runtime_and runtime_opp Let_In].
   reflexivity.
 Defined.
 
