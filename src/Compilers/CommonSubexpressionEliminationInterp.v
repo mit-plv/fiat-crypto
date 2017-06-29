@@ -134,8 +134,6 @@ Section symbolic.
 
 
 
-Check @symbolize_exprf.
-
   Local Arguments lookupb : simpl never.
   Local Arguments extendb : simpl never.
   Lemma interpf_csef G t e1 e2
