@@ -93,10 +93,10 @@ Notation "T x = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=T) A (fun x =
 Notation "T x = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=T) A (fun x => Pair .. (Pair (Var b0) (Var b1)) .. (Var b2))) : expr_scope.
 Notation "T0 x , T1 y = A ; b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => b)) : expr_scope.
 Notation "T0 x , T1 y = A ; 'return' b" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => Var b)) : expr_scope.
-(*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair b0%expr b1%expr) .. b2%expr))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
-(*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair (Var b0) (Var b1)) .. (Var b2)))) : expr_scope.*) (* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *)
+(""" + r"""*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair b0%expr b1%expr) .. b2%expr))) : expr_scope.*""" + r""") (""" + r"""* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *""" + r""")
+(""" + r"""*Notation "T0 x , T1 y = A ; 'return' ( b0 , b1 , .. , b2 )" := (LetIn (tx:=Prod T0 T1) A (fun '((x, y)%core) => (Pair .. (Pair (Var b0) (Var b1)) .. (Var b2)))) : expr_scope.*""" + r""") (""" + r"""* Error: Unsupported construction in recursive notations., https://coq.inria.fr/bugs/show_bug.cgi?id=5523 *""" + r""")
 
-(* for now, handle with
+(""" + r"""* for now, handle with
 <<
 sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(addcarryx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'
 sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(subborrow.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:'
@@ -109,15 +109,15 @@ Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c_in , a , b , & out )
  (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out ) ; REST"
  (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
->> *)
+>> *""" + r""")
 Reserved Notation "'addcarryx_u32' ( c , a , b )" (format "'addcarryx_u32' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64' ( c , a , b )" (format "'addcarryx_u64' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u128' ( c , a , b )" (format "'addcarryx_u128' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u51' ( c , a , b )" (format "'addcarryx_u51' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "'addcarryx_u51' ( c , a , b )" (format "'addcarryx_u51' ( c ,  a ,  b )"). (""" + r"""* temporary for testing *""" + r""")
 Reserved Notation "'subborrow_u32' ( c , a , b )" (format "'subborrow_u32' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u64' ( c , a , b )" (format "'subborrow_u64' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u128' ( c , a , b )" (format "'subborrow_u128' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,  a ,  b )"). (""" + r"""* temporary for testing *""" + r""")
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
@@ -125,21 +125,21 @@ Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
 Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u128ℤ' ( c , a , b )" (format "'addcarryx_u128ℤ' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )"). """ + r"""(* temporary for testing *""" + r""")
 Reserved Notation "'subborrow_u32ℤ' ( c , a , b )" (format "'subborrow_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u64ℤ' ( c , a , b )" (format "'subborrow_u64ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u128ℤ' ( c , a , b )" (format "'subborrow_u128ℤ' ( c ,  a ,  b )").
-Reserved Notation "'subborrow_u51ℤ' ( c , a , b )" (format "'subborrow_u51ℤ' ( c ,  a ,  b )"). (* temporary for testing *)
+Reserved Notation "'subborrow_u51ℤ' ( c , a , b )" (format "'subborrow_u51ℤ' ( c ,  a ,  b )"). (""" + r"""* temporary for testing *""" + r""")
 Reserved Notation "'mulx_u32ℤ' ( a , b )" (format "'mulx_u32ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u64ℤ' ( a , b )" (format "'mulx_u64ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u128ℤ' ( a , b )" (format "'mulx_u128ℤ' ( a ,  b )").
 
-(* python:
+(""" + r"""* python:
 <<""")
 
 print(open(__file__).read())
 
-print(r">> *)")
+print('>> *' + ')')
 
 def log2_up(x):
     return int(math.ceil(math.log(x, 2)))
@@ -285,7 +285,7 @@ for opn, op in (('addcarryx', 'AddWithGetCarry'), ('subborrow', 'SubWithGetBorro
                     b = ('b' if not v2 else '(Var b)')
                     for lgwordsz_small in (0, 3):
                         for notation_string in ('Notation "\'%s_u%d\' ( c , a , b )" := (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair (Pair %s %s) %s)).',
-                                                '(*Notation "T0 out ; T1 c_out = \'_%s_u%d\' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair (Pair %s %s) %s)) (fun \'((out, c_out)%%core) => REST)).*)'):
+                                                ('(' + '*Notation "T0 out ; T1 c_out = \'_%s_u%d\' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (%s %d (TWord %d) (TWord %d) (TWord %d) (TWord %d) (TWord %d)) (Pair (Pair %s %s) %s)) (fun \'((out, c_out)%%core) => REST)).*' + ')')):
                             print(notation_string % (opn, wordsz, op, wordsz, lgwordsz_small, lgwordsz, lgwordsz, lgwordsz, lgwordsz_small, c, a, b))
                             print(notation_string % (opn, wordsz, op, wordsz, lgwordsz_small, lgwordsz_small, lgwordsz, lgwordsz, lgwordsz_small, c, a, b))
                             print(notation_string % (opn, wordsz, op, wordsz, lgwordsz_small, lgwordsz, lgwordsz_small, lgwordsz, lgwordsz_small, c, a, b))
