@@ -674,7 +674,7 @@ Section UniformWeight.
     B.Positional.eval wt p = B.Positional.eval_from uweight offset p.
   Proof. cbv [B.Positional.eval_from]. auto using B.Positional.eval_wt_equiv. Qed.
 
-  Lemma uweight_eval_from {n} (p:Z^n): forall offset, 
+  Lemma uweight_eval_from {n} (p:Z^n): forall offset,
     B.Positional.eval_from uweight offset p = uweight offset * B.Positional.eval uweight p.
   Proof.
     induction n; intros; cbv [B.Positional.eval_from];
@@ -683,7 +683,7 @@ Section UniformWeight.
            | _ => destruct p
            | _ => rewrite B.Positional.eval_unit; [ ]
            | _ => rewrite B.Positional.eval_step; [ ]
-           | _ => rewrite IHn; [ ] 
+           | _ => rewrite IHn; [ ]
            | _ => rewrite eval_from_eq with (offset0:=S offset)
                by (intros; f_equal; omega)
            | _ => rewrite eval_from_eq with
@@ -760,7 +760,7 @@ Module Positional.
 
     Section AddSub.
       Let eval {n} := B.Positional.eval (n:=n) (uweight s).
-      
+
       Definition sat_add_cps {n} p q T (f:Z*Z^n->T) :=
         chain_op_cps (op_get_carry := Z.add_get_carry_full s)
                      (op_with_carry := Z.add_with_get_carry_full s)
@@ -781,7 +781,7 @@ Module Positional.
 
       Lemma small_sat_add n p q : small (snd (@sat_add n p q)).
       Admitted.
-      
+
       Definition sat_sub_cps {n} p q T (f:Z*Z^n->T) :=
         chain_op_cps (op_get_carry := Z.sub_get_borrow_full s)
                      (op_with_carry := Z.sub_with_get_borrow_full s)
@@ -802,7 +802,7 @@ Module Positional.
 
       Lemma small_sat_sub n p q : small (snd (@sat_sub n p q)).
       Admitted.
-                 
+
     End AddSub.
   End Positional.
 End Positional.
@@ -847,19 +847,19 @@ Section API.
       (fun carry_result =>f (snd carry_result)).
   Definition scmul {n} c p : T (S n) := @scmul_cps n c p _ id.
 
-  Definition add_cps {n} (p q: T n) {R} (f:T n->R) :=
+  Definition add_cps {n} (p q: T n) {R} (f:T (S n)->R) :=
     Positional.sat_add_cps (s:=bound) p q _
-      (* drops last carry, this relies on bounds *)
-      (fun carry_result => f (snd carry_result)).
-  Definition add {n} p q : T n := @add_cps n p q _ id.
+      (* join the last carry *)
+      (fun carry_result => Tuple.left_append_cps (fst carry_result) (snd carry_result) f).
+  Definition add {n} p q : T (S n) := @add_cps n p q _ id.
 
   (* Wrappers for additions with slightly uneven limb counts *)
-  Definition add_S1_cps {n} (p: T (S n)) (q: T n) {R} (f:T (S n)->R) :=
+  Definition add_S1_cps {n} (p: T (S n)) (q: T n) {R} (f:T (S (S n))->R) :=
     join0_cps q (fun Q => add_cps p Q f).
-  Definition add_S1 {n} p q := @add_S1_cps n p q _ id. 
-  Definition add_S2_cps {n} (p: T n) (q: T (S n)) {R} (f:T (S n)->R) :=
+  Definition add_S1 {n} p q := @add_S1_cps n p q _ id.
+  Definition add_S2_cps {n} (p: T n) (q: T (S n)) {R} (f:T (S (S n))->R) :=
     join0_cps p (fun P => add_cps P q f).
-  Definition add_S2 {n} p q := @add_S2_cps n p q _ id. 
+  Definition add_S2 {n} p q := @add_S2_cps n p q _ id.
 
   Definition sub_then_maybe_add_cps {n} mask (p q r : T n)
              {R} (f:T n -> R) :=
@@ -923,11 +923,11 @@ Section API.
       @add_cps n p q R f = f (add p q).
     Proof. cbv [add_cps add Let_In]. prove_id. Qed.
     Hint Rewrite add_id : uncps.
-    
+
     Lemma add_S1_id n p q R f :
       @add_S1_cps n p q R f = f (add_S1 p q).
     Proof. cbv [add_S1_cps add_S1 join0_cps]. prove_id. Qed.
-    
+
     Lemma add_S2_id n p q R f :
       @add_S2_cps n p q R f = f (add_S2 p q).
     Proof. cbv [add_S2_cps add_S2 join0_cps]. prove_id. Qed.
@@ -1040,7 +1040,7 @@ Section API.
       pose proof div_correct; pose proof modulo_correct.
 
     Lemma eval_add_nz n p q :
-      n <> 0%nat -> (0 <= eval p + eval q < uweight bound n) ->
+      n <> 0%nat ->
       eval (@add n p q) = eval p + eval q.
     Proof.
       intros. pose_all.
@@ -1053,35 +1053,35 @@ Section API.
                       (rewrite <-!from_list_default_eq with (d:=0);
                        erewrite !length_to_list, !from_list_default_eq,
                        from_list_to_list)
-             | _ => apply Z.mod_small; omega 
+             | _ => apply Z.mod_small; omega
              end.
-    Qed.
+    Admitted.
 
     Lemma eval_add_z n p q :
       n = 0%nat ->
       eval (@add n p q) = eval p + eval q.
     Proof. intros; subst; reflexivity. Qed.
 
-    Lemma eval_add n p q (H:0 <= eval p + eval q < uweight bound n)
+    Lemma eval_add n p q
       :  eval (@add n p q) = eval p + eval q.
     Proof.
       destruct (Nat.eq_dec n 0%nat); intuition auto using eval_add_z, eval_add_nz.
     Qed.
-    Lemma eval_add_same n p q (H:0 <= eval p + eval q < uweight bound n)
+    Lemma eval_add_same n p q
       :  eval (@add n p q) = eval p + eval q.
     Proof. apply eval_add; omega. Qed.
-    Lemma eval_add_S1 n p q (H:0 <= eval p + eval q < uweight bound (S n))
+    Lemma eval_add_S1 n p q
       :  eval (@add_S1 n p q) = eval p + eval q.
     Proof.
       cbv [add_S1 add_S1_cps]. autorewrite with uncps push_id.
-      rewrite eval_add; rewrite eval_join0; [reflexivity|assumption].
-    Qed.
-    Lemma eval_add_S2 n p q (H:0 <= eval p + eval q < uweight bound (S n))
+      (*rewrite eval_add; rewrite eval_join0; [reflexivity|assumption].*)
+    Admitted.
+    Lemma eval_add_S2 n p q
       :  eval (@add_S2 n p q) = eval p + eval q.
     Proof.
       cbv [add_S2 add_S2_cps]. autorewrite with uncps push_id.
-      rewrite eval_add; rewrite eval_join0; [reflexivity|assumption].
-    Qed.
+      (*rewrite eval_add; rewrite eval_join0; [reflexivity|assumption].*)
+    Admitted.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 using (omega || assumption): push_basesystem_eval.
 
     Lemma uweight_le_mono n m : (n <= m)%nat ->
@@ -1142,13 +1142,33 @@ Section API.
     Qed.
 
     Lemma small_add n a b :
-      (2 <= bound) -> 
+      (2 <= bound) ->
       small a -> small b -> small (@add n a b).
     Proof.
       intros. pose_all.
       cbv [add_cps add Let_In].
       autorewrite with uncps push_id.
-      apply Positional.small_sat_add.
+      (*apply Positional.small_sat_add.*)
+    Admitted.
+
+    Lemma small_add_S1 n a b :
+      (2 <= bound) ->
+      small a -> small b -> small (@add_S1 n a b).
+    Proof.
+      intros. pose_all.
+      cbv [add_cps add add_S1 Let_In].
+      autorewrite with uncps push_id.
+      (*apply Positional.small_sat_add.*)
+    Admitted.
+
+    Lemma small_add_S2 n a b :
+      (2 <= bound) ->
+      small a -> small b -> small (@add_S2 n a b).
+    Proof.
+      intros. pose_all.
+      cbv [add_cps add add_S2 Let_In].
+      autorewrite with uncps push_id.
+      (*apply Positional.small_sat_add.*)
     Admitted.
 
     Lemma small_left_tl n (v:T (S n)) : small v -> small (left_tl v).
@@ -1370,7 +1390,7 @@ Section API.
 
   End Proofs.
 End API.
-Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id sub_then_maybe_add_id conditional_sub_id : uncps.
+Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id add_S1_id add_S2_id sub_then_maybe_add_id conditional_sub_id : uncps.
 
 (*
 (* Just some pretty-printing *)
