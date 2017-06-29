@@ -34,8 +34,8 @@ Interp-η
  uint128_t x94, uint8_t x95 = subborrow_u128(x92, x87, 0xffffffff000000010000000000000000L);
  ℤ x96 = Op (Syntax.Opp (Syntax.TWord 3) Syntax.TZ) (Return x95);
  uint128_t _, ℤ x99 = addcarryx_u128ℤ(0x0, x96, x89);
- uint128_t x100 = x99 == 0 ? x94 : x87;
- uint128_t x101 = x99 == 0 ? x91 : x84;
+ uint128_t x100 = cmovznz(x99, x94, x87);
+ uint128_t x101 = cmovznz(x99, x91, x84);
  return (x100, x101))
 (x, x0)%core
      : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)

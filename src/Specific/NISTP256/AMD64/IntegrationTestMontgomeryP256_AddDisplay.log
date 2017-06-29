@@ -12,10 +12,10 @@ Interp-η
  uint64_t x38, uint8_t x39 = subborrow_u64(x36, x26, 0xffffffff00000001L);
  ℤ x40 = Op (Syntax.Opp (Syntax.TWord 3) Syntax.TZ) (Return x39);
  uint64_t _, ℤ x43 = addcarryx_u64ℤ(0x0, x40, x27);
- uint64_t x44 = x43 == 0 ? x38 : x26;
- uint64_t x45 = x43 == 0 ? x35 : x23;
- uint64_t x46 = x43 == 0 ? x32 : x20;
- uint64_t x47 = x43 == 0 ? x29 : x17;
+ uint64_t x44 = cmovznz(x43, x38, x26);
+ uint64_t x45 = cmovznz(x43, x35, x23);
+ uint64_t x46 = cmovznz(x43, x32, x20);
+ uint64_t x47 = cmovznz(x43, x29, x17);
  return (x44, x45, x46, x47))
 (x, x0)%core
      : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t)
