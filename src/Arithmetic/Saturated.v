@@ -735,10 +735,10 @@ Module Positional.
                        | None => op_get_carry
                        | Some x => op_with_carry x end in
             dlet carry_result := op' (hd p) (hd q) in
-              chain_op'_cps (Some (fst carry_result)) (tl p) (tl q) _
+              chain_op'_cps (Some (snd carry_result)) (tl p) (tl q) _
                             (fun carry_pq =>
                                f (fst carry_pq,
-                                  append (snd carry_result) (snd carry_pq)))
+                                  append (fst carry_result) (snd carry_pq)))
         end.
       Definition chain_op' {n} c p q := @chain_op'_cps n c p q _ id.
       Definition chain_op_cps {n} p q {T} f := @chain_op'_cps n None p q T f.
