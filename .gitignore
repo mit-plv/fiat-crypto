@@ -20,3 +20,15 @@ nra.cache
 .nlia.cache
 .nia.cache
 .nra.cache
+
+# compilation outputs
+src/Specific/NISTP256/AMD64/icc/measure
+src/Specific/NISTP256/AMD64/measure
+src/Specific/X25519/C64/femul.c
+src/Specific/X25519/C64/femul.h
+src/Specific/X25519/C64/fesquare.c
+src/Specific/X25519/C64/fesquare.h
+src/Specific/X25519/C64/ladderstep.c
+src/Specific/X25519/C64/ladderstep.h
+src/Specific/X25519/C64/measure
+third_party/openssl-nistz256/measure
