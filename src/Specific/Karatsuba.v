@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.Saturated.Core.
+Require Import Crypto.Arithmetic.Saturated.Freeze.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
