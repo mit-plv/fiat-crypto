@@ -6,6 +6,8 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
 Require Import Crypto.Arithmetic.Core. Import B.
+Require Crypto.Arithmetic.Saturated.MontgomeryAPI.
+Require Import Crypto.Arithmetic.Saturated.UniformWeight.
 Require Import Crypto.Specific.MontgomeryP256_128.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tuple Crypto.Util.Sigma Crypto.Util.Sigma.MapProjections Crypto.Util.Sigma.Lift Crypto.Util.Notations Crypto.Util.ZRange Crypto.Util.BoundedWord.
@@ -31,8 +33,8 @@ Section BoundedField25p5.
   Let feW : Type := tuple (wordT lgbitwidth) sz.
   Let feBW : Type := BoundedWord sz bitwidth bounds.
   Let eval : feBW -> Z :=
-    fun x => Saturated.eval (Z.pos r) (BoundedWordToZ _ _ _ x).
-  Let feBW_small : Type := { v : feBW | eval v < Saturated.eval (n:=sz) (Z.pos r) p256 }.
+    fun x => MontgomeryAPI.eval (Z.pos r) (BoundedWordToZ _ _ _ x).
+  Let feBW_small : Type := { v : feBW | eval v < MontgomeryAPI.eval (n:=sz) (Z.pos r) p256 }.
   Let feBW_of_feBW_small : feBW_small -> feBW := @proj1_sig _ _.
   Local Coercion feBW_of_feBW_small : feBW_small >-> feBW.
   Let phi : feBW -> F m :=
@@ -62,7 +64,7 @@ Section BoundedField25p5.
     eexists_sig_etransitivity.
     set (subZ := proj1_sig sub).
     context_to_dlet_in_rhs subZ; cbv [subZ].
-    cbv beta iota delta [sub sub' proj1_sig Saturated.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
+    cbv beta iota delta [sub sub' proj1_sig MontgomeryAPI.T lift2_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
     reflexivity.
     sig_dlet_in_rhs_to_context.
     apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).

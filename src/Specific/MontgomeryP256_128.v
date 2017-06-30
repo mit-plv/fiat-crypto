@@ -2,6 +2,8 @@ Require Import Coq.micromega.Lia.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Proofs.
 Require Import Crypto.Arithmetic.Core. Import B.
+Require Crypto.Arithmetic.Saturated.MontgomeryAPI.
+Require Import Crypto.Arithmetic.Saturated.UniformWeight.
 Require Import Crypto.Util.Sigma.Lift.
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.PArith.BinPos.
@@ -22,9 +24,9 @@ Definition r' := Eval vm_compute in Zpow_facts.Zpow_mod (Z.pos r) (Z.pos m - 2) 
 Definition r'_correct := eq_refl : ((Z.pos r * r') mod (Z.pos m) = 1)%Z.
 Definition m' : Z := Eval vm_compute in Option.invert_Some (Z.modinv_fueled 10 (-Z.pos m) (Z.pos r)).
 Definition m'_correct := eq_refl : ((Z.pos m * m') mod (Z.pos r) = (-1) mod Z.pos r)%Z.
-Definition m_p256 := eq_refl (Z.pos m) <: Z.pos m = Saturated.eval (n:=sz) (Z.pos r) p256.
+Definition m_p256 := eq_refl (Z.pos m) <: Z.pos m = MontgomeryAPI.eval (n:=sz) (Z.pos r) p256.
 
-Lemma r'_pow_correct : ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod Saturated.eval (n:=sz) (Z.pos r) p256 = 1)%Z.
+Lemma r'_pow_correct : ((r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) p256 = 1)%Z.
 Proof. vm_compute; reflexivity. Qed.
 
 Definition mulmod_256' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
@@ -44,44 +46,44 @@ Proof.
        fst snd length List.seq List.hd List.app
        redc pre_redc_cps redc_cps redc_loop_cps redc_body_cps
        Positional.to_associational_cps
-       Saturated.divmod_cps
-       Saturated.conditional_sub_cps
-       Saturated.scmul_cps
-       Saturated.uweight
-       Saturated.Columns.mul_cps
-       Saturated.Associational.mul_cps
+       MontgomeryAPI.divmod_cps
+       MontgomeryAPI.conditional_sub_cps
+       MontgomeryAPI.scmul_cps
+       uweight
+       MontgomeryAPI.Columns.mul_cps
+       MontgomeryAPI.Associational.mul_cps
        (*Z.of_nat Pos.of_succ_nat  Nat.pred
        Z.pow Z.pow_pos Z.mul Pos.iter Pos.mul Pos.succ*)
        Tuple.hd Tuple.append Tuple.tl Tuple.hd' Tuple.tl' CPSUtil.Tuple.left_tl_cps CPSUtil.Tuple.left_hd_cps CPSUtil.Tuple.hd_cps CPSUtil.Tuple.tl_cps
        CPSUtil.Tuple.map2_cps
-       Saturated.Columns.from_associational_cps
-       Saturated.Associational.multerm_cps
-       Saturated.Positional.sat_add_cps
-       Saturated.Positional.sat_sub_cps
-       Saturated.Positional.chain_op_cps
-       Saturated.Positional.chain_op'_cps
-       Saturated.Columns.compact_cps
-       Saturated.Columns.compact_step_cps
-       Saturated.Columns.compact_digit_cps
-       Saturated.drop_high_cps
-       Saturated.add_cps
-       Saturated.add_S1_cps
-       Saturated.Columns.add_cps
-       Saturated.Columns.cons_to_nth_cps
+       MontgomeryAPI.Columns.from_associational_cps
+       MontgomeryAPI.Associational.multerm_cps
+       MontgomeryAPI.Positional.sat_add_cps
+       MontgomeryAPI.Positional.sat_sub_cps
+       MontgomeryAPI.Positional.chain_op_cps
+       MontgomeryAPI.Positional.chain_op'_cps
+       MontgomeryAPI.Columns.compact_cps
+       MontgomeryAPI.Columns.compact_step_cps
+       MontgomeryAPI.Columns.compact_digit_cps
+       MontgomeryAPI.drop_high_cps
+       MontgomeryAPI.add_cps
+       MontgomeryAPI.add_S1_cps
+       MontgomeryAPI.Columns.add_cps
+       MontgomeryAPI.Columns.cons_to_nth_cps
        Nat.pred
-       Saturated.join0
-       Saturated.join0_cps CPSUtil.Tuple.left_append_cps
+       MontgomeryAPI.join0
+       MontgomeryAPI.join0_cps CPSUtil.Tuple.left_append_cps
        CPSUtil.Tuple.mapi_with_cps
        id
-       Positional.zeros Saturated.zero Saturated.Columns.nils Tuple.repeat Tuple.append
+       Positional.zeros MontgomeryAPI.zero MontgomeryAPI.Columns.nils Tuple.repeat Tuple.append
        Positional.place_cps
        CPSUtil.Tuple.mapi_with'_cps Tuple.hd Tuple.hd' Tuple.tl Tuple.tl' CPSUtil.Tuple.hd_cps CPSUtil.Tuple.tl_cps fst snd
        Z.of_nat fst snd Z.pow Z.pow_pos Pos.of_succ_nat Z.div Z.mul Pos.mul Z.modulo Z.div_eucl Z.pos_div_eucl Z.leb Z.compare Pos.compare_cont Pos.compare Z.pow_pos Pos.iter Z.mul Pos.succ Z.ltb Z.gtb Z.geb Z.div Z.sub Z.pos_sub Z.add Z.opp Z.double
        Decidable.dec Decidable.dec_eq_Z Z.eq_dec Z_rec Z_rec Z_rect
-       Positional.zeros Saturated.zero Saturated.Columns.nils Tuple.repeat Tuple.append
+       Positional.zeros MontgomeryAPI.zero MontgomeryAPI.Columns.nils Tuple.repeat Tuple.append
        (*
-       Saturated.Associational.multerm_cps
-       Saturated.Columns.from_associational_cps Positional.place_cps Saturated.Columns.cons_to_nth_cps Saturated.Columns.nils
+       MontgomeryAPI.Associational.multerm_cps
+       MontgomeryAPI.Columns.from_associational_cps Positional.place_cps MontgomeryAPI.Columns.cons_to_nth_cps MontgomeryAPI.Columns.nils
 Tuple.append
 Tuple.from_list Tuple.from_list'
 Tuple.from_list_default Tuple.from_list_default'
@@ -89,7 +91,7 @@ Tuple.hd
 Tuple.repeat
 Tuple.tl
 Tuple.tuple *)
-       (* Saturated.add_cps Saturated.divmod_cps Saturated.drop_high_cps Saturated.scmul_cps Saturated.zero Saturated.Columns.mul_cps Saturated.Columns.add_cps Saturated.uweight Saturated.T *)
+       (* MontgomeryAPI.add_cps MontgomeryAPI.divmod_cps MontgomeryAPI.drop_high_cps MontgomeryAPI.scmul_cps MontgomeryAPI.zero MontgomeryAPI.Columns.mul_cps MontgomeryAPI.Columns.add_cps uweight MontgomeryAPI.T *)
             (*
             CPSUtil.to_list_cps CPSUtil.to_list'_cps CPSUtil.to_list_cps'
 Positional.zeros
@@ -112,9 +114,9 @@ Defined.
 
 Definition mulmod_256'' : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
                         | forall (A B : Tuple.tuple Z sz),
-                            Saturated.small (Z.pos r) A -> Saturated.small (Z.pos r) B ->
-                            let eval := Saturated.eval (Z.pos r) in
-                            (Saturated.small (Z.pos r) (f A B)
+                            small (Z.pos r) A -> small (Z.pos r) B ->
+                            let eval := MontgomeryAPI.eval (Z.pos r) in
+                            (small (Z.pos r) (f A B)
                              /\ (eval B < eval p256 -> 0 <= eval (f A B) < eval p256)
                              /\ (eval (f A B) mod Z.pos m
                                  = (eval A * eval B * r'^(Z.of_nat sz)) mod Z.pos m))%Z
@@ -129,10 +131,10 @@ Proof.
           | _ => assumption
           | [ |- _ = _ :> Z ] => vm_compute; reflexivity
           | _ => reflexivity
-          | [ |- Saturated.small (Z.pos r) p256 ]
+          | [ |- small (Z.pos r) p256 ]
             => hnf; cbv [Tuple.to_list sz p256 r Tuple.to_list' List.In]; intros; destruct_head'_or;
                subst; try lia
-          | [ |- Saturated.eval (Z.pos r) p256 <> 0%Z ]
+          | [ |- MontgomeryAPI.eval (Z.pos r) p256 <> 0%Z ]
             => vm_compute; lia
           end
     ).
@@ -185,10 +187,10 @@ Defined.
 Import ModularArithmetic.
 
 (*Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                        | forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                                 (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
-                            Saturated.small (Z.pos r) (f A B)
-                            /\ (let eval := Saturated.eval (Z.pos r) in
+                        | forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                                 (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+                            small (Z.pos r) (f A B)
+                            /\ (let eval := MontgomeryAPI.eval (Z.pos r) in
                                 0 <= eval (f A B) < Z.pos r^Z.of_nat sz
                                 /\ (eval (f A B) mod Z.pos m
                                     = (eval A * eval B * r'^(Z.of_nat sz)) mod Z.pos m))%Z
@@ -200,13 +202,13 @@ Definition montgomery_to_F (v : Z) : F m
   := (F.of_Z m v * F.of_Z m (r'^Z.of_nat sz)%Z)%F.
 
 Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                        | let eval := Saturated.eval (Z.pos r) in
-                          (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                                  (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                        | let eval := MontgomeryAPI.eval (Z.pos r) in
+                          (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                                  (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
                               montgomery_to_F (eval (f A B))
                               = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F)
-                          /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                                     (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                          /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                                     (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
                                  (eval B < eval p256 -> 0 <= eval (f A B) < eval p256)%Z) }.
 Proof.
   exists (proj1_sig mulmod_256'').
@@ -230,25 +232,25 @@ Local Ltac t_fin :=
            | _ => assumption
            | [ |- _ = _ :> Z ] => vm_compute; reflexivity
            | _ => reflexivity
-           | [ |- Saturated.small (Z.pos r) p256 ]
+           | [ |- small (Z.pos r) p256 ]
              => hnf; cbv [Tuple.to_list sz p256 r Tuple.to_list' List.In]; intros; destruct_head'_or;
                 subst; try lia
-           | [ |- Saturated.eval (Z.pos r) p256 <> 0%Z ]
+           | [ |- MontgomeryAPI.eval (Z.pos r) p256 <> 0%Z ]
              => vm_compute; lia
            | [ |- and _ _ ] => split
-           | [ |- (0 <= Saturated.eval (Z.pos r) _)%Z ] => apply Saturated.eval_small
+           | [ |- (0 <= MontgomeryAPI.eval (Z.pos r) _)%Z ] => apply MontgomeryAPI.eval_small
            end.. ].
 
 Definition add : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | let eval := Saturated.eval (Z.pos r) in
-                   ((forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                            (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                 | let eval := MontgomeryAPI.eval (Z.pos r) in
+                   ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
                         (eval A < eval p256
                          -> eval B < eval p256
                          -> montgomery_to_F (eval (f A B))
                             = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F))
-                    /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                               (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                    /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                               (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
                            (eval A < eval p256
                             -> eval B < eval p256
                             -> 0 <= eval (f A B) < eval p256)))%Z }.
@@ -265,15 +267,15 @@ Proof.
 Defined.
 
 Definition sub : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | let eval := Saturated.eval (Z.pos r) in
-                   ((forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                            (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                 | let eval := MontgomeryAPI.eval (Z.pos r) in
+                   ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
                         (eval A < eval p256
                          -> eval B < eval p256
                          -> montgomery_to_F (eval (f A B))
                             = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F))
-                    /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A)
-                            (B : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) B),
+                    /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
                         (eval A < eval p256
                          -> eval B < eval p256
                          -> 0 <= eval (f A B) < eval p256)))%Z }.
@@ -290,12 +292,12 @@ Proof.
 Defined.
 
 Definition opp : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | let eval := Saturated.eval (Z.pos r) in
-                   ((forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
+                 | let eval := MontgomeryAPI.eval (Z.pos r) in
+                   ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
                         (eval A < eval p256
                          -> montgomery_to_F (eval (f A))
                             = (F.opp (montgomery_to_F (eval A)))%F))
-                    /\ (forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
+                    /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
                            (eval A < eval p256
                             -> 0 <= eval (f A) < eval p256)))%Z }.
 Proof.
@@ -311,8 +313,8 @@ Proof.
 Defined.
 
 Definition nonzero : { f:Tuple.tuple Z sz -> Z
-                     | let eval := Saturated.eval (Z.pos r) in
-                       forall (A : Tuple.tuple Z sz) (_ : Saturated.small (Z.pos r) A),
+                     | let eval := MontgomeryAPI.eval (Z.pos r) in
+                       forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
                          (eval A < eval p256
                           -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }.
 Proof.
@@ -320,14 +322,14 @@ Proof.
   abstract (
       intros eval A H **; rewrite (proj2_sig nonzero'), (@eval_nonzero r) by (eassumption || reflexivity);
       subst eval;
-      unfold montgomery_to_F, Saturated.uweight in *; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul;
+      unfold montgomery_to_F, uweight in *; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul;
       rewrite <- ModularArithmeticTheorems.F.eq_of_Z_iff, m_p256;
       let H := fresh in
       split; intro H;
       [ rewrite H; autorewrite with zsimplify_const; reflexivity
-      | cut ((Saturated.eval (Z.pos r) A * (r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz)) mod Saturated.eval (n:=sz) (Z.pos r) p256 = 0)%Z;
+      | cut ((MontgomeryAPI.eval (Z.pos r) A * (r' ^ Z.of_nat sz * Z.pos r ^ Z.of_nat sz)) mod MontgomeryAPI.eval (n:=sz) (Z.pos r) p256 = 0)%Z;
         [ rewrite Z.mul_mod, r'_pow_correct; autorewrite with zsimplify_const; pull_Zmod; [ | vm_compute; congruence ];
-          rewrite Z.mod_small; [ trivial | split; try assumption; apply Saturated.eval_small; try assumption; lia ]
+          rewrite Z.mod_small; [ trivial | split; try assumption; apply MontgomeryAPI.eval_small; try assumption; lia ]
         | rewrite Z.mul_assoc, Z.mul_mod, H by (vm_compute; congruence); autorewrite with zsimplify_const; reflexivity ] ]
     ).
 Defined.
