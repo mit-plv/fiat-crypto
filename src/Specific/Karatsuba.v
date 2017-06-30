@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
+Require Import Crypto.Arithmetic.Saturated.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
@@ -290,8 +291,6 @@ Ltac basesystem_partial_evaluation_RHS :=
              ))))) in
     solve_op_F wt x. reflexivity.
   Defined.
-
-  Require Import Crypto.Arithmetic.Saturated.
 
   Section PreFreeze.
     Lemma wt_pos i : wt i > 0.

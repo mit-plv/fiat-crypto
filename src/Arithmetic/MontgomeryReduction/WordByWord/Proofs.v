@@ -1,7 +1,8 @@
 (*** Word-By-Word Montgomery Multiplication Proofs *)
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.micromega.Lia.
-Require Import Crypto.Arithmetic.Saturated.
+Require Import Crypto.Arithmetic.Saturated.UniformWeight.
+Require Import Crypto.Arithmetic.Saturated.MontgomeryAPI.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Proofs.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
@@ -16,8 +17,8 @@ Section WordByWordMontgomery.
           (R_numlimbs : nat).
   Local Notation small := (@small (Z.pos r)).
   Local Notation eval := (@eval (Z.pos r)).
-  Local Notation addT' := (@Saturated.add_S1 (Z.pos r)).
-  Local Notation addT := (@Saturated.add (Z.pos r)).
+  Local Notation addT' := (@MontgomeryAPI.add_S1 (Z.pos r)).
+  Local Notation addT := (@MontgomeryAPI.add (Z.pos r)).
   Local Notation scmul := (@scmul (Z.pos r)).
   Local Notation eval_zero := (@eval_zero (Z.pos r)).
   Local Notation small_zero := (@small_zero r (Zorder.Zgt_pos_0 _)).
@@ -61,11 +62,11 @@ Section WordByWordMontgomery.
   Qed.
   Local Lemma small_addT : forall n a b, small a -> small b -> small (@addT n a b).
   Proof.
-    intros; apply Saturated.small_add; auto; lia.
+    intros; apply MontgomeryAPI.small_add; auto; lia.
   Qed.
   Local Lemma small_addT' : forall n a b, small a -> small b -> small (@addT' n a b).
   Proof.
-    intros; apply Saturated.small_add_S1; auto; lia.
+    intros; apply MontgomeryAPI.small_add_S1; auto; lia.
   Qed.
 
   Local Notation conditional_sub_cps := (fun V : T (S R_numlimbs) => @conditional_sub_cps (Z.pos r) _ V N _).

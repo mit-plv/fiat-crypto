@@ -18,7 +18,13 @@ src/Arithmetic/Karatsuba.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
 src/Arithmetic/PrimeFieldTheorems.v
-src/Arithmetic/Saturated.v
+src/Arithmetic/Saturated/AddSub.v
+src/Arithmetic/Saturated/Core.v
+src/Arithmetic/Saturated/Freeze.v
+src/Arithmetic/Saturated/MontgomeryAPI.v
+src/Arithmetic/Saturated/MulSplit.v
+src/Arithmetic/Saturated/UniformWeight.v
+src/Arithmetic/Saturated/Wrappers.v
 src/Arithmetic/BarrettReduction/Generalized.v
 src/Arithmetic/BarrettReduction/HAC.v
 src/Arithmetic/BarrettReduction/Wikipedia.v

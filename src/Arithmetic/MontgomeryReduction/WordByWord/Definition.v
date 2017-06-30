@@ -5,7 +5,7 @@
     of the algorithm; note that it may be that none of the algorithms
     there exactly match what we're doing here. *)
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Arithmetic.Saturated.
+Require Import Crypto.Arithmetic.Saturated.MontgomeryAPI.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Definition.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.
@@ -22,8 +22,8 @@ Section WordByWordMontgomery.
     (N : T R_numlimbs).
 
   Local Notation scmul := (@scmul (Z.pos r)).
-  Local Notation addT' := (@Saturated.add_S1 (Z.pos r)).
-  Local Notation addT := (@Saturated.add (Z.pos r)).
+  Local Notation addT' := (@MontgomeryAPI.add_S1 (Z.pos r)).
+  Local Notation addT := (@MontgomeryAPI.add (Z.pos r)).
   Local Notation conditional_sub_cps := (fun V => @conditional_sub_cps (Z.pos r) _ V N _).
   Local Notation conditional_sub := (fun V => @conditional_sub (Z.pos r) _ V N).
   Local Notation sub_then_maybe_add_cps :=
