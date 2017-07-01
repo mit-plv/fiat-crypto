@@ -156,6 +156,12 @@ src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $
 src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/freq.sh
 	./capture.sh src/Specific/X25519/C64
 
+third_party/openssl-curve25519/measure:  third_party/openssl-curve25519/compiler.sh third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
+	third_party/openssl-curve25519/compiler.sh -o third_party/openssl-curve25519/measure measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c -I third_party/openssl-curve25519 -D TIMINGS=2047 -D UUT=crypto_scalarmult_bench
+
+third_party/openssl-curve25519/measurements.txt: third_party/openssl-curve25519/measure
+	./capture.sh third_party/openssl-curve25519
+
 third_party/openssl-nistz256/measure:  third_party/openssl-nistz256/compiler.sh third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s third_party/openssl-nistz256/nistz256.h
 	third_party/openssl-nistz256/compiler.sh -o third_party/openssl-nistz256/measure measure.c third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s src/Specific/X25519/C64/scalarmult.c -I third_party/openssl-nistz256 -D TIMINGS=2047 -D UUT=bench_madd
 
