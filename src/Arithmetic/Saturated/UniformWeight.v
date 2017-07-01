@@ -65,6 +65,26 @@ Section UniformWeight.
     ring.
   Qed.
 
+  Lemma uweight_le_mono n m : (n <= m)%nat ->
+    uweight n <= uweight m.
+  Proof.
+    unfold uweight; intro; Z.peel_le; omega.
+  Qed.
+
+  Lemma uweight_lt_mono (bound_gt_1 : bound > 1) n m : (n < m)%nat ->
+    uweight n < uweight m.
+  Proof.
+    clear bound_pos.
+    unfold uweight; intro; apply Z.pow_lt_mono_r; omega.
+  Qed.
+
+  Lemma uweight_succ n : uweight (S n) = bound * uweight n.
+  Proof.
+    unfold uweight.
+    rewrite Nat2Z.inj_succ, Z.pow_succ_r by auto using Nat2Z.is_nonneg; reflexivity.
+  Qed.
+
+
   Definition small {n} (p : Z^n) : Prop :=
     forall x, In x (to_list _ p) -> 0 <= x < bound.
 

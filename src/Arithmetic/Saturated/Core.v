@@ -246,6 +246,7 @@ Module Columns.
     Lemma compact_mod_step a b c d: 0 < a -> 0 < b ->
       a * ((c / a + d) mod b) + c mod a = (a * d + c) mod (a * b).
     Proof.
+      clear.
       intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; omega).
       pose proof (Z.mod_pos_bound c a Ha).
       pose proof (Z.mod_pos_bound (c/a+d) b Hb).
@@ -262,7 +263,7 @@ Module Columns.
     Lemma compact_div_step a b c d : 0 < a -> 0 < b ->
       (c / a + d) / b = (a * d + c) / (a * b).
     Proof.
-      intros Ha Hb.
+      clear. intros Ha Hb.
       rewrite <-Z.div_div by omega.
       rewrite Z.div_add_l' by omega.
       f_equal; ring.

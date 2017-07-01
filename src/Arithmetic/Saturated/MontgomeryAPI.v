@@ -291,25 +291,6 @@ Section API.
     Admitted.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 using (omega || assumption): push_basesystem_eval.
 
-    Lemma uweight_le_mono n m : (n <= m)%nat ->
-      uweight bound n <= uweight bound m.
-    Proof.
-      unfold uweight; intro; Z.peel_le; omega.
-    Qed.
-
-    Lemma uweight_lt_mono (bound_gt_1 : bound > 1) n m : (n < m)%nat ->
-      uweight bound n < uweight bound m.
-    Proof.
-      clear bound_pos.
-      unfold uweight; intro; apply Z.pow_lt_mono_r; omega.
-    Qed.
-
-    Lemma uweight_succ n : uweight bound (S n) = bound * uweight bound n.
-    Proof.
-      unfold uweight.
-      rewrite Nat2Z.inj_succ, Z.pow_succ_r by auto using Nat2Z.is_nonneg; reflexivity.
-    Qed.
-
     Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
     Local Definition compact_digit := Columns.compact_digit (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
     Lemma small_compact {n} (p:(list Z)^n) : small (snd (compact p)).
@@ -455,7 +436,7 @@ Section API.
    Proof.
      cbv [sub_then_maybe_add_cps sub_then_maybe_add]; intros.
      repeat progress autounfold. autorewrite with uncps push_id.
-     apply small_drop_high, B.Positional.small_sat_sub.
+     apply small_drop_high, @B.Positional.small_sat_sub; omega.
    Qed.
 
    (* TODO : remove if unneeded when all admits are proven

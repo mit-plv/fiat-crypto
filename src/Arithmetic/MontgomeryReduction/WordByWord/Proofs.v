@@ -226,7 +226,7 @@ Section WordByWordMontgomery.
     Local Notation eval_sub_then_maybe_add :=
       (fun p q smp smq => @eval_sub_then_maybe_add (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) p q N smp smq small_N N_mask).
     Local Notation small_sub_then_maybe_add :=
-      (fun p q => @small_sub_then_maybe_add (Z.pos r) (*(Zorder.Zgt_pos_0 _)*) _ (Z.pos r - 1) p q N).
+      (fun p q => @small_sub_then_maybe_add (Z.pos r) (Zorder.Zgt_pos_0 _) _ (Z.pos r - 1) p q N).
 
     Definition add_no_cps_bound : 0 <= eval add_no_cps < eval N
       := @add_bound T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
