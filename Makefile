@@ -186,7 +186,7 @@ src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/compiler.sh
 src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/icc/measure
 	./capture.sh src/Specific/NISTP256/AMD64/icc
 
-bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-nistz256/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt
+bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?
 
 clean::
