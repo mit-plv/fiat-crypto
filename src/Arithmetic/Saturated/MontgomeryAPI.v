@@ -349,10 +349,15 @@ Section API.
       (2 <= bound) ->
       small a -> small b -> small (@add n a b).
     Proof.
-      intros. pose_all.
-      cbv [add_cps add Let_In].
-      autorewrite with uncps push_id.
-      (*apply Positional.small_sat_add.*)
+      intros.
+      cbv [add add_cps small]; autorewrite with uncps push_id in *.
+      pose proof @B.Positional.small_sat_add bound ltac:(omega) _ a b.
+      setoid_rewrite Tuple.to_list_left_append.
+      setoid_rewrite in_app_iff.
+      intros x HIn; destruct HIn as [HIn|[]]; (contradiction||omega||eauto); [].
+      subst x.
+      rewrite @B.Positional.sat_add_div by omega.
+      repeat match goal with H:_|-_=> unique pose proof (eval_small _ _ H) end.
     Admitted.
 
     Lemma small_add_S1 n a b :
@@ -600,8 +605,11 @@ Section API.
     Qed.
 
     Lemma small_div n v : small v -> small (fst (@divmod n v)).
-    Admitted.
-
+    Proof.
+      cbv [divmod divmod_cps]. intros.
+      autorewrite with uncps push_id cancel_pair.
+      auto using small_tl.
+    Qed.
   End Proofs.
 End API.
 Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id add_S1_id add_S2_id sub_then_maybe_add_id conditional_sub_id : uncps.
