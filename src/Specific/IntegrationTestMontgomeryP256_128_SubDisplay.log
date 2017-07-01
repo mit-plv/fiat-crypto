@@ -6,9 +6,9 @@ Interp-η
  uint128_t x12, uint8_t x13 = subborrow_u128(x10, x4, x6);
  uint128_t x14 = (uint128_t) (x13 == 0 ? 0x0 : 0xffffffffffffffffffffffffffffffffL);
  uint128_t x15 = x14 & 0xffffffffffffffffffffffffL;
- uint128_t x17, uint8_t x18 = subborrow_u128(0x0, x9, x15);
+ uint128_t x17, uint8_t x18 = addcarryx_u128(0x0, x9, x15);
  uint128_t x19 = x14 & 0xffffffff000000010000000000000000L;
- uint128_t x21, uint8_t _ = subborrow_u128(x18, x12, x19);
+ uint128_t x21, uint8_t _ = addcarryx_u128(x18, x12, x19);
  (Return x21, Return x17))
 (x, x0)%core
      : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)
