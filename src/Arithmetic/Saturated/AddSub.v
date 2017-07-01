@@ -60,10 +60,15 @@ Module B.
 
       Section AddSub.
         Create HintDb divmod discriminated.
-        Hint Rewrite Z.add_get_carry_full_mod
+        Hint Rewrite
+             Z.add_get_carry_full_mod
              Z.add_get_carry_full_div
              Z.add_with_get_carry_full_mod
              Z.add_with_get_carry_full_div
+             Z.sub_get_borrow_full_mod
+             Z.sub_get_borrow_full_div
+             Z.sub_with_get_borrow_full_mod
+             Z.sub_with_get_borrow_full_div
           : divmod.
         Let eval {n} := B.Positional.eval (n:=n) (uweight s).
 
@@ -112,15 +117,17 @@ Module B.
                  | _ => progress autorewrite with uncps divmod push_id cancel_pair push_basesystem_eval
                  | _ => rewrite uweight_0, ?Z.mod_1_r, ?Z.div_1_r
                  | _ => rewrite uweight_succ
+                 | _ => rewrite Z.sub_opp_r 
+                 | _ => rewrite sat_add_mod_step 
+                 | _ => rewrite sat_add_div_step 
                  | p : Z ^ 0 |- _ => destruct p
                  | _ => rewrite uweight_eval_step, ?hd_append, ?tl_append
                  | |- context[B.Positional.eval _ (snd (chain_op' ?c ?p ?q))]
                    => specialize (IHn p q c); autorewrite with push_id uncps in IHn;
                    rewrite (proj1 IHn); rewrite (proj2 IHn)
-                 | _ => tauto
-                 end;
-            (split; [rewrite sat_add_mod_step | rewrite sat_add_div_step];
-              f_equal; ring_simplify; omega).
+                 | _ => split; ring
+                 | _ => solve [split; repeat (f_equal; ring_simplify; try omega)]
+                 end.
         Qed.
 
         Lemma sat_add_mod n p q :
@@ -143,14 +150,42 @@ Module B.
         Lemma sat_sub_id n p q T f :
           @sat_sub_cps n p q T f = f (sat_sub p q).
         Proof. cbv [sat_sub sat_sub_cps]. rewrite !chain_op_id. reflexivity. Qed.
-
+        Lemma sat_sub_divmod n p q :
+          eval (snd (@sat_sub n p q)) = (eval p - eval q) mod (uweight s n)
+          /\ fst (@sat_sub n p q) = - ((eval p - eval q) / (uweight s n)).
+        Proof.
+          cbv [sat_sub sat_sub_cps chain_op_cps].
+          remember None as c.
+          replace (eval p - eval q) with
+          (eval p - eval q - match c with | None => 0 | Some x => x end)
+            by (subst; ring).
+          destruct Heqc. revert c.
+          induction n; [|destruct c]; intros; simpl chain_op'_cps;
+          repeat match goal with
+                 | _ => progress cbv [eval Let_In] in *
+                 | _ => progress autorewrite with uncps divmod push_id cancel_pair push_basesystem_eval
+                 | _ => rewrite uweight_0, ?Z.mod_1_r, ?Z.div_1_r
+                 | _ => rewrite uweight_succ
+                 | _ => rewrite Z.sub_opp_r 
+                 | _ => rewrite sat_add_mod_step 
+                 | _ => rewrite sat_add_div_step 
+                 | p : Z ^ 0 |- _ => destruct p
+                 | _ => rewrite uweight_eval_step, ?hd_append, ?tl_append
+                 | |- context[B.Positional.eval _ (snd (chain_op' ?c ?p ?q))]
+                   => specialize (IHn p q c); autorewrite with push_id uncps in IHn;
+                   rewrite (proj1 IHn); rewrite (proj2 IHn)
+                 | _ => split; ring
+                 | _ => solve [split; repeat (f_equal; ring_simplify; try omega)]
+                 end.
+        Qed.
+        
         Lemma sat_sub_mod n p q :
           eval (snd (@sat_sub n p q)) = (eval p - eval q) mod (uweight s n).
-        Admitted.
+        Proof. exact (proj1 (sat_sub_divmod n p q)). Qed.
 
         Lemma sat_sub_div n p q :
           fst (@sat_sub n p q) = - ((eval p - eval q) / uweight s n).
-        Admitted.
+        Proof. exact (proj2 (sat_sub_divmod n p q)). Qed.
 
         Lemma small_sat_sub n p q : small (snd (@sat_sub n p q)).
         Admitted.
