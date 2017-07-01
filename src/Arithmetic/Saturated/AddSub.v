@@ -139,7 +139,26 @@ Module B.
         Proof. exact (proj2 (sat_add_divmod n p q)). Qed.
 
         Lemma small_sat_add n p q : small (snd (@sat_add n p q)).
-        Admitted.
+        Proof.
+          cbv [small UniformWeight.small sat_add sat_add_cps chain_op_cps].
+          remember None as c. destruct Heqc. revert c.
+          induction n; intros;
+            repeat match goal with
+                   | p: Z^0 |- _ => destruct p
+                   | _ => progress (cbv [Let_In] in * )
+                   | _ => progress (simpl chain_op'_cps in * )
+                   | _ => progress autorewrite with uncps push_id cancel_pair in H
+                   | H : _ |- _ => rewrite to_list_append in H;
+                                     simpl In in H 
+                   | H : _ \/ _ |- _ => destruct H 
+                   | _ => contradiction
+                   end.
+            { subst x.
+              destruct c; rewrite ?Z.add_with_get_carry_full_mod,
+                          ?Z.add_get_carry_full_mod;
+              apply Z.mod_pos_bound; omega. }
+            {  apply IHn in H. assumption. }
+       Qed.
 
         Definition sat_sub_cps {n} p q T (f:Z*Z^n->T) :=
           chain_op_cps (op_get_carry := Z.sub_get_borrow_full s)
