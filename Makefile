@@ -168,6 +168,12 @@ third_party/openssl-nistz256/measure:  third_party/openssl-nistz256/compiler.sh 
 third_party/openssl-nistz256/measurements.txt: third_party/openssl-nistz256/measure
 	./capture.sh third_party/openssl-nistz256
 
+third_party/openssl-nistp256c64/measure:  third_party/openssl-nistp256c64/compiler.sh third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h
+	third_party/openssl-nistp256c64/compiler.sh -o third_party/openssl-nistp256c64/measure measure.c third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h -I third_party/openssl-nistp256c64 -D TIMINGS=2047 -D UUT=bench_madd
+
+third_party/openssl-nistp256c64/measurements.txt: third_party/openssl-nistp256c64/measure
+	./capture.sh third_party/openssl-nistp256c64
+
 src/Specific/NISTP256/AMD64/measure: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/bench_madd.c
 	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/bench_madd.c -I src/Specific/NISTP256/AMD64 measure.c -D TIMINGS=2047 -D UUT=bench_madd
 
