@@ -78,7 +78,7 @@ Section API.
          B.Positional.select_cps mask (fst carry_result) r
       (fun selected => join0_cps selected
       (fun selected' =>
-         B.Positional.sat_add_cps (s:=bound) (left_append (- fst carry_result) (snd carry_result)) selected' _
+         B.Positional.sat_add_cps (s:=bound) (left_append (- (fst carry_result))%RT (snd carry_result)) selected' _
       (* We can now safely discard the carry and the highest digit.
          This relies on the precondition that p - q + r < bound^n. *)
       (fun carry_result' => drop_high_cps (snd carry_result') f)))).
@@ -424,7 +424,7 @@ Section API.
       pose proof (@uweight_le_mono _ bound_pos n (S n) (Nat.le_succ_diag_r _)).
       intros.
       repeat match goal with
-             | _ => progress (intros; cbv [eval sub_then_maybe_add sub_then_maybe_add_cps] in * )
+             | _ => progress (intros; cbv [eval runtime_opp sub_then_maybe_add sub_then_maybe_add_cps] in * )
              | _ => progress autorewrite with uncps push_id push_basesystem_eval
              | _ => rewrite eval_drop_high by (apply @B.Positional.small_sat_add; omega)
              | _ => rewrite B.Positional.sat_sub_mod by omega
