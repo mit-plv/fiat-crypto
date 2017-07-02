@@ -4,7 +4,7 @@ Interp-η
  λ '(x1, x2)%core,
  uint128_t x4, uint8_t x5 = subborrow_u128(0x0, 0x0, x2);
  uint128_t x7, uint8_t x8 = subborrow_u128(x5, 0x0, x1);
- uint128_t x9 = (uint128_t) (x8 == 0 ? 0x0 : 0xffffffffffffffffffffffffffffffffL);
+ uint128_t x9 = (uint128_t)cmovznz(x8, 0x0, 0xffffffffffffffffffffffffffffffffL);
  uint128_t x10 = x9 & 0xffffffffffffffffffffffffL;
  uint128_t x12, uint8_t x13 = addcarryx_u128(0x0, x4, x10);
  uint128_t x14 = x9 & 0xffffffff000000010000000000000000L;

@@ -63,6 +63,8 @@ Reserved Notation "'mulx_u32ℤ' ( a , b )" (format "'mulx_u32ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u64ℤ' ( a , b )" (format "'mulx_u64ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u128ℤ' ( a , b )" (format "'mulx_u128ℤ' ( a ,  b )").
 
+Reserved Notation "'cmovznz' ( v , a , b )" (format "'cmovznz' ( v ,  a ,  b )").
+Reserved Notation "'cmovznzℤ' ( v , a , b )" (format "'cmovznzℤ' ( v ,  a ,  b )").
 (* python:
 <<
 #!/usr/bin/env python
@@ -134,6 +136,8 @@ Reserved Notation "'mulx_u32ℤ' ( a , b )" (format "'mulx_u32ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u64ℤ' ( a , b )" (format "'mulx_u64ℤ' ( a ,  b )").
 Reserved Notation "'mulx_u128ℤ' ( a , b )" (format "'mulx_u128ℤ' ( a ,  b )").
 
+Reserved Notation "'cmovznz' ( v , a , b )" (format "'cmovznz' ( v ,  a ,  b )").
+Reserved Notation "'cmovznzℤ' ( v , a , b )" (format "'cmovznzℤ' ( v ,  a ,  b )").
 (""" + r"""* python:
 <<""")
 
@@ -263,8 +267,8 @@ for v0 in (False, True):
             tes = ('v' if not v0 else '(Var v)')
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
-            print('Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair %s %s) %s)).' % (tes, lhs, rhs))
-            print('Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair %s %s) %s)).' % (tes, lhs, rhs))
+            print('Notation "\'cmovznz\' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair %s %s) %s)).' % (tes, lhs, rhs))
+            print('Notation "\'cmovznzℤ\' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair %s %s) %s)).' % (tes, lhs, rhs))
 for lgwordsz in range(0, len(types)):
     for v0 in (False, True):
         for v1 in (False, True):
@@ -272,8 +276,8 @@ for lgwordsz in range(0, len(types)):
                 tes = ('v' if not v0 else '(Var v)')
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "\'(%s)\' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord %d)) (Pair (Pair %s %s) %s)) (at level 40, x at level 10, y at level 10).' % (types[lgwordsz], lgwordsz, tes, lhs, rhs))
-                print('Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord %d) (TWord %d) (TWord %d)) (Pair (Pair %s %s) %s)).' % (lgwordsz, lgwordsz, lgwordsz, tes, lhs, rhs))
+                print('Notation "\'(%s)\' \'cmovznz\' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord %d)) (Pair (Pair %s %s) %s)) (format "\'(%s)\' \'cmovznz\' ( v ,  x ,  y )").' % (types[lgwordsz], lgwordsz, tes, lhs, rhs, types[lgwordsz]))
+                print('Notation "\'cmovznz\' ( v , x , y )" := (Op (Zselect _ (TWord %d) (TWord %d) (TWord %d)) (Pair (Pair %s %s) %s)).' % (lgwordsz, lgwordsz, lgwordsz, tes, lhs, rhs))
 for opn, op in (('addcarryx', 'AddWithGetCarry'), ('subborrow', 'SubWithGetBorrow')):
     for wordsz in (32, 64, 128, 51):
         lgwordsz = log2_up(wordsz)
@@ -1690,166 +1694,166 @@ Notation "'(uint256_t)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 8)) (
 Notation "x >> y" := (Op (Shr (TWord 8) (TWord _) (TWord 8)) (Pair (Var x) y)).
 Notation "'(uint256_t)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 8)) (Pair (Var x) (Var y))) (at level 30).
 Notation "x >> y" := (Op (Shr (TWord 8) (TWord _) (TWord 8)) (Pair (Var x) (Var y))).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v x) y)).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v x) y)).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v x) (Var y))).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v x) (Var y))).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v (Var x)) y)).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v (Var x)) y)).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair v (Var x)) (Var y))).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair v (Var x)) (Var y))).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) x) y)).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) x) y)).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) x) (Var y))).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) x) (Var y))).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) (Var x)) y)).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) (Var x)) y)).
-Notation "v == 0 ? x : y" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "v == 0 ?ℤ x : y" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v x) y)).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v x) (Var y))).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v (Var x)) y)).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) x) y)).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(bool)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v x) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v x) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v x) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v x) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v x) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v x) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint8_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v x) y)).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v x) (Var y))).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint16_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v x) y)).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v x) (Var y))).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint32_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v x) y)).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v x) (Var y))).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint64_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v x) y)).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v x) (Var y))).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint128_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) (Var x)) (Var y))).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v x) y)).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v x) (Var y))).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v (Var x)) y)).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v (Var x)) (Var y))).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) x) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) x) y)).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) x) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) x) (Var y))).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) (Var x)) y)) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) (Var x)) y)).
-Notation "'(uint256_t)' ( v == 0 ? x : y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) (Var x)) (Var y))) (at level 40, x at level 10, y at level 10).
-Notation "v == 0 ? x : y" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair v x) y)).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair v x) y)).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair v x) (Var y))).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair v x) (Var y))).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair v (Var x)) y)).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair v (Var x)) y)).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair v (Var x)) (Var y))).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair v (Var x)) (Var y))).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) x) y)).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) x) y)).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) x) (Var y))).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) x) (Var y))).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ _ _ _) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'cmovznzℤ' ( v , x , y )" := (Op (Zselect _ _ _ TZ) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v x) y)).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v x) (Var y))).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v (Var x)) y)).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) x) y)).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(bool)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 0)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 0) (TWord 0) (TWord 0)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v x) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v x) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v x) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 1)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 1) (TWord 1) (TWord 1)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v x) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v x) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v x) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 2)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 2) (TWord 2) (TWord 2)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v x) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v x) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v x) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint8_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 3)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 3) (TWord 3) (TWord 3)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v x) y)) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v x) y)).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v x) (Var y))) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v x) (Var y))).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v (Var x)) y)) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) x) y)) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint16_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 4)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint16_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 4) (TWord 4) (TWord 4)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v x) y)) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v x) y)).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v x) (Var y))) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v x) (Var y))).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v (Var x)) y)) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) x) y)) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint32_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 5)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint32_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 5) (TWord 5) (TWord 5)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v x) y)) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v x) y)).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v x) (Var y))) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v x) (Var y))).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v (Var x)) y)) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) x) y)) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint64_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 6)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint64_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 6) (TWord 6) (TWord 6)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v x) y)) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v x) y)).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v x) (Var y))) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v x) (Var y))).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v (Var x)) y)) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) x) y)) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint128_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 7)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint128_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 7) (TWord 7) (TWord 7)) (Pair (Pair (Var v) (Var x)) (Var y))).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v x) y)) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v x) y)).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v x) (Var y))) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v x) (Var y))).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v (Var x)) y)) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v (Var x)) y)).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair v (Var x)) (Var y))).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) x) y)) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) x) y)).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) x) (Var y))).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) (Var x)) y)).
+Notation "'(uint256_t)' 'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord _) (TWord _) (TWord 8)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint256_t)' 'cmovznz' ( v ,  x ,  y )").
+Notation "'cmovznz' ( v , x , y )" := (Op (Zselect _ (TWord 8) (TWord 8) (TWord 8)) (Pair (Pair (Var v) (Var x)) (Var y))).
 Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)).
 Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)).
 Notation "'addcarryx_u32' ( c , a , b )" := (Op (AddWithGetCarry 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)).
