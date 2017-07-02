@@ -345,30 +345,43 @@ Section API.
         apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
     Qed.
 
+    Lemma small_left_append {n} b x :
+      0 <= x < bound -> small b -> small (@left_append _ n x b).
+    Proof.
+      intros.
+      cbv [small].
+      setoid_rewrite Tuple.to_list_left_append.
+      setoid_rewrite in_app_iff.
+      intros y HIn; destruct HIn as [HIn|[]]; (contradiction||omega||eauto).
+    Qed.
+
     Lemma small_add n a b :
       (2 <= bound) ->
       small a -> small b -> small (@add n a b).
     Proof.
       intros.
-      cbv [add add_cps small]; autorewrite with uncps push_id in *.
+      cbv [add add_cps]; autorewrite with uncps push_id in *.
       pose proof @B.Positional.small_sat_add bound ltac:(omega) _ a b.
-      setoid_rewrite Tuple.to_list_left_append.
-      setoid_rewrite in_app_iff.
-      intros x HIn; destruct HIn as [HIn|[]]; (contradiction||omega||eauto); [].
-      subst x.
+      eapply small_left_append; eauto.
       rewrite @B.Positional.sat_add_div by omega.
       repeat match goal with H:_|-_=> unique pose proof (eval_small _ _ H) end.
       cbv [eval] in *; Z.div_mod_to_quot_rem; nia.
+    Qed.
+
+    Lemma small_join0 {n} b : small b -> small (@join0 n b).
+    Proof.
+      cbv [join0 join0_cps]; autorewrite with uncps push_id in *.
+      eapply small_left_append; omega.
     Qed.
 
     Lemma small_add_S1 n a b :
       (2 <= bound) ->
       small a -> small b -> small (@add_S1 n a b).
     Proof.
-      intros. pose_all.
-      cbv [add_cps add add_S1 Let_In].
-      (*apply Positional.small_sat_add.*)
-    Admitted.
+      intros.
+      cbv [add_S1 add_S1_cps Let_In]; autorewrite with uncps push_id in *.
+      eauto using small_add, small_join0.
+    Qed.
 
     Lemma small_add_S2 n a b :
       (2 <= bound) ->
@@ -556,7 +569,13 @@ Section API.
            (psmall : small p) (qsmall : small q) :
       0 <= eval p < eval q + uweight bound n ->
       small (conditional_sub p q).
-    Admitted.
+    Proof.
+      intros.
+      cbv [conditional_sub conditional_sub_cps]; autorewrite with uncps push_id.
+      eapply small_drop_high.
+      rewrite map2_zselect; break_match; [|assumption].
+      eauto using @B.Positional.small_sat_sub with omega.
+    Qed.
 
     Lemma eval_scmul n a v : small v -> 0 <= a < bound ->
       eval (@scmul n a v) = a * eval v.
