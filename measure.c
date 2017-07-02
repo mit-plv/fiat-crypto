@@ -85,24 +85,28 @@ void limits()
 
 void UUT(unsigned char*);
 
-void measure(void)
+void measure(int n)
 {
   unsigned char *buf = aligned_alloc(64, 1024);
-  static long long cycles[TIMINGS + 1];
+  long long* cycles = calloc(n + 1, sizeof(long long));
 
-  for (int i = 0;i <= TIMINGS;++i) {
+  for (int i = 0;i <= n;++i) {
 	  cycles[i] = cpucycles();
 	  UUT(buf);
   }
-  for (int i = 0;i < TIMINGS;++i) cycles[i] = cycles[i + 1] - cycles[i];
-  for (int i = 0;i < TIMINGS;++i) printf("%lld\n", cycles[i]);
+  for (int i = 0;i < n;++i) cycles[i] = cycles[i + 1] - cycles[i];
+  for (int i = 0;i < n;++i) printf("%lld\n", cycles[i]);
 
     __asm__ __volatile__("" :: "m" (buf)); // do not optimize buf away
+  free(cycles);
 }
 
-int main()
+int main(int argc, char** argv)
 {
+  int n = 0;
+  if (argc != 2) return 111;
+  sscanf(argv[1], "%d", &n);
   limits();
-  measure();
+  measure(n);
   return 0;
 }

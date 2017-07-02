@@ -1,2 +1,2 @@
 1140	ashryn-noht-notb-noac-broadwell	2.60ghz	7.1.1	cac291e0
-1144	ashryn-noht-notb-ac-broadwell	2.60ghz	7.1.1	5397ade1
+1160	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	448af3b4

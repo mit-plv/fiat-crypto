@@ -4,7 +4,7 @@ set -eu
 machine=$(etc/machine.sh)
 freq=$(etc/freq.sh)
 compiler=$($1/compiler.sh -dumpversion)
-measurement=$($1/measure | (LC_ALL=C sort -n || true) | head -1024 | tail -1)
+measurement=$($1/measure $2 | (LC_ALL=C sort -n || true) | head "-$(($2/2))" | tail -1)
 revision=$(git rev-parse --short HEAD)
 
 (

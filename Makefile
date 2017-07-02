@@ -151,40 +151,40 @@ $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compile
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 
 src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D TIMINGS=2047 -D UUT=crypto_scalarmult_bench
+	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I liblow -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D UUT=crypto_scalarmult_bench
 
 src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/freq.sh
-	./capture.sh src/Specific/X25519/C64
+	./capture.sh src/Specific/X25519/C64 2047
 
 third_party/openssl-curve25519/measure:  third_party/openssl-curve25519/compiler.sh third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
-	third_party/openssl-curve25519/compiler.sh -o third_party/openssl-curve25519/measure measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c -I third_party/openssl-curve25519 -D TIMINGS=2047 -D UUT=crypto_scalarmult_bench
+	third_party/openssl-curve25519/compiler.sh -o third_party/openssl-curve25519/measure measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c -I liblow -I third_party/openssl-curve25519 -D UUT=crypto_scalarmult_bench
 
 third_party/openssl-curve25519/measurements.txt: third_party/openssl-curve25519/measure
-	./capture.sh third_party/openssl-curve25519
+	./capture.sh third_party/openssl-curve25519 2047
 
 third_party/openssl-nistz256/measure:  third_party/openssl-nistz256/compiler.sh third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s third_party/openssl-nistz256/nistz256.h
-	third_party/openssl-nistz256/compiler.sh -o third_party/openssl-nistz256/measure measure.c third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s src/Specific/X25519/C64/scalarmult.c -I third_party/openssl-nistz256 -D TIMINGS=2047 -D UUT=bench_madd
+	third_party/openssl-nistz256/compiler.sh -o third_party/openssl-nistz256/measure measure.c third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s src/Specific/X25519/C64/scalarmult.c -I liblow -I third_party/openssl-nistz256 -D UUT=bench_madd
 
 third_party/openssl-nistz256/measurements.txt: third_party/openssl-nistz256/measure
-	./capture.sh third_party/openssl-nistz256
+	./capture.sh third_party/openssl-nistz256 65535
 
 third_party/openssl-nistp256c64/measure:  third_party/openssl-nistp256c64/compiler.sh third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h
-	third_party/openssl-nistp256c64/compiler.sh -o third_party/openssl-nistp256c64/measure measure.c third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h -I third_party/openssl-nistp256c64 -D TIMINGS=2047 -D UUT=bench_madd
+	third_party/openssl-nistp256c64/compiler.sh -o third_party/openssl-nistp256c64/measure measure.c third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h -I liblow -I third_party/openssl-nistp256c64 -D UUT=bench_madd
 
 third_party/openssl-nistp256c64/measurements.txt: third_party/openssl-nistp256c64/measure
-	./capture.sh third_party/openssl-nistp256c64
+	./capture.sh third_party/openssl-nistp256c64 65535
 
-src/Specific/NISTP256/AMD64/measure: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/bench_madd.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/bench_madd.c -I src/Specific/NISTP256/AMD64 measure.c -D TIMINGS=2047 -D UUT=bench_madd
+src/Specific/NISTP256/AMD64/measure:  src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c measure.c src/Specific/NISTP256/AMD64/compiler.sh measure.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/*.c -I src/Specific/NISTP256/AMD64/ measure.c -D UUT=bench_madd -I liblow liblow/*.c
 
 src/Specific/NISTP256/AMD64/measurements.txt: src/Specific/NISTP256/AMD64/measure
-	./capture.sh src/Specific/NISTP256/AMD64
+	./capture.sh src/Specific/NISTP256/AMD64 65535
 
 src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c
-	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/measure src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c -I src/Specific/NISTP256/AMD64 measure.c -D TIMINGS=2047 -D UUT=bench_madd
+	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/measure src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c -I liblow -I src/Specific/NISTP256/AMD64 measure.c -D UUT=bench_madd
 
 src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/icc/measure
-	./capture.sh src/Specific/NISTP256/AMD64/icc
+	./capture.sh src/Specific/NISTP256/AMD64/icc 65535
 
 bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?

@@ -17,6 +17,7 @@ cat <<EOF
 #include <stdint.h>
 #include <stdbool.h>
 #include <x86intrin.h>
+#include "liblow.h"
 
 #include "$funcname.h"
 
