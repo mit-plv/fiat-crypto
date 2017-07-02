@@ -18,7 +18,7 @@ INSTALLDEFAULTROOT := Crypto
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite \
 	curves-proofs no-curves-proofs \
-	bench c
+	test bench c
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
 
@@ -150,6 +150,9 @@ $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compile
 
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 
+src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
+	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/test -I liblow -I src/Specific/X25519/C64/ src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c
+
 src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
 	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I liblow -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D UUT=crypto_scalarmult_bench
 
@@ -163,7 +166,7 @@ third_party/openssl-curve25519/measurements.txt: third_party/openssl-curve25519/
 	./capture.sh third_party/openssl-curve25519 2047
 
 third_party/openssl-nistz256/measure:  third_party/openssl-nistz256/compiler.sh third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s third_party/openssl-nistz256/nistz256.h
-	third_party/openssl-nistz256/compiler.sh -o third_party/openssl-nistz256/measure measure.c third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s src/Specific/X25519/C64/scalarmult.c -I liblow -I third_party/openssl-nistz256 -D UUT=bench_madd
+	third_party/openssl-nistz256/compiler.sh -o third_party/openssl-nistz256/measure measure.c third_party/openssl-nistz256/bench_madd.c third_party/openssl-nistz256/cpu_intel.c third_party/openssl-nistz256/ecp_nistz256-x86_64.s -I liblow -I third_party/openssl-nistz256 -D UUT=bench_madd
 
 third_party/openssl-nistz256/measurements.txt: third_party/openssl-nistz256/measure
 	./capture.sh third_party/openssl-nistz256 65535
@@ -188,6 +191,9 @@ src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/ic
 
 bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?
+
+test: src/Specific/X25519/C64/test
+	src/Specific/X25519/C64/test
 
 clean::
 	rm -f Makefile.coq
