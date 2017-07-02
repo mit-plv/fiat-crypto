@@ -358,7 +358,8 @@ Section API.
       subst x.
       rewrite @B.Positional.sat_add_div by omega.
       repeat match goal with H:_|-_=> unique pose proof (eval_small _ _ H) end.
-    Admitted.
+      cbv [eval] in *; Z.div_mod_to_quot_rem; nia.
+    Qed.
 
     Lemma small_add_S1 n a b :
       (2 <= bound) ->
