@@ -26,7 +26,7 @@ Section WordByWordMontgomery.
   Local Notation eval_join0 := (@eval_zero (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_div := (@eval_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_mod := (@eval_mod (Z.pos r)).
-  Local Notation small_div := (@small_div (Z.pos r) (Zorder.Zgt_pos_0 _)).
+  Local Notation small_div := (@small_div (Z.pos r)).
   Local Notation eval_scmul := (fun n a v smallv abound vbound => @eval_scmul (Z.pos r) (Zorder.Zgt_pos_0 _) n a v smallv abound).
   Local Notation eval_addT := (@eval_add_same (Z.pos r) (Zorder.Zgt_pos_0 _)).
   Local Notation eval_addT' := (@eval_add_S1 (Z.pos r) (Zorder.Zgt_pos_0 _)).
