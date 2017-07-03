@@ -177,6 +177,12 @@ third_party/openssl-nistp256c64/measure:  third_party/openssl-nistp256c64/compil
 third_party/openssl-nistp256c64/measurements.txt: third_party/openssl-nistp256c64/measure
 	./capture.sh third_party/openssl-nistp256c64 65535
 
+src/Specific/NISTP256/AMD64/test/feadd_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/feadd.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/feadd_test.c liblow/cmovznz.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/feadd.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/feadd_test.c liblow/cmovznz.c
+
+src/Specific/NISTP256/AMD64/test/femul_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/femul.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/femul.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
+
 src/Specific/NISTP256/AMD64/measure:  src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c measure.c src/Specific/NISTP256/AMD64/compiler.sh measure.c
 	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/*.c -I src/Specific/NISTP256/AMD64/ measure.c -D UUT=bench_madd -I liblow liblow/*.c
 
@@ -192,8 +198,10 @@ src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/ic
 bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?
 
-test: src/Specific/X25519/C64/test
+test: src/Specific/X25519/C64/test src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test
 	src/Specific/X25519/C64/test
+	src/Specific/NISTP256/AMD64/test/feadd_test
+	src/Specific/NISTP256/AMD64/test/femul_test
 
 clean::
 	rm -f Makefile.coq
