@@ -127,7 +127,7 @@ Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
 Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u128ℤ' ( c , a , b )" (format "'addcarryx_u128ℤ' ( c ,  a ,  b )").
-Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )"). """ + r"""(* temporary for testing *""" + r""")
+Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )"). (""" + r"""* temporary for testing *""" + r""")
 Reserved Notation "'subborrow_u32ℤ' ( c , a , b )" (format "'subborrow_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u64ℤ' ( c , a , b )" (format "'subborrow_u64ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u128ℤ' ( c , a , b )" (format "'subborrow_u128ℤ' ( c ,  a ,  b )").
