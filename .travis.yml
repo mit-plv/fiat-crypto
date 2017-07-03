@@ -27,7 +27,7 @@ before_script:
   - uname -a
   - source ./etc/ci/travis_keep_alive.sh
 
-script: COQPATH="$(pwd)/$COQPRIME" ./etc/coq-scripts/timing/make-pretty-timed.sh -j2 $TARGETS && make COQPATH="$(pwd)/coqprime" $TARGETS TIMED=1 -j2
+script: ./etc/coq-scripts/timing/make-pretty-timed.sh -j2 $TARGETS && make $TARGETS TIMED=1 -j2
 
 after_success:
   - kill $PID_KEEP_ALIVE
