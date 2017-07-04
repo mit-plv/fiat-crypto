@@ -1,0 +1,1 @@
+icc -march=broadwell -mtune=broadwell -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing -ipo -masm=att
