@@ -1,1 +1,1 @@
-2040	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	e35a6ddb
+2040	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	4c69be42

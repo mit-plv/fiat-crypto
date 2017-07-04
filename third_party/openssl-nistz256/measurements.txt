@@ -1,4 +1,4 @@
 	JASONGROSS-X230-ht-tb-nops-core-avx-i	2.90ghz	4.8	c003b54
 	JASONGROSS-X230-ht-tb-nops-ivybridge	2.90ghz	6.3.0	c003b54
-564	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	e35a6ddb
+564	ashryn-noht-notb-ac-broadwell	2.50ghz	7.1.1	4c69be42
 564	ashryn-noht-notb-noac-broadwell	2.50ghz	7.1.1	fe5b5b3b
