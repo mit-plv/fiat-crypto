@@ -23,6 +23,12 @@ cat <<EOF
 
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 
+#if (defined(__GNUC__) || defined(__GNUG__)) && !(defined(__clang__)||defined(__INTEL_COMPILER))
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81294
+#define _subborrow_u32 __builtin_ia32_sbb_u32
+#define _subborrow_u64 __builtin_ia32_sbb_u64
+#endif
+
 #undef force_inline
 #define force_inline __attribute__((always_inline))
 
