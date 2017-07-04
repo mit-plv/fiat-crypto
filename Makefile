@@ -183,6 +183,9 @@ src/Specific/NISTP256/AMD64/test/feadd_test: src/Specific/NISTP256/AMD64/compile
 src/Specific/NISTP256/AMD64/test/femul_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/femul.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
 	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/femul.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
 
+src/Specific/NISTP256/AMD64/test/p256_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/test/p256_test.c liblow/cmovznz.c src/Specific/NISTP256/feadd.c src/Specific/NISTP256/feadd.h src/Specific/NISTP256/femul.c src/Specific/NISTP256/femul.h src/Specific/NISTP256/fenz.c src/Specific/NISTP256/fenz.h src/Specific/NISTP256/fesub.c src/Specific/NISTP256/fesub.h src/Specific/NISTP256/p256_jacobian_add_affine.c src/Specific/NISTP256/p256.h
+	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/p256_jacobian_add_affine.c src/Specific/NISTP256/feadd.c src/Specific/NISTP256/femul.c src/Specific/NISTP256/fenz.c src/Specific/NISTP256/fesub.c src/Specific/NISTP256/p256_jacobian_add_affine.c liblow/cmovznz.c -I liblow -I src/Specific/NISTP256/AMD64/ 
+
 src/Specific/NISTP256/AMD64/measure:  src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c measure.c src/Specific/NISTP256/AMD64/compiler.sh measure.c
 	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/*.c -I src/Specific/NISTP256/AMD64/ measure.c -D UUT=bench_madd -I liblow liblow/*.c
 
@@ -202,6 +205,7 @@ test: src/Specific/X25519/C64/test src/Specific/NISTP256/AMD64/test/feadd_test s
 	src/Specific/X25519/C64/test
 	src/Specific/NISTP256/AMD64/test/feadd_test
 	src/Specific/NISTP256/AMD64/test/femul_test
+	src/Specific/NISTP256/AMD64/test/p256_test
 
 clean::
 	rm -f Makefile.coq

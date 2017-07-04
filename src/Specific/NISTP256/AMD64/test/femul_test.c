@@ -40,7 +40,14 @@ int main() {
         && out[2] == Rmodm[2]
         && out[3] == Rmodm[3]
         )) { return 4; }
-
+  if ( femul(out,
+        0, 0, 0, 0,
+        2141451, Rmodm[2], -3251252, 2134), 
+      ! (out[0]   == 0
+        && out[1] == 0
+        && out[2] == 0
+        && out[3] == 0
+        )) { return 5; }
 
   //printf("0x%016" PRIx64 " 0x%016" PRIx64 " 0x%016" PRIx64 " 0x%016" PRIx64 "\n", out[0], out[1], out[2], out[3]);
   //printf("((((((0x%016" PRIx64 "<<64)+ 0x%016" PRIx64 ")<<64)+ 0x%016" PRIx64 ")<<64)+ 0x%016" PRIx64 ")\n", out[0], out[1], out[2], out[3]);
