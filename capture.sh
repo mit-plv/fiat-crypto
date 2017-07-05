@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+grep -q constant_tsc /proc/cpuinfo || (echo "need constant_tsc" ; exit 100 )
+
 machine=$(etc/machine.sh)
 cpufreq=$(etc/cpufreq)
 tscfreq=$(etc/tscfreq)
