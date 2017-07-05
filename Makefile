@@ -128,6 +128,9 @@ clean-coqprime:
 install-coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) install
 
+etc/tscfreq: etc/tscfreq.c
+	gcc etc/tscfreq.c -s -Os -o etc/tscfreq
+
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:$$/printenv::/g' > $@ && rm -f Makefile-old
@@ -156,7 +159,7 @@ src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X
 src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
 	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I liblow -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D UUT=crypto_scalarmult_bench
 
-src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/freq.sh
+src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
 	./capture.sh src/Specific/X25519/C64 2047
 
 third_party/openssl-curve25519/measure:  third_party/openssl-curve25519/compiler.sh third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h

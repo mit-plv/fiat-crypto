@@ -7,7 +7,7 @@ for cpu in $(seq 1 $(nproc)); do
 done | ( \
 	sleep .1 ;
         mhz=$(cat /proc/cpuinfo | grep "^[c]pu MHz" | cut -d: -f2 | tr -d ' ' | sort -nr | head -1);
-	printf "$(echo "scale=2; ($mhz + 5)/1000" | bc)ghz\n"
+	printf "$(echo "scale=2; ($mhz + 5)/1000" | bc)\n"
         while IFS= read -r pid; do
 		kill "$pid";
 	done )
