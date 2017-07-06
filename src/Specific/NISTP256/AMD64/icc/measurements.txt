@@ -3,5 +3,5 @@
 1081  =907*3.10/2.60	ashryn-ht-tb-ac-broadwell	7.1.1	a7ce099b+
 1111  =1156*2.50/2.60	ashryn-ht-notb-ac-broadwell	7.1.1	d9506354+
 1111  =1156*2.50/2.60	ashryn-ht-notb-noac-broadwell	7.1.1	d9506354+
-1111  =1156*2.50/2.60	ashryn-noht-notb-ac-broadwell	7.1.1	cdab01cf+
+1112  =1112*2.60/2.60	ashryn-noht-notb-ac-broadwell	7.1.1	e014b3ac+
 1140	ashryn-noht-notb-noac-broadwell	2.60ghz	7.1.1	cac291e0

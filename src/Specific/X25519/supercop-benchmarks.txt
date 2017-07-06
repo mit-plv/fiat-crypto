@@ -1,0 +1,21 @@
+ashryn-noht-notb-ac-broadwell, 2.60/2.60
+
+browse@ashryn ~/thesis/supercop-data/ashryn/amd64 %  ./try/c/gcc_-march=native_-mtune=native_-O3_-fomit-frame-pointer_-fwrapv/crypto_scalarmult/curve25519/amd64-64/compiled/measure | tail -1 | tr ' ' '\n' | sort -rn | head -32 | tail -1
+
+
+145008
+browse@ashryn ~/thesis/supercop-data/ashryn/amd64 %  ./try/c/gcc_-funroll-loops_-O2_-fomit-frame-pointer/crypto_scalarmult/curve25519/amd64-51/compiled/measure | tail -1 | tr ' ' '\n' | sort -rn | head -32 | tail -1
+
+
+154248
+browse@ashryn ~/thesis/supercop-data/ashryn/amd64 %  ./try/c/gcc_-m64_-O3_-fomit-frame-pointer/crypto_scalarmult/curve25519/sandy2x/compiled/measure | tail -1 | tr ' ' '\n' | sort -rn | head -32 | tail -1
+
+
+154688
+browse@ashryn ~/thesis/supercop-data/ashryn/amd64 %  ./try/c/gcc_-march=nocona_-Os_-fomit-frame-pointer/crypto_scalarmult/curve25519/ref10/compiled/measure | tail -1 | tr ' ' '\n' | sort -rn | head -32 | tail -1
+356716
+browse@ashryn ~/thesis/supercop-data/ashryn/amd64 %  ./try/c/gcc_-march=native_-mtune=native_-O3_-fomit-frame-pointer_-fwrapv/crypto_scalarmult/curve25519/ref/compiled/measure | tail -1 | tr ' ' '\n' | sort -rn | head -32 | tail -1
+
+
+6044504
+

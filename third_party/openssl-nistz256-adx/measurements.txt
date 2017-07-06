@@ -3,5 +3,5 @@
   =*2.20/3.51	jgross-Leopard-WS-noht-notb-nops-haswell	5.4.0	6888031+
   =*3.10/3.51	jgross-Leopard-WS-ht-tb-nops-haswell	5.4.0	6888031+
 527  =442*3.10/2.60	ashryn-ht-tb-ac-broadwell	7.1.1	a7ce099b+
+544  =544*2.60/2.60	ashryn-noht-notb-ac-broadwell	7.1.1	e014b3ac+
 564	ashryn-noht-notb-noac-broadwell	2.50ghz	7.1.1	fe5b5b3b
-615  =640*2.50/2.60	ashryn-noht-notb-ac-broadwell	7.1.1	cdab01cf+
