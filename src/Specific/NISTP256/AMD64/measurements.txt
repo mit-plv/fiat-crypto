@@ -1,3 +1,5 @@
 1576	ashryn-noht-notb-noac-broadwell	2.60ghz	7.1.1	cac291e0
 1752  =1470*3.10/2.60	ashryn-ht-tb-ac-broadwell	7.1.1	a7ce099b+
 1811  =1884*2.50/2.60	ashryn-noht-notb-ac-broadwell	7.1.1	cdab01cf+
+4006  =4018*3.50/3.51	jgross-Leopard-WS-ht-tb-nops-haswell	5.4.0	6888031+
+4510  =4523*3.50/3.51	jgross-Leopard-WS-noht-notb-nops-haswell	5.4.0	6888031+
