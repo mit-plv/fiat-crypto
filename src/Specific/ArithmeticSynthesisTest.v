@@ -6,6 +6,7 @@ Require Import Crypto.Arithmetic.Saturated.Freeze.
 Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
 Require Crypto.Util.Tuple.
+Require Import Crypto.Util.QUtil.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
 Local Open Scope Z_scope.
@@ -24,16 +25,18 @@ Section Ops51.
   Definition bitwidth := 64.
   Definition s : Z := 2^255.
   Definition c : list B.limb := [(1, 19)].
-  Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
   Definition carry_chain1 := Eval vm_compute in (seq 0 (pred sz)).
-  Definition carry_chain2 := ([0;1])%nat.
-  Definition a24 := 121665%Z.
+  Definition carry_chain2 := [0;1]%nat.
 
+  Definition a24 := 121665%Z.
+  Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
   (* These definitions are inferred from those above *)
   Definition m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
-  Definition wt := fun i : nat =>
-                     let si := Z.log2 s * i in
-                     2 ^ ((si/sz) + (if dec ((si/sz)*sz=si) then 0 else 1)).
+  Section wt.
+    Import QArith Qround.
+    Local Coercion QArith_base.inject_Z : Z >-> Q.
+    Definition wt (i:nat) : Z := 2^Qceiling((Z.log2_up m/sz)*i).
+  End wt.
   Definition sz2 := Eval vm_compute in ((sz * 2) - 1)%nat.
   Definition m_enc :=
     Eval vm_compute in (Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (s-Associational.eval c)).
@@ -45,44 +48,15 @@ Section Ops51.
          | S n => addm (Positional.add_cps wt acc m_enc id) n
         end) (Positional.zeros sz) coef_div_modulus).
   Definition coef_mod : mod_eq m (Positional.eval (n:=sz) wt coef) 0 := eq_refl.
-
   Lemma sz_nonzero : sz <> 0%nat. Proof. vm_decide. Qed.
   Lemma wt_nonzero i : wt i <> 0.
-  Proof.
-    apply Z.pow_nonzero; zero_bounds; try break_match; vm_decide.
-  Qed.
-
-  Lemma wt_divides_chain1 i (H:In i carry_chain1) : wt (S i) / wt i <> 0.
-  Proof.
-    cbv [In carry_chain1] in H.
-    repeat match goal with H : _ \/ _ |- _ => destruct H end;
-      try (exfalso; assumption); subst; try vm_decide.
-  Qed.
-  Lemma wt_divides_chain2 i (H:In i carry_chain2) : wt (S i) / wt i <> 0.
-  Proof.
-    cbv [In carry_chain2] in H.
-    repeat match goal with H : _ \/ _ |- _ => destruct H end;
-      try (exfalso; assumption); subst; try vm_decide.
-  Qed.
-  Lemma wt_divides_full i : wt (S i) / wt i <> 0.
-  Proof.
-    cbv [wt].
-    match goal with |- _ ^ ?x / _ ^ ?y <> _ => assert (0 <= y <= x) end.
-    { rewrite Nat2Z.inj_succ.
-      split; try break_match; ring_simplify;
-      repeat match goal with
-             | _ => apply Z.div_le_mono; try vm_decide; [ ]
-             | _ => apply Z.mul_le_mono_nonneg_l; try vm_decide; [ ]
-             | _ => apply Z.add_le_mono; try vm_decide; [ ]
-             | |- ?x <= ?y + 1 => assert (x <= y); [|omega]
-             | |- ?x + 1 <= ?y => rewrite <- Z.div_add by vm_decide
-             | _ => progress zero_bounds
-             | _ => progress ring_simplify
-             | _ => vm_decide
-             end. }
-    break_match; rewrite <-Z.pow_sub_r by omega;
-      apply Z.pow_nonzero; omega.
-  Qed.
+  Proof. eapply pow_ceil_mul_nat_nonzero; vm_decide. Qed.
+  Lemma wt_divides i : wt (S i) / wt i > 0.
+  Proof. apply pow_ceil_mul_nat_divide; vm_decide. Qed.
+  Lemma wt_divides' i : wt (S i) / wt i <> 0.
+  Proof. symmetry; apply Z.lt_neq, Z.gt_lt_iff, wt_divides. Qed.
+  Definition wt_divides_chain1 i (H:In i carry_chain1) : wt (S i) / wt i <> 0 := wt_divides' i.
+  Definition wt_divides_chain2 i (H:In i carry_chain2) : wt (S i) / wt i <> 0 := wt_divides' i.
 
   Local Ltac solve_constant_sig :=
     lazymatch goal with
@@ -235,20 +209,10 @@ Section Ops51.
 
   Section PreFreeze.
     Lemma wt_pos i : wt i > 0.
-    Proof.
-        apply Z.lt_gt.
-        apply Z.pow_pos_nonneg; zero_bounds; try break_match; vm_decide.
-    Qed.
+    Proof. eapply pow_ceil_mul_nat_pos; vm_decide. Qed.
 
     Lemma wt_multiples i : wt (S i) mod (wt i) = 0.
-    Admitted.
-
-    Lemma wt_divides_full_pos i : wt (S i) / wt i > 0.
-    Proof.
-        pose proof (wt_divides_full i).
-        apply Z.div_positive_gt_0; auto using wt_pos.
-        apply wt_multiples.
-    Qed.
+    Proof. apply pow_ceil_mul_nat_multiples; vm_decide. Qed.
   End PreFreeze.
 
   Hint Opaque freeze : uncps.
@@ -263,7 +227,7 @@ Section Ops51.
   Proof.
     eexists; cbv beta zeta; intros a ?.
     pose proof wt_nonzero. pose proof wt_pos.
-    pose proof div_mod. pose proof wt_divides_full_pos.
+    pose proof div_mod. pose proof wt_divides.
     pose proof wt_multiples.
     pose proof div_correct. pose proof modulo_correct.
     let x := constr:(freeze (n:=sz) wt (Z.ones bitwidth) m_enc a) in
@@ -299,7 +263,7 @@ Section Ops51.
          (Positional.Fdecode_Fencode_id
             (sz_nonzero := sz_nonzero)
             (div_mod := div_mod)
-            wt eq_refl wt_nonzero wt_divides_full)
+            wt eq_refl wt_nonzero wt_divides')
          (Positional.eq_Feq_iff wt)
          (proj2_sig add_sig)
          (proj2_sig sub_sig)
