@@ -134,10 +134,10 @@ end function
              partial_reduce.
 
       Definition reduce_via_partial_alt : montgomeryZ
-        := if N <=? partial_reduce then
-             partial_reduce - N
+        := if N <=? partial_reduce_alt then
+             partial_reduce_alt - N
            else
-             partial_reduce.
+             partial_reduce_alt.
     End redc.
 
     (** * Arithmetic in Montgomery form *)
