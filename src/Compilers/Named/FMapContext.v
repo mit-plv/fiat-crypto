@@ -49,7 +49,9 @@ Module FMapContextFun (E : DecidableType) (W : WSfun E).
                      | progress break_innermost_match_step
                      | rewrite concat_pV
                      | congruence
-                     | rewrite base_type_code_lb in * by reflexivity ].
+                     | rewrite base_type_code_lb in * by reflexivity
+                     | break_innermost_match_hyps_step
+                     | progress unfold var_cast in * ].
     Qed.
   End ctx.
 

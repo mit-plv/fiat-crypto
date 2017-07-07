@@ -17,7 +17,7 @@ Section language.
 
   Lemma ContextOnOk {Ctx} (COk : ContextOk Ctx) : ContextOk (ContextOn Ctx).
   Proof.
-    split; intros; try apply COk; auto.
+    unfold ContextOn in *; split; intros; try eapply COk; eauto.
   Qed.
 End language.
 

@@ -136,6 +136,8 @@ Section ctx.
                    | rewrite key_lb in * by reflexivity
                    | rewrite base_type_code_lb in * by reflexivity
                    | rewrite concat_pV
-                   | congruence ].
+                   | congruence
+                   | break_innermost_match_hyps_step
+                   | progress unfold var_cast in * ].
   Qed.
 End ctx.

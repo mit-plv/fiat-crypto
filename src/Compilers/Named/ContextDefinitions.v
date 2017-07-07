@@ -57,7 +57,10 @@ Section with_context.
       lookupb_removeb_same
       : forall (ctx : Context) n t t', lookupb t' (removeb t ctx n) n = None;
       lookupb_empty
-      : forall n t, lookupb t (@empty _ _ _ Context) n = None }.
+      : forall n t, lookupb t (@empty _ _ _ Context) n = None;
+
+      lookupb_unique_type
+      : forall (ctx : Context) n t t', lookupb t' ctx n <> None -> lookupb t ctx n <> None -> t = t' }.
 
   Definition context_equiv (a b : Context)
     := forall n t, lookupb t a n = lookupb t b n.
