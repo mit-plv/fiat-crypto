@@ -58,7 +58,7 @@ Section symbolic.
       := match se, t with
          | STT, Unit => Some tt
          | SVar n, t
-           => match List.nth_error m (length m - n) with
+           => match List.nth_error m (length m - S n) with
               | Some e => @var_cast _ t (projT2 (snd e))
               | None => None
               end
