@@ -6,7 +6,7 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primiti
 NOTE: The github.com repo is only intermittently synced with
 github.mit.edu.
 
-This repository has been tested with Coq 8.5 or 8.6. Coq 8.4 and older are known not to work.
+This repository has been tested with Coq 8.6. Coq 8.4 and older are known not to work. Coq 8.5 is not regularly tested, but we are not aware of fundamental reasons why it should not work.
 
 To build (if your COQPATH variable is empty):
 
