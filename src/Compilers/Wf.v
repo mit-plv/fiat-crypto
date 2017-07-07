@@ -59,11 +59,7 @@ Section language.
   End with_var.
 
   Definition Wf {t} (E : @Expr t) := forall var1 var2, wf (E var1) (E var2).
-
-  Axiom Wf_admitted : forall {t} (E:Expr t), @Wf t E.
 End language.
-
-Ltac admit_Wf := apply Wf_admitted.
 
 Global Arguments wff {_ _ _ _} G {t} _ _.
 Global Arguments wf {_ _ _ _ t} _ _.

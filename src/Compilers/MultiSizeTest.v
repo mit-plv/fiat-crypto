@@ -82,8 +82,6 @@ Definition typeD (t : type) : Type :=
   | Word9 => word9
   end.
 
-Axiom admit : forall T, T.
-
 Theorem O_lt_S : forall n, O < S n.
 Proof.
   intros; omega.

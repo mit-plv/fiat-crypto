@@ -383,22 +383,8 @@ Section API.
       eauto using small_add, small_join0.
     Qed.
 
-    Lemma small_add_S2 n a b :
-      (2 <= bound) ->
-      small a -> small b -> small (@add_S2 n a b).
-    Proof.
-      intros. pose_all.
-      cbv [add_cps add add_S2 Let_In].
-      autorewrite with uncps push_id.
-      (*apply Positional.small_sat_add.*)
-    Admitted.
-
     Lemma small_left_tl n (v:T (S n)) : small v -> small (left_tl v).
     Proof. cbv [small]. auto using Tuple.In_to_list_left_tl. Qed.
-
-    Lemma small_divmod n (p: T (S n)) (Hsmall : small p) :
-      left_hd p = eval p / uweight bound n /\ eval (left_tl p) = eval p mod (uweight bound n).
-    Admitted.
 
     Lemma eval_drop_high n v :
       small v -> eval (@drop_high n v) = eval v mod (uweight bound n).
@@ -481,21 +467,6 @@ Section API.
      repeat progress autounfold. autorewrite with uncps push_id.
      apply small_drop_high,  @B.Positional.small_sat_add; omega.
    Qed.
-
-   (* TODO : remove if unneeded when all admits are proven
-    Lemma small_highest_zero_iff {n} (p: T (S n)) (Hsmall : small p) :
-      (left_hd p = 0 <-> eval p < uweight bound n).
-    Proof.
-      destruct (small_divmod _ p Hsmall) as [Hdiv Hmod].
-      pose proof Hsmall as Hsmalltl. apply eval_small in Hsmall.
-      apply small_left_tl, eval_small in Hsmalltl. rewrite Hdiv.
-      rewrite (Z.div_small_iff (eval p) (uweight bound n))
-        by auto using uweight_nonzero.
-      split; [|intros; left; omega].
-      let H := fresh "H" in intro H; destruct H; [|omega].
-      omega.
-    Qed.
-    *)
 
     Lemma map2_zselect n cond x y :
       Tuple.map2 (n:=n) (Z.zselect cond) x y = if dec (cond = 0) then x else y.
