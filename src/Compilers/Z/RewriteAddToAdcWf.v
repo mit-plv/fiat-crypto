@@ -21,7 +21,11 @@ Section language.
       repeat first [ eapply @Wf_InterpToPHOAS with (t:=Arrow _ _)
                    | progress split_andb
                    | congruence
-                   | intros; eapply @PositiveContextOk
+                   | intros;
+                     match goal with
+                     | [ |- ContextDefinitions.ContextOk _ ]
+                       => eapply @PositiveContextOk
+                     end
                    | solve [ auto | eapply @BinPos.Pos.eqb_eq ]
                    | eapply @Wf_from_unit
                    | eapply @dec_rel_of_bool_dec_rel

@@ -42,7 +42,7 @@ Section language.
                 | [ H : Compile.compile (?e _) _ = Some ?e'', H' : Syntax.Named.Interp ?e'' ?x = Some ?v' |- ?v' = Interp ?interp_op' ?e ?x ]
                   => eapply @Interp_compile with (v:=x) (interp_op:=interp_op') in H
                 end
-              | intros; eapply (@PositiveContextOk _ _ base_type_beq internal_base_type_dec_bl internal_base_type_dec_lb)
+              | intros; exact (@PositiveContextOk _ _ base_type_beq internal_base_type_dec_bl internal_base_type_dec_lb)
               | progress split_andb
               | congruence
               | tauto
