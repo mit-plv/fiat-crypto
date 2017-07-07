@@ -6,7 +6,8 @@ Require Import Coq.ZArith.BinInt Coq.ZArith.Zdiv Coq.ZArith.Znumtheory Coq.NArit
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
-Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult Crypto.Algebra.Ring Crypto.Algebra.Field.
+Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult.
+Require Crypto.Algebra.Ring Crypto.Algebra.Field.
 Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -30,13 +31,6 @@ Module F.
 
   Lemma pow_spec {m} a : F.pow a 0%N = 1%F :> F m /\ forall x, F.pow a (1 + x)%N = F.mul a (F.pow a x).
   Proof. change (@F.pow m) with (proj1_sig (@F.pow_with_spec m)); destruct (@F.pow_with_spec m); eauto. Qed.
-
-  Global Instance char_gt {m} :
-    @Ring.char_ge
-      (F m) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
-      m.
-  Proof.
-  Admitted.
 
   Section FandZ.
     Context {m:positive}.
@@ -102,6 +96,9 @@ Module F.
     Lemma to_Z_opp : forall x : F m, F.to_Z (F.opp x) = (- F.to_Z x) mod m.
     Proof using Type. unwrap_F; trivial. Qed.
 
+    Lemma of_Z_opp : forall x, F.of_Z m (Z.opp x) = F.opp (F.of_Z m x).
+    Proof using Type. unwrap_F; trivial. Qed.
+
     Lemma of_Z_pow x n : F.of_Z _ x ^ n = F.of_Z _ (x ^ (Z.of_N n) mod m) :> F m.
     Proof using Type.
       induction n as [|n IHn] using N.peano_ind;
@@ -144,8 +141,38 @@ Module F.
       - eauto.
       - exists (F.of_Z _ x'); rewrite !to_Z_of_Z; pull_Zmod; auto.
     Qed.
-  End FandZ.
 
+    Local Notation R_of_nat := (@Ring.of_nat (F m) 0%F 1%F F.add).
+    Lemma Ring_of_nat p : R_of_nat (Pos.to_nat p) = F.of_Z m (Z.pos p).
+    Proof.
+      induction p using Pos.peano_ind.
+      { simpl. rewrite left_identity. reflexivity. }
+      { rewrite Pos2Nat.inj_succ; simpl; rewrite IHp.
+        rewrite <-Pos.add_1_r, Pos2Z.inj_add, of_Z_add.
+        reflexivity. }
+    Qed.
+
+    Local Notation R_of_Z := (@Ring.of_Z (F m) 0%F 1%F F.opp F.add).
+    Lemma Ring_of_Z x : R_of_Z x = F.of_Z m x.
+    Proof.
+      destruct x; cbv [R_of_Z];
+        rewrite ?Ring_of_nat, <-?Pos2Z.opp_pos, ?of_Z_opp; reflexivity.
+    Qed.
+
+    Global Instance char_gt :
+      @Ring.char_ge
+        (F m) Logic.eq F.zero F.one F.opp F.add F.sub F.mul
+        m.
+    Proof.
+      cbv [Ring.char_ge Hierarchy.char_ge].
+      intros.
+      rewrite Ring_of_Z.
+      setoid_rewrite <-eq_of_Z_iff.
+      rewrite Z.mod_0_l by discriminate.
+      rewrite Z.mod_small; [discriminate|].
+      auto using Pos2Z.is_nonneg.
+    Qed.
+  End FandZ.
   Section FandNat.
     Import NPeano Nat.
     Local Infix "mod" := modulo : nat_scope.
@@ -171,8 +198,11 @@ Module F.
       rewrite Z2Nat.id; [ eapply F.of_Z_to_Z | eapply F.to_Z_range; reflexivity].
     Qed.
 
+    (* TODO: move *)
     Lemma Pos_to_nat_nonzero p : Pos.to_nat p <> 0%nat.
-    Admitted.
+    Proof.
+      pose proof (Pos2Nat.is_pos p); omega.
+    Qed.
 
     Lemma of_nat_mod (n:nat) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.
     Proof using Type.
