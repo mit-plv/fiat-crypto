@@ -150,11 +150,11 @@ Module E.
                | _ => progress Option.inversion_option
                end.
         destruct (dec (r = 0)).
-        assert (s = 0); [|solve[setoid_subst_rel Feq; trivial] ].
-        admit.
-        progress rewrite parity_opp in * by assumption.
-        destruct (parity r), p; cbv [negb] in *; congruence.
-      Admitted.
+        { assert (s = 0) by Nsatz.nsatz_power 2%nat.
+          setoid_subst_rel Feq; trivial. }
+        { progress rewrite parity_opp in * by assumption.
+          destruct (parity r), p; cbv [negb] in *; congruence. }
+      Qed.
 
       Local Ltac t_step :=
         match goal with
@@ -199,16 +199,16 @@ Module E.
       Proof.
         cbv [compress decompress exist_option coordinates] in *; intros.
         t.
-        intro.
-        match goal with
-        | [ H0 : _ |- False ]
-          => apply (H0 f); [|congruence]
-        end.
-        admit.
-        intro. Prod.inversion_prod; subst.
-        rewrite solve_correct in y.
-        eapply H. eapply y.
-      Admitted.
+        { intro.
+          match goal with
+          | [ H0 : _ |- False ]
+            => apply (H0 f); [t|congruence]; clear H0
+          end.
+          rewrite solve_correct in y; Nsatz.nsatz_power 2%nat. }
+        { intro. Prod.inversion_prod; subst.
+          rewrite solve_correct in y.
+          eapply H. eapply y. }
+      Qed.
     End PointCompression.
   End CompleteEdwardsCurveTheorems.
   Section Homomorphism.
