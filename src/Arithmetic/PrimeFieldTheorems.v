@@ -33,7 +33,7 @@ Module F.
              | _ => solve [ solve_proper
                           | apply F.commutative_ring_modulo
                           | apply inv_nonzero
-                          | cbv [not]; pose proof prime_ge_2 q prime_q;
+                          | cbv [F.zero F.one not]; pose proof prime_ge_2 q prime_q;
                             rewrite F.eq_to_Z_iff, !F.to_Z_of_Z, !Zmod_small; omega ]
              | _ => split
              end.

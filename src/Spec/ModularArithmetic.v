@@ -81,5 +81,5 @@ Infix "*" := F.mul : F_scope.
 Infix "-" := F.sub : F_scope.
 Infix "/" := F.div : F_scope.
 Infix "^" := F.pow : F_scope.
-Notation "0" := (F.of_Z _ 0) : F_scope.
-Notation "1" := (F.of_Z _ 1) : F_scope.
+Notation "0" := F.zero : F_scope.
+Notation "1" := F.one : F_scope.

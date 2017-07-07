@@ -32,6 +32,13 @@ Section Ed25519.
 
   Context {SHA512: forall n : nat, Word.word n -> Word.word 512}.
 
+  Local Instance char_gt_e : 
+    @Ring.char_ge (@F q) eq F.zero F.one F.opp F.add F.sub F.mul
+                  (BinNat.N.succ_pos BinNat.N.two).
+  Proof. eapply Hierarchy.char_ge_weaken;
+           [apply (_:Ring.char_ge q)|Decidable.vm_decide]. Qed.
+    
+
   Definition E : Type := E.point
                            (F:=Fq) (Feq:=Logic.eq) (Fone:=F.one) (Fadd:=F.add) (Fmul:=F.mul)
                            (a:=a) (d:=d).
@@ -52,31 +59,12 @@ Section Ed25519.
     let '(x,y) := E.coordinates P in Fencode (len:=b-1) y ++ bit (sign x).
   Definition Senc : Fl -> Word.word b := Fencode (len:=b).
 
-  Local Instance char_gt_e : (* TODO: prove this in PrimeFieldTheorems *)
-    @Ring.char_ge (F.F q) (@eq (F.F q)) (F.of_Z q BinNums.Z0)
-                  (F.of_Z q (BinNums.Zpos BinNums.xH)) (@F.opp q)
-                  (@F.add q) (@F.sub q) (@F.mul q) (BinNat.N.succ_pos BinNat.N.two).
-  Proof. intros p ?.
-         edestruct (fun p:p = (BinNat.N.succ_pos BinNat.N.zero) \/ p = (BinNat.N.succ_pos BinNat.N.one) => p); subst.
-         { admit. (*
-           p : BinNums.positive
-           H : BinPos.Pos.le p (BinNat.N.succ_pos BinNat.N.one)
-           ============================
-           p = BinNat.N.succ_pos BinNat.N.zero \/ p = BinNat.N.succ_pos BinNat.N.one *) }
-         { Crypto.Util.Decidable.vm_decide. }
-         { Crypto.Util.Decidable.vm_decide. }
-  Admitted.
   Lemma nonzero_a : a <> 0%F.
-  Proof using Type.
- Crypto.Util.Decidable.vm_decide. Qed.
+  Proof using Type. Crypto.Util.Decidable.vm_decide. Qed.
   Lemma square_a : exists sqrt_a : Fq, (sqrt_a * sqrt_a)%F = a.
-  Proof using Type.
-
-    pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) a); Crypto.Util.Decidable.vm_decide. Qed.
+  Proof using Type. pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) a); Crypto.Util.Decidable.vm_decide. Qed.
   Lemma nonsquare_d : forall x : Fq, (x * x)%F <> d.
-  Proof using Type.
-
-    pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) d); Crypto.Util.Decidable.vm_decide. Qed.
+  Proof using Type. pose (@PrimeFieldTheorems.F.Decidable_square q _ ltac:(Crypto.Util.Decidable.vm_decide) d); Crypto.Util.Decidable.vm_decide. Qed.
 
   Let add := E.add(nonzero_a:=nonzero_a)(square_a:=square_a)(nonsquare_d:=nonsquare_d).
   Let zero := E.zero(nonzero_a:=nonzero_a)(d:=d).

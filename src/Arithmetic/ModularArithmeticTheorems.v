@@ -15,7 +15,7 @@ Module F.
   Ltac unwrap_F :=
     intros;
     repeat match goal with [ x : F _ |- _ ] => destruct x end;
-    lazy iota beta delta [F.add F.sub F.mul F.opp F.to_Z F.of_Z proj1_sig] in *;
+    lazy iota beta delta [F.one F.zero F.add F.sub F.mul F.opp F.to_Z F.of_Z proj1_sig] in *;
     try apply eqsig_eq;
     pull_Zmod.
 
@@ -63,7 +63,7 @@ Module F.
     Proof using Type. intros Hrange Hnz. inversion Hnz. rewrite Zmod_small, Zmod_0_l in *; omega. Qed.
 
     Lemma to_Z_nonzero (x:F m) : x <> 0 -> F.to_Z x <> 0%Z.
-    Proof using Type. intros Hnz Hz. rewrite <- Hz, of_Z_to_Z in Hnz; auto. Qed.
+    Proof using Type.  cbv [F.zero]. intros Hnz Hz. rewrite <- Hz, of_Z_to_Z in Hnz; auto. Qed.
 
     Lemma to_Z_range (x : F m) : 0 < m -> 0 <= F.to_Z x < m.
     Proof using Type. intros. rewrite <- mod_to_Z. apply Z.mod_pos_bound. trivial. Qed.
