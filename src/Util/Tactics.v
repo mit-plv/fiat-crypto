@@ -35,6 +35,7 @@ Require Export Crypto.Util.Tactics.SubstEvars.
 Require Export Crypto.Util.Tactics.SubstLet.
 Require Export Crypto.Util.Tactics.Test.
 Require Export Crypto.Util.Tactics.TransparentAssert.
+Require Export Crypto.Util.Tactics.UnfoldArg.
 Require Export Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Export Crypto.Util.Tactics.UniquePose.
 Require Export Crypto.Util.Tactics.VM.

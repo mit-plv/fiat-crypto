@@ -5,3 +5,7 @@ Ltac change_in_all from to :=
   repeat match goal with
          | [ H : _ |- _ ] => progress change from with to in H
          end.
+
+Ltac change_with_compute_in_all c :=
+  let c' := (eval compute in c) in
+  change c with c' in *.

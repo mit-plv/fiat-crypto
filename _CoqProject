@@ -357,6 +357,7 @@ src/Util/Tactics/SubstEvars.v
 src/Util/Tactics/SubstLet.v
 src/Util/Tactics/Test.v
 src/Util/Tactics/TransparentAssert.v
+src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
