@@ -4,6 +4,7 @@ Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.omega.Omega.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.

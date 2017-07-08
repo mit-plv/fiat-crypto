@@ -2,10 +2,11 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
-Require Import Crypto.Util.Prod Crypto.Util.Tactics.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z_scope.
 
 Local Notation eta x := (fst x, snd x).
@@ -62,7 +63,7 @@ Module Z.
         Z.add_get_carry Z.add_with_get_carry Z.add_with_carry
         Z.sub_get_borrow_full Z.sub_with_get_borrow_full
         Z.sub_get_borrow Z.sub_with_get_borrow Z.sub_with_borrow.
-  
+
   Lemma add_get_carry_full_mod s x y :
     fst (Z.add_get_carry_full s x y)  = (x + y) mod s.
   Proof. easypeasy. Qed.

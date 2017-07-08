@@ -1,22 +1,22 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Crypto.Util.Tactics Crypto.Util.Decidable.
+Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
 Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
 Import ListNotations. Local Open Scope Z_scope.
-    
+
 Definition runtime_mul := Z.mul.
 Definition runtime_add := Z.add.
 Delimit Scope runtime_scope with RT.
 Infix "*" := runtime_mul : runtime_scope.
-Infix "+" := runtime_add : runtime_scope. 
+Infix "+" := runtime_add : runtime_scope.
 
 Module Associational.
   Definition eval (p:list (Z*Z)) : Z :=
     fold_right Z.add 0%Z (map (fun t => fst t * snd t) p).
-  
+
   Lemma eval_nil : eval nil = 0.
   Proof. trivial.                                             Qed.
   Lemma eval_cons p q : eval (p::q) = fst p * snd p + eval q.
@@ -24,7 +24,7 @@ Module Associational.
   Lemma eval_app p q: eval (p++q) = eval p + eval q.
   Proof. induction p; rewrite <-?List.app_comm_cons;
            rewrite ?eval_nil, ?eval_cons; nsatz.              Qed.
-  
+
   Hint Rewrite eval_nil eval_cons eval_app : push_eval.
   Local Ltac push := autorewrite with
       push_eval push_map push_partition push_flat_map
@@ -190,7 +190,7 @@ Example base_25_5_mul (f g:tuple Z 10) :
   cbv -[runtime_mul runtime_add]; cbv [runtime_mul runtime_add].
   ring_simplify_subterms.
 (* ?fg =
- (f0*g9+ f1*g8+    f2*g7+    f3*g6+    f4*g5+    f5*g4+    f6*g3+    f7*g2+    f8*g1+    f9*g0,   
+ (f0*g9+ f1*g8+    f2*g7+    f3*g6+    f4*g5+    f5*g4+    f6*g3+    f7*g2+    f8*g1+    f9*g0,
   f0*g8+ 2*f1*g7+  f2*g6+    2*f3*g5+  f4*g4+    2*f5*g3+  f6*g2+    2*f7*g1+  f8*g0+    38*f9*g9,
   f0*g7+ f1*g6+    f2*g5+    f3*g4+    f4*g3+    f5*g2+    f6*g1+    f7*g0+    19*f8*g9+ 19*f9*g8,
   f0*g6+ 2*f1*g5+  f2*g4+    2*f3*g3+  f4*g2+    2*f5*g1+  f6*g0+    38*f7*g9+ 19*f8*g8+ 38*f9*g7,

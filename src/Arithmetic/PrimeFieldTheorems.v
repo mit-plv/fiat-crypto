@@ -12,6 +12,7 @@ Require Import Crypto.Util.NumTheoryUtil Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Algebra.Hierarchy Crypto.Algebra.Field.
 
 Existing Class prime.

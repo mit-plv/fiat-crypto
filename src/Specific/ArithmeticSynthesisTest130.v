@@ -2,8 +2,9 @@ Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
-Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Util.Tuple.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.

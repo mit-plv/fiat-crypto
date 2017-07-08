@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Algebra.Nsatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.LetIn Crypto.Util.CPSUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.ZUtil Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Arithmetic.Core. Import B. Import Positional.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.IdfunWithAlt.

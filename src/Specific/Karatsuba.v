@@ -4,12 +4,13 @@ Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.Saturated.Core.
 Require Import Crypto.Arithmetic.Saturated.Freeze.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
-Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
 Require Import Crypto.Arithmetic.Karatsuba.
 Require Crypto.Util.Tuple.
 Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Util.QUtil.
+Require Import Crypto.Util.Tactics.VM.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
 Local Open Scope Z_scope.

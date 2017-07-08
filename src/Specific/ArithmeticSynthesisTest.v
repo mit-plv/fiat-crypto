@@ -3,8 +3,9 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Arithmetic.Saturated.Freeze.
-Require Import (*Crypto.Util.Tactics*) Crypto.Util.Decidable.
-Require Import Crypto.Util.LetIn Crypto.Util.ZUtil Crypto.Util.Tactics.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Util.Tuple.
 Require Import Crypto.Util.QUtil.
 Local Notation tuple := Tuple.tuple.
