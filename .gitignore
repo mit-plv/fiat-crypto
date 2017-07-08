@@ -22,8 +22,23 @@ nra.cache
 .nra.cache
 
 # compilation outputs
+etc/tscfreq
+src/Specific/NISTP256/AMD64/feadd.c
+src/Specific/NISTP256/AMD64/feadd.h
+src/Specific/NISTP256/AMD64/femul.c
+src/Specific/NISTP256/AMD64/femul.h
+src/Specific/NISTP256/AMD64/fenz.c
+src/Specific/NISTP256/AMD64/fenz.h
+src/Specific/NISTP256/AMD64/feopp.c
+src/Specific/NISTP256/AMD64/feopp.h
+src/Specific/NISTP256/AMD64/fesub.c
+src/Specific/NISTP256/AMD64/fesub.h
 src/Specific/NISTP256/AMD64/icc/measure
+src/Specific/NISTP256/AMD64/icc/p256_test
 src/Specific/NISTP256/AMD64/measure
+src/Specific/NISTP256/AMD64/test/feadd_test
+src/Specific/NISTP256/AMD64/test/femul_test
+src/Specific/NISTP256/AMD64/test/p256_test
 src/Specific/X25519/C64/femul.c
 src/Specific/X25519/C64/femul.h
 src/Specific/X25519/C64/fesquare.c
@@ -31,4 +46,9 @@ src/Specific/X25519/C64/fesquare.h
 src/Specific/X25519/C64/ladderstep.c
 src/Specific/X25519/C64/ladderstep.h
 src/Specific/X25519/C64/measure
+src/Specific/X25519/C64/test
+third_party/openssl-curve25519/measure
+third_party/openssl-nistp256c64/measure
+third_party/openssl-nistz256-adx/measure
+third_party/openssl-nistz256-amd64/measure
 third_party/openssl-nistz256/measure
