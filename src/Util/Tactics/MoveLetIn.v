@@ -46,7 +46,7 @@ Local Ltac with_uconstr_in_goal uc k :=
     of the form [lhs = rhs]. *)
 Ltac context_to_dlet_in_rhs f :=
   lazymatch goal with
-  | [ |- ?LHS = ?RHS ]
+  | [ |- ?R ?LHS ?RHS ]
     => with_uconstr_in_goal
          f
          ltac:(fun f
