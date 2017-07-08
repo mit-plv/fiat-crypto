@@ -310,6 +310,8 @@ Global Notation "a >> b" := (runtime_shr a%RT b%RT) : runtime_scope.
 Definition runtime_lor := Z.lor.
 Global Arguments runtime_lor (_ _)%RT.
 
+Ltac cbv_runtime := cbv beta delta [runtime_add runtime_and runtime_lor runtime_mul runtime_opp runtime_shr].
+
 Module B.
   Definition limb := (Z*Z)%type. (* position coefficient and run-time value *)
   Module Associational.
