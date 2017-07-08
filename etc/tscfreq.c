@@ -19,5 +19,5 @@ int main() {
   const long long tsc_hz  = ((t1-t0)*1000*1000)/usecs;
   const long long tsc_mhz = tsc_hz / 1000 / 1000;
   const long long tsc_ghz = tsc_mhz / 1000;
-  printf("%1d.%02d\n", tsc_ghz, (tsc_mhz - 1000*tsc_ghz + 5)/10);
+  printf("%1lli.%02lli\n", tsc_ghz, (tsc_mhz - 1000*tsc_ghz + 5)/10);
 }
