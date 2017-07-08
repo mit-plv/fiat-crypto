@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.Tactics.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z_scope.
 
 Module Z.
