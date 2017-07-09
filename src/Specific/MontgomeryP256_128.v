@@ -201,15 +201,16 @@ Proof.*)
 Definition montgomery_to_F (v : Z) : F m
   := (F.of_Z m v * F.of_Z m (r'^Z.of_nat sz)%Z)%F.
 
-Definition mulmod_256 : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                        | let eval := MontgomeryAPI.eval (Z.pos r) in
-                          (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
-                                  (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
-                              montgomery_to_F (eval (f A B))
-                              = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F)
-                          /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
-                                     (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
-                                 (eval B < eval p256 -> 0 <= eval (f A B) < eval p256)%Z) }.
+Definition mulmod_256_ext
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+              (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+          montgomery_to_F (eval (f A B))
+          = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F)
+      /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                 (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+             (eval B < eval p256 -> 0 <= eval (f A B) < eval p256)%Z) }.
 Proof.
   exists (proj1_sig mulmod_256'').
   abstract (
@@ -226,6 +227,26 @@ Proof.
     ).
 Defined.
 
+Definition mulmod_256
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+             (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+        montgomery_to_F (eval (f A B))
+        = (montgomery_to_F (eval A) * montgomery_to_F (eval B))%F }.
+Proof.
+  let v := (eval cbv [proj1_sig mulmod_256_ext mulmod_256'' mulmod_256' lift2_sig] in (proj1_sig mulmod_256_ext)) in
+  (exists v).
+  abstract apply (proj2_sig mulmod_256_ext).
+Defined.
+
+Lemma mulmod_256_bounded
+  : let eval := MontgomeryAPI.eval (Z.pos r) in
+    forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+           (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+      (eval B < eval p256 -> 0 <= eval (proj1_sig mulmod_256 A B) < eval p256)%Z.
+Proof. apply (proj2_sig mulmod_256_ext). Qed.
+
 Local Ltac t_fin :=
   [ > reflexivity
   | repeat match goal with
@@ -241,19 +262,20 @@ Local Ltac t_fin :=
            | [ |- (0 <= MontgomeryAPI.eval (Z.pos r) _)%Z ] => apply MontgomeryAPI.eval_small
            end.. ].
 
-Definition add : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | let eval := MontgomeryAPI.eval (Z.pos r) in
-                   ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
-                            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
-                        (eval A < eval p256
-                         -> eval B < eval p256
-                         -> montgomery_to_F (eval (f A B))
-                            = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F))
-                    /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
-                               (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
-                           (eval A < eval p256
-                            -> eval B < eval p256
-                            -> 0 <= eval (f A B) < eval p256)))%Z }.
+Definition add_ext
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+               (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+           (eval A < eval p256
+            -> eval B < eval p256
+            -> montgomery_to_F (eval (f A B))
+               = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F))
+       /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                  (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+              (eval A < eval p256
+               -> eval B < eval p256
+               -> 0 <= eval (f A B) < eval p256)))%Z }.
 Proof.
   exists (proj1_sig add').
   abstract (
@@ -266,19 +288,20 @@ Proof.
     ).
 Defined.
 
-Definition sub : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | let eval := MontgomeryAPI.eval (Z.pos r) in
-                   ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
-                            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
-                        (eval A < eval p256
-                         -> eval B < eval p256
-                         -> montgomery_to_F (eval (f A B))
-                            = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F))
-                    /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
-                            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
-                        (eval A < eval p256
-                         -> eval B < eval p256
-                         -> 0 <= eval (f A B) < eval p256)))%Z }.
+Definition sub_ext
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+               (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+           (eval A < eval p256
+            -> eval B < eval p256
+            -> montgomery_to_F (eval (f A B))
+               = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F))
+       /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+                  (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+              (eval A < eval p256
+               -> eval B < eval p256
+               -> 0 <= eval (f A B) < eval p256)))%Z }.
 Proof.
   exists (proj1_sig sub').
   abstract (
@@ -291,15 +314,16 @@ Proof.
     ).
 Defined.
 
-Definition opp : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
-                 | let eval := MontgomeryAPI.eval (Z.pos r) in
-                   ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
-                        (eval A < eval p256
-                         -> montgomery_to_F (eval (f A))
-                            = (F.opp (montgomery_to_F (eval A)))%F))
-                    /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
-                           (eval A < eval p256
-                            -> 0 <= eval (f A) < eval p256)))%Z }.
+Definition opp_ext
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      ((forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
+           (eval A < eval p256
+            -> montgomery_to_F (eval (f A))
+               = (F.opp (montgomery_to_F (eval A)))%F))
+       /\ (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
+              (eval A < eval p256
+               -> 0 <= eval (f A) < eval p256)))%Z }.
 Proof.
   exists (proj1_sig opp').
   abstract (
@@ -312,11 +336,12 @@ Proof.
     ).
 Defined.
 
-Definition nonzero : { f:Tuple.tuple Z sz -> Z
-                     | let eval := MontgomeryAPI.eval (Z.pos r) in
-                       forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
-                         (eval A < eval p256
-                          -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }.
+Definition nonzero_ext
+  : { f:Tuple.tuple Z sz -> Z
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
+        (eval A < eval p256
+         -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }.
 Proof.
   exists (proj1_sig nonzero').
   abstract (
@@ -333,6 +358,87 @@ Proof.
         | rewrite Z.mul_assoc, Z.mul_mod, H by (vm_compute; congruence); autorewrite with zsimplify_const; reflexivity ] ]
     ).
 Defined.
+
+Definition add
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+             (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+        (eval A < eval p256
+         -> eval B < eval p256
+         -> montgomery_to_F (eval (f A B))
+            = (montgomery_to_F (eval A) + montgomery_to_F (eval B))%F)%Z }.
+Proof.
+  let v := (eval cbv [proj1_sig add_ext add' lift2_sig] in (proj1_sig add_ext)) in
+  (exists v).
+  abstract apply (proj2_sig add_ext).
+Defined.
+
+Lemma add_bounded
+  : let eval := MontgomeryAPI.eval (Z.pos r) in
+    (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+        (eval A < eval p256
+         -> eval B < eval p256
+         -> 0 <= eval (proj1_sig add A B) < eval p256))%Z.
+Proof. apply (proj2_sig add_ext). Qed.
+
+Definition sub
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+             (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+        (eval A < eval p256
+         -> eval B < eval p256
+         -> montgomery_to_F (eval (f A B))
+            = (montgomery_to_F (eval A) - montgomery_to_F (eval B))%F)%Z }.
+Proof.
+  let v := (eval cbv [proj1_sig sub_ext sub' lift2_sig] in (proj1_sig sub_ext)) in
+  (exists v).
+  abstract apply (proj2_sig sub_ext).
+Defined.
+
+Lemma sub_bounded
+  : let eval := MontgomeryAPI.eval (Z.pos r) in
+    (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A)
+            (B : Tuple.tuple Z sz) (_ : small (Z.pos r) B),
+        (eval A < eval p256
+         -> eval B < eval p256
+         -> 0 <= eval (proj1_sig sub A B) < eval p256))%Z.
+Proof. apply (proj2_sig sub_ext). Qed.
+
+Definition opp
+  : { f:Tuple.tuple Z sz -> Tuple.tuple Z sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
+        (eval A < eval p256
+         -> montgomery_to_F (eval (f A))
+            = (F.opp (montgomery_to_F (eval A)))%F)%Z }.
+Proof.
+  let v := (eval cbv [proj1_sig opp_ext opp' lift1_sig] in (proj1_sig opp_ext)) in
+  (exists v).
+  abstract apply (proj2_sig opp_ext).
+Defined.
+
+Lemma opp_bounded
+  : let eval := MontgomeryAPI.eval (Z.pos r) in
+    (forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
+        (eval A < eval p256
+         -> 0 <= eval (proj1_sig opp A) < eval p256))%Z.
+Proof. apply (proj2_sig opp_ext). Qed.
+
+Definition nonzero
+  : { f:Tuple.tuple Z sz -> Z
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Tuple.tuple Z sz) (_ : small (Z.pos r) A),
+        (eval A < eval p256
+         -> f A = 0 <-> (montgomery_to_F (eval A) = F.of_Z m 0))%Z }.
+Proof.
+  let v := (eval cbv [proj1_sig nonzero_ext nonzero' lift1_sig] in (proj1_sig nonzero_ext)) in
+  (exists v).
+  abstract apply (proj2_sig nonzero_ext).
+Defined.
+
 
 Local Definition for_assumptions := (mulmod_256, add, sub, opp, nonzero).
 Print Assumptions for_assumptions.

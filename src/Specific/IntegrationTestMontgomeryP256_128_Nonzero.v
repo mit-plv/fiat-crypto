@@ -44,18 +44,16 @@ Section BoundedField25p5.
   Let phi : feBW -> F m :=
     fun x => montgomery_to_F (eval x).
 
+  Local Ltac op_sig_side_conditions_t _ :=
+    try (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _)); destruct_head_hnf' sig; try assumption.
+
   (* TODO : change this to field once field isomorphism happens *)
   Definition nonzero
     : { nonzero : feBW_small -> BoundedWord  1 bitwidth bound1
       | forall A, (BoundedWordToZ _ _ _ (nonzero A) =? 0) = (if Decidable.dec (phi A = F.of_Z m 0) then true else false) }.
   Proof.
-    lazymatch goal with
-    | [ |- { f | forall a, (?R (?phi (f a)) ?v) = @?rhs a } ]
-      => apply lift1_sig with (P:=fun a f => R (phi f) v = rhs a)
-    end.
-    intros a.
-    cbv [feBW_of_feBW_small].
-    eexists_sig_etransitivity. all:cbv [phi eval].
+    apply_lift_sig; intros; eexists_sig_etransitivity.
+    all:cbv [feBW_of_feBW_small phi eval].
     refine (_ : (if Decidable.dec (_ = 0) then true else false) = _).
     lazymatch goal with
     | [ |- (if Decidable.dec ?x then _ else _) = (if Decidable.dec ?y then _ else _) ]
@@ -65,7 +63,7 @@ Section BoundedField25p5.
            | ]
     end.
     etransitivity; [ | eapply (proj2_sig nonzero) ];
-      [ | solve [ try (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _)); destruct_head' feBW_small; destruct_head' feBW; try assumption ].. ].
+      [ | solve [ op_sig_side_conditions_t () ].. ].
     reflexivity.
     let decP := lazymatch goal with |- { c | _ = if Decidable.dec (?decP = 0) then _ else _ } => decP end in
     apply (@proj2_sig_map _ (fun c => BoundedWordToZ 1 _ _ c = decP) _).
@@ -78,9 +76,8 @@ Section BoundedField25p5.
           try reflexivity.
         Z.ltb_to_lt; congruence. } }
     eexists_sig_etransitivity.
-    set (nonzeroZ := proj1_sig nonzero).
-    context_to_dlet_in_rhs nonzeroZ; cbv [nonzeroZ].
-    cbv beta iota delta [nonzero nonzero' proj1_sig MontgomeryAPI.T lift1_sig fst snd runtime_lor runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
+    do_set_sig nonzero.
+    cbv_runtime.
     reflexivity.
     sig_dlet_in_rhs_to_context.
     match goal with

@@ -46,21 +46,9 @@ Section BoundedField25p5.
     { square : feBW -> feBW
     | forall a, phi (square a) = F.mul (phi a) (phi a) }.
   Proof.
-    lazymatch goal with
-    | [ |- { f | forall a, ?phi (f a) = @?rhs a } ]
-      => apply lift1_sig with (P:=fun a f => phi f = rhs a)
-    end.
-    intros a.
-    eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig square_sig).
-    symmetry; rewrite <- (proj2_sig carry_sig); symmetry.
-    set (carry_squareZ := fun a => proj1_sig carry_sig (proj1_sig square_sig a)).
-    change (proj1_sig carry_sig (proj1_sig square_sig ?a)) with (carry_squareZ a).
-    context_to_dlet_in_rhs carry_squareZ.
-    cbv beta iota delta [carry_squareZ proj1_sig square_sig carry_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
-    reflexivity.
-    sig_dlet_in_rhs_to_context.
-    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
+    start_preglue.
+    do_rewrite_with_1sig_add_carry square_sig carry_sig; cbv_runtime.
+    all:fin_preglue.
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
     Time refine_reflectively. (* Finished transaction in 19.348 secs (19.284u,0.036s) (successful) *)

@@ -42,33 +42,28 @@ Section BoundedField25p5.
   Let phi : feBW -> F m :=
     fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
 
+  Lemma feBW_bounded (a : feBW)
+    : 0 <= B.Positional.eval wt (BoundedWordToZ sz bitwidth bounds a) < 2 * Z.pos m.
+  Proof.
+    destruct a as [a H]; unfold BoundedWordToZ, proj1_sig.
+    revert H.
+    cbv -[Z.le Z.add Z.mul Z.lt fst snd wordToZ wt]; cbn [fst snd].
+    repeat match goal with
+           | [ |- context[wt ?n] ]
+             => let v := (eval compute in (wt n)) in change (wt n) with v
+           end.
+    intro; destruct_head'_and.
+    omega.
+  Qed.
+
   (* TODO : change this to field once field isomorphism happens *)
   Definition freeze :
     { freeze : feBW -> feBW
     | forall a, phi (freeze a) = phi a }.
   Proof.
-    lazymatch goal with
-    | [ |- { f | forall a, ?phi (f a) = @?rhs a } ]
-      => apply lift1_sig with (P:=fun a f => phi f = rhs a)
-    end.
-    intros a.
-    eexists_sig_etransitivity. all:cbv [phi].
-    rewrite <- (proj2_sig freeze_sig).
-    { set (freezeZ := proj1_sig freeze_sig).
-      context_to_dlet_in_rhs freezeZ.
-      cbv beta iota delta [freezeZ proj1_sig freeze_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr sz].
-      reflexivity. }
-    { destruct a as [a H]; unfold BoundedWordToZ, proj1_sig.
-      revert H.
-      cbv -[Z.le Z.add Z.mul Z.lt fst snd wordToZ wt]; cbn [fst snd].
-      repeat match goal with
-             | [ |- context[wt ?n] ]
-               => let v := (eval compute in (wt n)) in change (wt n) with v
-             end.
-      intro; destruct_head'_and.
-      omega. }
-    sig_dlet_in_rhs_to_context.
-    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
+    start_preglue.
+    do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_bounded); cbv_runtime.
+    all:fin_preglue.
     (* jgross start here! *)
     (*Set Ltac Profiling.*)
     Time refine_reflectively_with_uint8_with anf. (* Finished transaction in 5.792 secs (5.792u,0.004s) (successful) *)

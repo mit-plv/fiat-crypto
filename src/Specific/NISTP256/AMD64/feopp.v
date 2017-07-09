@@ -40,37 +40,20 @@ Section BoundedField25p5.
   Let phi : feBW -> F m :=
     fun x => montgomery_to_F (eval x).
 
+  Local Ltac op_sig_side_conditions_t _ :=
+    try (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _)); destruct_head_hnf' sig; try assumption.
+
   (* TODO : change this to field once field isomorphism happens *)
   Definition opp
     : { opp : feBW_small -> feBW_small
       | forall A, phi (opp A) = F.opp (phi A) }.
   Proof.
-    lazymatch goal with
-    | [ |- { f | forall a, ?phi (?proj (f a)) = @?rhs a } ]
-      => apply lift1_sig with (P:=fun a f => phi (proj f) = rhs a)
-    end.
-    intros a.
-    cbv [feBW_of_feBW_small].
-    eexists_sig_etransitivity. all:cbv [phi eval].
-    rewrite <- (proj1 (proj2_sig opp))
-      by (try (hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _)); destruct_head' feBW_small; destruct_head' feBW; try assumption).
-    reflexivity.
-    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
-    Associativity.sig_sig_assoc.
-    apply sig_conj_by_impl2.
-    { intros ? H; cbv [eval]; rewrite H; clear H.
-      apply (proj2 (proj2_sig opp)); destruct_head' feBW_small; try assumption;
-        hnf; rewrite <- (is_bounded_by_None_repeat_In_iff_lt _ _ _); destruct_head' feBW; assumption. }
-    eexists_sig_etransitivity.
-    set (oppZ := proj1_sig opp).
-    context_to_dlet_in_rhs oppZ; cbv [oppZ].
-    cbv beta iota delta [opp opp' proj1_sig MontgomeryAPI.T lift1_sig fst snd runtime_add runtime_and runtime_mul runtime_opp runtime_shr].
-    reflexivity.
-    sig_dlet_in_rhs_to_context.
-    apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p)).
-    match goal with
-    | [ H : feBW_small |- _ ] => destruct H as [? _]
-    end.
+    start_preglue.
+    all:cbv [feBW_of_feBW_small eval].
+    do_rewrite_with_sig_by opp op_sig_side_conditions_t.
+    cbv_runtime.
+    all:fin_preglue.
+    factor_out_bounds_and_strip_eval opp_bounded op_sig_side_conditions_t.
     (* jgross start here! *)
     Set Ltac Profiling.
     (*     Set Ltac Profiling.
