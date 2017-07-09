@@ -27,6 +27,7 @@ Require Import Crypto.Compilers.Z.InterpSideConditions.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.Definition.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstLet.
+Require Import Crypto.Util.Tactics.UnfoldArg.
 Require Import Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Option.
@@ -58,6 +59,8 @@ forall x, Interp _ ?e x = F
 >>
     by reifying [F]. *)
 Ltac do_reify :=
+  unfold_second_arg Tuple.tuple;
+  unfold_second_arg Tuple.tuple';
   cbv beta iota delta [Tuple.tuple Tuple.tuple'] in *;
   cbv beta iota delta [Syntax.interp_flat_type Syntax.interp_base_type];
   reify_context_variables;
