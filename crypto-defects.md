@@ -32,6 +32,7 @@ appearing in our code.
 | [ed25519.py](https://ed25519.cr.yp.to/python/ed25519.py) | Ed25519 | accepts signatures other impls reject | missing h mod l |
 | [CryptoNote](https://getmonero.org/2017/05/17/disclosure-of-a-major-bug-in-cryptonote-based-currencies.html) | Anti-double-spending tag |  additive curve25519 curve point | need order(P) = l |
 |[bitcoin#eed71d85](https://github.com/bitcoin-core/secp256k1/commit/5de4c5dffd22aa4510a5c97d0ad4a9c2eed71d85) | ECDSA-secp256k1 x*B | mixed addition Jacobian+Affine | missing case |
+|[openjdk#01781d7e](http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/d99101781d7e) | EC scalarmult | mixed addition Jacobian+Affine | [missing case](https://twitter.com/asanso/status/887691580018176000) |
 
 
 
