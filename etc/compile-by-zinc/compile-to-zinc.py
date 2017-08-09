@@ -353,7 +353,7 @@ def make_assign_locations_to_instructions_cumulatively(data):
         ret += 'constraint alldifferent(output_locations);\n'
         return ret
 
-    def make_dependencies_old(input_data):
+    def make_dependencies(input_data):
         var_names = get_var_names(input_data)
         ret = ''
         for line in input_data['lines']:
@@ -366,14 +366,14 @@ def make_assign_locations_to_instructions_cumulatively(data):
         ret += '\n'
         return ret
 
-    def make_dependencies(input_data):
+    def make_dependencies_new(input_data):
         var_names = get_var_names(input_data)
         ret = ''
         ret += 'array[INSTRUCTIONS,INSTRUCTIONS] of var 0..1: depends_on;\n'
         dependencies = {}
-        for line in input_data['lines']:
-            dependencies[line['out']] = tuple(arg for arg in line['args']
-                                              if arg in var_names and arg[0] not in '0123456789')
+        #for line in input_data['lines']:
+        #    dependencies[line['out']] = tuple(arg for arg in line['args']
+        #                                      if arg in var_names and arg[0] not in '0123456789')
         # HERE
         
         
