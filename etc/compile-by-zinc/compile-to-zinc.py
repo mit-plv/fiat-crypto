@@ -12,6 +12,9 @@ MAX_INSTRUCTION_WINDOW = 53
 
 INSTRUCTIONS_PER_CYCLE = 4
 
+REGISTERS = tuple(['RAX', 'RBX', 'RCX', 'RDX', 'RSI', 'RDI', 'RBP', 'RSP']
+                  + ['r%d' % i for i in range(8, 16)])
+
 BITWISE_CORES = tuple({
     'core' : { 'name' : core_name , 'latency' : 1 },
     'latency' : 1
@@ -68,6 +71,10 @@ def get_var_names(input_data):
 
 def get_input_var_names(input_data):
     return tuple(i for i in data['vars'].replace('%core', '').replace(',', ' ').replace('(', ' ').replace(')', ' ').replace("'", ' ').split(' ')
+                 if i != '')
+
+def get_output_var_names(input_data):
+    return tuple(i for i in data['return'].replace(',', ' ').replace('(', ' ').replace(')', ' ').split(' ')
                  if i != '')
 
 def create_set(name, items):
@@ -507,7 +514,7 @@ def assemble_output_and_register_allocate(data_list, result_list):
     def combine_lists(data_list, result_list):
         data = data_list[0]
         data['lines'] = list(data['lines'])
-        for cur_data in data_list:
+        for cur_data in data_list[1:]:
             data['lines'] += list(cur_data['lines'])
         data['lines'] = tuple(data['lines'])
 
@@ -517,20 +524,71 @@ def assemble_output_and_register_allocate(data_list, result_list):
             results += [(var, core_type, basepoint+loc, data_latency, core_latency)
                         for var, core_type, loc, data_latency, core_latency in result['schedule']]
             basepoint += result['RET_loc']
-        return (data, results)
+        return (data, results, basepoint)
 
     def sort_results(data, results):
-        return sorted([(loc, line, var, core_type, loc, data_latency, core_latency)
+        return sorted([(loc, line, var, core_type, data_latency, core_latency)
                        for (line, (var, core_type, loc, data_latency, core_latency))
                        in zip(data['lines'], results)])
 
-    #def register_allocate
+    def get_live_ranges(data, results, RET_loc):
+        var_names = get_var_names(data)
+        input_var_names = get_input_var_names(data)
+        output_var_names = get_output_var_names(data)
+        ret = dict((var, {'start':0, 'accessed':[]}) for var in input_var_names)
+        for (line, (var, core_type, loc, data_latency, core_latency)) in zip(data['lines'], results):
+            assert var not in ret.keys()
+            ret[var] = {'start':loc, 'accessed':[]}
+            for arg in line['args']:
+                if arg in var_names + input_var_names:
+                    ret[arg]['accessed'].append(loc)
+                else:
+                    print(arg)
+        for var in output_var_names:
+            ret[var]['accessed'].append(RET_loc)
+        for var in ret.keys():
+            ret[var]['end'] = max(ret[var]['accessed'])
+        return ret
+
+    def remake_overlaps(live_ranges):
+        live_ranges = dict(live_ranges)
+        for var in live_ranges.keys():
+            live_ranges[var] = dict(live_ranges[var])
+            live_ranges[var]['overlaps'] = tuple(sorted(
+                other_var
+                for other_var in live_ranges.keys()
+                if other_var != var and
+                (live_ranges[other_var]['start'] <= live_ranges[var]['start'] <= live_ranges[other_var]['end']
+                 or live_ranges[var]['start'] <= live_ranges[other_var]['start'] <= live_ranges[var]['end'])
+                ))
+        return live_ranges
+
+##    def insert_possible_registers(live_ranges):
+##        live_ranges = dict(live_ranges)
+##        for var in live_ranges.keys():
+##            live_ranges[var] = dict(live_ranges[var])
+##            live_ranges[var]['possible registers'] = tuple(sorted(
+##                other_var
+##                for other_var in live_ranges.keys()
+##                if other_var != var and
+##                (live_ranges[other_var]['start'] <= live_ranges[var]['start'] <= live_ranges[other_var]['end']
+##                 or live_ranges[var]['start'] <= live_ranges[other_var]['start'] <= live_ranges[var]['end'])
+##                ))
+##        return live_ranges
+
+    def register_allocate(live_ranges):
+        allocated = {}
+        remaining_registers = list(REGISTERS)
+        
 
     def format_results(sorted_results):
         return ['%s // %s, start: %.2f, end: %.2f' % (line['source'], core_type, loc / 4.0, (loc + data_latency) / 4.0)
-                for loc, line, var, core_type, loc, data_latency, core_latency in sorted_results]
+                for loc, line, var, core_type, data_latency, core_latency in sorted_results]
 
-    data, results = combine_lists(data_list, result_list)
+    data, results, RET_loc = combine_lists(data_list, result_list)
+##    live_ranges = remake_overlaps(get_live_ranges(data, results, RET_loc))
+##    for i in sorted((len(rangev['overlaps']), var, rangev['accessed'], (rangev['start'], rangev['end']), rangev['overlaps']) for var, rangev in live_ranges.items()):
+##        print(i)
     return '\n'.join(format_results(sort_results(data, results)))
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
@@ -540,4 +598,4 @@ for i, data in enumerate(data_list):
         #f.write(make_assign_instructions_to_locations(data))
         f.write(make_assign_locations_to_instructions_cumulatively(data))
             
-print(assemble_output_and_register_allocate(data_list[:1], RESULTS[:1]))
+print(assemble_output_and_register_allocate(data_list, RESULTS))
