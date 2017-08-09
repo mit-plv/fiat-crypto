@@ -8,7 +8,7 @@ CORES = ('ADD_MUL0', 'ADD_MUL1', 'MUL0', 'LEA_BW0', 'LEA_BW1', 'NOOP_CORE')
 
 OP_NAMES = {'*':'MUL', '+':'ADD', '>>':'SHL', '<<':'SHR', '|':'OR', '&':'AND'}
 
-MAX_INSTRUCTION_WINDOW = 53
+MAX_INSTRUCTION_WINDOW = 150
 
 INSTRUCTIONS_PER_CYCLE = 4
 
@@ -353,7 +353,7 @@ def make_assign_locations_to_instructions_cumulatively(data):
         ret += 'constraint alldifferent(output_locations);\n'
         return ret
 
-    def make_dependencies(input_data):
+    def make_dependencies_old(input_data):
         var_names = get_var_names(input_data)
         ret = ''
         for line in input_data['lines']:
@@ -366,17 +366,24 @@ def make_assign_locations_to_instructions_cumulatively(data):
         ret += '\n'
         return ret
 
-    def make_dependencies_new(input_data):
+    def make_dependencies(input_data):
         var_names = get_var_names(input_data)
         ret = ''
-        ret += 'array[INSTRUCTIONS,INSTRUCTIONS] of var 0..1: depends_on;\n'
         dependencies = {}
-        #for line in input_data['lines']:
-        #    dependencies[line['out']] = tuple(arg for arg in line['args']
-        #                                      if arg in var_names and arg[0] not in '0123456789')
-        # HERE
-        
-        
+        for line in input_data['lines']:
+            dependencies[line['out']] = tuple(arg for arg in line['args']
+                                              if arg in var_names and arg[0] not in '0123456789')
+            dependencies_array = [['1' if arg2 in dependencies.get(arg1, tuple()) else '0'
+                                   for arg2 in var_names]
+                                  for arg1 in var_names]
+        ret += 'array[INSTRUCTIONS,INSTRUCTIONS] of 0..1: depends_on =\n'
+        ret += '  [|' + ',\n  | '.join(', '.join(row) for row in dependencies_array) + ' |];\n'
+        ret += '\n'
+        ret += 'constraint forall (i,j in INSTRUCTIONS) (depends_on[i,j] == 1 -> output_locations[i] + output_data_latency[i] <= output_locations[j]);\n'
+        ret += '\n'
+        ret += 'constraint max([ output_locations[i] + output_data_latency[i] | i in INSTRUCTIONS ]) <= RET_loc;\n'
+        ret += '\n'
+        return ret
     
 
     def make_output(input_data):
@@ -396,80 +403,78 @@ def make_assign_locations_to_instructions_cumulatively(data):
 
 
 RESULTS = [
-"""("x20", "ADD_MUL", 9, 12, 4) ,
-("x21", "ADD_MUL", 21, 12, 4) ,
-("x22", "ADD_MUL", 10, 12, 4) ,
-("x23", "ADD_MUL", 34, 4, 4) ,
-("x24", "ADD_MUL", 47, 12, 4) ,
-("x25", "ADD_MUL", 43, 12, 4) ,
-("x26", "ADD_MUL", 59, 4, 4) ,
-("x27", "ADD_MUL", 51, 12, 4) ,
-("x28", "ADD_MUL", 63, 4, 4) ,
-("x29", "ADD_MUL", 75, 12, 4) ,
-("x30", "ADD_MUL", 71, 12, 4) ,
-("x31", "ADD_MUL", 87, 4, 4) ,
-("x32", "ADD_MUL", 79, 12, 4) ,
-("x33", "ADD_MUL", 91, 4, 4) ,
-("x34", "ADD_MUL", 82, 12, 4) ,
-("x35", "ADD_MUL", 95, 4, 4) ,
-("x36", "ADD_MUL", 58, 12, 4) ,
-("x37", "ADD_MUL", 55, 12, 4) ,
-("x38", "ADD_MUL", 70, 4, 4) ,
-("x39", "ADD_MUL", 62, 12, 4) ,
-("x40", "ADD_MUL", 74, 4, 4) ,
-("x41", "ADD_MUL", 66, 12, 4) ,
-("x42", "ADD_MUL", 78, 4, 4) ,
-("x43", "ADD_MUL", 90, 12, 4) ,
-("x44", "ADD_MUL", 102, 4, 4) ,
-("x45", "ADD_MUL", 1, 12, 4) ,
-("x46", "ADD_MUL", 2, 12, 4) ,
-("x47", "ADD_MUL", 5, 12, 4) ,
-("x48", "ADD_MUL", 6, 12, 4) ,
-("x49", "ADD_MUL", 13, 12, 4) ,
-("x50", "ADD_MUL", 25, 4, 4) ,
-("x51", "ADD_MUL", 14, 12, 4) ,
-("x52", "ADD_MUL", 29, 4, 4) ,
-("x53", "ADD_MUL", 17, 12, 4) ,
-("x54", "ADD_MUL", 33, 4, 4) ,
-("x55", "ADD_MUL", 18, 12, 4) ,
-("x56", "ADD_MUL", 37, 4, 4) ,
-("x57", "ADD_MUL", 22, 12, 4) ,
-("x58", "ADD_MUL", 38, 4, 4) ,
-("x59", "ADD_MUL", 30, 12, 4) ,
-("x60", "ADD_MUL", 42, 4, 4) ,
-("x61", "ADD_MUL", 26, 12, 4) ,
-("x62", "ADD_MUL", 46, 4, 4) ,
-("x63", "ADD_MUL", 54, 12, 4) ,
-("x64", "ADD_MUL", 67, 4, 4) ,
-("x65", "ADD_MUL", 86, 12, 4) ,
-("x66", "ADD_MUL", 98, 4, 4) ,
-("x67", "ADD_MUL", 83, 12, 4) ,
-("x68", "ADD_MUL", 99, 4, 4) ,
-("x69", "LEA_BW", 41, 4, 4) ,
-("x70", "LEA_BW", 44, 4, 4) ,
-("x71", "ADD_MUL", 50, 4, 4) ,
-("x72", "LEA_BW", 56, 4, 4) ,
-RET_loc: 106"""
-,
-"""("x73", "LEA_BW", 2, 4, 4) ,
-("x74", "ADD_MUL", 1, 4, 4) ,
-("x75", "LEA_BW", 5, 4, 4) ,
-("x76", "LEA_BW", 6, 4, 4) ,
-("x77", "ADD_MUL", 9, 4, 4) ,
-("x78", "LEA_BW", 13, 4, 4) ,
+"""("x20", "ADD_MUL", 150, 12, 4) ,
+("x21", "ADD_MUL", 126, 12, 4) ,
+("x22", "ADD_MUL", 121, 12, 4) ,
+("x23", "ADD_MUL", 117, 4, 4) ,
+("x24", "ADD_MUL", 149, 12, 4) ,
+("x25", "ADD_MUL", 146, 12, 4) ,
+("x26", "ADD_MUL", 105, 4, 4) ,
+("x27", "ADD_MUL", 145, 12, 4) ,
+("x28", "ADD_MUL", 101, 4, 4) ,
+("x29", "ADD_MUL", 142, 12, 4) ,
+("x30", "ADD_MUL", 141, 12, 4) ,
+("x31", "ADD_MUL", 114, 4, 4) ,
+("x32", "ADD_MUL", 138, 12, 4) ,
+("x33", "ADD_MUL", 90, 4, 4) ,
+("x34", "ADD_MUL", 137, 12, 4) ,
+("x35", "ADD_MUL", 86, 4, 4) ,
+("x36", "ADD_MUL", 134, 12, 4) ,
+("x37", "ADD_MUL", 133, 12, 4) ,
+("x38", "ADD_MUL", 102, 4, 4) ,
+("x39", "ADD_MUL", 130, 12, 4) ,
+("x40", "ADD_MUL", 98, 4, 4) ,
+("x41", "ADD_MUL", 129, 12, 4) ,
+("x42", "ADD_MUL", 46, 4, 4) ,
+("x43", "ADD_MUL", 118, 12, 4) ,
+("x44", "ADD_MUL", 42, 4, 4) ,
+("x45", "ADD_MUL", 97, 12, 4) ,
+("x46", "ADD_MUL", 125, 12, 4) ,
+("x47", "ADD_MUL", 122, 12, 4) ,
+("x48", "ADD_MUL", 106, 12, 4) ,
+("x49", "ADD_MUL", 85, 12, 4) ,
+("x50", "ADD_MUL", 81, 4, 4) ,
+("x51", "ADD_MUL", 113, 12, 4) ,
+("x52", "ADD_MUL", 77, 4, 4) ,
+("x53", "ADD_MUL", 110, 12, 4) ,
+("x54", "ADD_MUL", 73, 4, 4) ,
+("x55", "ADD_MUL", 94, 12, 4) ,
+("x56", "ADD_MUL", 69, 4, 4) ,
+("x57", "ADD_MUL", 82, 12, 4) ,
+("x58", "ADD_MUL", 74, 4, 4) ,
+("x59", "ADD_MUL", 109, 12, 4) ,
+("x60", "ADD_MUL", 70, 4, 4) ,
+("x61", "ADD_MUL", 93, 12, 4) ,
+("x62", "ADD_MUL", 66, 4, 4) ,
+("x63", "ADD_MUL", 78, 12, 4) ,
+("x64", "ADD_MUL", 62, 4, 4) ,
+("x65", "ADD_MUL", 89, 12, 4) ,
+("x66", "ADD_MUL", 58, 4, 4) ,
+("x67", "ADD_MUL", 54, 12, 4) ,
+("x68", "ADD_MUL", 50, 4, 4) ,
+("x69", "LEA_BW", 65, 4, 4) ,
+("x70", "LEA_BW", 22, 4, 4) ,
+("x71", "ADD_MUL", 61, 4, 4) ,
+("x72", "LEA_BW", 57, 4, 4) ,
+("x73", "LEA_BW", 19, 4, 4) ,
+("x74", "ADD_MUL", 53, 4, 4) ,
+("x75", "LEA_BW", 49, 4, 4) ,
+("x76", "LEA_BW", 18, 4, 4) ,
+("x77", "ADD_MUL", 45, 4, 4) ,
+("x78", "LEA_BW", 41, 4, 4) ,
 ("x79", "LEA_BW", 14, 4, 4) ,
-("x80", "ADD_MUL", 17, 4, 4) ,
-("x81", "LEA_BW", 21, 4, 4) ,
-("x82", "LEA_BW", 22, 4, 4) ,
-("x83", "ADD_MUL", 25, 12, 4) ,
-("x84", "ADD_MUL", 37, 4, 4) ,
-("x85", "LEA_BW", 41, 4, 4) ,
-("x86", "LEA_BW", 42, 4, 4) ,
-("x87", "ADD_MUL", 45, 4, 4) ,
-("x88", "LEA_BW", 49, 4, 4) ,
-("x89", "LEA_BW", 50, 4, 4) ,
-("x90", "ADD_MUL", 53, 4, 4) ,
-RET_loc: 57"""
+("x80", "ADD_MUL", 37, 4, 4) ,
+("x81", "LEA_BW", 33, 4, 4) ,
+("x82", "LEA_BW", 10, 4, 4) ,
+("x83", "ADD_MUL", 21, 12, 4) ,
+("x84", "ADD_MUL", 17, 4, 4) ,
+("x85", "LEA_BW", 13, 4, 4) ,
+("x86", "LEA_BW", 6, 4, 4) ,
+("x87", "ADD_MUL", 9, 4, 4) ,
+("x88", "LEA_BW", 5, 4, 4) ,
+("x89", "LEA_BW", 2, 4, 4) ,
+("x90", "ADD_MUL", 1, 4, 4) ,
+RET_loc: 162"""
 ]
 
 ######################################################################
@@ -513,12 +518,18 @@ def assemble_output_and_register_allocate(data_list, result_list):
         return (data, results)
 
     def sort_results(data, results):
-        return sorted([(loc, '%s // %s, start: %.2f, end: %.2f' % (line['source'], core_type, loc / 4.0, (loc + data_latency) / 4.0))
+        return sorted([(loc, line, var, core_type, loc, data_latency, core_latency)
                        for (line, (var, core_type, loc, data_latency, core_latency))
                        in zip(data['lines'], results)])
 
+    #def register_allocate
+
+    def format_results(sorted_results):
+        return ['%s // %s, start: %.2f, end: %.2f' % (line['source'], core_type, loc / 4.0, (loc + data_latency) / 4.0)
+                for loc, line, var, core_type, loc, data_latency, core_latency in sorted_results]
+
     data, results = combine_lists(data_list, result_list)
-    return '\n'.join(code for i, code in sort_results(data, results))
+    return '\n'.join(format_results(sort_results(data, results)))
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
 for i, data in enumerate(data_list):
