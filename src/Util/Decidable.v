@@ -90,6 +90,10 @@ Global Instance dec_eq_Empty_set : DecidableRel (@eq Empty_set) | 10. exact _. D
 Global Instance dec_eq_prod {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A * B)) | 10. exact _. Defined.
 Global Instance dec_eq_option {A} `{DecidableRel (@eq A)} : DecidableRel (@eq (option A)) | 10. exact _. Defined.
 Global Instance dec_eq_list {A} `{DecidableRel (@eq A)} : DecidableRel (@eq (list A)) | 10. exact _. Defined.
+Global Instance dec_eq_list_nil_r {A} {ls} : Decidable (ls = @nil A) | 10.
+Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Defined.
+Global Instance dec_eq_list_nil_l {A} {ls} : Decidable (@nil A = ls) | 10.
+Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Defined.
 Global Instance dec_eq_sum {A B} `{DecidableRel (@eq A), DecidableRel (@eq B)} : DecidableRel (@eq (A + B)) | 10. exact _. Defined.
 Global Instance dec_eq_sigT_hprop {A P} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sigT A P)) | 10. exact _. Defined.
 Global Instance dec_eq_sig_hprop {A} {P : A -> Prop} `{DecidableRel (@eq A), forall a : A, IsHProp (P a)} : DecidableRel (@eq (@sig A P)) | 10. exact _. Defined.
