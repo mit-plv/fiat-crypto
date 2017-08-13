@@ -292,7 +292,16 @@ def schedule(data, basepoint):
         var_cores = [(var, core)
                      for var in next_statements
                      for core in MODEL[(lines[var]['op'] if var in lines.keys() else 'LOAD')]]
-        for cost, var, core, new_core_state in get_sorted_next_statements(var_cores, core_state)[:1]:
+        sorted_subset_next_statements = sorted_next_statements = get_sorted_next_statements(var_cores, core_state)
+        if len(sorted_next_statements) > 0:
+            pre_min_cost = sorted_next_statements[0][0]
+#            print((pre_min_cost, tuple(var for cost2, var, core, new_core_state in sorted_next_statements if pre_min_cost == cost2)))
+            sorted_subset_next_statements \
+                = tuple((cost, var, core, new_core_state) for cost, var, core, new_core_state in sorted_next_statements
+                        if pre_min_cost == cost)
+            sorted_subset_next_statements = sorted_subset_next_statements[:2]
+            if pre_min_cost == 0: sorted_subset_next_statements = sorted_subset_next_statements[:2]
+        for cost, var, core, new_core_state in sorted_subset_next_statements:
             cost, schedule = make_schedule(var, core)
             if min_cost is None or cost < min_cost:
                 min_cost, min_schedule = cost, schedule
