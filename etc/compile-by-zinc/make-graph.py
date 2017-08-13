@@ -117,8 +117,8 @@ def print_dependencies(input_data, dependencies):
     in_vars = get_input_var_names(input_data)
     out_vars = get_output_var_names(input_data)
     return ('digraph G {\n' +
-            ''.join('    %s -> in;\n' % var for var in in_vars) +
-            ''.join('    out -> %s;\n' % var for var in out_vars) +
+            ''.join('    in -> %s;\n' % var for var in in_vars) +
+            ''.join('    %s -> out;\n' % var for var in out_vars) +
             ''.join(''.join('    %s -> %s;\n' % (out_var, in_var) for out_var in sorted(dependencies[in_var]))
                     for in_var in sorted(dependencies.keys())) +
             '}\n')
