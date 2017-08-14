@@ -20,6 +20,20 @@ CORES = tuple(name for name, count in CORE_DATA)
 CORE_COUNT = dict(CORE_DATA)
 
 def possible_cores_for_line(line, var_types):
+    REGISTER = 'reg'
+    MEMORY = 'mem'
+    IMMEDIATE = 'imm'
+    VECTOR = 'vec'
+    INPUT = 'input'
+    def arg_type(arg):
+        if arg in REGISTERS: return REGISTER
+        if arg[:2] == '0x' and arg[2:].isdigit(): return IMMEDIATE
+        if arg[:3] in ('mmx', 'xmm', 'ymm'): return VECTOR
+        if arg[0] in 'v': return VECTOR
+        if arg[0] in 'Rr': return REGISTER
+        if arg[0] in 'm': return MEMORY
+        if arg[0] in 'x': return INPUT
+        assert False
     # from page 233 of http://agner.org/optimize/instruction_tables.pdf
     if line['op'] == '*':
         if line['type'] == 'uint64_t' and '0x13' in line['args']: # * 19 can be either imul r64/r64/i, or two lea; we skip the second case because jgross can't figure out what cost to use for it
@@ -72,7 +86,7 @@ def possible_cores_for_line(line, var_types):
             'latency' : 1,
             'instruction' : {'&':'AND', '|':'OR', '^':'XOR'}[line['op']]
             } for core_name in ('p0', 'p1', 'p5', 'p6'))
-    elif line['op'] in ('LOAD',):
+    elif line['op'] in ('LOAD','MOVmr') or (line['op'] == '=' and arg_type(line['args'][1]) in (MEMORY,) and arg_type(line['args'][0]) in (REGISTER,)):
         if line['type'] == 'uint128_t': # issue 2 MOV, same port, block on p4
             return tuple({
                 'core' : ({ 'name' : core_name , 'latency' : 2 }, { 'name' : 'p4' , 'latency' : 2 }),
@@ -87,7 +101,7 @@ def possible_cores_for_line(line, var_types):
                 } for core_name in ('p2', 'p3', 'p7'))
         else:
             assert False
-    elif line['op'] in ('STORE',):
+    elif line['op'] in ('STORE','MOVrm') or (line['op'] == '=' and arg_type(line['args'][0]) in (MEMORY,) and arg_type(line['args'][1]) in (REGISTER,)):
         if line['type'] == 'uint128_t': # issue 2 MOV, different ports
             return ({
                 'core' : tuple({ 'name' : core_name , 'latency' : 1 } for core_name in ('p2', 'p3')),
@@ -100,6 +114,15 @@ def possible_cores_for_line(line, var_types):
                 'latency' : 1,
                 'instruction' : 'MOV r64,m'
                 } for core_name in ('p2', 'p3'))
+        else:
+            assert False
+    elif line['op'] in ('MOV','MOVrr') or (line['op'] == '=' and arg_type(line['args'][1]) in (REGISTER,INPUT) and arg_type(line['args'][0]) in (REGISTER,INPUT)):
+        if line['type'] == 'uint64_t':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1 },),
+                'latency' : 1,
+                'instruction' : 'MOV r64,r64'
+                } for core_name in ('p0', 'p1', 'p5', 'p6'))
         else:
             assert False
     else:
@@ -136,9 +159,16 @@ def parse_lines(lines):
     ret['lines'] = []
     var_types = dict((var, 'uint64_t') for var in get_input_var_names(ret))
     for line, orig_line in zip(lines, orig_lines)[1:-1]:
-        datatype, varname, arg1, op, arg2 = re.findall('^(u?int[0-9]*_t) ([^ ]*) = ([^ ]*) ([^ ]*) ([^ ]*);(?: // .*)?$', line)[0]
-        var_types[varname] = datatype
-        cur_line = {'type':datatype, 'out':varname, 'op':op, 'args':(arg1, arg2), 'source':orig_line}
+        binop = re.findall('^(u?int[0-9]*_t) ([^ ]*) = ([^ ]*) ([^ ]*) ([^ ]*);(?: // .*)?$', line)
+        unop = re.findall('^([^ ]*) = ([^ ]*);(?: // .*)?$', line)
+        if len(binop) > 0:
+            datatype, varname, arg1, op, arg2 = binop[0]
+            var_types[varname] = datatype
+            cur_line = {'type':datatype, 'out':varname, 'op':op, 'args':(arg1, arg2), 'source':orig_line}
+        else:
+            varname, arg = unop[0]
+            var_types[varname] = var_types[arg]
+            cur_line = {'type':var_types[varname], 'out':varname, 'op':'=', 'args':(arg,), 'source':orig_line}
         possible_cores = possible_cores_for_line(cur_line, var_types)
         cur_line['cores'] = possible_cores
         ret['lines'].append(cur_line)
@@ -258,7 +288,7 @@ def schedule(data, basepoint, do_print):
     def update_register_vals_with_core_args(core, args, register_vals):
         new_rdx = register_vals['RDX']
         if 'MULX' in core['instruction']:
-            new_rdx = sorted(args, key=(lambda x: int(x.lstrip('0x'))))[0]
+            new_rdx = sorted(args, key=(lambda x: int(x.lstrip('0xrs'))))[0]
         changed = (register_vals['RDX'] != new_rdx)
         register_vals['RDX'] = new_rdx
         return changed, register_vals
@@ -398,6 +428,4 @@ for i, data in enumerate(data_list):
         basepoint = schedule(data, basepoint, do_print)
         f.write(data['footer'] + '\n')
     print(basepoint)
-    sys.exit(0)
-
-print(basepoint)
+    break
