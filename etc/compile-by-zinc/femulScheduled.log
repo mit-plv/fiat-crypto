@@ -1,4 +1,4 @@
-INPUT: (x10, x11, x9, x7, x5, x18, x19, x17, x15, x13)
+λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
 uint128_t x20 = (uint128_t) x5 * x13; // MULX r64,r64,r64, start: 0, end: 4
 uint128_t x21 = (uint128_t) x5 * x15; // MULX r64,r64,r64, start: 1, end: 5
 uint128_t x24 = (uint128_t) x5 * x17; // MULX r64,r64,r64, start: 2, end: 6
@@ -70,5 +70,4 @@ uint64_t x87 = x85 + x73; // ADD, start: 62, end: 63
 uint64_t x88 = x87 >> 0x33; // SHR r,i, start: 63, end: 64
 uint64_t x89 = x87 & 0x7ffffffffffff; // AND, start: 63, end: 64
 uint64_t x90 = x88 + x76; // ADD, start: 64, end: 65
-Return (x82, x79, x90, x89, x86)
-// end: 65
+return (x82, x79, x90, x89, x86))

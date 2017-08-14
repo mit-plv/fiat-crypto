@@ -131,10 +131,12 @@ def parse_lines(lines):
     ret['vars'] = lines[0][len(LAMBDA + ' '):-1]
     assert lines[-1][-1] == ')'
     ret['return'] = lines[-1][:-1].replace('return ', '').replace('Return ', '')
+    ret['header'] = orig_lines[0]
+    ret['footer'] = orig_lines[-1]
     ret['lines'] = []
     var_types = dict((var, 'uint64_t') for var in get_input_var_names(ret))
     for line, orig_line in zip(lines, orig_lines)[1:-1]:
-        datatype, varname, arg1, op, arg2 = re.findall('^(u?int[0-9]*_t) ([^ ]*) = ([^ ]*) ([^ ]*) ([^ ]*);$', line)[0]
+        datatype, varname, arg1, op, arg2 = re.findall('^(u?int[0-9]*_t) ([^ ]*) = ([^ ]*) ([^ ]*) ([^ ]*);(?: // .*)?$', line)[0]
         var_types[varname] = datatype
         cur_line = {'type':datatype, 'out':varname, 'op':op, 'args':(arg1, arg2), 'source':orig_line}
         possible_cores = possible_cores_for_line(cur_line, var_types)
@@ -380,21 +382,21 @@ def schedule(data, basepoint, do_print):
     schedule_with_cycle_info = add_cycle_info(schedule)
     for var, cycles, core in schedule_with_cycle_info:
         if var in lines.keys():
-            do_print('%s // %s, start: %s, end: %s' % (lines[var]['source'], core['instruction'], basepoint + cycles['start'], basepoint + cycles['finish']))
+            do_print(lines[var]['source'], ' // %s, start: %s, end: %s' % (core['instruction'], basepoint + cycles['start'], basepoint + cycles['finish']))
         else:
-            do_print('%s = %s; // %s, start: %s, end: %s' % (var, core['instruction'], basepoint + cycles['start'], basepoint + cycles['finish']))
+            do_print('%s = %s;' % (var, var), ' // %s, start: %s, end: %s' % (core['instruction'], basepoint + cycles['start'], basepoint + cycles['finish']))
     return basepoint + cost
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
 basepoint = 0
 for i, data in enumerate(data_list):
-    with open('femulScheduled.log', 'w') as f:
-        def do_print(v):
-            print(v)
-            f.write(v + '\n')
-        f.write('INPUT: (%s)\n' % ', '.join(get_input_var_names(data)))
+    with codecs.open('femulScheduled.log', 'w', encoding='utf8') as f:
+        def do_print(v, comment):
+            print(v + comment)
+            f.write(v + comment + '\n')
+        f.write(data['header'] + '\n')
         basepoint = schedule(data, basepoint, do_print)
-        f.write('Return (%s)\n// end: %d\n' % (', '.join(get_output_var_names(data)), basepoint))
+        f.write(data['footer'] + '\n')
     print(basepoint)
     sys.exit(0)
 
