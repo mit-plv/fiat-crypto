@@ -222,7 +222,8 @@ def schedule(data, basepoint, do_print):
         core_remaining_cycle_count = dict([(core_name, [0] * core_count) for core_name, core_count in CORE_DATA]
                                           + [(core_name, [0]) for core_name in REGISTERS])
         cur_instructions_in_cycle = 0
-        return vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle
+        register_vals = dict((var, None) for var in REGISTERS)
+        return vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle, register_vals
 
     def freeze_gen(v, rec=(lambda x:x)):
         if isinstance(v, list):
@@ -252,10 +253,19 @@ def schedule(data, basepoint, do_print):
     def unfreeze(v):
         return unfreeze_gen(v, unfreeze)
 
+    def update_register_vals_with_core_args(core, args, register_vals):
+        new_rdx = register_vals['RDX']
+        if 'MULX' in core['instruction']:
+            new_rdx = sorted(args, key=(lambda x: int(x.lstrip('0x'))))[0]
+        changed = (register_vals['RDX'] != new_rdx)
+        register_vals['RDX'] = new_rdx
+        return changed, register_vals
+
     @memoize
-    def update_core_state(var, core, core_state):
+    def update_core_state(var, core, args, core_state):
         core = unfreeze(core)
-        (vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle) = unfreeze(core_state)
+        (vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle, register_vals) = unfreeze(core_state)
+        changed, register_vals = update_register_vals_with_core_args(core, args, register_vals)
         cost = 0
         if cur_instructions_in_cycle >= INSTRUCTIONS_PER_CYCLE:
             cost += 1
@@ -282,37 +292,50 @@ def schedule(data, basepoint, do_print):
             assert core_remaining_cycle_count[port['name']][0] == 0
             core_remaining_cycle_count[port['name']][0] = port['latency']
             core_remaining_cycle_count[port['name']] = sorted(core_remaining_cycle_count[port['name']])
-        return (cost, freeze((vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle)))
+        return (cost, freeze((vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle, register_vals)))
 
     @memoize
     def evaluate_cost_memo(arg):
         schedule, core_state = unfreeze_gen(arg)
         schedule = unfreeze(schedule)
-        (vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle) = unfreeze(core_state)
+        (vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle, register_vals) = unfreeze(core_state)
         if len(schedule) == 0: return max([0] + list(vars_remaining_cycles.values()))
-        (var, core), schedule = schedule[0], schedule[1:]
-        cost, core_state = update_core_state(var, freeze(core), core_state)
+        (var, core, args), schedule = schedule[0], schedule[1:]
+        cost, core_state = update_core_state(var, freeze(core), args, core_state)
         return cost + evaluate_cost_memo(freeze_gen((freeze(schedule), core_state)))
 
 
     def get_wait_times(var_cores, core_state):
-        for var, core in var_cores:
-            cost, new_core_state = update_core_state(var, freeze(core), core_state)
-            yield (cost, var, core, new_core_state)
+        for var, core, args in var_cores:
+            (vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle, register_vals) = unfreeze(core_state)
+            changed, register_vals = update_register_vals_with_core_args(core, args, register_vals)
+            cost, new_core_state = update_core_state(var, freeze(core), args, core_state)
+            yield (cost, -len(reverse_dependencies.get(var, [])), changed, -core['latency'], var, core, args, new_core_state)
+
+    def cmp_wait_time(v1, v2):
+        (cost1, neg_len_deps1, changed1, neg_latency1, var1, core1, args1, new_core_state1) = v1
+        (cost2, neg_len_deps2, changed2, neg_latency2, var2, core2, args2, new_core_state2) = v2
+        if cost1 != cost2: return cmp(cost1, cost2)
+        if core1['instruction'] == core2['instruction']:
+            if changed1 != changed2: return cmp(changed1, changed2)
+            if neg_len_deps1 != neg_len_deps2: return cmp(neg_len_deps1, neg_len_deps2)
+            if neg_latency1 != neg_latency2: return cmp(neg_latency1, neg_latency2)
+        if var1 != var2: return cmp(var1, var2)
+        return cmp(v1, v2)
 
     def get_sorted_next_statements(next_var_cores, core_state):
-        return sorted(get_wait_times(next_var_cores, core_state))
+        return sorted(get_wait_times(next_var_cores, core_state), cmp=cmp_wait_time)
 
     def add_cycle_info(schedule):
         core_state = freeze(make_initial_core_state())
         schedule_with_cycle_info = []
         cur_cycle = 0
-        for var, core in schedule:
-            cost, core_state = update_core_state(var, freeze(core), core_state)
+        for var, core, args in schedule:
+            cost, core_state = update_core_state(var, freeze(core), args, core_state)
+            cur_cycle += cost
             schedule_with_cycle_info.append((var,
                                              {'start':cur_cycle, 'finish':cur_cycle + core['latency']},
                                              core))
-            cur_cycle += cost
         return schedule_with_cycle_info
 
     def evaluate_cost(schedule_with_cycle_info):
@@ -324,26 +347,27 @@ def schedule(data, basepoint, do_print):
 
     @memoize
     def schedule_remaining(remaining_indices, core_state):
-        def make_schedule(var, core):
-            cost, new_core_state = update_core_state(var, freeze(core), core_state)
+        def make_schedule(var, core, args):
+            cost, new_core_state = update_core_state(var, freeze(core), args, core_state)
             extra_cost, schedule = schedule_remaining(tuple(i for i in remaining_indices if i != var), new_core_state)
-            return cost + extra_cost, ([(var, core)] + schedule)
+            return cost + extra_cost, ([(var, core, args)] + schedule)
         next_statements = get_possible_next_statements(remaining_indices, dependencies)
         min_cost, min_schedule = None, None
-        var_cores = [(var, core)
+        var_cores = [(var, core, (lines[var]['args'] if var in lines.keys() else (var,)))
                      for var in next_statements
                      for core in (lines[var]['cores'] if var in lines.keys() else possible_cores_for_line({'op':'LOAD', 'type':'uint64_t'}))]
+
         sorted_subset_next_statements = sorted_next_statements = get_sorted_next_statements(var_cores, core_state)
         if len(sorted_next_statements) > 0:
             pre_min_cost = sorted_next_statements[0][0]
 #            print((pre_min_cost, tuple(var for cost2, var, core, new_core_state in sorted_next_statements if pre_min_cost == cost2)))
             sorted_subset_next_statements \
-                = tuple((cost, var, core, new_core_state) for cost, var, core, new_core_state in sorted_next_statements
+                = tuple((cost, var, core, args, new_core_state) for cost, reverse_dep_count, changed, neg_latency, var, core, args, new_core_state in sorted_next_statements
                         if pre_min_cost == cost)
             sorted_subset_next_statements = sorted_subset_next_statements[:1]
             if pre_min_cost == 0: sorted_subset_next_statements = sorted_subset_next_statements[:1]
-        for cost, var, core, new_core_state in sorted_subset_next_statements:
-            cost, schedule = make_schedule(var, core)
+        for cost, var, core, args, new_core_state in sorted_subset_next_statements:
+            cost, schedule = make_schedule(var, core, args)
             if min_cost is None or cost < min_cost:
                 min_cost, min_schedule = cost, schedule
 #            return min_cost, min_schedule
