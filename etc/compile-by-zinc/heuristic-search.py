@@ -2,6 +2,7 @@
 from __future__ import with_statement
 from memoize import memoize
 import codecs, re, sys
+import random
 
 LAMBDA = u'\u03bb'
 
@@ -14,39 +15,97 @@ INSTRUCTIONS_PER_CYCLE = 4
 REGISTERS = tuple(['RAX', 'RBX', 'RCX', 'RDX', 'RSI', 'RDI', 'RBP', 'RSP']
                   + ['r%d' % i for i in range(8, 16)])
 
-CORE_DATA = (('ADD_MUL', 2), ('MUL_CORE', 1), ('LEA_BW', 2))
+CORE_DATA = tuple(('p%d' % i, 1) for i in range(8))
 CORES = tuple(name for name, count in CORE_DATA)
 CORE_COUNT = dict(CORE_DATA)
 
-BITWISE_CORES = tuple({
-    'core' : { 'name' : core_name , 'latency' : 1 },
-    'latency' : 1
-    } for core_name in ('LEA_BW',))
+def possible_cores_for_line(line, var_types):
+    # from page 233 of http://agner.org/optimize/instruction_tables.pdf
+    if line['op'] == '*':
+        if line['type'] == 'uint64_t' and '0x13' in line['args']: # * 19 can be either imul r64/r64/i, or two lea; we skip the second case because jgross can't figure out what cost to use for it
+            return ({
+                'core': ({ 'name' : 'p1' , 'latency' : 1 },),
+                'latency' : 3,
+                'instruction' : 'IMUL r64,r64,i'
+                },)
+        elif line['type'] == 'uint128_t' and all(var_types[var] == 'uint64_t' for var in line['args']): # mulx
+            return ({
+                'core': tuple({ 'name' : core_name , 'latency' : 1 } for core_name in ('p1', 'p5')),
+                'latency' : 4,
+                'instruction' : 'MULX r64,r64,r64'
+                },)
+        else:
+            assert False
+    elif line['op'] == '+':
+        if line['type'] == 'uint128_t':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1+1 },),
+                'latency' : 1+1,
+                'instruction' : 'ADD; ADC(X)'
+                } for core_name in ('p0', 'p6'))
+        elif line['type'] == 'uint64_t':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1 },),
+                'latency' : 1,
+                'instruction' : 'ADD'
+                } for core_name in ('p0', 'p1', 'p5', 'p6'))
+        else:
+            assert False
+    elif line['op'] in ('>>', '<<'):
+        if var_types[line['args'][0]] == 'uint128_t' and line['type'] == 'uint64_t' and line['args'][1][:2] == '0x':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1 },),
+                'latency' : 3,
+                'instruction' : ('SHLD' if line['op'] == '<<' else 'SHRD') + ' r,r,i'
+                } for core_name in ('p1',))
+        elif var_types[line['args'][0]] == 'uint64_t' and line['type'] == 'uint64_t' and line['args'][1][:2] == '0x':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1 },),
+                'latency' : 1,
+                'instruction' : ('SHL' if line['op'] == '<<' else 'SHR') + ' r,i'
+                } for core_name in ('p0', 'p6'))
+        else:
+            assert False
+    elif line['op'] in ('&', '|', '^'):
+        return tuple({
+            'core' : ({ 'name' : core_name , 'latency' : 1 },),
+            'latency' : 1,
+            'instruction' : {'&':'AND', '|':'OR', '^':'XOR'}[line['op']]
+            } for core_name in ('p0', 'p1', 'p5', 'p6'))
+    elif line['op'] in ('LOAD',):
+        if line['type'] == 'uint128_t': # issue 2 MOV, same port, block on p4
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 2 }, { 'name' : 'p4' , 'latency' : 2 }),
+                'latency' : 2,
+                'instruction' : 'MOV m,r; MOV m,r'
+                } for core_name in ('p2', 'p3', 'p7'))
+        elif line['type'] == 'uint64_t':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1 }, { 'name' : 'p4' , 'latency' : 1 }),
+                'latency' : 1,
+                'instruction' : 'MOV m,r'
+                } for core_name in ('p2', 'p3', 'p7'))
+        else:
+            assert False
+    elif line['op'] in ('STORE',):
+        if line['type'] == 'uint128_t': # issue 2 MOV, different ports
+            return ({
+                'core' : tuple({ 'name' : core_name , 'latency' : 1 } for core_name in ('p2', 'p3')),
+                'latency' : 1,
+                'instruction' : 'MOV r64,m; MOV r64,m'
+                },)
+        elif line['type'] == 'uint64_t':
+            return tuple({
+                'core' : ({ 'name' : core_name , 'latency' : 1 },),
+                'latency' : 1,
+                'instruction' : 'MOV r64,m'
+                } for core_name in ('p2', 'p3'))
+        else:
+            assert False
+    else:
+        assert False
 
-MODEL = {
-    '*': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 3
-        }
-          for core_name in ('ADD_MUL', 'MUL_CORE')),
-    '+': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 1
-        }
-          for core_name in ('ADD_MUL', 'LEA_BW')),
-    '>>': BITWISE_CORES,
-    '<<': BITWISE_CORES,
-    '|': BITWISE_CORES,
-    '&': BITWISE_CORES,
-    'LOAD': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 1
-        } for core_name in REGISTERS),
-    'STORE': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 1
-        } for core_name in REGISTERS)
-    }
+
 
 if len(sys.argv) > 1:
     MAX_INSTRUCTION_WINDOW = int(sys.argv[1])
@@ -59,8 +118,13 @@ def get_lines(filename):
 def strip_casts(text):
     return re.sub(r'\(u?int[0-9]*_t\)\s*\(?([^\)]*)\)?', r'\1', text)
 
+def get_input_var_names(input_data):
+    return tuple(i for i in input_data['vars'].replace('%core', '').replace(',', ' ').replace('(', ' ').replace(')', ' ').replace("'", ' ').split(' ')
+                 if i != '')
+
 def parse_lines(lines):
-    lines = list(map(strip_casts, lines))
+    orig_lines = list(lines)
+    lines = list(map(strip_casts, orig_lines))
     assert lines[0][:len(LAMBDA + ' ')] == LAMBDA + ' '
     assert lines[0][-1] == ','
     ret = {}
@@ -68,9 +132,14 @@ def parse_lines(lines):
     assert lines[-1][-1] == ')'
     ret['return'] = lines[-1][:-1].replace('return ', '').replace('Return ', '')
     ret['lines'] = []
-    for line in lines[1:-1]:
+    var_types = dict((var, 'uint64_t') for var in get_input_var_names(ret))
+    for line, orig_line in zip(lines, orig_lines)[1:-1]:
         datatype, varname, arg1, op, arg2 = re.findall('^(u?int[0-9]*_t) ([^ ]*) = ([^ ]*) ([^ ]*) ([^ ]*);$', line)[0]
-        ret['lines'].append({'type':datatype, 'out':varname, 'op':op, 'args':(arg1, arg2), 'source':line})
+        var_types[varname] = datatype
+        cur_line = {'type':datatype, 'out':varname, 'op':op, 'args':(arg1, arg2), 'source':orig_line}
+        possible_cores = possible_cores_for_line(cur_line, var_types)
+        cur_line['cores'] = possible_cores
+        ret['lines'].append(cur_line)
     print('Compiling %d lines in groups of %d...' % (len(ret['lines']), min(MAX_INSTRUCTION_WINDOW, len(ret['lines']))))
     ret['lines'] = tuple(ret['lines'])
     split_ret = []
@@ -82,10 +151,6 @@ def parse_lines(lines):
 
 def get_var_names(input_data):
     return tuple(line['out'] for line in input_data['lines'])
-
-def get_input_var_names(input_data):
-    return tuple(i for i in data['vars'].replace('%core', '').replace(',', ' ').replace('(', ' ').replace(')', ' ').replace("'", ' ').split(' ')
-                 if i != '')
 
 def get_output_var_names(input_data):
     return tuple(i for i in data['return'].replace(',', ' ').replace('(', ' ').replace(')', ' ').split(' ')
@@ -101,7 +166,7 @@ def create_set(name, items):
     ret += '\n'
     return ret
 
-def schedule(data, basepoint):
+def schedule(data, basepoint, do_print):
     def make_data_dependencies(input_data):
         input_var_names = get_input_var_names(input_data)
         dependencies = dict((var, tuple()) for var in input_var_names)
@@ -200,7 +265,7 @@ def schedule(data, basepoint):
                     core_remaining_cycle_count[c][i] = max(0, core_remaining_cycle_count[c][i] - 1)
             vars_remaining_cycles = dict((var, c - 1) for var, c in vars_remaining_cycles.items()
                                          if c > 1)
-        cycles_passed = max([min(core_remaining_cycle_count[core['core']['name']])] +
+        cycles_passed = max([min(core_remaining_cycle_count[port['name']]) for port in core['core']] +
                             [vars_remaining_cycles[v] for v in dependencies[var] if v in vars_remaining_cycles.keys()])
         if cycles_passed != 0:
             cost += cycles_passed
@@ -213,9 +278,10 @@ def schedule(data, basepoint):
         else:
             cur_instructions_in_cycle += 1
         vars_remaining_cycles[var] = core['latency']
-        assert core_remaining_cycle_count[core['core']['name']][0] == 0
-        core_remaining_cycle_count[core['core']['name']][0] = core['core']['latency']
-        core_remaining_cycle_count[core['core']['name']] = sorted(core_remaining_cycle_count[core['core']['name']])
+        for port in core['core']:
+            assert core_remaining_cycle_count[port['name']][0] == 0
+            core_remaining_cycle_count[port['name']][0] = port['latency']
+            core_remaining_cycle_count[port['name']] = sorted(core_remaining_cycle_count[port['name']])
         return (cost, freeze((vars_remaining_cycles, core_remaining_cycle_count, cur_instructions_in_cycle)))
 
     @memoize
@@ -238,40 +304,15 @@ def schedule(data, basepoint):
         return sorted(get_wait_times(next_var_cores, core_state))
 
     def add_cycle_info(schedule):
-        vars_remaining_cycles = {}
-        core_remaining_cycle_count = dict([(core_name, [0] * core_count) for core_name, core_count in CORE_DATA]
-                                          + [(core_name, [0]) for core_name in REGISTERS])
+        core_state = freeze(make_initial_core_state())
         schedule_with_cycle_info = []
         cur_cycle = 0
-        cur_instructions_in_cycle = 0
         for var, core in schedule:
-            if cur_instructions_in_cycle >= INSTRUCTIONS_PER_CYCLE:
-                cur_cycle += 1
-                cur_instructions_in_cycle = 0
-                for c in core_remaining_cycle_count.keys():
-                    for i in range(len(core_remaining_cycle_count[c])):
-                        core_remaining_cycle_count[c][i] = max(0, core_remaining_cycle_count[c][i] - 1)
-                vars_remaining_cycles = dict((var, c - 1) for var, c in vars_remaining_cycles.items()
-                                             if c > 1)
-            cycles_passed = max([min(core_remaining_cycle_count[core['core']['name']])] +
-                                [vars_remaining_cycles[v] for v in dependencies[var] if v in vars_remaining_cycles.keys()])
-            if cycles_passed != 0:
-                cur_cycle += cycles_passed
-                cur_instructions_in_cycle = 1
-                for c in core_remaining_cycle_count.keys():
-                    for i in range(len(core_remaining_cycle_count[c])):
-                        core_remaining_cycle_count[c][i] = max(0, core_remaining_cycle_count[c][i] - cycles_passed)
-                vars_remaining_cycles = dict((var, c - cycles_passed) for var, c in vars_remaining_cycles.items()
-                                             if c > cycles_passed)
-            else:
-                cur_instructions_in_cycle += 1
-            vars_remaining_cycles[var] = core['latency']
-            assert core_remaining_cycle_count[core['core']['name']][0] == 0
-            core_remaining_cycle_count[core['core']['name']][0] = core['core']['latency']
-            core_remaining_cycle_count[core['core']['name']] = sorted(core_remaining_cycle_count[core['core']['name']])
+            cost, core_state = update_core_state(var, freeze(core), core_state)
             schedule_with_cycle_info.append((var,
-                                             {'start':cur_cycle, 'finish':cur_cycle + core['core']['latency']},
+                                             {'start':cur_cycle, 'finish':cur_cycle + core['latency']},
                                              core))
+            cur_cycle += cost
         return schedule_with_cycle_info
 
     def evaluate_cost(schedule_with_cycle_info):
@@ -291,7 +332,7 @@ def schedule(data, basepoint):
         min_cost, min_schedule = None, None
         var_cores = [(var, core)
                      for var in next_statements
-                     for core in MODEL[(lines[var]['op'] if var in lines.keys() else 'LOAD')]]
+                     for core in (lines[var]['cores'] if var in lines.keys() else possible_cores_for_line({'op':'LOAD', 'type':'uint64_t'}))]
         sorted_subset_next_statements = sorted_next_statements = get_sorted_next_statements(var_cores, core_state)
         if len(sorted_next_statements) > 0:
             pre_min_cost = sorted_next_statements[0][0]
@@ -299,8 +340,8 @@ def schedule(data, basepoint):
             sorted_subset_next_statements \
                 = tuple((cost, var, core, new_core_state) for cost, var, core, new_core_state in sorted_next_statements
                         if pre_min_cost == cost)
-            sorted_subset_next_statements = sorted_subset_next_statements[:2]
-            if pre_min_cost == 0: sorted_subset_next_statements = sorted_subset_next_statements[:2]
+            sorted_subset_next_statements = sorted_subset_next_statements[:1]
+            if pre_min_cost == 0: sorted_subset_next_statements = sorted_subset_next_statements[:1]
         for cost, var, core, new_core_state in sorted_subset_next_statements:
             cost, schedule = make_schedule(var, core)
             if min_cost is None or cost < min_cost:
@@ -315,100 +356,21 @@ def schedule(data, basepoint):
     schedule_with_cycle_info = add_cycle_info(schedule)
     for var, cycles, core in schedule_with_cycle_info:
         if var in lines.keys():
-            print('%s // %s, start: %s, end: %s' % (lines[var]['source'], core['core']['name'], basepoint + cycles['start'], basepoint + cycles['finish']))
+            do_print('%s // %s, start: %s, end: %s' % (lines[var]['source'], core['instruction'], basepoint + cycles['start'], basepoint + cycles['finish']))
         else:
-            print('LOAD %s; // %s, start: %s, end: %s' % (var, core['core']['name'], basepoint + cycles['start'], basepoint + cycles['finish']))
+            do_print('%s = %s; // %s, start: %s, end: %s' % (var, core['instruction'], basepoint + cycles['start'], basepoint + cycles['finish']))
     return basepoint + cost
-
-    def make_decls(input_data):
-        var_names = get_var_names(input_data)
-        ret = ''
-        ret += 'include "alldifferent.mzn";\n'
-        ret += 'include "cumulative.mzn";\n'
-        for line in input_data['lines']:
-            ret += '%%%s\n' % line['source']
-        ret += create_set('CORE', CORES)
-        ret += create_set('INSTRUCTIONS', list(var_names))
-        ret += create_set('OPS', list(OP_NAMES.values()))
-        MAX_NUMBER_OF_NOOPS_PER_INSTRUCTION = 3
-        APPROXIMATE_MAX_LATENCY = 6 * INSTRUCTIONS_PER_CYCLE
-        max_loc = len(var_names) * MAX_NUMBER_OF_NOOPS_PER_INSTRUCTION + APPROXIMATE_MAX_LATENCY
-        ret += 'int: MAX_LOC = %d;\n\n' % max_loc
-        ret += 'set of int: LOCATIONS = 1..MAX_LOC;\n'
-        ret += 'array[INSTRUCTIONS] of var LOCATIONS: output_locations;\n'
-        ret += 'array[INSTRUCTIONS] of var int: output_data_latency;\n'
-        ret += 'array[INSTRUCTIONS] of var int: output_core_latency;\n'
-        ret += 'array[INSTRUCTIONS] of var CORE: output_cores;\n'
-        ret += 'array[INSTRUCTIONS] of OPS: input_ops = [%s];\n' % ', '.join(OP_NAMES[line['op']] for line in input_data['lines'])
-        for core in CORES:
-            ret += 'array[INSTRUCTIONS] of var int: output_%s_core_latency;\n' % core
-            ret += 'array[INSTRUCTIONS] of var 0..1: output_%s_core_use;\n' % core
-            ret += 'constraint forall (i in INSTRUCTIONS) (0 <= output_%s_core_latency[i]);\n' % core
-            ret += 'constraint forall (i in INSTRUCTIONS) (output_%s_core_use[i] == 1 -> output_core_latency[i] == output_%s_core_latency[i]);\n' % (core, core)
-        ret += 'var LOCATIONS: RET_loc;\n'
-        ret += '\n'
-        return ret
-
-    def make_cores(input_data):
-        ret = ''
-        for opc, cores in MODEL.items():
-            possible_cores = []
-            for core in cores:
-                conjuncts = (['output_cores[i] == %s' % core['core']['name'],
-                              'output_%s_core_use[i] == 1' % core['core']['name'],
-                              'output_%s_core_latency[i] == %d' % (core['core']['name'], core['core']['latency'] * INSTRUCTIONS_PER_CYCLE),
-                              'output_data_latency[i] == %d' % (core['latency'] * INSTRUCTIONS_PER_CYCLE)] +
-                             ['output_%s_core_use[i] == 0 /\ output_%s_core_latency[i] == 0' % (other_core, other_core)
-                              for other_core in CORES if other_core != core['core']['name']])
-                possible_cores.append('(%s)' % (r' /\ '.join(conjuncts)))
-            ret += ('constraint forall (i in INSTRUCTIONS) (input_ops[i] == %s -> (%s));\n'
-                    % (OP_NAMES[opc], r' \/ '.join(possible_cores)))
-        ret += '\n'
-        for core in CORES:
-            ret += ('constraint cumulative(output_locations, output_%s_core_latency, output_%s_core_use, %d);\n'
-                    % (core, core, CORE_COUNT[core]))
-        return ret
-
-    def make_disjoint(input_data):
-        var_names = get_var_names(input_data)
-        ret = ''
-        ret += 'constraint alldifferent(output_locations);\n'
-        return ret
-
-    def make_dependencies(input_data):
-        var_names = get_var_names(input_data)
-        ret = ''
-        for line in input_data['lines']:
-            for arg in line['args']:
-                if arg in var_names and arg[0] not in '0123456789':
-                    ret += ('constraint output_locations[%s] + output_data_latency[%s] <= output_locations[%s];\n'
-                            % (arg, arg, line['out']))
-        ret += '\n'
-        ret += 'constraint max([ output_locations[i] + output_data_latency[i] | i in INSTRUCTIONS ]) <= RET_loc;\n'
-        ret += '\n'
-        return ret
-
-
-
-    def make_output(input_data):
-        ret = 'solve minimize RET_loc;\n\n'
-        ret += 'output [ "(" ++ show(INSTRUCTIONS_NAMES[i]) ++ ", " ++ show(CORE_NAMES[fix(output_cores[i])]) ++ ", " ++ show(output_locations[i]) ++ ", " ++ show(output_data_latency[i]) ++ ", " ++ show(output_core_latency[i]) ++ ") ,\\n"\n'
-        ret += '       | i in INSTRUCTIONS ];\n'
-        ret += 'output [ "RET_loc: " ++ show(RET_loc) ];\n'
-        return ret
-
-#    return '\n'.join([
-#        make_decls(data),
-#        make_disjoint(data),
-#        make_dependencies(data),
-#        make_cores(data),
-#        make_output(data)
-#        ])
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
 basepoint = 0
 for i, data in enumerate(data_list):
-    basepoint = schedule(data, basepoint)
+    with open('femulScheduled.log', 'w') as f:
+        def do_print(v):
+            print(v)
+            f.write(v + '\n')
+        f.write('INPUT: (%s)\n' % ', '.join(get_input_var_names(data)))
+        basepoint = schedule(data, basepoint, do_print)
+        f.write('Return (%s)\n// end: %d\n' % (', '.join(get_output_var_names(data)), basepoint))
     print(basepoint)
     sys.exit(0)
 
