@@ -117,15 +117,21 @@ def print_dependencies(input_data, dependencies):
     in_vars = get_input_var_names(input_data)
     out_vars = get_output_var_names(input_data)
     return ('digraph G {\n' +
-            ''.join('    in -> %s;\n' % var for var in in_vars) +
-            ''.join('    %s -> out;\n' % var for var in out_vars) +
-            ''.join(''.join('    %s -> %s;\n' % (out_var, in_var) for out_var in sorted(dependencies[in_var]))
+            ''.join('    in -> %s ;\n' % var for var in in_vars) +
+            ''.join('    %s -> out ;\n' % var for var in out_vars) +
+            ''.join(''.join('    %s -> %s ;\n' % (out_var, in_var) for out_var in sorted(dependencies[in_var]))
                     for in_var in sorted(dependencies.keys())) +
             '}\n')
+def adjust_bits(input_data, graph):
+    for line in input_data['lines']:
+        if line['type'] == 'uint128_t':
+            graph = graph.replace(line['out'], line['out'] + '_128')
+    return graph
+    
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
 for i, data in enumerate(data_list):
-    deps = print_dependencies(data, make_data_dependencies(data))
+    deps = adjust_bits(data, print_dependencies(data, make_data_dependencies(data)))
     with codecs.open('femulData%d.dot' % i, 'w', encoding='utf8') as f:
         f.write(deps)
     for fmt in ('png', 'svg'):
