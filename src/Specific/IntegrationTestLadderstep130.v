@@ -109,8 +109,9 @@ Section BoundedField25p5.
     Set Ltac Profiling.
     (*
     Time Glue.refine_to_reflective_glue (128::256::nil)%nat%list.
-    Time ReflectiveTactics.refine_with_pipeline_correct.
+    Time ReflectiveTactics.refine_with_pipeline_correct default.
     { Time ReflectiveTactics.do_reify. }
+    { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
     { Time UnifyAbstractReflexivity.unify_abstract_vm_compute_rhs_reflexivity. }
