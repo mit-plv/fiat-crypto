@@ -8,7 +8,7 @@ LAMBDA = u'\u03bb'
 
 OP_NAMES = {'*':'MUL', '+':'ADD', '>>':'SHL', '<<':'SHR', '|':'OR', '&':'AND'}
 
-REGISTERS = tuple(['RAX', 'RBX', 'RCX', 'RDX', 'RSI', 'RDI', 'RBP', 'RSP']
+REGISTERS = tuple(['RAX', 'RBX', 'RCX', 'RDX', 'RSI', 'RDI', 'RBP'] #, 'RSP'] # RSP is stack pointer?
                   + ['r%d' % i for i in range(8, 16)])
 REGISTER_COLORS = ['color="black"', 'color="white",fillcolor="black"', 'color="maroon"', 'color="green"', 'fillcolor="olive"',
                    'color="navy"', 'color="purple"', 'fillcolor="teal"', 'fillcolor="silver"', 'fillcolor="gray"', 'fillcolor="red"',
@@ -17,40 +17,6 @@ REGISTER_COLORS = ['fillcolor="%s"' % c for c in 'aliceblue antiquewhite aquamar
 COLOR_FOR_REGISTER = dict(zip(REGISTERS, REGISTER_COLORS))
 
 MAX_INSTRUCTION_WINDOW = 10000
-
-CORE_DATA = (('ADD_MUL', 2), ('MUL_CORE', 1), ('LEA_BW', 2))
-CORES = tuple(name for name, count in CORE_DATA)
-CORE_COUNT = dict(CORE_DATA)
-
-BITWISE_CORES = tuple({
-    'core' : { 'name' : core_name , 'latency' : 1 },
-    'latency' : 1
-    } for core_name in ('LEA_BW',))
-
-MODEL = {
-    '*': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 3
-        }
-          for core_name in ('ADD_MUL', 'MUL_CORE')),
-    '+': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 1
-        }
-          for core_name in ('ADD_MUL', 'LEA_BW')),
-    '>>': BITWISE_CORES,
-    '<<': BITWISE_CORES,
-    '|': BITWISE_CORES,
-    '&': BITWISE_CORES,
-    'LOAD': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 1
-        } for core_name in REGISTERS),
-    'STORE': tuple({
-        'core' : { 'name' : core_name , 'latency' : 1 },
-        'latency' : 1
-        } for core_name in REGISTERS)
-    }
 
 def get_lines(filename):
     with codecs.open(filename, 'r', encoding='utf8') as f:
@@ -281,7 +247,7 @@ def adjust_bits(input_data, graph):
         if line['type'] == 'uint128_t':
             graph = graph.replace(line['out'], line['out'] + '_128')
     return graph
-    
+
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
 for i, data in enumerate(data_list):
