@@ -134,6 +134,7 @@ def split_graph(objs):
                 else:
                     assert(False)
             obj_low['deps'], obj_high['deps'] = tuple(obj_low['deps']), tuple(obj_high['deps'])
+            obj_low['rev_deps'] = list(obj_low['rev_deps']) + [obj_carry]
             obj['deps'] = tuple()
             obj['rev_deps'] = tuple()
 
@@ -156,19 +157,19 @@ def collect_ac_buckets(graph):
             line['deps'] = tuple(new_args)
         to_process += list(line['deps'])
 
-def prune(out_vars, objs, seen=None):
-    if seen is None: seen = set()
-    for obj in objs:
-        if obj['out'] in seen: continue
-        prune(out_vars, obj['rev_deps'], seen=seen)
-        if any(len(rdep['deps']) == 0
-               or (len(rdep['rev_deps']) == 0 and rdep['out'] not in out_vars)
-               for rdep in obj['rev_deps']):
-            #print('pruning %s' % obj['out'])
-            obj['rev_deps'] = tuple(rdep for rdep in obj['rev_deps']
-                                    if len(rdep['deps']) > 0
-                                    and (rdep['out'] in out_vars or len(rdep['rev_deps']) > 0))
-        seen.add(obj['out'])
+def get_objects(start, ret=None):
+    if ret is None: ret = {}
+    for node in start:
+        if node['out'] in ret.keys(): continue
+        ret[node['out']] = node
+        get_objects(node['deps'], ret=ret)
+    return ret
+
+def prune(start):
+    objs = get_objects(start)
+    for var in objs.keys():
+        objs[var]['rev_deps'] = tuple(objs[arg] for arg in sorted(objs.keys())
+                                      if any(node['out'] == var for node in objs[arg]['deps']))
 
 def to_graph(input_data):
     objs = dict((var, {'out':var, 'style':''}) for var in list(get_input_var_names(input_data)) + list(get_var_names(input_data)))
@@ -191,7 +192,7 @@ def to_graph(input_data):
     collect_ac_buckets(graph)
     add_combine_low_high(objs.values())
     split_graph(objs.values())
-    prune(set(graph['out'].keys()), objs.values())
+    prune(tuple(graph['out'].values()))
     #split_graph(objs)
     return graph
 
@@ -236,9 +237,13 @@ def is_temp(node):
             return True
     return False
 
-# returns {cur_map with new_name->reg}, still_free_temps, still_free_list, all_temps
+def deps_allocated(full_map, node):
+    if node['out'] not in full_map.keys(): return False
+    return all(deps_allocated(full_map, dep) for dep in node['deps'])
+
+# returns {cur_map with new_name->reg}, still_free_temps, still_free_list, all_temps, freed, new_buckets, emit_vars
 def allocate_node(existing, node, *args):
-    cur_map, free_temps, free_list, all_temps, freed, new_buckets = args
+    cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars = args
     free_temps = list(free_temps)
     free_list = list(free_list)
     all_temps = list(all_temps)
@@ -246,9 +251,10 @@ def allocate_node(existing, node, *args):
     cur_map = dict(cur_map)
     freed = list(freed)
     new_buckets = list(new_buckets)
+    emit_vars = list(emit_vars)
     full_map.update(cur_map)
     def do_ret():
-        return cur_map, tuple(free_temps), tuple(free_list), tuple(all_temps), tuple(freed), tuple(new_buckets)
+        return cur_map, tuple(free_temps), tuple(free_list), tuple(all_temps), tuple(freed), tuple(new_buckets), tuple(emit_vars)
     def do_free(var):
         for reg in full_map[var].split(':'):
             if reg in all_temps:
@@ -258,9 +264,15 @@ def allocate_node(existing, node, *args):
                 if reg not in free_list:
                     free_list.append(reg)
     def do_free_deps(node):
-        for dep in node['deps']:
-            if dep['out'] in full_map.keys() and all(n['out'] in full_map.keys() or n['out'] in cur_map.keys() for n in dep['rev_deps']):
+        full_map.update(cur_map)
+        if deps_allocated(full_map, node):
+            for dep in node['deps']:
                 if dep['out'] not in freed:
+                    do_free(dep['out'])
+                    freed.append(dep['out'])
+        elif node['out'] in full_map.keys():
+            for dep in node['deps']:
+                if dep['out'] not in freed and dep['out'] in full_map.keys() and all(reg in all_temps for reg in full_map[dep['out']].split(':')):
                     do_free(dep['out'])
                     freed.append(dep['out'])
     if node['out'] in full_map.keys():
@@ -270,13 +282,16 @@ def allocate_node(existing, node, *args):
     if node['op'] in ('GET_HIGH', 'GET_LOW') and len(node['deps']) == 1 and len(node['deps'][0]['rev_deps']) <= 2 and all(n['op'] in ('GET_HIGH', 'GET_LOW') for n in node['deps'][0]['rev_deps']) and node['deps'][0]['out'] in full_map.keys():
         reg_idx = {'GET_LOW':0, 'GET_HIGH':1}[node['op']]
         cur_map[node['out']] = full_map[node['deps'][0]['out']].split(':')[reg_idx]
+        emit_vars.append(node)
         return do_ret()
     if len(node['deps']) == 1 and len(node['deps'][0]['rev_deps']) == 1 and node['deps'][0]['out'] in full_map.keys() and node['type'] == node['deps'][0]['type']:
         cur_map[node['out']] = full_map[node['deps'][0]['out']]
+        emit_vars.append(node)
         return do_ret()
     if len(node['deps']) == 0 and node['op'] == 'INPUT':
         assert(node['type'] == 'uint64_t')
         cur_map[node['out']] = free_list.pop()
+        emit_vars.append(node)
         return do_ret()
     if is_temp(node):
         num_reg = {'uint64_t':1, 'uint128_t':2}[node['type']]
@@ -289,10 +304,12 @@ def allocate_node(existing, node, *args):
             all_temps.append(reg)
         cur_map[node['out']] = ':'.join(free_temps[:num_reg])
         free_temps = free_temps[num_reg:]
+        emit_vars.append(node)
         do_free_deps(node)
         return do_ret()
     if node['op'] == '+' and node['type'] == 'uint64_t' and len(node['extra_out']) > 0:
         cur_map[node['out']] = free_list.pop()
+        emit_vars.append(node)
         new_buckets.append(node)
         do_free_deps(node)
         return do_ret()
@@ -304,6 +321,7 @@ def allocate_node(existing, node, *args):
             cur_map[node['out']] = full_map[dep['out']]
         else:
             cur_map[node['out']] = free_list.pop()
+        emit_vars.append(node)
         return do_ret()
     raw_input([node['out'], node['op'], node['type'], len(node['deps'])])
     return do_ret()
@@ -341,14 +359,6 @@ def get_plus_deps(nodes, ops=('+',), types=('uint128_t',), seen=None):
             for dep in get_plus_deps([dep], ops=ops, types=types, seen=seen):
                 yield dep
 
-def get_objects(start, ret=None):
-    if ret is None: ret = {}
-    for node in start:
-        if node['out'] in ret.keys(): continue
-        ret[node['out']] = node
-        get_objects(node['deps'], ret=ret)
-    return ret
-
 def print_nodes(objs):
     for var in sorted(objs.keys(), key=(lambda s:(int(s.strip('cx_lowhightmp')), s))):
         yield '    %s [label="%s%s" %s];\n' % (objs[var]['out'], ' + '.join(sorted([objs[var]['out']] + list(objs[var]['extra_out']))), objs[var]['reg'], objs[var]['style'])
@@ -357,18 +367,88 @@ def print_deps(objs):
         for dep in objs[var]['deps']:
             yield '    %s -> %s [ label="%s" ] ;\n' % (dep['out'], objs[var]['out'], objs[var]['op'])
 
-def allocate_one_subtree(possible_nodes, existing, *args):
-    cur_map, free_temps, free_list, all_temps, freed, new_buckets = args
-    existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets \
-        = dict(existing), dict(cur_map), list(free_temps), list(free_list), list(all_temps), tuple(freed), tuple(new_buckets)
-    args = (cur_map, free_temps, free_list, all_temps, freed, new_buckets)
+def push_allocate(existing, nodes, *args, **kwargs):
+    if 'seen' not in kwargs.keys(): kwargs['seen'] = set()
+    full_map = dict(existing)
+    for node in nodes:
+        if node['out'] in kwargs['seen']: continue
+        cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars = args
+        free_temps = list(free_temps)
+        free_list = list(free_list)
+        all_temps = list(all_temps)
+        cur_map = dict(cur_map)
+        freed = list(freed)
+        new_buckets = list(new_buckets)
+        emit_vars = list(emit_vars)
+        full_map.update(cur_map)
+        if node['out'] in full_map.keys() and node['op'] == '+' and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and set(d['op'] for d in node['rev_deps']) == set(('&', 'COMBINE', 'GET_CARRY')):
+            and_node = [d for d in node['rev_deps'] if d['op'] == '&'][0]
+            carry_node = [d for d in node['rev_deps'] if d['op'] == 'GET_CARRY'][0]
+            combine_node = [d for d in node['rev_deps'] if d['op'] == 'COMBINE'][0]
+            high_node = [d for d in combine_node['deps'] if d is not node][0]
+            assert(len(combine_node['rev_deps']) == 1)
+            shr_node = combine_node['rev_deps'][0]
+            assert(shr_node['op'] == '>>')
+            assert(shr_node['out'] not in full_map.keys())
+            assert(len(combine_node['deps']) == 2)
+            assert(all(d['out'] in full_map.keys() for d in combine_node['deps']))
+            cur_map[carry_node['out']] = 'c0'
+            emit_vars.append(carry_node)
+            cur_map[combine_node['out']] = ':'.join(full_map[d['out']] for d in combine_node['deps'])
+            emit_vars.append(combine_node)
+            assert(high_node['out'] in full_map.keys())
+            cur_map[shr_node['out']] = full_map[high_node['out']]
+            emit_vars.append(shr_node)
+            cur_map[and_node['out']] = full_map[node['out']]
+            emit_vars.append(and_node)
+            fill_node(combine_node)
+            fill_node(carry_node)
+            fill_node(shr_node)
+            fill_node(and_node)
+        elif node['out'] in full_map.keys() and len(node['rev_deps']) == 1 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and len(node['rev_deps'][0]['deps']) == 1 and node['type'] == node['rev_deps'][0]['type']:
+            next_node = node['rev_deps'][0]
+            cur_map[next_node['out']] = full_map[node['out']]
+            fill_node(next_node)
+            full_map.update(cur_map)
+        elif node['out'] not in full_map.keys() and len(node['rev_deps']) == 2 and len(node['deps']) == 2 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and all(d['out'] in full_map.keys() for d in node['deps']) and node['type'] == 'uint64_t' and all(d['type'] == 'uint64_t' for d in node['rev_deps']) and all(d['type'] == 'uint64_t' for d in node['deps']):
+            from1, from2 = node['deps']
+            to1, to2 = node['rev_deps']
+            assert(full_map[from1['out']] != full_map[from2['out']])
+            cur_map[node['out']] = full_map[from1['out']]
+            emit_vars.append(node)
+            cur_map[to1['out']] = full_map[from1['out']]
+            emit_vars.append(to1)
+            cur_map[to2['out']] = full_map[from2['out']]
+            emit_vars.append(to2)
+            fill_node(node)
+            fill_node(to1)
+            fill_node(to2)
+            full_map.update(cur_map)
+        elif node['out'] not in full_map.keys() and len(node['rev_deps']) == 0 and len(node['deps']) == 2 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and all(d['out'] in full_map.keys() for d in node['deps']) and node['type'] == 'uint64_t' and all(d['type'] == 'uint64_t' for d in node['rev_deps']) and all(d['type'] == 'uint64_t' for d in node['deps']):
+            from1, from2 = node['deps']
+            assert(full_map[from1['out']] != full_map[from2['out']])
+            cur_map[node['out']] = full_map[from1['out']]
+            emit_vars.append(node)
+            fill_node(node)
+            full_map.update(cur_map)
+        full_map.update(cur_map)
+        args = (cur_map, tuple(free_temps), tuple(free_list), tuple(all_temps), tuple(freed), tuple(new_buckets), tuple(emit_vars))
+        kwargs['seen'].add(node['out'])
+        args = push_allocate(existing, node['rev_deps'], *args, **kwargs)
+    return args
+
+def allocate_one_subtree(in_nodes, possible_nodes, existing, *args):
+    cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars = args
+    existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars \
+        = dict(existing), dict(cur_map), list(free_temps), list(free_list), list(all_temps), tuple(freed), tuple(new_buckets), tuple(emit_vars)
+    args = (cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars)
     sorted_nodes = []
     for node in possible_nodes:
         try:
             lens = [len([rd for rd in d['rev_deps'] if rd['out'] not in existing.keys()]) for d in node['deps']]
-            temp_cur_map, temp_free_temps, temp_free_list, temp_all_temps, temp_freed, temp_new_buckets = allocate_subgraph(existing, node, *args)
+            temp_cur_map, temp_free_temps, temp_free_list, temp_all_temps, temp_freed, temp_new_buckets, temp_emit_vars = allocate_subgraph(existing, node, *args)
             if set(temp_free_temps) != set(temp_all_temps):
-                print(('BAD', node['out'], temp_cur_map, temp_free_temps, temp_free_list, temp_all_temps))
+                print(('BAD', node['out'], temp_cur_map, temp_free_temps, temp_free_list, temp_all_temps, temp_freed))
             sorted_nodes.append(((len(temp_free_list),
                                   -min(lens),
                                   -max(lens),
@@ -385,8 +465,9 @@ def allocate_one_subtree(possible_nodes, existing, *args):
     print('Allocating for %s' % node['out'])
     args = allocate_subgraph(existing, node, *args)
     fill_subgraph(node)
-    cur_map, free_temps, free_list, all_temps, freed, new_buckets = args
-    return possible_nodes, cur_map, free_temps, free_list, all_temps, freed, new_buckets
+    args = push_allocate(existing, in_nodes, *args)
+    cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars = args
+    return possible_nodes, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars
 
 
 def print_graph(graph, allocs):
@@ -397,6 +478,149 @@ def print_graph(graph, allocs):
     body += ''.join('    in -> %s ;\n' % node['out'] for node in graph['in'].values())
     body += ''.join('    %s -> out ;\n' % node['out'] for node in graph['out'].values())
     return ('digraph G {\n' + body + '}\n')
+
+def schedule(input_data, existing, emit_vars):
+    ret = ''
+    buckets_seen = set()
+    buckets_carried = set()
+    ret += ('// Convention is low_reg:high_reg\n')
+    for node in emit_vars:
+        if node['op'] == 'INPUT':
+            ret += ('%s <- LOAD %s;' % (existing[node['out']], node['out']))
+        elif node['op'] == '*' and len(node['deps']) == 2:
+            ret += ('%s <- MULX %s, %s; // %s = %s * %s\n'
+                    % (existing[node['out']],
+                       existing[node['deps'][0]['out']],
+                       existing[node['deps'][1]['out']],
+                       node['out'],
+                       node['deps'][0]['out'],
+                       node['deps'][1]['out']))
+        elif node['op'] == '*' and len(node['deps']) == 1:
+            extra_arg = [arg for arg in line_of_var(data, node['out'])['args'] if arg[:2] == '0x'][0]
+            ret += ('%s <- MULX %s, %s; // %s = %s * %s\n'
+                    % (existing[node['out']],
+                       existing[node['deps'][0]['out']],
+                       extra_arg,
+                       node['out'],
+                       node['deps'][0]['out'],
+                       extra_arg))
+        elif node['op'] == '&' and len(node['deps']) == 1:
+            extra_arg = [arg for arg in line_of_var(data, node['out'])['args'] if arg[:2] == '0x'][0]
+            ret += ('%s <- AND %s, %s; // %s = %s & %s\n'
+                    % (existing[node['out']],
+                       existing[node['deps'][0]['out']],
+                       extra_arg,
+                       node['out'],
+                       node['deps'][0]['out'],
+                       extra_arg))
+        elif node['op'] == '>>' and len(node['deps']) == 1 and node['deps'][0]['op'] == 'COMBINE':
+            extra_arg = [arg for arg in line_of_var(data, node['out'])['args'] if arg[:2] == '0x'][0]
+            ret += ('%s <- SHR %s:%s, %s; // %s = %s:%s >> %s\n'
+                    % (existing[node['out']],
+                       existing[node['deps'][0]['deps'][0]['out']],
+                       existing[node['deps'][0]['deps'][1]['out']],
+                       extra_arg,
+                       node['out'],
+                       node['deps'][0]['deps'][0]['out'],
+                       node['deps'][0]['deps'][1]['out'],
+                       extra_arg))
+        elif node['op'] == '>>' and len(node['deps']) == 1 and node['deps'][0]['type'] == 'uint64_t':
+            extra_arg = [arg for arg in line_of_var(data, node['out'])['args'] if arg[:2] == '0x'][0]
+            ret += ('%s <- SHR %s, %s; // %s = %s >> %s\n'
+                    % (existing[node['out']],
+                       existing[node['deps'][0]['deps'][0]['out']],
+                       extra_arg,
+                       node['out'],
+                       node['deps'][0]['deps'][0]['out'],
+                       extra_arg))
+        elif node['op'] in ('GET_HIGH', 'GET_LOW'):
+            if node['rev_deps'][0]['out'] not in buckets_seen:
+                ret += ('%s <- MOV %s; // bucket: %s\n'
+                        % (existing[node['rev_deps'][0]['out']],
+                           existing[node['out']],
+                           ' + '.join(sorted([node['rev_deps'][0]['out']] + list(node['rev_deps'][0]['extra_out'])))))
+                buckets_seen.add(node['rev_deps'][0]['out'])
+            elif node['op'] == 'GET_HIGH':
+                ret += ('%s <- ADX %s, %s; // bucket: %s\n'
+                        % (existing[node['rev_deps'][0]['out']],
+                           existing[node['rev_deps'][0]['out']],
+                           existing[node['out']],
+                           ' + '.join(sorted([node['rev_deps'][0]['out']] + list(node['rev_deps'][0]['extra_out'])))))
+            elif node['op'] == 'GET_LOW':
+                carry = 'c' + node['rev_deps'][0]['out'][:-len('_low')]
+                if node['rev_deps'][0]['out'] not in buckets_carried:
+                    ret += ('%s, (%s) <- ADD %s, %s; // bucket: %s\n'
+                            % (existing[node['rev_deps'][0]['out']],
+                               carry,
+                               existing[node['rev_deps'][0]['out']],
+                               existing[node['out']],
+                               ' + '.join(sorted([node['rev_deps'][0]['out']] + list(node['rev_deps'][0]['extra_out'])))))
+                    buckets_carried.add(node['rev_deps'][0]['out'])
+                else:
+                    ret += ('%s, (%s) <- ADC (%s), %s, %s; // bucket: %s\n'
+                            % (existing[node['rev_deps'][0]['out']],
+                               carry,
+                               carry,
+                               existing[node['rev_deps'][0]['out']],
+                               existing[node['out']],
+                               ' + '.join(sorted([node['rev_deps'][0]['out']] + list(node['rev_deps'][0]['extra_out'])))))
+        elif node['op'] in ('GET_CARRY',):
+            carry = 'c' + node['rev_deps'][0]['out'][:-len('_high')]
+            ret += ('%s <- ADCX (%s), %s, 0x0; // bucket: %s\n'
+                    % (existing[node['rev_deps'][0]['out']],
+                       carry,
+                       existing[node['rev_deps'][0]['out']],
+                       ' + '.join(sorted([node['rev_deps'][0]['out']] + list(node['rev_deps'][0]['extra_out'])))))
+        elif node['op'] == '+' and len(node['extra_out']) > 0:
+            pass
+        elif node['op'] == '+' and len(node['deps']) == 2 and node['type'] == 'uint64_t':
+            ret += ('%s <- ADX %s, %s; // %s = %s + %s\n'
+                    % (existing[node['out']],
+                       existing[node['deps'][0]['out']],
+                       existing[node['deps'][1]['out']],
+                       node['out'],
+                       node['deps'][0]['out'],
+                       node['deps'][1]['out']))
+        elif node['op'] in ('COMBINE',):
+            pass
+        else:
+            raw_input((node['out'], node['op']))
+        if node['op'] not in ('GET_HIGH', 'GET_LOW', 'COMBINE'):
+            for rdep in node['rev_deps']:
+                if len(rdep['extra_out']) > 0 and rdep['op'] == '+':
+                    if rdep['out'] not in buckets_seen:
+                        ret += ('%s <- MOV %s; // bucket: %s\n'
+                                % (existing[rdep['out']],
+                                   existing[node['out']],
+                                   ' + '.join(sorted([rdep['out']] + list(rdep['extra_out'])))))
+                        buckets_seen.add(rdep['out'])
+                    elif 'high' in rdep['out']:
+                        ret += ('%s <- ADX %s, %s; // bucket: %s\n'
+                                % (existing[rdep['out']],
+                                   existing[rdep['out']],
+                                   existing[node['out']],
+                                   ' + '.join(sorted([rdep['out']] + list(rdep['extra_out'])))))
+                    elif 'low' in rdep['out']:
+                        carry = 'c' + rdep['out'][:-len('_low')]
+                        if rdep['out'] not in buckets_carried:
+                            ret += ('%s, (%s) <- ADD %s, %s; // bucket: %s\n'
+                                    % (existing[rdep['out']],
+                                       carry,
+                                       existing[rdep['out']],
+                                       existing[node['out']],
+                                       ' + '.join(sorted([rdep['out']] + list(rdep['extra_out'])))))
+                            buckets_carried.add(rdep['out'])
+                        else:
+                            ret += ('%s, (%s) <- ADC (%s), %s, %s; // bucket: %s\n'
+                                    % (existing[rdep['out']],
+                                       carry,
+                                       carry,
+                                       existing[rdep['out']],
+                                       existing[node['out']],
+                                       ' + '.join(sorted([rdep['out']] + list(rdep['extra_out'])))))
+                    else:
+                        assert(False)
+    return ret
 
 data_list = parse_lines(get_lines('femulDisplay.log'))
 for i, data in enumerate(data_list):
@@ -413,18 +637,28 @@ for i, data in enumerate(data_list):
                                    if n['op'] == '*'))
     possible_nodes = list(sorted(possible_nodes.items()))
     possible_nodes = [n for v, n in possible_nodes]
-    existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets = {}, {}, tuple(), tuple(REGISTERS), tuple(), tuple(), tuple()
-    for var in tuple(): #('x20_tmp', 'x49_tmp', 'x51_tmp', 'x55_tmp', 'x53_tmp'):
+    in_nodes = tuple(graph['in'].values())
+    existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars = {}, {}, tuple(), tuple(REGISTERS), tuple(), tuple(), tuple(), tuple()
+    objs = get_objects(graph['out'].values())
+    def vars_for(var, rec=True):
+        pre_ret = [n['out'] for n in objs[var]['rev_deps']]
+        ret = [v for v in pre_ret if 'tmp' in v]
+        if rec:
+            for v in pre_ret:
+                if 'tmp' not in v:
+                    ret += list(vars_for(v, rec=False))
+        return tuple(ret)
+    for var in list(vars_for('x10')) + list(vars_for('x11')) + list(vars_for('x9')) + list(vars_for('x7')) + list(vars_for('x5')): # tuple(): #('x20_tmp', 'x49_tmp', 'x51_tmp', 'x55_tmp', 'x53_tmp'):
         print(var)
         cur_possible_nodes = [n for n in possible_nodes if n['out'] == var]
-        cur_possible_nodes, cur_map, free_temps, free_list, all_temps, freed, new_buckets \
-            = allocate_one_subtree(cur_possible_nodes, existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets)
+        cur_possible_nodes, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars \
+            = allocate_one_subtree(in_nodes, cur_possible_nodes, existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars)
         existing.update(cur_map)
         cur_map = {}
-    for count in range(10):
+    for count in range(0 * 16):
         print(count)
-        possible_nodes, cur_map, free_temps, free_list, all_temps, freed, new_buckets \
-            = allocate_one_subtree(possible_nodes, existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets)
+        possible_nodes, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars \
+            = allocate_one_subtree(in_nodes, possible_nodes, existing, cur_map, free_temps, free_list, all_temps, freed, new_buckets, emit_vars)
         existing.update(cur_map)
         cur_map = {}
     #my_node = [n for n in possible_nodes if n['out'] == 'x36_tmp'][0]
@@ -434,10 +668,12 @@ for i, data in enumerate(data_list):
     #mul_node = possible_nodes[0]
     #print([n['out'] for n in mul_node['deps']])
     #cur_map, free_temps, free_list, all_temps = allocate_subgraph(existing, mul_node, cur_map, free_temps, free_list, all_temps)
-    print((existing, free_temps, free_list, all_temps))
+    sched = schedule(data, existing, emit_vars)
     #fill_deps(buckets[0])
     deps = adjust_bits(data, print_graph(graph, existing))
     with codecs.open('femulData%d.dot' % i, 'w', encoding='utf8') as f:
         f.write(deps)
+    with codecs.open('femulDisplayScheduled%d.log' % i, 'w', encoding='utf8') as f:
+        f.write(sched)
     for fmt in ('png', 'svg'):
         subprocess.call(['dot', '-T%s' % fmt, 'femulData%d.dot' % i, '-o', 'femulData%d.%s' % (i, fmt)])
