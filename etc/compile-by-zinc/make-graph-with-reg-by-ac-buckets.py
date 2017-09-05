@@ -408,6 +408,7 @@ def push_allocate(existing, nodes, *args, **kwargs):
         elif node['out'] in full_map.keys() and len(node['rev_deps']) == 1 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and len(node['rev_deps'][0]['deps']) == 1 and node['type'] == node['rev_deps'][0]['type']:
             next_node = node['rev_deps'][0]
             cur_map[next_node['out']] = full_map[node['out']]
+            emit_vars.append(next_node)
             fill_node(next_node)
             full_map.update(cur_map)
         elif node['out'] not in full_map.keys() and len(node['rev_deps']) == 2 and len(node['deps']) == 2 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and all(d['out'] in full_map.keys() for d in node['deps']) and node['type'] == 'uint64_t' and all(d['type'] == 'uint64_t' for d in node['rev_deps']) and all(d['type'] == 'uint64_t' for d in node['deps']):
@@ -479,10 +480,38 @@ def print_graph(graph, allocs):
     body += ''.join('    %s -> out ;\n' % node['out'] for node in graph['out'].values())
     return ('digraph G {\n' + body + '}\n')
 
+def fix_emit_vars(emit_vars):
+    ret = []
+    waiting = []
+    seen = set()
+    for node in emit_vars:
+        waiting.append(node)
+        new_waiting = []
+        for wnode in waiting:
+            if all(dep['out'] in seen for dep in wnode['deps']):
+                ret.append(wnode)
+                seen.add(wnode['out'])
+            else:
+                new_waiting.append(wnode)
+        waiting = new_waiting
+    while len(waiting) > 0:
+        print('Waiting on...')
+        print(list(sorted(node['out'] for node in waiting)))
+        new_waiting = []
+        for wnode in waiting:
+            if all(dep['out'] in seen for dep in wnode['deps']):
+                ret.append(wnode)
+                seen.add(wnode['out'])
+            else:
+                new_waiting.append(wnode)
+        waiting = new_waiting
+    return tuple(ret)
+
 def schedule(input_data, existing, emit_vars):
     ret = ''
     buckets_seen = set()
     buckets_carried = set()
+    emit_vars = fix_emit_vars(emit_vars)
     ret += ('// Convention is low_reg:high_reg\n')
     for node in emit_vars:
         if node['op'] == 'INPUT':
@@ -585,7 +614,7 @@ def schedule(input_data, existing, emit_vars):
             pass
         else:
             raw_input((node['out'], node['op']))
-        if node['op'] not in ('GET_HIGH', 'GET_LOW', 'COMBINE'):
+        if node['op'] not in ('GET_HIGH', 'GET_LOW', 'COMBINE', 'GET_CARRY'):
             for rdep in node['rev_deps']:
                 if len(rdep['extra_out']) > 0 and rdep['op'] == '+':
                     if rdep['out'] not in buckets_seen:
