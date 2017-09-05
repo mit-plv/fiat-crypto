@@ -486,7 +486,7 @@ def schedule(input_data, existing, emit_vars):
     ret += ('// Convention is low_reg:high_reg\n')
     for node in emit_vars:
         if node['op'] == 'INPUT':
-            ret += ('%s <- LOAD %s;' % (existing[node['out']], node['out']))
+            ret += ('%s <- LOAD %s;\n' % (existing[node['out']], node['out']))
         elif node['op'] == '*' and len(node['deps']) == 2:
             ret += ('%s <- MULX %s, %s; // %s = %s * %s\n'
                     % (existing[node['out']],
