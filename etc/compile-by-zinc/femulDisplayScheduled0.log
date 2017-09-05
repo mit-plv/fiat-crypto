@@ -1,117 +1,117 @@
 // Convention is low_reg:high_reg
-r15 <- LOAD x10;
-r14 <- LOAD x13;
-r13:r12 <- MULX r15, r14; // x37_tmp = x10 * x13
-r14 <- MOV r12; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
-r15 <- MOV r13; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
-r15 <- MULX r15, 0x13; // x45 = x10 * 0x13
-r11 <- LOAD x15;
-r12:r13 <- MULX r15, r11; // x49_tmp = x45 * x15
-r11 <- MOV r13; // bucket: x50_high + x52_high + x54_high + x56_high
-r15 <- MOV r12; // bucket: x50_low + x52_low + x54_low + x56_low
-r10 <- LOAD x17;
-r13:r12 <- MULX r15, r10; // x57_tmp = x45 * x17
-r10 <- MOV r12; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
-r9 <- MOV r13; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-r8 <- LOAD x19;
-r12:r13 <- MULX r15, r8; // x63_tmp = x45 * x19
-r8 <- MOV r13; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
-RBP <- MOV r12; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
-RDI <- LOAD x18;
-r13:r12 <- MULX r15, RDI; // x67_tmp = x45 * x18
-RDI <- MOV r12; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
-RSI <- MOV r13; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-RDX <- LOAD x11;
-r12:r13 <- MULX RDX, r14; // x30_tmp = x11 * x13
-RDI <- ADX RDI, r13; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
-RSI, (cx77) <- ADD RSI, r12; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-r13:r12 <- MULX RDX, r11; // x39_tmp = x11 * x15
-r14 <- ADX r14, r12; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
-r15, (cx80) <- ADD r15, r13; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
-RDX <- MULX RDX, 0x13; // x48 = x11 * 0x13
-r12:r13 <- MULX RDX, r10; // x55_tmp = x48 * x17
-r11 <- ADX r11, r13; // bucket: x50_high + x52_high + x54_high + x56_high
-r15, (cx56) <- ADD r15, r12; // bucket: x50_low + x52_low + x54_low + x56_low
-r13:r12 <- MULX RDX, r8; // x61_tmp = x48 * x19
-r10 <- ADX r10, r12; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
-r9, (cx71) <- ADD r9, r13; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-r12:r13 <- MULX RDX, RDI; // x65_tmp = x48 * x18
-r8 <- ADX r8, r13; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
-RBP, (cx74) <- ADD RBP, r12; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
-RDX <- LOAD x9;
-r13:r12 <- MULX RDX, r14; // x25_tmp = x9 * x13
-r8 <- ADX r8, r12; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
-RBP, (cx74) <- ADC (cx74), RBP, r13; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
-r12:r13 <- MULX RDX, r11; // x34_tmp = x9 * x15
-RDI <- ADX RDI, r13; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
-RSI, (cx77) <- ADC (cx77), RSI, r12; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-r13:r12 <- MULX RDX, r10; // x43_tmp = x9 * x17
-r14 <- ADX r14, r12; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
-r15, (cx80) <- ADC (cx80), r15, r13; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
-RDX <- MULX RDX, 0x13; // x47 = x9 * 0x13
-r12:r13 <- MULX RDX, r8; // x53_tmp = x47 * x19
-r11 <- ADX r11, r13; // bucket: x50_high + x52_high + x54_high + x56_high
-r15, (cx56) <- ADC (cx56), r15, r12; // bucket: x50_low + x52_low + x54_low + x56_low
-r13:r12 <- MULX RDX, RDI; // x59_tmp = x47 * x18
-r10 <- ADX r10, r12; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
-r9, (cx71) <- ADC (cx71), r9, r13; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-RDX <- LOAD x7;
-r12:r13 <- MULX RDX, r14; // x22_tmp = x7 * x13
-r10 <- ADX r10, r13; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
-r9, (cx71) <- ADC (cx71), r9, r12; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-r13:r12 <- MULX RDX, r11; // x27_tmp = x7 * x15
-r8 <- ADX r8, r12; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
-RBP, (cx74) <- ADC (cx74), RBP, r13; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
-r12:r13 <- MULX RDX, r10; // x32_tmp = x7 * x17
-RDI <- ADX RDI, r13; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
-RSI, (cx77) <- ADC (cx77), RSI, r12; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-r13:r12 <- MULX RDX, r8; // x41_tmp = x7 * x19
-r14 <- ADX r14, r12; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
-r15, (cx80) <- ADC (cx80), r15, r13; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
-RDX <- MULX RDX, 0x13; // x46 = x7 * 0x13
-r12:r13 <- MULX RDX, RDI; // x51_tmp = x46 * x18
-r11 <- ADX r11, r13; // bucket: x50_high + x52_high + x54_high + x56_high
-r15, (cx56) <- ADC (cx56), r15, r12; // bucket: x50_low + x52_low + x54_low + x56_low
-RDX <- LOAD x5;
-r13:r12 <- MULX RDX, r14; // x20_tmp = x5 * x13
-r11 <- ADX r11, r12; // bucket: x50_high + x52_high + x54_high + x56_high
-r15, (cx56) <- ADC (cx56), r15, r13; // bucket: x50_low + x52_low + x54_low + x56_low
+r18 <- LOAD x10;
+r17 <- LOAD x13;
+r16:r15 <- MULX r18, r17; // x37_tmp = x10 * x13
+r14 <- MOV r15; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
+r13 <- MOV r16; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+r18 <- MULX r18, 0x13; // x45 = x10 * 0x13
+r12 <- LOAD x15;
+r15:r16 <- MULX r18, r12; // x49_tmp = x45 * x15
+r11 <- MOV r16; // bucket: x50_high + x52_high + x54_high + x56_high
+r10 <- MOV r15; // bucket: x50_low + x52_low + x54_low + x56_low
+r9 <- LOAD x17;
+r16:r15 <- MULX r18, r9; // x57_tmp = x45 * x17
+r8 <- MOV r15; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+RBP <- MOV r16; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
+RDI <- LOAD x19;
+r15:r16 <- MULX r18, RDI; // x63_tmp = x45 * x19
+RSI <- MOV r16; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
+RDX <- MOV r15; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+RCX <- LOAD x18;
+r16:r15 <- MULX r18, RCX; // x67_tmp = x45 * x18
+r18 <- MOV r15; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+RBX <- MOV r16; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
+RAX <- LOAD x11;
+r15:r16 <- MULX RAX, r17; // x30_tmp = x11 * x13
+r18 <- ADX r18, r16; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+RBX, (cx77) <- ADD RBX, r15; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
+r16:r15 <- MULX RAX, r12; // x39_tmp = x11 * x15
+r14 <- ADX r14, r15; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
+r13, (cx80) <- ADD r13, r16; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+RAX <- MULX RAX, 0x13; // x48 = x11 * 0x13
+r15:r16 <- MULX RAX, r9; // x55_tmp = x48 * x17
+r11 <- ADX r11, r16; // bucket: x50_high + x52_high + x54_high + x56_high
+r10, (cx56) <- ADD r10, r15; // bucket: x50_low + x52_low + x54_low + x56_low
+r16:r15 <- MULX RAX, RDI; // x61_tmp = x48 * x19
+r8 <- ADX r8, r15; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+RBP, (cx71) <- ADD RBP, r16; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
+r15:r16 <- MULX RAX, RCX; // x65_tmp = x48 * x18
+RSI <- ADX RSI, r16; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
+RDX, (cx74) <- ADD RDX, r15; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+RAX <- LOAD x9;
+r16:r15 <- MULX RAX, r17; // x25_tmp = x9 * x13
+RSI <- ADX RSI, r15; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
+RDX, (cx74) <- ADC (cx74), RDX, r16; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+r15:r16 <- MULX RAX, r12; // x34_tmp = x9 * x15
+r18 <- ADX r18, r16; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+RBX, (cx77) <- ADC (cx77), RBX, r15; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
+r16:r15 <- MULX RAX, r9; // x43_tmp = x9 * x17
+r14 <- ADX r14, r15; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
+r13, (cx80) <- ADC (cx80), r13, r16; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+RAX <- MULX RAX, 0x13; // x47 = x9 * 0x13
+r15:r16 <- MULX RAX, RDI; // x53_tmp = x47 * x19
+r11 <- ADX r11, r16; // bucket: x50_high + x52_high + x54_high + x56_high
+r10, (cx56) <- ADC (cx56), r10, r15; // bucket: x50_low + x52_low + x54_low + x56_low
+r16:r15 <- MULX RAX, RCX; // x59_tmp = x47 * x18
+r8 <- ADX r8, r15; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+RBP, (cx71) <- ADC (cx71), RBP, r16; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
+RAX <- LOAD x7;
+r15:r16 <- MULX RAX, r17; // x22_tmp = x7 * x13
+r8 <- ADX r8, r16; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+RBP, (cx71) <- ADC (cx71), RBP, r15; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
+r16:r15 <- MULX RAX, r12; // x27_tmp = x7 * x15
+RSI <- ADX RSI, r15; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
+RDX, (cx74) <- ADC (cx74), RDX, r16; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+r15:r16 <- MULX RAX, r9; // x32_tmp = x7 * x17
+r18 <- ADX r18, r16; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+RBX, (cx77) <- ADC (cx77), RBX, r15; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
+r16:r15 <- MULX RAX, RDI; // x41_tmp = x7 * x19
+r14 <- ADX r14, r15; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
+r13, (cx80) <- ADC (cx80), r13, r16; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+RAX <- MULX RAX, 0x13; // x46 = x7 * 0x13
+r15:r16 <- MULX RAX, RCX; // x51_tmp = x46 * x18
+r11 <- ADX r11, r16; // bucket: x50_high + x52_high + x54_high + x56_high
+r10, (cx56) <- ADC (cx56), r10, r15; // bucket: x50_low + x52_low + x54_low + x56_low
+RAX <- LOAD x5;
+r16:r15 <- MULX RAX, r17; // x20_tmp = x5 * x13
+r11 <- ADX r11, r15; // bucket: x50_high + x52_high + x54_high + x56_high
+r10, (cx56) <- ADC (cx56), r10, r16; // bucket: x50_low + x52_low + x54_low + x56_low
 r11 <- ADCX (cx56), r11, 0x0; // bucket: x50_high + x52_high + x54_high + x56_high
-r15 <- AND r15, 0x7ffffffffffff; // x70 = x56_low & 0x7ffffffffffff
-r12:r13 <- MULX RDX, r11; // x21_tmp = x5 * x15
-r11 <- SHR r15:r11, 0x33; // x69 = x56_low:x56_high >> 0x33
-r9, (cx71) <- ADC (cx71), r9, r11; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-r10 <- ADX r10, r13; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
-r9, (cx71) <- ADC (cx71), r9, r12; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
-r10 <- ADCX (cx71), r10, 0x0; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
-r9 <- AND r9, 0x7ffffffffffff; // x73 = x71_low & 0x7ffffffffffff
-r13:r12 <- MULX RDX, r10; // x24_tmp = x5 * x17
-r10 <- SHR r9:r10, 0x33; // x72 = x71_low:x71_high >> 0x33
-RBP, (cx74) <- ADC (cx74), RBP, r10; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
-r8 <- ADX r8, r12; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
-RBP, (cx74) <- ADC (cx74), RBP, r13; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
-r8 <- ADCX (cx74), r8, 0x0; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
-RBP <- AND RBP, 0x7ffffffffffff; // x76 = x74_low & 0x7ffffffffffff
-r12:r13 <- MULX RDX, r8; // x29_tmp = x5 * x19
-r8 <- SHR RBP:r8, 0x33; // x75 = x74_low:x74_high >> 0x33
-RSI, (cx77) <- ADC (cx77), RSI, r8; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-RDI <- ADX RDI, r13; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
-RSI, (cx77) <- ADC (cx77), RSI, r12; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
-RDI <- ADCX (cx77), RDI, 0x0; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
-RSI <- AND RSI, 0x7ffffffffffff; // x79 = x77_low & 0x7ffffffffffff
-r13:r12 <- MULX RDX, RDI; // x36_tmp = x5 * x18
-RDI <- SHR RSI:RDI, 0x33; // x78 = x77_low:x77_high >> 0x33
-r15, (cx80) <- ADC (cx80), r15, RDI; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
-r14 <- ADX r14, r12; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
-r15, (cx80) <- ADC (cx80), r15, r13; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+r10 <- AND r10, 0x7ffffffffffff; // x70 = x56_low & 0x7ffffffffffff
+r15:r16 <- MULX RAX, r12; // x21_tmp = x5 * x15
+r11 <- SHR r10:r11, 0x33; // x69 = x56_low:x56_high >> 0x33
+RBP, (cx71) <- ADC (cx71), RBP, r11; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
+r8 <- ADX r8, r16; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+RBP, (cx71) <- ADC (cx71), RBP, r15; // bucket: x23_low + x58_low + x60_low + x62_low + x71_low
+r8 <- ADCX (cx71), r8, 0x0; // bucket: x23_high + x58_high + x60_high + x62_high + x71_high
+RBP <- AND RBP, 0x7ffffffffffff; // x73 = x71_low & 0x7ffffffffffff
+r16:r15 <- MULX RAX, r9; // x24_tmp = x5 * x17
+r8 <- SHR RBP:r8, 0x33; // x72 = x71_low:x71_high >> 0x33
+RDX, (cx74) <- ADC (cx74), RDX, r8; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+RSI <- ADX RSI, r15; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
+RDX, (cx74) <- ADC (cx74), RDX, r16; // bucket: x26_low + x28_low + x64_low + x66_low + x74_low
+RSI <- ADCX (cx74), RSI, 0x0; // bucket: x26_high + x28_high + x64_high + x66_high + x74_high
+RDX <- AND RDX, 0x7ffffffffffff; // x76 = x74_low & 0x7ffffffffffff
+r15:r16 <- MULX RAX, RDI; // x29_tmp = x5 * x19
+RSI <- SHR RDX:RSI, 0x33; // x75 = x74_low:x74_high >> 0x33
+RBX, (cx77) <- ADC (cx77), RBX, RSI; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
+r18 <- ADX r18, r16; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+RBX, (cx77) <- ADC (cx77), RBX, r15; // bucket: x31_low + x33_low + x35_low + x68_low + x77_low
+r18 <- ADCX (cx77), r18, 0x0; // bucket: x31_high + x33_high + x35_high + x68_high + x77_high
+RBX <- AND RBX, 0x7ffffffffffff; // x79 = x77_low & 0x7ffffffffffff
+r16:r15 <- MULX RAX, RCX; // x36_tmp = x5 * x18
+r18 <- SHR RBX:r18, 0x33; // x78 = x77_low:x77_high >> 0x33
+r13, (cx80) <- ADC (cx80), r13, r18; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
+r14 <- ADX r14, r15; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
+r13, (cx80) <- ADC (cx80), r13, r16; // bucket: x38_low + x40_low + x42_low + x44_low + x80_low
 r14 <- ADCX (cx80), r14, 0x0; // bucket: x38_high + x40_high + x42_high + x44_high + x80_high
-r15 <- AND r15, 0x7ffffffffffff; // x82 = x80_low & 0x7ffffffffffff
-r14 <- SHR r15:r14, 0x33; // x81 = x80_low:x80_high >> 0x33
+r13 <- AND r13, 0x7ffffffffffff; // x82 = x80_low & 0x7ffffffffffff
+r14 <- SHR r13:r14, 0x33; // x81 = x80_low:x80_high >> 0x33
 r14 <- MULX r14, 0x13; // x83 = x81 * 0x13
-r15 <- ADX r15, r14; // x84 = x70 + x83
-r15 <- SHR r15, 0x33; // x85 = x70 >> 0x33
-r14 <- AND r15, 0x7ffffffffffff; // x86 = x84 & 0x7ffffffffffff
-r15 <- ADX r15, r9; // x87 = x85 + x73
-r15 <- SHR r15, 0x33; // x88 = x85 >> 0x33
-r9 <- AND r15, 0x7ffffffffffff; // x89 = x87 & 0x7ffffffffffff
-r15 <- ADX r15, RBP; // x90 = x88 + x76
+r10 <- ADX r10, r14; // x84 = x70 + x83
+r10 <- SHR r10, 0x33; // x85 = x70 >> 0x33
+r14 <- AND r10, 0x7ffffffffffff; // x86 = x84 & 0x7ffffffffffff
+r10 <- ADX r10, RBP; // x87 = x85 + x73
+r10 <- SHR r10, 0x33; // x88 = x85 >> 0x33
+RBP <- AND r10, 0x7ffffffffffff; // x89 = x87 & 0x7ffffffffffff
+r10 <- ADX r10, RDX; // x90 = x88 + x76

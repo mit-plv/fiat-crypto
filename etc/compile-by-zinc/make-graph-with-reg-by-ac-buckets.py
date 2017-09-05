@@ -9,7 +9,7 @@ LAMBDA = u'\u03bb'
 OP_NAMES = {'*':'MUL', '+':'ADD', '>>':'SHL', '<<':'SHR', '|':'OR', '&':'AND'}
 
 REGISTERS = tuple(['RAX', 'RBX', 'RCX', 'RDX', 'RSI', 'RDI', 'RBP'] #, 'RSP'] # RSP is stack pointer?
-                  + ['r%d' % i for i in range(8, 16)])
+                  + ['r%d' % i for i in range(8, 19)])
 REGISTER_COLORS = ['color="black"', 'color="white",fillcolor="black"', 'color="maroon"', 'color="green"', 'fillcolor="olive"',
                    'color="navy"', 'color="purple"', 'fillcolor="teal"', 'fillcolor="silver"', 'fillcolor="gray"', 'fillcolor="red"',
                    'fillcolor="lime"', 'fillcolor="yellow"', 'fillcolor="blue"', 'fillcolor="fuschia"', 'fillcolor="aqua"']
@@ -262,17 +262,15 @@ def allocate_node(existing, node, *args):
                     free_temps.append(reg)
             else:
                 if reg not in free_list:
+                    print('freeing %s from %s' % (reg, var))
                     free_list.append(reg)
     def do_free_deps(node):
         full_map.update(cur_map)
-        if deps_allocated(full_map, node):
+        if node['out'] in full_map.keys():
             for dep in node['deps']:
-                if dep['out'] not in freed:
-                    do_free(dep['out'])
-                    freed.append(dep['out'])
-        elif node['out'] in full_map.keys():
-            for dep in node['deps']:
-                if dep['out'] not in freed and dep['out'] in full_map.keys() and all(reg in all_temps for reg in full_map[dep['out']].split(':')):
+                if dep['out'] in freed or dep['out'] not in full_map.keys(): continue
+                if (all(deps_allocated(full_map, rdep) for rdep in dep['rev_deps']) or
+                    all(reg in all_temps for reg in full_map[dep['out']].split(':'))):
                     do_free(dep['out'])
                     freed.append(dep['out'])
     if node['out'] in full_map.keys():
@@ -319,6 +317,7 @@ def allocate_node(existing, node, *args):
         if all(rdep is node or (rdep['out'] in full_map.keys() and full_map[rdep['out']] != full_map[dep['out']])
                for rdep in dep['rev_deps']):
             cur_map[node['out']] = full_map[dep['out']]
+            freed += [dep['out']]
         else:
             cur_map[node['out']] = free_list.pop()
         emit_vars.append(node)
@@ -405,12 +404,14 @@ def push_allocate(existing, nodes, *args, **kwargs):
             fill_node(carry_node)
             fill_node(shr_node)
             fill_node(and_node)
+            freed += [node['out'], carry_node['out'], high_node['out'], combine_node['out']]
         elif node['out'] in full_map.keys() and len(node['rev_deps']) == 1 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and len(node['rev_deps'][0]['deps']) == 1 and node['type'] == node['rev_deps'][0]['type']:
             next_node = node['rev_deps'][0]
             cur_map[next_node['out']] = full_map[node['out']]
             emit_vars.append(next_node)
             fill_node(next_node)
             full_map.update(cur_map)
+            freed += [node['out']]
         elif node['out'] not in full_map.keys() and len(node['rev_deps']) == 2 and len(node['deps']) == 2 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and all(d['out'] in full_map.keys() for d in node['deps']) and node['type'] == 'uint64_t' and all(d['type'] == 'uint64_t' for d in node['rev_deps']) and all(d['type'] == 'uint64_t' for d in node['deps']):
             from1, from2 = node['deps']
             to1, to2 = node['rev_deps']
@@ -425,6 +426,7 @@ def push_allocate(existing, nodes, *args, **kwargs):
             fill_node(to1)
             fill_node(to2)
             full_map.update(cur_map)
+            freed += [node['out'], from1['out'], from2['out']]
         elif node['out'] not in full_map.keys() and len(node['rev_deps']) == 0 and len(node['deps']) == 2 and all(d['out'] not in full_map.keys() for d in node['rev_deps']) and all(d['out'] in full_map.keys() for d in node['deps']) and node['type'] == 'uint64_t' and all(d['type'] == 'uint64_t' for d in node['rev_deps']) and all(d['type'] == 'uint64_t' for d in node['deps']):
             from1, from2 = node['deps']
             assert(full_map[from1['out']] != full_map[from2['out']])
@@ -432,6 +434,7 @@ def push_allocate(existing, nodes, *args, **kwargs):
             emit_vars.append(node)
             fill_node(node)
             full_map.update(cur_map)
+            freed += [from1['out'], from2['out']]
         full_map.update(cur_map)
         args = (cur_map, tuple(free_temps), tuple(free_list), tuple(all_temps), tuple(freed), tuple(new_buckets), tuple(emit_vars))
         kwargs['seen'].add(node['out'])
