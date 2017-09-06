@@ -73,90 +73,6 @@ Section Loops.
     cbv [terminates loop_default] in *; break_match; congruence.
   Qed.
 
-  Inductive trace : continue_state -> continue_state ->
-                    list continue_state -> Prop :=
-  | Break : forall final, trace final final (final::nil)
-  | Cont : forall st st' final tr, body st =  inr st'
-                             -> trace st' final tr
-                             -> trace st final (st :: tr).
-  
-  Fixpoint make_trace fuel start tr : list continue_state :=
-    match (body start) with
-    | inl _ => (tr ++ start :: nil)
-    | inr next => 
-      match fuel with
-      | O => (tr ++ start :: nil)
-      | S fuel' => make_trace fuel' next (tr ++ start :: nil)
-      end end.
-  
-  Lemma app_trace : forall tr a b,
-      trace a b tr ->
-      forall c,
-        body b = inr c ->
-        trace a c (tr ++ c :: nil).
-  Proof.
-    induction tr; intros;
-      match goal with
-      | H : trace _ _ _ |- _ => progress (inversion H; subst)
-      end; simpl app; eapply Cont; eauto; apply Break.
-  Qed.
-
-  Lemma is_trace' fuel fuel' : forall start middle tr,
-      terminates fuel start ->
-      terminates fuel' middle ->
-      trace start middle (tr ++ middle :: nil) ->
-      exists final b, body final = inl b /\
-      trace start final (make_trace fuel' middle tr).
-  Proof.
-    induction fuel';
-      repeat match goal with
-             | _ => progress (cbv [terminates loop_default])
-             | _ => progress (simpl loop; simpl make_trace)
-             | _ => progress intros
-             | _ => progress break_match; try congruence
-             | _ => do 2 eexists; split; eassumption
-             end.
-      apply IHfuel'; eauto using app_trace.
-  Qed.
-  
-  Lemma is_trace fuel : forall start,
-      terminates fuel start ->
-      exists final b,
-        body final = inl b /\
-        trace start final (make_trace fuel start nil).
-  Proof. intros. eauto using is_trace', Break. Qed.
-
-  Lemma trace_end d tr :
-    forall fuel start final b,
-    terminates fuel start ->
-    body final = inl b ->
-    trace start final tr ->
-    loop_default fuel start d = b.
-  Proof.
-    induction tr; intros.
-    { inversion H1. }
-    { inversion H1; subst.
-      { cbv [loop_default]; erewrite loop_break_step; eauto. }
-      { pose proof H;
-        cbv [loop_default terminates] in H |- *;
-          erewrite loop_continue_step in H |- * by eauto.
-        destruct fuel; try congruence.
-        eapply IHtr; eauto. } }
-  Qed.
-
-  Lemma is_trace_full fuel d : forall start,
-      terminates fuel start ->
-      exists final,
-        body final = inl (loop_default fuel start d) /\
-        trace start final (make_trace fuel start nil).
-  Proof.
-    intros. pose proof H.
-    eapply is_trace in H.
-    destruct H as [final [? [? ?]]].
-    exists final. split; [|assumption].
-    erewrite trace_end; eauto.
-  Qed.
-
   Definition invariant_for
              (inv : continue_state -> Prop)
              (P : break_state -> Prop) : Prop :=
@@ -166,66 +82,52 @@ Section Loops.
     (forall state state',
         body state = inl state' -> inv state ->
         P state').      
+
+  Local Ltac loop_simplify :=
+    repeat match goal with
+           | _ => progress (simpl loop in * )
+           | _ => progress intros
+           | H: exists _, _ |- _ => destruct H
+           | H: _ /\ _ |- _ => destruct H
+           | _ => erewrite loop_default_eq by eassumption
+           | _ => erewrite loop_continue_step in * by eassumption
+           | _ => erewrite loop_break_step in * by eassumption
+           | |- context [match (body ?s) with | _ => _ end] =>
+             let Heq := fresh "H" in
+             case_eq (body s); intros ? Heq; rewrite Heq in *
+           | _ => congruence
+           | _ => solve [eauto] 
+           end.             
   
-  Lemma loop_invariant' (P : break_state -> Prop)
-        (inv : continue_state -> Prop)
-        default final b (Hfinal : body final = inl b) :
-    forall tr fuel start (Htrace: trace start final tr),
-        terminates fuel start ->
-        inv start ->
-        invariant_for inv P ->
-        P (loop_default fuel start default).
-  Proof.
-    cbv [invariant_for];
-      induction tr; intros; [inversion Htrace|];
-        match goal with | H : _ /\ _ |- _ => destruct H end.
-    case_eq (body start); intros.
-    { erewrite trace_end; eauto using Break. }
-    { unfold loop_default.
-      erewrite loop_continue_step by eauto.
-      destruct fuel.
-      { cbv [terminates] in H. simpl in *.
-        match goal with H : body start = _ |- _ =>
-        rewrite H in * end; congruence. }
-      { assert (terminates fuel c) by (cbv [terminates] in *; erewrite loop_continue_step in * by eauto; congruence).
-        eapply IHtr; try eauto.
-        inversion Htrace; subst; congruence. } }
-  Qed.
-  
-  Lemma loop_invariant fuel start
+  Lemma loop_invariant fuel :
+    forall start
         (P : break_state -> Prop) default
-        (Hterm : terminates fuel start) :
+        (Hterm : terminates fuel start),
     (exists (inv : continue_state -> Prop),
         inv start /\
         invariant_for inv P)
     <-> P (loop_default fuel start default).
   Proof.
-    cbv [invariant_for]; split.
-    { let H := fresh "H" in
-      intro H; destruct H as [inv [? [? ?]]].
-      pose proof Hterm.
-      apply is_trace in Hterm.
-      destruct Hterm as [? [? [? ?]]].
-      eapply loop_invariant' with (inv:=inv);
-        cbv [invariant_for]; eauto.  }
-    { intro Hend.
+    intros; split;
+      [ intro H; destruct H as [? [Hstart ?]];
+        revert start Hterm Hstart;
+        induction fuel |
       exists (fun st =>
-                exists f e, (loop f st = Some e /\ P e)).
-      repeat split.
-      { do 2 eexists.
-        erewrite loop_default_eq by eassumption.
-        split; [f_equal|eassumption]. }
-      { intros ? ? ? IH.
-        destruct IH as [f IH].
-        erewrite loop_continue_step in IH by eauto.
-        destruct f.
-        { destruct IH as [? [? ?]]; congruence. }
-        { eexists; eassumption. } }
-      { intros ? ? ? IH.
-        destruct IH as [f IH].
-        erewrite loop_break_step in IH by eauto.
-        destruct IH as [e [HSome HP]].
-        congruence. } }
+                exists f e, (loop f st = Some e /\ P e)) ];
+      repeat match goal with
+               | _ => progress (cbv [invariant_for
+                                       loop_default
+                                       terminates] in * )
+             | _ => progress intros
+             | _ => progress loop_simplify
+             | H: _ = ?x |- _ = ?x =>
+               etransitivity; [|apply H]
+             | H: context
+                    [match ?x with | O => _
+                              | S _ => _ end] |- _ =>
+               destruct x; try congruence
+             | _ => eexists
+             end.
   Qed.
 
   Lemma to_measure (measure : continue_state -> nat) :
