@@ -158,21 +158,21 @@ Section Loops.
   Qed.
 
   Definition invariant_for
-             (inv : continue_state -> nat -> Prop)
+             (inv : continue_state -> Prop)
              (P : break_state -> Prop) : Prop :=
-    (forall state state' fuel',
-        body state = inr state' -> inv state (S fuel') ->
-        inv state' fuel') /\ 
-    (forall state state' fuel',
-        body state = inl state' -> inv state fuel' ->
+    (forall state state',
+        body state = inr state' -> inv state ->
+        inv state') /\ 
+    (forall state state',
+        body state = inl state' -> inv state ->
         P state').      
   
   Lemma loop_invariant' (P : break_state -> Prop)
-        (inv : continue_state -> nat -> Prop)
+        (inv : continue_state -> Prop)
         default final b (Hfinal : body final = inl b) :
     forall tr fuel start (Htrace: trace start final tr),
         terminates fuel start ->
-        inv start fuel ->
+        inv start ->
         invariant_for inv P ->
         P (loop_default fuel start default).
   Proof.
@@ -195,31 +195,36 @@ Section Loops.
   Lemma loop_invariant fuel start
         (P : break_state -> Prop) default
         (Hterm : terminates fuel start) :
-    (exists (inv : continue_state -> nat -> Prop),
-        inv start fuel /\
+    (exists (inv : continue_state -> Prop),
+        inv start /\
         invariant_for inv P)
     <-> P (loop_default fuel start default).
   Proof.
     cbv [invariant_for]; split.
     { let H := fresh "H" in
-      intro H; destruct H as [? [? [? ?]]].
+      intro H; destruct H as [inv [? [? ?]]].
       pose proof Hterm.
       apply is_trace in Hterm.
       destruct Hterm as [? [? [? ?]]].
-      eapply loop_invariant'; cbv [invariant_for]; eauto.  }
+      eapply loop_invariant' with (inv:=inv);
+        cbv [invariant_for]; eauto.  }
     { intro Hend.
-      exists (fun st f =>
-                exists e, (loop f st = Some e /\ P e)).
+      exists (fun st =>
+                exists f e, (loop f st = Some e /\ P e)).
       repeat split.
-      { eexists.
-        erewrite loop_default_eq by assumption.
+      { do 2 eexists.
+        erewrite loop_default_eq by eassumption.
         split; [f_equal|eassumption]. }
-      { intros.
-        erewrite loop_continue_step in * by eauto.
-        assumption. }
-      { intros.
-        erewrite loop_break_step in * by eauto.
-        destruct H0 as [e [HSome HP]].
+      { intros ? ? ? IH.
+        destruct IH as [f IH].
+        erewrite loop_continue_step in IH by eauto.
+        destruct f.
+        { destruct IH as [? [? ?]]; congruence. }
+        { eexists; eassumption. } }
+      { intros ? ? ? IH.
+        destruct IH as [f IH].
+        erewrite loop_break_step in IH by eauto.
+        destruct IH as [e [HSome HP]].
         congruence. } }
   Qed.
 
@@ -303,7 +308,7 @@ Section ZeroLoop.
   Definition zero_loop (arr : list nat) : list nat :=
     loop_default zero_body (length arr) (0,arr) nil.
   
-  Definition zero_invariant (state : nat * list nat) (fuel:nat) :=
+  Definition zero_invariant (state : nat * list nat) :=
     fst state <= length (snd state)
     /\ forall n, n < fst state -> nth_default 0 (snd state) n = 0.
 
