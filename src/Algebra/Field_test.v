@@ -24,6 +24,9 @@ Module _fsatz_test.
     Lemma div_goal a b c d (H:a=b+c) (anz:a<>0) : d/a + 1 = (d+b+c)/(b+c).
     Proof using Type*. fsatz. Qed.
 
+    Lemma inv_inv x (H:x <> 0) : 1/(1/x) = x.
+    Proof using Type*. fsatz. Qed.
+
     Lemma zero_neq_one : 0 <> 1.
     Proof using Type*. fsatz. Qed.
 
