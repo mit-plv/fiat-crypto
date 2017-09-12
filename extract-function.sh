@@ -36,6 +36,12 @@ EOF
 
 lines=0
 show=false
+brace='{ '
+close_brace='}'
+if [ ! -z "${FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM}" ]; then
+  brace=''
+  close_brace=''
+fi
 while IFS= read -r line; do
   case "$line" in
     *"λ '"*)
@@ -57,7 +63,7 @@ while IFS= read -r line; do
             i=$((i+1))
           done;
           seq 2 "$lines" | while IFS= read -r _; do
-            echo -n "}"
+            echo -n "${close_brace}"
           done
           echo "}"
           echo "// caller: uint64_t out[$i];" )
@@ -68,14 +74,13 @@ while IFS= read -r line; do
       case "$show" in
         true)
           lines=$((lines+1))
-          line="$(echo "$line" | \
+          line="$(printf "%s" "$line" | \
             sed s':^\([^,]*\),\(\s*\)\([^ ]*\) \([^ ]*\)\(.*\)\(mulx.*\))\([; ]*\)$: \3 \4;\2\1\5_\6, \&\4)\7:' | \
             sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(addcarryx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:' | \
             sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(subborrow.*\))\([; ]*\)$:\1 \2\3;\4_\5, \&\2)\6:')"
-          echo "{ $line"
+          printf "%s%s\n" "${brace}" "${line}"
           ;;
       esac
       ;;
   esac
 done
-
