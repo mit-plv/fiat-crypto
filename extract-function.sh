@@ -38,7 +38,9 @@ lines=0
 show=false
 brace='{ '
 close_brace='}'
+function_open_brace=''
 if [ ! -z "${FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM}" ]; then
+  function_open_brace=' {'
   brace=''
   close_brace=''
 fi
@@ -51,7 +53,8 @@ while IFS= read -r line; do
         while IFS= read -r arg; do
           echo -n ", uint64_t $arg"
         done
-        echo ')'
+        echo -n ')'
+        echo "${function_open_brace}"
       show=true
       ;;
     *"Return "*|*"return "*)
