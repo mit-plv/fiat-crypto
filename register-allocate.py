@@ -897,7 +897,7 @@ def inline_schedule(sched, input_vars, output_vars):
                             ['[%s] "m" (%s)' % (reg, reg) for reg in map(str.lower, TO_BE_RESTORED_REGISTERS)]) + '\n'
     ret += ': ' + ', '.join(['"cc"'] +
                             ['"%s"' % reg for reg in special_reg] +
-                            ['"%s"' % reg for reg in transient_regs]) + '\n'
+                            ['"%s"' % reg for reg in transient_regs if reg.upper() not in TO_BE_RESTORED_REGISTERS]) + '\n'
     ret += ');\n'
     return ret
 
