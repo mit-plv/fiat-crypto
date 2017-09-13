@@ -1,7 +1,6 @@
 162456  =136254*3.10/2.60	ashryn-ht-tb-ac-broadwell	7.1.1	a7ce099b+
 168279	JASONGROSS-X230-ht-tb-nops-ivybridge	2.90ghz	6.3.0	c003b54
 168376  =168376*2.60/2.60	ashryn-noht-notb-ac-broadwell	7.1.1	e014b3ac+
-187992	jgross-Leopard-WS-ht-tb-nops-haswell	3.70ghz	5.4.0	19a7001
+185666  =176132*3.70/3.51	jgross-Leopard-WS-ht-tb-nops-haswell	5.4.0	e4b51d4+
 201846  =308035*2.30/3.51	jgross-Leopard-WS-noht-notb-nops-haswell	5.4.0	6888031+
 217869	JASONGROSS-X230-ht-tb-nops-core-avx-i	2.90ghz	4.8	c003b54
-266483  =311786*3.00/3.51	jgross-Leopard-WS-ht-tb-nops-haswell	5.4.0	6888031+
