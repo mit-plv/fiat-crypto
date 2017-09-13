@@ -6,8 +6,8 @@ LAMBDA = u'\u03bb'
 
 NAMED_REGISTERS = ('RAX', 'RCX', 'RDX', 'RBX', 'RSP', 'RBP', 'RSI', 'RDI')
 NUMBERED_REGISTERS = tuple('r%d' % i for i in range(16))
-RESERVED_REGISTERS = ('RSP', )
-TO_BE_RESTORED_REGISTERS = ('RBP', )
+RESERVED_REGISTERS = ('RBP', )
+TO_BE_RESTORED_REGISTERS = ('RSP', )
 NAMED_REGISTER_MAPPING = dict(('r%d' % i, reg) for i, reg in enumerate(NAMED_REGISTERS))
 REAL_REGISTERS = tuple(list(NAMED_REGISTERS) + list(NUMBERED_REGISTERS))
 REGISTERS = ['reg%d' % i for i in range(13)]
