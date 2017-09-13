@@ -648,15 +648,27 @@ def print_mov_bucket(reg_out, reg_in, bucket):
 
 LAST_CARRY = None
 
+def print_imul_constant(reg_out, reg_in, imm, src):
+    global LAST_CARRY
+    LAST_CARRY = None
+    ret = ''
+    assert(imm[:2] == '0x')
+    ret2, reg_in = print_load(reg_in, can_clobber=[reg_out])
+    ret += ret2 + print_instr('imul', (reg_out, reg_in, imm), comment=src)
+    return ret
+
+
 def print_mul_by_constant(reg_out, reg_in, constant, src):
     #return '%s <- MULX %s, %s; // %s\n' % (ret_out, reg_in, constant, src)
     ret = ''
-    if constant == '0x13':
-        ret += ('// FIXME: lea for %s\n' % src)
+    #if constant == '0x13':
+    #    ret += ('// FIXME: lea for %s\n' % src)
     assert(constant[:2] == '0x')
+    #return ret + \
+    #    print_load_constant('rdx', constant) + \
+    #    print_mulx(reg_out, 'rdx', 'rdx', reg_in, src)
     return ret + \
-        print_load_constant('rdx', constant) + \
-        print_mulx(reg_out, 'rdx', 'rdx', reg_in, src)
+        print_imul_constant(reg_out, reg_in, constant, src)
 
 def print_adx(reg_out, rx1, rx2, bucket):
     #return '%s <- ADX %s, %s; // bucket: %s\n' % (reg_out, rx1, rx2, bucket)
