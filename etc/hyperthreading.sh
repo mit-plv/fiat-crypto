@@ -1,6 +1,14 @@
 #!/bin/sh
 set -eu
 
+usage() {
+  echo "USAGE: $0 <on|off>" ; exit 111
+}
+
+if [ "$#" -eq 0 ]; then
+  usage
+fi
+
 case $1 in
    on)
      for f in "/sys/devices/system/cpu/cpu"[0-9]*/online; do
@@ -20,5 +28,5 @@ case $1 in
       cores=$(printf "$cores\n$coreid")
     done
     ;;
-  *) echo "USAGE: hyperthreading.sh <on|off>"
+  *) usage
 esac
