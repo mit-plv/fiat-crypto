@@ -163,70 +163,70 @@ $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compile
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 
 src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/test -I liblow -I src/Specific/X25519/C64/ src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c
+	src/Specific/X25519/C64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/C64/ $(filter %.c %.s,$^)
 
 src/Specific/X25519/C64/measure: src/Specific/X25519/C64/compiler.sh measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
-	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/measure -I liblow -I src/Specific/X25519/C64/ measure.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c -D UUT=crypto_scalarmult_bench
+	src/Specific/X25519/C64/compiler.sh -o $@ -I liblow -I src/Specific/X25519/C64/ $(filter %.c %.s,$^) -D UUT=crypto_scalarmult_bench
 
-src/Specific/X25519/C64/measurements.txt: src/Specific/X25519/C64/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
-	./capture.sh src/Specific/X25519/C64 2047
+src/Specific/X25519/C64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 2047
 
-third_party/openssl-curve25519/measure:  third_party/openssl-curve25519/compiler.sh third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
-	third_party/openssl-curve25519/compiler.sh -o third_party/openssl-curve25519/measure measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c -I liblow -I third_party/openssl-curve25519 -D UUT=crypto_scalarmult_bench
+third_party/openssl-curve25519/measure: third_party/openssl-curve25519/compiler.sh measure.c third_party/openssl-curve25519/crypto_scalarmult_bench.c third_party/openssl-curve25519/ec_curve25519.c third_party/openssl-curve25519/ec_curve25519.h
+	third_party/openssl-curve25519/compiler.sh -o $@ -I liblow -I third_party/openssl-curve25519 $(filter %.c %.s,$^) -D UUT=crypto_scalarmult_bench
 
-third_party/openssl-curve25519/measurements.txt: third_party/openssl-curve25519/measure capture.sh
-	./capture.sh third_party/openssl-curve25519 2047
+third_party/openssl-curve25519/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 2047
 
-third_party/curve25519-donna-c64/measure:  third_party/curve25519-donna-c64/compiler.sh third_party/curve25519-donna-c64/crypto_scalarmult_bench.c third_party/curve25519-donna-c64/curve25519-donna-c64.c
-	third_party/curve25519-donna-c64/compiler.sh -o third_party/curve25519-donna-c64/measure measure.c third_party/curve25519-donna-c64/crypto_scalarmult_bench.c third_party/curve25519-donna-c64/curve25519-donna-c64.c -I liblow -I third_party/curve25519-donna-c64 -D UUT=crypto_scalarmult_bench
+third_party/curve25519-donna-c64/measure: third_party/curve25519-donna-c64/compiler.sh measure.c third_party/curve25519-donna-c64/crypto_scalarmult_bench.c third_party/curve25519-donna-c64/curve25519-donna-c64.c
+	third_party/curve25519-donna-c64/compiler.sh -o $@ -I liblow -I third_party/curve25519-donna-c64 $(filter %.c %.s,$^) -D UUT=crypto_scalarmult_bench
 
-third_party/curve25519-donna-c64/measurements.txt: third_party/openssl-curve25519/measure capture.sh
-	./capture.sh third_party/curve25519-donna-c64 2047
+third_party/curve25519-donna-c64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 2047
 
-third_party/openssl-nistz256-amd64/measure:  third_party/openssl-nistz256-amd64/compiler.sh third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s third_party/openssl-nistz256-amd64/nistz256.h
-	third_party/openssl-nistz256-amd64/compiler.sh -o third_party/openssl-nistz256-amd64/measure measure.c third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s -I liblow -I third_party/openssl-nistz256-amd64 -D UUT=bench_madd
+third_party/openssl-nistz256-amd64/measure: third_party/openssl-nistz256-amd64/compiler.sh measure.c third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s third_party/openssl-nistz256-amd64/nistz256.h
+	third_party/openssl-nistz256-amd64/compiler.sh -o $@ -I liblow -I third_party/openssl-nistz256-amd64 $(filter %.c %.s,$^) -D UUT=bench_madd
 
-third_party/openssl-nistz256-amd64/measurements.txt: third_party/openssl-nistz256-amd64/measure capture.sh
-	./capture.sh third_party/openssl-nistz256-amd64 65535
+third_party/openssl-nistz256-amd64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 65535
 
-third_party/openssl-nistz256-adx/measure:  third_party/openssl-nistz256-adx/compiler.sh third_party/openssl-nistz256-adx/bench_madd.c third_party/openssl-nistz256-adx/cpu_intel.c third_party/openssl-nistz256-adx/ecp_nistz256-x86_64.s third_party/openssl-nistz256-adx/nistz256.h
-	third_party/openssl-nistz256-adx/compiler.sh -o third_party/openssl-nistz256-adx/measure measure.c third_party/openssl-nistz256-adx/bench_madd.c third_party/openssl-nistz256-adx/cpu_intel.c third_party/openssl-nistz256-adx/ecp_nistz256-x86_64.s -I liblow -I third_party/openssl-nistz256-adx -D UUT=bench_madd
+third_party/openssl-nistz256-adx/measure: third_party/openssl-nistz256-adx/compiler.sh measure.c third_party/openssl-nistz256-adx/bench_madd.c third_party/openssl-nistz256-adx/cpu_intel.c third_party/openssl-nistz256-adx/ecp_nistz256-x86_64.s third_party/openssl-nistz256-adx/nistz256.h
+	third_party/openssl-nistz256-adx/compiler.sh -o $@ -I liblow -I third_party/openssl-nistz256-adx $(filter %.c %.s,$^) -D UUT=bench_madd
 
-third_party/openssl-nistz256-adx/measurements.txt: third_party/openssl-nistz256-adx/measure capture.sh
-	./capture.sh third_party/openssl-nistz256-adx 65535
+third_party/openssl-nistz256-adx/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 65535
 
-third_party/openssl-nistp256c64/measure:  third_party/openssl-nistp256c64/compiler.sh third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h
-	third_party/openssl-nistp256c64/compiler.sh -o third_party/openssl-nistp256c64/measure measure.c third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h -I liblow -I third_party/openssl-nistp256c64 -D UUT=bench_madd
+third_party/openssl-nistp256c64/measure: third_party/openssl-nistp256c64/compiler.sh measure.c third_party/openssl-nistp256c64/bench_madd.c third_party/openssl-nistp256c64/ecp_nistp256.c third_party/openssl-nistp256c64/ecp_nistp256.h
+	third_party/openssl-nistp256c64/compiler.sh -o $@ -I liblow -I third_party/openssl-nistp256c64 $(filter %.c %.s,$^) -D UUT=bench_madd
 
-third_party/openssl-nistp256c64/measurements.txt: third_party/openssl-nistp256c64/measure capture.sh
-	./capture.sh third_party/openssl-nistp256c64 65535
+third_party/openssl-nistp256c64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 65535
 
 src/Specific/NISTP256/AMD64/test/feadd_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/feadd_test.c liblow/cmovznz.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/feadd.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/feadd_test.c liblow/cmovznz.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o $@ -I liblow -I src/Specific/NISTP256/AMD64/ $(filter %.c %.s,$^)
 
 src/Specific/NISTP256/AMD64/test/femul_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/femul.c -I liblow -I src/Specific/NISTP256/AMD64/ src/Specific/NISTP256/AMD64/test/femul_test.c liblow/cmovznz.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o $@ -I liblow -I src/Specific/NISTP256/AMD64/ $(filter %.c %.s,$^)
 
 src/Specific/NISTP256/AMD64/test/p256_test: src/Specific/NISTP256/AMD64/compiler.sh src/Specific/NISTP256/AMD64/test/p256_test.c liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/p256.h
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c liblow/cmovznz.c -I liblow -I src/Specific/NISTP256/AMD64/
+	src/Specific/NISTP256/AMD64/compiler.sh -o $@ -I liblow -I src/Specific/NISTP256/AMD64/ $(filter %.c %.s,$^)
 
-src/Specific/NISTP256/AMD64/measure:  src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.h src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c measure.c src/Specific/NISTP256/AMD64/compiler.sh measure.c
-	src/Specific/NISTP256/AMD64/compiler.sh -o src/Specific/NISTP256/AMD64/measure src/Specific/NISTP256/AMD64/*.c -I src/Specific/NISTP256/AMD64/ measure.c -D UUT=bench_madd -I liblow liblow/*.c
+src/Specific/NISTP256/AMD64/measure: src/Specific/NISTP256/AMD64/compiler.sh measure.c src/Specific/NISTP256/AMD64/bench_madd.c src/Specific/NISTP256/AMD64/feadd.h src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.h src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.h src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/feopp.h src/Specific/NISTP256/AMD64/feopp.c src/Specific/NISTP256/AMD64/fesub.h src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c liblow/cmovznz.c
+	src/Specific/NISTP256/AMD64/compiler.sh -o $@ -I liblow -I src/Specific/NISTP256/AMD64/ $(filter %.c %.s,$^) -D UUT=bench_madd
 
-src/Specific/NISTP256/AMD64/measurements.txt: src/Specific/NISTP256/AMD64/measure capture.sh
-	./capture.sh src/Specific/NISTP256/AMD64 65535
+src/Specific/NISTP256/AMD64/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 65535
 
 src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c extract-function.sh
 	(cd src/Specific/NISTP256/AMD64 && ( BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ../../../../extract-function.sh "stdint" < /dev/null | grep -v stdint && sed 's:^uint64_t:static inline &:' ../../../../liblow/cmovznz.c && echo fenz.c feadd.c fesub.c femul.c p256_jacobian_add_affine.c | xargs -n1 grep -A99999 void -- ) | sed 's:^void force_inline:static inline void force_inline:' | grep -v liblow > icc/combined.c )
 
 src/Specific/NISTP256/AMD64/icc/p256_test: src/Specific/NISTP256/AMD64/icc/compiler.sh src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/p256.h
-	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/p256_test src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s -I src/Specific/NISTP256/AMD64/
+	src/Specific/NISTP256/AMD64/icc/compiler.sh -o $@ -I src/Specific/NISTP256/AMD64/ $(filter %.c %.s,$^)
 
-src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/icc/compiler.sh src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c
-	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/measure src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c -I liblow -I src/Specific/NISTP256/AMD64 measure.c -D UUT=bench_madd
+src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/icc/compiler.sh measure.c src/Specific/NISTP256/AMD64/p256.h src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/bench_madd.c
+	src/Specific/NISTP256/AMD64/icc/compiler.sh -o $@ -I liblow -I src/Specific/NISTP256/AMD64 $(filter %.c %.s,$^) -D UUT=bench_madd
 
-src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/icc/measure capture.sh
-	./capture.sh src/Specific/NISTP256/AMD64/icc 65535
+src/Specific/NISTP256/AMD64/icc/measurements.txt : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/cpufreq etc/tscfreq
+	./capture.sh $* 65535
 
 bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt third_party/curve25519-donna-c64/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256-amd64/measurements.txt third_party/openssl-nistz256-adx/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?
