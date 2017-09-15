@@ -52,3 +52,4 @@ third_party/openssl-nistp256c64/measure
 third_party/openssl-nistz256-adx/measure
 third_party/openssl-nistz256-amd64/measure
 third_party/openssl-nistz256/measure
+third_party/curve25519-donna-c64/measure

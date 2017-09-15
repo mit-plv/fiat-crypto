@@ -168,6 +168,12 @@ third_party/openssl-curve25519/measure:  third_party/openssl-curve25519/compiler
 third_party/openssl-curve25519/measurements.txt: third_party/openssl-curve25519/measure capture.sh
 	./capture.sh third_party/openssl-curve25519 2047
 
+third_party/curve25519-donna-c64/measure:  third_party/curve25519-donna-c64/compiler.sh third_party/curve25519-donna-c64/crypto_scalarmult_bench.c third_party/curve25519-donna-c64/curve25519-donna-c64.c
+	third_party/curve25519-donna-c64/compiler.sh -o third_party/curve25519-donna-c64/measure measure.c third_party/curve25519-donna-c64/crypto_scalarmult_bench.c third_party/curve25519-donna-c64/curve25519-donna-c64.c -I liblow -I third_party/curve25519-donna-c64 -D UUT=crypto_scalarmult_bench
+
+third_party/curve25519-donna-c64/measurements.txt: third_party/openssl-curve25519/measure capture.sh
+	./capture.sh third_party/curve25519-donna-c64 2047
+
 third_party/openssl-nistz256-amd64/measure:  third_party/openssl-nistz256-amd64/compiler.sh third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s third_party/openssl-nistz256-amd64/nistz256.h
 	third_party/openssl-nistz256-amd64/compiler.sh -o third_party/openssl-nistz256-amd64/measure measure.c third_party/openssl-nistz256-amd64/bench_madd.c third_party/openssl-nistz256-amd64/cpu_intel.c third_party/openssl-nistz256-amd64/ecp_nistz256-x86_64.s -I liblow -I third_party/openssl-nistz256-amd64 -D UUT=bench_madd
 
@@ -213,7 +219,7 @@ src/Specific/NISTP256/AMD64/icc/measure: src/Specific/NISTP256/AMD64/icc/compile
 src/Specific/NISTP256/AMD64/icc/measurements.txt: src/Specific/NISTP256/AMD64/icc/measure capture.sh
 	./capture.sh src/Specific/NISTP256/AMD64/icc 65535
 
-bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256-amd64/measurements.txt third_party/openssl-nistz256-adx/measurements.txt third_party/openssl-nistp256c64/measurements.txt
+bench: src/Specific/X25519/C64/measurements.txt third_party/openssl-curve25519/measurements.txt third_party/curve25519-donna-c64/measurements.txt src/Specific/NISTP256/AMD64/measurements.txt src/Specific/NISTP256/AMD64/icc/measurements.txt third_party/openssl-nistz256-amd64/measurements.txt third_party/openssl-nistz256-adx/measurements.txt third_party/openssl-nistp256c64/measurements.txt
 	head -999999 $?
 
 test: src/Specific/X25519/C64/test src/Specific/NISTP256/AMD64/test/feadd_test src/Specific/NISTP256/AMD64/test/femul_test src/Specific/NISTP256/AMD64/test/p256_test src/Specific/NISTP256/AMD64/icc/p256_test
