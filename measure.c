@@ -1,6 +1,6 @@
 /*
  * Benchmarking utilities extracted from SUPERCOP by Andres Erbsen
- * based on measure-anything.c version 20120328 and measure.c 
+ * based on measure-anything.c version 20120328 and measure.c
  * by D. J. Bernstein
  * Public domain.
  */
@@ -85,15 +85,24 @@ void limits()
 
 void UUT(unsigned char*);
 
+// place the call to UUT in a separate function, because gcc prohibits
+// use of bp in inline assembly if you have a variable-length array or
+// alloca in the code; see
+// https://stackoverflow.com/questions/46248430/how-can-i-determine-preferably-at-compile-time-whether-gcc-is-using-rbp-based?noredirect=1#comment79462384_46248430
+void measure_helper(int n, unsigned char *buf, long long* cycles)
+{
+  for (int i = 0;i <= n;++i) {
+	  cycles[i] = cpucycles();
+	  UUT(buf);
+  }
+}
+
 void measure(int n)
 {
   unsigned char *buf = aligned_alloc(64, 1024);
   long long* cycles = calloc(n + 1, sizeof(long long));
 
-  for (int i = 0;i <= n;++i) {
-	  cycles[i] = cpucycles();
-	  UUT(buf);
-  }
+  measure_helper(n, buf, cycles);
   for (int i = 0;i < n;++i) cycles[i] = cycles[i + 1] - cycles[i];
   for (int i = 0;i < n;++i) printf("%lld\n", cycles[i]);
 
