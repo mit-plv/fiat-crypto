@@ -89,7 +89,7 @@ void UUT(unsigned char*);
 // use of bp in inline assembly if you have a variable-length array or
 // alloca in the code; see
 // https://stackoverflow.com/questions/46248430/how-can-i-determine-preferably-at-compile-time-whether-gcc-is-using-rbp-based?noredirect=1#comment79462384_46248430
-void measure_helper(int n, unsigned char *buf, long long* cycles)
+void __attribute__ ((noinline)) measure_helper(int n, unsigned char *buf, long long* cycles)
 {
   for (int i = 0;i <= n;++i) {
 	  cycles[i] = cpucycles();
