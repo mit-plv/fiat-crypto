@@ -224,6 +224,7 @@ src/Spec/WeierstrassCurve.v
 src/Spec/Test/X25519.v
 src/Specific/ArithmeticSynthesisTest.v
 src/Specific/ArithmeticSynthesisTest130.v
+src/Specific/ArithmeticSynthesisTest32.v
 src/Specific/IntegrationTestDisplayCommon.v
 src/Specific/IntegrationTestDisplayCommonTactics.v
 src/Specific/IntegrationTestFreeze.v
