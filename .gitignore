@@ -47,6 +47,14 @@ src/Specific/X25519/C64/ladderstep.c
 src/Specific/X25519/C64/ladderstep.h
 src/Specific/X25519/C64/measure
 src/Specific/X25519/C64/test
+src/Specific/X25519/C32/femul.c
+src/Specific/X25519/C32/femul.h
+src/Specific/X25519/C32/fesquare.c
+src/Specific/X25519/C32/fesquare.h
+src/Specific/X25519/C32/ladderstep.c
+src/Specific/X25519/C32/ladderstep.h
+src/Specific/X25519/C32/measure
+src/Specific/X25519/C32/test
 third_party/openssl-curve25519/measure
 third_party/openssl-nistp256c64/measure
 third_party/openssl-nistz256-adx/measure

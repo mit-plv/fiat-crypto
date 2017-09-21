@@ -141,17 +141,26 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z
 
 c: $(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_JAVA_VO:Display.vo=.h)
 
-$(DISPLAY_NON_JAVA_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
-	FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
+DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
+DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO)
+DISPLAY_NON_JAVA_C64_VO := $(filter-out $(DISPLAY_NON_JAVA_C32_VO),$(DISPLAY_NON_JAVA_VO))
 
-$(DISPLAY_NON_JAVA_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
-	./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+$(DISPLAY_NON_JAVA_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
+	BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_C32_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
+	BITWIDTH=32 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_C64_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
+	BITWIDTH=64 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_NON_JAVA_C32_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
+	BITWIDTH=32 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
 
 $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
-
-DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 
 src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
 	src/Specific/X25519/C64/compiler.sh -o src/Specific/X25519/C64/test -I liblow -I src/Specific/X25519/C64/ src/Specific/X25519/x25519_test.c $(DISPLAY_X25519_C64_VO:Display.vo=.c) src/Specific/X25519/C64/scalarmult.c

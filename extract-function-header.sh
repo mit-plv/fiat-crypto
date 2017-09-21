@@ -21,18 +21,21 @@ cat <<"EOF"
 
 EOF
 
+if [ -z "${BITWIDTH}" ]; then
+  BITWIDTH=64
+fi
+
 while IFS= read -r line; do
   case "$line" in
     *"λ '"*)
       echo -n "void force_inline $funcname("
-      echo -n "uint64_t* out"
+      echo -n "uint${BITWIDTH}_t* out"
       echo "$line" | grep -owP -- '\w+\d+' | \
         while IFS= read -r arg; do
-          echo -n ", uint64_t $arg"
+          echo -n ", uint${BITWIDTH}_t $arg"
         done
         echo ');'
       break
       ;;
   esac
 done
-

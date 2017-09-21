@@ -261,6 +261,10 @@ src/Specific/NISTP256/AMD64/fesubDisplay.v
 src/Specific/NISTP256/FancyMachine256/Barrett.v
 src/Specific/NISTP256/FancyMachine256/Core.v
 src/Specific/NISTP256/FancyMachine256/Montgomery.v
+src/Specific/X25519/C32/femul.v
+src/Specific/X25519/C32/femulDisplay.v
+src/Specific/X25519/C32/fesquare.v
+src/Specific/X25519/C32/fesquareDisplay.v
 src/Specific/X25519/C64/femul.v
 src/Specific/X25519/C64/femulDisplay.v
 src/Specific/X25519/C64/fesquare.v

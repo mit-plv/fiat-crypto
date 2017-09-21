@@ -44,14 +44,17 @@ if [ ! -z "${FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM}" ]; then
   brace=''
   close_brace=''
 fi
+if [ -z "${BITWIDTH}" ]; then
+  BITWIDTH=64
+fi
 while IFS= read -r line; do
   case "$line" in
     *"λ '"*)
       echo -n "void force_inline $funcname("
-      echo -n "uint64_t* out"
+      echo -n "uint${BITWIDTH}_t* out"
       echo "$line" | grep -owP -- '\w+\d+' | \
         while IFS= read -r arg; do
-          echo -n ", uint64_t $arg"
+          echo -n ", uint${BITWIDTH}_t $arg"
         done
         echo -n ')'
         echo "${function_open_brace}"
@@ -69,7 +72,7 @@ while IFS= read -r line; do
             echo -n "${close_brace}"
           done
           echo "}"
-          echo "// caller: uint64_t out[$i];" )
+          echo "// caller: uint${BITWIDTH}_t out[$i];" )
       show=false
       break
       ;;
