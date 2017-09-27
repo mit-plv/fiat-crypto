@@ -10,7 +10,7 @@
  *
  * http://code.google.com/p/curve25519-donna/
  *
- * (modified by Andres Erbsen)
+ * (modified by Andres Erbsen and Jason Gross)
  * Adam Langley <agl@imperialviolet.org>
  * Parts optimised by floodyberry
  * Derived from public domain C code by Daniel J. Bernstein <djb@cr.yp.to>
@@ -164,7 +164,7 @@ fmonty(limb *x2, limb *z2, /* output 2Q */
   x2[2] = out[ 2];
   x2[1] = out[ 3];
   x2[0] = out[ 4];
-  z2[4] = out[ 5]; 
+  z2[4] = out[ 5];
   z2[3] = out[ 6];
   z2[2] = out[ 7];
   z2[1] = out[ 8];
@@ -178,7 +178,7 @@ fmonty(limb *x2, limb *z2, /* output 2Q */
   z3[3] = out[16];
   z3[2] = out[17];
   z3[1] = out[18];
-  z3[0] = out[19]; 
+  z3[0] = out[19];
 }
 
 // -----------------------------------------------------------------------------
