@@ -217,7 +217,7 @@ src/Specific/NISTP256/AMD64/measurements.txt: src/Specific/NISTP256/AMD64/measur
 	./capture.sh src/Specific/NISTP256/AMD64 65535
 
 src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c extract-function.sh
-	(cd src/Specific/NISTP256/AMD64 && ( FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ../../../../extract-function.sh "stdint" < /dev/null | grep -v stdint && sed 's:^uint64_t:static inline &:' ../../../../liblow/cmovznz.c && echo fenz.c feadd.c fesub.c femul.c p256_jacobian_add_affine.c | xargs -n1 grep -A99999 void -- ) | sed 's:^void force_inline:static inline void force_inline:' | grep -v liblow > icc/combined.c )
+	(cd src/Specific/NISTP256/AMD64 && ( BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ../../../../extract-function.sh "stdint" < /dev/null | grep -v stdint && sed 's:^uint64_t:static inline &:' ../../../../liblow/cmovznz.c && echo fenz.c feadd.c fesub.c femul.c p256_jacobian_add_affine.c | xargs -n1 grep -A99999 void -- ) | sed 's:^void force_inline:static inline void force_inline:' | grep -v liblow > icc/combined.c )
 
 src/Specific/NISTP256/AMD64/icc/p256_test: src/Specific/NISTP256/AMD64/icc/compiler.sh src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s src/Specific/NISTP256/AMD64/p256.h
 	src/Specific/NISTP256/AMD64/icc/compiler.sh -o src/Specific/NISTP256/AMD64/icc/p256_test src/Specific/NISTP256/AMD64/test/p256_test.c src/Specific/NISTP256/AMD64/icc/icc17_p256_jacobian_add_affine.s -I src/Specific/NISTP256/AMD64/
