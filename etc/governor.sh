@@ -3,6 +3,7 @@ set -eu
 
 usage() {
   generators="$1"
+  # example: USAGE: ./governor.sh <performance|powersave>
   echo "USAGE: $0 <$(echo "$generators" | tr ' ' '|')>"
   exit 111
 }
