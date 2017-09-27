@@ -158,6 +158,7 @@ Section BoundedField25p5.
     { Time UnifyAbstractReflexivity.unify_abstract_compute_rhs_reflexivity. }
     { Time ReflectiveTactics.unify_abstract_cbv_interp_rhs_reflexivity. }
     { Time abstract ReflectiveTactics.handle_bounds_from_hyps. }
+    { Time abstract ReflectiveTactics.handle_boundedness_side_condition. }
      *)
     Time refine_reflectively.
     Show Ltac Profile.
