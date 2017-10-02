@@ -222,9 +222,8 @@ src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Spec/Test/X25519.v
-src/Specific/ArithmeticSynthesisTest.v
 src/Specific/ArithmeticSynthesisTest130.v
-src/Specific/ArithmeticSynthesisTest32.v
+src/Specific/CurveParameters.v
 src/Specific/IntegrationTestDisplayCommon.v
 src/Specific/IntegrationTestDisplayCommonTactics.v
 src/Specific/IntegrationTestFreeze.v
@@ -262,10 +261,16 @@ src/Specific/NISTP256/AMD64/fesubDisplay.v
 src/Specific/NISTP256/FancyMachine256/Barrett.v
 src/Specific/NISTP256/FancyMachine256/Core.v
 src/Specific/NISTP256/FancyMachine256/Montgomery.v
+src/Specific/X25519/C32/ArithmeticSynthesisTest.v
+src/Specific/X25519/C32/CurveParameters.v
+src/Specific/X25519/C32/ReificationTypes.v
 src/Specific/X25519/C32/femul.v
 src/Specific/X25519/C32/femulDisplay.v
 src/Specific/X25519/C32/fesquare.v
 src/Specific/X25519/C32/fesquareDisplay.v
+src/Specific/X25519/C64/ArithmeticSynthesisTest.v
+src/Specific/X25519/C64/CurveParameters.v
+src/Specific/X25519/C64/ReificationTypes.v
 src/Specific/X25519/C64/femul.v
 src/Specific/X25519/C64/femulDisplay.v
 src/Specific/X25519/C64/fesquare.v

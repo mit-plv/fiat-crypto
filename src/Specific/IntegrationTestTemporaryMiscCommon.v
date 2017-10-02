@@ -237,23 +237,18 @@ Ltac unmap_map_tuple _ :=
            => rewrite <- (Tuple.map_map (n:=N) f g
                           : pointwise_relation _ eq _ (Tuple.map (n:=N) (fun x : T => f (g x))))
          end.
+Ltac get_feW_bounded boundedT :=
+  lazymatch boundedT with
+  | and ?X ?Y => get_feW_bounded X
+  | ?feW_bounded _ => feW_bounded
+  end.
 Ltac subst_feW _ :=
   let T := lazymatch goal with |- @sig ?T _ => T end in
   let boundedT := lazymatch goal with |- { e | ?A -> _ } => A end in
-  match goal with
-  | [ feW := _ : Type |- _ ]
-    => match goal with
-       | [ feW_bounded := _ : feW -> Prop |- _ ]
-         => lazymatch T with
-            | context[feW] => idtac
-            end;
-            lazymatch boundedT with
-            | context[feW_bounded _] => idtac
-            end;
-            subst feW feW_bounded
-       end
-  end;
-  cbv beta.
+  let feW_bounded := get_feW_bounded boundedT in
+  let feW := lazymatch type of feW_bounded with ?feW -> Prop => feW end in
+  cbv [feW feW_bounded];
+  try clear feW feW_bounded.
 Ltac finish_conjoined_preglue _ :=
   [ > match goal with
       | [ FINAL : _ /\ ?e |- _ ] => is_evar e; refine (proj2 FINAL)

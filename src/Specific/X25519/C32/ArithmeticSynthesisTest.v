@@ -3,6 +3,8 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Arithmetic.Saturated.Freeze.
+Require Crypto.Specific.CurveParameters.
+Require Import Crypto.Specific.X25519.C32.CurveParameters.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -13,24 +15,22 @@ Local Open Scope list_scope.
 Local Open Scope Z_scope.
 Local Coercion Z.of_nat : nat >-> Z.
 
-(***
-Modulus : 2^255-19
-Base: 51
-***)
-Section Ops51.
+Module P := CurveParameters.FillCurveParameters Curve.
+
+Section Ops.
   Local Infix "^" := tuple : type_scope.
 
   (* These definitions will need to be passed as Ltac arguments (or
   cleverly inferred) when things are eventually automated *)
-  Definition sz := 5%nat.
-  Definition bitwidth := 64.
-  Definition s : Z := 2^255.
-  Definition c : list B.limb := [(1, 19)].
-  Definition carry_chain1 := Eval vm_compute in (seq 0 (pred sz)).
-  Definition carry_chain2 := [0;1]%nat.
+  Definition sz : nat := P.compute P.sz.
+  Definition bitwidth : Z := P.compute P.bitwidth.
+  Definition s : Z := P.unfold P.s. (* don't want to compute, e.g., [2^255] *)
+  Definition c : list B.limb := P.compute P.c.
+  Definition carry_chain1 := P.compute P.carry_chain1.
+  Definition carry_chain2 := P.compute P.carry_chain2.
 
-  Definition a24 := 121665%Z.
-  Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
+  Definition a24 := P.compute P.a24.
+  Definition coef_div_modulus : nat := P.compute P.coef_div_modulus.
   (* These definitions are inferred from those above *)
   Definition m := Eval vm_compute in Z.to_pos (s - Associational.eval c). (* modulus *)
   Section wt.
@@ -136,28 +136,9 @@ Section Ops51.
          Positional.mul_cps (n:=sz) (m:=sz2) wt a b
                             (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
     solve_op_F wt x.
-    instantiate (1 := fun a b =>
-      (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
-      let '(r4, r3, r2, r1, r0) := a in
-      let '(s4, s3, s2, s1, s0) := b in
-      dlet t0  :=  r0 * s0 in
-      dlet t1  :=  r0 * s1 + r1 * s0 in
-      dlet t2  :=  r0 * s2 + r2 * s0 + r1 * s1 in
-      dlet t3  :=  r0 * s3 + r3 * s0 + r1 * s2 + r2 * s1 in
-      dlet t4  :=  r0 * s4 + r4 * s0 + r3 * s1 + r1 * s3 + r2 * s2 in
-
-      dlet r4' := r4*19 in
-      dlet r1' := r1*19 in
-      dlet r2' := r2*19 in
-      dlet r3' := r3*19 in
-
-      dlet t0 := t0 + r4' * s1 + r1' * s4 + r2' * s3 + r3' * s2 in
-      dlet t1 := t1 + r4' * s2 + r2' * s4 + r3' * s3 in
-      dlet t2 := t2 + r4' * s3 + r3' * s4 in
-      dlet t3 := t3 + r4' * s4 in
-      (t4, t3, t2, t1, t0)
-    ).
-    break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
+    P.default_mul;
+      P.extra_prove_mul_eq;
+      break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring.
   Defined.
 
   Definition square_sig :
@@ -172,22 +153,9 @@ Section Ops51.
          Positional.mul_cps (n:=sz) (m:=sz2) wt a a
                             (fun ab => Positional.reduce_cps (n:=sz) (m:=sz2) wt s c ab id)) in
     solve_op_F wt x.
-    instantiate (1 := fun a =>
-      (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
-      let '(r4, r3, r2, r1, r0) := a in
-      dlet d0 := r0 * 2 in
-      dlet d1 := r1 * 2 in
-      dlet d2 := r2 * 2 * 19 in
-      dlet d419 := r4 * 19 in
-      dlet d4 := d419 * 2 in
-      dlet t0 := r0 * r0 + d4 * r1 + d2 * r3        in
-      dlet t1 := d0 * r1 + d4 * r2 + r3 * (r3 * 19) in
-      dlet t2 := d0 * r2 + r1 * r1 + d4 * r3        in
-      dlet t3 := d0 * r3 + d1 * r2 + r4 * d419      in
-      dlet t4 := d0 * r4 + d1 * r3 + r2 * r2        in
-      (t4, t3, t2, t1, t0)
-    ).
-    break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); ring.
+    P.default_square;
+      P.extra_prove_square_eq;
+      break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring.
   Defined.
 
   (* Performs a full carry loop (as specified by carry_chain) *)
@@ -246,7 +214,7 @@ Section Ops51.
    reflexivity.
   Defined.
 
-  Definition ring_51 :=
+  Definition ring :=
     (Ring.ring_by_isomorphism
          (F := F m)
          (H := Z^sz)
@@ -279,4 +247,4 @@ Eval cbv [proj1_sig mul_sig] in (proj1_sig mul_sig).
 Eval cbv [proj1_sig carry_sig] in (proj1_sig carry_sig).
 *)
 
-End Ops51.
+End Ops.
