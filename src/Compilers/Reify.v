@@ -64,6 +64,7 @@ Tactic Notation "debug_reifyf_case" string(case)
   := debug3 ltac:(fun _ => idtac "reifyf:" case).
 Ltac debug_enter_reify_abs e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_abs:" e).
 
+Class reify_internal {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_internal : T.
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
 Definition reify_var_for_in_is base_type_code {T} (x : T) (t : flat_type base_type_code) {eT} (e : eT) := False.
 Arguments reify_var_for_in_is _ {T} _ _ {eT} _.
@@ -172,7 +173,13 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   let reify_pretag := constr:(@exprf base_type_code interp_base_type op) in
   let reify_tag := constr:(reify_pretag var) in
   let dummy := debug_enter_reifyf e in
-  match constr:(Set) with
+  match goal with
+  | [ re := ?rev : reify reify_tag e |- _ ] =>
+    (* fast path *)
+    let dummy := debug_reifyf_case "hyp" in
+    let ret := rev in
+    let dummy := debug_leave_reifyf_success e ret in
+    ret
   | _ =>
     let ret :=
         lazymatch e with
@@ -202,7 +209,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           let not_x := fresh x in
           let C' := match constr:(Set) with
                     | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                                     (_ : reify reify_tag C)) (* [C] here is an open term that references "x" by name *)
+                                     (_ : reify_internal reify_tag C)) (* [C] here is an open term that references "x" by name *)
                     | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to reify by typeclasses:" e)
                     end in
           match constr:(Set) with
@@ -313,11 +320,24 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   | _ => debug_leave_reifyf_failure e
   end.
 
+Ltac do_reifyf_goal _ :=
+  debug_enter_reify_rec;
+  let e := lazymatch goal with
+           | [ |- reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e ]
+             => reifyf base_type_code interp_base_type op var e
+           | [ |- reify_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e ]
+             => reifyf base_type_code interp_base_type op var e
+           end in
+  debug_leave_reify_rec e;
+  eexact e.
+
 Hint Extern 0 (reify (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
-=> (debug_enter_reify_rec; let e := reifyf base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e)
-   : typeclass_instances.
+=> do_reifyf_goal () : typeclass_instances.
+Hint Extern 0 (reify_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
+=> do_reifyf_goal () : typeclass_instances.
 
 (** For reification including [Abs] *)
+Class reify_abs_internal {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs_internal : T.
 Class reify_abs {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_abs : T.
 Ltac reify_abs base_type_code interp_base_type op var e :=
   let reify_rec e := reify_abs base_type_code interp_base_type op var e in
@@ -347,7 +367,7 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
       let not_x := fresh x in
       let C' := match constr:(Set) with
                 | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
-                                 (_ : reify_abs reify_tag C)) (* [C] here is an open term that references "x" by name *)
+                                 (_ : reify_abs_internal reify_tag C)) (* [C] here is an open term that references "x" by name *)
                 | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reify_abs: Failed to reify by typeclasses:" e)
                 end in
       let C := match constr:(Set) with
@@ -362,11 +382,24 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
     end
   end.
 
+Ltac do_reify_abs_goal _ :=
+  debug_enter_reify_rec;
+  let e := lazymatch goal with
+           | [ |- reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e ]
+             => reify_abs base_type_code interp_base_type op var e
+           | [ |- reify_abs_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e ]
+             => reify_abs base_type_code interp_base_type op var e
+           end in
+  debug_leave_reify_rec e;
+  eexact e.
+
 Hint Extern 0 (reify_abs (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
-=> (debug_enter_reify_rec; let e := reify_abs base_type_code interp_base_type op var e in debug_leave_reify_rec e; eexact e) : typeclass_instances.
+=> do_reify_abs_goal () : typeclass_instances.
+Hint Extern 0 (reify_abs_internal (@exprf ?base_type_code ?interp_base_type ?op ?var) ?e)
+=> do_reify_abs_goal () : typeclass_instances.
 
 Ltac Reify' base_type_code interp_base_type op e :=
-  lazymatch constr:(fun (var : flat_type base_type_code -> Type) => (_ : reify_abs (@exprf base_type_code interp_base_type op var) e)) with
+  lazymatch constr:(fun (var : flat_type base_type_code -> Type) => (_ : reify_abs_internal (@exprf base_type_code interp_base_type op var) e)) with
     (fun var => ?C) => constr:(fun (var : flat_type base_type_code -> Type) => C) (* copy the term but not the type cast *)
   end.
 Ltac Reify base_type_code interp_base_type op make_const e :=
@@ -463,7 +496,7 @@ Ltac unique_reify_context_variable base_type_code interp_base_type op F Fbody rT
          => let maybe_x := fresh x in
             let not_x := fresh maybe_x in
             let rF := lazymatch constr:(fun var' (x : X) (not_x : var' src) (_ : reify_var_for_in_is base_type_code x src not_x)
-                                        => (_ : reify (reify_pretag var') Fbody'))
+                                        => (_ : reify_internal (reify_pretag var') Fbody'))
                       with
                       | fun (var' : ?VAR) (x : ?X) (v : ?V) _ => ?C
                         => constr:(fun (var' : VAR) (v : V) => C)
