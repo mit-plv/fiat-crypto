@@ -45,8 +45,10 @@ Module FillCurveParameters (P : CurveParameters).
         | Some v => v
         | None => default
         end).
+  Ltac do_compute v :=
+    let v' := (eval vm_compute in v) in v'.
   Notation compute v
-    := (ltac:(let v' := v in let v' := (eval vm_compute in v') in exact v'))
+    := (ltac:(let v' := do_compute v in exact v'))
          (only parsing).
   Definition sz := P.sz.
   Definition bitwidth := P.bitwidth.
