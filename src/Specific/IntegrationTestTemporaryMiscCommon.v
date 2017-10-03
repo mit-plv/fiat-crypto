@@ -121,23 +121,90 @@ Ltac apply_lift_sig :=
   | [ |- { f | _ } ]
     => idtac
   end.
+Ltac get_proj2_sig_map_arg_helper P :=
+  lazymatch P with
+  | (fun e => ?A -> @?B e)
+    => let B' := get_proj2_sig_map_arg_helper B in
+       uconstr:(A -> B')
+  | _ => uconstr:(_ : Prop)
+  end.
+Ltac get_proj2_sig_map_arg _ :=
+  lazymatch goal with
+  | [ |- { e : ?T | @?E e } ]
+    => let P := get_proj2_sig_map_arg_helper E in
+       uconstr:(fun e : T => P)
+  end.
+Ltac get_phi_for_preglue _ :=
+  lazymatch goal with
+  | [ |- { e | @?E e } ]
+    => lazymatch E with
+       | context[Tuple.map (Tuple.map ?phi) _ = _]
+         => phi
+       | context[?phi _ = _]
+         => phi
+       end
+  end.
 Ltac start_preglue :=
-  apply_lift_sig; intros;
-  let phi := lazymatch goal with |- { f | ?phi _ = _ } => phi end in
-  eexists_sig_etransitivity; cbv [phi].
+  apply_lift_sig; intros; cbv beta iota zeta;
+  let phi := get_phi_for_preglue () in
+  let P' := get_proj2_sig_map_arg () in
+  refine (proj2_sig_map (P:=P') _ _);
+  [ let FINAL := fresh "FINAL" in
+    let a := fresh "a" in
+    intros a FINAL;
+    repeat (let H := fresh in intro H; specialize (FINAL H));
+    lazymatch goal with
+    | [ |- ?phi _ = ?RHS ]
+      => refine (@eq_trans _ _ _ RHS FINAL _); cbv [phi]; clear a FINAL
+    | [ |- _ /\ Tuple.map (Tuple.map ?phi) _ = _ ]
+      => split; cbv [phi]; [ refine (proj1 FINAL); shelve | ]
+    end
+  | cbv [phi] ].
 Ltac do_set_sig f_sig :=
   let fZ := fresh f_sig in
   set (fZ := proj1_sig f_sig);
-  context_to_dlet_in_rhs fZ; cbv beta delta [fZ];
-  try cbv beta iota delta [proj1_sig f_sig];
+  context_to_dlet_in_rhs fZ;
+  try cbv beta iota delta [proj1_sig f_sig] in fZ;
+  cbv beta delta [fZ]; clear fZ;
   cbv beta iota delta [fst snd].
-Ltac do_rewrite_with_sig_by f_sig by_tac :=
+Ltac do_set_sig_1arg f_sig :=
+  let fZ := fresh f_sig in
+  set (fZ := proj1_sig f_sig);
+  context_to_dlet_in_rhs (fZ _);
+  try cbv beta iota delta [proj1_sig f_sig] in fZ;
+  cbv beta delta [fZ]; clear fZ;
+  cbv beta iota delta [fst snd].
+Ltac do_set_sigs _ :=
+  lazymatch goal with
+  | [ |- context[@proj1_sig ?a ?b ?f_sig] ]
+    => let fZ := fresh f_sig in
+       set (fZ := proj1_sig f_sig);
+       context_to_dlet_in_rhs fZ;
+       do_set_sigs (); (* we recurse before unfolding, because that's faster *)
+       try cbv beta iota delta [proj1_sig f_sig] in fZ;
+       cbv beta delta [fZ];
+       cbv beta iota delta [fst snd]
+  | _ => idtac
+  end.
+Ltac trim_after_do_rewrite_with_sig _ :=
+  repeat match goal with
+         | [ |- Tuple.map ?f _ = Tuple.map ?f _ ]
+           => apply f_equal
+         end.
+Ltac do_rewrite_with_sig_no_set_by f_sig by_tac :=
   let lem := constr:(proj2_sig f_sig) in
   let lemT := type of lem in
   let lemT := (eval cbv beta zeta in lemT) in
   rewrite <- (lem : lemT) by by_tac ();
+  trim_after_do_rewrite_with_sig ().
+Ltac do_rewrite_with_sig_by f_sig by_tac :=
+  do_rewrite_with_sig_no_set_by f_sig by_tac;
   do_set_sig f_sig.
+Ltac do_rewrite_with_sig_1arg_by f_sig by_tac :=
+  do_rewrite_with_sig_no_set_by f_sig by_tac;
+  do_set_sig_1arg f_sig.
 Ltac do_rewrite_with_sig f_sig := do_rewrite_with_sig_by f_sig ltac:(fun _ => idtac).
+Ltac do_rewrite_with_sig_1arg f_sig := do_rewrite_with_sig_1arg_by f_sig ltac:(fun _ => idtac).
 Ltac do_rewrite_with_1sig_add_carry_by f_sig carry_sig by_tac :=
   let fZ := fresh f_sig in
   rewrite <- (proj2_sig f_sig) by by_tac ();
@@ -164,6 +231,34 @@ Ltac do_rewrite_with_2sig_add_carry_by f_sig carry_sig by_tac :=
   try cbv beta iota delta [proj1_sig f_sig carry_sig];
   cbv beta iota delta [fst snd].
 Ltac do_rewrite_with_2sig_add_carry f_sig carry_sig := do_rewrite_with_2sig_add_carry_by f_sig carry_sig ltac:(fun _ => idtac).
+Ltac unmap_map_tuple _ :=
+  repeat match goal with
+         | [ |- context[Tuple.map (n:=?N) (fun x : ?T => ?f (?g x))] ]
+           => rewrite <- (Tuple.map_map (n:=N) f g
+                          : pointwise_relation _ eq _ (Tuple.map (n:=N) (fun x : T => f (g x))))
+         end.
+Ltac subst_feW _ :=
+  let T := lazymatch goal with |- @sig ?T _ => T end in
+  let boundedT := lazymatch goal with |- { e | ?A -> _ } => A end in
+  match goal with
+  | [ feW := _ : Type |- _ ]
+    => match goal with
+       | [ feW_bounded := _ : feW -> Prop |- _ ]
+         => lazymatch T with
+            | context[feW] => idtac
+            end;
+            lazymatch boundedT with
+            | context[feW_bounded _] => idtac
+            end;
+            subst feW feW_bounded
+       end
+  end;
+  cbv beta.
+Ltac finish_conjoined_preglue _ :=
+  [ > match goal with
+      | [ FINAL : _ /\ ?e |- _ ] => is_evar e; refine (proj2 FINAL)
+      end
+  | try subst_feW () ].
 Ltac fin_preglue :=
   [ > reflexivity
   | repeat sig_dlet_in_rhs_to_context;
@@ -191,6 +286,7 @@ Ltac factor_out_bounds_and_strip_eval op_bounded op_sig_side_conditions_t :=
       | .. ];
       op_sig_side_conditions_t ()
   | apply (fun f => proj2_sig_map (fun THIS_NAME_MUST_NOT_BE_UNDERSCORE_TO_WORK_AROUND_CONSTR_MATCHING_ANAOMLIES___BUT_NOTE_THAT_IF_THIS_NAME_IS_LOWERCASE_A___THEN_REIFICATION_STACK_OVERFLOWS___AND_I_HAVE_NO_IDEA_WHATS_GOING_ON p => f_equal f p));
+    cbv [proj1_sig];
     repeat match goal with
            | [ H : feBW_small |- _ ] => destruct H as [? _]
            end ].

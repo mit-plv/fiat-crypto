@@ -112,34 +112,13 @@ Section BoundedField25p5.
             /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
            /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (eval (proj1_sig a24_sig)) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
   Proof.
-    apply_lift_sig.
-    intros a b c; cbv beta iota zeta.
-    lazymatch goal with
-    | [ |- { e | ?A -> ?B -> ?C -> @?E e } ]
-      => refine (proj2_sig_map (P:=fun e => A -> B -> C -> (_:Prop)) _ _)
-    end.
-    { intros ? FINAL.
-      repeat let H := fresh in intro H; specialize (FINAL H).
-      cbv [phi].
-      split; [ refine (proj1 FINAL); shelve | ].
-      do 4 match goal with
-           | [ |- context[Tuple.map (n:=?N) (fun x : ?T => ?f (?g x))] ]
-             => rewrite <- (Tuple.map_map (n:=N) f g
-                            : pointwise_relation _ eq _ (Tuple.map (n:=N) (fun x : T => f (g x))))
-           end.
-      rewrite <- (proj2_sig Mxzladderstep_sig).
-      apply f_equal.
-      cbv [proj1_sig]; cbv [Mxzladderstep_sig].
-      context_to_dlet_in_rhs (@Mxzladderstep _).
-      cbv [Mxzladderstep M.xzladderstep a24_sig].
-      repeat lazymatch goal with
-             | [ |- context[@proj1_sig ?a ?b ?f_sig _] ]
-               => context_to_dlet_in_rhs (@proj1_sig a b f_sig)
-             end.
-      cbv beta iota delta [proj1_sig mul_sig add_sig sub_sig carry_sig square_sig].
-      cbv_runtime.
-      refine (proj2 FINAL). }
-    subst feW feW_bounded; cbv beta.
+    start_preglue.
+    unmap_map_tuple ().
+    do_rewrite_with_sig_1arg Mxzladderstep_sig.
+    cbv [Mxzladderstep M.xzladderstep a24_sig]; cbn [proj1_sig].
+    do_set_sigs ().
+    cbv_runtime.
+    all:finish_conjoined_preglue ().
     (* jgross start here! *)
     Set Ltac Profiling.
     (*

@@ -80,6 +80,7 @@ Section BoundedField25p5.
     cbv_runtime.
     reflexivity.
     sig_dlet_in_rhs_to_context.
+    cbv [proj1_sig].
     match goal with
     | [ H : feBW_small |- _ ] => destruct H as [? _]
     end.
