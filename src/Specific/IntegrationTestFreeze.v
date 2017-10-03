@@ -6,13 +6,10 @@ Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
-Local Definition phi : feBW -> F m :=
-  fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
-
 (* TODO : change this to field once field isomorphism happens *)
 Definition freeze :
   { freeze : feBW -> feBW
-  | forall a, phi (freeze a) = phi a }.
+  | forall a, phiBW (freeze a) = phiBW a }.
 Proof.
   start_preglue.
   do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_bounded); cbv_runtime.
