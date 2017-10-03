@@ -6,13 +6,10 @@ Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
-Local Definition phi : feBW -> F m :=
-  fun x => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x).
-
 (* TODO : change this to field once field isomorphism happens *)
 Definition mul :
   { mul : feBW -> feBW -> feBW
-  | forall a b, phi (mul a b) = F.mul (phi a) (phi b) }.
+  | forall a b, phiBW (mul a b) = F.mul (phiBW a) (phiBW b) }.
 Proof.
   start_preglue.
   do_rewrite_with_2sig_add_carry mul_sig carry_sig; cbv_runtime.

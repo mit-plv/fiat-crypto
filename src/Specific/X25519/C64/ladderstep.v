@@ -20,9 +20,6 @@ Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Tactics.ETransitivity.
 Require Import Crypto.Util.Notations.
 
-Local Definition phi : feW -> F m :=
-  fun x => B.Positional.Fdecode wt (Tuple.map wordToZ x).
-
 (** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
 Definition FMxzladderstep := @M.donnaladderstep (F m) F.add F.sub F.mul.
 
@@ -84,7 +81,7 @@ Definition xzladderstep :
       -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
       -> ((feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
           /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
-         /\ Tuple.map (n:=2) (Tuple.map (n:=2) phi) xz = FMxzladderstep (eval (proj1_sig a24_sig)) (phi x1) (Tuple.map (n:=2) phi Q) (Tuple.map (n:=2) phi Q') }.
+         /\ Tuple.map (n:=2) (Tuple.map (n:=2) phiW) xz = FMxzladderstep (eval (proj1_sig a24_sig)) (phiW x1) (Tuple.map (n:=2) phiW Q) (Tuple.map (n:=2) phiW Q') }.
 Proof.
   start_preglue.
   unmap_map_tuple ().
