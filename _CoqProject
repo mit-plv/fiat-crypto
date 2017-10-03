@@ -336,6 +336,7 @@ src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
 src/Util/Tactics/BreakMatch.v
+src/Util/Tactics/CacheTerm.v
 src/Util/Tactics/ChangeInAll.v
 src/Util/Tactics/ClearAll.v
 src/Util/Tactics/ClearDuplicates.v
