@@ -1,5 +1,6 @@
 (** * [Proper] morphisms for ℤ constants *)
 Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationPairs.
@@ -11,7 +12,11 @@ Module Z.
       instances; making them instances would slow typeclass search
       unacceptably.  In files where we use these, we add them with
       [Local Existing Instances]. *)
+  Lemma succ_le_Proper : Proper (Z.le ==> Z.le) Z.succ.
+  Proof. repeat (omega || intro). Qed.
   Lemma add_le_Proper : Proper (Z.le ==> Z.le ==> Z.le) Z.add.
+  Proof. repeat (omega || intro). Qed.
+  Lemma add_le_Proper' x : Proper (Z.le ==> Z.le) (Z.add x).
   Proof. repeat (omega || intro). Qed.
   Lemma sub_le_ge_Proper : Proper (Z.le ==> Z.ge ==> Z.le) Z.sub.
   Proof. repeat (omega || intro). Qed.
@@ -19,6 +24,8 @@ Module Z.
   Proof. unfold Basics.flip; repeat (omega || intro). Qed.
   Lemma sub_le_eq_Proper : Proper (Z.le ==> Logic.eq ==> Z.le) Z.sub.
   Proof. repeat (omega || intro). Qed.
+  Lemma mul_Zpos_le_Proper p : Proper (Z.le ==> Z.le) (Z.mul (Z.pos p)).
+  Proof. repeat (nia || intro). Qed.
   Lemma log2_up_le_Proper : Proper (Z.le ==> Z.le) Z.log2_up.
   Proof. intros ???; apply Z.log2_up_le_mono; assumption. Qed.
   Lemma log2_le_Proper : Proper (Z.le ==> Z.le) Z.log2.
