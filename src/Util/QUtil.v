@@ -50,8 +50,15 @@ Section pow_ceil_mul_nat.
     eapply zero_le_ceil_mul_nat.
   Qed.
 
+  Lemma pow_ceil_mul_nat_nonneg (Hb : 0 <= b)
+    : forall i, 0 <= wt i.
+  Proof.
+    intros.
+    apply Z.pow_nonneg; assumption.
+  Qed.
+
   Lemma pow_ceil_mul_S i :
-    wt (S i) = 
+    wt (S i) =
     (b ^ (Qceiling (f + f * inject_Z (Z.of_nat i)) - Qceiling (f * inject_Z (Z.of_nat i))) * wt i).
   Proof.
     rewrite Nat2Z.inj_succ.
