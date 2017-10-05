@@ -248,6 +248,7 @@ src/Specific/IntegrationTestSubDisplay.v
 src/Specific/IntegrationTestTemporaryMiscCommon.v
 src/Specific/Karatsuba.v
 src/Specific/MontgomeryP256_128.v
+src/Specific/ReificationTypes.v
 src/Specific/NISTP256/AMD64/MontgomeryP256.v
 src/Specific/NISTP256/AMD64/feadd.v
 src/Specific/NISTP256/AMD64/feaddDisplay.v
