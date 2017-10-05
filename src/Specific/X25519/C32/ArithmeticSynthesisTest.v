@@ -52,6 +52,8 @@ Section Ops.
   Lemma sz_nonzero : sz <> 0%nat. Proof. vm_decide. Qed.
   Lemma wt_nonzero i : wt i <> 0.
   Proof. eapply pow_ceil_mul_nat_nonzero; vm_decide. Qed.
+  Lemma wt_nonneg i : 0 <= wt i.
+  Proof. apply pow_ceil_mul_nat_nonneg; vm_decide. Qed.
   Lemma wt_divides i : wt (S i) / wt i > 0.
   Proof. apply pow_ceil_mul_nat_divide; vm_decide. Qed.
   Lemma wt_divides' i : wt (S i) / wt i <> 0.
