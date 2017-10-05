@@ -349,6 +349,7 @@ src/Util/Tactics/Head.v
 src/Util/Tactics/MoveLetIn.v
 src/Util/Tactics/Not.v
 src/Util/Tactics/OnSubterms.v
+src/Util/Tactics/PoseTermWithName.v
 src/Util/Tactics/PrintContext.v
 src/Util/Tactics/Revert.v
 src/Util/Tactics/RewriteHyp.v
