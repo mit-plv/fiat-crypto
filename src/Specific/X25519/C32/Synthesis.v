@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.SynthesisFramework.
+Require Import Crypto.Specific.Framework.SynthesisFramework.
 Require Import Crypto.Specific.X25519.C32.CurveParameters.
 
 Module Import T := MakeSynthesisTactics Curve.

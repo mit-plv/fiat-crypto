@@ -17,7 +17,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Import ListNotations.
 
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 

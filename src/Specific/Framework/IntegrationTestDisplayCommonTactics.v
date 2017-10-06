@@ -1,7 +1,7 @@
 Require Import Crypto.Util.Sigma.Lift.
 Require Import Crypto.Util.Sigma.Associativity.
 Require Import Crypto.Util.Sigma.MapProjections.
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Eta.
 Require Import Coq.ZArith.ZArith.
