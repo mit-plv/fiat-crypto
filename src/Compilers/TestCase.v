@@ -32,12 +32,12 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Add : op (Prod tnat tnat) tnat
 | Mul : op (Prod tnat tnat) tnat
 | Sub : op (Prod tnat tnat) tnat.
-Notation "x" := (Syntax.Op (Const x) _) (only printing, at level 10) : expr_scope.
-Notation "x" := (Syntax.Var x) (only printing, at level 10) : expr_scope.
+Notation "' x" := (Syntax.Op (Const x) _) (only printing, at level 10) : expr_scope.
+Notation "' x" := (Syntax.Var x) (only printing, at level 10) : expr_scope.
 Notation "a + b" := (Syntax.Op Add (a, b)%expr) : expr_scope.
 Notation "a * b" := (Syntax.Op Mul (a, b)%expr) : expr_scope.
 Notation "a - b" := (Syntax.Op Sub (a, b)%expr) : expr_scope.
-Notation "x" := (Named.Op (Const x) _) (only printing, at level 10) : nexpr_scope.
+Notation "' x" := (Named.Op (Const x) _) (only printing, at level 10) : nexpr_scope.
 Notation "a + b" := (Named.Op Add (a, b)%nexpr) : nexpr_scope.
 Notation "a * b" := (Named.Op Mul (a, b)%nexpr) : nexpr_scope.
 Notation "a - b" := (Named.Op Sub (a, b)%nexpr) : nexpr_scope.
