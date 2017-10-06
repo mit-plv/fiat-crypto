@@ -7,7 +7,7 @@ def compute_bitwidth(base):
 def compute_sz(modulus, base):
     return 1 + int(math.ceil(math.log(modulus, 2) / base))
 def default_carry_chains():
-    return ('seq 0 (pred sz)', '[0; 1]')
+    return ['seq 0 (pred sz)', '[0; 1]']
 def compute_s(modulus_str):
     base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', r'([0-9\^ +\*-]*)$')), modulus_str).groups()
     return '%s^%s' % (base, exp)
@@ -176,7 +176,7 @@ def make_curve_parameters(parameters):
             = ('Some %s%%nat'
                % nested_list_to_string([(v if v != 'default' else defaults[i])
                                         for i, v in enumerate(replacements['carry_chains'])]))
-    elif replacements['carry_chains'] == 'default':
+    elif replacements['carry_chains'] in ('default', 'Some default'):
         replacements['carry_chains'] = 'Some %s%%nat' % nested_list_to_string(default_carry_chains())
     replacements['s'] = parameters.get('s', compute_s(parameters['modulus']))
     replacements['c'] = parameters.get('c', compute_c(parameters['modulus']))

@@ -4,7 +4,7 @@
     "a24"              : "121665 (* XXX TODO(andreser) FIXME?  Is this right for this curve? *)",
     "sz"               : "3",
     "bitwidth"         : "128",
-    "carry_chains"     : ["default", ["0", "1"]],
+    "carry_chains"     : "default",
     "coef_div_modulus" : "2",
     "operations"       : ["ladderstep"]
 }
