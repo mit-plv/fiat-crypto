@@ -1,15 +1,15 @@
 {
     "modulus"          : "2^255-19",
     "base"             : "51",
-    "operations"       : ["femul", "fesquare", "ladderstep", "freeze"],
+    "a24"              : "121665",
     "sz"               : "5",
     "bitwidth"         : "64",
-    "s"                : "2^255",
-    "c"                : [["1", "19"]],
     "carry_chain1"     : "default",
     "carry_chain2"     : ["0", "1"],
-    "a24"              : "121665",
     "coef_div_modulus" : "2",
+    "operations"       : ["femul", "fesquare", "freeze", "ladderstep"],
+    "extra_files"      : ["X25519_C64/scalarmult.c"],
+    "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
     "mul_header"       : "(* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)",
     "mul_code"
     :

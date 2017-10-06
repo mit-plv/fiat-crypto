@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 from __future__ import with_statement
-import json, sys, os, math, re
+import json, sys, os, math, re, shutil
 
 def compute_bitwidth(base):
     return 2**int(math.ceil(math.log(base, 2)))
-def compute_sz(modulus, bitwidth):
-    return 1 + int(math.ceil(math.log(modulus, 2) / bitwidth))
+def compute_sz(modulus, base):
+    return 1 + int(math.ceil(math.log(modulus, 2) / base))
 def default_carry_chain(cc):
     assert(cc == 'carry_chain1')
     return 'Some (seq 0 (pred sz))'
@@ -67,6 +67,9 @@ def format_c_code(header, code, numargs, sz, indent='      ', closing_indent='  
     lines = [repeat_until_unchanged((lambda line: re.sub(r'\(([A-Za-z0-9_]+)\)', r'\1', line)),
                                     line)
              for line in lines]
+    lines = [repeat_until_unchanged((lambda line: re.sub(r'\(([A-Za-z0-9_]+\[[0-9]+\])\)', r'\1', line)),
+                                    line)
+             for line in lines]
     out_match = re.match(r'^\s*u?int[0-9]+_t ([A-Za-z_][A-Za-z_0-9]*)\[([0-9]+)\]$', lines[0])
     if out_match is not None:
         out_var, out_count = out_match.groups()
@@ -81,8 +84,8 @@ def format_c_code(header, code, numargs, sz, indent='      ', closing_indent='  
         limb_match = re.match(r'^\s*limb [a-zA-Z0-9, ]+$', line)
         in_match = re.match(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*in([0-9]*)\[([0-9]+)\]$', line)
         fixed_line = do_fix(line)
-        normal_match = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*)=(\s*)([A-Za-z_0-9\(\) *+-]+)$', fixed_line)
-        upd_match = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*)([*+])=(\s*)([A-Za-z_0-9\(\) *+-]+)$', fixed_line)
+        normal_match = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*)=(\s*)([A-Za-z_0-9\(\)\s<>*+-]+)$', fixed_line)
+        upd_match = re.match(r'^(\s*)([A-Za-z_][A-Za-z0-9_]*)(\s*)([*+])=(\s*)([A-Za-z_0-9\(\)\s<>*+-]+)$', fixed_line)
         if line == '':
             ret_code.append(line)
         elif out_match or limb_match: pass
@@ -104,13 +107,25 @@ def format_c_code(header, code, numargs, sz, indent='      ', closing_indent='  
         else:
             print('Unhandled line:')
             raw_input(line)
-    main_code = '\n'.join((indent + i.strip(' \n')).rstrip() for i in ' '.join(ret_code).strip().split('\n'))
+    ret_code = ' '.join(ret_code).strip().split('\n')
+    ret_code = [((indent + i.strip(' \n')) if i.strip()[:len('dlet ')] == 'dlet '
+                 else (indent + '  ' + i.rstrip(' \n'))).rstrip()
+                for i in ret_code]
+    main_code = '\n'.join(ret_code)
     arg_code = []
     for in_count in sorted(input_map.keys()):
         arg_code.append("%slet '(%s) := %s in"
                         % (indent,
                            ', '.join(v for k, v in sorted(input_map[in_count].items(), reverse=True)),
                            ARGS[in_count]))
+    if len(input_map.keys()) == 0:
+        for in_count in range(numargs):
+            in_str = str(in_count + 1)
+            if in_count == 0: in_str = ''
+            arg_code.append("%slet '(%s) := %s in"
+                            % (indent,
+                               ', '.join(do_fix('in%s[%d]' % (in_str, v)) for v in reversed(range(sz))),
+                               ARGS[in_count]))
     ret += '\n%s\n' % '\n'.join(arg_code)
     ret += main_code
     ret += '\n%s(%s)' % (indent, ', '.join(do_fix('%s[%d]' % (out_var, i)) for i in reversed(range(sz))))
@@ -121,10 +136,10 @@ def make_curve_parameters(parameters):
     replacements = dict(parameters)
     assert(all(ch in '0123456789^+- ' for ch in parameters['modulus']))
     modulus = eval(parameters['modulus'].replace('^', '**'))
-    base = int(parameters['base'])
+    base = float(parameters['base'])
     replacements['bitwidth'] = parameters.get('bitwidth', str(compute_bitwidth(base)))
     bitwidth = int(replacements['bitwidth'])
-    replacements['sz'] = parameters.get('sz', str(compute_sz(modulus, bitwidth)))
+    replacements['sz'] = parameters.get('sz', str(compute_sz(modulus, base)))
     sz = int(replacements['sz'])
     for cc in ('carry_chain1', 'carry_chain2'):
         if cc in replacements.keys() and isinstance(replacements[cc], list):
@@ -293,6 +308,13 @@ Require Import Crypto.Specific.Framework.IntegrationTestDisplayCommon.
 Check display %(function_name)s.
 """ % locals()
 
+def make_compiler(compiler):
+    return r"""#!/bin/sh
+set -eu
+
+%s "$@"
+""" % compiler
+
 
 def main(*args):
     if '--help' in args[1:] or '-h' in args[1:]: usage(0)
@@ -302,7 +324,7 @@ def main(*args):
     with open(args[1], 'r') as f:
         parameters = f.read()
     output_folder = os.path.realpath(args[2])
-    assert('|' not in parameters)
+    parameters_folder = os.path.dirname(os.path.realpath(args[1]))
     parameters = json.loads(parameters, strict=False)
     root = get_file_root(folder=output_folder)
     output_prefix = 'Crypto.' + os.path.normpath(os.path.relpath(output_folder, os.path.join(root, 'src'))).replace(os.sep, '.')
@@ -312,6 +334,10 @@ def main(*args):
     for arg in parameters['operations']:
         outputs[arg + '.v'] = make_synthesized_arg(arg, output_prefix)
         outputs[arg + 'Display.v'] = make_display_arg(arg, output_prefix)
+    for fname in parameters.get('extra_files', []):
+        outputs[os.path.basename(fname)] = open(os.path.join(parameters_folder, fname), 'r').read()
+    if 'compiler' in parameters.keys():
+        outputs['compiler.sh'] = make_compiler(parameters['compiler'])
     file_list = tuple((k, os.path.join(output_folder, k)) for k in sorted(outputs.keys()))
     if not force:
         extant_files = [os.path.relpath(fname, os.getcwd())
@@ -322,12 +348,20 @@ def main(*args):
             sys.exit(1)
     if not os.path.isdir(output_folder):
         os.makedirs(output_folder)
+    new_files = []
     for k, fname in file_list:
         if os.path.isfile(fname):
             if open(fname, 'r').read() == outputs[k]:
                 continue
+        new_files.append(fname)
         with open(fname, 'w') as f:
             f.write(outputs[k])
+            if fname[-len('compiler.sh'):] == 'compiler.sh':
+                mode = os.fstat(f.fileno()).st_mode
+                mode |= 0o111
+                os.fchmod(f.fileno(), mode & 0o7777)
+    if len(new_files) > 0:
+        print('git add ' + ' '.join('"%s"' % i for i in new_files))
 
 if __name__ == '__main__':
     main(*sys.argv)
