@@ -2,21 +2,21 @@ Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
-Modulus : 2^255-5
-Base: 130
+Modulus : 2^448-2^224-1
+Base: 56
 ***)
 
 Module Curve <: CurveParameters.
-  Definition sz : nat := 3%nat.
-  Definition bitwidth : Z := 128.
-  Definition s : Z := 2^255.
-  Definition c : list limb := [(1, 5)].
-  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [seq 0 (pred sz); [0; 1]]%nat.
+  Definition sz : nat := 8%nat.
+  Definition bitwidth : Z := 64.
+  Definition s : Z := 2^448.
+  Definition c : list limb := [(1, 1); (2^224, 1)].
+  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [[3; 7]; [0; 4; 1; 5; 2; 6; 3; 7]; [4; 0]]%nat.
 
-  Definition a24 : option Z := Some (121665 (* XXX TODO(andreser) FIXME?  Is this right for this curve? *)).
+  Definition a24 : option Z := None.
   Definition coef_div_modulus : nat := 2%nat. (* add 2*modulus before subtracting *)
 
-  Definition goldilocks : bool := false.
+  Definition goldilocks : bool := true.
 
   Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
     := None.

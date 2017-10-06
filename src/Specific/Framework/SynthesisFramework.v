@@ -18,10 +18,14 @@ Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
   Ltac get_synthesis_package _ :=
     let arithmetic_synthesis_pkg := AS.get_ArithmeticSynthesis_package () in
     lazymatch arithmetic_synthesis_pkg with
-    | (?sz, ?bitwidth, ?s, ?c, ?carry_chain1, ?carry_chain2, ?a24, ?coef_div_modulus, ?m, ?wt, ?sz2, ?m_enc, ?coef, ?coef_mod, ?sz_nonzero, ?wt_nonzero, ?wt_nonneg, ?wt_divides, ?wt_divides', ?wt_divides_chain1, ?wt_divides_chain2, ?zero_sig, ?one_sig, ?a24_sig, ?add_sig, ?sub_sig, ?opp_sig, ?mul_sig, ?square_sig, ?carry_sig, ?wt_pos, ?wt_multiples, ?freeze_sig, ?ring)
+    | (?sz, ?bitwidth, ?s, ?c, ?carry_chains, ?a24, ?coef_div_modulus, ?goldilocks, ?m, ?wt, ?sz2, ?m_enc, ?coef, ?coef_mod, ?sz_nonzero, ?wt_nonzero, ?wt_nonneg, ?wt_divides, ?wt_divides', ?wt_divides_chains, ?zero_sig, ?one_sig, ?a24_sig, ?add_sig, ?sub_sig, ?opp_sig, ?half_sz, ?half_sz_nonzero, ?sqrt_s, ?mul_sig, ?square_sig, ?carry_sig, ?wt_pos, ?wt_multiples, ?freeze_sig, ?ring)
       => let reification_types_pkg := get_ReificationTypes_package wt sz m wt_nonneg AS.P.upper_bound_of_exponent in
          let ladderstep_pkg := get_Ladderstep_package sz wt m add_sig sub_sig mul_sig square_sig carry_sig in
          constr:((arithmetic_synthesis_pkg, reification_types_pkg, ladderstep_pkg))
+    | _ => let dummy := match goal with
+                        | _ => fail "Did you update get_ArithmeticSynthesis_package but forget to update get_synthesis_package?"
+                        end in
+           constr:(I : I)
     end.
   Ltac make_synthesis_package _ :=
     lazymatch goal with

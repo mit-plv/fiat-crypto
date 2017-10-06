@@ -20,12 +20,12 @@ Module Type CurveParameters.
   Parameter bitwidth : Z.
   Parameter s : Z.
   Parameter c : list limb.
-  Parameter carry_chain1
-    : option (list nat). (* defaults to [seq 0 (pred sz)] *)
-  Parameter carry_chain2
-    : option (list nat). (* defaults to [0 :: 1 :: nil] *)
-  Parameter a24 : Z.
+  Parameter carry_chains
+    : option (list (list nat)). (* defaults to [seq 0 (pred sz) :: (0 :: 1 :: nil) :: nil] *)
+  Parameter a24 : option Z.
   Parameter coef_div_modulus : nat.
+
+  Parameter goldilocks : bool.
 
   Parameter mul_code : option (Z^sz -> Z^sz -> Z^sz).
   Parameter square_code : option (Z^sz -> Z^sz).
@@ -54,10 +54,11 @@ Module FillCurveParameters (P : CurveParameters).
   Definition bitwidth := P.bitwidth.
   Definition s := P.s.
   Definition c := P.c.
-  Definition carry_chain1 := defaulted P.carry_chain1 (seq 0 (pred sz)).
-  Definition carry_chain2 := defaulted P.carry_chain2 (0 :: 1 :: nil)%nat.
-  Definition a24 := P.a24.
+  Definition carry_chains := defaulted P.carry_chains [seq 0 (pred sz); [0; 1]]%nat.
+  Definition a24 := defaulted P.a24 0.
   Definition coef_div_modulus := P.coef_div_modulus.
+
+  Definition goldilocks := P.goldilocks.
 
   Ltac default_mul :=
     lazymatch (eval hnf in P.mul_code) with
@@ -85,10 +86,10 @@ Module FillCurveParameters (P : CurveParameters).
     let P_bitwidth := P.bitwidth in
     let P_s := P.s in
     let P_c := P.c in
-    let P_carry_chain1 := P.carry_chain1 in
-    let P_carry_chain2 := P.carry_chain2 in
+    let P_carry_chains := P.carry_chains in
     let P_a24 := P.a24 in
     let P_coef_div_modulus := P.coef_div_modulus in
+    let P_goldilocks := P.goldilocks in
     let P_mul_code := P.mul_code in
     let P_square_code := P.square_code in
     let P_upper_bound_of_exponent := P.upper_bound_of_exponent in
@@ -96,8 +97,8 @@ Module FillCurveParameters (P : CurveParameters).
     let P_freeze_extra_allowable_bit_widths := P.freeze_extra_allowable_bit_widths in
     let v' := (eval cbv [id
                            List.app
-                           sz bitwidth s c carry_chain1 carry_chain2 a24 coef_div_modulus
-                           P_sz P_bitwidth P_s P_c P_carry_chain1 P_carry_chain2 P_a24 P_coef_div_modulus
+                           sz bitwidth s c carry_chains a24 coef_div_modulus goldilocks
+                           P_sz P_bitwidth P_s P_c P_carry_chains P_a24 P_coef_div_modulus P_goldilocks
                            P_mul_code P_square_code
                            upper_bound_of_exponent allowable_bit_widths freeze_allowable_bit_widths
                            P_upper_bound_of_exponent P_allowable_bit_widths P_freeze_extra_allowable_bit_widths
