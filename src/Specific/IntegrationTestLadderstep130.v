@@ -16,7 +16,7 @@ Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Curves.Montgomery.XZ.
 Import ListNotations.
 
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 

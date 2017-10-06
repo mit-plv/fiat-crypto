@@ -3,7 +3,7 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Arithmetic.Saturated.Freeze.
-Require Crypto.Specific.CurveParameters.
+Require Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.

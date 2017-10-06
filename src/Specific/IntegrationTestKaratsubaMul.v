@@ -11,7 +11,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.MoveLetIn.
 Import ListNotations.
 
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
