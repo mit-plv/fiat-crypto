@@ -20,7 +20,7 @@ Interp-η
  uint64_t x47 = (uint64_t) x42 & 0xffffffffffffff;
  uint64_t x48 = (uint64_t) (x35 >> 0x38);
  uint64_t x49 = (uint64_t) x35 & 0xffffffffffffff;
- uint128_t x50 = (uint128_t) (Const 72057594037927936) * x48 + x49;
+ uint128_t x50 = (uint128_t) 0x100000000000000 * x48 + x49;
  uint64_t x51 = (uint64_t) (x50 >> 0x38);
  uint64_t x52 = (uint64_t) x50 & 0xffffffffffffff;
  uint128_t x53 = x45 + x51;
@@ -47,7 +47,7 @@ Interp-η
  uint64_t x74 = x69 + x52;
  uint64_t x75 = x74 >> 0x38;
  uint64_t x76 = x74 & 0xffffffffffffff;
- uint64_t x77 = Const 72057594037927936 * x75 + x76;
+ uint64_t x77 = 0x100000000000000 * x75 + x76;
  uint64_t x78 = x77 >> 0x38;
  uint64_t x79 = x77 & 0xffffffffffffff;
  uint64_t x80 = x72 + x58 + x78;
