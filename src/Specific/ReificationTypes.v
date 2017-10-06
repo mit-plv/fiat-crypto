@@ -139,7 +139,7 @@ Ltac pose_phiBW feBW m wt phiBW :=
     ltac:(exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x)))
            phiBW.
 
-Ltac get_ReificationTypes_package wt sz bounds m wt_nonneg upper_bound_of_exponent :=
+Ltac get_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent :=
   let limb_widths := fresh "limb_widths" in
   let bounds_exp := fresh "bounds_exp" in
   let bounds := fresh "bounds" in
@@ -166,12 +166,12 @@ Ltac get_ReificationTypes_package wt sz bounds m wt_nonneg upper_bound_of_expone
   let phiW := pose_phiW feW m wt phiW in
   let phiBW := pose_phiBW feBW m wt phiBW in
   constr:((feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW)).
-Ltac make_ReificationTypes_package wt sz bounds m wt_nonneg upper_bound_of_exponent :=
+Ltac make_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent :=
   lazymatch goal with
   | [ |- { T : _ & T } ] => eexists
   | [ |- _ ] => idtac
   end;
-  let pkg := get_ReificationTypes_package wt sz bounds m wt_nonneg upper_bound_of_exponent in
+  let pkg := get_ReificationTypes_package wt sz m wt_nonneg upper_bound_of_exponent in
   exact pkg.
 
 Module Type ReificationTypesPrePackage.
@@ -180,22 +180,28 @@ Module Type ReificationTypesPrePackage.
 End ReificationTypesPrePackage.
 
 Module MakeReificationTypes (RP : ReificationTypesPrePackage).
-  Definition ReificationTypes_package := RP.ReificationTypes_package.
-  Ltac reduce_proj x :=
-    let RP_ReificationTypes_package := (eval cbv [ReificationTypes_package] in ReificationTypes_package) in
-    let v := (eval cbv [ReificationTypes_package RP_ReificationTypes_package] in x) in
-    exact v.
+  Ltac get_ReificationTypes_package _ := eval hnf in RP.ReificationTypes_package.
+  Ltac RT_reduce_proj x :=
+    eval cbv beta iota zeta in x.
   (**
 <<
 terms = 'feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW'
 for i in terms.split(', '):
-    print("  Notation %s := (ltac:(reduce_proj (let '(%s) := ReificationTypes_package in %s))) (only parsing)." % (i, terms, i))
+    print("  Ltac get_%s _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(%s) := pkg in %s)." % (i, terms, i))
+    print("  Notation %s := (ltac:(let v := get_%s () in exact v)) (only parsing)." % (i, i))
 >> *)
-  Notation feZ := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in feZ))) (only parsing).
-  Notation feW := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in feW))) (only parsing).
-  Notation feW_bounded := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in feW_bounded))) (only parsing).
-  Notation feBW := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in feBW))) (only parsing).
-  Notation feBW_bounded := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in feBW_bounded))) (only parsing).
-  Notation phiW := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in phiW))) (only parsing).
-  Notation phiBW := (ltac:(reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := ReificationTypes_package in phiBW))) (only parsing).
+  Ltac get_feZ _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feZ).
+  Notation feZ := (ltac:(let v := get_feZ () in exact v)) (only parsing).
+  Ltac get_feW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feW).
+  Notation feW := (ltac:(let v := get_feW () in exact v)) (only parsing).
+  Ltac get_feW_bounded _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feW_bounded).
+  Notation feW_bounded := (ltac:(let v := get_feW_bounded () in exact v)) (only parsing).
+  Ltac get_feBW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feBW).
+  Notation feBW := (ltac:(let v := get_feBW () in exact v)) (only parsing).
+  Ltac get_feBW_bounded _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in feBW_bounded).
+  Notation feBW_bounded := (ltac:(let v := get_feBW_bounded () in exact v)) (only parsing).
+  Ltac get_phiW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in phiW).
+  Notation phiW := (ltac:(let v := get_phiW () in exact v)) (only parsing).
+  Ltac get_phiBW _ := let pkg := get_ReificationTypes_package () in RT_reduce_proj (let '(feZ, feW, feW_bounded, feBW, feBW_bounded, phiW, phiBW) := pkg in phiBW).
+  Notation phiBW := (ltac:(let v := get_phiBW () in exact v)) (only parsing).
 End MakeReificationTypes.
