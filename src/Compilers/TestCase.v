@@ -15,6 +15,7 @@ Require Crypto.Compilers.Linearize Crypto.Compilers.Inline.
 Require Import Crypto.Compilers.WfReflective.
 Require Import Crypto.Compilers.Conversion.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZRange.
 
 Import ReifyDebugNotations.
 
@@ -31,6 +32,15 @@ Inductive op : flat_type base_type -> flat_type base_type -> Type :=
 | Add : op (Prod tnat tnat) tnat
 | Mul : op (Prod tnat tnat) tnat
 | Sub : op (Prod tnat tnat) tnat.
+Notation "x" := (Syntax.Op (Const x) _) (only printing, at level 10) : expr_scope.
+Notation "x" := (Syntax.Var x) (only printing, at level 10) : expr_scope.
+Notation "a + b" := (Syntax.Op Add (a, b)%expr) : expr_scope.
+Notation "a * b" := (Syntax.Op Mul (a, b)%expr) : expr_scope.
+Notation "a - b" := (Syntax.Op Sub (a, b)%expr) : expr_scope.
+Notation "x" := (Named.Op (Const x) _) (only printing, at level 10) : nexpr_scope.
+Notation "a + b" := (Named.Op Add (a, b)%nexpr) : nexpr_scope.
+Notation "a * b" := (Named.Op Mul (a, b)%nexpr) : nexpr_scope.
+Notation "a - b" := (Named.Op Sub (a, b)%nexpr) : nexpr_scope.
 Definition is_const s d (v : op s d) : bool := match v with Const _ => true | _ => false end.
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := match f with
@@ -95,12 +105,15 @@ Goal (0 = let x := 1 in let y := 2 in x * y)%nat.
   Reify_rhs.
 Abort.
 
-Import Linearize Inline.
+Import Linearize Inline Eta.
 
+(** Example of flattening / linearization / linearize / a-normal form *)
 Goal True.
-  let x := Reify (fun xy => let '(x, y) := xy in (let a := 1 in let '(c, d) := (2, 3) in a + x - a + c + d) + y)%nat in
-  pose (InlineConst is_const (ANormal x)) as e.
-  vm_compute in e.
+  let x := Reify (fun xy => let '(x, y) := xy in (let a := 1 in let '(c, d) := (2, 3) in let e := c + d in a + x - a + c + d + e) + y)%nat in
+  pose x as e0;
+  pose (ExprEta (Linearize x)) as e1;
+  pose (ExprEta (InlineConst is_const (ANormal x))) as e.
+  vm_compute in e0, e1, e.
 Abort.
 
 Definition example_expr : Syntax.Expr base_type op (Syntax.Arrow (tnat * tnat) tnat).
@@ -190,7 +203,7 @@ Section cse.
   Definition CSE {t} e := @CSE base_type op_code base_type_beq op_code_beq internal_base_type_dec_bl op symbolicify_op (fun _ x => x) true t e (fun _ => nil).
 End cse.
 
-Definition example_expr_simplified := Eval vm_compute in InlineConst is_const (ANormal example_expr).
+Definition example_expr_simplified := Eval vm_compute in Eta.ExprEta (InlineConst is_const (ANormal example_expr)).
 Compute CSE example_expr_simplified.
 
 Definition example_expr_compiled
@@ -249,7 +262,15 @@ Module bounds.
        | Prod _ _ => fun x => (constant_bounds _ (fst x), constant_bounds _ (snd x))
        end.
 
-  Compute (fun x xpf y ypf => proj1_sig (Syntax.Interp interp_op_bounds example_expr
-                                         (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf,
-                                          exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))).
+  Compute example_expr_simplified.
+  Local Open Scope zrange_scope.
+  Eval compute in
+      (fun x (xpf : 0 <= x <= 10) y (ypf : 100 <= y <= 1000)
+       => let (l, _, u) :=
+              proj1_sig
+                (Syntax.Interp
+                   interp_op_bounds example_expr
+                   (exist _ {| lower := 0 ; value := x ; upper := 10 |} xpf,
+                    exist _ {| lower := 100 ; value := y ; upper := 1000 |} ypf))
+          in {| ZRange.lower := Z.of_nat l ; ZRange.upper := Z.of_nat u |}).
 End bounds.
