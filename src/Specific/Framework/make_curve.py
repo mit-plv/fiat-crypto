@@ -9,13 +9,25 @@ def compute_sz(modulus, base):
 def default_carry_chains():
     return ('seq 0 (pred sz)', '[0; 1]')
 def compute_s(modulus_str):
-    base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', '([0-9^ +-]*)$')), modulus_str).groups()
+    base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', r'([0-9\^ +\*-]*)$')), modulus_str).groups()
     return '%s^%s' % (base, exp)
 def compute_c(modulus_str):
-    base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', '([0-9^ +-]*)$')), modulus_str).groups()
+    base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', r'([0-9\^ +\*-]*)$')), modulus_str).groups()
     if rest.strip() == '': return '[]'
     assert(rest.strip()[0] == '-')
     rest = negate_numexpr(rest.strip()[1:])
+    ret = []
+    for part in re.findall(r'(-?[0-9\^\*]+)', rest.replace(' ', '')):
+        if part.isdigit():
+            ret.append('(1, %s)' % part)
+        elif part[:2] == '2^' and part[2:].isdigit():
+            ret.append('(%s, 1)' % part)
+        else:
+            raw_input('Unhandled part: %s' % part)
+            ret = None
+            break
+    if ret is not None:
+        return '[%s]' % '; '.join(reversed(ret))
     # XXX FIXME: Is this the right way to extract c?
     return '[(1, %s)]' % rest
 
