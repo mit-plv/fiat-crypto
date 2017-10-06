@@ -72,7 +72,7 @@ DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
-ifneq ($(filter lite,$(MAKECMDGOALS)),)
+ifneq ($(filter printlite lite,$(MAKECMDGOALS)),)
 LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
