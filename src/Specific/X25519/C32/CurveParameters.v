@@ -11,11 +11,12 @@ Module Curve <: CurveParameters.
   Definition bitwidth : Z := 32.
   Definition s : Z := 2^255.
   Definition c : list limb := [(1, 19)].
-  Definition carry_chain1 : option (list nat) := Eval vm_compute in Some (seq 0 (pred sz)).
-  Definition carry_chain2 : option (list nat) := Eval vm_compute in Some [0; 1]%nat.
+  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [seq 0 (pred sz); [0; 1]]%nat.
 
-  Definition a24 : Z := 121665.
+  Definition a24 : option Z := Some 121665.
   Definition coef_div_modulus : nat := 2%nat. (* add 2*modulus before subtracting *)
+
+  Definition goldilocks : bool := false.
 
   Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
     := Some (fun a b =>

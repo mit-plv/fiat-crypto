@@ -61,6 +61,8 @@ src/Specific/X25519/C32/measure
 src/Specific/X25519/C32/test
 src/Specific/X2555/C128/ladderstep.c
 src/Specific/X2555/C128/ladderstep.h
+src/Specific/X2448/Karatsuba/C64/femul.c
+src/Specific/X2448/Karatsuba/C64/femul.h
 third_party/openssl-curve25519/measure
 third_party/openssl-nistp256c64/measure
 third_party/openssl-nistz256-adx/measure
