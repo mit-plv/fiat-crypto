@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.CurveParameters.
+Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***

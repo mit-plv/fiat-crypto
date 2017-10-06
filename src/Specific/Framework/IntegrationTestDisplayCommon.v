@@ -1,14 +1,14 @@
 Require Import Crypto.Util.Sigma.Lift.
 Require Import Crypto.Util.Sigma.Associativity.
 Require Import Crypto.Util.Sigma.MapProjections.
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Eta.
 Require Export Coq.ZArith.ZArith.
 Require Export Crypto.Util.LetIn.
 Require Export Crypto.Util.FixedWordSizes.
 Require Export Crypto.Compilers.Syntax.
-Require Export Crypto.Specific.IntegrationTestDisplayCommonTactics.
+Require Export Crypto.Specific.Framework.IntegrationTestDisplayCommonTactics.
 Require Export Crypto.Compilers.Z.HexNotationConstants.
 Require Export Crypto.Util.Notations.
 Require Export Crypto.Compilers.Z.CNotations.

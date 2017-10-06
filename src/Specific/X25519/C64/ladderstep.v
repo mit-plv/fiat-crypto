@@ -1,6 +1,6 @@
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Specific.LadderstepSynthesisFramework.
+Require Import Crypto.Specific.Framework.LadderstepSynthesisFramework.
 Require Import Crypto.Specific.X25519.C64.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)

@@ -1,12 +1,12 @@
-Require Import Crypto.Specific.ArithmeticSynthesisFramework.
-Require Import Crypto.Specific.ReificationTypes.
-Require Import Crypto.Specific.LadderstepSynthesisFramework.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesisFramework.
+Require Import Crypto.Specific.Framework.ReificationTypes.
+Require Import Crypto.Specific.Framework.LadderstepSynthesisFramework.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.BoundedWord.
-Require Import Crypto.Specific.IntegrationTestTemporaryMiscCommon.
+Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
-Require Crypto.Specific.CurveParameters.
+Require Crypto.Specific.Framework.CurveParameters.
 
 Module Export Exports.
   Export ArithmeticSynthesisFramework.Exports.
