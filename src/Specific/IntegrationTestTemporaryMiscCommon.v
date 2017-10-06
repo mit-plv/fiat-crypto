@@ -171,7 +171,8 @@ Ltac do_set_sig_1arg f_sig :=
   let fZ := fresh f_sig in
   set (fZ := proj1_sig f_sig);
   context_to_dlet_in_rhs (fZ _);
-  try cbv beta iota delta [proj1_sig f_sig] in fZ;
+  try cbn beta iota delta [proj1_sig f_sig] in fZ;
+  try cbv [f_sig] in fZ;
   cbv beta delta [fZ]; clear fZ;
   cbv beta iota delta [fst snd].
 Ltac do_set_sigs _ :=
