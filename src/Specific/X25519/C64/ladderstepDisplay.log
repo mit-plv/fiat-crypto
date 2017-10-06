@@ -1,4 +1,4 @@
-λ x x0 x1 x2 x3 : ReificationTypes.RP.feW,
+λ x x0 x1 x2 x3 : Synthesis.P.feW,
 let (a, b) := Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x15, x16, x14, x12, x10, (x25, x26, x24, x22, x20, (x33, x34, x32, x30, x28)), (x43, x44, x42, x40, x38, (x51, x52, x50, x48, x46)))%core,
@@ -367,4 +367,4 @@ let (a, b) := Interp-η
 (let (a0, b0) := a in
 (a0, b0), let (a0, b0) := b in
 (a0, b0))%core
-     : ReificationTypes.RP.feW → ReificationTypes.RP.feW → ReificationTypes.RP.feW → ReificationTypes.RP.feW → ReificationTypes.RP.feW → ReificationTypes.RP.feW * ReificationTypes.RP.feW * (ReificationTypes.RP.feW * ReificationTypes.RP.feW)
+     : Synthesis.P.feW → Synthesis.P.feW → Synthesis.P.feW → Synthesis.P.feW → Synthesis.P.feW → Synthesis.P.feW * Synthesis.P.feW * (Synthesis.P.feW * Synthesis.P.feW)

@@ -223,6 +223,7 @@ src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v
 src/Spec/WeierstrassCurve.v
 src/Spec/Test/X25519.v
+src/Specific/ArithmeticSynthesisFramework.v
 src/Specific/ArithmeticSynthesisTest130.v
 src/Specific/CurveParameters.v
 src/Specific/IntegrationTestDisplayCommon.v
@@ -247,8 +248,10 @@ src/Specific/IntegrationTestSub.v
 src/Specific/IntegrationTestSubDisplay.v
 src/Specific/IntegrationTestTemporaryMiscCommon.v
 src/Specific/Karatsuba.v
+src/Specific/LadderstepSynthesisFramework.v
 src/Specific/MontgomeryP256_128.v
 src/Specific/ReificationTypes.v
+src/Specific/SynthesisFramework.v
 src/Specific/NISTP256/AMD64/MontgomeryP256.v
 src/Specific/NISTP256/AMD64/feadd.v
 src/Specific/NISTP256/AMD64/feaddDisplay.v
@@ -263,16 +266,14 @@ src/Specific/NISTP256/AMD64/fesubDisplay.v
 src/Specific/NISTP256/FancyMachine256/Barrett.v
 src/Specific/NISTP256/FancyMachine256/Core.v
 src/Specific/NISTP256/FancyMachine256/Montgomery.v
-src/Specific/X25519/C32/ArithmeticSynthesisTest.v
 src/Specific/X25519/C32/CurveParameters.v
-src/Specific/X25519/C32/ReificationTypes.v
+src/Specific/X25519/C32/Synthesis.v
 src/Specific/X25519/C32/femul.v
 src/Specific/X25519/C32/femulDisplay.v
 src/Specific/X25519/C32/fesquare.v
 src/Specific/X25519/C32/fesquareDisplay.v
-src/Specific/X25519/C64/ArithmeticSynthesisTest.v
 src/Specific/X25519/C64/CurveParameters.v
-src/Specific/X25519/C64/ReificationTypes.v
+src/Specific/X25519/C64/Synthesis.v
 src/Specific/X25519/C64/femul.v
 src/Specific/X25519/C64/femulDisplay.v
 src/Specific/X25519/C64/fesquare.v
