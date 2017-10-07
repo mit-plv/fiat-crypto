@@ -1,5 +1,5 @@
 ((coq-mode . ((eval . (let* ((project-root (locate-dominating-file buffer-file-name "_CoqProject"))
                              (coqprime-folder (expand-file-name "coqprime" project-root))
-                             (coq-path (split-string (or (getenv "COQPATH") "") ":" t)))
-                        (unless (memql coqprime-folder coq-path)
-                          (setenv "COQPATH" (mapconcat #'identity (cons coqprime-folder coq-path) ":"))))))))
+                             (coq-path (split-string (or (getenv "COQPATH") "") path-separator t)))
+                        (unless (member coqprime-folder coq-path)
+                          (setenv "COQPATH" (mapconcat #'identity (cons coqprime-folder coq-path) path-separator))))))))
