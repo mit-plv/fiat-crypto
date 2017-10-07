@@ -28,6 +28,7 @@ Module Type CurveParameters.
   Parameter coef_div_modulus : option nat.
 
   Parameter goldilocks : bool.
+  Parameter montgomery : bool.
 
   Parameter mul_code : option (Z^sz -> Z^sz -> Z^sz).
   Parameter square_code : option (Z^sz -> Z^sz).
@@ -43,7 +44,7 @@ Module Type CurveParameters.
 End CurveParameters.
 
 Module TAG.
-  Inductive tags := sz | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | upper_bound_of_exponent | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel.
+  Inductive tags := sz | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | montgomery | upper_bound_of_exponent | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel.
 End TAG.
 
 Module FillCurveParameters (P : CurveParameters).
@@ -66,6 +67,7 @@ Module FillCurveParameters (P : CurveParameters).
   Definition coef_div_modulus := defaulted P.coef_div_modulus 0%nat.
 
   Definition goldilocks := P.goldilocks.
+  Definition montgomery := P.montgomery.
 
   Ltac default_mul :=
     lazymatch (eval hnf in P.mul_code) with
@@ -82,7 +84,9 @@ Module FillCurveParameters (P : CurveParameters).
 
   Definition upper_bound_of_exponent
     := defaulted P.upper_bound_of_exponent
-                 (fun exp => (2^exp + 2^(exp-3))%Z).
+                 (if P.montgomery
+                  then (fun exp => (2^exp - 1)%Z)
+                  else (fun exp => (2^exp + 2^(exp-3))%Z)).
   Local Notation list_8_if_not_exists ls :=
     (if existsb (Nat.eqb 8) ls
      then nil
@@ -91,7 +95,10 @@ Module FillCurveParameters (P : CurveParameters).
   Definition allowable_bit_widths
     := defaulted
          P.allowable_bit_widths
-         (Z.to_nat bitwidth :: 2*Z.to_nat bitwidth :: nil)%nat.
+         ((if P.montgomery
+           then [8]
+           else nil)
+            ++ (Z.to_nat bitwidth :: 2*Z.to_nat bitwidth :: nil))%nat.
   Definition freeze_allowable_bit_widths
     := defaulted
          P.freeze_extra_allowable_bit_widths
@@ -109,6 +116,7 @@ Module FillCurveParameters (P : CurveParameters).
     let P_a24 := P.a24 in
     let P_coef_div_modulus := P.coef_div_modulus in
     let P_goldilocks := P.goldilocks in
+    let P_montgomery := P.montgomery in
     let P_mul_code := P.mul_code in
     let P_square_code := P.square_code in
     let P_upper_bound_of_exponent := P.upper_bound_of_exponent in
@@ -117,8 +125,8 @@ Module FillCurveParameters (P : CurveParameters).
     let P_modinv_fuel := P.modinv_fuel in
     let v' := (eval cbv [id
                            List.app
-                           sz bitwidth s c carry_chains a24 coef_div_modulus goldilocks modinv_fuel
-                           P_sz P_bitwidth P_s P_c P_carry_chains P_a24 P_coef_div_modulus P_goldilocks P_modinv_fuel
+                           sz bitwidth s c carry_chains a24 coef_div_modulus goldilocks montgomery modinv_fuel
+                           P_sz P_bitwidth P_s P_c P_carry_chains P_a24 P_coef_div_modulus P_goldilocks P_montgomery P_modinv_fuel
                            P_mul_code P_square_code
                            upper_bound_of_exponent allowable_bit_widths freeze_allowable_bit_widths
                            P_upper_bound_of_exponent P_allowable_bit_widths P_freeze_extra_allowable_bit_widths
@@ -141,6 +149,7 @@ Module FillCurveParameters (P : CurveParameters).
   Local Notation P_a24 := a24.
   Local Notation P_coef_div_modulus := coef_div_modulus.
   Local Notation P_goldilocks := goldilocks.
+  Local Notation P_montgomery := montgomery.
   Local Notation P_upper_bound_of_exponent := upper_bound_of_exponent.
   Local Notation P_allowable_bit_widths := allowable_bit_widths.
   Local Notation P_freeze_allowable_bit_widths := freeze_allowable_bit_widths.
@@ -183,6 +192,11 @@ Module FillCurveParameters (P : CurveParameters).
       bool
       ltac:(let v := do_compute P_goldilocks in exact v)
              goldilocks.
+  Ltac pose_montgomery montgomery :=
+    cache_term_with_type_by
+      bool
+      ltac:(let v := do_compute P_montgomery in exact v)
+             montgomery.
 
   Ltac pose_modinv_fuel modinv_fuel :=
     cache_term_with_type_by
@@ -237,6 +251,11 @@ Module FillCurveParameters (P : CurveParameters).
     let goldilocks := pose_goldilocks goldilocks in
     Tag.update pkg TAG.goldilocks goldilocks.
 
+  Ltac add_montgomery pkg :=
+    let montgomery := fresh "montgomery" in
+    let montgomery := pose_montgomery montgomery in
+    Tag.update pkg TAG.montgomery montgomery.
+
   Ltac add_modinv_fuel pkg :=
     let modinv_fuel := fresh "modinv_fuel" in
     let modinv_fuel := pose_modinv_fuel modinv_fuel in
@@ -256,6 +275,7 @@ Module FillCurveParameters (P : CurveParameters).
     let pkg := add_a24 pkg in
     let pkg := add_coef_div_modulus pkg in
     let pkg := add_goldilocks pkg in
+    let pkg := add_montgomery pkg in
     let pkg := add_modinv_fuel pkg in
     let pkg := add_upper_bound_of_exponent pkg in
     Tag.strip_local pkg.

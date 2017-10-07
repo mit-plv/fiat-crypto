@@ -11,6 +11,14 @@ Ltac if_goldilocks pkg tac_true tac_false arg :=
   | false => tac_false arg
   end.
 
+Ltac if_montgomery pkg tac_true tac_false arg :=
+  let montgomery := Tag.get pkg TAG.montgomery in
+  let montgomery := (eval vm_compute in (montgomery : bool)) in
+  lazymatch montgomery with
+  | true => tac_true arg
+  | false => tac_false arg
+  end.
+
 
 Module MakeCurveParametersPackage (PKG : PrePackage).
   Module Import MakeCurveParametersPackageInternal := MakePackageBase PKG.
@@ -31,6 +39,8 @@ Module MakeCurveParametersPackage (PKG : PrePackage).
   Notation coef_div_modulus := (ltac:(let v := get_coef_div_modulus () in exact v)) (only parsing).
   Ltac get_goldilocks _ := get TAG.goldilocks.
   Notation goldilocks := (ltac:(let v := get_goldilocks () in exact v)) (only parsing).
+  Ltac get_montgomery _ := get TAG.montgomery.
+  Notation montgomery := (ltac:(let v := get_montgomery () in exact v)) (only parsing).
   Ltac get_modinv_fuel _ := get TAG.modinv_fuel.
   Notation modinv_fuel := (ltac:(let v := get_modinv_fuel () in exact v)) (only parsing).
   Ltac get_upper_bound_of_exponent _ := get TAG.upper_bound_of_exponent.

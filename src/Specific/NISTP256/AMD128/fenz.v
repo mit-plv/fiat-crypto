@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Specific.NISTP256.AMD64.Synthesis.
+Require Import Crypto.Specific.NISTP256.AMD128.Synthesis.
 Local Open Scope Z_scope.
 
 (* TODO : change this to field once field isomorphism happens *)

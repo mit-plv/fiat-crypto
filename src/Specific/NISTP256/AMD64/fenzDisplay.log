@@ -7,4 +7,16 @@ Interp-η
  uint64_t x9 = x2 | x8;
  return x9)
 x
-     : word64 * word64 * word64 * word64 → ReturnType uint64_t
+     : word64 * word64 * word64 * word64 → ReturnType (Tbase match (if match match (let (lower, _) := Synthesis.P.bound1 in
+                                                                                    lower) with
+                                                                             | 0%Z => Eq
+                                                                             | Z.pos _ => Lt
+                                                                             | Z.neg _ => Gt
+                                                                             end with
+                                                                       | Eq => true
+                                                                       | Lt => true
+                                                                       | Gt => false
+                                                                       end then Some 6 else None) with
+                                                             | Some lgsz => Syntax.TWord lgsz
+                                                             | None => Syntax.TZ
+                                                             end)
