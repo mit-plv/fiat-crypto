@@ -21,14 +21,12 @@ matrix:
     - env: COQ_VERSION="trunk" TARGETS="coq display test bench"         COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-trunk-daily"
     - env: COQ_VERSION="v8.7"  TARGETS="coq display test bench"         COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.7-daily"
     - env: COQ_VERSION="v8.6"  TARGETS="no-curves-proofs display bench" COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.6-daily"
-    - env: COQ_VERSION="v8.5"  TARGETS="lite"                           COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.5-daily"
     - env: COQ_VERSION="8.6"   TARGETS="no-curves-proofs display bench" COQ_PACKAGE="coq-8.6" PPA="ppa:jgross-h/many-coq-versions"
     - env: TARGETS="printlite lite" COQ_VERSION="8.6"                   COQ_PACKAGE="coq-8.6" PPA="ppa:jgross-h/many-coq-versions"
   allow_failures:
     - env: COQ_VERSION="trunk" TARGETS="coq display test bench"         COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-trunk-daily"
     - env: COQ_VERSION="v8.7"  TARGETS="coq display test bench"         COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.7-daily"
     - env: COQ_VERSION="v8.6"  TARGETS="no-curves-proofs display bench" COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.6-daily"
-    - env: COQ_VERSION="v8.5"  TARGETS="lite"                           COQ_PACKAGE="coq"     PPA="ppa:jgross-h/coq-8.5-daily"
 
 before_install:
   - if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
