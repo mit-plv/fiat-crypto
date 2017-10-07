@@ -1,0 +1,20 @@
+λ x : word128 * word128,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x1, x2)%core,
+ uint128_t x3 = x2 | x1;
+ return x3)
+x
+     : word128 * word128 → ReturnType (Tbase match (if match match (let (lower, _) := Synthesis.P.bound1 in
+                                                                    lower) with
+                                                             | 0%Z => Eq
+                                                             | Z.pos _ => Lt
+                                                             | Z.neg _ => Gt
+                                                             end with
+                                                       | Eq => true
+                                                       | Lt => true
+                                                       | Gt => false
+                                                       end then Some 7 else None) with
+                                             | Some lgsz => Syntax.TWord lgsz
+                                             | None => Syntax.TZ
+                                             end)

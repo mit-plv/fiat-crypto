@@ -216,7 +216,10 @@ def make_curve_parameters(parameters):
                             ('coef_div_modulus', '%nat'),
                             ('modinv_fuel', '%nat')):
         replacements[k] = fix_option(nested_list_to_string(replacements.get(k, 'None')), scope_string=scope_string)
-    for k in ('s', 'c', 'goldilocks'):
+    for k in ('montgomery', ):
+        if k not in replacements.keys():
+            replacements[k] = False
+    for k in ('s', 'c', 'goldilocks', 'montgomery'):
         replacements[k] = nested_list_to_string(replacements[k])
     for k in ('extra_prove_mul_eq', 'extra_prove_square_eq'):
         if k not in replacements.keys():
@@ -240,6 +243,7 @@ Module Curve <: CurveParameters.
   Definition coef_div_modulus : option nat := %(coef_div_modulus)s. (* add %(coef_div_modulus_raw)s*modulus before subtracting *)
 
   Definition goldilocks : bool := %(goldilocks)s.
+  Definition montgomery : bool := %(montgomery)s.
 
   Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
     := %(mul)s.
@@ -271,15 +275,32 @@ End P.
 Module Export S := PackageSynthesis Curve P.
 """ % prefix
 
-def make_synthesized_arg(fearg, prefix):
+def make_synthesized_arg(fearg, prefix, montgomery=False):
     if fearg in ('femul', 'fesub', 'feadd'):
-        return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+        if not montgomery:
+            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import %(prefix)s.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition %(arg)s :
   { %(arg)s : feBW -> feBW -> feBW
   | forall a b, phiBW (%(arg)s a b) = F.%(arg)s (phiBW a) (phiBW b) }.
+Proof.
+  Set Ltac Profiling.
+  Time synthesize_%(arg)s ().
+  Show Ltac Profile.
+Time Defined.
+
+Print Assumptions %(arg)s.
+""" % {'prefix':prefix, 'arg':fearg[2:]}
+        else:
+            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import %(prefix)s.Synthesis.
+
+(* TODO : change this to field once field isomorphism happens *)
+Definition %(arg)s :
+  { %(arg)s : feBW_small -> feBW_small -> feBW_small
+  | forall a b, phiM_small (%(arg)s a b) = F.%(arg)s (phiM_small a) (phiM_small b) }.
 Proof.
   Set Ltac Profiling.
   Time synthesize_%(arg)s ().
@@ -321,7 +342,8 @@ Time Defined.
 Print Assumptions freeze.
 """ % {'prefix':prefix}
     elif fearg in ('feopp',):
-        return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+        if not montgomery:
+            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import %(prefix)s.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
@@ -336,6 +358,43 @@ Time Defined.
 
 Print Assumptions %(arg)s.
 """ % {'prefix':prefix, 'arg':fearg[2:]}
+        else:
+            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import %(prefix)s.Synthesis.
+
+(* TODO : change this to field once field isomorphism happens *)
+Definition %(arg)s :
+  { %(arg)s : feBW_small -> feBW_small
+  | forall a, phiM_small (%(arg)s a) = F.%(arg)s (phiM_small a) }.
+Proof.
+  Set Ltac Profiling.
+  Time synthesize_%(arg)s ().
+  Show Ltac Profile.
+Time Defined.
+
+Print Assumptions %(arg)s.
+""" % {'prefix':prefix, 'arg':fearg[2:]}
+    elif fearg in ('fenz',):
+        assert(fearg == 'fenz')
+        assert(montgomery)
+        full_arg = 'nonzero'
+        return r"""Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import %(prefix)s.Synthesis.
+Local Open Scope Z_scope.
+
+(* TODO : change this to field once field isomorphism happens *)
+Definition %(full_arg)s :
+  { %(full_arg)s : feBW_small -> BoundedWord.BoundedWord 1 adjusted_bitwidth bound1
+  | forall a, (BoundedWord.BoundedWordToZ _ _ _ (%(full_arg)s a) =? 0) = (if Decidable.dec (phiM_small a = F.of_Z m 0) then true else false) }.
+Proof.
+  Set Ltac Profiling.
+  Time synthesize_%(full_arg)s ().
+  Show Ltac Profile.
+Time Defined.
+
+Print Assumptions %(full_arg)s.
+""" % {'prefix':prefix, 'full_arg':full_arg}
     elif fearg in ('ladderstep', 'xzladderstep'):
         return r"""Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -411,7 +470,7 @@ def main(*args):
     outputs['CurveParameters.v'] = make_curve_parameters(parameters)
     outputs['Synthesis.v'] = make_synthesis(output_prefix)
     for arg in parameters['operations']:
-        outputs[arg + '.v'] = make_synthesized_arg(arg, output_prefix)
+        outputs[arg + '.v'] = make_synthesized_arg(arg, output_prefix, montgomery=(parameters.get('montgomery', 'false') == 'true'))
         outputs[arg + 'Display.v'] = make_display_arg(arg, output_prefix)
     for fname in parameters.get('extra_files', []):
         outputs[os.path.basename(fname)] = open(os.path.join(parameters_folder, fname), 'r').read()

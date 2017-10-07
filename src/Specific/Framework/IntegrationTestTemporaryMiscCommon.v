@@ -292,3 +292,51 @@ Ltac factor_out_bounds_and_strip_eval op_bounded op_sig_side_conditions_t :=
 
 Ltac op_sig_side_conditions_t _ :=
   try (hnf; rewrite <- (ZRange.is_bounded_by_None_repeat_In_iff_lt _ _ _)); destruct_head_hnf' sig; try assumption.
+
+Local Open Scope Z_scope.
+(* XXX TODO: Clean this up *)
+Ltac nonzero_preglue op_sig cbv_runtime :=
+  let phi := lazymatch goal with
+             | [ |- context[Decidable.dec (?phi _ = _)] ] => phi
+             end in
+  let do_red _ :=
+      lazymatch (eval cbv [phi] in phi) with
+      | (fun x => ?montgomery_to_F (?meval (?feBW_of_feBW_small _)))
+        => cbv [feBW_of_feBW_small phi meval]
+      end in
+  apply_lift_sig; intros; eexists_sig_etransitivity;
+  do_red ();
+  [ refine (_ : (if Decidable.dec (_ = 0) then true else false) = _);
+    lazymatch goal with
+    | [ |- (if Decidable.dec ?x then _ else _) = (if Decidable.dec ?y then _ else _) ]
+      => cut (x <-> y);
+         [ destruct (Decidable.dec x), (Decidable.dec y); try reflexivity; intros [? ?];
+           generalize dependent x; generalize dependent y; solve [ intuition congruence ]
+         | ]
+    end;
+    etransitivity; [ | eapply (proj2_sig op_sig) ];
+    [ | solve [ op_sig_side_conditions_t () ].. ];
+    reflexivity
+  | ];
+  let decP := lazymatch goal with |- { c | _ = if Decidable.dec (?decP = 0) then _ else _ } => decP end in
+  apply (@proj2_sig_map _ (fun c => BoundedWordToZ 1 _ _ c = decP) _);
+  [ let a' := fresh "a'" in
+    let H' := fresh "H'" in
+    intros a' H'; rewrite H';
+    let H := fresh in
+    lazymatch goal with |- context[Decidable.dec ?x] => destruct (Decidable.dec x) as [H|H]; try rewrite H end;
+    [ reflexivity
+    | let H := fresh in
+      lazymatch goal with |- context[?x =? 0] => destruct (x =? 0) eqn:? end;
+      try reflexivity;
+      Z.ltb_to_lt; congruence ]
+  | ];
+  eexists_sig_etransitivity;
+  [ do_set_sig op_sig; cbv_runtime (); reflexivity
+  | ];
+  sig_dlet_in_rhs_to_context;
+  cbv [proj1_sig];
+  match goal with
+  | [ |- context[match ?v with exist _ _ => _ end] ]
+    => is_var v; destruct v as [? _]
+  end.

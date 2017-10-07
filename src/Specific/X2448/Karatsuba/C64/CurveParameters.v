@@ -17,6 +17,7 @@ Module Curve <: CurveParameters.
   Definition coef_div_modulus : option nat := Some 2%nat. (* add 2*modulus before subtracting *)
 
   Definition goldilocks : bool := true.
+  Definition montgomery : bool := false.
 
   Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
     := None.

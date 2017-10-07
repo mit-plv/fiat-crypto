@@ -1,5 +1,5 @@
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Specific.NISTP256.AMD64.Synthesis.
+Require Import Crypto.Specific.NISTP256.AMD128.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition add :
