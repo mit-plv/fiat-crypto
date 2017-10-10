@@ -18,6 +18,7 @@ INSTALLDEFAULTROOT := Crypto
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite \
 	curves-proofs no-curves-proofs \
+	coq1 display1 coq2 display2 \
 	test bench c
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
@@ -41,7 +42,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs coq1 coq2 lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -62,6 +63,8 @@ UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
+COQ1_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo
+COQ2_PRE_VOFILES := $(filter src/Specific/Karatsuba% src/Specific/IntegrationTestKaratsuba%,$(VOFILES))
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
@@ -70,6 +73,8 @@ SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
+COQ1_DISPLAY_VO := $(filter-out src/Specific/Karatsuba% src/Specific/IntegrationTestKaratsuba%,$(DISPLAY_VO))
+COQ2_DISPLAY_VO := $(filter src/Specific/Karatsuba% src/Specific/IntegrationTestKaratsuba%,$(DISPLAY_VO))
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
 ifneq ($(filter printlite lite,$(MAKECMDGOALS)),)
@@ -86,6 +91,13 @@ endif
 ifneq ($(filter curves-proofs,$(MAKECMDGOALS)),)
 CURVES_PROOFS_VOFILES := $(call vo_closure,$(CURVES_PROOFS_PRE_VOFILES))
 endif
+ifneq ($(filter coq1,$(MAKECMDGOALS)),)
+COQ1_ALL_UNMADE_VOFILES := $(foreach vo,$(COQ1_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+COQ1_VOFILES := $(filter-out $(COQ1_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
+ifneq ($(filter coq2,$(MAKECMDGOALS)),)
+COQ2_VOFILES := $(call vo_closure,$(COQ2_PRE_VOFILES))
+endif
 
 specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
@@ -94,9 +106,13 @@ lite: $(LITE_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
+coq1: $(COQ1_VOFILES) coqprime
+coq2: $(COQ2_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
 specific-c: $(SPECIFIC_DISPLAY_VO:Display.vo=.c) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
+display1: $(COQ1_DISPLAY_VO:.vo=.log) coqprime
+display2: $(COQ2_DISPLAY_VO:.vo=.log) coqprime
 
 printlite::
 	@echo 'Files Made:'
