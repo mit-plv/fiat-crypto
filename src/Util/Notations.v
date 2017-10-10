@@ -105,6 +105,10 @@ Reserved Notation "x ::> ( max_bitwidth = v )"
          (at level 70, no associativity, format "x  ::>  ( max_bitwidth  =  v )").
 Reserved Notation "r[ l ~> u ]" (l at level 69, format "r[ l  ~>  u ]").
 Reserved Notation "b[ l ~> u ]" (l at level 69, format "b[ l  ~>  u ]").
+Reserved Notation "m[ l ~> u ]" (l at level 69, format "m[ l  ~>  u ]").
+Reserved Notation "kv[ l ~> u ]" (l at level 69, format "kv[ l  ~>  u ]").
+Reserved Notation "t[ l ~> u ]" (l at level 69, format "t[ l  ~>  u ]").
+Reserved Notation "l[ l' ~> u ]" (l' at level 69, format "l[ l'  ~>  u ]").
 Reserved Notation "'for' i (:= i0 ; += step ; < finish ) 'updating' ( state := initial ) {{ body }}"
          (at level 70, format "'[v  ' 'for'  i  (:=  i0 ;  +=  step ;  <  finish )  'updating'  ( state  :=  initial )  {{ '//' body ']' '//' }}").
 Reserved Notation "'for' ( 'int' i = i0 ; step_expr ; finish_expr ) 'updating' ( state1 .. staten = initial ) {{ body }}"
