@@ -17,7 +17,8 @@ INSTALLDEFAULTROOT := Crypto
 	install-coqprime clean-coqprime coqprime \
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite \
-	curves-proofs no-curves-proofs \
+	curves-proofs no-curves-proofs no-curves-proofs-non-specific \
+	selected-specific selected-speicifc-display selected-test selected-bench selected-c \
 	test bench c
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
@@ -41,7 +42,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -56,20 +57,25 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES := src/SpecificGen/% src/Specific/%Display.vo
+UNMADE_VOFILES := src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo
+LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo src/Specific/X25519/C32/%.vo
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
+NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
+
+SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% third_party/%
+SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(VOFILES))
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
 SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
-NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VO_FILES))
+NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VOFILES))
 SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
+SELECTED_SPECIFIC_DISPLAY_VO := $(filter $(SELECTED_PATTERN),$(DISPLAY_VO))
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
 ifneq ($(filter printlite lite,$(MAKECMDGOALS)),)
@@ -83,8 +89,15 @@ ifneq ($(filter no-curves-proofs,$(MAKECMDGOALS)),)
 NO_CURVES_PROOFS_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 NO_CURVES_PROOFS_VOFILES := $(filter-out $(NO_CURVES_PROOFS_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
+ifneq ($(filter no-curves-proofs-non-specific,$(MAKECMDGOALS)),)
+NO_CURVES_PROOFS_NON_SPECIFIC_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+NO_CURVES_PROOFS_NON_SPECIFIC_VOFILES := $(filter-out $(NO_CURVES_PROOFS_NON_SPECIFIC_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
 ifneq ($(filter curves-proofs,$(MAKECMDGOALS)),)
 CURVES_PROOFS_VOFILES := $(call vo_closure,$(CURVES_PROOFS_PRE_VOFILES))
+endif
+ifneq ($(filter selected-specific,$(MAKECMDGOALS)),)
+SELECTED_SPECIFIC_VOFILES := $(call vo_closure,$(SELECTED_SPECIFIC_PRE_VOFILES))
 endif
 
 specific: $(SPECIFIC_VO) coqprime
@@ -94,8 +107,12 @@ lite: $(LITE_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
+no-curves-proofs-non-specific: $(NO_CURVES_PROOFS_NON_SPECIFIC_VOFILES) coqprime
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
-specific-c: $(SPECIFIC_DISPLAY_VO:Display.vo=.c) coqprime
+specific-c: $(SPECIFIC_DISPLAY_VO:Display.vo=.c) $(SPECIFIC_DISPLAY_VO:Display.vo=.h) coqprime
+selected-specific: $(SELECTED_SPECIFIC_VOFILES) coqprime
+selected-specific-display: $(SELECTED_SPECIFIC_DISPLAY_VO:.vo=.log) coqprime
+selected-c: $(SELECTED_SPECIFIC_DISPLAY_VO:Display.vo=.c) $(SELECTED_SPECIFIC_DISPLAY_VO:Display.vo=.h) coqprime
 display: $(DISPLAY_VO:.vo=.log) coqprime
 
 printlite::
@@ -180,6 +197,10 @@ MEASUREMENTS := \
 	src/Specific/NISTP256/AMD64/icc/measurements.txt
 MEASURE_BINARIES := $(addsuffix measure,$(dir $(MEASUREMENTS)))
 
+SELECTED_TEST_BINARIES := $(filter $(SELECTED_PATTERN),$(TEST_BINARIES))
+RUN_SELECTED_TEST_BINARIES := $(filter $(SELECTED_PATTERN),$(RUN_TEST_BINARIES))
+SELECTED_MEASUREMENTS := $(filter $(SELECTED_PATTERN),$(MEASUREMENTS))
+
 src/Specific/X25519/C64/test src/Specific/X25519/C64/measure: $(DISPLAY_X25519_C64_VO:Display.vo=.c) $(DISPLAY_X25519_C64_VO:Display.vo=.h) src/Specific/X25519/C64/scalarmult.c
 src/Specific/X25519/C64/test: src/Specific/X25519/C64/compiler.sh src/Specific/X25519/x25519_test.c
 src/Specific/X25519/C64/test: INCLUDE_FOLDER=src/Specific/X25519/C64
@@ -242,12 +263,17 @@ src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP2
 bench: $(MEASUREMENTS)
 	head -999999 $?
 
+selected-bench: $(SELECTED_MEASUREMENTS)
+	head -999999 $?
+
 
 .PHONY: $(RUN_TEST_BINARIES)
 $(RUN_TEST_BINARIES) : %-run : %
 	$<
 
 test: $(RUN_TEST_BINARIES)
+
+selected-test: $(RUN_SELECTED_TEST_BINARIES)
 
 clean::
 	rm -f Makefile.coq
