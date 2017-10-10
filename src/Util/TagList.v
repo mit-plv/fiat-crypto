@@ -40,9 +40,9 @@ Module Tag.
     lazymatch (eval hnf in ctx) with
     | context[{| key := key' ; value := ?value' |}]
       => tac_found value'
-    | context[add_gen ?key' ?value' _ _] => tac_found value'
-    | context[add_local ?key' ?value' _] => tac_found value'
-    | context[add ?key' ?value' _] => tac_found value'
+    | context[add_gen key' ?value' _ _] => tac_found value'
+    | context[add_local key' ?value' _] => tac_found value'
+    | context[add key' ?value' _] => tac_found value'
     | _ => lazymatch allow_unfound with
            | true => tac_not_found ()
            end
@@ -60,8 +60,9 @@ Module Tag.
 
   Ltac get_error ctx key' :=
     get_gen_cont ctx key' ltac:(fun v => v) ltac:(fun _ => constr:(I)) false.
+  Ltac get_default ctx key' := get_gen ctx key' ltac:(fun _ => constr:(I)).
 
-  Ltac get ctx key' := get_gen ctx key' ltac:(fun _ => constr:(I)).
+  Ltac get ctx key' := get_error ctx key'.
 
   Notation get ctx key' := ltac:(let v := get ctx key' in exact v) (only parsing).
 
