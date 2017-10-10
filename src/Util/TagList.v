@@ -48,12 +48,16 @@ Module Tag.
            end
     end.
 
-  Ltac update_if_not_exists ctx key value :=
+  Ltac update_by_tac_if_not_exists ctx key value_tac :=
     get_gen_cont
       ctx key
       ltac:(fun value' => ctx)
-             ltac:(fun _ => update ctx key value)
+             ltac:(fun _ => let value := value_tac () in
+                            update ctx key value)
                     true.
+
+  Ltac update_if_not_exists ctx key value :=
+    update_by_tac_if_not_exists ctx key ltac:(fun _ => value).
 
   Ltac get_gen ctx key' default :=
     get_gen_cont ctx key' ltac:(fun v => v) default true.
