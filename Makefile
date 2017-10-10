@@ -110,10 +110,9 @@ COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
 ifneq ($(PROFILE),)
-OTHERFLAGS += -profile-ltac -w "-notation-overridden"
-else
-OTHERFLAGS += -w "-notation-overridden"
+OTHERFLAGS += -profile-ltac
 endif
+OTHERFLAGS += -w "-notation-overridden"
 endif
 
 COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)
