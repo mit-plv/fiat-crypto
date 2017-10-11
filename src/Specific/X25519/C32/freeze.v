@@ -10,3 +10,5 @@ Proof.
   Time synthesize_freeze ().
   Show Ltac Profile.
 Time Defined.
+
+Print Assumptions freeze.

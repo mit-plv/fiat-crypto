@@ -1,72 +1,76 @@
-Require Import Crypto.Specific.Framework.ArithmeticSynthesisFramework.
-Require Import Crypto.Specific.Framework.ReificationTypes.
-Require Import Crypto.Specific.Framework.LadderstepSynthesisFramework.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.BasePackage.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.DefaultsPackage.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.FreezePackage.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.KaratsubaPackage.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.LadderstepPackage.
+Require Import Crypto.Specific.Framework.CurveParametersPackage.
+Require Import Crypto.Specific.Framework.ReificationTypesPackage.
+Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.BoundedWord.
+Require Import Crypto.Util.TagList.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
-Require Crypto.Specific.Framework.CurveParameters.
 
 Module Export Exports.
-  Export ArithmeticSynthesisFramework.Exports.
+  Export ArithmeticSynthesis.Defaults.Exports.
+  Export ArithmeticSynthesis.Freeze.Exports.
 End Exports.
 
-Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
-  Module AS := MakeArithmeticSynthesisTestTactics Curve.
+(* Alisases for exporting *)
+Module Type PrePackage := PrePackage.
+Module Tag.
+  Notation Context := Tag.Context (only parsing).
+End Tag.
 
-  Ltac get_synthesis_package _ :=
-    let arithmetic_synthesis_pkg := AS.get_ArithmeticSynthesis_package () in
-    lazymatch arithmetic_synthesis_pkg with
-    | (?sz, ?bitwidth, ?s, ?c, ?carry_chains, ?a24, ?coef_div_modulus, ?goldilocks, ?m, ?wt, ?sz2, ?m_enc, ?coef, ?coef_mod, ?sz_nonzero, ?wt_nonzero, ?wt_nonneg, ?wt_divides, ?wt_divides', ?wt_divides_chains, ?zero_sig, ?one_sig, ?a24_sig, ?add_sig, ?sub_sig, ?opp_sig, ?half_sz, ?half_sz_nonzero, ?sqrt_s, ?mul_sig, ?square_sig, ?carry_sig, ?wt_pos, ?wt_multiples, ?freeze_sig, ?ring)
-      => let reification_types_pkg := get_ReificationTypes_package wt sz m wt_nonneg AS.P.upper_bound_of_exponent in
-         let ladderstep_pkg := get_Ladderstep_package sz wt m add_sig sub_sig mul_sig square_sig carry_sig in
-         constr:((arithmetic_synthesis_pkg, reification_types_pkg, ladderstep_pkg))
-    | _ => let dummy := match goal with
-                        | _ => fail "Did you update get_ArithmeticSynthesis_package but forget to update get_synthesis_package?"
-                        end in
-           constr:(I : I)
-    end.
-  Ltac make_synthesis_package _ :=
-    lazymatch goal with
-    | [ |- { T : _ & _ } ]
-      => first [ eexists (_, _, _)
-               | eexists (_, _)
-               | eexists ]
-    | [ |- _ ] => idtac
-    end;
-    let pkg := get_synthesis_package () in
+Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
+  Module P := FillCurveParameters Curve.
+
+  Ltac add_Synthesis_package pkg :=
+    let P_default_mul _ := P.default_mul in
+    let P_extra_prove_mul_eq _ := P.extra_prove_mul_eq in
+    let P_default_square _ := P.default_square in
+    let P_extra_prove_square_eq _ := P.extra_prove_square_eq in
+    let pkg := P.add_CurveParameters_package pkg in
+    let pkg := add_Base_package pkg in
+    let pkg := add_ReificationTypes_package pkg in
+    let pkg := add_Karatsuba_package pkg in
+    (* N.B. freeze is a "default" and must come after anything that may disable it *)
+    let pkg := add_Freeze_package pkg in
+    (* N.B. the Defaults must come after other possible ways of adding the _sig lemmas *)
+    let pkg := add_Defaults_package pkg P_default_mul P_extra_prove_mul_eq P_default_square P_extra_prove_square_eq in
+    (* N.B. Ladderstep must come after Defaults *)
+    let pkg := add_Ladderstep_package pkg in
+    pkg.
+
+  Ltac get_Synthesis_package _ :=
+    let pkg := constr:(Tag.empty) in
+    add_Synthesis_package pkg.
+
+  Ltac make_Synthesis_package _ :=
+    let pkg := get_Synthesis_package () in
     exact pkg.
 End MakeSynthesisTactics.
 
-Local Notation eta2 x := (fst x, snd x) (only parsing).
-Local Notation eta3 x := (eta2 (fst x), snd x) (only parsing).
+Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePackage).
+  Module P := CurveParameters.FillCurveParameters Curve.
 
-Notation Synthesis_package'_Type :=
-  { ABC : _ & let '(a, b, c) := eta3 ABC in (a * b * c)%type } (only parsing).
-
-Module Type SynthesisPrePackage.
-  Parameter Synthesis_package' : Synthesis_package'_Type.
-  Parameter Synthesis_package : let '(a, b, c) := eta3 (projT1 Synthesis_package') in (a * b * c)%type.
-End SynthesisPrePackage.
-
-Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (P : SynthesisPrePackage).
-  Module CP := CurveParameters.FillCurveParameters Curve.
-
-  Module PP <: ReificationTypesPrePackage <: ArithmeticSynthesisPrePackage <: LadderstepPrePackage.
-    Definition ArithmeticSynthesis_package := Eval compute in let '(a, b, c) := P.Synthesis_package in a.
-    Definition ArithmeticSynthesis_package' : { T : _ & T } := existT _ _ ArithmeticSynthesis_package.
-    Definition ReificationTypes_package := Eval compute in let '(a, b, c) := P.Synthesis_package in b.
-    Definition ReificationTypes_package' : { T : _ & T } := existT _ _ ReificationTypes_package.
-    Definition Ladderstep_package := Eval compute in let '(a, b, c) := P.Synthesis_package in c.
-    Definition Ladderstep_package' : { T : _ & T } := existT _ _ Ladderstep_package.
-  End PP.
-  Module RT := MakeReificationTypes PP.
-  Module AS := MakeArithmeticSynthesisTest PP.
-  Module LS := MakeLadderstep PP.
-  Include RT.
-  Include AS.
-  Include LS.
+  Module CP := MakeCurveParametersPackage PKG.
+  Module BP := MakeBasePackage PKG.
+  Module DP := MakeDefaultsPackage PKG.
+  Module RP := MakeReificationTypesPackage PKG.
+  Module FP := MakeFreezePackage PKG.
+  Module LP := MakeLadderstepPackage PKG.
+  Module KP := MakeKaratsubaPackage PKG.
+  Include CP.
+  Include BP.
+  Include DP.
+  Include RP.
+  Include FP.
+  Include LP.
+  Include KP.
 
   Ltac synthesize_with_carry do_rewrite get_op_sig :=
     let carry_sig := get_carry_sig () in
@@ -75,7 +79,7 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (P : Synthesis
     [ do_rewrite op_sig carry_sig; cbv_runtime
     | .. ];
     fin_preglue;
-    refine_reflectively_gen CP.allowable_bit_widths default.
+    refine_reflectively_gen P.allowable_bit_widths default.
   Ltac synthesize_2arg_with_carry get_op_sig :=
     synthesize_with_carry do_rewrite_with_2sig_add_carry get_op_sig.
   Ltac synthesize_1arg_with_carry get_op_sig :=
@@ -84,6 +88,7 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (P : Synthesis
   Ltac synthesize_mul _ := synthesize_2arg_with_carry get_mul_sig.
   Ltac synthesize_add _ := synthesize_2arg_with_carry get_add_sig.
   Ltac synthesize_sub _ := synthesize_2arg_with_carry get_sub_sig.
+  Ltac synthesize_opp _ := synthesize_1arg_with_carry get_opp_sig.
   Ltac synthesize_square _ := synthesize_1arg_with_carry get_square_sig.
   Ltac synthesize_freeze _ :=
     let freeze_sig := get_freeze_sig () in
@@ -92,7 +97,7 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (P : Synthesis
     [ do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_bounded); cbv_runtime
     | .. ];
     fin_preglue;
-    refine_reflectively_gen CP.freeze_allowable_bit_widths anf.
+    refine_reflectively_gen P.freeze_allowable_bit_widths anf.
   Ltac synthesize_xzladderstep _ :=
     let Mxzladderstep_sig := get_Mxzladderstep_sig () in
     let a24_sig := get_a24_sig () in
@@ -104,5 +109,6 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (P : Synthesis
       cbv_runtime
     | .. ];
     finish_conjoined_preglue ();
-    refine_reflectively_gen CP.allowable_bit_widths default.
+    refine_reflectively_gen P.allowable_bit_widths default.
+
 End PackageSynthesis.
