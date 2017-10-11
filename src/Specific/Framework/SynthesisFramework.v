@@ -27,15 +27,16 @@ Module Tag.
   Notation Context := Tag.Context (only parsing).
 End Tag.
 
-Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
-  Module P := FillCurveParameters Curve.
-
-  Ltac add_Synthesis_package pkg :=
-    let P_default_mul _ := P.default_mul in
-    let P_extra_prove_mul_eq _ := P.extra_prove_mul_eq in
-    let P_default_square _ := P.default_square in
-    let P_extra_prove_square_eq _ := P.extra_prove_square_eq in
-    let pkg := P.add_CurveParameters_package pkg in
+Module Export MakeSynthesisTactics.
+  Ltac add_Synthesis_package pkg curve extra_prove_mul_eq extra_prove_square_eq :=
+    let CP := get_fill_CurveParameters curve in
+    let P_default_mul _ := default_mul CP in
+    let P_extra_prove_mul_eq := extra_prove_mul_eq in
+    let P_default_square _ := default_square CP in
+    let P_extra_prove_square_eq := extra_prove_square_eq in
+    let pkg := Tag.local_update pkg TAG.CP CP in
+    let pkg := add_CurveParameters_package pkg in
+    let pkg := Tag.strip_local pkg in
     let pkg := add_Base_package pkg in
     let pkg := add_ReificationTypes_package pkg in
     let pkg := add_Karatsuba_package pkg in
@@ -49,18 +50,16 @@ Module MakeSynthesisTactics (Curve : CurveParameters.CurveParameters).
     let pkg := add_Ladderstep_package pkg in
     pkg.
 
-  Ltac get_Synthesis_package _ :=
+  Ltac get_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq :=
     let pkg := constr:(Tag.empty) in
-    add_Synthesis_package pkg.
+    add_Synthesis_package pkg curve extra_prove_mul_eq extra_prove_square_eq.
 
-  Ltac make_Synthesis_package _ :=
-    let pkg := get_Synthesis_package () in
+  Ltac make_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq :=
+    let pkg := get_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq in
     exact pkg.
 End MakeSynthesisTactics.
 
-Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePackage).
-  Module P := CurveParameters.FillCurveParameters Curve.
-
+Module PackageSynthesis (PKG : PrePackage).
   Module CP := MakeCurveParametersPackage PKG.
   Module BP := MakeBasePackage PKG.
   Module DP := MakeDefaultsPackage PKG.
@@ -83,11 +82,12 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePack
   Ltac synthesize_with_carry do_rewrite get_op_sig :=
     let carry_sig := get_carry_sig () in
     let op_sig := get_op_sig () in
+    let allowable_bit_widths := get_allowable_bit_widths () in
     start_preglue;
     [ do_rewrite op_sig carry_sig; cbv_runtime
     | .. ];
     fin_preglue;
-    refine_reflectively_gen P.allowable_bit_widths default.
+    refine_reflectively_gen allowable_bit_widths default.
   Ltac synthesize_2arg_with_carry get_op_sig :=
     synthesize_with_carry do_rewrite_with_2sig_add_carry get_op_sig.
   Ltac synthesize_1arg_with_carry get_op_sig :=
@@ -97,6 +97,7 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePack
     let phi := get_phi_for_preglue () in
     let op_sig := get_op_sig () in
     let op_bounded := get_op_bounded () in
+    let allowable_bit_widths := get_allowable_bit_widths () in
     let do_red _ :=
         lazymatch (eval cbv [phi] in phi) with
         | (fun x => ?montgomery_to_F (?meval (?feBW_of_feBW_small _)))
@@ -109,15 +110,17 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePack
     | .. ];
     fin_preglue;
     factor_out_bounds_and_strip_eval op_bounded op_sig_side_conditions_t;
-    refine_reflectively_gen P.allowable_bit_widths anf.
+    refine_reflectively_gen allowable_bit_widths anf.
 
   Ltac synthesize_2arg_choice get_op_sig get_op_bounded :=
-    lazymatch (eval vm_compute in P.montgomery) with
+    let montgomery := get_montgomery () in
+    lazymatch (eval vm_compute in montgomery) with
     | true => synthesize_montgomery get_op_sig get_op_bounded
     | false => synthesize_2arg_with_carry get_op_sig
     end.
   Ltac synthesize_1arg_choice get_op_sig get_op_bounded :=
-    lazymatch (eval vm_compute in P.montgomery) with
+    let montgomery := get_montgomery () in
+    lazymatch (eval vm_compute in montgomery) with
     | true => synthesize_montgomery get_op_sig get_op_bounded
     | false => synthesize_1arg_with_carry get_op_sig
     end.
@@ -130,14 +133,16 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePack
   Ltac synthesize_freeze _ :=
     let freeze_sig := get_freeze_sig () in
     let feBW_bounded := get_feBW_bounded () in
+    let freeze_allowable_bit_widths := get_freeze_allowable_bit_widths () in
     start_preglue;
     [ do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_bounded); cbv_runtime
     | .. ];
     fin_preglue;
-    refine_reflectively_gen P.freeze_allowable_bit_widths anf.
+    refine_reflectively_gen freeze_allowable_bit_widths anf.
   Ltac synthesize_xzladderstep _ :=
     let Mxzladderstep_sig := get_Mxzladderstep_sig () in
     let a24_sig := get_a24_sig () in
+    let allowable_bit_widths := get_allowable_bit_widths () in
     start_preglue;
     [ unmap_map_tuple ();
       do_rewrite_with_sig_1arg Mxzladderstep_sig;
@@ -146,10 +151,10 @@ Module PackageSynthesis (Curve : CurveParameters.CurveParameters) (PKG : PrePack
       cbv_runtime
     | .. ];
     finish_conjoined_preglue ();
-    refine_reflectively_gen P.allowable_bit_widths default.
+    refine_reflectively_gen allowable_bit_widths default.
   Ltac synthesize_nonzero _ :=
     let op_sig := get_nonzero_sig () in
+    let allowable_bit_widths := get_allowable_bit_widths () in
     nonzero_preglue op_sig ltac:(fun _ => cbv_runtime);
-    refine_reflectively_gen P.allowable_bit_widths anf.
-
+    refine_reflectively_gen allowable_bit_widths anf.
 End PackageSynthesis.

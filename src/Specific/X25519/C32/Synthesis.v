@@ -1,11 +1,9 @@
 Require Import Crypto.Specific.Framework.SynthesisFramework.
 Require Import Crypto.Specific.X25519.C32.CurveParameters.
 
-Module Import T := MakeSynthesisTactics Curve.
-
 Module P <: PrePackage.
   Definition package : Tag.Context.
-  Proof. make_Synthesis_package (). Defined.
+  Proof. make_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq. Defined.
 End P.
 
-Module Export S := PackageSynthesis Curve P.
+Module Export S := PackageSynthesis P.

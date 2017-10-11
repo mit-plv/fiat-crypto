@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.Framework.CurveParameters.
+Require Import Crypto.Specific.Framework.RawCurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
@@ -6,29 +6,29 @@ Modulus : 2^255-5
 Base: 130
 ***)
 
-Module Curve <: CurveParameters.
-  Definition sz : nat := 3%nat.
-  Definition bitwidth : Z := 128.
-  Definition s : Z := 2^255.
-  Definition c : list limb := [(1, 5)].
-  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [seq 0 (pred sz); [0; 1]]%nat.
+Definition curve : CurveParameters :=
+  {|
+    sz := 3%nat;
+    bitwidth := 128;
+    s := 2^255;
+    c := [(1, 5)];
+    carry_chains := Some [seq 0 (pred 3); [0; 1]]%nat;
 
-  Definition a24 : option Z := Some (121665 (* XXX TODO(andreser) FIXME?  Is this right for this curve? *)).
-  Definition coef_div_modulus : option nat := Some 2%nat. (* add 2*modulus before subtracting *)
+    a24 := Some (121665 (* XXX TODO(andreser) FIXME?  Is this right for this curve? *));
+    coef_div_modulus := Some 2%nat;
 
-  Definition goldilocks : bool := false.
-  Definition montgomery : bool := false.
+    goldilocks := Some false;
+    montgomery := false;
 
-  Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
-    := None.
+    mul_code := None;
 
-  Definition square_code : option (Z^sz -> Z^sz)
-    := None.
+    square_code := None;
 
-  Definition upper_bound_of_exponent : option (Z -> Z) := None.
-  Definition allowable_bit_widths : option (list nat) := None.
-  Definition freeze_extra_allowable_bit_widths : option (list nat) := None.
-  Definition modinv_fuel : option nat := None.
-  Ltac extra_prove_mul_eq := idtac.
-  Ltac extra_prove_square_eq := idtac.
-End Curve.
+    upper_bound_of_exponent := None;
+    allowable_bit_widths := None;
+    freeze_extra_allowable_bit_widths := None;
+    modinv_fuel := None
+  |}.
+
+Ltac extra_prove_mul_eq _ := idtac.
+Ltac extra_prove_square_eq _ := idtac.

@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.Framework.CurveParameters.
+Require Import Crypto.Specific.Framework.RawCurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
@@ -6,21 +6,21 @@ Modulus : 2^255-19
 Base: 51
 ***)
 
-Module Curve <: CurveParameters.
-  Definition sz : nat := 5%nat.
-  Definition bitwidth : Z := 64.
-  Definition s : Z := 2^255.
-  Definition c : list limb := [(1, 19)].
-  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [seq 0 (pred sz); [0; 1]]%nat.
+Definition curve : CurveParameters :=
+  {|
+    sz := 5%nat;
+    bitwidth := 64;
+    s := 2^255;
+    c := [(1, 19)];
+    carry_chains := Some [seq 0 (pred 5); [0; 1]]%nat;
 
-  Definition a24 : option Z := Some 121665.
-  Definition coef_div_modulus : option nat := Some 2%nat. (* add 2*modulus before subtracting *)
+    a24 := Some 121665;
+    coef_div_modulus := Some 2%nat;
 
-  Definition goldilocks : bool := false.
-  Definition montgomery : bool := false.
+    goldilocks := Some false;
+    montgomery := false;
 
-  Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
-    := Some (fun a b =>
+    mul_code := Some (fun a b =>
       (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
       let '(r4, r3, r2, r1, r0) := a in
       let '(s4, s3, s2, s1, s0) := b in
@@ -40,10 +40,9 @@ Module Curve <: CurveParameters.
       dlet t2 := t2 + r4 * s3 + r3 * s4 in
       dlet t3 := t3 + r4 * s4 in
       (t4, t3, t2, t1, t0)
-            ).
+            );
 
-  Definition square_code : option (Z^sz -> Z^sz)
-    := Some (fun a =>
+    square_code := Some (fun a =>
       (* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
       let '(r4, r3, r2, r1, r0) := a in
       dlet d0 := r0 * 2 in
@@ -58,12 +57,13 @@ Module Curve <: CurveParameters.
       dlet t3 := d0 * r3 + d1 * r2 + (r4 * (d419   )) in
       dlet t4 := d0 * r4 + d1 * r3 + (r2 * (r2     )) in
       (t4, t3, t2, t1, t0)
-            ).
+            );
 
-  Definition upper_bound_of_exponent : option (Z -> Z) := None.
-  Definition allowable_bit_widths : option (list nat) := None.
-  Definition freeze_extra_allowable_bit_widths : option (list nat) := None.
-  Definition modinv_fuel : option nat := None.
-  Ltac extra_prove_mul_eq := idtac.
-  Ltac extra_prove_square_eq := idtac.
-End Curve.
+    upper_bound_of_exponent := None;
+    allowable_bit_widths := None;
+    freeze_extra_allowable_bit_widths := None;
+    modinv_fuel := None
+  |}.
+
+Ltac extra_prove_mul_eq _ := idtac.
+Ltac extra_prove_square_eq _ := idtac.

@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.Framework.CurveParameters.
+Require Import Crypto.Specific.Framework.RawCurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
@@ -6,21 +6,21 @@ Modulus : 2^255-19
 Base: 25.5
 ***)
 
-Module Curve <: CurveParameters.
-  Definition sz : nat := 10%nat.
-  Definition bitwidth : Z := 32.
-  Definition s : Z := 2^255.
-  Definition c : list limb := [(1, 19)].
-  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [seq 0 (pred sz); [0; 1]]%nat.
+Definition curve : CurveParameters :=
+  {|
+    sz := 10%nat;
+    bitwidth := 32;
+    s := 2^255;
+    c := [(1, 19)];
+    carry_chains := Some [seq 0 (pred 10); [0; 1]]%nat;
 
-  Definition a24 : option Z := Some 121665.
-  Definition coef_div_modulus : option nat := Some 2%nat. (* add 2*modulus before subtracting *)
+    a24 := Some 121665;
+    coef_div_modulus := Some 2%nat;
 
-  Definition goldilocks : bool := false.
-  Definition montgomery : bool := false.
+    goldilocks := Some false;
+    montgomery := false;
 
-  Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
-    := Some (fun a b =>
+    mul_code := Some (fun a b =>
       (* Micro-optimized form from curve25519-donna by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
       let '(in9, in8, in7, in6, in5, in4, in3, in2, in1, in0) := a in
       let '(in29, in28, in27, in26, in25, in24, in23, in22, in21, in20) := b in
@@ -152,10 +152,9 @@ Module Curve <: CurveParameters.
       dlet output0 := output0 + output10 << 1 in
       dlet output0 := output0 + output10 in
       (output9, output8, output7, output6, output5, output4, output3, output2, output1, output0)
-            ).
+            );
 
-  Definition square_code : option (Z^sz -> Z^sz)
-    := Some (fun a =>
+    square_code := Some (fun a =>
       (* Micro-optimized form from curve25519-donna by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
       let '(in9, in8, in7, in6, in5, in4, in3, in2, in1, in0) := a in
       dlet output0 :=       in0 * in0 in
@@ -241,12 +240,13 @@ Module Curve <: CurveParameters.
       dlet output0 := output0 + output10 << 1 in
       dlet output0 := output0 + output10 in
       (output9, output8, output7, output6, output5, output4, output3, output2, output1, output0)
-            ).
+            );
 
-  Definition upper_bound_of_exponent : option (Z -> Z) := None.
-  Definition allowable_bit_widths : option (list nat) := None.
-  Definition freeze_extra_allowable_bit_widths : option (list nat) := None.
-  Definition modinv_fuel : option nat := None.
-  Ltac extra_prove_mul_eq := idtac.
-  Ltac extra_prove_square_eq := idtac.
-End Curve.
+    upper_bound_of_exponent := None;
+    allowable_bit_widths := None;
+    freeze_extra_allowable_bit_widths := None;
+    modinv_fuel := None
+  |}.
+
+Ltac extra_prove_mul_eq _ := idtac.
+Ltac extra_prove_square_eq _ := idtac.
