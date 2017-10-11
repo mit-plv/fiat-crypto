@@ -6,8 +6,8 @@ def compute_bitwidth(base):
     return 2**int(math.ceil(math.log(base, 2)))
 def compute_sz(modulus, base):
     return 1 + int(math.ceil(math.log(modulus, 2) / base))
-def default_carry_chains():
-    return ['seq 0 (pred sz)', '[0; 1]']
+def default_carry_chains(sz):
+    return ['seq 0 (pred %(sz)s)' % locals(), '[0; 1]']
 def compute_s(modulus_str):
     base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', r'([0-9\^ +\*-]*)$')), modulus_str).groups()
     return '%s^%s' % (base, exp)
@@ -33,6 +33,7 @@ def compute_c(modulus_str):
     # XXX FIXME: Is this the right way to extract c?
     return [('1', rest)]
 def compute_goldilocks(s, c):
+    # true if the prime is of the form 2^2k - 2^k - 1
     ms = re.match(r'^2\^([0-9]+)$', s)
     if ms is None: return False
     two_k = int(ms.groups()[0])
@@ -194,13 +195,13 @@ def make_curve_parameters(parameters):
     replacements['a24'] = fix_option(parameters.get('a24', 'None'))
     replacements['carry_chains'] = fix_option(parameters.get('carry_chains', 'None'))
     if isinstance(replacements['carry_chains'], list):
-        defaults = default_carry_chains()
+        defaults = default_carry_chains(replacements['sz'])
         replacements['carry_chains'] \
             = ('Some %s%%nat'
                % nested_list_to_string([(v if v != 'default' else defaults[i])
                                         for i, v in enumerate(replacements['carry_chains'])]))
     elif replacements['carry_chains'] in ('default', 'Some default'):
-        replacements['carry_chains'] = 'Some %s%%nat' % nested_list_to_string(default_carry_chains())
+        replacements['carry_chains'] = 'Some %s%%nat' % nested_list_to_string(default_carry_chains(replacements['sz']))
     replacements['s'] = parameters.get('s', compute_s(parameters['modulus']))
     replacements['c'] = parameters.get('c', compute_c(parameters['modulus']))
     replacements['goldilocks'] = parameters.get('goldilocks', compute_goldilocks(replacements['s'], replacements['c']))
@@ -214,7 +215,8 @@ def make_curve_parameters(parameters):
                             ('allowable_bit_widths', '%nat'),
                             ('freeze_extra_allowable_bit_widths', '%nat'),
                             ('coef_div_modulus', '%nat'),
-                            ('modinv_fuel', '%nat')):
+                            ('modinv_fuel', '%nat'),
+                            ('goldilocks', '')):
         replacements[k] = fix_option(nested_list_to_string(replacements.get(k, 'None')), scope_string=scope_string)
     for k in ('montgomery', ):
         if k not in replacements.keys():
@@ -224,7 +226,7 @@ def make_curve_parameters(parameters):
     for k in ('extra_prove_mul_eq', 'extra_prove_square_eq'):
         if k not in replacements.keys():
             replacements[k] = 'idtac'
-    ret = r"""Require Import Crypto.Specific.Framework.CurveParameters.
+    ret = r"""Require Import Crypto.Specific.Framework.RawCurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
@@ -232,32 +234,32 @@ Modulus : %(modulus)s
 Base: %(base)s
 ***)
 
-Module Curve <: CurveParameters.
-  Definition sz : nat := %(sz)s%%nat.
-  Definition bitwidth : Z := %(bitwidth)s.
-  Definition s : Z := %(s)s.
-  Definition c : list limb := %(c)s.
-  Definition carry_chains : option (list (list nat)) := Eval vm_compute in %(carry_chains)s.
+Definition curve : CurveParameters :=
+  {|
+    sz := %(sz)s%%nat;
+    bitwidth := %(bitwidth)s;
+    s := %(s)s;
+    c := %(c)s;
+    carry_chains := %(carry_chains)s;
 
-  Definition a24 : option Z := %(a24)s.
-  Definition coef_div_modulus : option nat := %(coef_div_modulus)s. (* add %(coef_div_modulus_raw)s*modulus before subtracting *)
+    a24 := %(a24)s;
+    coef_div_modulus := %(coef_div_modulus)s;
 
-  Definition goldilocks : bool := %(goldilocks)s.
-  Definition montgomery : bool := %(montgomery)s.
+    goldilocks := %(goldilocks)s;
+    montgomery := %(montgomery)s;
 
-  Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
-    := %(mul)s.
+    mul_code := %(mul)s;
 
-  Definition square_code : option (Z^sz -> Z^sz)
-    := %(square)s.
+    square_code := %(square)s;
 
-  Definition upper_bound_of_exponent : option (Z -> Z) := %(upper_bound_of_exponent)s.
-  Definition allowable_bit_widths : option (list nat) := %(allowable_bit_widths)s.
-  Definition freeze_extra_allowable_bit_widths : option (list nat) := %(freeze_extra_allowable_bit_widths)s.
-  Definition modinv_fuel : option nat := %(modinv_fuel)s.
-  Ltac extra_prove_mul_eq := %(extra_prove_mul_eq)s.
-  Ltac extra_prove_square_eq := %(extra_prove_square_eq)s.
-End Curve.
+    upper_bound_of_exponent := %(upper_bound_of_exponent)s;
+    allowable_bit_widths := %(allowable_bit_widths)s;
+    freeze_extra_allowable_bit_widths := %(freeze_extra_allowable_bit_widths)s;
+    modinv_fuel := %(modinv_fuel)s
+  |}.
+
+Ltac extra_prove_mul_eq _ := %(extra_prove_mul_eq)s.
+Ltac extra_prove_square_eq _ := %(extra_prove_square_eq)s.
 """ % replacements
     return ret
 
@@ -265,14 +267,12 @@ def make_synthesis(prefix):
     return r"""Require Import Crypto.Specific.Framework.SynthesisFramework.
 Require Import %s.CurveParameters.
 
-Module Import T := MakeSynthesisTactics Curve.
-
 Module P <: PrePackage.
   Definition package : Tag.Context.
-  Proof. make_Synthesis_package (). Defined.
+  Proof. make_Synthesis_package curve extra_prove_mul_eq extra_prove_square_eq. Defined.
 End P.
 
-Module Export S := PackageSynthesis Curve P.
+Module Export S := PackageSynthesis P.
 """ % prefix
 
 def make_synthesized_arg(fearg, prefix, montgomery=False):
