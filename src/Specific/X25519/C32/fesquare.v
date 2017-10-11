@@ -10,3 +10,5 @@ Proof.
   Time synthesize_square ().
   Show Ltac Profile.
 Time Defined.
+
+Print Assumptions square.

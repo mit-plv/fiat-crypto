@@ -1,6 +1,6 @@
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Specific.Framework.LadderstepSynthesisFramework.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.Ladderstep.
 Require Import Crypto.Specific.X2555.C128.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
@@ -20,3 +20,5 @@ Proof.
   synthesize_xzladderstep ().
   Show Ltac Profile.
 Time Defined.
+
+Print Assumptions xzladderstep.

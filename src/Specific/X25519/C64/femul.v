@@ -10,3 +10,5 @@ Proof.
   Time synthesize_mul ().
   Show Ltac Profile.
 Time Defined.
+
+Print Assumptions mul.

@@ -2,9 +2,12 @@
 Require Import Coq.ZArith.BinInt.
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple.
+Require Import Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Sigma.Lift.
 Require Import Crypto.Util.Sigma.Associativity.
 Require Import Crypto.Util.Sigma.MapProjections.
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.MoveLetIn.
 Require Import Crypto.Util.Tactics.DestructHead.
 
@@ -286,3 +289,6 @@ Ltac factor_out_bounds_and_strip_eval op_bounded op_sig_side_conditions_t :=
     repeat match goal with
            | [ H : feBW_small |- _ ] => destruct H as [? _]
            end ].
+
+Ltac op_sig_side_conditions_t _ :=
+  try (hnf; rewrite <- (ZRange.is_bounded_by_None_repeat_In_iff_lt _ _ _)); destruct_head_hnf' sig; try assumption.
