@@ -22,6 +22,8 @@ def compute_c(modulus_str):
             ret.append(('1', part))
         elif part[:2] == '2^' and part[2:].isdigit():
             ret.append((part, '1'))
+        elif part[:3] == '-2^' and part[3:].isdigit():
+            ret.append((part[1:], '-1'))
         else:
             raw_input('Unhandled part: %s' % part)
             ret = None
