@@ -46,7 +46,6 @@ Section with_notations.
        end.
 End with_notations.
 
-(** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
 Ltac pose_Mxzladderstep_sig sz wt m add_sig sub_sig mul_sig square_sig carry_sig Mxzladderstep_sig :=
   cache_term_with_type_by
     { xzladderstep : tuple Z sz -> tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz -> tuple Z sz * tuple Z sz * (tuple Z sz * tuple Z sz)
@@ -66,28 +65,3 @@ Ltac pose_Mxzladderstep_sig sz wt m add_sig sub_sig mul_sig square_sig carry_sig
                  end;
           reflexivity)
            Mxzladderstep_sig.
-
-Ltac get_Ladderstep_package sz wt m add_sig sub_sig mul_sig square_sig carry_sig :=
-  let Mxzladderstep_sig := fresh "Mxzladderstep_sig" in
-  let Mxzladderstep_sig := pose_Mxzladderstep_sig sz wt m add_sig sub_sig mul_sig square_sig carry_sig Mxzladderstep_sig in
-  constr:((Mxzladderstep_sig, tt)).
-Ltac make_Ladderstep_package sz wt m add_sig sub_sig mul_sig square_sig carry_sig :=
-  lazymatch goal with
-  | [ |- { T : _ & T } ] => eexists
-  | [ |- _ ] => idtac
-  end;
-  let pkg := get_Ladderstep_package sz wt m add_sig sub_sig mul_sig square_sig carry_sig in
-  exact pkg.
-
-Module Type LadderstepPrePackage.
-  Parameter Ladderstep_package' : { T : _ & T }.
-  Parameter Ladderstep_package : projT1 Ladderstep_package'.
-End LadderstepPrePackage.
-
-Module MakeLadderstep (LP : LadderstepPrePackage).
-  Ltac get_Ladderstep_package _ := eval hnf in LP.Ladderstep_package.
-  Ltac L_reduce_proj x :=
-    eval cbv beta iota zeta in x.
-  Ltac get_Mxzladderstep_sig _ := let pkg := get_Ladderstep_package () in L_reduce_proj (let '(Mxzladderstep_sig, tt) := pkg in Mxzladderstep_sig).
-  Notation Mxzladderstep_sig := (ltac:(let v := get_Mxzladderstep_sig () in exact v)) (only parsing).
-End MakeLadderstep.
