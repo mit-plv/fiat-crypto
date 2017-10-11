@@ -211,7 +211,7 @@ def update_CurveParameters(fname='../CurveParameters.v'):
     for name, args, local in fns[fname]:
         ret += '\n' + make_add_from_pose(name, args, indent='  ', local=local)
     ret += '\n' + make_add_all(fname, indent='  ')
-    ret += endline
+    ret += endline + '\n'
     prefix = ''
     for name in CONFIGS:
         prefix += '\n' + make_if(name, indent='')
