@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.CurveParameters.
+Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
@@ -11,239 +11,242 @@ Module Curve <: CurveParameters.
   Definition bitwidth : Z := 32.
   Definition s : Z := 2^255.
   Definition c : list limb := [(1, 19)].
-  Definition carry_chain1 := Eval vm_compute in Some (seq 0 (pred sz)).
-  Definition carry_chain2 := Some [0;1]%nat.
+  Definition carry_chains : option (list (list nat)) := Eval vm_compute in Some [seq 0 (pred sz); [0; 1]]%nat.
 
-  Definition a24 := 121665%Z.
-  Definition coef_div_modulus : nat := 2. (* add 2*modulus before subtracting *)
+  Definition a24 : option Z := Some 121665.
+  Definition coef_div_modulus : option nat := Some 2%nat. (* add 2*modulus before subtracting *)
+
+  Definition goldilocks : bool := false.
+  Definition montgomery : bool := false.
 
   Definition mul_code : option (Z^sz -> Z^sz -> Z^sz)
     := Some (fun a b =>
       (* Micro-optimized form from curve25519-donna by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
-      let '(in_9, in_8, in_7, in_6, in_5, in_4, in_3, in_2, in_1, in_0) := a in
-      let '(in2_9, in2_8, in2_7, in2_6, in2_5, in2_4, in2_3, in2_2, in2_1, in2_0) := b in
-      dlet output_0 := in2_0 * in_0 in
-dlet output_1 :=       in2_0 * in_1 +
-                    in2_1 * in_0 in
-dlet output_2 :=  2 *  in2_1 * in_1 +
-                    in2_0 * in_2 +
-                    in2_2 * in_0 in
-dlet output_3 :=       in2_1 * in_2 +
-                    in2_2 * in_1 +
-                    in2_0 * in_3 +
-                    in2_3 * in_0 in
-dlet output_4 :=       in2_2 * in_2 +
-               2 * (in2_1 * in_3 +
-                    in2_3 * in_1) +
-                    in2_0 * in_4 +
-                    in2_4 * in_0 in
-dlet output_5 :=       in2_2 * in_3 +
-                    in2_3 * in_2 +
-                    in2_1 * in_4 +
-                    in2_4 * in_1 +
-                    in2_0 * in_5 +
-                    in2_5 * in_0 in
-dlet output_6 :=  2 * (in2_3 * in_3 +
-                    in2_1 * in_5 +
-                    in2_5 * in_1) +
-                    in2_2 * in_4 +
-                    in2_4 * in_2 +
-                    in2_0 * in_6 +
-                    in2_6 * in_0 in
-dlet output_7 :=       in2_3 * in_4 +
-                    in2_4 * in_3 +
-                    in2_2 * in_5 +
-                    in2_5 * in_2 +
-                    in2_1 * in_6 +
-                    in2_6 * in_1 +
-                    in2_0 * in_7 +
-                    in2_7 * in_0 in
-dlet output_8 :=       in2_4 * in_4 +
-               2 * (in2_3 * in_5 +
-                    in2_5 * in_3 +
-                    in2_1 * in_7 +
-                    in2_7 * in_1) +
-                    in2_2 * in_6 +
-                    in2_6 * in_2 +
-                    in2_0 * in_8 +
-                    in2_8 * in_0 in
-dlet output_9 :=       in2_4 * in_5 +
-                    in2_5 * in_4 +
-                    in2_3 * in_6 +
-                    in2_6 * in_3 +
-                    in2_2 * in_7 +
-                    in2_7 * in_2 +
-                    in2_1 * in_8 +
-                    in2_8 * in_1 +
-                    in2_0 * in_9 +
-                    in2_9 * in_0 in
-dlet output_10 := 2 * (in2_5 * in_5 +
-                    in2_3 * in_7 +
-                    in2_7 * in_3 +
-                    in2_1 * in_9 +
-                    in2_9 * in_1) +
-                    in2_4 * in_6 +
-                    in2_6 * in_4 +
-                    in2_2 * in_8 +
-                    in2_8 * in_2 in
-dlet output_11 :=      in2_5 * in_6 +
-                    in2_6 * in_5 +
-                    in2_4 * in_7 +
-                    in2_7 * in_4 +
-                    in2_3 * in_8 +
-                    in2_8 * in_3 +
-                    in2_2 * in_9 +
-                    in2_9 * in_2 in
-dlet output_12 :=      in2_6 * in_6 +
-               2 * (in2_5 * in_7 +
-                    in2_7 * in_5 +
-                    in2_3 * in_9 +
-                    in2_9 * in_3) +
-                    in2_4 * in_8 +
-                    in2_8 * in_4 in
-dlet output_13 :=      in2_6 * in_7 +
-                    in2_7 * in_6 +
-                    in2_5 * in_8 +
-                    in2_8 * in_5 +
-                    in2_4 * in_9 +
-                    in2_9 * in_4 in
-dlet output_14 := 2 * (in2_7 * in_7 +
-                    in2_5 * in_9 +
-                    in2_9 * in_5) +
-                    in2_6 * in_8 +
-                    in2_8 * in_6 in
-dlet output_15 :=      in2_7 * in_8 +
-                    in2_8 * in_7 +
-                    in2_6 * in_9 +
-                    in2_9 * in_6 in
-dlet output_16 :=      in2_8 * in_8 +
-               2 * (in2_7 * in_9 +
-                    in2_9 * in_7) in
-dlet output_17 :=      in2_8 * in_9 +
-                    in2_9 * in_8 in
-dlet output_18 := 2 *  in2_9 * in_9 in
-dlet output_8 := output_8 + output_18 << 4 in
-dlet output_8 := output_8 + output_18 << 1 in
-dlet output_8 := output_8 + output_18 in
-dlet output_7 := output_7 + output_17 << 4 in
-dlet output_7 := output_7 + output_17 << 1 in
-dlet output_7 := output_7 + output_17 in
-dlet output_6 := output_6 + output_16 << 4 in
-dlet output_6 := output_6 + output_16 << 1 in
-dlet output_6 := output_6 + output_16 in
-dlet output_5 := output_5 + output_15 << 4 in
-dlet output_5 := output_5 + output_15 << 1 in
-dlet output_5 := output_5 + output_15 in
-dlet output_4 := output_4 + output_14 << 4 in
-dlet output_4 := output_4 + output_14 << 1 in
-dlet output_4 := output_4 + output_14 in
-dlet output_3 := output_3 + output_13 << 4 in
-dlet output_3 := output_3 + output_13 << 1 in
-dlet output_3 := output_3 + output_13 in
-dlet output_2 := output_2 + output_12 << 4 in
-dlet output_2 := output_2 + output_12 << 1 in
-dlet output_2 := output_2 + output_12 in
-dlet output_1 := output_1 + output_11 << 4 in
-dlet output_1 := output_1 + output_11 << 1 in
-dlet output_1 := output_1 + output_11 in
-dlet output_0 := output_0 + output_10 << 4 in
-dlet output_0 := output_0 + output_10 << 1 in
-dlet output_0 := output_0 + output_10 in
-(output_9, output_8, output_7, output_6, output_5, output_4, output_3, output_2, output_1, output_0)
+      let '(in9, in8, in7, in6, in5, in4, in3, in2, in1, in0) := a in
+      let '(in29, in28, in27, in26, in25, in24, in23, in22, in21, in20) := b in
+      dlet output0 :=       in20 * in0 in
+      dlet output1 :=       in20 * in1 +
+                            in21 * in0 in
+      dlet output2 :=  2 *  in21 * in1 +
+                            in20 * in2 +
+                            in22 * in0 in
+      dlet output3 :=       in21 * in2 +
+                            in22 * in1 +
+                            in20 * in3 +
+                            in23 * in0 in
+      dlet output4 :=       in22 * in2 +
+                       2 * (in21 * in3 +
+                            in23 * in1) +
+                            in20 * in4 +
+                            in24 * in0 in
+      dlet output5 :=       in22 * in3 +
+                            in23 * in2 +
+                            in21 * in4 +
+                            in24 * in1 +
+                            in20 * in5 +
+                            in25 * in0 in
+      dlet output6 :=  2 * (in23 * in3 +
+                            in21 * in5 +
+                            in25 * in1) +
+                            in22 * in4 +
+                            in24 * in2 +
+                            in20 * in6 +
+                            in26 * in0 in
+      dlet output7 :=       in23 * in4 +
+                            in24 * in3 +
+                            in22 * in5 +
+                            in25 * in2 +
+                            in21 * in6 +
+                            in26 * in1 +
+                            in20 * in7 +
+                            in27 * in0 in
+      dlet output8 :=       in24 * in4 +
+                       2 * (in23 * in5 +
+                            in25 * in3 +
+                            in21 * in7 +
+                            in27 * in1) +
+                            in22 * in6 +
+                            in26 * in2 +
+                            in20 * in8 +
+                            in28 * in0 in
+      dlet output9 :=       in24 * in5 +
+                            in25 * in4 +
+                            in23 * in6 +
+                            in26 * in3 +
+                            in22 * in7 +
+                            in27 * in2 +
+                            in21 * in8 +
+                            in28 * in1 +
+                            in20 * in9 +
+                            in29 * in0 in
+      dlet output10 := 2 * (in25 * in5 +
+                            in23 * in7 +
+                            in27 * in3 +
+                            in21 * in9 +
+                            in29 * in1) +
+                            in24 * in6 +
+                            in26 * in4 +
+                            in22 * in8 +
+                            in28 * in2 in
+      dlet output11 :=      in25 * in6 +
+                            in26 * in5 +
+                            in24 * in7 +
+                            in27 * in4 +
+                            in23 * in8 +
+                            in28 * in3 +
+                            in22 * in9 +
+                            in29 * in2 in
+      dlet output12 :=      in26 * in6 +
+                       2 * (in25 * in7 +
+                            in27 * in5 +
+                            in23 * in9 +
+                            in29 * in3) +
+                            in24 * in8 +
+                            in28 * in4 in
+      dlet output13 :=      in26 * in7 +
+                            in27 * in6 +
+                            in25 * in8 +
+                            in28 * in5 +
+                            in24 * in9 +
+                            in29 * in4 in
+      dlet output14 := 2 * (in27 * in7 +
+                            in25 * in9 +
+                            in29 * in5) +
+                            in26 * in8 +
+                            in28 * in6 in
+      dlet output15 :=      in27 * in8 +
+                            in28 * in7 +
+                            in26 * in9 +
+                            in29 * in6 in
+      dlet output16 :=      in28 * in8 +
+                       2 * (in27 * in9 +
+                            in29 * in7) in
+      dlet output17 :=      in28 * in9 +
+                            in29 * in8 in
+      dlet output18 := 2 *  in29 * in9 in
+      dlet output8 := output8 + output18 << 4 in
+      dlet output8 := output8 + output18 << 1 in
+      dlet output8 := output8 + output18 in
+      dlet output7 := output7 + output17 << 4 in
+      dlet output7 := output7 + output17 << 1 in
+      dlet output7 := output7 + output17 in
+      dlet output6 := output6 + output16 << 4 in
+      dlet output6 := output6 + output16 << 1 in
+      dlet output6 := output6 + output16 in
+      dlet output5 := output5 + output15 << 4 in
+      dlet output5 := output5 + output15 << 1 in
+      dlet output5 := output5 + output15 in
+      dlet output4 := output4 + output14 << 4 in
+      dlet output4 := output4 + output14 << 1 in
+      dlet output4 := output4 + output14 in
+      dlet output3 := output3 + output13 << 4 in
+      dlet output3 := output3 + output13 << 1 in
+      dlet output3 := output3 + output13 in
+      dlet output2 := output2 + output12 << 4 in
+      dlet output2 := output2 + output12 << 1 in
+      dlet output2 := output2 + output12 in
+      dlet output1 := output1 + output11 << 4 in
+      dlet output1 := output1 + output11 << 1 in
+      dlet output1 := output1 + output11 in
+      dlet output0 := output0 + output10 << 4 in
+      dlet output0 := output0 + output10 << 1 in
+      dlet output0 := output0 + output10 in
+      (output9, output8, output7, output6, output5, output4, output3, output2, output1, output0)
             ).
 
   Definition square_code : option (Z^sz -> Z^sz)
     := Some (fun a =>
       (* Micro-optimized form from curve25519-donna by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)
-      let '(in_9, in_8, in_7, in_6, in_5, in_4, in_3, in_2, in_1, in_0) := a in
-dlet output_0 :=       in_0 * in_0 in
-dlet output_1 :=  2 *  in_0 * in_1 in
-dlet output_2 :=  2 * (in_1 * in_1 +
-                    in_0 * in_2) in
-dlet output_3 :=  2 * (in_1 * in_2 +
-                    in_0 * in_3) in
-dlet output_4 :=       in_2 * in_2 +
-               4 *  in_1 * in_3 +
-               2 *  in_0 * in_4 in
-dlet output_5 :=  2 * (in_2 * in_3 +
-                    in_1 * in_4 +
-                    in_0 * in_5) in
-dlet output_6 :=  2 * (in_3 * in_3 +
-                    in_2 * in_4 +
-                    in_0 * in_6 +
-               2 *  in_1 * in_5) in
-dlet output_7 :=  2 * (in_3 * in_4 +
-                    in_2 * in_5 +
-                    in_1 * in_6 +
-                    in_0 * in_7) in
-dlet output_8 :=       in_4 * in_4 +
-               2 * (in_2 * in_6 +
-                    in_0 * in_8 +
-               2 * (in_1 * in_7 +
-                    in_3 * in_5)) in
-dlet output_9 :=  2 * (in_4 * in_5 +
-                    in_3 * in_6 +
-                    in_2 * in_7 +
-                    in_1 * in_8 +
-                    in_0 * in_9) in
-dlet output_10 := 2 * (in_5 * in_5 +
-                    in_4 * in_6 +
-                    in_2 * in_8 +
-               2 * (in_3 * in_7 +
-                    in_1 * in_9)) in
-dlet output_11 := 2 * (in_5 * in_6 +
-                    in_4 * in_7 +
-                    in_3 * in_8 +
-                    in_2 * in_9) in
-dlet output_12 :=      in_6 * in_6 +
-               2 * (in_4 * in_8 +
-               2 * (in_5 * in_7 +
-                    in_3 * in_9)) in
-dlet output_13 := 2 * (in_6 * in_7 +
-                    in_5 * in_8 +
-                    in_4 * in_9) in
-dlet output_14 := 2 * (in_7 * in_7 +
-                    in_6 * in_8 +
-               2 *  in_5 * in_9) in
-dlet output_15 := 2 * (in_7 * in_8 +
-                    in_6 * in_9) in
-dlet output_16 :=      in_8 * in_8 +
-               4 *  in_7 * in_9 in
-dlet output_17 := 2 *  in_8 * in_9 in
-dlet output_18 := 2 *  in_9 * in_9 in
-dlet output_8 := output_8 + output_18 << 4 in
-dlet output_8 := output_8 + output_18 << 1 in
-dlet output_8 := output_8 + output_18 in
-dlet output_7 := output_7 + output_17 << 4 in
-dlet output_7 := output_7 + output_17 << 1 in
-dlet output_7 := output_7 + output_17 in
-dlet output_6 := output_6 + output_16 << 4 in
-dlet output_6 := output_6 + output_16 << 1 in
-dlet output_6 := output_6 + output_16 in
-dlet output_5 := output_5 + output_15 << 4 in
-dlet output_5 := output_5 + output_15 << 1 in
-dlet output_5 := output_5 + output_15 in
-dlet output_4 := output_4 + output_14 << 4 in
-dlet output_4 := output_4 + output_14 << 1 in
-dlet output_4 := output_4 + output_14 in
-dlet output_3 := output_3 + output_13 << 4 in
-dlet output_3 := output_3 + output_13 << 1 in
-dlet output_3 := output_3 + output_13 in
-dlet output_2 := output_2 + output_12 << 4 in
-dlet output_2 := output_2 + output_12 << 1 in
-dlet output_2 := output_2 + output_12 in
-dlet output_1 := output_1 + output_11 << 4 in
-dlet output_1 := output_1 + output_11 << 1 in
-dlet output_1 := output_1 + output_11 in
-dlet output_0 := output_0 + output_10 << 4 in
-dlet output_0 := output_0 + output_10 << 1 in
-dlet output_0 := output_0 + output_10 in
-(output_9, output_8, output_7, output_6, output_5, output_4, output_3, output_2, output_1, output_0)
+      let '(in9, in8, in7, in6, in5, in4, in3, in2, in1, in0) := a in
+      dlet output0 :=       in0 * in0 in
+      dlet output1 :=  2 *  in0 * in1 in
+      dlet output2 :=  2 * (in1 * in1 +
+                            in0 * in2) in
+      dlet output3 :=  2 * (in1 * in2 +
+                            in0 * in3) in
+      dlet output4 :=       in2 * in2 +
+                       4 *  in1 * in3 +
+                       2 *  in0 * in4 in
+      dlet output5 :=  2 * (in2 * in3 +
+                            in1 * in4 +
+                            in0 * in5) in
+      dlet output6 :=  2 * (in3 * in3 +
+                            in2 * in4 +
+                            in0 * in6 +
+                       2 *  in1 * in5) in
+      dlet output7 :=  2 * (in3 * in4 +
+                            in2 * in5 +
+                            in1 * in6 +
+                            in0 * in7) in
+      dlet output8 :=       in4 * in4 +
+                       2 * (in2 * in6 +
+                            in0 * in8 +
+                       2 * (in1 * in7 +
+                            in3 * in5)) in
+      dlet output9 :=  2 * (in4 * in5 +
+                            in3 * in6 +
+                            in2 * in7 +
+                            in1 * in8 +
+                            in0 * in9) in
+      dlet output10 := 2 * (in5 * in5 +
+                            in4 * in6 +
+                            in2 * in8 +
+                       2 * (in3 * in7 +
+                            in1 * in9)) in
+      dlet output11 := 2 * (in5 * in6 +
+                            in4 * in7 +
+                            in3 * in8 +
+                            in2 * in9) in
+      dlet output12 :=      in6 * in6 +
+                       2 * (in4 * in8 +
+                       2 * (in5 * in7 +
+                            in3 * in9)) in
+      dlet output13 := 2 * (in6 * in7 +
+                            in5 * in8 +
+                            in4 * in9) in
+      dlet output14 := 2 * (in7 * in7 +
+                            in6 * in8 +
+                       2 *  in5 * in9) in
+      dlet output15 := 2 * (in7 * in8 +
+                            in6 * in9) in
+      dlet output16 :=      in8 * in8 +
+                       4 *  in7 * in9 in
+      dlet output17 := 2 *  in8 * in9 in
+      dlet output18 := 2 *  in9 * in9 in
+      dlet output8 := output8 + output18 << 4 in
+      dlet output8 := output8 + output18 << 1 in
+      dlet output8 := output8 + output18 in
+      dlet output7 := output7 + output17 << 4 in
+      dlet output7 := output7 + output17 << 1 in
+      dlet output7 := output7 + output17 in
+      dlet output6 := output6 + output16 << 4 in
+      dlet output6 := output6 + output16 << 1 in
+      dlet output6 := output6 + output16 in
+      dlet output5 := output5 + output15 << 4 in
+      dlet output5 := output5 + output15 << 1 in
+      dlet output5 := output5 + output15 in
+      dlet output4 := output4 + output14 << 4 in
+      dlet output4 := output4 + output14 << 1 in
+      dlet output4 := output4 + output14 in
+      dlet output3 := output3 + output13 << 4 in
+      dlet output3 := output3 + output13 << 1 in
+      dlet output3 := output3 + output13 in
+      dlet output2 := output2 + output12 << 4 in
+      dlet output2 := output2 + output12 << 1 in
+      dlet output2 := output2 + output12 in
+      dlet output1 := output1 + output11 << 4 in
+      dlet output1 := output1 + output11 << 1 in
+      dlet output1 := output1 + output11 in
+      dlet output0 := output0 + output10 << 4 in
+      dlet output0 := output0 + output10 << 1 in
+      dlet output0 := output0 + output10 in
+      (output9, output8, output7, output6, output5, output4, output3, output2, output1, output0)
             ).
 
   Definition upper_bound_of_exponent : option (Z -> Z) := None.
   Definition allowable_bit_widths : option (list nat) := None.
   Definition freeze_extra_allowable_bit_widths : option (list nat) := None.
+  Definition modinv_fuel : option nat := None.
   Ltac extra_prove_mul_eq := idtac.
   Ltac extra_prove_square_eq := idtac.
 End Curve.

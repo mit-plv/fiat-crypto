@@ -24,17 +24,11 @@ matrix:
     - env: COQ_VERSION="v8.7"      TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.7-daily"
     - env: COQ_VERSION="v8.7"      TARGETS="curves-proofs"                               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.7-daily"
     - env: COQ_VERSION="v8.7"      TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.7-daily"
-    - env: COQ_VERSION="v8.6"      TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.6-daily"
-    - env: COQ_VERSION="v8.6"      TARGETS="curves-proofs"                               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.6-daily"
-    - env: COQ_VERSION="v8.6"      TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.6-daily"
     - env: COQ_VERSION="8.7+beta2" TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq-8.7+beta2" PPA="ppa:jgross-h/many-coq-versions"
     - env: COQ_VERSION="8.7+beta2" TARGETS="curves-proofs"                               COQ_PACKAGE="coq-8.7+beta2" PPA="ppa:jgross-h/many-coq-versions"
     - env: COQ_VERSION="8.7+beta2" TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq-8.7+beta2" PPA="ppa:jgross-h/many-coq-versions"
-    - env: COQ_VERSION="8.6.1"     TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq-8.6.1"     PPA="ppa:jgross-h/many-coq-versions"
-    - env: COQ_VERSION="8.6.1"     TARGETS="curves-proofs"                               COQ_PACKAGE="coq-8.6.1"     PPA="ppa:jgross-h/many-coq-versions"
-    - env: COQ_VERSION="8.6.1"     TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq-8.6.1"     PPA="ppa:jgross-h/many-coq-versions"
     - env: TARGETS="selected-test selected-bench" COQ_VERSION="8.7+beta2"                COQ_PACKAGE="coq-8.7+beta2" PPA="ppa:jgross-h/many-coq-versions"
-    - env: TARGETS="printlite lite" COQ_VERSION="8.6.1"                                  COQ_PACKAGE="coq-8.6.1"     PPA="ppa:jgross-h/many-coq-versions"
+    - env: TARGETS="printlite lite" COQ_VERSION="8.7+beta2"                              COQ_PACKAGE="coq-8.7+beta2" PPA="ppa:jgross-h/many-coq-versions"
   allow_failures:
     - env: COQ_VERSION="master"    TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-master-daily"
     - env: COQ_VERSION="master"    TARGETS="curves-proofs"                               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-master-daily"
@@ -42,9 +36,6 @@ matrix:
     - env: COQ_VERSION="v8.7"      TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.7-daily"
     - env: COQ_VERSION="v8.7"      TARGETS="curves-proofs"                               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.7-daily"
     - env: COQ_VERSION="v8.7"      TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.7-daily"
-    - env: COQ_VERSION="v8.6"      TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.6-daily"
-    - env: COQ_VERSION="v8.6"      TARGETS="curves-proofs"                               COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.6-daily"
-    - env: COQ_VERSION="v8.6"      TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq"           PPA="ppa:jgross-h/coq-8.6-daily"
     - env: TARGETS="selected-test selected-bench" COQ_VERSION="8.7+beta2"                COQ_PACKAGE="coq-8.7+beta2" PPA="ppa:jgross-h/many-coq-versions"
 
 before_install:

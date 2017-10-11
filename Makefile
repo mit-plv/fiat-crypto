@@ -60,7 +60,7 @@ $(VOFILES): | coqprime
 UNMADE_VOFILES := src/Specific/%Display.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo src/Specific/X25519/C32/%.vo
+LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/X2448/Karatsuba/C64/Synthesis.vo src/Specific/NISTP256/AMD64/Synthesis.vo src/Specific/X25519/C64/ladderstep.vo src/Specific/X25519/C32/%.vo
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
@@ -151,7 +151,7 @@ Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' > $@ && rm -f Makefile-old
 
-$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z/CNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
+$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z/CNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*Display > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 
@@ -174,7 +174,7 @@ $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.h) : %.h : %Display.log extract-function-h
 $(DISPLAY_NON_JAVA_C32_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
 	BITWIDTH=32 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
 
-$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/IntegrationTestDisplayCommon.vo
+$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 

@@ -1,0 +1,9 @@
+{
+    "modulus"              : "2^256-2^224+2^192+2^96-1",
+    "base"                 : "128",
+    "sz"                   : "2",
+    "bitwidth"             : "128",
+    "montgomery"           : "true",
+    "operations"           : ["fenz", "feadd", "femul", "feopp", "fesub"],
+    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+}
