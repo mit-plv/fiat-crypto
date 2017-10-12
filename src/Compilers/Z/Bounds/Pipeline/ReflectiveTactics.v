@@ -212,7 +212,7 @@ Section with_round_up_list.
              {e_pre_pkg}
              {e_pkg}
              (** ** reification *)
-             (rexpr_sig : { rexpr : Expr base_type op t | forall x, Interp Syntax.interp_op rexpr x = fZ x })
+             (rexpr_sig : { rexpr : Expr t | forall x, Interp rexpr x = fZ x })
              (** ** pre-wf pipeline *)
              (He : e = PreWfPipeline (proj1_sig rexpr_sig))
              (** ** proving wf *)
@@ -232,7 +232,7 @@ Section with_round_up_list.
              (Hbounds_sane : pick_type given_output_bounds = pick_type b)
              (Hbounds_sane_refl
               : e_final_newtype
-                = eq_rect _ (fun t => Expr base_type op (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane))
+                = eq_rect _ (fun t => Expr (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane))
              (** ** instantiation of original evar *)
              (Hevar : final_e_evar = InterpEta (t:=Arrow _ _) Syntax.interp_op e_final_newtype v')
              (** ** side conditions (boundedness) *)
@@ -255,8 +255,8 @@ Section with_round_up_list.
     rewrite !@InterpPreWfPipeline in Hpost_correct.
     unshelve eapply relax_output_bounds; try eassumption; [].
     match goal with
-    | [ |- context[Interp _ (@eq_rect ?A ?x ?P ?k ?y ?pf) ?v] ]
-      => rewrite (@ap_transport A P _ x y pf (fun t e => Interp interp_op e v) k)
+    | [ |- context[Interp (@eq_rect ?A ?x ?P ?k ?y ?pf) ?v] ]
+      => rewrite (@ap_transport A P _ x y pf (fun t e => Interp e v) k)
     end.
     rewrite <- transport_pp, concat_Vp; simpl.
     apply Hpost_correct.

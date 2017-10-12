@@ -33,7 +33,7 @@ Require Import Crypto.Compilers.Z.ArithmeticSimplifierInterp.
 
 (** *** Definition of the Pre-Wf Pipeline *)
 (** Do not change the name or the type of this definition *)
-Definition PreWfPipeline {t} (e : Expr base_type op t) : Expr base_type op _
+Definition PreWfPipeline {t} (e : Expr t) : Expr _
   := ExprEta (SimplifyArith false (Linearize e)).
 
 (** *** Correctness proof of the Pre-Wf Pipeline *)
@@ -41,8 +41,8 @@ Definition PreWfPipeline {t} (e : Expr base_type op t) : Expr base_type op _
     change it's proof, either; all of the relevant lemmas should be in
     the [reflective_interp] rewrite database.  If they're not, you
     should find the file where they are defined and add them. *)
-Lemma InterpPreWfPipeline {t} (e : Expr base_type op t)
-  : forall x, Interp interp_op (PreWfPipeline e) x = Interp interp_op e x.
+Lemma InterpPreWfPipeline {t} (e : Expr t)
+  : forall x, Interp (PreWfPipeline e) x = Interp e x.
 Proof.
   unfold PreWfPipeline; intro.
   repeat autorewrite with reflective_interp.
@@ -86,8 +86,8 @@ Definition default_PipelineOptions :=
     the expression. *)
 Definition PostWfPreBoundsPipeline
            (opts : PipelineOptions)
-           {t} (e : Expr base_type op t)
-  : Expr base_type op t
+           {t} (e : Expr t)
+  : Expr t
   := let e := InlineConst e in
      let e := InlineConst (Linearize (SimplifyArith false e)) in
      let e := InlineConst (Linearize (SimplifyArith false e)) in
@@ -117,8 +117,8 @@ Definition PostWfPreBoundsPipeline
 Definition PostWfBoundsPipeline
            round_up
            (opts : PipelineOptions)
-           {t} (e0 : Expr base_type op t)
-           (e : Expr base_type op t)
+           {t} (e0 : Expr t)
+           (e : Expr t)
            (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
   : option (@ProcessedReflectivePackage round_up)
   := Build_ProcessedReflectivePackage_from_option_sigma
@@ -167,7 +167,7 @@ Section with_round_up_list.
   Definition PostWfPipelineCorrect
              opts
              {t}
-             (e : Expr base_type op t)
+             (e : Expr t)
              (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
              (Hwf : Wf e)
              (e' := PostWfPreBoundsPipeline opts e)
@@ -177,8 +177,8 @@ Section with_round_up_list.
              (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
              (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
              (Hside : to_prop (InterpSideConditions e' v))
-    : Bounds.is_bounded_by b (Interp interp_op e v)
-      /\ cast_back_flat_const (Interp interp_op e'' v') = Interp interp_op e v.
+    : Bounds.is_bounded_by b (Interp e v)
+      /\ cast_back_flat_const (Interp e'' v') = Interp e v.
   Proof using Type.
     (** These first two lines probably shouldn't change much *)
     unfold PostWfBoundsPipeline, PostWfPreBoundsPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *; subst e'.

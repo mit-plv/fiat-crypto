@@ -10,7 +10,7 @@ Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijn.
 
 Definition Wf_MapCast
            {round_up}
-           {t} (e : Expr base_type op t)
+           {t} (e : Expr t)
            (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
            {b} e' (He' : MapCast round_up e input_bounds = Some (existT _ b e'))
            (Hwf : Wf e)
@@ -23,7 +23,7 @@ Definition Wf_MapCast
 
 Definition Wf_MapCast_arrow
            {round_up}
-           {s d} (e : Expr base_type op (Arrow s d))
+           {s d} (e : Expr (Arrow s d))
            (input_bounds : interp_flat_type Bounds.interp_base_type s)
            {b} e' (He' : MapCast round_up e input_bounds = Some (existT _ b e'))
            (Hwf : Wf e)

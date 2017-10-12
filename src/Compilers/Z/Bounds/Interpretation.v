@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
@@ -285,10 +285,10 @@ Module Import Bounds.
     := let good_lgsz := List.filter (Nat.leb lgsz) allowable_lgsz in
        List.fold_right (fun a b => Some (option_min a b)) None good_lgsz.
 
-  Definition ComputeBounds {t} (e : Expr base_type op t)
+  Definition ComputeBounds {t} (e : Expr t)
              (input_bounds : interp_flat_type interp_base_type (domain t))
     : interp_flat_type interp_base_type (codomain t)
-    := Interp (@interp_op) e input_bounds.
+    := Compilers.Syntax.Interp (@interp_op) e input_bounds.
 
   Definition is_tighter_thanb' {T} : interp_base_type T -> interp_base_type T -> bool
     := is_tighter_than_bool.

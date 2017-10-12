@@ -54,6 +54,11 @@ Section language.
     Definition invert_Abs {T} (e : expr T) : interp_flat_type_gen var (domain T) -> exprf (codomain T)
       := match e with Abs _ _ f => f end.
 
+    Definition compose {A B C} (f : expr (B -> C)) (g : expr (A -> B))
+      : expr (A -> C)
+      := Abs (fun v => LetIn (invert_Abs g v)
+                             (invert_Abs f)).
+
     Definition exprf_code {t} (e : exprf t) : exprf t -> Prop
       := match e with
          | TT => fun e' => TT = e'
@@ -148,6 +153,10 @@ Section language.
     : Syntax.interpf interp_op (@invert_Abs interp_base_type T e x)
       = Syntax.interp interp_op e x.
   Proof using Type. destruct e; reflexivity. Qed.
+
+  Definition Compose {A B C} (f : Expr (B -> C)) (g : Expr (A -> B))
+    : Expr (A -> C)
+    := fun var => compose (f var) (g var).
 End language.
 
 Global Arguments invert_Var {_ _ _ _} _.
@@ -155,6 +164,12 @@ Global Arguments invert_Op {_ _ _ _} _.
 Global Arguments invert_LetIn {_ _ _ _} _.
 Global Arguments invert_Pair {_ _ _ _ _} _.
 Global Arguments invert_Abs {_ _ _ _} _ _.
+
+Module Export Notations.
+  Infix "∘" := Compose : expr_scope.
+  Infix "∘f" := compose : expr_scope.
+  Infix "∘ᶠ" := compose : expr_scope.
+End Notations.
 
 Ltac invert_one_expr e :=
   preinvert_one_type e;

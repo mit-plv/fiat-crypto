@@ -36,7 +36,7 @@ Section language.
     := (@MapCast interp_base_type_bounds interp_op_bounds pick_typeb cast_op).
 
   Definition Wf_MapCast
-             {t} (e : Expr base_type op t)
+             {t} (e : Expr t)
              (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
              {b} e' (He' : MapCast e input_bounds = Some (existT _ b e'))
              (Hwf : Wf e)
@@ -45,7 +45,7 @@ Section language.
          _ _ _ internal_base_type_dec_bl internal_base_type_dec_lb _ _ _ _ _
          t e input_bounds b e' He' Hwf.
   Definition Wf_MapCast_arrow
-             {s d} (e : Expr base_type op (Arrow s d))
+             {s d} (e : Expr (Arrow s d))
              (input_bounds : interp_flat_type interp_base_type_bounds s)
              {b} e' (He' : MapCast e input_bounds = Some (existT _ b e'))
              (Hwf : Wf e)

@@ -10,7 +10,6 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Section language.
   Context (convert_adc_to_sbb : bool).
   Local Notation exprf := (@exprf base_type op).
-  Local Notation Expr := (@Expr base_type op).
 
   Section with_var.
     Context {var : base_type -> Type}.

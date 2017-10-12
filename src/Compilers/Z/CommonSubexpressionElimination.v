@@ -218,13 +218,13 @@ Definition cse inline_symbolic_expr_in_lookup {var} (prefix : list _) {t} (v : e
           normalize_symbolic_expr_mod_c
           inline_symbolic_expr_in_lookup var prefix t v xs.
 
-Definition CSE_gen inline_symbolic_expr_in_lookup {t} (e : Expr _ _ t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
-  : Expr _ _ t
+Definition CSE_gen inline_symbolic_expr_in_lookup {t} (e : Expr t) (prefix : forall var, list { t : flat_type base_type & exprf _ _ t })
+  : Expr t
   := @CSE base_type symbolic_op base_type_beq symbolic_op_beq
           internal_base_type_dec_bl op symbolize_op
           normalize_symbolic_expr_mod_c
           inline_symbolic_expr_in_lookup t e prefix.
 
-Definition CSE inline_symbolic_expr_in_lookup {t} (e : Expr _ _ t)
-  : Expr _ _ t
+Definition CSE inline_symbolic_expr_in_lookup {t} (e : Expr t)
+  : Expr t
   := @CSE_gen inline_symbolic_expr_in_lookup t e (fun _ => nil).

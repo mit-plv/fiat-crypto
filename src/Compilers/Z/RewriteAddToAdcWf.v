@@ -13,7 +13,7 @@ Require Import Crypto.Util.Bool.
 Section language.
   Local Hint Resolve internal_base_type_dec_lb internal_base_type_dec_lb dec_rel_of_bool_dec_rel : typeclass_instances.
 
-  Lemma Wf_RewriteAdc {t} (e : Expr base_type op t) (Hwf : Wf e)
+  Lemma Wf_RewriteAdc {t} (e : Expr t) (Hwf : Wf e)
   : Wf (RewriteAdc e).
   Proof.
     unfold RewriteAdc, option_map; break_innermost_match;

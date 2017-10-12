@@ -148,6 +148,7 @@ Module Export Notations.
   Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
   Notation "( )" := TT : expr_scope.
   Notation "()" := TT : expr_scope.
+  Infix "^" := (@tuple _) : ctype_scope.
   Bind Scope ctype_scope with flat_type.
   Bind Scope ctype_scope with type.
 End Notations.

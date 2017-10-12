@@ -22,7 +22,6 @@ Require Import Crypto.Util.Tactics.UniquePose.
 
 Local Notation exprf := (@exprf base_type op interp_base_type).
 Local Notation expr := (@expr base_type op interp_base_type).
-Local Notation Expr := (@Expr base_type op).
 
 Local Ltac fin_t :=
   first [ exact I
@@ -103,7 +102,7 @@ Local Arguments lift_op / .
 Local Opaque Z.pow.
 
 Lemma InterpSimplifyArith {convert_adc_to_sbb} {t} (e : Expr t)
-  : forall x, Interp interp_op (SimplifyArith convert_adc_to_sbb e) x = Interp interp_op e x.
+  : forall x, Interp (SimplifyArith convert_adc_to_sbb e) x = Interp e x.
 Proof.
   apply InterpRewriteOp; intros; unfold simplify_op_expr.
   Time break_innermost_match;

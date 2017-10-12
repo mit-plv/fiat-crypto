@@ -20,8 +20,8 @@ Section language.
   Local Notation PContext var := (PositiveContext _ var _ internal_base_type_dec_bl).
 
   Lemma InterpRewriteAdc
-        {t} (e : Expr base_type op t) (Hwf : Wf e)
-  : forall x, Interp interp_op (RewriteAdc e) x = Interp interp_op e x.
+        {t} (e : Expr t) (Hwf : Wf e)
+  : forall x, Compilers.Syntax.Interp interp_op (RewriteAdc e) x = Compilers.Syntax.Interp interp_op e x.
   Proof.
     intro x; unfold RewriteAdc, option_map; break_innermost_match; try reflexivity;
       match goal with |- ?x = ?y => cut (Some x = Some y); [ congruence | ] end;
@@ -39,7 +39,7 @@ Section language.
                   => let lhs := match goal with |- ?lhs = _ => lhs end in
                      let H := fresh in
                      destruct lhs eqn:H; [ apply (f_equal (@Some _)); eapply @Interp_rewrite_expr in H | ]
-                | [ H : Compile.compile (?e _) _ = Some ?e'', H' : Syntax.Named.Interp ?e'' ?x = Some ?v' |- ?v' = Interp ?interp_op' ?e ?x ]
+                | [ H : Compile.compile (?e _) _ = Some ?e'', H' : Syntax.Named.Interp ?e'' ?x = Some ?v' |- ?v' = Compilers.Syntax.Interp ?interp_op' ?e ?x ]
                   => eapply @Interp_compile with (v:=x) (interp_op:=interp_op') in H
                 end
               | intros; exact (@PositiveContextOk _ _ base_type_beq internal_base_type_dec_bl internal_base_type_dec_lb)

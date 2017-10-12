@@ -21,7 +21,6 @@ Require Import Crypto.Util.HProp.
 
 Local Notation exprf := (@exprf base_type op).
 Local Notation expr := (@expr base_type op).
-Local Notation Expr := (@Expr base_type op).
 Local Notation wff := (@wff base_type op).
 Local Notation Wf := (@Wf base_type op).
 

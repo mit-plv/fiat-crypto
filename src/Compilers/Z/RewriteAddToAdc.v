@@ -24,8 +24,8 @@ Local Open Scope bool_scope.
 Section language.
   Local Notation PContext var := (PositiveContext _ var _ internal_base_type_dec_bl).
 
-  Definition RewriteAdc {t} (e : Expr base_type op t)
-    : Expr base_type op t
+  Definition RewriteAdc {t} (e : Expr t)
+    : Expr t
     := let is_good e' := match option_map (wf_unit (Context:=PContext _) empty) e' with
                          | Some (Some trivial) => true
                          | _ => false
@@ -49,7 +49,7 @@ Section language.
        then let e' := option_map interp_to_phoas e' in
             match e' with
             | Some e'
-              => match t return Expr _ _ (Arrow (domain t) (codomain t)) -> Expr _ _ t with
+              => match t return Expr (Arrow (domain t) (codomain t)) -> Expr t with
                  | Arrow _ _ => fun x => x
                  end e'
             | None => e

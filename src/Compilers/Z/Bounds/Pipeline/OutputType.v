@@ -16,16 +16,16 @@ Section with_round_up_list.
 
   Record ProcessedReflectivePackage
     := { InputType : _;
-         input_expr : Expr base_type op InputType;
+         input_expr : Expr InputType;
          input_bounds : interp_flat_type Bounds.interp_base_type (domain InputType);
          output_bounds :> interp_flat_type Bounds.interp_base_type (codomain InputType);
-         output_expr :> Expr base_type op (Arrow (pick_type input_bounds) (pick_type output_bounds)) }.
+         output_expr :> Expr (Arrow (pick_type input_bounds) (pick_type output_bounds)) }.
 
   Definition Build_ProcessedReflectivePackage_from_option_sigma
-             {t} (e : Expr base_type op t)
+             {t} (e : Expr t)
              (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
              (result : option { output_bounds : interp_flat_type Bounds.interp_base_type (codomain t)
-                                                & Expr base_type op (Arrow (pick_type input_bounds) (pick_type output_bounds)) })
+                                                & Expr (Arrow (pick_type input_bounds) (pick_type output_bounds)) })
     : option ProcessedReflectivePackage
     := option_map
          (fun be
@@ -35,10 +35,10 @@ Section with_round_up_list.
 
   Definition ProcessedReflectivePackage_to_sigT (x : ProcessedReflectivePackage)
     : { InputType : _
-                    & Expr base_type op InputType
+                    & Expr InputType
                       * { bounds : interp_flat_type Bounds.interp_base_type (domain InputType)
                                    * interp_flat_type Bounds.interp_base_type (codomain InputType)
-                                   & Expr base_type op (Arrow (pick_type (fst bounds)) (pick_type (snd bounds))) } }%type
+                                   & Expr (Arrow (pick_type (fst bounds)) (pick_type (snd bounds))) } }%type
     := let (a, b, c, d, e) := x in
        existT _ a (b, (existT _ (c, d) e)).
 End with_round_up_list.

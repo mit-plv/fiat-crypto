@@ -5,7 +5,7 @@ Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Compilers.CommonSubexpressionEliminationWf.
 Require Import Crypto.Compilers.Z.CommonSubexpressionElimination.
 
-Lemma Wf_CSE_gen inline_symbolic_expr_in_lookup t (e : Expr _ _ t)
+Lemma Wf_CSE_gen inline_symbolic_expr_in_lookup t (e : Expr t)
       prefix
       (Hlen : forall var1 var2, length (prefix var1) = length (prefix var2))
       (Hprefix : forall var1 var2 n t1 t2 e1 e2,
@@ -18,7 +18,7 @@ Proof.
   apply Wf_CSE; auto using internal_base_type_dec_bl, internal_base_type_dec_lb, internal_symbolic_op_dec_bl, internal_symbolic_op_dec_lb.
 Qed.
 
-Lemma Wf_CSE inline_symbolic_expr_in_lookup t (e : Expr _ _ t)
+Lemma Wf_CSE inline_symbolic_expr_in_lookup t (e : Expr t)
       (Hwf : Wf e)
   : Wf (@CSE inline_symbolic_expr_in_lookup t e).
 Proof.

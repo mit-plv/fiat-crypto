@@ -98,3 +98,6 @@ Definition Zinterp_op src dst (f : op src dst)
 
 Definition interp_op src dst (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
   := lift_op (Zinterp_op src dst f).
+
+Notation Expr := (Expr base_type op).
+Notation Interp := (Interp interp_op).

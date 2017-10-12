@@ -41,15 +41,15 @@ Section language.
     := (@MapCast interp_base_type_bounds interp_op_bounds pick_typeb cast_op).
 
   Lemma MapCastCorrect
-        {t} (e : Expr base_type op t)
+        {t} (e : Expr t)
         (Hwf : Wf e)
         (input_bounds : interp_flat_type interp_base_type_bounds (domain t))
     : forall {b} e' (He':MapCast e input_bounds = Some (existT _ b e'))
              v v' (Hv : @inbounds _ input_bounds v /\ cast_back _ _ v' = v)
              (Hside : to_prop (InterpSideConditions e v)),
-      Interp interp_op_bounds e input_bounds = b
-      /\ @inbounds _ b (Interp interp_op e v)
-      /\ cast_back _ _ (Interp interp_op e' v') = (Interp interp_op e v).
+      Compilers.Syntax.Interp interp_op_bounds e input_bounds = b
+      /\ @inbounds _ b (Compilers.Syntax.Interp interp_op e v)
+      /\ cast_back _ _ (Compilers.Syntax.Interp interp_op e' v') = (Compilers.Syntax.Interp interp_op e v).
   Proof using Type*.
     apply MapCastCorrect; auto using internal_base_type_dec_lb.
   Qed.
