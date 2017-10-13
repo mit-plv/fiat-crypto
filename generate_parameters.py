@@ -1,3 +1,70 @@
+
+'''
+EXAMPLES (handwritten):
+
+
+# p256 - amd128
+{
+    "modulus"              : "2^256-2^224+2^192+2^96-1",
+    "base"                 : "128",
+    "sz"                   : "2",
+    "bitwidth"             : "128",
+    "montgomery"           : "true",
+    "operations"           : ["fenz", "feadd", "femul", "feopp", "fesub"],
+    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+}
+
+# p256 - amd64
+{
+    "modulus"              : "2^256-2^224+2^192+2^96-1",
+    "base"                 : "64",
+    "sz"                   : "4",
+    "bitwidth"             : "64",
+    "montgomery"           : "true",
+    "operations"           : ["fenz", "feadd", "femul", "feopp", "fesub"],
+    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+}
+
+
+# p448 - c64
+{
+    "modulus"          : "2^448-2^224-1",
+    "base"             : "56",
+    "goldilocks"       : "true",
+    "sz"               : "8",
+    "bitwidth"         : "64",
+    "carry_chains"     : [[3, 7],
+			  [0, 4, 1, 5, 2, 6, 3, 7],
+			  [4, 0]],
+    "coef_div_modulus" : "2",
+    "operations"       : ["femul"]
+}
+
+# curve25519 - c64
+{
+    "modulus"          : "2^255-19",
+    "base"             : "51",
+    "sz"               : "5",
+    "bitwidth"         : "64",
+    "carry_chains"     : "default",
+    "coef_div_modulus" : "2",
+    "operations"       : ["femul", "fesquare", "freeze"],
+    "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+}
+ 
+# curve25519 - c32
+{
+    "modulus"          : "2^255-19",
+    "base"             : "25.5",
+    "sz"               : "10",
+    "bitwidth"         : "32",
+    "carry_chains"     : "default",
+    "coef_div_modulus" : "2",
+    "operations"       : ["femul", "fesquare", "freeze"],
+    "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+}
+
+'''
 COMPILER = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
 
 # given a string representing one term or "tap" in a prime, returns a pair of
