@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.BinIntDef.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Compilers.Syntax.
@@ -38,16 +39,6 @@ Section gen.
                   wt (curve.(sz)) m
                   (Tuple.map interpToZ (flat_interp_tuple (T:=Tbase _) v)).
 
-  Lemma encode_correct : forall v, decode (Interp (encode v) tt) = v.
-  Proof.
-    cbv [decode encode Interp interp codomain RT rT]; intro.
-    rewrite interpf_SmartPairf, SmartVarfMap_tuple.
-    cbv [SmartVarfMap smart_interp_flat_map tuple_map].
-    rewrite !flat_interp_tuple_untuple, !Tuple.map_map.
-    cbv [interpf interp_op interpf_step Zinterp_op lift_op SmartFlatTypeMapUnInterp cast_const].
-    cbn [interpToZ ZToInterp].
-  Admitted.
-
   Record SynthesisOutputOn :=
     {
       zero : Expr RT;
@@ -69,6 +60,7 @@ Section gen.
 
       encode_valid : forall v, _;
       encode_sig := fun v => exist P (Interp (encode v) tt) (encode_valid v);
+      encode_correct : forall v, decode (Interp (encode v) tt) = v;
 
       decode_sig := fun v : sig P => decode (proj1_sig v);
 
