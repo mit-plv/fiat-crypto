@@ -71,20 +71,20 @@ Module Import Bounds.
       := let mx := max_abs_bound x in
          let my := max_abs_bound y in
          {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
-    Definition extermization_bounds (f : t -> t -> t) (x y : t) : t
+    Definition extremization_bounds (f : t -> t -> t) (x y : t) : t
       := let (lx, ux) := x in
          let (ly, uy) := y in
          if ((lx <? 0) || (ly <? 0))%Z%bool
          then extreme_lor_land_bounds x y
          else f x y.
     Definition land : t -> t -> t
-      := extermization_bounds
+      := extremization_bounds
            (fun x y
             => let (lx, ux) := x in
                let (ly, uy) := y in
                {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
     Definition lor : t -> t -> t
-      := extermization_bounds
+      := extremization_bounds
            (fun x y
             => let (lx, ux) := x in
                let (ly, uy) := y in

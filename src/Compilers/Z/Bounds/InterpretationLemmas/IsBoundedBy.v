@@ -392,14 +392,14 @@ Proof.
   { apply monotone_four_corners_genb; try (split; auto);
       [ eexists; apply Z.shiftr_le_Proper1
       | exists true; apply Z.shiftr_le_Proper2 ]. }
-  { cbv [Bounds.land Bounds.extermization_bounds]; break_innermost_match;
+  { cbv [Bounds.land Bounds.extremization_bounds]; break_innermost_match;
       [ apply land_bounds_extreme; split; auto | .. ];
       repeat first [ progress simpl in *
                    | Zarith_t_step
                    | rewriter_t
                    | progress saturate_land_lor_facts
                    | split_min_max; omega ]. }
-  { cbv [Bounds.lor Bounds.extermization_bounds]; break_innermost_match;
+  { cbv [Bounds.lor Bounds.extremization_bounds]; break_innermost_match;
       [ apply lor_bounds_extreme; split; auto | .. ];
       repeat first [ progress simpl in *
                    | Zarith_t_step
