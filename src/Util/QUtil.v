@@ -111,4 +111,16 @@ Section pow_ceil_mul_nat2.
     eapply Qfloor_resp_le.
     all: trivial; try omega; (eapply (Qle_trans _ 1 _); [vm_decide|assumption]).
   Qed.
+
+  Lemma pow_ceil_mul_nat_divide_upperbound i :
+    wt (S i) / (wt i) <= b^Qceiling f.
+  Proof.
+    rewrite pow_ceil_mul_S.
+    rewrite Z_div_mult_full; [|apply pow_ceil_mul_nat_nonzero].
+    all:[ > | omega | eapply (Qle_trans _ 1 _); [vm_decide|assumption].. ].
+    apply Z.pow_le_mono_r; [ assumption | ].
+    rewrite Z.le_sub_le_add_l, Z.add_comm.
+    etransitivity; [ | apply Qceiling_le_add ].
+    reflexivity.
+  Qed.
 End pow_ceil_mul_nat2.
