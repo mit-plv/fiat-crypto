@@ -65,7 +65,13 @@ EXAMPLES (handwritten):
 }
 
 '''
-COMPILER = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+
+import math,json,sys
+
+# for montgomery
+COMPILER_MONT = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+# for solinas
+COMPILER_SOLI = "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"
 
 # given a string representing one term or "tap" in a prime, returns a pair of
 # integers representing the weight and coefficient of that tap
@@ -75,12 +81,12 @@ COMPILER = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std
 #    "x" -> [x,0]
 def parse_term(t) :
     if "*" not in t and "^" not in t:
-        return [int(t),1]
+        return [int(t),0]
     
     if "*" in t:
         a,b = t.split("*")
         if "^" not in b:
-            return [int(a) * int(b),1]
+            return [int(a) * int(b),0]
     else:
         a,b = (1,t)
     
@@ -98,19 +104,22 @@ def parse_prime(prime):
 
 # check that the parsed prime makes sense
 def sanity_check(p):
-    return all([
+    if not all([
         # are there at least 2 terms?
         len(p) > 1,
         # do all terms have 2 elements?
         all(map(lambda t:len(t) == 2, p)),
         # are terms are in order (most to least significant)?
         p == list(sorted(p,reverse=True,key=lambda t:t[1])),
+        # does the least significant term have weight 2^0=1?
+        p[-1][1] == 0,
         # are all the exponents positive and the coefficients nonzero?
-        all(map(lambda t:t[0] != 0 and t[1] > 0, p)),
+        all(map(lambda t:t[0] != 0 and t[1] >= 0, p)),
         # is second-most-significant term negative?
         p[1][0] < 0,
         # are any exponents repeated?
-        len(set(map(lambda t:t[1], p))) == len(p)])
+        len(set(map(lambda t:t[1], p))) == len(p)]) :
+        raise Exception("Parsed prime %s has unexpected format" %p)
 
 
 def num_bits(p):
@@ -118,14 +127,57 @@ def num_bits(p):
 
 def get_params_montgomery(prime, bitwidth):
     p = parse_prime(prime)
-    if not sanity_check(p):
-        raise Exception("Parsed prime %s has unexpected format (original input: %s)" %(p,prime))
-    sz = num_bits(p) / bitwidth 
+    sanity_check(p)
+    sz = math.ceil(num_bits(p) / bitwidth)
     return {
             "modulus" : prime,
             "base" : str(bitwidth),
-            "sz" : sz,
+            "sz" : str(sz),
             "montgomery" : True,
             "operations" : ["fenz", "feadd", "femul", "feopp", "fesub"],
-            "compiler" : COMPILER 
+            "compiler" : COMPILER_MONT
             }
+
+# given a parsed prime, pick a number of (unsaturated) limbs
+def get_num_limbs(p, bitwidth):
+    # we want to leave enough bits unused to do a full solinas reduction
+    # without carrying; the number of bits necessary is the sum of the bits in
+    # the negative coefficients of p (other than the most significant digit)
+    unused_bits = sum(map(lambda t: math.ceil(math.log2(-t[0])) if t[0] < 0 else 0, p[1:]))
+    # print(p,unused_bits)
+    min_limbs = math.ceil(num_bits(p) / (bitwidth - unused_bits)) + 1
+    choices = []
+    for n in range(min_limbs, 5 * min_limbs): # don't search past 5x as many limbs as saturated representation; that's just wasteful
+        # check that the number of 'extra' bits needed fits in this number of limbs
+        min_bits = int(num_bits(p) / n)
+        extra = num_bits(p) % n
+        if extra == 0 or n % extra == 0:
+            choices.append((n, num_bits(p) / n))
+            break
+    if len(choices) == 0:
+        raise Exception("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
+    # print (p,choices)
+    return choices[0][0]
+
+def is_goldilocks(p):
+    return p[0][1] == 2 * p[1][1]
+
+def get_params_solinas(prime, bitwidth):
+    p = parse_prime(prime)
+    sanity_check(p)
+    sz = get_num_limbs(p, bitwidth)
+    base = num_bits(p) / sz
+    output = {
+            "modulus": prime,
+            "base" : str(base),
+            "sz" : str(sz),
+            "bitwidth" : bitwidth,
+            "carry_chains" : "default",
+            "coef_div_modulus" : str(2),
+            "operations"       : ["femul", "fesquare", "freeze"],
+            "compiler"         : COMPILER_SOLI
+            }
+    if is_goldilocks(p):
+        output["goldilocks"] = True
+    return output
+
