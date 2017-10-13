@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Tuple.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
@@ -121,6 +122,23 @@ Section homogenous_type.
     : @SmartVarfMap var' var'' f' (Prod A B) v
       = (SmartVarfMap f' (fst v), SmartVarfMap f' (snd v))
     := eq_refl.
+  Lemma SmartVarfMap_tuple' {var' var''} {f' : forall t, var' t -> var'' t} {T n}
+             v
+    : @SmartVarfMap var' var'' f' (tuple' T n) v
+      = flat_interp_untuple' (Tuple.map' (@SmartVarfMap var' var'' f' _) (flat_interp_tuple' v)).
+  Proof.
+    induction n as [|n IHn]; [ reflexivity | destruct v as [v0 v1] ].
+    simpl; rewrite SmartVarfMap_Pair, IHn; simpl.
+    reflexivity.
+  Qed.
+  Definition SmartVarfMap_tuple {var' var''} {f' : forall t, var' t -> var'' t} {T n}
+             v
+    : @SmartVarfMap var' var'' f' (tuple T n) v
+      = tuple_map (@SmartVarfMap var' var'' f' _) v.
+  Proof.
+    destruct n as [|n]; [ destruct v; reflexivity | ].
+    apply SmartVarfMap_tuple'.
+  Qed.
   Global Instance smart_interp_flat_map_Proper {f g}
     : Proper ((forall_relation (fun t => pointwise_relation _ eq))
                 ==> eq
@@ -325,7 +343,7 @@ Section interp_lemmas.
 
   Local Notation exprfb := (fun t => exprf _ op (Tbase t)).
 
-  Lemma interpf_SmartPairf
+  Lemma interpf_SmartPairf'
         {t} (e : interp_flat_type exprfb t)
   : @interpf _ interp_base_type _ interp_op _ (SmartPairf e)
     = SmartVarfMap (fun t => interpf interp_op) e.
@@ -335,4 +353,10 @@ Section interp_lemmas.
       rewrite !SmartPairf_Pair, !SmartVarfMap_Pair, <- !IHA, <- !IHB.
       reflexivity. }
   Qed.
+
+  Lemma interpf_SmartPairf
+        {t} (e : interp_flat_type exprfb t)
+  : @interpf _ interp_base_type _ interp_op _ (SmartPairf (var:=interp_base_type) e)
+    = SmartVarfMap (fun t => interpf interp_op) e.
+  Proof. apply interpf_SmartPairf'. Qed.
 End interp_lemmas.
