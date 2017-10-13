@@ -5,6 +5,7 @@ Require Import Coq.FSets.FMapInterface.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Equality.
 Require Import Crypto.Compilers.CommonSubexpressionElimination.
+Require Import Crypto.Util.NatUtil.
 
 Local Open Scope list_scope.
 
