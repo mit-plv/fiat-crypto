@@ -181,3 +181,39 @@ def get_params_solinas(prime, bitwidth):
         output["goldilocks"] = True
     return output
 
+def write_output(name, params):
+    prime = params["modulus"]
+    filename = (name + "_" + prime + ".json").replace("^","e").replace(" ","").replace("-","m").replace("+","p").replace("*","x")
+    g = open(filename,"w")
+    g.write(json.dumps(params))
+    g.close()
+
+USAGE = "python generate_parameters.py input_file"
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(USAGE)
+        sys.exit()
+    f = open(sys.argv[1])
+    for line in f:
+        # skip comments and empty lines
+        if line.strip().startswith("#") or len(line.strip()) == 0:
+            continue
+        prime = line.strip().split("#")[0] # remove trailing comments and trailing/leading whitespace
+        try:
+            write_output("montgomery32", get_params_montgomery(prime, 32))
+        except Exception as e:
+            print(e)
+        try:
+            write_output("montgomery64", get_params_montgomery(prime, 64))
+        except Exception as e:
+            print(e)
+        try:
+            write_output("solinas32", get_params_solinas(prime, 32))
+        except Exception as e:
+            print(e)
+        try:
+            write_output("solinas64", get_params_solinas(prime, 64))
+        except Exception as e:
+            print(e)
+
+    f.close()
