@@ -25,6 +25,7 @@ Module Import Bounds.
 
   Section with_bitwidth.
     Context (bit_width : option Z).
+    (** Generic helper definitions *)
     Definition two_corners (f : Z -> Z) : t -> t
       := fun x
          => let (lx, ux) := x in
@@ -63,8 +64,26 @@ Module Import Bounds.
       := fun x y z => eight_corners f x y z.
     Definition t_map3 (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
       := fun x y z => truncation_bounds (eight_corners f x y z).
-    Definition t_map4 (f : bounds -> bounds -> bounds -> bounds -> bounds) (x y z w : t)
-      := truncation_bounds (f x y z w).
+    (** Definitions of the actual bounds propogation *)
+    (** Rules for adding new operations:
+
+        - Every output must pass through [truncation_bounds] as the
+          final step.  Using [BuildTruncated_bounds] can be more
+          convienient at times.  The reason for [truncation_bounds] is
+          that we know that every operation is bounded by the bitwidth
+          of the underlying data type, and maintaining this constraint
+          is important sometimes.
+
+        - Use [t_mapn] to if the underlying operation on [Z] is
+          monotonic in all [n] of its arguments ([t_mapn] handles both
+          monotonic non-increasing and monotonic non-decreasing, and
+          applies [truncation_bounds])
+
+        - The [t_mapn'] definitions are for if you need to do further
+          processing on the bounds before applying
+          [truncation_bounds]; they handle lifting monotonic [Z]
+          functions without truncating to the bitwidth. *)
+
     Definition add : t -> t -> t := t_map2 Z.add.
     Definition sub : t -> t -> t := t_map2 Z.sub.
     Definition mul : t -> t -> t := t_map2 Z.mul.
