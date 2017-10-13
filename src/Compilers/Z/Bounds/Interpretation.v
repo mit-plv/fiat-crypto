@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.
+Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
@@ -23,8 +24,7 @@ Module Import Bounds.
   Local Coercion Z.of_nat : nat >-> Z.
   Definition interp_base_type (ty : base_type) : Set := t.
 
-  Section with_bitwidth.
-    Context (bit_width : option Z).
+  Section ops.
     (** Generic helper definitions *)
     Definition two_corners (f : Z -> Z) : t -> t
       := fun x
@@ -45,49 +45,22 @@ Module Import Bounds.
             let (lfu, ufu) := four_corners (f ux) y z in
             {| lower := Z.min lfl lfu;
                upper := Z.max ufl ufu |}.
-    Definition truncation_bounds (b : t)
-      := match bit_width with
-         | Some bit_width => if ((0 <=? lower b) && (upper b <? 2^bit_width))%bool
-                             then b
-                             else {| lower := 0 ; upper := 2^bit_width - 1 |}
-         | None => b
-         end.
-    Definition BuildTruncated_bounds (l u : Z) : t
-      := truncation_bounds {| lower := l ; upper := u |}.
-    Definition t_map1 (f : Z -> Z) (x : t)
-      := truncation_bounds (two_corners f x).
-    Definition t_map2' (f : Z -> Z -> Z) : t -> t -> t
-      := fun x y => four_corners f x y.
+    Definition t_map1 (f : Z -> Z) : t -> t
+      := fun x => two_corners f x.
     Definition t_map2 (f : Z -> Z -> Z) : t -> t -> t
-      := fun x y => truncation_bounds (four_corners f x y).
-    Definition t_map3' (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
-      := fun x y z => eight_corners f x y z.
+      := fun x y => four_corners f x y.
     Definition t_map3 (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
-      := fun x y z => truncation_bounds (eight_corners f x y z).
+      := fun x y z => eight_corners f x y z.
     (** Definitions of the actual bounds propogation *)
     (** Rules for adding new operations:
 
-        - Every output must pass through [truncation_bounds] as the
-          final step.  Using [BuildTruncated_bounds] can be more
-          convienient at times.  The reason for [truncation_bounds] is
-          that we know that every operation is bounded by the bitwidth
-          of the underlying data type, and maintaining this constraint
-          is important sometimes.
-
         - Use [t_mapn] to if the underlying operation on [Z] is
           monotonic in all [n] of its arguments ([t_mapn] handles both
-          monotonic non-increasing and monotonic non-decreasing, and
-          applies [truncation_bounds])
-
-        - The [t_mapn'] definitions are for if you need to do further
-          processing on the bounds before applying
-          [truncation_bounds]; they handle lifting monotonic [Z]
-          functions without truncating to the bitwidth. *)
+          monotonic non-increasing and monotonic non-decreasing) *)
 
     Definition add : t -> t -> t := t_map2 Z.add.
     Definition sub : t -> t -> t := t_map2 Z.sub.
     Definition mul : t -> t -> t := t_map2 Z.mul.
-    Definition mul' : t -> t -> t := t_map2' Z.mul.
     Definition shl : t -> t -> t := t_map2 Z.shiftl.
     Definition shr : t -> t -> t := t_map2 Z.shiftr.
     Definition max_abs_bound (x : t) : Z
@@ -99,12 +72,11 @@ Module Import Bounds.
          let my := max_abs_bound y in
          {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
     Definition extermization_bounds (f : t -> t -> t) (x y : t) : t
-      := truncation_bounds
-           (let (lx, ux) := x in
-            let (ly, uy) := y in
-            if ((lx <? 0) || (ly <? 0))%Z%bool
-            then extreme_lor_land_bounds x y
-            else f x y).
+      := let (lx, ux) := x in
+         let (ly, uy) := y in
+         if ((lx <? 0) || (ly <? 0))%Z%bool
+         then extreme_lor_land_bounds x y
+         else f x y.
     Definition land : t -> t -> t
       := extermization_bounds
            (fun x y
@@ -124,32 +96,28 @@ Module Import Bounds.
          let (lr2, ur2) := r2 in
          {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
     Definition zselect (c r1 r2 : t) : t
-      := truncation_bounds (zselect' r1 r2).
-    Definition add_with_carry' : t -> t -> t -> t
-      := t_map3' Z.add_with_carry.
+      := zselect' r1 r2.
     Definition add_with_carry : t -> t -> t -> t
       := t_map3 Z.add_with_carry.
-    Definition sub_with_borrow' : t -> t -> t -> t
-      := t_map3' Z.sub_with_borrow.
     Definition sub_with_borrow : t -> t -> t -> t
       := t_map3 Z.sub_with_borrow.
     Definition modulo_pow2_constant : Z -> t -> t
       := fun e x
          => let d := 2^e in
             let (l, u) := (lower x, upper x) in
-            truncation_bounds {| lower := if l / d =? u / d then Z.min (l mod d) (u mod d) else Z.min 0 (d + 1);
-                                 upper := if l / d =? u / d then Z.max (l mod d) (u mod d) else Z.max 0 (d - 1) |}.
+            {| lower := if l / d =? u / d then Z.min (l mod d) (u mod d) else Z.min 0 (d + 1);
+               upper := if l / d =? u / d then Z.max (l mod d) (u mod d) else Z.max 0 (d - 1) |}.
     Definition div_pow2_constant : Z -> t -> t
       := fun e x
          => let d := 2^e in
             let (l, u) := (lower x, upper x) in
-            truncation_bounds {| lower := l / d ; upper := u / d |}.
+            {| lower := l / d ; upper := u / d |}.
     Definition opp_div_pow2_constant : Z -> t -> t
       := fun e x
          => let d := 2^e in
             let (l, u) := (lower x, upper x) in
-            truncation_bounds {| lower := -(u / d) ; upper := -(l / d) |}.
-    Definition neg' (int_width : Z) : t -> t
+            {| lower := -(u / d) ; upper := -(l / d) |}.
+    Definition neg (int_width : Z) : t -> t
       := fun v
          => let (lb, ub) := v in
             let might_be_one := ((lb <=? 1) && (1 <=? ub))%Z%bool in
@@ -159,59 +127,55 @@ Module Import Bounds.
             else if might_be_one
                  then {| lower := Z.min 0 (Z.ones int_width) ; upper := Z.max 0 (Z.ones int_width) |}
                  else {| lower := 0 ; upper := 0 |}.
-    Definition neg (int_width : Z) : t -> t
-      := fun v
-         => truncation_bounds (neg' int_width v).
     Definition cmovne' (r1 r2 : t) : t
       := let (lr1, ur1) := r1 in
          let (lr2, ur2) := r2 in
          {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
     Definition cmovne (x y r1 r2 : t) : t
-      := truncation_bounds (cmovne' r1 r2).
+      := cmovne' r1 r2.
     Definition cmovle' (r1 r2 : t) : t
       := let (lr1, ur1) := r1 in
          let (lr2, ur2) := r2 in
          {| lower := Z.min lr1 lr2 ; upper := Z.max ur1 ur2 |}.
     Definition cmovle (x y r1 r2 : t) : t
-      := truncation_bounds (cmovle' r1 r2).
+      := cmovle' r1 r2.
 
     Definition id_with_alt {T1 T2 Tout} (x : interp_base_type T1) (y : interp_base_type T2)
       : interp_base_type Tout
-      := truncation_bounds match T1, T2, Tout with
-                           | TZ, TZ, TZ => y
-                           | _, _, _ => x
-                           end.
-  End with_bitwidth.
-  Section with_bitwidth2.
-    Context (bit_width1 bit_width2 : option Z)
-            (carry_boundary_bit_width : Z).
+      := match T1, T2, Tout with
+         | TZ, TZ, TZ => y
+         | _, _, _ => x
+         end.
+  End ops.
+  Section ops_with_carry.
+    Context (carry_boundary_bit_width : Z).
     Definition get_carry : t -> t * t
       := fun v =>
-           (modulo_pow2_constant bit_width1 carry_boundary_bit_width v,
-            div_pow2_constant bit_width2 carry_boundary_bit_width v).
+           (modulo_pow2_constant carry_boundary_bit_width v,
+            div_pow2_constant carry_boundary_bit_width v).
     Definition get_borrow : t -> t * t
       := fun v =>
-           (modulo_pow2_constant bit_width1 carry_boundary_bit_width v,
-            opp_div_pow2_constant bit_width2 carry_boundary_bit_width v).
+           (modulo_pow2_constant carry_boundary_bit_width v,
+            opp_div_pow2_constant carry_boundary_bit_width v).
     Definition add_with_get_carry  : t -> t -> t -> t * t
       := fun c x y
-         => get_carry (add_with_carry' c x y).
+         => get_carry (add_with_carry c x y).
     Definition sub_with_get_borrow : t -> t -> t -> t * t
       := fun c x y
-         => get_borrow (sub_with_borrow' c x y).
+         => get_borrow (sub_with_borrow c x y).
     Definition mul_split : t -> t -> t * t
-      := fun x y => get_carry (mul' x y).
-  End with_bitwidth2.
+      := fun x y => get_carry (mul x y).
+  End ops_with_carry.
 
   Module Export Notations.
     Export Util.ZRange.Notations.
-    Infix "+" := (add _) : bounds_scope.
-    Infix "-" := (sub _) : bounds_scope.
-    Infix "*" := (mul _) : bounds_scope.
-    Infix "<<" := (shl _) : bounds_scope.
-    Infix ">>" := (shr _) : bounds_scope.
-    Infix "&'" := (land _) : bounds_scope.
-    Notation "- x" := (opp _ x) : bounds_scope.
+    Infix "+" := add : bounds_scope.
+    Infix "-" := sub : bounds_scope.
+    Infix "*" := mul : bounds_scope.
+    Infix "<<" := shl : bounds_scope.
+    Infix ">>" := shr : bounds_scope.
+    Infix "&'" := land : bounds_scope.
+    Notation "- x" := (opp x) : bounds_scope.
   End Notations.
 
   Definition log_bit_width_of_base_type ty : option nat
@@ -223,30 +187,44 @@ Module Import Bounds.
   Definition bit_width_of_base_type ty : option Z
     := option_map (fun logsz => 2^Z.of_nat logsz)%Z (log_bit_width_of_base_type ty).
 
-  Definition interp_op {src dst} (f : op src dst) : interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst
-    := match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
-       | OpConst T v => fun _ => BuildTruncated_bounds (bit_width_of_base_type T) v v
-       | Add _ _ T => fun xy => add (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Sub _ _ T => fun xy => sub (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Mul _ _ T => fun xy => mul (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Shl _ _ T => fun xy => shl (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Shr _ _ T => fun xy => shr (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Land _ _ T => fun xy => land (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Lor _ _ T => fun xy => lor (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Opp _ T => fun x => opp (bit_width_of_base_type T) x
-       | IdWithAlt _ _ T => fun xy => id_with_alt (bit_width_of_base_type T) (fst xy) (snd xy)
-       | Zselect _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in zselect (bit_width_of_base_type T) c x y
-       | MulSplit carry_boundary_bit_width _ _ T1 T2
-         => fun xy => mul_split (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width (fst xy) (snd xy)
-       | AddWithCarry _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in add_with_carry (bit_width_of_base_type T) c x y
-       | AddWithGetCarry carry_boundary_bit_width _ _ _ T1 T2
-         => fun cxy => let '(c, x, y) := eta3 cxy in
-                       add_with_get_carry (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width c x y
-       | SubWithBorrow _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in sub_with_borrow (bit_width_of_base_type T) c x y
-       | SubWithGetBorrow carry_boundary_bit_width _ _ _ T1 T2
-         => fun cxy => let '(c, x, y) := eta3 cxy in
-                       sub_with_get_borrow (bit_width_of_base_type T1) (bit_width_of_base_type T2) carry_boundary_bit_width c x y
-       end%bounds.
+  Definition truncation_bounds' bit_width (b : t)
+    := match bit_width with
+       | Some bit_width => if ((0 <=? lower b) && (upper b <? 2^bit_width))%bool
+                           then b
+                           else {| lower := 0 ; upper := 2^bit_width - 1 |}
+       | None => b
+       end.
+  Definition truncation_bounds ty : interp_base_type ty -> interp_base_type ty
+    := truncation_bounds' (bit_width_of_base_type ty).
+
+  Definition interp_op {src dst} (f : op src dst)
+             (x : interp_flat_type interp_base_type src)
+    : interp_flat_type interp_base_type dst
+    := SmartVarfMap
+         truncation_bounds
+         (match f in op src dst return interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst with
+          | OpConst T v => fun _ => {| lower := v ; upper := v |}
+          | Add _ _ T => fun xy => add (fst xy) (snd xy)
+          | Sub _ _ T => fun xy => sub (fst xy) (snd xy)
+          | Mul _ _ T => fun xy => mul (fst xy) (snd xy)
+          | Shl _ _ T => fun xy => shl (fst xy) (snd xy)
+          | Shr _ _ T => fun xy => shr (fst xy) (snd xy)
+          | Land _ _ T => fun xy => land (fst xy) (snd xy)
+          | Lor _ _ T => fun xy => lor (fst xy) (snd xy)
+          | Opp _ T => fun x => opp x
+          | IdWithAlt _ _ T => fun xy => id_with_alt (fst xy) (snd xy)
+          | Zselect _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in zselect c x y
+          | MulSplit carry_boundary_bit_width _ _ T1 T2
+            => fun xy => mul_split carry_boundary_bit_width (fst xy) (snd xy)
+          | AddWithCarry _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in add_with_carry c x y
+          | AddWithGetCarry carry_boundary_bit_width _ _ _ T1 T2
+            => fun cxy => let '(c, x, y) := eta3 cxy in
+                          add_with_get_carry carry_boundary_bit_width c x y
+          | SubWithBorrow _ _ _ T => fun cxy => let '(c, x, y) := eta3 cxy in sub_with_borrow c x y
+          | SubWithGetBorrow carry_boundary_bit_width _ _ _ T1 T2
+            => fun cxy => let '(c, x, y) := eta3 cxy in
+                          sub_with_get_borrow carry_boundary_bit_width c x y
+          end%bounds x).
 
   Definition of_Z (z : Z) : t := ZToZRange z.
 

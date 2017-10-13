@@ -22,13 +22,13 @@ Local Open Scope Z_scope.
 
 Local Arguments Bounds.is_bounded_by' !_ _ _ / .
 
-Lemma is_bounded_by_truncation_bounds Tout bs v
+Lemma is_bounded_by_truncation_bounds' Tout bs v
       (H : Bounds.is_bounded_by (T:=Tbase TZ) bs v)
   : Bounds.is_bounded_by (T:=Tbase Tout)
-                         (Bounds.truncation_bounds (Bounds.bit_width_of_base_type Tout) bs)
+                         (Bounds.truncation_bounds' (Bounds.bit_width_of_base_type Tout) bs)
                          (ZToInterp v).
 Proof.
-  destruct bs as [l u]; cbv [Bounds.truncation_bounds Bounds.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type Bounds.log_bit_width_of_base_type option_map ZRange.is_bounded_by'] in *; simpl in *.
+  destruct bs as [l u]; cbv [Bounds.truncation_bounds' Bounds.is_bounded_by Bounds.is_bounded_by' Bounds.bit_width_of_base_type Bounds.log_bit_width_of_base_type option_map ZRange.is_bounded_by'] in *; simpl in *.
   repeat first [ break_t_step
                | fin_t
                | progress simpl in *
@@ -326,10 +326,20 @@ Local Arguments Z.pow : simpl never.
 Local Arguments Z.add !_ !_.
 Local Existing Instances Z.add_le_Proper Z.sub_le_flip_le_Proper Z.log2_up_le_Proper Z.pow_Zpos_le_Proper Z.sub_le_eq_Proper Z.add_with_carry_le_Proper.
 Local Hint Extern 1 => progress cbv beta iota : typeclass_instances.
-Local Ltac ibbio_do_cbv :=
-  cbv [Bounds.interp_op Zinterp_op Z.add_with_get_carry SmartFlatTypeMapUnInterp Bounds.add_with_get_carry Bounds.sub_with_get_borrow Bounds.get_carry Bounds.get_borrow Z.get_carry cast_const Bounds.mul_split]; cbn [fst snd].
-Local Ltac ibbio_prefin_by_apply :=
-  [ > | intros; apply is_bounded_by_truncation_bounds | simpl; reflexivity ].
+Local Ltac ibbio_prefin :=
+  [ > | intros | simpl; reflexivity ].
+Local Ltac apply_is_bounded_by_truncation_bounds :=
+  cbv [id
+         Bounds.interp_op interp_op Bounds.is_bounded_by Relations.interp_flat_type_rel_pointwise Relations.interp_flat_type_rel_pointwise_gen_Prop SmartVarfMap smart_interp_flat_map lift_op SmartFlatTypeMapUnInterp cast_const Zinterp_op SmartFlatTypeMapInterp2
+         Z.add_with_get_carry Bounds.add_with_get_carry Bounds.sub_with_get_borrow Bounds.get_carry Bounds.get_borrow Z.get_carry Bounds.mul_split];
+  cbn [interpToZ fst snd];
+  repeat match goal with
+         | [ |- _ /\ _ ] => split
+         end;
+  lazymatch goal with
+  | [ |- Bounds.is_bounded_by' (Bounds.truncation_bounds _ _) (ZToInterp _) ]
+    => apply is_bounded_by_truncation_bounds'
+  end.
 Local Ltac handle_mul :=
   apply monotone_four_corners_genb; try (split; auto);
   unfold Basics.flip;
@@ -345,29 +355,26 @@ Lemma is_bounded_by_interp_op t tR (opc : op t tR)
       (H_side : to_prop (interped_op_side_conditions opc v))
   : Bounds.is_bounded_by (Bounds.interp_op opc bs) (Syntax.interp_op _ _ opc v).
 Proof.
-  destruct opc;
-    [ apply is_bounded_by_truncation_bounds..
-    | split; ibbio_do_cbv;
-      [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
-        [ .. | cbn -[Z.mul_split_at_bitwidth]; rewrite Z.mul_split_at_bitwidth_mod ];
-        ibbio_prefin_by_apply
-      | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
+  destruct opc; apply_is_bounded_by_truncation_bounds;
+    [ ..
+    | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+      [ .. | cbn -[Z.mul_split_at_bitwidth]; rewrite Z.mul_split_at_bitwidth_mod ];
+      ibbio_prefin
+    | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
         [ .. | cbn -[Z.mul_split_at_bitwidth]; rewrite Z.mul_split_at_bitwidth_div ];
-        ibbio_prefin_by_apply ]
-    | apply is_bounded_by_truncation_bounds
-    | split; ibbio_do_cbv;
-      [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
-        ibbio_prefin_by_apply
-      | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
-        ibbio_prefin_by_apply ]
-    | apply is_bounded_by_truncation_bounds
-    | split; ibbio_do_cbv;
-      [ eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
-        ibbio_prefin_by_apply
-      | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (-(v / _)))   (v:=ZToInterp _);
-        ibbio_prefin_by_apply ] ];
+        ibbio_prefin
+    |
+    | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+        ibbio_prefin
+    | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v / _))   (v:=ZToInterp _);
+        ibbio_prefin
+    |
+    | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (v mod _)) (v:=ZToInterp _);
+        ibbio_prefin
+    | eapply is_bounded_by_compose with (T1:=TZ) (f_v := fun v => ZToInterp (-(v / _)))   (v:=ZToInterp _);
+      ibbio_prefin ];
     repeat first [ progress simpl in *
-                 | progress cbv [interp_op lift_op cast_const Bounds.interp_base_type Bounds.is_bounded_by' ZRange.is_bounded_by'] in *
+                 | progress cbv [Bounds.interp_base_type Bounds.is_bounded_by' ZRange.is_bounded_by'] in *
                  | progress destruct_head'_prod
                  | progress destruct_head'_and
                  | omega
@@ -385,15 +392,15 @@ Proof.
   { apply monotone_four_corners_genb; try (split; auto);
       [ eexists; apply Z.shiftr_le_Proper1
       | exists true; apply Z.shiftr_le_Proper2 ]. }
-  { break_innermost_match;
-      try (apply land_bounds_extreme; split; auto);
+  { cbv [Bounds.land Bounds.extermization_bounds]; break_innermost_match;
+      [ apply land_bounds_extreme; split; auto | .. ];
       repeat first [ progress simpl in *
                    | Zarith_t_step
                    | rewriter_t
                    | progress saturate_land_lor_facts
                    | split_min_max; omega ]. }
-  { break_innermost_match;
-      try (apply lor_bounds_extreme; split; auto);
+  { cbv [Bounds.lor Bounds.extermization_bounds]; break_innermost_match;
+      [ apply lor_bounds_extreme; split; auto | .. ];
       repeat first [ progress simpl in *
                    | Zarith_t_step
                    | rewriter_t
@@ -403,8 +410,9 @@ Proof.
                  | progress simpl in *
                  | progress split_min_max
                  | omega ]. }
-  { break_innermost_match; simpl in *; Z.ltb_to_lt; subst;
-      split; assumption. }
+  { cbv [Bounds.id_with_alt];
+      break_innermost_match; simpl in *; Z.ltb_to_lt; subst;
+        split; assumption. }
   { destruct_head Bounds.t; cbv [Bounds.zselect' Z.zselect].
     break_innermost_match; split_min_max; omega. }
   { handle_mul. }
