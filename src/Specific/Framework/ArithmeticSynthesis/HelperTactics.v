@@ -44,9 +44,16 @@ Ltac pose_correct_if_Z v mkeqn id :=
            id.
 
 Ltac pose_proof_tuple ls :=
+  let t := type of ls in
   lazymatch ls with
-  | pair ?x ?y => pose_proof_tuple x; pose_proof_tuple y
-  | ?ls => pose proof ls
+  | prod ?x ?y => pose_proof_tuple x; pose_proof_tuple y
+  | conj ?x ?y => pose_proof_tuple x; pose_proof_tuple y
+  | _
+    => lazymatch eval hnf in t with
+       | prod ?x ?y => pose_proof_tuple (fst ls); pose_proof_tuple (snd ls)
+       | and ?x ?y => pose_proof_tuple (proj1 ls); pose_proof_tuple (proj2 ls)
+       | _ => pose proof ls
+       end
   end.
 
 Ltac make_chained_carries_cps' sz wt s c a carry_chains :=
