@@ -235,6 +235,7 @@ src/Specific/Framework/IntegrationTestDisplayCommonTactics.v
 src/Specific/Framework/IntegrationTestTemporaryMiscCommon.v
 src/Specific/Framework/MontgomeryReificationTypes.v
 src/Specific/Framework/MontgomeryReificationTypesPackage.v
+src/Specific/Framework/OutputType.v
 src/Specific/Framework/Packages.v
 src/Specific/Framework/RawCurveParameters.v
 src/Specific/Framework/ReificationTypes.v
