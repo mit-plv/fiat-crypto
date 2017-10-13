@@ -2,12 +2,20 @@
 set -eu
 
 online_governors() {
+  FOUND=""
   for cpu in "/sys/devices/system/cpu/cpu"[0-9]* ; do
     if grep -vq '^1$' "$cpu/online" 2>/dev/null; then
       continue
     fi
+    if [ ! -e "$cpu/cpufreq" ]; then
+      continue
+    fi
     cat "$cpu/cpufreq/scaling_governor"
+    FOUND=1
   done
+  if [ -z "$FOUND" ]; then
+    echo "nocpufreq_support"
+  fi
 }
 
 printf "$(hostname)"

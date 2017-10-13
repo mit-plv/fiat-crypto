@@ -13,6 +13,9 @@ for cpu in "/sys/devices/system/cpu/cpu"[0-9]* ; do
   if grep -vq '^1$' "$cpu/online" 2>/dev/null; then
     continue
   fi
+  if [ ! -e "$cpu/cpufreq/scaling_available_governors" ]; then
+    continue
+  fi
   generators="$(cat "$cpu/cpufreq/scaling_available_governors")"
   if [ "$#" -eq 0 ] || [ -z "$1" ]; then
     usage "$generators"
