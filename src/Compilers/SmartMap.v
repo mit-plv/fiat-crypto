@@ -116,6 +116,11 @@ Section homogenous_type.
     unfold SmartVarfMap; clear; induction t; simpl; destruct_head_hnf unit; destruct_head_hnf prod;
       rewrite_hyp ?*; congruence.
   Qed.
+  Definition SmartVarfMap_Pair {var' var''} {f' : forall t, var' t -> var'' t} {A B}
+             v
+    : @SmartVarfMap var' var'' f' (Prod A B) v
+      = (SmartVarfMap f' (fst v), SmartVarfMap f' (snd v))
+    := eq_refl.
   Global Instance smart_interp_flat_map_Proper {f g}
     : Proper ((forall_relation (fun t => pointwise_relation _ eq))
                 ==> eq
@@ -311,3 +316,23 @@ Global Arguments SmartFlatTypeMap2 {_ _ _} _ {!_} _ / .
 Global Arguments SmartFlatTypeMap2Interp {_ _ _ _ _} fv {_} _.
 Global Arguments SmartFlatTypeMap2Interp2 {_ _ _ _ _ _} fv {t} v _.
 Global Arguments SmartFlatTypeMapUnInterp2 {_ _ _ _ _ _} fv {_ _} _.
+
+Section interp_lemmas.
+  Context {base_type_code : Type}
+          {op : flat_type base_type_code -> flat_type base_type_code -> Type}
+          {interp_base_type : base_type_code -> Type}
+          {interp_op : forall s d, op s d -> interp_flat_type interp_base_type s -> interp_flat_type interp_base_type d}.
+
+  Local Notation exprfb := (fun t => exprf _ op (Tbase t)).
+
+  Lemma interpf_SmartPairf
+        {t} (e : interp_flat_type exprfb t)
+  : @interpf _ interp_base_type _ interp_op _ (SmartPairf e)
+    = SmartVarfMap (fun t => interpf interp_op) e.
+  Proof.
+    induction t as [ t | | A IHA B IHB ]; try reflexivity.
+    { destruct e.
+      rewrite !SmartPairf_Pair, !SmartVarfMap_Pair, <- !IHA, <- !IHB.
+      reflexivity. }
+  Qed.
+End interp_lemmas.
