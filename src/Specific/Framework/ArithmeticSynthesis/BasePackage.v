@@ -107,9 +107,8 @@ Ltac add_wt_divides' pkg :=
 Ltac add_wt_divides_chains pkg :=
   let wt := Tag.get pkg TAG.wt in
   let carry_chains := Tag.get pkg TAG.carry_chains in
-  let wt_divides' := Tag.get pkg TAG.wt_divides' in
   let wt_divides_chains := fresh "wt_divides_chains" in
-  let wt_divides_chains := pose_wt_divides_chains wt carry_chains wt_divides' wt_divides_chains in
+  let wt_divides_chains := pose_wt_divides_chains wt carry_chains wt_divides_chains in
   Tag.update pkg TAG.wt_divides_chains wt_divides_chains.
 
 Ltac add_wt_pos pkg :=

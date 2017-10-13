@@ -72,54 +72,130 @@ Ltac pose_sz_nonzero sz sz_nonzero :=
     (sz <> 0%nat)
     ltac:(vm_decide_no_check)
            sz_nonzero.
+Section wt_gen.
+  Context (m : positive) (sz : nat).
+  Local Notation wt := (wt_gen m sz).
+  Local Ltac Q_cbv :=
+    cbv [wt_gen Qround.Qceiling QArith_base.Qmult QArith_base.Qdiv QArith_base.inject_Z QArith_base.Qden QArith_base.Qnum QArith_base.Qopp Qround.Qfloor QArith_base.Qinv QArith_base.Qle Z.of_nat].
+  Lemma wt_gen0_1 : wt 0 = 1.
+  Proof.
+    Q_cbv; simpl.
+    autorewrite with zsimplify_const; reflexivity.
+  Qed.
+
+  Lemma wt_gen_nonzero : forall i, wt i <> 0.
+  Proof.
+    eapply pow_ceil_mul_nat_nonzero; [ omega | ].
+    destruct sz; Q_cbv;
+      autorewrite with zsimplify_const; [ omega | ].
+    apply Z.log2_up_nonneg.
+  Qed.
+
+  Lemma wt_gen_nonneg : forall i, 0 <= wt i.
+  Proof. apply pow_ceil_mul_nat_nonneg; omega. Qed.
+
+  Lemma wt_gen_pos : forall i, wt i > 0.
+  Proof.
+    intro i; pose proof (wt_gen_nonzero i); pose proof (wt_gen_nonneg i).
+    omega.
+  Qed.
+
+  Lemma wt_gen_multiples : forall i, wt (S i) mod (wt i) = 0.
+  Proof.
+    apply pow_ceil_mul_nat_multiples.
+    destruct sz; Q_cbv; autorewrite with zsimplify_const;
+      auto using Z.log2_up_nonneg, Z.le_refl.
+  Qed.
+
+  Section divides.
+    Context (sz_nonzero : sz <> 0%nat)
+            (sz_small : Z.of_nat sz <= Z.log2_up (Z.pos m)).
+
+    Lemma wt_gen_divides
+      : forall i, wt (S i) / wt i > 0.
+    Proof.
+      apply pow_ceil_mul_nat_divide; [ omega | ].
+      destruct sz; Q_cbv; autorewrite with zsimplify_const; [ congruence | ].
+      rewrite Pos.mul_1_l; assumption.
+    Qed.
+    Lemma wt_gen_divides'
+      : forall i, wt (S i) / wt i <> 0.
+    Proof.
+      symmetry; apply Z.lt_neq, Z.gt_lt_iff, wt_gen_divides; assumption.
+    Qed.
+
+    Lemma wt_gen_div_bound
+      : forall i, wt (S i) / wt i <= wt 1.
+    Proof.
+      intro; etransitivity.
+      eapply pow_ceil_mul_nat_divide_upperbound; [ omega | ].
+      all:destruct sz; Q_cbv; autorewrite with zsimplify_const;
+        rewrite ?Pos.mul_1_l, ?Pos.mul_1_r; try assumption; omega.
+    Qed.
+    Lemma wt_gen_divides_chain
+          carry_chain
+      : forall i (H:In i carry_chain), wt (S i) / wt i <> 0.
+    Proof. intros i ?; apply wt_gen_divides'; assumption. Qed.
+
+    Lemma wt_gen_divides_chains
+          carry_chains
+      : List.fold_right
+          and
+          True
+          (List.map
+             (fun carry_chain
+              => forall i (H:In i carry_chain), wt (S i) / wt i <> 0)
+             carry_chains).
+    Proof.
+      induction carry_chains as [|carry_chain carry_chains IHcarry_chains];
+        constructor; eauto using wt_gen_divides_chain.
+    Qed.
+  End divides.
+End wt_gen.
+
+
 Ltac pose_wt_nonzero wt wt_nonzero :=
   cache_proof_with_type_by
     (forall i, wt i <> 0)
-    ltac:(eapply pow_ceil_mul_nat_nonzero; vm_decide_no_check)
+    ltac:(apply wt_gen_nonzero; vm_decide_no_check)
            wt_nonzero.
 Ltac pose_wt_nonneg wt wt_nonneg :=
   cache_proof_with_type_by
     (forall i, 0 <= wt i)
-    ltac:(apply pow_ceil_mul_nat_nonneg; vm_decide_no_check)
+    ltac:(apply wt_gen_nonneg; vm_decide_no_check)
            wt_nonneg.
 Ltac pose_wt_divides wt wt_divides :=
   cache_proof_with_type_by
     (forall i, wt (S i) / wt i > 0)
-    ltac:(apply pow_ceil_mul_nat_divide; vm_decide_no_check)
+    ltac:(apply wt_gen_divides; vm_decide_no_check)
            wt_divides.
 Ltac pose_wt_divides' wt wt_divides wt_divides' :=
   cache_proof_with_type_by
     (forall i, wt (S i) / wt i <> 0)
-    ltac:(symmetry; apply Z.lt_neq, Z.gt_lt_iff, wt_divides)
+    ltac:(apply wt_gen_divides'; vm_decide_no_check)
            wt_divides'.
-Ltac helper_pose_wt_divides_chain wt carry_chain wt_divides' wt_divides_chain :=
-  cache_term_with_type_by
-    (forall i (H:In i carry_chain), wt (S i) / wt i <> 0)
-    ltac:(let i := fresh "i" in intros i ?; exact (wt_divides' i))
-           wt_divides_chain.
-Ltac internal_pose_wt_divides_chains' wt carry_chains wt_divides' wt_divides_chains :=
-  lazymatch carry_chains with
-  | ?carry_chain :: nil
-    => helper_pose_wt_divides_chain wt carry_chain wt_divides' wt_divides_chains
-  | ?carry_chain :: ?carry_chains
-    => let wt_divides_chains := fresh wt_divides_chains in
-       let wt_divides_chain := fresh wt_divides_chains in
-       let wt_divides_chain := helper_pose_wt_divides_chain wt carry_chain wt_divides' wt_divides_chain in
-       let wt_divides_chains := internal_pose_wt_divides_chains' wt carry_chains wt_divides' wt_divides_chains in
-       constr:((wt_divides_chain, wt_divides_chains))
-  end.
-Ltac pose_wt_divides_chains wt carry_chains wt_divides' wt_divides_chains :=
-  let carry_chains := (eval cbv delta [carry_chains] in carry_chains) in
-  internal_pose_wt_divides_chains' wt carry_chains wt_divides' wt_divides_chains.
+Ltac pose_wt_divides_chains wt carry_chains wt_divides_chains :=
+  let T := (eval cbv [carry_chains List.fold_right List.map] in
+               (List.fold_right
+                  and
+                  True
+                  (List.map
+                     (fun carry_chain
+                      => forall i (H:In i carry_chain), wt (S i) / wt i <> 0)
+                     carry_chains))) in
+  cache_proof_with_type_by
+    T
+    ltac:(refine (@wt_gen_divides_chains _ _ _ _ carry_chains); vm_decide_no_check)
+           wt_divides_chains.
 
 Ltac pose_wt_pos wt wt_pos :=
   cache_proof_with_type_by
     (forall i, wt i > 0)
-    ltac:(eapply pow_ceil_mul_nat_pos; vm_decide_no_check)
+    ltac:(apply wt_gen_pos; vm_decide_no_check)
            wt_pos.
 
 Ltac pose_wt_multiples wt wt_multiples :=
   cache_proof_with_type_by
     (forall i, wt (S i) mod (wt i) = 0)
-    ltac:(apply pow_ceil_mul_nat_multiples; vm_decide_no_check)
+    ltac:(apply wt_gen_multiples; vm_decide_no_check)
            wt_multiples.
