@@ -81,6 +81,10 @@ class LimbPickingException(Exception): pass
 class NonBase2Exception(Exception): pass
 class UnexpectedPrimeException(Exception): pass
 
+# exception to be raised if we can't find an appropriate number of limbs
+class NoBaseFoundException(Exception):
+    pass
+
 # given a string representing one term or "tap" in a prime, returns a pair of
 # integers representing the weight and coefficient of that tap
 #    "2 ^ y" -> [1, y]
@@ -92,7 +96,11 @@ def parse_term(t) :
         return [int(t),0]
 
     if "*" in t:
-        a,b = t.split("*")
+        if len(t.split("*")) > 2: # this occurs when e.g. [w - x * y] has been turned into [w + -1 * x * y]
+            a1,a2,b = t.split("*") 
+            a = int(a1) * int(a2)
+        else:
+            a,b = t.split("*")
         if "^" not in b:
             return [int(a) * int(b),0]
     else:
@@ -154,21 +162,18 @@ def get_num_limbs(p, bitwidth):
     # the negative coefficients of p (other than the most significant digit)
     unused_bits = sum(map(lambda t: math.ceil(math.log(-t[0], 2)) if t[0] < 0 else 0, p[1:]))
     # print(p,unused_bits)
-    min_limbs = int(math.ceil(num_bits(p) / (bitwidth - unused_bits))) + 1
+    min_limbs = int(math.ceil(num_bits(p) / (bitwidth - unused_bits)))
     choices = []
     for n in range(min_limbs, 5 * min_limbs): # don't search past 5x as many limbs as saturated representation; that's just wasteful
         # check that the number of 'extra' bits needed fits in this number of limbs
         min_bits = int(num_bits(p) / n)
         extra = num_bits(p) % n
-        if extra == 0 or n % extra == 0:
-            if extra == 0: # integer
-                choices.append((n, num_bits(p) / n))
-            else: # fraction
-                choices.append((n, Fraction(numerator=num_bits(p), denominator=n)))
+        if (extra == 0 or n % extra == 0) and min_bits + 1 < bitwidth:
+            choices.append((n, num_bits(p) / n))
             break
     if len(choices) == 0:
-        raise LimbPickingException("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
-    # print (p,choices)
+        raise NoBaseFoundException("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
+    # print (p,choices,min_limbs)
     return choices[0][0]
 
 def is_goldilocks(p):
@@ -186,17 +191,38 @@ def format_base(numerator, denominator):
             base = '%d + %s' % (base_int, str(base_frac))
     return base
 
+# removes latest occurences, preserves order
+def remove_duplicates(l):
+    seen = []
+    for x in l:
+        if x not in seen:
+            seen.append(x)
+    return seen
+
 def get_params_solinas(prime, bitwidth):
     p = parse_prime(prime)
     sanity_check(p)
     sz = get_num_limbs(p, bitwidth)
     base = format_base(num_bits(p), sz)
+
+    if len(p) > 2:
+        # do interleaved carry chains, starting at where the taps are
+        starts = [(int(t[1] / base) - 1) % sz for t in p[1:]]
+        chain2 = []
+        for n in range(1,sz):
+            for j in starts:
+                chain2.append((j + n) % sz)
+        chain2 = remove_duplicates(chain2)
+        chain3 = list(map(lambda x:(x+1)%sz,starts))
+        carry_chains = [starts,chain2,chain3]
+    else:
+        carry_chains = "default"
     output = {
             "modulus": prime,
             "base" : str(base),
             "sz" : str(sz),
             "bitwidth" : bitwidth,
-            "carry_chains" : "default",
+            "carry_chains" : carry_chains,
             "coef_div_modulus" : str(2),
             "operations"       : ["femul", "fesquare", "freeze"],
             "compiler"         : COMPILER_SOLI
@@ -260,5 +286,4 @@ if __name__ == "__main__":
         try_write_output("montgomery64", get_params_montgomery, prime, 64)
         try_write_output("solinas32", get_params_solinas, prime, 32)
         try_write_output("solinas64", get_params_solinas, prime, 64)
-
     f.close()
