@@ -231,7 +231,7 @@ Ltac pose_r'_correct m r r' r'_correct :=
 Ltac pose_m_enc_correct_montgomery m sz r m_enc m_enc_correct_montgomery :=
   cache_proof_with_type_by
     (Z.pos m = MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc)
-    ltac:(vm_compute; vm_cast_no_check (eq_refl (Z.pos m)))
+    ltac:(vm_compute; reflexivity)
            m_enc_correct_montgomery.
 
 Ltac pose_r'_pow_correct r' sz r m_enc r'_pow_correct :=
