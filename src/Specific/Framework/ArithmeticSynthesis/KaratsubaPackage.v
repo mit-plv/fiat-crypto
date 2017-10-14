@@ -37,7 +37,7 @@ Ltac add_square_sig pkg :=
 Ltac add_Karatsuba_package pkg :=
   let pkg := add_mul_sig pkg in
   let pkg := add_square_sig pkg in
-  Tag.strip_local pkg.
+  Tag.strip_subst_local pkg.
 
 
 Module MakeKaratsubaPackage (PKG : PrePackage).

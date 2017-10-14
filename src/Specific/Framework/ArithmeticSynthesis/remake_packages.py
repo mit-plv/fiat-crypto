@@ -121,7 +121,7 @@ def make_add_all(fname, indent=''):
     nl_indent = ('\n%(indent)s  ' % locals())
     ret += nl_indent + nl_indent.join('let pkg := add_%s pkg %sin' % (name, pass_args_str)
                                       for name, (args, pass_args, extract_args, pass_args_str, extract_args_str) in all_items)
-    ret += nl_indent + 'Tag.strip_local pkg.\n'
+    ret += nl_indent + 'Tag.strip_subst_local pkg.\n'
     return ret
 
 def make_if(name, indent=''):

@@ -332,5 +332,5 @@ Module Export CurveParameters.
     let pkg := add_modinv_fuel pkg in
     let pkg := add_mul_code pkg in
     let pkg := add_square_code pkg in
-    Tag.strip_local pkg.
+    Tag.strip_subst_local pkg.
 End CurveParameters.

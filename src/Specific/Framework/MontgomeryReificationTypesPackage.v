@@ -75,7 +75,7 @@ Ltac add_MontgomeryReificationTypes_package pkg :=
   let pkg := add_feBW_of_feBW_small pkg in
   let pkg := add_phiM pkg in
   let pkg := add_phiM_small pkg in
-  Tag.strip_local pkg.
+  Tag.strip_subst_local pkg.
 
 
 Module MakeMontgomeryReificationTypesPackage (PKG : PrePackage).
