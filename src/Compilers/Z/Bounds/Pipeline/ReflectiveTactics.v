@@ -199,48 +199,67 @@ Section with_round_up_list.
   Local Notation pick_typeb := (@Bounds.bounds_to_base_type (Bounds.round_up_to_in_list allowable_lgsz)) (only parsing).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
 
+  Context (opts : PipelineOptions)
+          {t : type base_type}
+          {input_bounds : interp_flat_type Bounds.interp_base_type (domain t)}
+          {given_output_bounds : interp_flat_type Bounds.interp_base_type (codomain t)}
+          {v' : interp_flat_type interp_base_type (pick_type input_bounds)}
+          {fZ : interp_flat_type interp_base_type (domain t)
+                -> interp_flat_type interp_base_type (codomain t)}
+          {final_e_evar : interp_flat_type interp_base_type (pick_type given_output_bounds)}.
+
+  Class PipelineEvars :=
+    {
+      b : interp_flat_type Bounds.interp_base_type (codomain t);
+      e' : Expr (pick_type input_bounds -> pick_type b);
+      e_final : Expr (pick_type input_bounds -> pick_type b);
+      e_final_newtype : Expr (pick_type input_bounds -> pick_type given_output_bounds);
+      e : Expr (domain t -> codomain t);
+      e_pre_pkg : Expr (domain t -> codomain t);
+      e_pkg : option (@ProcessedReflectivePackage allowable_lgsz)
+    }.
+
+  Record PipelineSideConditions :=
+    {
+      evars :> PipelineEvars;
+      (** ** reification *)
+      rexpr_sig : { rexpr : Expr t | forall x, Interp rexpr x = fZ x };
+      (** ** pre-wf pipeline *)
+      He : e = PreWfPipeline (proj1_sig rexpr_sig);
+      (** ** proving wf *)
+      He_unnatize_for_wf : forall var, unnatize_expr 0 (ExprEta' e (fun t => (nat * var t)%type)) = ExprEta' e _;
+      Hwf : forall var1 var2,
+          let P := (@reflect_wfT base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil _ _ (ExprEta' e _) (ExprEta' e _)) in
+          trueify P = P;
+      (** ** post-wf-pre-bounds-pipeline *)
+      Hpost_wf_pre_bounds : e_pre_pkg = PostWfPreBoundsPipeline opts e;
+      (** ** post-wf-pipeline *)
+      Hpost : e_pkg = PostWfBoundsPipeline _ opts e e_pre_pkg input_bounds;
+      Hpost_correct : Some {| OutputType.input_expr := e ; OutputType.input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |} = e_pkg;
+      (** ** renaming *)
+      Hrenaming : e_final = e';
+      (** ** bounds relaxation *)
+      Hbounds_relax : Bounds.is_tighter_thanb b given_output_bounds = true;
+      Hbounds_sane : pick_type given_output_bounds = pick_type b;
+      Hbounds_sane_refl
+      : e_final_newtype
+        = eq_rect _ (fun t => Expr (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane);
+      (** ** instantiation of original evar *)
+      Hevar : final_e_evar = InterpEta (t:=Arrow _ _) Syntax.interp_op e_final_newtype v';
+      (** ** side conditions (boundedness) *)
+      Hv1 : Bounds.is_bounded_by input_bounds (cast_back_flat_const v');
+      Hv2 : forall v, PointedProp.to_prop (InterpSideConditions e_pre_pkg v);
+    }.
+
   Definition PipelineCorrect
-             opts
-             {t}
-             {input_bounds : interp_flat_type Bounds.interp_base_type (domain t)}
-             {given_output_bounds : interp_flat_type Bounds.interp_base_type (codomain t)}
-             {v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds)}
-             {b e' e_final e_final_newtype}
-             {fZ}
-             {final_e_evar : interp_flat_type Syntax.interp_base_type (pick_type given_output_bounds)}
-             {e}
-             {e_pre_pkg}
-             {e_pkg}
-             (** ** reification *)
-             (rexpr_sig : { rexpr : Expr t | forall x, Interp rexpr x = fZ x })
-             (** ** pre-wf pipeline *)
-             (He : e = PreWfPipeline (proj1_sig rexpr_sig))
-             (** ** proving wf *)
-             (He_unnatize_for_wf : forall var, unnatize_expr 0 (ExprEta' e (fun t => (nat * var t)%type)) = ExprEta' e _)
-             (Hwf : forall var1 var2,
-                 let P := (@reflect_wfT base_type base_type_eq_semidec_transparent op op_beq var1 var2 nil _ _ (ExprEta' e _) (ExprEta' e _)) in
-                 trueify P = P)
-             (** ** post-wf-pre-bounds-pipeline *)
-             (Hpost_wf_pre_bounds : e_pre_pkg = PostWfPreBoundsPipeline opts e)
-             (** ** post-wf-pipeline *)
-             (Hpost : e_pkg = PostWfBoundsPipeline _ opts e e_pre_pkg input_bounds)
-             (Hpost_correct : Some {| input_expr := e ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |} = e_pkg)
-             (** ** renaming *)
-             (Hrenaming : e_final = e')
-             (** ** bounds relaxation *)
-             (Hbounds_relax : Bounds.is_tighter_thanb b given_output_bounds = true)
-             (Hbounds_sane : pick_type given_output_bounds = pick_type b)
-             (Hbounds_sane_refl
-              : e_final_newtype
-                = eq_rect _ (fun t => Expr (Arrow (pick_type input_bounds) t)) e' _ (eq_sym Hbounds_sane))
-             (** ** instantiation of original evar *)
-             (Hevar : final_e_evar = InterpEta (t:=Arrow _ _) Syntax.interp_op e_final_newtype v')
-             (** ** side conditions (boundedness) *)
-             (Hv1 : Bounds.is_bounded_by input_bounds (cast_back_flat_const v'))
-             (Hv2 : forall v, PointedProp.to_prop (InterpSideConditions e_pre_pkg v))
+             (side_conditions : PipelineSideConditions)
     : Bounds.is_bounded_by given_output_bounds (fZ (cast_back_flat_const v'))
       /\ cast_back_flat_const final_e_evar = fZ (cast_back_flat_const v').
-  Proof.
+  Proof using All.
+    destruct side_conditions
+      as [evars rexpr_sig He He_unnatize_for_wf Hwf Hpost_wf_pre_bounds Hpost Hpost_correct Hrenaming Hbounds_relax Hbounds_sane Hbounds_sane_refl Hevar Hv1 Hv2].
+    cbv [b e' e_final e_final_newtype e e_pre_pkg e_pkg] in *.
+    destruct evars as [b e' e_final e_final_newtype e e_pre_pkg e_pkg].
     destruct rexpr_sig as [? Hrexpr].
     assert (Hwf' : Wf e)
       by (apply (proj1 (@Wf_ExprEta'_iff _ _ _ e));
@@ -272,8 +291,10 @@ End with_round_up_list.
 Ltac refine_with_pipeline_correct opts :=
   lazymatch goal with
   | [ |- _ /\ ?castback ?fW = ?fZ ?arg ]
-    => let lem := open_constr:(@PipelineCorrect _ opts _ _ _ _ _ _ _ _ _ _ _ _ _) in
-       simple refine (lem _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+    => let lem := open_constr:(@PipelineCorrect _ opts _ _ _ _ _ _) in
+       let evars' := open_constr:({| e_pkg := _ |}) in
+       simple refine (lem {| evars := evars' ; rexpr_sig := _ |});
+       cbv beta iota delta [b e' e_final e_final_newtype e e_pre_pkg e_pkg];
        subst fW fZ
   end;
   [ eexists
