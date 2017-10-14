@@ -1094,7 +1094,7 @@ Ltac presolve_op_mod_eq wt x :=
   | autorewrite with uncps push_id push_basesystem_eval ].
 
 Ltac solve_op_mod_eq wt x :=
-  presolve_op_mod_eq;
+  presolve_op_mod_eq wt x;
   [ basesystem_partial_evaluation_RHS;
     do_replace_match_with_destructuring_match_in_goal
   | reflexivity ].
