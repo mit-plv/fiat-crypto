@@ -131,7 +131,7 @@ def num_bits(p):
 def get_params_montgomery(prime, bitwidth):
     p = parse_prime(prime)
     sanity_check(p)
-    sz = math.ceil(num_bits(p) / bitwidth)
+    sz = int(math.ceil(num_bits(p) / bitwidth))
     return {
             "modulus" : prime,
             "base" : str(bitwidth),
