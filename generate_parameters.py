@@ -51,7 +51,7 @@ EXAMPLES (handwritten):
     "operations"       : ["femul", "fesquare", "freeze"],
     "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
 }
- 
+
 # curve25519 - c32
 {
     "modulus"          : "2^255-19",
@@ -82,14 +82,14 @@ COMPILER_SOLI = "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-fra
 def parse_term(t) :
     if "*" not in t and "^" not in t:
         return [int(t),0]
-    
+
     if "*" in t:
         a,b = t.split("*")
         if "^" not in b:
             return [int(a) * int(b),0]
     else:
         a,b = (1,t)
-    
+
     b,e = b.split("^")
     if int(b) != 2:
         raise Exception("Could not parse term, power with base other than 2: %s" %t)
@@ -97,7 +97,7 @@ def parse_term(t) :
 
 
 # expects prime to be a string and expressed as sum/difference of products of
-# two with small coefficients (e.g. '2^448 - 2^224 - 1', '2^255 - 19') 
+# two with small coefficients (e.g. '2^448 - 2^224 - 1', '2^255 - 19')
 def parse_prime(prime):
     terms = prime.replace("-", "+ -1 *").split("+")
     return list(map(parse_term, terms))
@@ -143,9 +143,9 @@ def get_num_limbs(p, bitwidth):
     # we want to leave enough bits unused to do a full solinas reduction
     # without carrying; the number of bits necessary is the sum of the bits in
     # the negative coefficients of p (other than the most significant digit)
-    unused_bits = sum(map(lambda t: math.ceil(math.log2(-t[0])) if t[0] < 0 else 0, p[1:]))
+    unused_bits = sum(map(lambda t: math.ceil(math.log(-t[0], 2)) if t[0] < 0 else 0, p[1:]))
     # print(p,unused_bits)
-    min_limbs = math.ceil(num_bits(p) / (bitwidth - unused_bits)) + 1
+    min_limbs = int(math.ceil(num_bits(p) / (bitwidth - unused_bits))) + 1
     choices = []
     for n in range(min_limbs, 5 * min_limbs): # don't search past 5x as many limbs as saturated representation; that's just wasteful
         # check that the number of 'extra' bits needed fits in this number of limbs
