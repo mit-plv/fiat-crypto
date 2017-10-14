@@ -49,6 +49,24 @@ Ltac pose_half_sz_nonzero half_sz half_sz_nonzero :=
     ltac:(cbv; congruence)
            half_sz_nonzero.
 
+Ltac pose_s_nonzero s s_nonzero :=
+  cache_proof_with_type_by
+    (s <> 0)
+    ltac:(vm_decide_no_check)
+           s_nonzero.
+
+Ltac pose_sz_le_log2_m sz m sz_le_log2_m :=
+  cache_proof_with_type_by
+    (Z.of_nat sz <= Z.log2_up (Z.pos m))
+    ltac:(vm_decide_no_check)
+           sz_le_log2_m.
+
+Ltac pose_m_correct m s c m_correct :=
+  cache_proof_with_type_by
+    (Z.pos m = s - Associational.eval c)
+    ltac:(vm_decide_no_check)
+           m_correct.
+
 Ltac pose_m_enc sz s c wt m_enc :=
   let v := (eval vm_compute in (Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (s-Associational.eval c))) in
   let v := (eval compute in v) in (* compute away the type arguments *)

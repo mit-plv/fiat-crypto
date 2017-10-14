@@ -5,7 +5,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples.
+  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | s_nonzero | sz_le_log2_m | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples.
 End TAG.
 
 Ltac add_r pkg :=
@@ -45,6 +45,27 @@ Ltac add_half_sz_nonzero pkg :=
   let half_sz_nonzero := fresh "half_sz_nonzero" in
   let half_sz_nonzero := pose_half_sz_nonzero half_sz half_sz_nonzero in
   Tag.update pkg TAG.half_sz_nonzero half_sz_nonzero.
+
+Ltac add_s_nonzero pkg :=
+  let s := Tag.get pkg TAG.s in
+  let s_nonzero := fresh "s_nonzero" in
+  let s_nonzero := pose_s_nonzero s s_nonzero in
+  Tag.update pkg TAG.s_nonzero s_nonzero.
+
+Ltac add_sz_le_log2_m pkg :=
+  let sz := Tag.get pkg TAG.sz in
+  let m := Tag.get pkg TAG.m in
+  let sz_le_log2_m := fresh "sz_le_log2_m" in
+  let sz_le_log2_m := pose_sz_le_log2_m sz m sz_le_log2_m in
+  Tag.update pkg TAG.sz_le_log2_m sz_le_log2_m.
+
+Ltac add_m_correct pkg :=
+  let m := Tag.get pkg TAG.m in
+  let s := Tag.get pkg TAG.s in
+  let c := Tag.get pkg TAG.c in
+  let m_correct := fresh "m_correct" in
+  let m_correct := pose_m_correct m s c m_correct in
+  Tag.update pkg TAG.m_correct m_correct.
 
 Ltac add_m_enc pkg :=
   let sz := Tag.get pkg TAG.sz in
@@ -130,6 +151,9 @@ Ltac add_Base_package pkg :=
   let pkg := add_sz2 pkg in
   let pkg := add_half_sz pkg in
   let pkg := add_half_sz_nonzero pkg in
+  let pkg := add_s_nonzero pkg in
+  let pkg := add_sz_le_log2_m pkg in
+  let pkg := add_m_correct pkg in
   let pkg := add_m_enc pkg in
   let pkg := add_coef pkg in
   let pkg := add_coef_mod pkg in
@@ -159,6 +183,12 @@ Module MakeBasePackage (PKG : PrePackage).
   Notation half_sz := (ltac:(let v := get_half_sz () in exact v)) (only parsing).
   Ltac get_half_sz_nonzero _ := get TAG.half_sz_nonzero.
   Notation half_sz_nonzero := (ltac:(let v := get_half_sz_nonzero () in exact v)) (only parsing).
+  Ltac get_s_nonzero _ := get TAG.s_nonzero.
+  Notation s_nonzero := (ltac:(let v := get_s_nonzero () in exact v)) (only parsing).
+  Ltac get_sz_le_log2_m _ := get TAG.sz_le_log2_m.
+  Notation sz_le_log2_m := (ltac:(let v := get_sz_le_log2_m () in exact v)) (only parsing).
+  Ltac get_m_correct _ := get TAG.m_correct.
+  Notation m_correct := (ltac:(let v := get_m_correct () in exact v)) (only parsing).
   Ltac get_m_enc _ := get TAG.m_enc.
   Notation m_enc := (ltac:(let v := get_m_enc () in exact v)) (only parsing).
   Ltac get_coef _ := get TAG.coef.
