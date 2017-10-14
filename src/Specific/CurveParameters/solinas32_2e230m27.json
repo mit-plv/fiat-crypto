@@ -1,1 +1,14 @@
-{"operations": ["femul", "fesquare", "freeze"], "sz": "10", "base": "23", "bitwidth": 32, "coef_div_modulus": "2", "modulus": "2^230 - 27", "carry_chains": "default", "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"}
+{
+    "base": "23",
+    "bitwidth": 32,
+    "carry_chains": "default",
+    "coef_div_modulus": "2",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "modulus": "2^230 - 27",
+    "operations": [
+        "femul",
+        "fesquare",
+        "freeze"
+    ],
+    "sz": "10"
+}

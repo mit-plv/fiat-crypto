@@ -197,12 +197,15 @@ def update_remake_curves(filename):
     with open(REMAKE_CURVES, 'w') as f:
         f.write(''.join(lines))
 
+def format_json(params):
+    return json.dumps(params, indent=4, separators=(',', ': '), sort_keys=True) + '\n'
+
 
 def write_output(name, params):
     prime = params["modulus"]
     filename = (name + "_" + prime + ".json").replace("^","e").replace(" ","").replace("-","m").replace("+","p").replace("*","x")
     g = open(os.path.join(JSON_DIRECTORY, filename), "w")
-    g.write(json.dumps(params))
+    g.write(format_json(params))
     g.close()
     update_remake_curves(filename)
 
