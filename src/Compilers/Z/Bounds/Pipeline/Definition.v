@@ -149,6 +149,7 @@ Require Import Crypto.Compilers.Equality.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Z.Syntax.Util.
 Require Import Crypto.Compilers.Z.InterpSideConditions.
+Require Import Crypto.Compilers.InterpRewriting.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.
@@ -163,6 +164,51 @@ Section with_round_up_list.
   Local Notation pick_typeb := (@Bounds.bounds_to_base_type (Bounds.round_up_to_in_list allowable_lgsz)) (only parsing).
   Local Notation pick_type v := (SmartFlatTypeMap pick_typeb v).
   Local Opaque to_prop InterpSideConditions.
+
+  Definition PostWfPreBoundsPipelineCorrect
+             opts
+             {t}
+             (e : Expr t)
+             (Hwf : Wf e)
+             (e' := PostWfPreBoundsPipeline opts e)
+    : (forall v, Interp e' v = Interp e v) /\ Wf e'.
+  Proof using Type.
+    (** These first two lines probably shouldn't change much *)
+    unfold PostWfPreBoundsPipeline in *; subst e'.
+    break_match_hyps.
+    (** Now handle all the transformations that come before the word-size selection *)
+    rewrite_reflective_interp_cached.
+    split; intros; finish_rewrite_reflective_interp_cached; auto.
+  Qed.
+
+  Definition PostWfBoundsPipelineCorrect
+             opts
+             {t}
+             (e0 : Expr t)
+             (input_bounds : interp_flat_type Bounds.interp_base_type (domain t))
+             (e : Expr t)
+             (Hwf : Wf e)
+             {b e'} (He' : PostWfBoundsPipeline _ opts e0 e input_bounds
+                           = Some {| input_expr := e0 ; input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |})
+             (v : interp_flat_type Syntax.interp_base_type (domain t))
+             (v' : interp_flat_type Syntax.interp_base_type (pick_type input_bounds))
+             (Hv : Bounds.is_bounded_by input_bounds v /\ cast_back_flat_const v' = v)
+             (Hside : to_prop (InterpSideConditions e v))
+    : Bounds.is_bounded_by b (Interp e v)
+      /\ cast_back_flat_const (Interp e' v') = Interp e v.
+  Proof using Type.
+    (** These first two lines probably shouldn't change much *)
+    unfold PostWfBoundsPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *.
+    repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage
+            || inversion_sigma || eliminate_hprop_eq || inversion_prod
+            || simpl in * || subst).
+    (** Now handle all the transformations that come after the word-size selection *)
+    all:rewrite_reflective_interp_cached.
+    (** Now handle word-size selection *)
+    all:(eapply MapCastCorrect_eq; [ | eassumption | eassumption | assumption | .. ];
+         [ solve_wf_side_condition | reflexivity | ]).
+    all:reflexivity.
+  Qed.
 
   Definition PostWfPipelineCorrect
              opts
@@ -179,19 +225,10 @@ Section with_round_up_list.
              (Hside : to_prop (InterpSideConditions e' v))
     : Bounds.is_bounded_by b (Interp e v)
       /\ cast_back_flat_const (Interp e'' v') = Interp e v.
-  Proof using Type.
-    (** These first two lines probably shouldn't change much *)
-    unfold PostWfBoundsPipeline, PostWfPreBoundsPipeline, Build_ProcessedReflectivePackage_from_option_sigma, option_map, projT2_map in *; subst e'.
-    repeat (break_match_hyps || inversion_option || inversion_ProcessedReflectivePackage
-            || inversion_sigma || eliminate_hprop_eq || inversion_prod
-            || simpl in * || subst).
-    (** Now handle all the transformations that come after the word-size selection *)
-    all:autorewrite with reflective_interp.
-    (** Now handle word-size selection *)
-    all:(eapply MapCastCorrect_eq; [ | eassumption | eassumption | assumption | .. ];
-         [ solve_wf_side_condition | reflexivity | ]).
-    (** Now handle all the transformations that come before the word-size selection *)
-    all:repeat autorewrite with reflective_interp; reflexivity.
+  Proof.
+    rewrite <- (proj1 (PostWfPreBoundsPipelineCorrect opts e Hwf)) by assumption.
+    eapply PostWfBoundsPipelineCorrect; eauto.
+    apply PostWfPreBoundsPipelineCorrect; assumption.
   Qed.
 End with_round_up_list.
 
