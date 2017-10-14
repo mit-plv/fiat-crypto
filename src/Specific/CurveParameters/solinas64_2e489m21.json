@@ -1,0 +1,1 @@
+{"operations": ["femul", "fesquare", "freeze"], "sz": "18", "base": "27", "bitwidth": 64, "coef_div_modulus": "2", "modulus": "2^489 - 21", "carry_chains": "default", "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"}

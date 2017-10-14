@@ -66,12 +66,15 @@ EXAMPLES (handwritten):
 
 '''
 
-import math,json,sys
+import math,json,sys,os
 
 # for montgomery
 COMPILER_MONT = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
 # for solinas
 COMPILER_SOLI = "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"
+CUR_PATH = os.path.dirname(os.path.realpath(__file__))
+JSON_DIRECTORY = os.path.join(CUR_PATH, "src/Specific/CurveParameters")
+REMAKE_CURVES = os.path.join(JSON_DIRECTORY, 'remake_curves.sh')
 
 # given a string representing one term or "tap" in a prime, returns a pair of
 # integers representing the weight and coefficient of that tap
@@ -181,12 +184,27 @@ def get_params_solinas(prime, bitwidth):
         output["goldilocks"] = True
     return output
 
+def update_remake_curves(filename):
+    with open(REMAKE_CURVES, 'r') as f:
+        lines = f.readlines()
+    new_line = '${MAKE} "$@" %s ../%s/\n' % (filename, filename[:-len('.json')])
+    if new_line in lines: return
+    if any(filename in line for line in lines):
+        lines = [(line if filename not in line else new_line)
+                 for line in lines]
+    else:
+        lines.append(new_line)
+    with open(REMAKE_CURVES, 'w') as f:
+        f.write(''.join(lines))
+
+
 def write_output(name, params):
     prime = params["modulus"]
     filename = (name + "_" + prime + ".json").replace("^","e").replace(" ","").replace("-","m").replace("+","p").replace("*","x")
-    g = open(filename,"w")
+    g = open(os.path.join(JSON_DIRECTORY, filename), "w")
     g.write(json.dumps(params))
     g.close()
+    update_remake_curves(filename)
 
 USAGE = "python generate_parameters.py input_file"
 if __name__ == "__main__":
