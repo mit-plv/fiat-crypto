@@ -13,22 +13,20 @@ Ltac add_freeze_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.freeze_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let sz := Tag.get pkg TAG.sz in
                    let c := Tag.get pkg TAG.c in
-                   let m_enc := Tag.get pkg TAG.m_enc in
                    let bitwidth := Tag.get pkg TAG.bitwidth in
-                   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
-                   let wt_pos := Tag.get pkg TAG.wt_pos in
-                   let wt_divides := Tag.get pkg TAG.wt_divides in
-                   let wt_multiples := Tag.get pkg TAG.wt_multiples in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
+                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
                    let freeze_sig := fresh "freeze_sig" in
-                   let freeze_sig := pose_freeze_sig sz m wt c m_enc bitwidth wt_nonzero wt_pos wt_divides wt_multiples freeze_sig in
+                   let freeze_sig := pose_freeze_sig wt m sz c bitwidth m_enc sz_nonzero sz_le_log2_m freeze_sig in
                    constr:(freeze_sig)).
 Ltac add_Freeze_package pkg :=
   let pkg := add_freeze_sig pkg in
-  Tag.strip_local pkg.
+  Tag.strip_subst_local pkg.
 
 
 Module MakeFreezePackage (PKG : PrePackage).

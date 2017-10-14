@@ -126,7 +126,7 @@ Ltac add_ReificationTypes_package pkg :=
   let pkg := add_feBW_bounded pkg in
   let pkg := add_phiW pkg in
   let pkg := add_phiBW pkg in
-  Tag.strip_local pkg.
+  Tag.strip_subst_local pkg.
 
 
 Module MakeReificationTypesPackage (PKG : PrePackage).

@@ -407,7 +407,7 @@ Ltac add_Montgomery_package pkg :=
   let pkg := add_carry_sig pkg in
   let pkg := add_freeze_sig pkg in
   let pkg := add_Mxzladderstep_sig pkg in
-  Tag.strip_local pkg.
+  Tag.strip_subst_local pkg.
 
 
 Module MakeMontgomeryPackage (PKG : PrePackage).

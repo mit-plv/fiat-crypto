@@ -30,13 +30,11 @@ End Tag.
 Module Export MakeSynthesisTactics.
   Ltac add_Synthesis_package pkg curve extra_prove_mul_eq extra_prove_square_eq :=
     let CP := get_fill_CurveParameters curve in
-    let P_default_mul _ := default_mul CP in
     let P_extra_prove_mul_eq := extra_prove_mul_eq in
-    let P_default_square _ := default_square CP in
     let P_extra_prove_square_eq := extra_prove_square_eq in
     let pkg := Tag.local_update pkg TAG.CP CP in
     let pkg := add_CurveParameters_package pkg in
-    let pkg := Tag.strip_local pkg in
+    let pkg := Tag.strip_subst_local pkg in
     let pkg := add_Base_package pkg in
     let pkg := add_ReificationTypes_package pkg in
     let pkg := add_Karatsuba_package pkg in
@@ -45,7 +43,7 @@ Module Export MakeSynthesisTactics.
     (* N.B. freeze is a "default" and must come after montgomery, which disables it *)
     let pkg := add_Freeze_package pkg in
     (* N.B. the Defaults must come after other possible ways of adding the _sig lemmas *)
-    let pkg := add_Defaults_package pkg P_default_mul P_extra_prove_mul_eq P_default_square P_extra_prove_square_eq in
+    let pkg := add_Defaults_package pkg P_extra_prove_mul_eq P_extra_prove_square_eq in
     (* N.B. Ladderstep must come after Defaults *)
     let pkg := add_Ladderstep_package pkg in
     pkg.
