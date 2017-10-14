@@ -194,6 +194,12 @@ Section homogenous_type.
   Definition SmartFlatTypeMap {var'} (f : forall t, var' t -> base_type_code) {t}
     : interp_flat_type var' t -> flat_type
     := @smart_interp_flat_map var' (fun _ => flat_type) (fun t v => Tbase (f t v)) Unit (fun _ _ => Prod) t.
+  Definition SmartFlatTypeMap_Pair {var'} (f : forall t, var' t -> base_type_code) {A B}
+        (x : interp_flat_type var' (A * B))
+    : SmartFlatTypeMap f x
+      = (SmartFlatTypeMap f (@fst (interp_flat_type _ _) (interp_flat_type _ _) x)
+         * SmartFlatTypeMap f (@snd (interp_flat_type _ _) (interp_flat_type _ _) x))%ctype
+    := eq_refl.
   Definition SmartFlatTypeUnMap (t : flat_type)
     : interp_flat_type (fun _ => base_type_code) t
     := SmartValf (fun t => t) t.
