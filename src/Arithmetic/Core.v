@@ -1087,13 +1087,17 @@ Ltac F_mod_eq :=
   cbv [Positional.Fdecode]; autorewrite with pull_FofZ;
   apply mod_eq_Z2F_iff.
 
-Ltac solve_op_mod_eq wt x :=
+Ltac presolve_op_mod_eq wt x :=
   transitivity (Positional.eval wt x); repeat autounfold;
-  [|autorewrite with uncps push_id push_basesystem_eval;
-    reflexivity];
-  cbv [mod_eq]; apply f_equal2; [|reflexivity];
-  apply f_equal;
-  basesystem_partial_evaluation_RHS;
-  do_replace_match_with_destructuring_match_in_goal.
+  [ cbv [mod_eq]; apply f_equal2; [|reflexivity];
+    apply f_equal
+  | autorewrite with uncps push_id push_basesystem_eval ].
+
+Ltac solve_op_mod_eq wt x :=
+  presolve_op_mod_eq;
+  [ basesystem_partial_evaluation_RHS;
+    do_replace_match_with_destructuring_match_in_goal
+  | reflexivity ].
 
 Ltac solve_op_F wt x := F_mod_eq; solve_op_mod_eq wt x.
+Ltac presolve_op_F wt x := F_mod_eq; presolve_op_mod_eq wt x.
