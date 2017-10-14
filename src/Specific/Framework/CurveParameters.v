@@ -126,6 +126,8 @@ Module Export CurveParameters.
                        (if montgomery
                         then (fun exp => (2^exp - 1)%Z)
                         else (fun exp => (2^exp + 2^(exp-3))%Z));
+          (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
+
           allowable_bit_widths := allowable_bit_widths;
           freeze_allowable_bit_widths
           := defaulted
