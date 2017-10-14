@@ -219,9 +219,10 @@ Section with_round_up_list.
       e_pkg : option (@ProcessedReflectivePackage allowable_lgsz)
     }.
 
+  Context (evars : PipelineEvars).
+
   Record PipelineSideConditions :=
     {
-      evars :> PipelineEvars;
       (** ** reification *)
       rexpr_sig : { rexpr : Expr t | forall x, Interp rexpr x = fZ x };
       (** ** pre-wf pipeline *)
@@ -257,9 +258,10 @@ Section with_round_up_list.
       /\ cast_back_flat_const final_e_evar = fZ (cast_back_flat_const v').
   Proof using All.
     destruct side_conditions
-      as [evars rexpr_sig He He_unnatize_for_wf Hwf Hpost_wf_pre_bounds Hpost Hpost_correct Hrenaming Hbounds_relax Hbounds_sane Hbounds_sane_refl Hevar Hv1 Hv2].
+      as [rexpr_sig He He_unnatize_for_wf Hwf Hpost_wf_pre_bounds Hpost Hpost_correct Hrenaming Hbounds_relax Hbounds_sane Hbounds_sane_refl Hevar Hv1 Hv2].
     cbv [b e' e_final e_final_newtype e e_pre_pkg e_pkg] in *.
-    destruct evars as [b e' e_final e_final_newtype e e_pre_pkg e_pkg].
+    destruct evars as [b e' e_final e_final_newtype e e_pre_pkg e_pkg];
+      clear evars.
     destruct rexpr_sig as [? Hrexpr].
     assert (Hwf' : Wf e)
       by (apply (proj1 (@Wf_ExprEta'_iff _ _ _ e));
@@ -291,9 +293,8 @@ End with_round_up_list.
 Ltac refine_with_pipeline_correct opts :=
   lazymatch goal with
   | [ |- _ /\ ?castback ?fW = ?fZ ?arg ]
-    => let lem := open_constr:(@PipelineCorrect _ opts _ _ _ _ _ _) in
-       let evars' := open_constr:({| e_pkg := _ |}) in
-       simple refine (lem {| evars := evars' ; rexpr_sig := _ |});
+    => let lem := open_constr:(@PipelineCorrect _ opts _ _ _ _ _ _ {| e_pkg := _ |}) in
+       simple refine (lem {| rexpr_sig := _ |});
        cbv beta iota delta [b e' e_final e_final_newtype e e_pre_pkg e_pkg];
        subst fW fZ
   end;
