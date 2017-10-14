@@ -18,7 +18,7 @@ def compute_c(modulus_str):
     rest = negate_numexpr(rest.strip()[1:])
     ret = []
     for part in re.findall(r'(-?[0-9\^\*]+)', rest.replace(' ', '')):
-        if part.isdigit():
+        if part.isdigit() or (part[:1] == '-' and part[1:].isdigit()):
             ret.append(('1', part))
         elif part[:2] == '2^' and part[2:].isdigit():
             ret.append((part, '1'))
@@ -174,6 +174,11 @@ def nested_list_to_string(v):
     else:
         print('ERROR: Invalid type in nested_list_to_string: %s' % str(type(v)))
         assert(False)
+
+def as_bool(v):
+    if isinstance(v, str) or isinstance(v, unicode): return {'true':True, 'false':False}[v]
+    if isinstance(v, bool): return v
+    raise Exception('Not a bool: %s' % repr(v))
 
 def make_curve_parameters(parameters):
     def fix_option(term, scope_string=''):
@@ -470,7 +475,7 @@ def main(*args):
     outputs['CurveParameters.v'] = make_curve_parameters(parameters)
     outputs['Synthesis.v'] = make_synthesis(output_prefix)
     for arg in parameters['operations']:
-        outputs[arg + '.v'] = make_synthesized_arg(arg, output_prefix, montgomery=(parameters.get('montgomery', 'false') == 'true'))
+        outputs[arg + '.v'] = make_synthesized_arg(arg, output_prefix, montgomery=as_bool(parameters.get('montgomery', 'false')))
         outputs[arg + 'Display.v'] = make_display_arg(arg, output_prefix)
     for fname in parameters.get('extra_files', []):
         outputs[os.path.basename(fname)] = open(os.path.join(parameters_folder, fname), 'r').read()
