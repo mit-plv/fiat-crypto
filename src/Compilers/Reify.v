@@ -23,12 +23,12 @@ Module Import ReifyDebugNotations.
   Open Scope string_scope.
 End ReifyDebugNotations.
 
-Tactic Notation "debug_enter_reify_idtac" string(funname) uconstr(e)
-  := idtac funname "Attempting to reify:" e.
-Tactic Notation "debug_leave_reify_success_idtac" string(funname) uconstr(e) uconstr(ret)
-  := idtac funname "Success in reifying:" e "as" ret.
-Tactic Notation "debug_leave_reify_failure_idtac" string(funname) uconstr(e)
-  := idtac funname "Failure in reifying:" e.
+Tactic Notation "debug_enter_reify_idtac" ident(funname) uconstr(e)
+  := idtac funname ": Attempting to reify:" e.
+Tactic Notation "debug_leave_reify_success_idtac" ident(funname) uconstr(e) uconstr(ret)
+  := idtac funname ": Success in reifying:" e "as" ret.
+Tactic Notation "debug_leave_reify_failure_idtac" ident(funname) uconstr(e)
+  := idtac funname ": Failure in reifying:" e.
 Ltac check_debug_level_then_Set _ :=
   let lvl := reify_debug_level in
   lazymatch type of lvl with
@@ -55,15 +55,32 @@ Ltac debug3 tac :=
   | S (S (S _)) => constr_run_tac tac
   | _ => check_debug_level_then_Set ()
   end.
-Ltac debug_enter_reify_flat_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_flat_type:" e).
-Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_type:" e).
-Ltac debug_enter_reifyf e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reifyf:" e).
-Ltac debug_leave_reifyf_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac "reifyf:" e ret).
-Ltac debug_leave_reifyf_failure e := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac "reifyf:" e).
-Tactic Notation "debug_reifyf_case" string(case)
-  := debug3 ltac:(fun _ => idtac "reifyf:" case).
-Ltac debug_enter_reify_abs e := debug2 ltac:(fun _ => debug_enter_reify_idtac "reify_abs:" e).
+Ltac debug_enter_reify_flat_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_flat_type e).
+Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_type e).
+Ltac debug_enter_reifyf e := debug2 ltac:(fun _ => debug_enter_reify_idtac reifyf e).
+Ltac debug_leave_reifyf_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac reifyf e ret).
+Ltac debug_leave_reifyf_failure e
+  := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reifyf e) in
+     constr:(I : I).
+Ltac debug_leave_reify_flat_type_failure e
+  := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_flat_type e) in
+     constr:(I : I).
+Tactic Notation "idtac_reifyf_case" ident(case) :=
+  idtac "reifyf:" case.
+Ltac debug_reifyf_case tac :=
+  debug3 tac.
+Ltac debug_enter_reify_abs e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_abs e).
 
+Ltac refresh x :=
+  (* Work around Coq 8.5 and 8.6 bug *)
+  (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
+  (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
+  (* even if its Gallina name matches a Ltac in this tactic. *)
+  let maybe_x := fresh x in
+  let maybe_x := fresh x in
+  let maybe_x := fresh x in
+  let not_x := fresh x in
+  not_x.
 Class reify_internal {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify_internal : T.
 Class reify {varT} (var : varT) {eT} (e : eT) {T : Type} := Build_reify : T.
 Typeclasses Opaque reify_internal reify.
@@ -87,18 +104,22 @@ Ltac base_reify_type T :=
 Ltac reify_base_type T := base_reify_type T.
 Ltac reify_flat_type T :=
   let dummy := debug_enter_reify_flat_type T in
-  lazymatch T with
-  | prod ?A ?B
-    => let a := reify_flat_type A in
-       let b := reify_flat_type B in
-       constr:(@Prod _ a b)
-  | Syntax.interp_type _ (Tflat ?T)
-    => T
-  | Syntax.interp_flat_type _ ?T
-    => T
+  match goal with
   | _
-    => let v := reify_base_type T in
-       constr:(@Tbase _ v)
+    => lazymatch T with
+       | prod ?A ?B
+         => let a := reify_flat_type A in
+            let b := reify_flat_type B in
+            constr:(@Prod _ a b)
+       | Syntax.interp_type _ (Tflat ?T)
+         => T
+       | Syntax.interp_flat_type _ ?T
+         => T
+       | _
+         => let v := reify_base_type T in
+            constr:(@Tbase _ v)
+       end
+  | _ => debug_leave_reify_flat_type_failure T
   end.
 Ltac reify_input_type T :=
   let dummy := debug_enter_reify_type T in
@@ -177,7 +198,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
   match goal with
   | [ re := ?rev : reify reify_tag e |- _ ] =>
     (* fast path *)
-    let dummy := debug_reifyf_case "hyp" in
+    let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case hyp) in
     let ret := rev in
     let dummy := debug_leave_reifyf_success e ret in
     ret
@@ -185,29 +206,28 @@ Ltac reifyf base_type_code interp_base_type op var e :=
     let ret :=
         lazymatch e with
         | let x := ?ex in @?eC x =>
-          let dummy := debug_reifyf_case "let in" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case let_in) in
           let ex := reify_rec ex in
           let eC := reify_rec eC in
           mkLetIn ex eC
         | (dlet x := ?ex in @?eC x) =>
-          let dummy := debug_reifyf_case "dlet in" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case dlet_in) in
           let ex := reify_rec ex in
           let eC := reify_rec eC in
           mkLetIn ex eC
         | pair ?a ?b =>
-          let dummy := debug_reifyf_case "pair" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case pair) in
           let a := reify_rec a in
           let b := reify_rec b in
           mkPair a b
         | (fun x : ?T => ?C) =>
-          let dummy := debug_reifyf_case "fun" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case function) in
           let t := reify_flat_type T in
           (* Work around Coq 8.5 and 8.6 bug *)
           (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
           (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
           (* even if its Gallina name matches a Ltac in this tactic. *)
-          let maybe_x := fresh x in
-          let not_x := fresh x in
+          let not_x := refresh x in
           let C' := match constr:(Set) with
                     | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                                      (_ : reify_internal reify_tag C)) (* [C] here is an open term that references "x" by name *)
@@ -219,7 +239,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           | _ => constr_run_tac_fail ltac:(fun _ => idtac "Error: reifyf: Failed to eliminate function dependencies of:" C')
           end
         | match ?ev with pair a b => @?eC a b end =>
-          let dummy := debug_reifyf_case "matchpair" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case matchpair) in
           let T := type of eC in
           let t := (let T := match (eval cbv beta in T) with _ -> _ -> ?T => T end in reify_flat_type T) in
           let v := reify_rec ev in
@@ -227,16 +247,17 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           let ret := mkMatchPair t v C in
           ret
         | @fst ?A ?B ?ev =>
-          let dummy := debug_reifyf_case "fst" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case fst) in
           let v := reify_rec ev in
           mkFst v
         | @snd ?A ?B ?ev =>
-          let dummy := debug_reifyf_case "snd" in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case snd) in
           let v := reify_rec ev in
           mkSnd v
         | ?x =>
-          let dummy := debug_reifyf_case "generic" in
-          let t := lazymatch type of x with ?t => reify_flat_type t end in
+          let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case generic) in
+          let t := type of x in
+          let t := reify_flat_type t in
           let retv := match constr:(Set) with
                       | _ => let retv := reifyf_var x mkVar in constr:(finished_value retv)
                       | _ => let op_head := head x in
@@ -257,7 +278,7 @@ Ltac reifyf base_type_code interp_base_type op var e :=
           lazymatch retv with
           | finished_value ?v => v
           | context_value ?rFH ?eargs
-            => let dummy := debug_reifyf_case "context_value" in
+            => let dummy := debug_reifyf_case ltac:(fun _ => idtac_reifyf_case context_value) in
                let args := reify_rec eargs in
                let F_head := head rFH in
                let F := lazymatch (eval cbv beta delta [F_head] in rFH) with
@@ -265,7 +286,8 @@ Ltac reifyf base_type_code interp_base_type op var e :=
                         end in
                mkLetIn args F
           | op_info (reify_op _ _ ?nargs ?op_code)
-            => let tR := (let tR := type of x in reify_flat_type tR) in
+            =>
+            let tR := (let tR := type of x in reify_flat_type tR) in
                lazymatch nargs with
                | 1%nat
                  => lazymatch x with
@@ -361,12 +383,7 @@ Ltac reify_abs base_type_code interp_base_type op var e :=
     lazymatch e with
     | (fun x : ?T => ?C) =>
       let t := reify_flat_type T in
-      (* Work around Coq 8.5 and 8.6 bug *)
-      (* <https://coq.inria.fr/bugs/show_bug.cgi?id=4998> *)
-      (* Avoid re-binding the Gallina variable referenced by Ltac [x] *)
-      (* even if its Gallina name matches a Ltac in this tactic. *)
-      let maybe_x := fresh x in
-      let not_x := fresh x in
+      let not_x := refresh x in
       let C' := match constr:(Set) with
                 | _ => constr:(fun (x : T) (not_x : var t) (_ : reify_var_for_in_is base_type_code x t not_x) =>
                                  (_ : reify_abs_internal reify_tag C)) (* [C] here is an open term that references "x" by name *)
@@ -495,8 +512,7 @@ Ltac unique_reify_context_variable base_type_code interp_base_type op F Fbody rT
        let src := lazymatch rT with Syntax.Arrow ?src ?dst => src end in
        lazymatch Fbody with
        | fun x : ?X => ?Fbody'
-         => let maybe_x := fresh x in
-            let not_x := fresh maybe_x in
+         => let not_x := refresh x in
             let rF := lazymatch constr:(fun var' (x : X) (not_x : var' src) (_ : reify_var_for_in_is base_type_code x src not_x)
                                         => (_ : reify_internal (reify_pretag var') Fbody'))
                       with
