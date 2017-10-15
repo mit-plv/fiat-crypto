@@ -38,9 +38,9 @@ Ltac add_bound1 pkg :=
   Tag.update pkg TAG.bound1 bound1.
 
 Ltac add_lgbitwidth pkg :=
-  let limb_widths := Tag.get pkg TAG.limb_widths in
+  let bitwidth := Tag.get pkg TAG.bitwidth in
   let lgbitwidth := fresh "lgbitwidth" in
-  let lgbitwidth := pose_local_lgbitwidth limb_widths lgbitwidth in
+  let lgbitwidth := pose_local_lgbitwidth bitwidth lgbitwidth in
   Tag.local_update pkg TAG.lgbitwidth lgbitwidth.
 
 Ltac add_adjusted_bitwidth' pkg :=
