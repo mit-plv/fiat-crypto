@@ -47,9 +47,9 @@ Ltac pose_bound1 r bound1 :=
     ltac:(exact {| lower := 0 ; upper := Z.pos r-1 |})
            bound1.
 
-Ltac pose_local_lgbitwidth limb_widths lgbitwidth :=
+Ltac pose_local_lgbitwidth bitwidth lgbitwidth :=
   pose_term_with
-    ltac:(fun _ => eval compute in (Z.to_nat (Z.log2_up (List.fold_right Z.max 0 limb_widths))))
+    ltac:(fun _ => eval compute in (Z.to_nat (Z.log2_up bitwidth)))
            lgbitwidth.
 
 Ltac pose_local_adjusted_bitwidth' lgbitwidth adjusted_bitwidth' :=
