@@ -5,6 +5,7 @@ Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
 Require Import Crypto.Util.QUtil.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.CacheTerm.
 
@@ -31,68 +32,21 @@ Section wt.
   Local Coercion Z.pos : positive >-> Z.
   Definition wt_gen (m : positive) (sz : nat) (i:nat) : Z := 2^Qceiling((Z.log2_up m/sz)*i).
 End wt.
-Ltac pose_wt m sz wt :=
-  let v := (eval cbv [wt_gen] in (wt_gen m sz)) in
-  cache_term v wt.
 
-Ltac pose_sz2 sz sz2 :=
-  let v := (eval vm_compute in ((sz * 2) - 1)%nat) in
-  cache_term v sz2.
+Section gen.
+  Context (m : positive)
+          (sz : nat)
+          (coef_div_modulus : nat).
 
-Ltac pose_half_sz sz half_sz :=
-  let v := (eval compute in (sz / 2)%nat) in
-  cache_term v half_sz.
-
-Ltac pose_half_sz_nonzero half_sz half_sz_nonzero :=
-  cache_proof_with_type_by
-    (half_sz <> 0%nat)
-    ltac:(cbv; congruence)
-           half_sz_nonzero.
-
-Ltac pose_s_nonzero s s_nonzero :=
-  cache_proof_with_type_by
-    (s <> 0)
-    ltac:(vm_decide_no_check)
-           s_nonzero.
-
-Ltac pose_sz_le_log2_m sz m sz_le_log2_m :=
-  cache_proof_with_type_by
-    (Z.of_nat sz <= Z.log2_up (Z.pos m))
-    ltac:(vm_decide_no_check)
-           sz_le_log2_m.
-
-Ltac pose_m_correct m s c m_correct :=
-  cache_proof_with_type_by
-    (Z.pos m = s - Associational.eval c)
-    ltac:(vm_decide_no_check)
-           m_correct.
-
-Ltac pose_m_enc sz s c wt m_enc :=
-  let v := (eval vm_compute in (Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (s-Associational.eval c))) in
-  let v := (eval compute in v) in (* compute away the type arguments *)
-  cache_term v m_enc.
-Ltac pose_coef sz wt m_enc coef_div_modulus coef := (* subtraction coefficient *)
-  let v := (eval vm_compute in
-               ((fix addm (acc: Z^sz) (ctr : nat) : Z^sz :=
-                   match ctr with
-                   | O => acc
-                   | S n => addm (Positional.add_cps wt acc m_enc id) n
-                   end) (Positional.zeros sz) coef_div_modulus)) in
-  cache_term v coef.
-
-Ltac pose_coef_mod sz wt m coef coef_mod :=
-  cache_term_with_type_by
-    (mod_eq m (Positional.eval (n:=sz) wt coef) 0)
-    ltac:(exact eq_refl)
-           coef_mod.
-Ltac pose_sz_nonzero sz sz_nonzero :=
-  cache_proof_with_type_by
-    (sz <> 0%nat)
-    ltac:(vm_decide_no_check)
-           sz_nonzero.
-Section wt_gen.
-  Context (m : positive) (sz : nat).
   Local Notation wt := (wt_gen m sz).
+
+  Definition sz2' := ((sz * 2) - 1)%nat.
+
+  Definition half_sz' := (sz / 2)%nat.
+
+  Definition m_enc'
+    := Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m).
+
   Local Ltac Q_cbv :=
     cbv [wt_gen Qround.Qceiling QArith_base.Qmult QArith_base.Qdiv QArith_base.inject_Z QArith_base.Qden QArith_base.Qnum QArith_base.Qopp Qround.Qfloor QArith_base.Qinv QArith_base.Qle Z.of_nat].
   Lemma wt_gen0_1 : wt 0 = 1.
@@ -169,8 +123,95 @@ Section wt_gen.
         constructor; eauto using wt_gen_divides_chain.
     Qed.
   End divides.
-End wt_gen.
 
+  Definition coef'
+    := (fix addm (acc: Z^sz) (ctr : nat) : Z^sz :=
+          match ctr with
+          | O => acc
+          | S n => addm (Positional.add_cps wt acc m_enc' id) n
+          end) (Positional.zeros sz) coef_div_modulus.
+
+  Lemma coef_mod'
+        (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m))
+    : mod_eq m (Positional.eval (n:=sz) wt coef') 0.
+  Proof.
+    cbv [coef' m_enc'].
+    remember (Positional.zeros sz) as v eqn:Hv.
+    assert (Hv' : mod_eq m (Positional.eval wt v) 0)
+      by (subst v; autorewrite with push_basesystem_eval; reflexivity);
+      clear Hv.
+    revert dependent v.
+    induction coef_div_modulus as [|n IHn]; clear coef_div_modulus;
+      intros; [ assumption | ].
+    rewrite IHn; [ reflexivity | ].
+    pose proof wt_gen0_1.
+    pose proof wt_gen_nonzero.
+    pose proof div_mod.
+    pose proof wt_gen_divides'.
+    destruct (Nat.eq_dec sz 0).
+    { subst; reflexivity. }
+    { repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
+      rewrite Positional.eval_encode by auto.
+      cbv [mod_eq] in *.
+      push_Zmod; rewrite Hv'; pull_Zmod.
+      reflexivity. }
+  Qed.
+End gen.
+
+Ltac pose_wt m sz wt :=
+  let v := (eval cbv [wt_gen] in (wt_gen m sz)) in
+  cache_term v wt.
+
+Ltac pose_sz2 sz sz2 :=
+  let v := (eval vm_compute in (sz2' sz)) in
+  cache_term v sz2.
+
+Ltac pose_half_sz sz half_sz :=
+  let v := (eval compute in (half_sz' sz)) in
+  cache_term v half_sz.
+
+Ltac pose_half_sz_nonzero half_sz half_sz_nonzero :=
+  cache_proof_with_type_by
+    (half_sz <> 0%nat)
+    ltac:(cbv; congruence)
+           half_sz_nonzero.
+
+Ltac pose_s_nonzero s s_nonzero :=
+  cache_proof_with_type_by
+    (s <> 0)
+    ltac:(vm_decide_no_check)
+           s_nonzero.
+
+Ltac pose_sz_le_log2_m sz m sz_le_log2_m :=
+  cache_proof_with_type_by
+    (Z.of_nat sz <= Z.log2_up (Z.pos m))
+    ltac:(vm_decide_no_check)
+           sz_le_log2_m.
+
+Ltac pose_m_correct m s c m_correct :=
+  cache_proof_with_type_by
+    (Z.pos m = s - Associational.eval c)
+    ltac:(vm_decide_no_check)
+           m_correct.
+
+Ltac pose_m_enc sz m m_enc :=
+  let v := (eval vm_compute in (m_enc' m sz)) in
+  let v := (eval compute in v) in (* compute away the type arguments *)
+  cache_term v m_enc.
+Ltac pose_coef sz m coef_div_modulus coef := (* subtraction coefficient *)
+  let v := (eval vm_compute in (coef' m sz coef_div_modulus)) in
+  cache_term v coef.
+
+Ltac pose_coef_mod sz wt m coef coef_div_modulus sz_le_log2_m coef_mod :=
+  cache_proof_with_type_by
+    (mod_eq m (Positional.eval (n:=sz) wt coef) 0)
+    ltac:(vm_cast_no_check (coef_mod' m sz coef_div_modulus sz_le_log2_m))
+           coef_mod.
+Ltac pose_sz_nonzero sz sz_nonzero :=
+  cache_proof_with_type_by
+    (sz <> 0%nat)
+    ltac:(vm_decide_no_check)
+           sz_nonzero.
 
 Ltac pose_wt_nonzero wt wt_nonzero :=
   cache_proof_with_type_by
