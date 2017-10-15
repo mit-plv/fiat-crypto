@@ -427,3 +427,23 @@ Hint Rewrite
      @Columns.eval_from_associational
      @Columns.eval_nils
   using (assumption || omega): push_basesystem_eval.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t :=
+      (eval
+         cbv
+         delta [
+           (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
+           Columns.eval Columns.eval_from
+                   Columns.compact_digit_cps Columns.compact_digit
+                   Columns.compact_step_cps Columns.compact_step
+                   Columns.compact_cps Columns.compact
+                   Columns.cons_to_nth_cps Columns.cons_to_nth
+                   Columns.nils
+                   Columns.from_associational_cps Columns.from_associational
+         ] in t) in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.

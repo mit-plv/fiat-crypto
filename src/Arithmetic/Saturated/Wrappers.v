@@ -51,3 +51,12 @@ Hint Unfold
      Columns.add_cps
      Columns.unbalanced_sub_cps
      Columns.mul_cps.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t := (eval cbv delta [Columns.add_cps Columns.unbalanced_sub_cps Columns.mul_cps Columns.conditional_add_cps] in t) in
+  let t := Saturated.Core.basesystem_partial_evaluation_unfolder t in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.

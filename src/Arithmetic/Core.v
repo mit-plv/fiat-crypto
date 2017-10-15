@@ -249,10 +249,12 @@ Require Import Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.VM.
+Require Import Crypto.Util.IdfunWithAlt.
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
@@ -985,34 +987,59 @@ End DivMod.
 
 Import B.
 
-Ltac basesystem_partial_evaluation_RHS :=
-  let t0 := match goal with |- _ _ ?t => t end in
-  let t := (eval cbv delta [
-  (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
-Positional.to_associational_cps Positional.to_associational Positional.eval Positional.zeros Positional.add_to_nth_cps Positional.add_to_nth Positional.place_cps Positional.place Positional.from_associational_cps Positional.from_associational Positional.carry_cps Positional.carry Positional.chained_carries_cps Positional.chained_carries Positional.sub_cps Positional.sub Positional.split_cps Positional.scmul_cps Positional.unbalanced_sub_cps Positional.negate_snd_cps Positional.add_cps Positional.opp_cps Associational.eval Associational.multerm Associational.mul_cps Associational.mul Associational.split_cps Associational.split Associational.reduce_cps Associational.reduce Associational.carryterm_cps Associational.carryterm Associational.carry_cps Associational.carry Associational.negate_snd_cps Associational.negate_snd div modulo
-                 ] in t0) in
-  let t := (eval pattern @runtime_mul in t) in
-  let t := match t with ?t _ => t end in
-  let t := (eval pattern @runtime_add in t) in
-  let t := match t with ?t _ => t end in
-  let t := (eval pattern @runtime_opp in t) in
-  let t := match t with ?t _ => t end in
-  let t := (eval pattern @runtime_shr in t) in
-  let t := match t with ?t _ => t end in
-  let t := (eval pattern @runtime_and in t) in
-  let t := match t with ?t _ => t end in
-  let t := (eval pattern @Let_In in t) in
-  let t := match t with ?t _ => t end in
+Ltac basesystem_partial_evaluation_unfolder t :=
+  eval
+    cbv
+    delta [
+      (* this list must contain all definitions referenced by t that reference [Let_In], [runtime_add], [runtime_opp], [runtime_mul], [runtime_shr], or [runtime_and] *)
+      id
+        Positional.to_associational_cps Positional.to_associational
+        Positional.eval Positional.zeros Positional.add_to_nth_cps
+        Positional.add_to_nth Positional.place_cps Positional.place
+        Positional.from_associational_cps Positional.from_associational
+        Positional.carry_cps Positional.carry
+        Positional.chained_carries_cps Positional.chained_carries
+        Positional.sub_cps Positional.sub Positional.split_cps
+        Positional.scmul_cps Positional.unbalanced_sub_cps
+        Positional.negate_snd_cps Positional.add_cps Positional.opp_cps
+        Associational.eval Associational.multerm Associational.mul_cps
+        Associational.mul Associational.split_cps Associational.split
+        Associational.reduce_cps Associational.reduce
+        Associational.carryterm_cps Associational.carryterm
+        Associational.carry_cps Associational.carry
+        Associational.negate_snd_cps Associational.negate_snd div modulo
+        id_tuple_with_alt id_tuple'_with_alt
+    ] in t.
+
+Ltac basesystem_partial_evaluation_RHS_gen unfold_tac :=
+  let t := match goal with |- _ _ ?t => t end in
+  let t := unfold_tac t in
+  let t := (eval pattern @Let_In,
+            @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and,
+            @id_with_alt,
+            @Z.add_get_carry, @Z.zselect
+             in t) in
+  let t := match t with ?t _ _ _ _ _ _ _ _ _ => t end in
   let t1 := fresh "t1" in
   pose t as t1;
   transitivity (t1
                   (@Let_In)
-                  (@runtime_and)
-                  (@runtime_shr)
-                  (@runtime_opp)
+                  (@runtime_mul)
                   (@runtime_add)
-                  (@runtime_mul));
+                  (@runtime_opp)
+                  (@runtime_shr)
+                  (@runtime_and)
+                  (@id_with_alt)
+                  (@Z.add_get_carry)
+                  (@Z.zselect));
   [replace_with_vm_compute t1; clear t1|reflexivity].
+
+Ltac basesystem_partial_evaluation_default_unfolder t :=
+  basesystem_partial_evaluation_unfolder t.
+
+Ltac basesystem_partial_evaluation_RHS :=
+  basesystem_partial_evaluation_RHS_gen basesystem_partial_evaluation_default_unfolder.
+
 
 (** This block of tactic code works around bug #5434
     (https://coq.inria.fr/bugs/show_bug.cgi?id=5434), that
