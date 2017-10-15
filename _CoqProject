@@ -14,6 +14,7 @@ src/Algebra/Nsatz.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Arithmetic/Core.v
+src/Arithmetic/CoreUnfolder.v
 src/Arithmetic/Karatsuba.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
@@ -31,12 +32,15 @@ src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Definition.v
 src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Proofs.v
 src/Arithmetic/Saturated/AddSub.v
 src/Arithmetic/Saturated/Core.v
+src/Arithmetic/Saturated/CoreUnfolder.v
 src/Arithmetic/Saturated/Freeze.v
+src/Arithmetic/Saturated/FreezeUnfolder.v
 src/Arithmetic/Saturated/MontgomeryAPI.v
 src/Arithmetic/Saturated/MulSplit.v
 src/Arithmetic/Saturated/UniformWeight.v
 src/Arithmetic/Saturated/UniformWeightInstances.v
 src/Arithmetic/Saturated/Wrappers.v
+src/Arithmetic/Saturated/WrappersUnfolder.v
 src/Compilers/CommonSubexpressionElimination.v
 src/Compilers/CommonSubexpressionEliminationDenote.v
 src/Compilers/CommonSubexpressionEliminationInterp.v

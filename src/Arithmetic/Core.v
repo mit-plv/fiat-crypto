@@ -1009,29 +1009,39 @@ Ltac basesystem_partial_evaluation_unfolder t :=
         Associational.carry_cps Associational.carry
         Associational.negate_snd_cps Associational.negate_snd div modulo
         id_tuple_with_alt id_tuple'_with_alt
+        Z.add_get_carry_full
     ] in t.
+
+Ltac pattern_strip t :=
+  let t := (eval pattern @Let_In,
+            @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
+            @id_with_alt,
+            @Z.add_get_carry, @Z.zselect
+             in t) in
+  let t := match t with ?t _ _ _ _ _ _ _ _ _ _ => t end in
+  t.
+
+Ltac apply_patterned t1 :=
+  constr:(t1
+            (@Let_In)
+            (@runtime_mul)
+            (@runtime_add)
+            (@runtime_opp)
+            (@runtime_shr)
+            (@runtime_and)
+            (@runtime_lor)
+            (@id_with_alt)
+            (@Z.add_get_carry)
+            (@Z.zselect)).
 
 Ltac basesystem_partial_evaluation_RHS_gen unfold_tac :=
   let t := match goal with |- _ _ ?t => t end in
   let t := unfold_tac t in
-  let t := (eval pattern @Let_In,
-            @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and,
-            @id_with_alt,
-            @Z.add_get_carry, @Z.zselect
-             in t) in
-  let t := match t with ?t _ _ _ _ _ _ _ _ _ => t end in
+  let t := pattern_strip t in
   let t1 := fresh "t1" in
   pose t as t1;
-  transitivity (t1
-                  (@Let_In)
-                  (@runtime_mul)
-                  (@runtime_add)
-                  (@runtime_opp)
-                  (@runtime_shr)
-                  (@runtime_and)
-                  (@id_with_alt)
-                  (@Z.add_get_carry)
-                  (@Z.zselect));
+  let t1' := apply_patterned t1 in
+  transitivity t1';
   [replace_with_vm_compute t1; clear t1|reflexivity].
 
 Ltac basesystem_partial_evaluation_default_unfolder t :=
