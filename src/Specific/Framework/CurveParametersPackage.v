@@ -49,4 +49,8 @@ Module MakeCurveParametersPackage (PKG : PrePackage).
   Notation upper_bound_of_exponent := (ltac:(let v := get_upper_bound_of_exponent () in exact v)) (only parsing).
   Ltac get_modinv_fuel _ := get TAG.modinv_fuel.
   Notation modinv_fuel := (ltac:(let v := get_modinv_fuel () in exact v)) (only parsing).
+  Ltac get_mul_code _ := get TAG.mul_code.
+  Notation mul_code := (ltac:(let v := get_mul_code () in exact v)) (only parsing).
+  Ltac get_square_code _ := get TAG.square_code.
+  Notation square_code := (ltac:(let v := get_square_code () in exact v)) (only parsing).
 End MakeCurveParametersPackage.

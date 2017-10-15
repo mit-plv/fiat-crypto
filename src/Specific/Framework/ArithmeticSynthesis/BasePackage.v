@@ -69,20 +69,17 @@ Ltac add_m_correct pkg :=
 
 Ltac add_m_enc pkg :=
   let sz := Tag.get pkg TAG.sz in
-  let s := Tag.get pkg TAG.s in
-  let c := Tag.get pkg TAG.c in
-  let wt := Tag.get pkg TAG.wt in
+  let m := Tag.get pkg TAG.m in
   let m_enc := fresh "m_enc" in
-  let m_enc := pose_m_enc sz s c wt m_enc in
+  let m_enc := pose_m_enc sz m m_enc in
   Tag.update pkg TAG.m_enc m_enc.
 
 Ltac add_coef pkg :=
   let sz := Tag.get pkg TAG.sz in
-  let wt := Tag.get pkg TAG.wt in
-  let m_enc := Tag.get pkg TAG.m_enc in
+  let m := Tag.get pkg TAG.m in
   let coef_div_modulus := Tag.get pkg TAG.coef_div_modulus in
   let coef := fresh "coef" in
-  let coef := pose_coef sz wt m_enc coef_div_modulus coef in
+  let coef := pose_coef sz m coef_div_modulus coef in
   Tag.update pkg TAG.coef coef.
 
 Ltac add_coef_mod pkg :=
@@ -90,8 +87,10 @@ Ltac add_coef_mod pkg :=
   let wt := Tag.get pkg TAG.wt in
   let m := Tag.get pkg TAG.m in
   let coef := Tag.get pkg TAG.coef in
+  let coef_div_modulus := Tag.get pkg TAG.coef_div_modulus in
+  let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
   let coef_mod := fresh "coef_mod" in
-  let coef_mod := pose_coef_mod sz wt m coef coef_mod in
+  let coef_mod := pose_coef_mod sz wt m coef coef_div_modulus sz_le_log2_m coef_mod in
   Tag.update pkg TAG.coef_mod coef_mod.
 
 Ltac add_sz_nonzero pkg :=
