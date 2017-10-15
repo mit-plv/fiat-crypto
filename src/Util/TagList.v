@@ -26,9 +26,33 @@ Module Tag.
                     => negb loc)
                    ctx.
 
+  Definition get_local (ctx : Context) : Context
+    := List.filter (fun '{| key := k ; value := v ; local := loc |}
+                    => loc)
+                   ctx.
+
+  Ltac subst_from_list ls :=
+    lazymatch eval hnf in ls with
+    | {| value := ?id |} :: ?ls
+      => try subst id; subst_from_list ls
+    | nil => idtac
+    end.
+
+  Ltac subst_local ctx :=
+    let loc := (eval cbv [get_local List.filter add add_local add_gen]
+                 in (get_local ctx)) in
+    subst_from_list loc.
+
   Ltac strip_local ctx :=
     let upd := (eval cbv [strip_local negb List.filter] in strip_local) in
     eval cbv [add add_local add_gen] in (upd ctx).
+
+  Ltac strip_subst_local ctx :=
+    let ret := strip_local ctx in
+    let dummy := match goal with
+                 | _ => subst_local ctx
+                 end in
+    ret.
 
   Ltac update ctx key value :=
     constr:(add key value ctx).
