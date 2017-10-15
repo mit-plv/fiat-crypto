@@ -47,6 +47,11 @@ Section gen.
   Definition m_enc'
     := Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m).
 
+  Lemma sz2'_nonzero
+        (sz_nonzero : sz <> 0%nat)
+    : sz2' <> 0%nat.
+  Proof. clear -sz_nonzero; cbv [sz2']; omega. Qed.
+
   Local Ltac Q_cbv :=
     cbv [wt_gen Qround.Qceiling QArith_base.Qmult QArith_base.Qdiv QArith_base.inject_Z QArith_base.Qden QArith_base.Qnum QArith_base.Qopp Qround.Qfloor QArith_base.Qinv QArith_base.Qle Z.of_nat].
   Lemma wt_gen0_1 : wt 0 = 1.
