@@ -57,20 +57,22 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES := src/Specific/%Display.vo
+SPECIAL_VOFILES := src/Specific/%Display.vo
+UNMADE_VOFILES :=
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/Karatsuba.vo src/Specific/NISTP256/AMD64/IntegrationTestMontgomeryP256.vo src/Specific/X25519/C64/ladderstep.vo src/Specific/X25519/C32/%.vo
-CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(VOFILES))
+REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
+CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
 
 SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% third_party/%
-SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(VOFILES))
+SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(REGULAR_VOFILES))
 
-COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(VOFILES))
-SPECIFIC_VO := $(filter src/Specific/%,$(VOFILES))
-NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(VOFILES))
+COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(REGULAR_VOFILES))
+SPECIFIC_VO := $(filter src/Specific/%,$(REGULAR_VOFILES))
+NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(REGULAR_VOFILES))
 SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
