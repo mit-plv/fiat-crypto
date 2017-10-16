@@ -184,6 +184,13 @@ def get_params_solinas(prime, bitwidth):
         output["goldilocks"] = True
     return output
 
+def write_if_changed(filename, contents):
+    with open(filename, 'r') as f:
+        old = f.read()
+    if old == contents: return
+    with open(filename, 'w') as f:
+        f.write(contents)
+
 def update_remake_curves(filename):
     with open(REMAKE_CURVES, 'r') as f:
         lines = f.readlines()
@@ -194,8 +201,7 @@ def update_remake_curves(filename):
                  for line in lines]
     else:
         lines.append(new_line)
-    with open(REMAKE_CURVES, 'w') as f:
-        f.write(''.join(lines))
+    write_if_changed(REMAKE_CURVES, ''.join(lines))
 
 def format_json(params):
     return json.dumps(params, indent=4, separators=(',', ': '), sort_keys=True) + '\n'
@@ -204,9 +210,9 @@ def format_json(params):
 def write_output(name, params):
     prime = params["modulus"]
     filename = (name + "_" + prime + ".json").replace("^","e").replace(" ","").replace("-","m").replace("+","p").replace("*","x")
-    g = open(os.path.join(JSON_DIRECTORY, filename), "w")
-    g.write(format_json(params))
-    g.close()
+
+    write_if_changed(os.path.join(JSON_DIRECTORY, filename),
+                     format_json(params))
     update_remake_curves(filename)
 
 USAGE = "python generate_parameters.py input_file"
