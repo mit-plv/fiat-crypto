@@ -171,12 +171,6 @@ Ltac pose_half_sz sz half_sz :=
   let v := (eval compute in (half_sz' sz)) in
   cache_term v half_sz.
 
-Ltac pose_half_sz_nonzero half_sz half_sz_nonzero :=
-  cache_proof_with_type_by
-    (half_sz <> 0%nat)
-    ltac:(cbv; congruence)
-           half_sz_nonzero.
-
 Ltac pose_s_nonzero s s_nonzero :=
   cache_proof_with_type_by
     (s <> 0)

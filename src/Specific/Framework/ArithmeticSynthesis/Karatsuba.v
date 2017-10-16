@@ -80,6 +80,12 @@ Section gen.
   Defined.
 End gen.
 
+Ltac pose_half_sz_nonzero half_sz half_sz_nonzero :=
+  cache_proof_with_type_by
+    (half_sz <> 0%nat)
+    ltac:(cbv; congruence)
+           half_sz_nonzero.
+
 Ltac pose_mul_sig wt m base sz s c half_sz mul_sig :=
   let sqrt_s := fresh "sqrt_s" in
   let sqrt_s := internal_pose_sqrt_s s sqrt_s in
