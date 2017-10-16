@@ -5,7 +5,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | s_nonzero | sz_le_log2_m | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples | c_small | m_enc_bounded | m_correct_wt.
+  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | s_nonzero | sz_le_log2_m | base_pos | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples | c_small | m_enc_bounded | m_correct_wt.
 End TAG.
 
 Ltac add_r pkg :=
@@ -22,10 +22,9 @@ Ltac add_m pkg :=
   Tag.update pkg TAG.m m.
 
 Ltac add_wt pkg :=
-  let m := Tag.get pkg TAG.m in
-  let sz := Tag.get pkg TAG.sz in
+  let base := Tag.get pkg TAG.base in
   let wt := fresh "wt" in
-  let wt := pose_wt m sz wt in
+  let wt := pose_wt base wt in
   Tag.update pkg TAG.wt wt.
 
 Ltac add_sz2 pkg :=
@@ -59,6 +58,12 @@ Ltac add_sz_le_log2_m pkg :=
   let sz_le_log2_m := pose_sz_le_log2_m sz m sz_le_log2_m in
   Tag.update pkg TAG.sz_le_log2_m sz_le_log2_m.
 
+Ltac add_base_pos pkg :=
+  let base := Tag.get pkg TAG.base in
+  let base_pos := fresh "base_pos" in
+  let base_pos := pose_base_pos base base_pos in
+  Tag.update pkg TAG.base_pos base_pos.
+
 Ltac add_m_correct pkg :=
   let m := Tag.get pkg TAG.m in
   let s := Tag.get pkg TAG.s in
@@ -68,29 +73,32 @@ Ltac add_m_correct pkg :=
   Tag.update pkg TAG.m_correct m_correct.
 
 Ltac add_m_enc pkg :=
-  let sz := Tag.get pkg TAG.sz in
+  let base := Tag.get pkg TAG.base in
   let m := Tag.get pkg TAG.m in
+  let sz := Tag.get pkg TAG.sz in
   let m_enc := fresh "m_enc" in
-  let m_enc := pose_m_enc sz m m_enc in
+  let m_enc := pose_m_enc base m sz m_enc in
   Tag.update pkg TAG.m_enc m_enc.
 
 Ltac add_coef pkg :=
-  let sz := Tag.get pkg TAG.sz in
+  let base := Tag.get pkg TAG.base in
   let m := Tag.get pkg TAG.m in
+  let sz := Tag.get pkg TAG.sz in
   let coef_div_modulus := Tag.get pkg TAG.coef_div_modulus in
   let coef := fresh "coef" in
-  let coef := pose_coef sz m coef_div_modulus coef in
+  let coef := pose_coef base m sz coef_div_modulus coef in
   Tag.update pkg TAG.coef coef.
 
 Ltac add_coef_mod pkg :=
-  let sz := Tag.get pkg TAG.sz in
   let wt := Tag.get pkg TAG.wt in
-  let m := Tag.get pkg TAG.m in
   let coef := Tag.get pkg TAG.coef in
+  let base := Tag.get pkg TAG.base in
+  let m := Tag.get pkg TAG.m in
+  let sz := Tag.get pkg TAG.sz in
   let coef_div_modulus := Tag.get pkg TAG.coef_div_modulus in
-  let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
+  let base_pos := Tag.get pkg TAG.base_pos in
   let coef_mod := fresh "coef_mod" in
-  let coef_mod := pose_coef_mod sz wt m coef coef_div_modulus sz_le_log2_m coef_mod in
+  let coef_mod := pose_coef_mod wt coef base m sz coef_div_modulus base_pos coef_mod in
   Tag.update pkg TAG.coef_mod coef_mod.
 
 Ltac add_sz_nonzero pkg :=
@@ -177,6 +185,7 @@ Ltac add_Base_package pkg :=
   let pkg := add_half_sz_nonzero pkg in
   let pkg := add_s_nonzero pkg in
   let pkg := add_sz_le_log2_m pkg in
+  let pkg := add_base_pos pkg in
   let pkg := add_m_correct pkg in
   let pkg := add_m_enc pkg in
   let pkg := add_coef pkg in
@@ -214,6 +223,8 @@ Module MakeBasePackage (PKG : PrePackage).
   Notation s_nonzero := (ltac:(let v := get_s_nonzero () in exact v)) (only parsing).
   Ltac get_sz_le_log2_m _ := get TAG.sz_le_log2_m.
   Notation sz_le_log2_m := (ltac:(let v := get_sz_le_log2_m () in exact v)) (only parsing).
+  Ltac get_base_pos _ := get TAG.base_pos.
+  Notation base_pos := (ltac:(let v := get_base_pos () in exact v)) (only parsing).
   Ltac get_m_correct _ := get TAG.m_correct.
   Notation m_correct := (ltac:(let v := get_m_correct () in exact v)) (only parsing).
   Ltac get_m_enc _ := get TAG.m_enc.

@@ -15,14 +15,15 @@ Ltac add_freeze_sig pkg :=
     TAG.freeze_sig
     ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
+                   let base := Tag.get pkg TAG.base in
                    let sz := Tag.get pkg TAG.sz in
                    let c := Tag.get pkg TAG.c in
                    let bitwidth := Tag.get pkg TAG.bitwidth in
                    let m_enc := Tag.get pkg TAG.m_enc in
+                   let base_pos := Tag.get pkg TAG.base_pos in
                    let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
-                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
                    let freeze_sig := fresh "freeze_sig" in
-                   let freeze_sig := pose_freeze_sig wt m sz c bitwidth m_enc sz_nonzero sz_le_log2_m freeze_sig in
+                   let freeze_sig := pose_freeze_sig wt m base sz c bitwidth m_enc base_pos sz_nonzero freeze_sig in
                    constr:(freeze_sig)).
 Ltac add_Freeze_package pkg :=
   let pkg := add_freeze_sig pkg in

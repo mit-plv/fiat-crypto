@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
+Require Import Coq.QArith.QArith_base.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.CoreUnfolder.
 Require Import Crypto.Arithmetic.Saturated.CoreUnfolder.
@@ -26,17 +27,18 @@ Ltac freeze_preunfold :=
 
 Section gen.
   Context (m : positive)
+          (base : Q)
           (sz : nat)
           (c : list limb)
           (bitwidth : Z)
           (m_enc : Z^sz)
-          (sz_nonzero : sz <> 0%nat)
-          (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m)).
+          (base_pos : (1 <= base)%Q)
+          (sz_nonzero : sz <> 0%nat).
 
-  Local Notation wt := (wt_gen m sz).
+  Local Notation wt := (wt_gen base).
   Local Notation sz2 := (sz2' sz).
-  Local Notation wt_divides' := (wt_gen_divides' m sz sz_nonzero sz_le_log2_m).
-  Local Notation wt_nonzero := (wt_gen_nonzero m sz).
+  Local Notation wt_divides' := (wt_gen_divides' base base_pos).
+  Local Notation wt_nonzero := (wt_gen_nonzero base base_pos).
 
   Context (c_small : 0 < Associational.eval c < wt sz)
           (m_enc_bounded : Tuple.map (BinInt.Z.land (Z.ones bitwidth)) m_enc = m_enc)
@@ -51,12 +53,11 @@ Section gen.
           eval (freeze a) = eval a }.
   Proof.
     eexists; cbv beta zeta; (intros a ?).
-    pose proof wt_nonzero; pose proof (wt_gen_pos m sz).
-    pose proof (wt_gen0_1 m sz).
-    pose proof div_mod; pose proof (wt_gen_divides m sz sz_nonzero sz_le_log2_m).
-    pose proof (wt_gen_multiples m sz).
+    pose proof wt_nonzero; pose proof (wt_gen_pos base base_pos).
+    pose proof (wt_gen0_1 base).
+    pose proof div_mod; pose proof (wt_gen_divides base base_pos).
+    pose proof (wt_gen_multiples base base_pos).
     pose proof div_correct; pose proof modulo_correct.
-    pose proof (wt_gen_divides_chain m sz sz_nonzero sz_le_log2_m).
     let x := constr:(freeze (n:=sz) wt (Z.ones bitwidth) m_enc a) in
     presolve_op_F constr:(wt) x;
       [ autorewrite with pattern_runtime; reflexivity | ].
@@ -65,7 +66,7 @@ Section gen.
   Defined.
 End gen.
 
-Ltac pose_freeze_sig wt m sz c bitwidth m_enc sz_nonzero sz_le_log2_m freeze_sig :=
+Ltac pose_freeze_sig wt m base sz c bitwidth m_enc base_pos sz_nonzero freeze_sig :=
   cache_sig_with_type_by_existing_sig_helper
     ltac:(fun _ => cbv [freeze_sig'])
            {freeze : (Z^sz -> Z^sz)%type |
@@ -73,5 +74,5 @@ Ltac pose_freeze_sig wt m sz c bitwidth m_enc sz_nonzero sz_le_log2_m freeze_sig
               (0 <= Positional.eval wt a < 2 * Z.pos m)->
               let eval := Positional.Fdecode (m := m) wt in
               eval (freeze a) = eval a}
-           (freeze_sig' m sz c bitwidth m_enc sz_nonzero sz_le_log2_m)
+           (freeze_sig' m base sz c bitwidth m_enc base_pos sz_nonzero)
            freeze_sig.

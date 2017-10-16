@@ -1,9 +1,12 @@
+Require Export Coq.QArith.QArith_base.
 Require Export Coq.ZArith.BinInt.
 Require Export Coq.Lists.List.
 Require Export Crypto.Util.ZUtil.Notations.
 Require Crypto.Util.Tuple.
 
 Local Set Primitive Projections.
+Coercion QArith_base.inject_Z : Z >-> Q.
+Coercion Z.of_nat : nat >-> Z.
 
 Module Export Notations. (* import/export tracking *)
   Export ListNotations.
@@ -18,6 +21,7 @@ End Notations.
 Record CurveParameters :=
   {
     sz : nat;
+    base : Q;
     bitwidth : Z;
     s : Z;
     c : list limb;
@@ -42,6 +46,7 @@ Record CurveParameters :=
 
 Declare Reduction cbv_RawCurveParameters
   := cbv [sz
+            base
             bitwidth
             s
             c

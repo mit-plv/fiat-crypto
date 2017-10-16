@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import with_statement
 import json, sys, os, math, re, shutil, io
+from fractions import Fraction
 
 def compute_bitwidth(base):
     return 2**int(math.ceil(math.log(base, 2)))
@@ -11,6 +12,10 @@ def default_carry_chains(sz):
 def compute_s(modulus_str):
     base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', r'([0-9\^ +\*-]*)$')), modulus_str).groups()
     return '%s^%s' % (base, exp)
+def reformat_base(base):
+    if '.' not in base: return base
+    int_part, frac_part = base.split('.')
+    return int_part + ' + ' + str(Fraction('.' + frac_part))
 def compute_c(modulus_str):
     base, exp, rest = re.match(r'\s*'.join(('^', '(2)', r'\^', '([0-9]+)', r'([0-9\^ +\*-]*)$')), modulus_str).groups()
     if rest.strip() == '': return []
@@ -193,6 +198,7 @@ def make_curve_parameters(parameters):
     assert(all(ch in '0123456789^+- ' for ch in parameters['modulus']))
     modulus = eval(parameters['modulus'].replace('^', '**'))
     base = float(parameters['base'])
+    replacements['reformatted_base'] = reformat_base(parameters['base'])
     replacements['bitwidth'] = parameters.get('bitwidth', str(compute_bitwidth(base)))
     bitwidth = int(replacements['bitwidth'])
     replacements['sz'] = parameters.get('sz', str(compute_sz(modulus, base)))
@@ -242,6 +248,7 @@ Base: %(base)s
 Definition curve : CurveParameters :=
   {|
     sz := %(sz)s%%nat;
+    base := %(reformatted_base)s;
     bitwidth := %(bitwidth)s;
     s := %(s)s;
     c := %(c)s;

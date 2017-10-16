@@ -9,6 +9,7 @@ Base: 17
 Definition curve : CurveParameters :=
   {|
     sz := 15%nat;
+    base := 17;
     bitwidth := 32;
     s := 2^256;
     c := [(1, 977); (2^32, 1)];

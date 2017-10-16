@@ -23,6 +23,8 @@ Ltac if_montgomery pkg tac_true tac_false arg :=
 Module MakeCurveParametersPackage (PKG : PrePackage).
   Module Import MakeCurveParametersPackageInternal := MakePackageBase PKG.
 
+  Ltac get_base _ := get TAG.base.
+  Notation base := (ltac:(let v := get_base () in exact v)) (only parsing).
   Ltac get_sz _ := get TAG.sz.
   Notation sz := (ltac:(let v := get_sz () in exact v)) (only parsing).
   Ltac get_bitwidth _ := get TAG.bitwidth.
