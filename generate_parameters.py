@@ -184,6 +184,7 @@ def format_base(numerator, denominator):
         else:
             base_int, base_frac = int(base), base - int(base)
             base = '%d + %s' % (base_int, str(base_frac))
+    return base
 
 def get_params_solinas(prime, bitwidth):
     p = parse_prime(prime)
