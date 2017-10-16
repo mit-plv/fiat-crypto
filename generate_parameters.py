@@ -107,7 +107,8 @@ def parse_term(t) :
 # expects prime to be a string and expressed as sum/difference of products of
 # two with small coefficients (e.g. '2^448 - 2^224 - 1', '2^255 - 19')
 def parse_prime(prime):
-    terms = prime.replace("-", "+ -1 *").split("+")
+    prime = prime.replace("-", "+ -").replace(' ', '').replace('+-2^', '+-1*2^')
+    terms = prime.split("+")
     return list(map(parse_term, terms))
 
 # check that the parsed prime makes sense
