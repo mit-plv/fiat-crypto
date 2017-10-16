@@ -10,15 +10,15 @@ Require Import Crypto.Util.TagList.
 Ltac add_mul_sig pkg :=
   if_goldilocks
     pkg
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let s := Tag.get pkg TAG.s in
                    let c := Tag.get pkg TAG.c in
                    let half_sz := Tag.get pkg TAG.half_sz in
-                   let wt_nonzero := Tag.get pkg TAG.wt_nonzero in
                    let mul_sig := fresh "mul_sig" in
-                   let mul_sig := pose_mul_sig sz m wt s c half_sz wt_nonzero mul_sig in
+                   let mul_sig := pose_mul_sig wt m base sz s c half_sz mul_sig in
                    Tag.update pkg TAG.mul_sig mul_sig)
     ltac:(fun _ => pkg)
     ().
