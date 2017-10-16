@@ -300,3 +300,7 @@ ${MAKE} "$@" montgomery32_2e384m2e128m2e96p2e32m1.json ../montgomery32_2e384m2e1
 ${MAKE} "$@" montgomery64_2e384m2e128m2e96p2e32m1.json ../montgomery64_2e384m2e128m2e96p2e32m1/
 ${MAKE} "$@" solinas32_2e384m2e128m2e96p2e32m1.json ../solinas32_2e384m2e128m2e96p2e32m1/
 ${MAKE} "$@" solinas64_2e384m2e128m2e96p2e32m1.json ../solinas64_2e384m2e128m2e96p2e32m1/
+${MAKE} "$@" montgomery32_2e205m45x2e198m1.json ../montgomery32_2e205m45x2e198m1/
+${MAKE} "$@" montgomery64_2e205m45x2e198m1.json ../montgomery64_2e205m45x2e198m1/
+${MAKE} "$@" solinas32_2e205m45x2e198m1.json ../solinas32_2e205m45x2e198m1/
+${MAKE} "$@" solinas64_2e205m45x2e198m1.json ../solinas64_2e205m45x2e198m1/

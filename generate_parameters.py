@@ -205,9 +205,10 @@ def get_params_solinas(prime, bitwidth):
     return output
 
 def write_if_changed(filename, contents):
-    with open(filename, 'r') as f:
-        old = f.read()
-    if old == contents: return
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            old = f.read()
+        if old == contents: return
     with open(filename, 'w') as f:
         f.write(contents)
 
