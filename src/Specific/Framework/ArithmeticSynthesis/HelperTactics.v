@@ -18,9 +18,13 @@ Ltac if_cond_else cond tac default id :=
 Ltac if_cond cond tac id := if_cond_else cond tac (0%Z) id.
 
 Ltac pose_modinv modinv_fuel a modulus modinv :=
-  let v := constr:(Option.invert_Some (Z.modinv_fueled modinv_fuel a modulus)) in
-  let v := (eval vm_compute in v) in
-  let v := (eval vm_compute in (v : Z)) in
+  let v0 := constr:(Option.invert_Some (Z.modinv_fueled modinv_fuel a modulus)) in
+  let v := (eval vm_compute in v0) in
+  let v := lazymatch type of v with (* if the computation failed, display a reasonable error message about the attempted computation *)
+           | Z => v
+           | _ => (eval cbv -[Option.invert_Some Z.modinv_fueled] in v0)
+           end in
+  let v := (eval vm_compute in (v <: Z)) in
   cache_term v modinv.
 Ltac pose_correct_if_Z v mkeqn id :=
   let T := type of v in
