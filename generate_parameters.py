@@ -164,7 +164,7 @@ def get_num_limbs(p, bitwidth):
     # print(p,unused_bits)
     min_limbs = int(math.ceil(num_bits(p) / (bitwidth - unused_bits)))
     choices = []
-    for n in range(min_limbs, 5 * min_limbs): # don't search past 5x as many limbs as saturated representation; that's just wasteful
+    for n in range(min_limbs, 2 * min_limbs): # don't search past 2x as many limbs as saturated representation; that's just wasteful
         # check that the number of 'extra' bits needed fits in this number of limbs
         min_bits = int(num_bits(p) / n)
         extra = num_bits(p) % n
@@ -204,6 +204,9 @@ def get_params_solinas(prime, bitwidth):
     sanity_check(p)
     sz = get_num_limbs(p, bitwidth)
     base = format_base(num_bits(p), sz)
+
+    # Uncomment to pretty-print primes/bases
+    # print("  ".join(map(str, [prime, " "*(35-len(prime)), bitwidth, round(base,1), sz])))
 
     if len(p) > 2:
         # do interleaved carry chains, starting at where the taps are
