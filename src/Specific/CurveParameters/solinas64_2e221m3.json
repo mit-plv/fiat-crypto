@@ -1,5 +1,5 @@
 {
-    "base": "44.2",
+    "base": "55.25",
     "bitwidth": 64,
     "carry_chains": "default",
     "coef_div_modulus": "2",
@@ -10,5 +10,5 @@
         "fesquare",
         "freeze"
     ],
-    "sz": "5"
+    "sz": "4"
 }

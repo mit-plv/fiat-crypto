@@ -81,10 +81,6 @@ class LimbPickingException(Exception): pass
 class NonBase2Exception(Exception): pass
 class UnexpectedPrimeException(Exception): pass
 
-# exception to be raised if we can't find an appropriate number of limbs
-class NoBaseFoundException(Exception):
-    pass
-
 # given a string representing one term or "tap" in a prime, returns a pair of
 # integers representing the weight and coefficient of that tap
 #    "2 ^ y" -> [1, y]
@@ -172,7 +168,7 @@ def get_num_limbs(p, bitwidth):
             choices.append((n, num_bits(p) / n))
             break
     if len(choices) == 0:
-        raise NoBaseFoundException("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
+        raise LimbPickingException("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
     # print (p,choices,min_limbs)
     return choices[0][0]
 
@@ -210,7 +206,7 @@ def get_params_solinas(prime, bitwidth):
 
     if len(p) > 2:
         # do interleaved carry chains, starting at where the taps are
-        starts = [(int(t[1] / base) - 1) % sz for t in p[1:]]
+        starts = [(int(t[1] / (num_bits(p) / sz)) - 1) % sz for t in p[1:]]
         chain2 = []
         for n in range(1,sz):
             for j in starts:

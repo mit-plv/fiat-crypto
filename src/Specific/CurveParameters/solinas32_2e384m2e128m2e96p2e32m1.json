@@ -1,7 +1,38 @@
 {
-    "base": "24",
+    "base": "24.0",
     "bitwidth": 32,
-    "carry_chains": "default",
+    "carry_chains": [
+        [
+            4,
+            3,
+            0,
+            15
+        ],
+        [
+            5,
+            4,
+            1,
+            0,
+            6,
+            2,
+            7,
+            3,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+        ],
+        [
+            5,
+            4,
+            1,
+            0
+        ]
+    ],
     "coef_div_modulus": "2",
     "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
     "modulus": "2^384 - 2^128 - 2^96 + 2^32 - 1 ",

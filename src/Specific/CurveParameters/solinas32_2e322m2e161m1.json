@@ -1,7 +1,32 @@
 {
-    "base": "23",
+    "base": "23.0",
     "bitwidth": 32,
-    "carry_chains": "default",
+    "carry_chains": [
+        [
+            6,
+            13
+        ],
+        [
+            7,
+            0,
+            8,
+            1,
+            9,
+            2,
+            10,
+            3,
+            11,
+            4,
+            12,
+            5,
+            13,
+            6
+        ],
+        [
+            7,
+            0
+        ]
+    ],
     "coef_div_modulus": "2",
     "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
     "goldilocks": true,
