@@ -274,6 +274,13 @@ Ltac pose_c_small c wt sz c_small :=
     ltac:(vm_decide_no_check)
            c_small.
 
+Ltac pose_base_le_bitwidth base bitwidth base_le_bitwidth := (* this is purely a sanity check *)
+  cache_proof_with_type_by
+    (base <= inject_Z bitwidth)%Q
+    ltac:(cbv -[Z.le]; vm_decide_no_check)
+           base_le_bitwidth.
+
+
 Ltac pose_m_enc_bounded sz bitwidth m_enc m_enc_bounded :=
   cache_proof_with_type_by
     (Tuple.map (n:=sz) (BinInt.Z.land (Z.ones bitwidth)) m_enc = m_enc)
