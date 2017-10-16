@@ -138,7 +138,7 @@ Module Export CurveParameters.
                (RawCurveParameters.freeze_extra_allowable_bit_widths CP)
                (list_8_if_not_exists allowable_bit_widths)
                ++ allowable_bit_widths;
-          modinv_fuel := defaulted (RawCurveParameters.modinv_fuel CP) 10%nat
+          modinv_fuel := defaulted (RawCurveParameters.modinv_fuel CP) (Z.to_nat (Z.log2_up s))
         |}.
 
   Ltac get_fill_CurveParameters CP :=
