@@ -1,5 +1,7 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.Lists.List. Import ListNotations.
+Require Import Coq.micromega.Lia.
+Require Import Coq.QArith.QArith_base.
 Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
@@ -30,15 +32,17 @@ Section wt.
   Local Coercion QArith_base.inject_Z : Z >-> Q.
   Local Coercion Z.of_nat : nat >-> Z.
   Local Coercion Z.pos : positive >-> Z.
-  Definition wt_gen (m : positive) (sz : nat) (i:nat) : Z := 2^Qceiling((Z.log2_up m/sz)*i).
+  Definition wt_gen (base : Q) (i:nat) : Z := 2^Qceiling(base*i).
 End wt.
 
 Section gen.
-  Context (m : positive)
+  Context (base : Q)
+          (m : positive)
           (sz : nat)
-          (coef_div_modulus : nat).
+          (coef_div_modulus : nat)
+          (base_pos : (1 <= base)%Q).
 
-  Local Notation wt := (wt_gen m sz).
+  Local Notation wt := (wt_gen base).
 
   Definition sz2' := ((sz * 2) - 1)%nat.
 
@@ -50,69 +54,62 @@ Section gen.
   Lemma sz2'_nonzero
         (sz_nonzero : sz <> 0%nat)
     : sz2' <> 0%nat.
-  Proof. clear -sz_nonzero; cbv [sz2']; omega. Qed.
+  Proof using Type. clear -sz_nonzero; cbv [sz2']; omega. Qed.
 
   Local Ltac Q_cbv :=
-    cbv [wt_gen Qround.Qceiling QArith_base.Qmult QArith_base.Qdiv QArith_base.inject_Z QArith_base.Qden QArith_base.Qnum QArith_base.Qopp Qround.Qfloor QArith_base.Qinv QArith_base.Qle Z.of_nat].
+    cbv [wt_gen Qround.Qceiling QArith_base.Qmult QArith_base.Qdiv QArith_base.inject_Z QArith_base.Qden QArith_base.Qnum QArith_base.Qopp Qround.Qfloor QArith_base.Qinv QArith_base.Qle QArith_base.Qeq Z.of_nat] in *.
   Lemma wt_gen0_1 : wt 0 = 1.
-  Proof.
+  Proof using Type.
     Q_cbv; simpl.
     autorewrite with zsimplify_const; reflexivity.
   Qed.
 
   Lemma wt_gen_nonzero : forall i, wt i <> 0.
-  Proof.
+  Proof using base_pos.
     eapply pow_ceil_mul_nat_nonzero; [ omega | ].
-    destruct sz; Q_cbv;
-      autorewrite with zsimplify_const; [ omega | ].
-    apply Z.log2_up_nonneg.
+    destruct base; Q_cbv; lia.
   Qed.
 
   Lemma wt_gen_nonneg : forall i, 0 <= wt i.
-  Proof. apply pow_ceil_mul_nat_nonneg; omega. Qed.
+  Proof using Type. apply pow_ceil_mul_nat_nonneg; omega. Qed.
 
   Lemma wt_gen_pos : forall i, wt i > 0.
-  Proof.
+  Proof using base_pos.
     intro i; pose proof (wt_gen_nonzero i); pose proof (wt_gen_nonneg i).
     omega.
   Qed.
 
   Lemma wt_gen_multiples : forall i, wt (S i) mod (wt i) = 0.
-  Proof.
-    apply pow_ceil_mul_nat_multiples.
-    destruct sz; Q_cbv; autorewrite with zsimplify_const;
-      auto using Z.log2_up_nonneg, Z.le_refl.
+  Proof using base_pos.
+    apply pow_ceil_mul_nat_multiples; destruct base; Q_cbv; lia.
   Qed.
 
   Section divides.
-    Context (sz_nonzero : sz <> 0%nat)
-            (sz_small : Z.of_nat sz <= Z.log2_up (Z.pos m)).
-
     Lemma wt_gen_divides
       : forall i, wt (S i) / wt i > 0.
-    Proof.
+    Proof using base_pos.
       apply pow_ceil_mul_nat_divide; [ omega | ].
-      destruct sz; Q_cbv; autorewrite with zsimplify_const; [ congruence | ].
-      rewrite Pos.mul_1_l; assumption.
+      destruct base; Q_cbv; lia.
     Qed.
+
     Lemma wt_gen_divides'
       : forall i, wt (S i) / wt i <> 0.
-    Proof.
+    Proof using base_pos.
       symmetry; apply Z.lt_neq, Z.gt_lt_iff, wt_gen_divides; assumption.
     Qed.
 
     Lemma wt_gen_div_bound
       : forall i, wt (S i) / wt i <= wt 1.
-    Proof.
+    Proof using base_pos.
       intro; etransitivity.
       eapply pow_ceil_mul_nat_divide_upperbound; [ omega | ].
-      all:destruct sz; Q_cbv; autorewrite with zsimplify_const;
+      all:destruct base; Q_cbv; autorewrite with zsimplify_const;
         rewrite ?Pos.mul_1_l, ?Pos.mul_1_r; try assumption; omega.
     Qed.
     Lemma wt_gen_divides_chain
           carry_chain
       : forall i (H:In i carry_chain), wt (S i) / wt i <> 0.
-    Proof. intros i ?; apply wt_gen_divides'; assumption. Qed.
+    Proof using base_pos. intros i ?; apply wt_gen_divides'; assumption. Qed.
 
     Lemma wt_gen_divides_chains
           carry_chains
@@ -123,7 +120,7 @@ Section gen.
              (fun carry_chain
               => forall i (H:In i carry_chain), wt (S i) / wt i <> 0)
              carry_chains).
-    Proof.
+    Proof using base_pos.
       induction carry_chains as [|carry_chain carry_chains IHcarry_chains];
         constructor; eauto using wt_gen_divides_chain.
     Qed.
@@ -137,9 +134,8 @@ Section gen.
           end) (Positional.zeros sz) coef_div_modulus.
 
   Lemma coef_mod'
-        (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m))
     : mod_eq m (Positional.eval (n:=sz) wt coef') 0.
-  Proof.
+  Proof using base_pos.
     cbv [coef' m_enc'].
     remember (Positional.zeros sz) as v eqn:Hv.
     assert (Hv' : mod_eq m (Positional.eval wt v) 0)
@@ -163,8 +159,8 @@ Section gen.
   Qed.
 End gen.
 
-Ltac pose_wt m sz wt :=
-  let v := (eval cbv [wt_gen] in (wt_gen m sz)) in
+Ltac pose_wt base wt :=
+  let v := (eval cbv [wt_gen] in (wt_gen base)) in
   cache_term v wt.
 
 Ltac pose_sz2 sz sz2 :=
@@ -193,24 +189,31 @@ Ltac pose_sz_le_log2_m sz m sz_le_log2_m :=
     ltac:(vm_decide_no_check)
            sz_le_log2_m.
 
+Ltac pose_base_pos base base_pos :=
+  cache_proof_with_type_by
+    ((1 <= base)%Q)
+    ltac:(vm_decide_no_check)
+           base_pos.
+
 Ltac pose_m_correct m s c m_correct :=
   cache_proof_with_type_by
     (Z.pos m = s - Associational.eval c)
     ltac:(vm_decide_no_check)
            m_correct.
 
-Ltac pose_m_enc sz m m_enc :=
-  let v := (eval vm_compute in (m_enc' m sz)) in
+Ltac pose_m_enc base m sz m_enc :=
+  let v := (eval vm_compute in (m_enc' base m sz)) in
   let v := (eval compute in v) in (* compute away the type arguments *)
   cache_term v m_enc.
-Ltac pose_coef sz m coef_div_modulus coef := (* subtraction coefficient *)
-  let v := (eval vm_compute in (coef' m sz coef_div_modulus)) in
+
+Ltac pose_coef base m sz coef_div_modulus coef := (* subtraction coefficient *)
+  let v := (eval vm_compute in (coef' base m sz coef_div_modulus)) in
   cache_term v coef.
 
-Ltac pose_coef_mod sz wt m coef coef_div_modulus sz_le_log2_m coef_mod :=
+Ltac pose_coef_mod wt coef base m sz coef_div_modulus base_pos coef_mod :=
   cache_proof_with_type_by
     (mod_eq m (Positional.eval (n:=sz) wt coef) 0)
-    ltac:(vm_cast_no_check (coef_mod' m sz coef_div_modulus sz_le_log2_m))
+    ltac:(vm_cast_no_check (coef_mod' base m sz coef_div_modulus base_pos))
            coef_mod.
 Ltac pose_sz_nonzero sz sz_nonzero :=
   cache_proof_with_type_by
@@ -238,6 +241,7 @@ Ltac pose_wt_divides' wt wt_divides wt_divides' :=
     (forall i, wt (S i) / wt i <> 0)
     ltac:(apply wt_gen_divides'; vm_decide_no_check)
            wt_divides'.
+
 Ltac pose_wt_divides_chains wt carry_chains wt_divides_chains :=
   let T := (eval cbv [carry_chains List.fold_right List.map] in
                (List.fold_right
@@ -249,7 +253,7 @@ Ltac pose_wt_divides_chains wt carry_chains wt_divides_chains :=
                      carry_chains))) in
   cache_proof_with_type_by
     T
-    ltac:(refine (@wt_gen_divides_chains _ _ _ _ carry_chains); vm_decide_no_check)
+    ltac:(refine (@wt_gen_divides_chains _ _ carry_chains); vm_decide_no_check)
            wt_divides_chains.
 
 Ltac pose_wt_pos wt wt_pos :=

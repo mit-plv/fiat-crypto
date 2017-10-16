@@ -9,6 +9,7 @@ Base: 24
 Definition curve : CurveParameters :=
   {|
     sz := 12%nat;
+    base := 24;
     bitwidth := 32;
     s := 2^291;
     c := [(1, 19)];

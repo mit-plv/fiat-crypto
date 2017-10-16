@@ -39,38 +39,41 @@ Ltac add_carry_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.carry_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let s := Tag.get pkg TAG.s in
                    let c := Tag.get pkg TAG.c in
                    let carry_chains := Tag.get pkg TAG.carry_chains in
                    let carry_sig := fresh "carry_sig" in
-                   let carry_sig := pose_carry_sig sz m wt s c carry_chains carry_sig in
+                   let carry_sig := pose_carry_sig wt m base sz s c carry_chains carry_sig in
                    constr:(carry_sig)).
 Ltac add_zero_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.zero_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
-                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
+                   let base_pos := Tag.get pkg TAG.base_pos in
                    let zero_sig := fresh "zero_sig" in
-                   let zero_sig := pose_zero_sig sz m wt sz_nonzero sz_le_log2_m zero_sig in
+                   let zero_sig := pose_zero_sig wt m base sz sz_nonzero base_pos zero_sig in
                    constr:(zero_sig)).
 Ltac add_one_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.one_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
-                   let sz_le_log2_m := Tag.get pkg TAG.sz_le_log2_m in
+                   let base_pos := Tag.get pkg TAG.base_pos in
                    let one_sig := fresh "one_sig" in
-                   let one_sig := pose_one_sig sz m wt sz_nonzero sz_le_log2_m one_sig in
+                   let one_sig := pose_one_sig wt m base sz sz_nonzero base_pos one_sig in
                    constr:(one_sig)).
 Ltac add_a24_sig pkg :=
   Tag.update_by_tac_if_not_exists
@@ -87,66 +90,72 @@ Ltac add_add_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.add_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
-                   let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let add_sig := fresh "add_sig" in
-                   let add_sig := pose_add_sig sz m wt sz_nonzero add_sig in
+                   let add_sig := pose_add_sig wt m base sz add_sig in
                    constr:(add_sig)).
 Ltac add_sub_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.sub_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let coef := Tag.get pkg TAG.coef in
                    let sub_sig := fresh "sub_sig" in
-                   let sub_sig := pose_sub_sig sz m wt coef sub_sig in
+                   let sub_sig := pose_sub_sig wt m base sz coef sub_sig in
                    constr:(sub_sig)).
 Ltac add_opp_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.opp_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let coef := Tag.get pkg TAG.coef in
                    let opp_sig := fresh "opp_sig" in
-                   let opp_sig := pose_opp_sig sz m wt coef opp_sig in
+                   let opp_sig := pose_opp_sig wt m base sz coef opp_sig in
                    constr:(opp_sig)).
 Ltac add_mul_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.mul_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let s := Tag.get pkg TAG.s in
                    let c := Tag.get pkg TAG.c in
                    let mul_code := Tag.get pkg TAG.mul_code in
                    let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
                    let s_nonzero := Tag.get pkg TAG.s_nonzero in
+                   let base_pos := Tag.get pkg TAG.base_pos in
                    let mul_code_correct := Tag.get pkg TAG.mul_code_correct in
                    let mul_sig := fresh "mul_sig" in
-                   let mul_sig := pose_mul_sig sz m wt s c mul_code sz_nonzero s_nonzero mul_code_correct mul_sig in
+                   let mul_sig := pose_mul_sig wt m base sz s c mul_code sz_nonzero s_nonzero base_pos mul_code_correct mul_sig in
                    constr:(mul_sig)).
 Ltac add_square_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
     TAG.square_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
+    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
                    let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
+                   let base := Tag.get pkg TAG.base in
+                   let sz := Tag.get pkg TAG.sz in
                    let s := Tag.get pkg TAG.s in
                    let c := Tag.get pkg TAG.c in
                    let square_code := Tag.get pkg TAG.square_code in
                    let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
                    let s_nonzero := Tag.get pkg TAG.s_nonzero in
+                   let base_pos := Tag.get pkg TAG.base_pos in
                    let square_code_correct := Tag.get pkg TAG.square_code_correct in
                    let square_sig := fresh "square_sig" in
-                   let square_sig := pose_square_sig sz m wt s c square_code sz_nonzero s_nonzero square_code_correct square_sig in
+                   let square_sig := pose_square_sig wt m base sz s c square_code sz_nonzero s_nonzero base_pos square_code_correct square_sig in
                    constr:(square_sig)).
 Ltac add_ring pkg :=
   Tag.update_by_tac_if_not_exists

@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
+Require Import Coq.QArith.QArith_base.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.CoreUnfolder.
 Require Import Crypto.Arithmetic.Core. Import B.
@@ -38,8 +39,8 @@ Local Ltac solve_constant_local_sig :=
   | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
     => (exists (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v)));
        lazymatch goal with
-       | [ sz_nonzero : sz <> 0%nat, sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos M) |- _ ]
-         => clear -sz_nonzero sz_le_log2_m
+       | [ sz_nonzero : sz <> 0%nat, base_pos : (1 <= _)%Q |- _ ]
+         => clear -base_pos sz_nonzero
        end
   end;
   abstract (
@@ -50,6 +51,7 @@ Local Ltac solve_constant_local_sig :=
 
 Section gen.
   Context (m : positive)
+          (base : Q)
           (sz : nat)
           (s : Z)
           (c : list limb)
@@ -59,12 +61,13 @@ Section gen.
           (square_code : option (Z^sz -> Z^sz))
           (sz_nonzero : sz <> 0%nat)
           (s_nonzero : s <> 0)
+          (base_pos : (1 <= base)%Q)
           (sz_le_log2_m : Z.of_nat sz <= Z.log2_up (Z.pos m)).
 
-  Local Notation wt := (wt_gen m sz).
+  Local Notation wt := (wt_gen base).
   Local Notation sz2 := (sz2' sz).
-  Local Notation wt_divides' := (wt_gen_divides' m sz sz_nonzero sz_le_log2_m).
-  Local Notation wt_nonzero := (wt_gen_nonzero m sz).
+  Local Notation wt_divides' := (wt_gen_divides' base base_pos).
+  Local Notation wt_nonzero := (wt_gen_nonzero base base_pos).
 
   (* side condition needs cbv [Positional.mul_cps Positional.reduce_cps]. *)
   Context (mul_code_correct
@@ -99,9 +102,9 @@ Section gen.
   Proof.
     let a := fresh "a" in
     eexists; cbv beta zeta; intros a.
-    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen0_1 base).
     pose proof wt_nonzero; pose proof div_mod.
-    pose proof (wt_gen_divides_chains m sz sz_nonzero sz_le_log2_m carry_chains).
+    pose proof (wt_gen_divides_chains base base_pos carry_chains).
     pose proof wt_divides'.
     let x := constr:(chained_carries' sz wt s c a carry_chains) in
     presolve_op_F constr:(wt) x;
@@ -148,7 +151,7 @@ Section gen.
   Proof.
     eexists; cbv beta zeta; intros a b.
     pose proof wt_nonzero.
-    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen0_1 base).
     let x := constr:(
                Positional.add_cps (n := sz) wt a b id) in
     presolve_op_F constr:(wt) x;
@@ -166,7 +169,7 @@ Section gen.
     let b := fresh "b" in
     eexists; cbv beta zeta; intros a b.
     pose proof wt_nonzero.
-    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen0_1 base).
     let x := constr:(
                Positional.sub_cps (n:=sz) (coef := coef) wt a b id) in
     presolve_op_F constr:(wt) x;
@@ -182,7 +185,7 @@ Section gen.
   Proof.
     eexists; cbv beta zeta; intros a.
     pose proof wt_nonzero.
-    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen0_1 base).
     let x := constr:(
                Positional.opp_cps (n:=sz) (coef := coef) wt a id) in
     presolve_op_F constr:(wt) x;
@@ -198,7 +201,7 @@ Section gen.
   Proof.
     eexists; cbv beta zeta; intros a b.
     pose proof wt_nonzero.
-    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen0_1 base).
     pose proof (sz2'_nonzero sz sz_nonzero).
     let x := constr:(
                Positional.mul_cps (n:=sz) (m:=sz2) wt a b
@@ -224,7 +227,7 @@ Section gen.
   Proof.
     eexists; cbv beta zeta; intros a.
     pose proof wt_nonzero.
-    pose proof (wt_gen0_1 m sz).
+    pose proof (wt_gen0_1 base).
     pose proof (sz2'_nonzero sz sz_nonzero).
     let x := constr:(
                Positional.mul_cps (n:=sz) (m:=sz2) wt a a
@@ -263,7 +266,7 @@ Section gen.
                  (Positional.Fdecode_Fencode_id
                     (sz_nonzero := sz_nonzero)
                     (div_mod := div_mod)
-                    wt (wt_gen0_1 m sz) wt_nonzero wt_divides')
+                    wt (wt_gen0_1 base) wt_nonzero wt_divides')
                  (Positional.eq_Feq_iff wt)
                  _ _ _);
       lazymatch goal with
@@ -324,25 +327,25 @@ Ltac cache_sig_with_type_by_existing_sig ty existing_sig id :=
     ltac:(fun _ => cbv [carry_sig' constant_sig' zero_sig' one_sig' add_sig' sub_sig' mul_sig' square_sig' opp_sig'])
            ty existing_sig id.
 
-Ltac pose_carry_sig sz m wt s c carry_chains carry_sig :=
+Ltac pose_carry_sig wt m base sz s c carry_chains carry_sig :=
   cache_sig_with_type_by_existing_sig
     {carry : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (carry a) = eval a}
-    (carry_sig' m sz s c carry_chains)
+    (carry_sig' m base sz s c carry_chains)
     carry_sig.
 
-Ltac pose_zero_sig sz m wt sz_nonzero sz_le_log2_m zero_sig :=
+Ltac pose_zero_sig wt m base sz sz_nonzero base_pos zero_sig :=
   cache_vm_sig_with_type
     { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 0%F}
-    (zero_sig' m sz sz_nonzero sz_le_log2_m)
+    (zero_sig' m base sz sz_nonzero base_pos)
     zero_sig.
 
-Ltac pose_one_sig sz m wt sz_nonzero sz_le_log2_m one_sig :=
+Ltac pose_one_sig wt m base sz sz_nonzero base_pos one_sig :=
   cache_vm_sig_with_type
     { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}
-    (one_sig' m sz sz_nonzero sz_le_log2_m)
+    (one_sig' m base sz sz_nonzero base_pos)
     one_sig.
 
 Ltac pose_a24_sig sz m wt a24 a24_sig :=
@@ -351,49 +354,49 @@ Ltac pose_a24_sig sz m wt a24 a24_sig :=
     solve_constant_sig
     a24_sig.
 
-Ltac pose_add_sig sz m wt sz_nonzero add_sig :=
+Ltac pose_add_sig wt m base sz add_sig :=
   cache_sig_with_type_by_existing_sig
     { add : (Z^sz -> Z^sz -> Z^sz)%type |
       forall a b : Z^sz,
         let eval := Positional.Fdecode (m:=m) wt in
         eval (add a b) = (eval a + eval b)%F }
-    (add_sig' m sz sz_nonzero)
+    (add_sig' m base sz)
     add_sig.
 
-Ltac pose_sub_sig sz m wt coef sub_sig :=
+Ltac pose_sub_sig wt m base sz coef sub_sig :=
   cache_sig_with_type_by_existing_sig
     {sub : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
        let eval := Positional.Fdecode (m:=m) wt in
        eval (sub a b) = (eval a - eval b)%F}
-    (sub_sig' m sz coef)
+    (sub_sig' m base sz coef)
     sub_sig.
 
-Ltac pose_opp_sig sz m wt coef opp_sig :=
+Ltac pose_opp_sig wt m base sz coef opp_sig :=
   cache_sig_with_type_by_existing_sig
     {opp : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (opp a) = F.opp (eval a)}
-    (opp_sig' m sz coef)
+    (opp_sig' m base sz coef)
     opp_sig.
 
-Ltac pose_mul_sig sz m wt s c mul_code sz_nonzero s_nonzero mul_code_correct mul_sig :=
+Ltac pose_mul_sig wt m base sz s c mul_code sz_nonzero s_nonzero base_pos mul_code_correct mul_sig :=
   cache_sig_with_type_by_existing_sig
     {mul : (Z^sz -> Z^sz -> Z^sz)%type |
      forall a b : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (mul a b) = (eval a * eval b)%F}
-    (mul_sig' m sz s c mul_code sz_nonzero s_nonzero mul_code_correct)
+    (mul_sig' m base sz s c mul_code sz_nonzero s_nonzero base_pos mul_code_correct)
     mul_sig.
 
-Ltac pose_square_sig sz m wt s c square_code sz_nonzero s_nonzero square_code_correct square_sig :=
+Ltac pose_square_sig wt m base sz s c square_code sz_nonzero s_nonzero base_pos square_code_correct square_sig :=
   cache_sig_with_type_by_existing_sig
     {square : (Z^sz -> Z^sz)%type |
      forall a : Z^sz,
        let eval := Positional.Fdecode (m := m) wt in
        eval (square a) = (eval a * eval a)%F}
-    (square_sig' m sz s c square_code sz_nonzero s_nonzero square_code_correct)
+    (square_sig' m base sz s c square_code sz_nonzero s_nonzero base_pos square_code_correct)
     square_sig.
 
 Ltac pose_ring sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_sig add_sig sub_sig mul_sig ring :=
