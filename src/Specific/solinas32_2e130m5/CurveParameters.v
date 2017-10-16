@@ -3,17 +3,17 @@ Require Import Crypto.Util.LetIn.
 
 (***
 Modulus : 2^130 - 5 
-Base: 16
+Base: 26
 ***)
 
 Definition curve : CurveParameters :=
   {|
-    sz := 8%nat;
-    base := 16;
+    sz := 5%nat;
+    base := 26;
     bitwidth := 32;
     s := 2^130;
     c := [(1, 5)];
-    carry_chains := Some [seq 0 (pred 8); [0; 1]]%nat;
+    carry_chains := Some [seq 0 (pred 5); [0; 1]]%nat;
 
     a24 := None;
     coef_div_modulus := Some 2%nat;

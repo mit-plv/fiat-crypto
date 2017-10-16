@@ -29,6 +29,13 @@ def compute_c(modulus_str):
             ret.append((part, '1'))
         elif part[:3] == '-2^' and part[3:].isdigit():
             ret.append((part[1:], '-1'))
+        elif len(part.split('*')) == 2:
+            a, b = part.split("*")
+            if "^" not in b:
+                ret.append((part, '1'))
+            else:
+                assert(b.replace(' ', '')[:2] == '2^')
+                ret.append((a.strip(), b.strip()))
         else:
             raw_input('Unhandled part: %s' % part)
             ret = None
@@ -53,10 +60,23 @@ def compute_goldilocks(s, c):
     if two_k != 2 * k: return False
     return True
 
-
+def parse_base(base):
+    ret = 0
+    for term in base.split('+'):
+        term = term.strip()
+        if term.isdigit():
+            ret += int(term)
+        elif '.' in term and '/' not in term:
+            ret += float(term)
+        elif '/' in term and '.' not in term:
+            ret += Fraction(term)
+        else:
+            raw_input('Unhandled: %s' % term)
+            assert(False)
+    return ret
 
 def negate_numexpr(expr):
-    remap = dict([(d, d) for d in '0123456789^ '] + [('-', '+'), ('+', '-')])
+    remap = dict([(d, d) for d in '0123456789^* '] + [('-', '+'), ('+', '-')])
     return ''.join(remap[ch] for ch in expr)
 
 def usage(exitcode=0, errmsg=None):
@@ -195,9 +215,9 @@ def make_curve_parameters(parameters):
             return 'Some %s%s' % (term, scope_string)
         return term
     replacements = dict(parameters)
-    assert(all(ch in '0123456789^+- ' for ch in parameters['modulus']))
+    assert(all(ch in '0123456789^+-* ' for ch in parameters['modulus']))
     modulus = eval(parameters['modulus'].replace('^', '**'))
-    base = float(parameters['base'])
+    base = parse_base(parameters['base'])
     replacements['reformatted_base'] = reformat_base(parameters['base'])
     replacements['bitwidth'] = parameters.get('bitwidth', str(compute_bitwidth(base)))
     bitwidth = int(replacements['bitwidth'])
