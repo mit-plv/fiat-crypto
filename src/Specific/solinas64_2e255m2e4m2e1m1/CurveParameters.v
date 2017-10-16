@@ -13,7 +13,7 @@ Definition curve : CurveParameters :=
     bitwidth := 64;
     s := 2^255;
     c := [(1, 1); (2^1, 1); (2^4, 1)];
-    carry_chains := Some [seq 0 (pred 5); [0; 1]]%nat;
+    carry_chains := Some [[4; 4; 4]; [0; 1; 2; 3]; [0; 0; 0]]%nat;
 
     a24 := None;
     coef_div_modulus := Some 2%nat;

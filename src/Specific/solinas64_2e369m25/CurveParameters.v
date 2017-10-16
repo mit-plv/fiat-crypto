@@ -3,13 +3,13 @@ Require Import Crypto.Util.LetIn.
 
 (***
 Modulus : 2^369 - 25
-Base: 46
+Base: 46.125
 ***)
 
 Definition curve : CurveParameters :=
   {|
     sz := 8%nat;
-    base := 46;
+    base := 46 + 1/8;
     bitwidth := 64;
     s := 2^369;
     c := [(1, 25)];

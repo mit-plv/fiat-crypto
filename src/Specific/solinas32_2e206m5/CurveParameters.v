@@ -3,13 +3,13 @@ Require Import Crypto.Util.LetIn.
 
 (***
 Modulus : 2^206 - 5
-Base: 17
+Base: 17 + 1/6
 ***)
 
 Definition curve : CurveParameters :=
   {|
     sz := 12%nat;
-    base := 17;
+    base := 17 + 1/6;
     bitwidth := 32;
     s := 2^206;
     c := [(1, 5)];
