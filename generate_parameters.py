@@ -66,7 +66,8 @@ EXAMPLES (handwritten):
 
 '''
 
-import math,json,sys,os
+import math,json,sys,os,traceback
+from fractions import Fraction
 
 # for montgomery
 COMPILER_MONT = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
@@ -75,6 +76,10 @@ COMPILER_SOLI = "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-fra
 CUR_PATH = os.path.dirname(os.path.realpath(__file__))
 JSON_DIRECTORY = os.path.join(CUR_PATH, "src/Specific/CurveParameters")
 REMAKE_CURVES = os.path.join(JSON_DIRECTORY, 'remake_curves.sh')
+
+class LimbPickingException(Exception): pass
+class NonBase2Exception(Exception): pass
+class UnexpectedPrimeException(Exception): pass
 
 # given a string representing one term or "tap" in a prime, returns a pair of
 # integers representing the weight and coefficient of that tap
@@ -95,7 +100,7 @@ def parse_term(t) :
 
     b,e = b.split("^")
     if int(b) != 2:
-        raise Exception("Could not parse term, power with base other than 2: %s" %t)
+        raise NonBase2Exception("Could not parse term, power with base other than 2: %s" %t)
     return [int(a),int(e)]
 
 
@@ -122,7 +127,7 @@ def sanity_check(p):
         p[1][0] < 0,
         # are any exponents repeated?
         len(set(map(lambda t:t[1], p))) == len(p)]) :
-        raise Exception("Parsed prime %s has unexpected format" %p)
+        raise UnexpectedPrimeException("Parsed prime %s has unexpected format" %p)
 
 
 def num_bits(p):
@@ -131,7 +136,7 @@ def num_bits(p):
 def get_params_montgomery(prime, bitwidth):
     p = parse_prime(prime)
     sanity_check(p)
-    sz = int(math.ceil(num_bits(p) / bitwidth))
+    sz = int(math.ceil(num_bits(p) / float(bitwidth)))
     return {
             "modulus" : prime,
             "base" : str(bitwidth),
@@ -155,21 +160,35 @@ def get_num_limbs(p, bitwidth):
         min_bits = int(num_bits(p) / n)
         extra = num_bits(p) % n
         if extra == 0 or n % extra == 0:
-            choices.append((n, num_bits(p) / n))
+            if extra == 0: # integer
+                choices.append((n, num_bits(p) / n))
+            else: # fraction
+                choices.append((n, Fraction(numerator=num_bits(p), denominator=n)))
             break
     if len(choices) == 0:
-        raise Exception("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
+        raise LimbPickingException("Unable to pick a number of limbs for prime %s and bitwidth %s in range %s-%s limbs" %(p,bitwidth,min_limbs,5*min_limbs))
     # print (p,choices)
     return choices[0][0]
 
 def is_goldilocks(p):
     return p[0][1] == 2 * p[1][1]
 
+def format_base(numerator, denominator):
+    if numerator % denominator == 0:
+        base = numerator / denominator
+    else:
+        base = Fraction(numerator=numerator, denominator=denominator)
+        if base.denominator in (1, 2, 4, 5, 8, 10):
+            base = float(base)
+        else:
+            base_int, base_frac = int(base), base - int(base)
+            base = '%d + %s' % (base_int, str(base_frac))
+
 def get_params_solinas(prime, bitwidth):
     p = parse_prime(prime)
     sanity_check(p)
     sz = get_num_limbs(p, bitwidth)
-    base = num_bits(p) / sz
+    base = format_base(num_bits(p), sz)
     output = {
             "modulus": prime,
             "base" : str(base),
@@ -215,6 +234,14 @@ def write_output(name, params):
                      format_json(params))
     update_remake_curves(filename)
 
+def try_write_output(name, get_params, prime, bitwidth):
+    try:
+        write_output(name, get_params(prime, bitwidth))
+    except (LimbPickingException, NonBase2Exception, UnexpectedPrimeException) as e:
+        print(e)
+    except Exception as e:
+        traceback.print_exc()
+
 USAGE = "python generate_parameters.py input_file"
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -226,21 +253,9 @@ if __name__ == "__main__":
         if line.strip().startswith("#") or len(line.strip()) == 0:
             continue
         prime = line.strip().split("#")[0] # remove trailing comments and trailing/leading whitespace
-        try:
-            write_output("montgomery32", get_params_montgomery(prime, 32))
-        except Exception as e:
-            print(e)
-        try:
-            write_output("montgomery64", get_params_montgomery(prime, 64))
-        except Exception as e:
-            print(e)
-        try:
-            write_output("solinas32", get_params_solinas(prime, 32))
-        except Exception as e:
-            print(e)
-        try:
-            write_output("solinas64", get_params_solinas(prime, 64))
-        except Exception as e:
-            print(e)
+        try_write_output("montgomery32", get_params_montgomery, prime, 32)
+        try_write_output("montgomery64", get_params_montgomery, prime, 64)
+        try_write_output("solinas32", get_params_solinas, prime, 32)
+        try_write_output("solinas64", get_params_solinas, prime, 64)
 
     f.close()
