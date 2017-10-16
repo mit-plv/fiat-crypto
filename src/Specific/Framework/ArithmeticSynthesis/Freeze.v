@@ -22,9 +22,6 @@ End Exports.
 Local Open Scope Z_scope.
 Local Infix "^" := Tuple.tuple : type_scope.
 
-Ltac freeze_preunfold :=
-  cbv [freeze freeze_cps Wrappers.Columns.unbalanced_sub_cps Wrappers.Columns.conditional_add_cps Core.Columns.from_associational_cps Core.Columns.nils Core.Columns.cons_to_nth_cps Core.Columns.compact_cps Wrappers.Columns.add_cps Core.Columns.compact_step_cps Core.Columns.compact_digit_cps].
-
 Section gen.
   Context (m : positive)
           (base : Q)
@@ -65,6 +62,12 @@ Section gen.
       try eassumption; try omega; try reflexivity.
   Defined.
 End gen.
+
+Ltac pose_m_correct_wt m c sz wt m_correct_wt :=
+  cache_proof_with_type_by
+    (Z.pos m = wt sz - Associational.eval c)
+    ltac:(vm_decide_no_check)
+           m_correct_wt.
 
 Ltac pose_freeze_sig wt m base sz c bitwidth m_enc base_pos sz_nonzero freeze_sig :=
   cache_sig_with_type_by_existing_sig_helper

@@ -6,9 +6,20 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := freeze_sig.
+  Inductive tags := m_correct_wt | freeze_sig.
 End TAG.
 
+Ltac add_m_correct_wt pkg :=
+  Tag.update_by_tac_if_not_exists
+    pkg
+    TAG.m_correct_wt
+    ltac:(fun _ => let m := Tag.get pkg TAG.m in
+                   let c := Tag.get pkg TAG.c in
+                   let sz := Tag.get pkg TAG.sz in
+                   let wt := Tag.get pkg TAG.wt in
+                   let m_correct_wt := fresh "m_correct_wt" in
+                   let m_correct_wt := pose_m_correct_wt m c sz wt m_correct_wt in
+                   constr:(m_correct_wt)).
 Ltac add_freeze_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
@@ -26,6 +37,7 @@ Ltac add_freeze_sig pkg :=
                    let freeze_sig := pose_freeze_sig wt m base sz c bitwidth m_enc base_pos sz_nonzero freeze_sig in
                    constr:(freeze_sig)).
 Ltac add_Freeze_package pkg :=
+  let pkg := add_m_correct_wt pkg in
   let pkg := add_freeze_sig pkg in
   Tag.strip_subst_local pkg.
 
@@ -33,6 +45,8 @@ Ltac add_Freeze_package pkg :=
 Module MakeFreezePackage (PKG : PrePackage).
   Module Import MakeFreezePackageInternal := MakePackageBase PKG.
 
+  Ltac get_m_correct_wt _ := get TAG.m_correct_wt.
+  Notation m_correct_wt := (ltac:(let v := get_m_correct_wt () in exact v)) (only parsing).
   Ltac get_freeze_sig _ := get TAG.freeze_sig.
   Notation freeze_sig := (ltac:(let v := get_freeze_sig () in exact v)) (only parsing).
 End MakeFreezePackage.
