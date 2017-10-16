@@ -263,3 +263,21 @@ Ltac pose_wt_multiples wt wt_multiples :=
     (forall i, wt (S i) mod (wt i) = 0)
     ltac:(apply wt_gen_multiples; vm_decide_no_check)
            wt_multiples.
+
+Ltac pose_c_small c wt sz c_small :=
+  cache_proof_with_type_by
+    (0 < Associational.eval c < wt sz)
+    ltac:(vm_decide_no_check)
+           c_small.
+
+Ltac pose_m_enc_bounded sz bitwidth m_enc m_enc_bounded :=
+  cache_proof_with_type_by
+    (Tuple.map (n:=sz) (BinInt.Z.land (Z.ones bitwidth)) m_enc = m_enc)
+    ltac:(vm_decide_no_check)
+           m_enc_bounded.
+
+Ltac pose_m_correct_wt m c sz wt m_correct_wt :=
+  cache_proof_with_type_by
+    (Z.pos m = wt sz - Associational.eval c)
+    ltac:(vm_decide_no_check)
+           m_correct_wt.

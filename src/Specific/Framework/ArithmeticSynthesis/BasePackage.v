@@ -5,7 +5,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | s_nonzero | sz_le_log2_m | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples.
+  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | s_nonzero | sz_le_log2_m | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples | c_small | m_enc_bounded | m_correct_wt.
 End TAG.
 
 Ltac add_r pkg :=
@@ -143,6 +143,31 @@ Ltac add_wt_multiples pkg :=
   let wt_multiples := pose_wt_multiples wt wt_multiples in
   Tag.update pkg TAG.wt_multiples wt_multiples.
 
+Ltac add_c_small pkg :=
+  let c := Tag.get pkg TAG.c in
+  let wt := Tag.get pkg TAG.wt in
+  let sz := Tag.get pkg TAG.sz in
+  let c_small := fresh "c_small" in
+  let c_small := pose_c_small c wt sz c_small in
+  Tag.update pkg TAG.c_small c_small.
+
+Ltac add_m_enc_bounded pkg :=
+  let sz := Tag.get pkg TAG.sz in
+  let bitwidth := Tag.get pkg TAG.bitwidth in
+  let m_enc := Tag.get pkg TAG.m_enc in
+  let m_enc_bounded := fresh "m_enc_bounded" in
+  let m_enc_bounded := pose_m_enc_bounded sz bitwidth m_enc m_enc_bounded in
+  Tag.update pkg TAG.m_enc_bounded m_enc_bounded.
+
+Ltac add_m_correct_wt pkg :=
+  let m := Tag.get pkg TAG.m in
+  let c := Tag.get pkg TAG.c in
+  let sz := Tag.get pkg TAG.sz in
+  let wt := Tag.get pkg TAG.wt in
+  let m_correct_wt := fresh "m_correct_wt" in
+  let m_correct_wt := pose_m_correct_wt m c sz wt m_correct_wt in
+  Tag.update pkg TAG.m_correct_wt m_correct_wt.
+
 Ltac add_Base_package pkg :=
   let pkg := add_r pkg in
   let pkg := add_m pkg in
@@ -164,7 +189,10 @@ Ltac add_Base_package pkg :=
   let pkg := add_wt_divides_chains pkg in
   let pkg := add_wt_pos pkg in
   let pkg := add_wt_multiples pkg in
-  Tag.strip_local pkg.
+  let pkg := add_c_small pkg in
+  let pkg := add_m_enc_bounded pkg in
+  let pkg := add_m_correct_wt pkg in
+  Tag.strip_subst_local pkg.
 
 
 Module MakeBasePackage (PKG : PrePackage).
@@ -210,4 +238,10 @@ Module MakeBasePackage (PKG : PrePackage).
   Notation wt_pos := (ltac:(let v := get_wt_pos () in exact v)) (only parsing).
   Ltac get_wt_multiples _ := get TAG.wt_multiples.
   Notation wt_multiples := (ltac:(let v := get_wt_multiples () in exact v)) (only parsing).
+  Ltac get_c_small _ := get TAG.c_small.
+  Notation c_small := (ltac:(let v := get_c_small () in exact v)) (only parsing).
+  Ltac get_m_enc_bounded _ := get TAG.m_enc_bounded.
+  Notation m_enc_bounded := (ltac:(let v := get_m_enc_bounded () in exact v)) (only parsing).
+  Ltac get_m_correct_wt _ := get TAG.m_correct_wt.
+  Notation m_correct_wt := (ltac:(let v := get_m_correct_wt () in exact v)) (only parsing).
 End MakeBasePackage.
