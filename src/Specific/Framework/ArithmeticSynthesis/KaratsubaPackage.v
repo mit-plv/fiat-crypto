@@ -6,7 +6,19 @@ Require Export Crypto.Specific.Framework.ArithmeticSynthesis.Karatsuba.
 Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
+Module TAG.
+  Inductive tags := half_sz_nonzero.
+End TAG.
 
+Ltac add_half_sz_nonzero pkg :=
+  if_goldilocks
+    pkg
+    ltac:(fun _ => let half_sz := Tag.get pkg TAG.half_sz in
+                   let half_sz_nonzero := fresh "half_sz_nonzero" in
+                   let half_sz_nonzero := pose_half_sz_nonzero half_sz half_sz_nonzero in
+                   Tag.update pkg TAG.half_sz_nonzero half_sz_nonzero)
+    ltac:(fun _ => pkg)
+    ().
 Ltac add_mul_sig pkg :=
   if_goldilocks
     pkg
@@ -35,6 +47,7 @@ Ltac add_square_sig pkg :=
     ltac:(fun _ => pkg)
     ().
 Ltac add_Karatsuba_package pkg :=
+  let pkg := add_half_sz_nonzero pkg in
   let pkg := add_mul_sig pkg in
   let pkg := add_square_sig pkg in
   Tag.strip_subst_local pkg.
@@ -43,4 +56,6 @@ Ltac add_Karatsuba_package pkg :=
 Module MakeKaratsubaPackage (PKG : PrePackage).
   Module Import MakeKaratsubaPackageInternal := MakePackageBase PKG.
 
+  Ltac get_half_sz_nonzero _ := get TAG.half_sz_nonzero.
+  Notation half_sz_nonzero := (ltac:(let v := get_half_sz_nonzero () in exact v)) (only parsing).
 End MakeKaratsubaPackage.

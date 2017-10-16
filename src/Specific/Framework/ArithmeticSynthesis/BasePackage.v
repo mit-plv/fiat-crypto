@@ -5,7 +5,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := r | m | wt | sz2 | half_sz | half_sz_nonzero | s_nonzero | sz_le_log2_m | base_pos | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples | c_small | base_le_bitwidth | m_enc_bounded.
+  Inductive tags := r | m | wt | sz2 | half_sz | s_nonzero | sz_le_log2_m | base_pos | m_correct | m_enc | coef | coef_mod | sz_nonzero | wt_nonzero | wt_nonneg | wt_divides | wt_divides' | wt_divides_chains | wt_pos | wt_multiples | c_small | base_le_bitwidth | m_enc_bounded.
 End TAG.
 
 Ltac add_r pkg :=
@@ -38,12 +38,6 @@ Ltac add_half_sz pkg :=
   let half_sz := fresh "half_sz" in
   let half_sz := pose_half_sz sz half_sz in
   Tag.update pkg TAG.half_sz half_sz.
-
-Ltac add_half_sz_nonzero pkg :=
-  let half_sz := Tag.get pkg TAG.half_sz in
-  let half_sz_nonzero := fresh "half_sz_nonzero" in
-  let half_sz_nonzero := pose_half_sz_nonzero half_sz half_sz_nonzero in
-  Tag.update pkg TAG.half_sz_nonzero half_sz_nonzero.
 
 Ltac add_s_nonzero pkg :=
   let s := Tag.get pkg TAG.s in
@@ -180,7 +174,6 @@ Ltac add_Base_package pkg :=
   let pkg := add_wt pkg in
   let pkg := add_sz2 pkg in
   let pkg := add_half_sz pkg in
-  let pkg := add_half_sz_nonzero pkg in
   let pkg := add_s_nonzero pkg in
   let pkg := add_sz_le_log2_m pkg in
   let pkg := add_base_pos pkg in
@@ -215,8 +208,6 @@ Module MakeBasePackage (PKG : PrePackage).
   Notation sz2 := (ltac:(let v := get_sz2 () in exact v)) (only parsing).
   Ltac get_half_sz _ := get TAG.half_sz.
   Notation half_sz := (ltac:(let v := get_half_sz () in exact v)) (only parsing).
-  Ltac get_half_sz_nonzero _ := get TAG.half_sz_nonzero.
-  Notation half_sz_nonzero := (ltac:(let v := get_half_sz_nonzero () in exact v)) (only parsing).
   Ltac get_s_nonzero _ := get TAG.s_nonzero.
   Notation s_nonzero := (ltac:(let v := get_s_nonzero () in exact v)) (only parsing).
   Ltac get_sz_le_log2_m _ := get TAG.sz_le_log2_m.
