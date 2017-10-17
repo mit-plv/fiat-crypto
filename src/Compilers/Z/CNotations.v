@@ -71,6 +71,8 @@ Reserved Notation "'cmovznzℤ' ( v , a , b )" (format "'cmovznzℤ' ( v ,  a , 
 # -*- coding: utf-8 -*-
 import math
 
+PARENTHESIZED = False
+
 print(r"""Require Export Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Export Crypto.Compilers.Z.HexNotationConstants.
@@ -145,6 +147,9 @@ print(open(__file__).read())
 
 print('>> *' + ')')
 
+OPEN = ('( ' if PARENTHESIZED else '')
+CLOSE = (' )' if PARENTHESIZED else '')
+
 def log2_up(x):
     return int(math.ceil(math.log(x, 2)))
 types = ('bool', 'uint8_t', 'uint8_t', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'uint128_t', 'uint256_t')
@@ -160,82 +165,82 @@ for opn, op, lvl in (('*', 'Mul', 40), ('+', 'Add', 50), ('-', 'Sub', 50)):
         for v2 in (False, True):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
-            print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
-            print('Notation "x %sℤ y" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
+            print('Notation "%sx %s y%s" := (Op (%s _ _ _) (Pair %s %s)).' % (OPEN, opn, CLOSE, op, lhs, rhs))
+            print('Notation "%sx %sℤ y%s" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (OPEN, opn, CLOSE, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "%s %s %s" := (Op (%s (TWord _) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9).'
-                      % (cast_pat % (types[lgwordsz], 'x'), opn, 'y',
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord _) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9).'
+                      % (OPEN, cast_pat % (types[lgwordsz], 'x'), opn, 'y', CLOSE,
                          op, lgwordsz, lhs, rhs, lvl))
-                print('Notation "%s %s %s" := (Op (%s (TWord _) (TWord %s) (TWord %d)) (Pair %s %s)) (at level %d, y at level 9).'
-                      % ('x', opn, cast_pat % (types[lgwordsz], 'y'),
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord _) (TWord %s) (TWord %d)) (Pair %s %s)) (at level %d, y at level 9).'
+                      % (OPEN, 'x', opn, cast_pat % (types[lgwordsz], 'y'), CLOSE,
                          op, at_least_S_pattern(lgwordsz), lgwordsz, lhs, rhs, lvl))
-                print('Notation "%s %s %s" := (Op (%s (TWord %s) (TWord %s) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9, y at level 9).'
-                      % (cast_pat % (types[lgwordsz], 'x'), opn, cast_pat % (types[lgwordsz], 'y'),
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord %s) (TWord %s) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9, y at level 9).'
+                      % (OPEN, cast_pat % (types[lgwordsz], 'x'), opn, cast_pat % (types[lgwordsz], 'y'), CLOSE,
                          op, at_least_S_pattern(lgwordsz), at_least_S_pattern(lgwordsz), lgwordsz, lhs, rhs, lvl))
         for v1 in (False, True):
             for v2 in (False, True):
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "x %s y" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)).'
-                      % (opn,
+                print('Notation "%sx %s y%s" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)).'
+                      % (OPEN, opn, CLOSE,
                          op, lgwordsz, lgwordsz, lhs, rhs))
-                print('Notation "x %s y" := (Op (%s (TWord _) (TWord %d) (TWord %d)) (Pair %s %s)).'
-                      % (opn,
+                print('Notation "%sx %s y%s" := (Op (%s (TWord _) (TWord %d) (TWord %d)) (Pair %s %s)).'
+                      % (OPEN, opn, CLOSE,
                          op, lgwordsz, lgwordsz, lhs, rhs))
-                print('Notation "%s %s %s" := (Op (%s (TWord %d) (TWord %s) (TWord %d)) (Pair %s %s)) (at level %d, y at level 9).'
-                      % ('x', opn, cast_pat % (types[lgwordsz], 'y'),
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord %d) (TWord %s) (TWord %d)) (Pair %s %s)) (at level %d, y at level 9).'
+                      % (OPEN, 'x', opn, cast_pat % (types[lgwordsz], 'y'), CLOSE,
                          op, lgwordsz, at_least_S_pattern(lgwordsz), lgwordsz, lhs, rhs, lvl))
-                print('Notation "%s %s %s" := (Op (%s (TWord %s) (TWord %d) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9).'
-                      % (cast_pat % (types[lgwordsz], 'x'), opn, 'y',
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord %s) (TWord %d) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9).'
+                      % (OPEN, cast_pat % (types[lgwordsz], 'x'), opn, 'y', CLOSE,
                          op, at_least_S_pattern(lgwordsz), lgwordsz, lgwordsz, lhs, rhs, lvl))
         for v1 in (False, True):
             for v2 in (False, True):
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "x %s y" := (Op (%s (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)).'
-                      % (opn, op, lgwordsz, lgwordsz, lgwordsz, lhs, rhs))
+                print('Notation "%sx %s y%s" := (Op (%s (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)).'
+                      % (OPEN, opn, CLOSE, op, lgwordsz, lgwordsz, lgwordsz, lhs, rhs))
 for opn, op, lvl in (('&', 'Land', 40), ('|', 'Lor', 45)):
     for v1 in (False, True):
         for v2 in (False, True):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
-            print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
-            print('Notation "x %sℤ y" := (Op (%s _ _ _) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
+            print('Notation "%sx %s y%s" := (Op (%s _ _ _) (Pair %s %s)).' % (OPEN, opn, CLOSE, op, lhs, rhs))
+            print('Notation "%sx %sℤ y%s" := (Op (%s _ _ _) (Pair %s %s)) (at level %d).' % (OPEN, opn, CLOSE, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "%s %s %s" := (Op (%s (TWord _) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9, y at level 9).'
-                      % (cast_pat % (types[lgwordsz], 'x'), opn, cast_pat % (types[lgwordsz], 'y'),
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord _) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9, y at level 9).'
+                      % (OPEN, cast_pat % (types[lgwordsz], 'x'), opn, cast_pat % (types[lgwordsz], 'y'), CLOSE,
                          op, lgwordsz, lhs, rhs, lvl))
         for v1 in (False, True):
             for v2 in (False, True):
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "%s %s %s" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d, y at level 9).'
-                      % ('x', opn, cast_pat % (types[lgwordsz], 'y'),
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d, y at level 9).'
+                      % (OPEN, 'x', opn, cast_pat % (types[lgwordsz], 'y'), CLOSE,
                          op, lgwordsz, lgwordsz, lhs, rhs, lvl))
-                print('Notation "%s %s %s" := (Op (%s (TWord _) (TWord %d) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9).'
-                      % (cast_pat % (types[lgwordsz], 'x'), opn, 'y',
+                print('Notation "%s%s %s %s%s" := (Op (%s (TWord _) (TWord %d) (TWord %d)) (Pair %s %s)) (at level %d, x at level 9).'
+                      % (OPEN, cast_pat % (types[lgwordsz], 'x'), opn, 'y', CLOSE,
                          op, lgwordsz, lgwordsz, lhs, rhs, lvl))
         for v1 in (False, True):
             for v2 in (False, True):
                 lhs = ('x' if not v1 else '(Var x)')
                 rhs = ('y' if not v2 else '(Var y)')
-                print('Notation "x %s y" := (Op (%s (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)).'
-                      % (opn, op, lgwordsz, lgwordsz, lgwordsz, lhs, rhs))
+                print('Notation "%sx %s y%s" := (Op (%s (TWord %d) (TWord %d) (TWord %d)) (Pair %s %s)).'
+                      % (OPEN, opn, CLOSE, op, lgwordsz, lgwordsz, lgwordsz, lhs, rhs))
 for opn, op, lvl in (('<<', 'Shl', 30),):
     for v1 in (False, True):
         for v2 in (False, True):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
-            print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
-            print('Notation "x %sℤ y" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
+            print('Notation "%sx %s y%s" := (Op (%s _ _ _) (Pair %s %s)).' % (OPEN, opn, CLOSE, op, lhs, rhs))
+            print('Notation "%sx %sℤ y%s" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (OPEN, opn, CLOSE, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
@@ -243,15 +248,15 @@ for opn, op, lvl in (('<<', 'Shl', 30),):
                 rhs = ('y' if not v2 else '(Var y)')
                 print('Notation "\'(%s)\' x %s y" := (Op (%s (TWord _) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d).'
                       % (types[lgwordsz], opn, op, lgwordsz, lhs, rhs, lvl))
-                print('Notation "x %s y" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)).'
-                      % (opn, op, lgwordsz, lgwordsz, lhs, rhs))
+                print('Notation "%sx %s y%s" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)).'
+                      % (OPEN, opn, CLOSE, op, lgwordsz, lgwordsz, lhs, rhs))
 for opn, op, lvl in (('>>', 'Shr', 30),):
     for v1 in (False, True):
         for v2 in (False, True):
             lhs = ('x' if not v1 else '(Var x)')
             rhs = ('y' if not v2 else '(Var y)')
-            print('Notation "x %s y" := (Op (%s _ _ _) (Pair %s %s)).' % (opn, op, lhs, rhs))
-            print('Notation "x %sℤ y" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (opn, op, lhs, rhs, lvl))
+            print('Notation "%sx %s y%s" := (Op (%s _ _ _) (Pair %s %s)).' % (OPEN, opn, CLOSE, op, lhs, rhs))
+            print('Notation "%sx %sℤ y%s" := (Op (%s _ _ TZ) (Pair %s %s)) (at level %d).' % (OPEN, opn, CLOSE, op, lhs, rhs, lvl))
     for lgwordsz in range(0, len(types)):
         for v1 in (False, True):
             for v2 in (False, True):
@@ -259,8 +264,8 @@ for opn, op, lvl in (('>>', 'Shr', 30),):
                 rhs = ('y' if not v2 else '(Var y)')
                 print('Notation "\'(%s)\' ( x %s y )" := (Op (%s (TWord _) (TWord _) (TWord %d)) (Pair %s %s)) (at level %d).'
                       % (types[lgwordsz], opn, op, lgwordsz, lhs, rhs, lvl))
-                print('Notation "x %s y" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)).'
-                      % (opn, op, lgwordsz, lgwordsz, lhs, rhs))
+                print('Notation "%sx %s y%s" := (Op (%s (TWord %d) (TWord _) (TWord %d)) (Pair %s %s)).'
+                      % (OPEN, opn, CLOSE, op, lgwordsz, lgwordsz, lhs, rhs))
 for v0 in (False, True):
     for v1 in (False, True):
         for v2 in (False, True):
