@@ -30,7 +30,7 @@ Section language.
     := match t return interp_flat_type (fun _ => Name) t -> interp_flat_type var t -> Context with
        | Tbase t => fun n v => extendb ctx n v
        | Unit => fun _ _ => ctx
-       | Prod A B => fun n v
+       | Prod A B => fun n v : interp_flat_type _ A * interp_flat_type _ B
                      => let ctx := @extend A ctx (fst n) (fst v) in
                         let ctx := @extend B ctx (snd n) (snd v) in
                         ctx
@@ -42,7 +42,7 @@ Section language.
     := match t return interp_flat_type (fun _ => Name) t -> Context with
        | Tbase t => fun n => removeb t ctx n
        | Unit => fun _ => ctx
-       | Prod A B => fun n
+       | Prod A B => fun n : interp_flat_type _ A * interp_flat_type _ B
                      => let ctx := @remove A ctx (fst n) in
                         let ctx := @remove B ctx (snd n) in
                         ctx
