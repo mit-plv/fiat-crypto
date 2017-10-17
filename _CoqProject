@@ -37,6 +37,7 @@ src/Arithmetic/Saturated/Freeze.v
 src/Arithmetic/Saturated/FreezeUnfolder.v
 src/Arithmetic/Saturated/MontgomeryAPI.v
 src/Arithmetic/Saturated/MulSplit.v
+src/Arithmetic/Saturated/MulSplitUnfolder.v
 src/Arithmetic/Saturated/UniformWeight.v
 src/Arithmetic/Saturated/UniformWeightInstances.v
 src/Arithmetic/Saturated/Wrappers.v

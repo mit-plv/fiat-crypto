@@ -1,5 +1,6 @@
 Require Import Crypto.Arithmetic.CoreUnfolder.
 Require Import Crypto.Arithmetic.Saturated.CoreUnfolder.
+Require Import Crypto.Arithmetic.Saturated.MulSplitUnfolder.
 Require Import Crypto.Arithmetic.Saturated.Wrappers.
 
 Module Columns.

@@ -1034,6 +1034,44 @@ Ltac apply_patterned t1 :=
             (@Z.add_get_carry)
             (@Z.zselect)).
 
+Ltac pattern_strip_full t :=
+  let t := (eval pattern
+                 Z,
+            (@Let_In Z (fun _ => Z)),
+            @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
+            (@id_with_alt Z),
+            @Z.add_get_carry, @Z.zselect, @Z.mul_split_at_bitwidth,
+            Z.mul, Z.add, Z.opp, Z.shiftr, Z.shiftl, Z.land, Z.lor,
+            Z.modulo, Z.div, Z.log2, Z.pow, Z.ones,
+            Z.eq_dec, Z.eqb,
+            (@ModularArithmetic.F.to_Z), (@ModularArithmetic.F.of_Z),
+            2%Z, 1%Z, 0%Z
+             in t) in
+  let t := match t with ?t _
+                         _
+                         _ _ _ _ _ _
+                         _
+                         _ _ _
+                         _ _ _ _ _ _ _
+                         _ _ _ _ _
+                         _ _
+                         _ _
+                         _ _ _ => t end in
+  t.
+
+Ltac apply_patterned_full t1 :=
+  constr:(t1
+            Z
+            (@Let_In Z (fun _ => Z))
+            (@runtime_mul) (@runtime_add) (@runtime_opp) (@runtime_shr) (@runtime_and) (@runtime_lor)
+            (@id_with_alt Z)
+            (@Z.add_get_carry) (@Z.zselect) (@Z.mul_split_at_bitwidth)
+            Z.mul Z.add Z.opp Z.shiftr Z.shiftl Z.land Z.lor
+            Z.modulo Z.div Z.log2 Z.pow Z.ones
+            Z.eq_dec Z.eqb
+            (@ModularArithmetic.F.to_Z) (@ModularArithmetic.F.of_Z)
+            2%Z 1%Z 0%Z).
+
 Ltac basesystem_partial_evaluation_RHS_gen unfold_tac :=
   let t := match goal with |- _ _ ?t => t end in
   let t := unfold_tac t in

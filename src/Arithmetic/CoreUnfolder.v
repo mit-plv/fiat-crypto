@@ -6,8 +6,10 @@ Require Import Crypto.Util.Tactics.VM.
 Ltac make_parameterized_sig t :=
   refine (_ : { v : _ | v = t });
   eexists; cbv delta [t
+                        B.limb ListUtil.sum ListUtil.sum_firstn
+                        Decidable.dec Decidable.dec_eq_Z
                         id_tuple_with_alt id_tuple'_with_alt
-                        Z.add_get_carry_full];
+                        Z.add_get_carry_full Z.mul_split];
   repeat autorewrite with pattern_runtime;
   reflexivity.
 
@@ -39,7 +41,7 @@ for i in eval multerm mul_cps mul split_cps split reduce_cps reduce negate_snd_c
 done
 echo "  End Associational."
 echo "  Module Positional."
-for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_nth place_cps place from_associational_cps from_associational carry_cps carry chained_carries_cps chained_carries add_cps mul_cps reduce_cps carry_reduce_cps negate_snd_cps split_cps scmul_cps unbalanced_sub_cps sub_cps sub opp_cps Fencode Fdecode eval_from select_cps select; do
+for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_nth place_cps place from_associational_cps from_associational carry_cps carry chained_carries_cps chained_carries encode add_cps mul_cps reduce_cps carry_reduce_cps negate_snd_cps split_cps scmul_cps unbalanced_sub_cps sub_cps sub opp_cps Fencode Fdecode eval_from select_cps select; do
   echo "    Definition ${i}_sig := parameterize_sig (@Core.B.Positional.${i}).";
   echo "    Definition ${i} := parameterize_from_sig ${i}_sig.";
   echo "    Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
@@ -195,6 +197,11 @@ done
     Definition chained_carries := parameterize_from_sig chained_carries_sig.
     Definition chained_carries_eq := parameterize_eq chained_carries chained_carries_sig.
     Hint Rewrite <- chained_carries_eq : pattern_runtime.
+
+    Definition encode_sig := parameterize_sig (@Core.B.Positional.encode).
+    Definition encode := parameterize_from_sig encode_sig.
+    Definition encode_eq := parameterize_eq encode encode_sig.
+    Hint Rewrite <- encode_eq : pattern_runtime.
 
     Definition add_cps_sig := parameterize_sig (@Core.B.Positional.add_cps).
     Definition add_cps := parameterize_from_sig add_cps_sig.
