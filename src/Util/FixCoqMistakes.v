@@ -27,3 +27,14 @@ Definition f_equal2 {A1 A2 B} (f : A1 -> A2 -> B) {x1 y1 : A1} {x2 y2 : A2} (H :
          | eq_refl => eq_refl
          end
      end.
+
+(** Work around BZ#5341, https://coq.inria.fr/bugs/show_bug.cgi?id=5341, [subst] fails with bogus error message about universe polymorphism *)
+Local Theorem create_internal_eq_rew_r_dep :  forall A (a : A) (x : A) (e : a = x),
+    e = e -> True.
+Proof.
+  intros ? ? ? H.
+  match goal with |- ?G => assert G end;
+    [ rewrite -> H
+    | rewrite <- H ];
+    constructor.
+Defined.
