@@ -93,7 +93,7 @@ def parse_term(t) :
 
     if "*" in t:
         if len(t.split("*")) > 2: # this occurs when e.g. [w - x * y] has been turned into [w + -1 * x * y]
-            a1,a2,b = t.split("*") 
+            a1,a2,b = t.split("*")
             a = int(a1) * int(a2)
         else:
             a,b = t.split("*")
@@ -177,7 +177,7 @@ def is_goldilocks(p):
 
 def format_base(numerator, denominator):
     if numerator % denominator == 0:
-        base = numerator / denominator
+        base = int(numerator / denominator)
     else:
         base = Fraction(numerator=numerator, denominator=denominator)
         if base.denominator in (1, 2, 4, 5, 8, 10):

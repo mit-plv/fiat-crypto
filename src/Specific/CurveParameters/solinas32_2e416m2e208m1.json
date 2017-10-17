@@ -1,5 +1,5 @@
 {
-    "base": "26.0",
+    "base": "26",
     "bitwidth": 32,
     "carry_chains": [
         [

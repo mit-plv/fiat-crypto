@@ -1,5 +1,5 @@
 {
-    "base": "29.0",
+    "base": "29",
     "bitwidth": 32,
     "carry_chains": "default",
     "coef_div_modulus": "2",
