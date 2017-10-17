@@ -283,24 +283,47 @@ Module Tuple.
     [|rewrite IHn, <-map2_append,<-!subst_append]; reflexivity.
   Qed. Hint Rewrite @map2_cps_correct : uncps.
 
-  Fixpoint mapi_with'_cps {T A B n} i
-          (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
-  : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R :=
-  match n as n0 return (tuple' A n0 -> forall {R}, (T * tuple' B n0->R)->R) with
-  | O => fun ys {T} ret => f i start ys ret
-  | S n' => fun ys {T} ret =>
-              f i start (hd ys) (fun sb =>
-              mapi_with'_cps (S i) f (fst sb) (tl ys)
-                  (fun r => ret (fst r, (snd r, snd sb))))
-  end.
+  Section internal_mapi_with_cps.
+    (* We define fixpoints with fewer parameters to the internal [fix] to allow unfolding to partially specialize them *)
+    Context {R T A B : Type}
+            (f: nat->T->A->(T*B->R)->R).
 
-  Fixpoint mapi_with_cps {S A B n}
+    Fixpoint mapi_with'_cps_specialized {n} i
+             (start:T)
+      : Tuple.tuple' A n -> (T * tuple' B n -> R) -> R :=
+      match n as n0 return (tuple' A n0 -> (T * tuple' B n0->R)->R) with
+      | O => fun ys ret => f i start ys ret
+      | S n' => fun ys ret =>
+                  f i start (hd ys) (fun sb =>
+                  mapi_with'_cps_specialized (S i) (fst sb) (tl ys)
+                      (fun r => ret (fst r, (snd r, snd sb))))
+      end.
+  End internal_mapi_with_cps.
+
+  Definition mapi_with'_cps {T A B n} i
+          (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
+    : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R
+    := fun ts R => @mapi_with'_cps_specialized R T A B (fun n t a => @f n t a R) n i start ts.
+
+  Definition mapi_with_cps {S A B n}
           (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S)
   : tuple A n -> forall {T}, (S * tuple B n->T)->T :=
   match n as n0 return (tuple A n0 -> forall {T}, (S * tuple B n0->T)->T) with
   | O => fun ys {T} ret => ret (start, tt)
   | S n' => fun ys {T} ret => mapi_with'_cps 0%nat f start ys ret
   end.
+
+  Lemma unfold_mapi_with'_cps {T A B n} i
+        (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
+    : @mapi_with'_cps T A B n i f start
+      = match n as n0 return (tuple' A n0 -> forall {R}, (T * tuple' B n0->R)->R) with
+        | O => fun ys {T} ret => f i start ys ret
+        | S n' => fun ys {T} ret =>
+                    f i start (hd ys) (fun sb =>
+                    mapi_with'_cps (S i) f (fst sb) (tl ys)
+                        (fun r => ret (fst r, (snd r, snd sb))))
+        end.
+  Proof. destruct n; reflexivity. Qed.
 
   Lemma mapi_with'_cps_correct {S A B n} : forall i f start xs T ret,
   (forall i s a R (ret:_->R), f i s a R ret = ret (f i s a _ id)) ->
