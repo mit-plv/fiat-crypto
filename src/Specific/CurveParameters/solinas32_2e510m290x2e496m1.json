@@ -1,0 +1,49 @@
+{
+    "base": "21.25",
+    "bitwidth": 32,
+    "carry_chains": [
+        [
+            22,
+            23
+        ],
+        [
+            23,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22
+        ],
+        [
+            23,
+            0
+        ]
+    ],
+    "coef_div_modulus": "2",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "modulus": "2^510 - 290*2^496 - 1",
+    "operations": [
+        "femul",
+        "fesquare",
+        "freeze"
+    ],
+    "sz": "24"
+}
