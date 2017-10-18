@@ -348,21 +348,25 @@ Module B.
     Proof. cbv [mul mul_cps]; induction p; prove_eval. Qed.
     Hint Rewrite eval_mul : push_basesystem_eval.
 
-    Fixpoint split_cps (s:Z) (xs:list limb)
-             {T} (f :list limb*list limb->T) :=
-      match xs with
-      | nil => f (nil, nil)
-      | cons x xs' =>
-        split_cps s xs'
-              (fun sxs' =>
-        if dec (fst x mod s = 0)
-        then f (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
-        else f (cons x (fst sxs'), snd sxs'))
-      end.
+    Section split_cps.
+      Context (s:Z) {T : Type}.
+
+      Fixpoint split_cps (xs:list limb)
+               (f :list limb*list limb->T) :=
+        match xs with
+        | nil => f (nil, nil)
+        | cons x xs' =>
+          split_cps xs'
+                (fun sxs' =>
+          if dec (fst x mod s = 0)
+          then f (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
+          else f (cons x (fst sxs'), snd sxs'))
+        end.
+    End split_cps.
 
     Definition split s xs := split_cps s xs id.
     Lemma split_cps_id s p: forall {T} f,
-        @split_cps s p T f = f (split s p).
+        @split_cps s T p f = f (split s p).
     Proof.
       induction p as [|?? IHp];
         repeat match goal with
@@ -576,14 +580,18 @@ Module B.
         intros; subst. autorewrite with uncps push_id. distr_length.
       Qed. Hint Rewrite @eval_add_to_nth using omega : push_basesystem_eval.
 
-      Fixpoint place_cps (t:limb) (i:nat) {T} (f:nat * Z->T) :=
-        if dec (fst t mod weight i = 0)
-        then f (i, let c := fst t / weight i in (c * snd t)%RT)
-        else match i with S i' => place_cps t i' f | O => f (O, fst t * snd t)%RT end.
+      Section place_cps.
+        Context {T : Type}.
+
+        Fixpoint place_cps (t:limb) (i:nat) (f:nat * Z->T) :=
+          if dec (fst t mod weight i = 0)
+          then f (i, let c := fst t / weight i in (c * snd t)%RT)
+          else match i with S i' => place_cps t i' f | O => f (O, fst t * snd t)%RT end.
+      End place_cps.
 
       Definition place t i := place_cps t i id.
       Lemma place_cps_id t i {T} f :
-        @place_cps t i T f = f (place t i).
+        @place_cps T t i f = f (place t i).
       Proof using Type. cbv [place]; induction i; prove_id. Qed.
       Hint Opaque place : uncps.
       Hint Rewrite place_cps_id : uncps.

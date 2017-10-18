@@ -325,12 +325,12 @@ Module Tuple.
     := fun ts R => @mapi_with'_cps_specialized R T A B (fun n t a => @f n t a R) n i start ts.
 
   Definition mapi_with_cps {S A B n}
-          (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S)
-  : tuple A n -> forall {T}, (S * tuple B n->T)->T :=
-  match n as n0 return (tuple A n0 -> forall {T}, (S * tuple B n0->T)->T) with
-  | O => fun ys {T} ret => ret (start, tt)
-  | S n' => fun ys {T} ret => mapi_with'_cps 0%nat f start ys ret
-  end.
+          (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S) (ys:tuple A n) {T}
+    : (S * tuple B n->T)->T :=
+  match n as n0 return (tuple A n0 -> (S * tuple B n0->T)->T) with
+  | O => fun ys ret => ret (start, tt)
+  | S n' => fun ys ret => mapi_with'_cps 0%nat f start ys ret
+  end ys.
 
   Lemma unfold_mapi_with'_cps {T A B n} i
         (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)

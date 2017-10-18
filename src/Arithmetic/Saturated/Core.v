@@ -156,25 +156,29 @@ Module Columns.
     (* Sums a list of integers using carry bits.
      Output : carry, sum
      *)
-    Fixpoint compact_digit_cps n (digit : list Z) {T} (f:Z * Z->T) :=
-      match digit with
-      | nil => f (0, 0)
-      | x :: nil => f (div x (weight (S n) / weight n), modulo x (weight (S n) / weight n))
-      | x :: y :: nil =>
-          dlet sum_carry := add_get_carry (weight (S n) / weight n) x y in
-          dlet carry := snd sum_carry in
-          f (carry, fst sum_carry)
-      | x :: tl =>
-        compact_digit_cps n tl
-          (fun rec =>
-            dlet sum_carry := add_get_carry (weight (S n) / weight n) x (snd rec) in
-            dlet carry' := (fst rec + snd sum_carry)%RT in
-            f (carry', fst sum_carry))
-      end.
+    Section compact_digit_cps.
+      Context (n : nat) {T : Type}.
+
+      Fixpoint compact_digit_cps (digit : list Z) (f:Z * Z->T) :=
+        match digit with
+        | nil => f (0, 0)
+        | x :: nil => f (div x (weight (S n) / weight n), modulo x (weight (S n) / weight n))
+        | x :: y :: nil =>
+            dlet sum_carry := add_get_carry (weight (S n) / weight n) x y in
+            dlet carry := snd sum_carry in
+            f (carry, fst sum_carry)
+        | x :: tl =>
+          compact_digit_cps tl
+            (fun rec =>
+              dlet sum_carry := add_get_carry (weight (S n) / weight n) x (snd rec) in
+              dlet carry' := (fst rec + snd sum_carry)%RT in
+              f (carry', fst sum_carry))
+        end.
+    End compact_digit_cps.
 
     Definition compact_digit n digit := compact_digit_cps n digit id.
     Lemma compact_digit_id n digit: forall {T} f,
-        @compact_digit_cps n digit T f = f (compact_digit n digit).
+        @compact_digit_cps n T digit f = f (compact_digit n digit).
     Proof using Type.
       induction digit; intros; cbv [compact_digit]; [reflexivity|];
         simpl compact_digit_cps; break_match; rewrite ?IHdigit;

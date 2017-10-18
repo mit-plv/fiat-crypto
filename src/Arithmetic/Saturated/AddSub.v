@@ -20,30 +20,34 @@ Module B.
                 {op_get_carry : Z -> Z -> Z * Z} (* no carry in, carry out *)
                 {op_with_carry : Z -> Z -> Z -> Z * Z}. (* carry in, carry out  *)
 
-        Fixpoint chain_op'_cps {n}:
-          option Z->Z^n->Z^n->forall T, (Z*Z^n->T)->T :=
-          match n with
-          | O => fun c p _ _ f =>
-                   let carry := match c with | None => 0 | Some x => x end in
-                   f (carry,p)
-          | S n' =>
-            fun c p q _ f =>
-              (* for the first call, use op_get_carry, then op_with_carry *)
-              let op' := match c with
-                         | None => op_get_carry
-                         | Some x => op_with_carry x end in
-              dlet carry_result := op' (hd p) (hd q) in
-                chain_op'_cps (Some (snd carry_result)) (tl p) (tl q) _
-                              (fun carry_pq =>
-                                 f (fst carry_pq,
-                                    append (fst carry_result) (snd carry_pq)))
-          end.
-        Definition chain_op' {n} c p q := @chain_op'_cps n c p q _ id.
-        Definition chain_op_cps {n} p q {T} f := @chain_op'_cps n None p q T f.
+        Section chain_op'_cps.
+          Context (T : Type).
+
+          Fixpoint chain_op'_cps {n} (c:option Z) (p q:Z^n)
+            : (Z*Z^n->T)->T :=
+            match n return option Z -> Z^n -> Z^n -> (Z*Z^n -> T) -> T with
+            | O => fun c p _ f =>
+                     let carry := match c with | None => 0 | Some x => x end in
+                     f (carry,p)
+            | S n' =>
+              fun c p q f =>
+                (* for the first call, use op_get_carry, then op_with_carry *)
+                let op' := match c with
+                           | None => op_get_carry
+                           | Some x => op_with_carry x end in
+                dlet carry_result := op' (hd p) (hd q) in
+                  chain_op'_cps (Some (snd carry_result)) (tl p) (tl q)
+                                (fun carry_pq =>
+                                   f (fst carry_pq,
+                                      append (fst carry_result) (snd carry_pq)))
+            end c p q.
+        End chain_op'_cps.
+        Definition chain_op' {n} c p q := @chain_op'_cps _ n c p q id.
+        Definition chain_op_cps {n} p q {T} f := @chain_op'_cps T n None p q f.
         Definition chain_op {n} p q : Z * Z^n := chain_op_cps p q id.
 
         Lemma chain_op'_id {n} : forall c p q T f,
-          @chain_op'_cps n c p q T f = f (chain_op' c p q).
+          @chain_op'_cps T n c p q f = f (chain_op' c p q).
         Proof.
           cbv [chain_op']; induction n; intros; destruct c;
             simpl chain_op'_cps; cbv [Let_In]; try reflexivity.
@@ -53,7 +57,7 @@ Module B.
 
         Lemma chain_op_id {n} p q T f :
           @chain_op_cps n p q T f = f (chain_op p q).
-        Proof. apply chain_op'_id. Qed.
+        Proof. apply (@chain_op'_id n None). Qed.
       End GenericOp.
       Hint Opaque chain_op chain_op' : uncps.
       Hint Rewrite @chain_op_id @chain_op'_id : uncps.
@@ -117,9 +121,9 @@ Module B.
                  | _ => progress autorewrite with uncps divmod push_id cancel_pair push_basesystem_eval
                  | _ => rewrite uweight_0, ?Z.mod_1_r, ?Z.div_1_r
                  | _ => rewrite uweight_succ
-                 | _ => rewrite Z.sub_opp_r 
-                 | _ => rewrite sat_add_mod_step 
-                 | _ => rewrite sat_add_div_step 
+                 | _ => rewrite Z.sub_opp_r
+                 | _ => rewrite sat_add_mod_step
+                 | _ => rewrite sat_add_div_step
                  | p : Z ^ 0 |- _ => destruct p
                  | _ => rewrite uweight_eval_step, ?hd_append, ?tl_append
                  | |- context[B.Positional.eval _ (snd (chain_op' ?c ?p ?q))]
@@ -149,8 +153,8 @@ Module B.
                    | _ => progress (simpl chain_op'_cps in * )
                    | _ => progress autorewrite with uncps push_id cancel_pair in H
                    | H : _ |- _ => rewrite to_list_append in H;
-                                     simpl In in H 
-                   | H : _ \/ _ |- _ => destruct H 
+                                     simpl In in H
+                   | H : _ \/ _ |- _ => destruct H
                    | _ => contradiction
                    end.
             { subst x.
@@ -185,9 +189,9 @@ Module B.
                  | _ => progress autorewrite with uncps divmod push_id cancel_pair push_basesystem_eval
                  | _ => rewrite uweight_0, ?Z.mod_1_r, ?Z.div_1_r
                  | _ => rewrite uweight_succ
-                 | _ => rewrite Z.sub_opp_r 
-                 | _ => rewrite sat_add_mod_step 
-                 | _ => rewrite sat_add_div_step 
+                 | _ => rewrite Z.sub_opp_r
+                 | _ => rewrite sat_add_mod_step
+                 | _ => rewrite sat_add_div_step
                  | p : Z ^ 0 |- _ => destruct p
                  | _ => rewrite uweight_eval_step, ?hd_append, ?tl_append
                  | |- context[B.Positional.eval _ (snd (chain_op' ?c ?p ?q))]
@@ -197,7 +201,7 @@ Module B.
                  | _ => solve [split; repeat (f_equal; ring_simplify; try omega)]
                  end.
         Qed.
-        
+
         Lemma sat_sub_mod n p q :
           eval (snd (@sat_sub n p q)) = (eval p - eval q) mod (uweight s n).
         Proof. exact (proj1 (sat_sub_divmod n p q)). Qed.
@@ -217,8 +221,8 @@ Module B.
                    | _ => progress (simpl chain_op'_cps in * )
                    | _ => progress autorewrite with uncps push_id cancel_pair in H
                    | H : _ |- _ => rewrite to_list_append in H;
-                                     simpl In in H 
-                   | H : _ \/ _ |- _ => destruct H 
+                                     simpl In in H
+                   | H : _ \/ _ |- _ => destruct H
                    | _ => contradiction
                    end.
           { subst x.
