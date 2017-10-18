@@ -6,7 +6,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := mul_code_correct | square_code_correct | carry_sig | zero_sig | one_sig | a24_sig | add_sig | sub_sig | opp_sig | mul_sig | square_sig | ring.
+  Inductive tags := mul_code_correct | square_code_correct | carry_sig | zero_sig | one_sig | add_sig | sub_sig | opp_sig | mul_sig | square_sig | ring.
 End TAG.
 
 Ltac add_mul_code_correct pkg P_extra_prove_mul_eq :=
@@ -75,17 +75,6 @@ Ltac add_one_sig pkg :=
                    let one_sig := fresh "one_sig" in
                    let one_sig := pose_one_sig wt m base sz sz_nonzero base_pos one_sig in
                    constr:(one_sig)).
-Ltac add_a24_sig pkg :=
-  Tag.update_by_tac_if_not_exists
-    pkg
-    TAG.a24_sig
-    ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
-                   let m := Tag.get pkg TAG.m in
-                   let wt := Tag.get pkg TAG.wt in
-                   let a24 := Tag.get pkg TAG.a24 in
-                   let a24_sig := fresh "a24_sig" in
-                   let a24_sig := pose_a24_sig sz m wt a24 a24_sig in
-                   constr:(a24_sig)).
 Ltac add_add_sig pkg :=
   Tag.update_by_tac_if_not_exists
     pkg
@@ -182,7 +171,6 @@ Ltac add_Defaults_package pkg P_extra_prove_mul_eq P_extra_prove_square_eq :=
   let pkg := add_carry_sig pkg in
   let pkg := add_zero_sig pkg in
   let pkg := add_one_sig pkg in
-  let pkg := add_a24_sig pkg in
   let pkg := add_add_sig pkg in
   let pkg := add_sub_sig pkg in
   let pkg := add_opp_sig pkg in
@@ -205,8 +193,6 @@ Module MakeDefaultsPackage (PKG : PrePackage).
   Notation zero_sig := (ltac:(let v := get_zero_sig () in exact v)) (only parsing).
   Ltac get_one_sig _ := get TAG.one_sig.
   Notation one_sig := (ltac:(let v := get_one_sig () in exact v)) (only parsing).
-  Ltac get_a24_sig _ := get TAG.a24_sig.
-  Notation a24_sig := (ltac:(let v := get_a24_sig () in exact v)) (only parsing).
   Ltac get_add_sig _ := get TAG.add_sig.
   Notation add_sig := (ltac:(let v := get_add_sig () in exact v)) (only parsing).
   Ltac get_sub_sig _ := get TAG.sub_sig.

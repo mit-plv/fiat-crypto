@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Crypto.Arithmetic.Core. Import B.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Crypto.Arithmetic.Saturated.Wrappers.
 Require Import Crypto.Util.ZUtil.ModInv.
 Require Import Crypto.Util.Tactics.CacheTerm.
@@ -171,3 +172,12 @@ Ltac cache_sig_with_type_by_existing_sig_helper cbv_tac ty existing_sig id :=
           do_replace_match_with_destructuring_match_in_goal;
           reflexivity)
            id.
+
+Ltac solve_constant_sig :=
+  idtac;
+  lazymatch goal with
+  | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
+    => let t := (eval vm_compute in
+                    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v))) in
+       (exists t; vm_decide)
+  end.

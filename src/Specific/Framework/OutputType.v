@@ -26,7 +26,7 @@ Section gen.
     Definition rT := ((Tbase b)^curve.(sz))%ctype.
     Definition T' := (interp_flat_type rT).
     Definition RT := (Unit -> rT)%ctype.
-    Definition wt := (wt_gen m curve.(sz)).
+    Definition wt := (wt_gen curve.(base)).
     Definition encode : F m -> Expr RT
       := fun v var
          => Abs
