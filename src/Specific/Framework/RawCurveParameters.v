@@ -32,6 +32,8 @@ Record CurveParameters :=
 
     goldilocks : option bool; (* defaults to true iff the prime ([s-c]) is of the form [2²ᵏ - 2ᵏ - 1] *)
     montgomery : bool;
+    freeze : option bool; (* defaults to true iff [s = 2^(base * sz)] *)
+    ladderstep : bool;
 
     mul_code : option (Z^sz -> Z^sz -> Z^sz);
     square_code : option (Z^sz -> Z^sz);
@@ -55,6 +57,8 @@ Declare Reduction cbv_RawCurveParameters
             coef_div_modulus
             goldilocks
             montgomery
+            freeze
+            ladderstep
             mul_code
             square_code
             upper_bound_of_exponent

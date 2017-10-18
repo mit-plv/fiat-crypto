@@ -84,6 +84,7 @@ Ltac add_feBW pkg :=
   Tag.update pkg TAG.feBW feBW.
 
 Ltac add_feBW_bounded pkg :=
+  let freeze := Tag.get pkg TAG.freeze in
   let wt := Tag.get pkg TAG.wt in
   let sz := Tag.get pkg TAG.sz in
   let feBW := Tag.get pkg TAG.feBW in
@@ -92,7 +93,7 @@ Ltac add_feBW_bounded pkg :=
   let m := Tag.get pkg TAG.m in
   let wt_nonneg := Tag.get pkg TAG.wt_nonneg in
   let feBW_bounded := fresh "feBW_bounded" in
-  let feBW_bounded := pose_feBW_bounded wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded in
+  let feBW_bounded := pose_feBW_bounded freeze wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded in
   Tag.update pkg TAG.feBW_bounded feBW_bounded.
 
 Ltac add_phiW pkg :=

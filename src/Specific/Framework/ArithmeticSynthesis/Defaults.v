@@ -24,15 +24,6 @@ Module Export Exports.
   Export Coq.setoid_ring.ZArithRing.
 End Exports.
 
-Ltac solve_constant_sig :=
-  idtac;
-  lazymatch goal with
-  | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
-    => let t := (eval vm_compute in
-                    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v))) in
-       (exists t; vm_decide)
-  end.
-
 Local Ltac solve_constant_local_sig :=
   idtac;
   lazymatch goal with
@@ -347,12 +338,6 @@ Ltac pose_one_sig wt m base sz sz_nonzero base_pos one_sig :=
     { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}
     (one_sig' m base sz sz_nonzero base_pos)
     one_sig.
-
-Ltac pose_a24_sig sz m wt a24 a24_sig :=
-  cache_term_with_type_by
-    { a24t : Z^sz | Positional.Fdecode (m:=m) wt a24t = F.of_Z m a24 }
-    solve_constant_sig
-    a24_sig.
 
 Ltac pose_add_sig wt m base sz add_sig :=
   cache_sig_with_type_by_existing_sig

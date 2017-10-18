@@ -19,6 +19,22 @@ Ltac if_montgomery pkg tac_true tac_false arg :=
   | false => tac_false arg
   end.
 
+Ltac if_freeze pkg tac_true tac_false arg :=
+  let freeze := Tag.get pkg TAG.freeze in
+  let freeze := (eval vm_compute in (freeze : bool)) in
+  lazymatch freeze with
+  | true => tac_true arg
+  | false => tac_false arg
+  end.
+
+Ltac if_ladderstep pkg tac_true tac_false arg :=
+  let ladderstep := Tag.get pkg TAG.ladderstep in
+  let ladderstep := (eval vm_compute in (ladderstep : bool)) in
+  lazymatch ladderstep with
+  | true => tac_true arg
+  | false => tac_false arg
+  end.
+
 
 Module MakeCurveParametersPackage (PKG : PrePackage).
   Module Import MakeCurveParametersPackageInternal := MakePackageBase PKG.
@@ -43,6 +59,10 @@ Module MakeCurveParametersPackage (PKG : PrePackage).
   Notation goldilocks := (ltac:(let v := get_goldilocks () in exact v)) (only parsing).
   Ltac get_montgomery _ := get TAG.montgomery.
   Notation montgomery := (ltac:(let v := get_montgomery () in exact v)) (only parsing).
+  Ltac get_freeze _ := get TAG.freeze.
+  Notation freeze := (ltac:(let v := get_freeze () in exact v)) (only parsing).
+  Ltac get_ladderstep _ := get TAG.ladderstep.
+  Notation ladderstep := (ltac:(let v := get_ladderstep () in exact v)) (only parsing).
   Ltac get_allowable_bit_widths _ := get TAG.allowable_bit_widths.
   Notation allowable_bit_widths := (ltac:(let v := get_allowable_bit_widths () in exact v)) (only parsing).
   Ltac get_freeze_allowable_bit_widths _ := get TAG.freeze_allowable_bit_widths.

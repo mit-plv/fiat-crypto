@@ -10,32 +10,40 @@ Module TAG.
 End TAG.
 
 Ltac add_m_correct_wt pkg :=
-  Tag.update_by_tac_if_not_exists
+  if_freeze
     pkg
-    TAG.m_correct_wt
-    ltac:(fun _ => let m := Tag.get pkg TAG.m in
-                   let c := Tag.get pkg TAG.c in
-                   let sz := Tag.get pkg TAG.sz in
-                   let wt := Tag.get pkg TAG.wt in
-                   let m_correct_wt := fresh "m_correct_wt" in
-                   let m_correct_wt := pose_m_correct_wt m c sz wt m_correct_wt in
-                   constr:(m_correct_wt)).
+    ltac:(fun _ => Tag.update_by_tac_if_not_exists
+                       pkg
+                       TAG.m_correct_wt
+                       ltac:(fun _ => let m := Tag.get pkg TAG.m in
+                                      let c := Tag.get pkg TAG.c in
+                                      let sz := Tag.get pkg TAG.sz in
+                                      let wt := Tag.get pkg TAG.wt in
+                                      let m_correct_wt := fresh "m_correct_wt" in
+                                      let m_correct_wt := pose_m_correct_wt m c sz wt m_correct_wt in
+                                      constr:(m_correct_wt)))
+    ltac:(fun _ => pkg)
+    ().
 Ltac add_freeze_sig pkg :=
-  Tag.update_by_tac_if_not_exists
+  if_freeze
     pkg
-    TAG.freeze_sig
-    ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
-                   let m := Tag.get pkg TAG.m in
-                   let base := Tag.get pkg TAG.base in
-                   let sz := Tag.get pkg TAG.sz in
-                   let c := Tag.get pkg TAG.c in
-                   let bitwidth := Tag.get pkg TAG.bitwidth in
-                   let m_enc := Tag.get pkg TAG.m_enc in
-                   let base_pos := Tag.get pkg TAG.base_pos in
-                   let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
-                   let freeze_sig := fresh "freeze_sig" in
-                   let freeze_sig := pose_freeze_sig wt m base sz c bitwidth m_enc base_pos sz_nonzero freeze_sig in
-                   constr:(freeze_sig)).
+    ltac:(fun _ => Tag.update_by_tac_if_not_exists
+                       pkg
+                       TAG.freeze_sig
+                       ltac:(fun _ => let wt := Tag.get pkg TAG.wt in
+                                      let m := Tag.get pkg TAG.m in
+                                      let base := Tag.get pkg TAG.base in
+                                      let sz := Tag.get pkg TAG.sz in
+                                      let c := Tag.get pkg TAG.c in
+                                      let bitwidth := Tag.get pkg TAG.bitwidth in
+                                      let m_enc := Tag.get pkg TAG.m_enc in
+                                      let base_pos := Tag.get pkg TAG.base_pos in
+                                      let sz_nonzero := Tag.get pkg TAG.sz_nonzero in
+                                      let freeze_sig := fresh "freeze_sig" in
+                                      let freeze_sig := pose_freeze_sig wt m base sz c bitwidth m_enc base_pos sz_nonzero freeze_sig in
+                                      constr:(freeze_sig)))
+    ltac:(fun _ => pkg)
+    ().
 Ltac add_Freeze_package pkg :=
   let pkg := add_m_correct_wt pkg in
   let pkg := add_freeze_sig pkg in

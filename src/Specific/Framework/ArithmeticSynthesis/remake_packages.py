@@ -11,13 +11,13 @@ CP_BASE_DEFAULTS_FREEZE_LADDERSTEP_LIST = ['../CurveParametersPackage.v', 'BaseP
 NORMAL_PACKAGE_NAMES = [('Base.v', (CP_LIST, None)),
                         ('Defaults.v', (CP_BASE_LIST, 'not_exists')),
                         ('../ReificationTypes.v', (CP_BASE_LIST, None)),
-                        ('Freeze.v', (CP_BASE_LIST, 'not_exists')),
-                        ('Ladderstep.v', (CP_BASE_DEFAULTS_LIST, 'not_exists')),
+                        ('Freeze.v', (CP_BASE_LIST, ('freeze', 'not_exists'))),
+                        ('Ladderstep.v', (CP_BASE_DEFAULTS_LIST, ('ladderstep', 'not_exists'))),
                         ('Karatsuba.v', (CP_BASE_DEFAULTS_LIST, 'goldilocks')),
                         ('Montgomery.v', (CP_BASE_DEFAULTS_FREEZE_LADDERSTEP_LIST, 'montgomery')),
                         ('../MontgomeryReificationTypes.v', (CP_BASE_LIST + ['MontgomeryPackage.v', '../ReificationTypesPackage.v'], 'montgomery'))]
 ALL_FILE_NAMES = PACKAGE_NAMES + NORMAL_PACKAGE_NAMES # PACKAGE_CP_NAMES + WITH_CURVE_BASE_NAMES + ['../ReificationTypes.v']
-CONFIGS = ('goldilocks', 'montgomery')
+CONFIGS = ('goldilocks', 'montgomery', 'freeze', 'ladderstep')
 
 EXCLUDES = ('constr:((wt_divides_chain, wt_divides_chains))', )
 
@@ -95,11 +95,22 @@ def make_add_from_pose(name, args_str, indent='', only_if=None, local=False):
 %(indent)s    TAG.%(name)s
 %(indent)s    ltac:(fun _ => %(body)s).''' % locals()
     else:
-        body += r'''Tag.%(local_str)supdate pkg TAG.%(name)s %(name)s''' % locals()
+        if isinstance(only_if, tuple) and 'not_exists' in only_if:
+            only_if = [i for i in only_if if i != 'not_exists']
+            assert(len(only_if) == 1)
+            only_if = only_if[0]
+            body += 'constr:(%(name)s)' % locals()
+            body = body.strip('\n ').replace('\n', '\n                   ')
+            body = r'''Tag.update_by_tac_if_not_exists
+%(indent)s      pkg
+%(indent)s      TAG.%(name)s
+%(indent)s      ltac:(fun _ => %(body)s).''' % locals()
+        else:
+            body += r'''Tag.%(local_str)supdate pkg TAG.%(name)s %(name)s''' % locals()
         if only_if is None:
             ret += body + '.\n'
         else:
-            body = body.strip('\n ').replace('\n', '\n                 ')
+            body = body.strip('\n .').replace('\n', '\n                 ')
             ret += r'''
 %(indent)s  if_%(only_if)s
 %(indent)s    pkg

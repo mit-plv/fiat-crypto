@@ -1,3 +1,4 @@
+Require Import Coq.QArith.Qround.
 Require Export Coq.ZArith.BinInt.
 Require Export Coq.Lists.List.
 Require Export Crypto.Util.ZUtil.Notations.
@@ -11,7 +12,7 @@ Local Set Primitive Projections.
 Module Export Notations := RawCurveParameters.Notations.
 
 Module TAG. (* namespacing *)
-  Inductive tags := CP | sz | base | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | montgomery | upper_bound_of_exponent | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel | mul_code | square_code.
+  Inductive tags := CP | sz | base | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | montgomery | freeze | ladderstep | upper_bound_of_exponent | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel | mul_code | square_code.
 End TAG.
 
 Module Export CurveParameters.
@@ -37,11 +38,13 @@ Module Export CurveParameters.
       s : Z;
       c : list limb;
       carry_chains : list (list nat);
-      a24 : Z;
+      a24 : option Z;
       coef_div_modulus : nat;
 
       goldilocks : bool;
       montgomery : bool;
+      freeze : bool;
+      ladderstep : bool;
 
       mul_code : option (Z^sz -> Z^sz -> Z^sz);
       square_code : option (Z^sz -> Z^sz);
@@ -62,6 +65,8 @@ Module Export CurveParameters.
               coef_div_modulus
               goldilocks
               montgomery
+              freeze
+              ladderstep
               mul_code
               square_code
               upper_bound_of_exponent
@@ -97,6 +102,10 @@ Module Export CurveParameters.
         let montgomery := RawCurveParameters.montgomery CP in
         let s := RawCurveParameters.s CP in
         let c := RawCurveParameters.c CP in
+        let freeze
+            := defaulted
+                 (RawCurveParameters.freeze CP)
+                 (s =? 2^(Qceiling (base * sz))) in
         let goldilocks :=
             defaulted
               (RawCurveParameters.goldilocks CP)
@@ -117,11 +126,13 @@ Module Export CurveParameters.
           s := s;
           c := c;
           carry_chains := defaulted (RawCurveParameters.carry_chains CP) [seq 0 (pred sz); [0; 1]]%nat;
-          a24 := defaulted (RawCurveParameters.a24 CP) 0;
+          a24 := RawCurveParameters.a24 CP;
           coef_div_modulus := defaulted (RawCurveParameters.coef_div_modulus CP) 0%nat;
 
           goldilocks := goldilocks;
           montgomery := montgomery;
+          freeze := freeze;
+          ladderstep := RawCurveParameters.ladderstep CP;
 
           mul_code := RawCurveParameters.mul_code CP;
           square_code := RawCurveParameters.square_code CP;
@@ -159,6 +170,8 @@ Module Export CurveParameters.
           coef_div_modulus := ?coef_div_modulus';
           goldilocks := ?goldilocks';
           montgomery := ?montgomery';
+          freeze := ?freeze';
+          ladderstep := ?ladderstep';
           mul_code := ?mul_code';
           square_code := ?square_code';
           upper_bound_of_exponent := ?upper_bound_of_exponent';
@@ -172,6 +185,8 @@ Module Export CurveParameters.
          let carry_chains' := do_compute carry_chains' in
          let goldilocks' := do_compute goldilocks' in
          let montgomery' := do_compute montgomery' in
+         let freeze' := do_compute freeze' in
+         let ladderstep' := do_compute ladderstep' in
          let allowable_bit_widths' := do_compute allowable_bit_widths' in
          let freeze_allowable_bit_widths' := do_compute freeze_allowable_bit_widths' in
          let modinv_fuel' := do_compute modinv_fuel' in
@@ -186,6 +201,8 @@ Module Export CurveParameters.
                     coef_div_modulus := coef_div_modulus';
                     goldilocks := goldilocks';
                     montgomery := montgomery';
+                    freeze := freeze';
+                    ladderstep := ladderstep';
                     mul_code := mul_code';
                     square_code := square_code';
                     upper_bound_of_exponent := upper_bound_of_exponent';
@@ -221,6 +238,10 @@ Module Export CurveParameters.
     internal_pose_of_CP CP CurveParameters.goldilocks goldilocks.
   Ltac pose_montgomery CP montgomery :=
     internal_pose_of_CP CP CurveParameters.montgomery montgomery.
+  Ltac pose_freeze CP freeze :=
+    internal_pose_of_CP CP CurveParameters.freeze freeze.
+  Ltac pose_ladderstep CP ladderstep :=
+    internal_pose_of_CP CP CurveParameters.ladderstep ladderstep.
   Ltac pose_allowable_bit_widths CP allowable_bit_widths :=
     internal_pose_of_CP CP CurveParameters.allowable_bit_widths allowable_bit_widths.
   Ltac pose_freeze_allowable_bit_widths CP freeze_allowable_bit_widths :=
@@ -295,6 +316,18 @@ Module Export CurveParameters.
     let montgomery := pose_montgomery CP montgomery in
     Tag.update pkg TAG.montgomery montgomery.
 
+  Ltac add_freeze pkg :=
+    let CP := Tag.get pkg TAG.CP in
+    let freeze := fresh "freeze" in
+    let freeze := pose_freeze CP freeze in
+    Tag.update pkg TAG.freeze freeze.
+
+  Ltac add_ladderstep pkg :=
+    let CP := Tag.get pkg TAG.CP in
+    let ladderstep := fresh "ladderstep" in
+    let ladderstep := pose_ladderstep CP ladderstep in
+    Tag.update pkg TAG.ladderstep ladderstep.
+
   Ltac add_allowable_bit_widths pkg :=
     let CP := Tag.get pkg TAG.CP in
     let allowable_bit_widths := fresh "allowable_bit_widths" in
@@ -342,6 +375,8 @@ Module Export CurveParameters.
     let pkg := add_coef_div_modulus pkg in
     let pkg := add_goldilocks pkg in
     let pkg := add_montgomery pkg in
+    let pkg := add_freeze pkg in
+    let pkg := add_ladderstep pkg in
     let pkg := add_allowable_bit_widths pkg in
     let pkg := add_freeze_allowable_bit_widths pkg in
     let pkg := add_upper_bound_of_exponent pkg in

@@ -1,12 +1,19 @@
 Require Import Coq.ZArith.BinIntDef.
-Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Curves.Montgomery.XZ.
+Require Import Crypto.Specific.Framework.ArithmeticSynthesis.HelperTactics.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
+Require Import Crypto.Util.Option.
+
+Local Notation tuple := Tuple.tuple.
+Local Open Scope list_scope.
+Local Open Scope Z_scope.
+Local Infix "^" := tuple : type_scope.
 
 (** TODO(jadep,andreser): Move to NewBaseSystemTest? *)
 Definition FMxzladderstep {m} := @M.donnaladderstep (F m) F.add F.sub F.mul.
@@ -45,6 +52,13 @@ Section with_notations.
          ((x2, z2), (x3, z3))%core
        end.
 End with_notations.
+
+Ltac pose_a24_sig sz m wt a24 a24_sig :=
+  let a24 := (eval vm_compute in (invert_Some a24)) in
+  cache_term_with_type_by
+    { a24t : Z^sz | Positional.Fdecode (m:=m) wt a24t = F.of_Z m a24 }
+    solve_constant_sig
+    a24_sig.
 
 Ltac pose_Mxzladderstep_sig sz wt m add_sig sub_sig mul_sig square_sig carry_sig Mxzladderstep_sig :=
   cache_term_with_type_by

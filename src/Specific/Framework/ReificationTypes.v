@@ -130,12 +130,17 @@ Proof.
     assumption.
 Qed.
 
-Ltac pose_feBW_bounded wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded :=
-  cache_proof_with_type_by
-    (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < 2 * Z.pos m)
-    ltac:(apply (@feBW_bounded_helper sz adjusted_bitwidth' bounds wt wt_nonneg);
-          vm_compute; clear; split; congruence)
-           feBW_bounded.
+Ltac pose_feBW_bounded freeze wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded :=
+  match (eval vm_compute in freeze) with
+  | true
+    => cache_proof_with_type_by
+         (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < 2 * Z.pos m)
+         ltac:(apply (@feBW_bounded_helper sz adjusted_bitwidth' bounds wt wt_nonneg);
+               vm_compute; clear; split; congruence)
+                feBW_bounded
+  | false
+    => cache_term tt feBW_bounded
+  end.
 
 Ltac pose_phiW feW m wt phiW :=
   cache_term_with_type_by

@@ -242,6 +242,8 @@ def make_curve_parameters(parameters):
                                          nargs,
                                          sz)
     replacements['coef_div_modulus_raw'] = replacements.get('coef_div_modulus', '0')
+    replacements['freeze'] = fix_option(nested_list_to_string(replacements.get('freeze', 'freeze' in parameters.get('operations', []))))
+    replacements['ladderstep'] = nested_list_to_string(replacements.get('ladderstep', any(f in parameters.get('operations', []) for f in ('ladderstep', 'xzladderstep'))))
     for k, scope_string in (('upper_bound_of_exponent', ''),
                             ('allowable_bit_widths', '%nat'),
                             ('freeze_extra_allowable_bit_widths', '%nat'),
@@ -279,6 +281,8 @@ Definition curve : CurveParameters :=
 
     goldilocks := %(goldilocks)s;
     montgomery := %(montgomery)s;
+    freeze := %(freeze)s;
+    ladderstep := %(ladderstep)s;
 
     mul_code := %(mul)s;
 

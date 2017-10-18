@@ -20,6 +20,8 @@ Definition curve : CurveParameters :=
 
     goldilocks := Some false;
     montgomery := true;
+    freeze := Some false;
+    ladderstep := false;
 
     mul_code := None;
 
