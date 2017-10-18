@@ -7,6 +7,7 @@ Ltac make_parameterized_sig t :=
   refine (_ : { v : _ | v = t });
   eexists; cbv delta [t
                         B.limb ListUtil.sum ListUtil.sum_firstn
+                        CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
                         Decidable.dec Decidable.dec_eq_Z
                         id_tuple_with_alt id_tuple'_with_alt
                         Z.add_get_carry_full Z.mul_split];
