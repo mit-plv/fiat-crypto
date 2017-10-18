@@ -57,7 +57,7 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES :=
+UNMADE_VOFILES := src/Specific/X2555/C128/%.vo # x2555-c128 currently doesn't build
 # files that are treated specially
 SPECIAL_VOFILES := src/Specific/%Display.vo
 SPECIFIC_GENERATED_VOFILES := src/Specific/solinas%.vo src/Specific/montgomery%.vo
@@ -73,9 +73,9 @@ SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% thir
 SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(REGULAR_VOFILES))
 
 COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(REGULAR_VOFILES))
-SPECIFIC_VO := $(filter src/Specific/%,$(REGULAR_VOFILES))
-NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(REGULAR_VOFILES))
-SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(VOFILES))
+SPECIFIC_VO := $(filter src/Specific/%,$(COQ_VOFILES))
+NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(COQ_VOFILES))
+SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(filter-out $(UNMADE_VOFILES),$(VOFILES)))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
 DISPLAY_NON_JAVA_VO := $(filter-out $(DISPLAY_JAVA_VO),$(DISPLAY_VO))
