@@ -275,12 +275,12 @@ Hint Rewrite @fold_right_no_starter_cps_correct : uncps.
 Import Tuple.
 
 Module Tuple.
-  Fixpoint map_cps {A B n} (g : A->B) :
-  tuple A n -> forall {T}, (tuple B n->T) -> T:=
-  match n with
-  | O => fun _ _ f => f tt
-  | S n' => fun t T f => map_cps g (tl t) (fun r => f (append (g (hd t)) r))
-  end.
+  Fixpoint map_cps {A B n} (g : A->B) (t : tuple A n) {T} :
+    (tuple B n->T) -> T:=
+  match n return tuple A n -> (tuple B n -> T) -> T with
+  | O => fun _ f => f tt
+  | S n' => fun t f => map_cps g (tl t) (fun r => f (append (g (hd t)) r))
+  end t.
   Lemma map_cps_correct {A B n} g t: forall {T} f,
       @map_cps A B n g t T f = f (map g t).
   Proof.
@@ -288,13 +288,13 @@ Module Tuple.
     [|rewrite IHn, <-map_append,<-subst_append]; reflexivity.
   Qed. Hint Rewrite @map_cps_correct : uncps.
 
-  Fixpoint map2_cps {n A B C} (g:A->B->C) :
-    tuple A n -> tuple B n -> forall {T}, (tuple C n->T) -> T :=
-    match n with
-    | O => fun _ _ _ f => f tt
-    | S n' => fun xs ys T f =>
+  Fixpoint map2_cps {n A B C} (g:A->B->C) (xs:tuple A n) (ys:tuple B n) {T} :
+    (tuple C n->T) -> T :=
+    match n return tuple _ n -> tuple _ n -> (tuple C n -> T) -> T with
+    | O => fun _ _ f => f tt
+    | S n' => fun xs ys f =>
                 map2_cps g (tl xs) (tl ys) (fun zs => f (append (g (hd xs) (hd ys)) zs))
-    end.
+    end xs ys.
   Lemma map2_cps_correct {n A B C} g xs ys : forall {T} f,
       @map2_cps n A B C g xs ys T f = f (map2 g xs ys).
   Proof.
@@ -355,16 +355,16 @@ Module Tuple.
   Hint Rewrite @mapi_with_cps_correct @mapi_with'_cps_correct
        using (intros; autorewrite with uncps; auto): uncps.
 
-  Fixpoint left_append_cps {A n} (x:A) :
-    tuple A n -> forall {R}, (tuple A (S n) -> R) -> R :=
+  Fixpoint left_append_cps {A n} (x:A) (xs:tuple A n) {R} :
+    (tuple A (S n) -> R) -> R :=
   match
-    n as n0 return (tuple A n0 -> forall R, (tuple A (S n0) -> R) -> R)
+    n as n0 return (tuple A n0 -> (tuple A (S n0) -> R) -> R)
   with
-  | 0%nat => fun _ _ f => f x
+  | 0%nat => fun _ f => f x
   | S n' =>
-      fun xs _ f =>
+      fun xs f =>
       left_append_cps x (tl xs) (fun r => f (append (hd xs) r))
-  end.
+  end xs.
   Lemma left_append_cps_correct A n x xs R f :
     @left_append_cps A n x xs R f = f (left_append x xs).
   Proof.
@@ -373,41 +373,41 @@ Module Tuple.
     rewrite IHn. reflexivity.
   Qed.
 
-  Definition tl_cps {A n} :
-    tuple A (S n) -> forall {R}, (tuple A n -> R) -> R :=
+  Definition tl_cps {A n} (xs : tuple A (S n)) {R} :
+    (tuple A n -> R) -> R :=
   match
-    n as n0 return (tuple A (S n0) -> forall R, (tuple A n0 -> R) -> R)
+    n as n0 return (tuple A (S n0) -> (tuple A n0 -> R) -> R)
   with
-  | 0%nat => fun _ _ f => f tt
-  | S n' => fun xs _ f => f (fst xs)
-  end.
+  | 0%nat => fun _ f => f tt
+  | S n' => fun xs f => f (fst xs)
+  end xs.
   Lemma tl_cps_correct A n xs R f :
     @tl_cps A n xs R f = f (tl xs).
   Proof. destruct n; reflexivity. Qed.
 
-  Definition hd_cps {A n} :
-    tuple A (S n) -> forall {R}, (A -> R) -> R :=
+  Definition hd_cps {A n} (xs : tuple A (S n)) {R} :
+    (A -> R) -> R :=
   match
-    n as n0 return (tuple A (S n0) -> forall R, (A -> R) -> R)
+    n as n0 return (tuple A (S n0) -> (A -> R) -> R)
   with
-  | 0%nat => fun x _ f => f x
-  | S n' => fun xs _ f => f (snd xs)
-  end.
+  | 0%nat => fun x f => f x
+  | S n' => fun xs f => f (snd xs)
+  end xs.
   Lemma hd_cps_correct A n xs R f :
     @hd_cps A n xs R f = f (hd xs).
   Proof. destruct n; reflexivity. Qed.
 
-  Fixpoint left_tl_cps {A n} :
-    tuple A (S n) -> forall {R}, (tuple A n -> R) -> R :=
+  Fixpoint left_tl_cps {A n} (xs : tuple A (S n)) {R} :
+    (tuple A n -> R) -> R :=
   match
-    n as n0 return (tuple A (S n0) -> forall R, (tuple A n0 -> R) -> R)
+    n as n0 return (tuple A (S n0) -> (tuple A n0 -> R) -> R)
   with
-  | 0%nat => fun _ _ f => f tt
+  | 0%nat => fun _ f => f tt
   | S n' =>
-      fun xs _ f =>
+      fun xs f =>
         tl_cps xs (fun xtl => hd_cps xs (fun xhd =>
           left_tl_cps xtl (fun r => f (append xhd r))))
-  end.
+  end xs.
   Lemma left_tl_cps_correct A n xs R f :
     @left_tl_cps A n xs R f = f (left_tl xs).
   Proof.
@@ -416,15 +416,15 @@ Module Tuple.
     rewrite IHn. reflexivity.
   Qed.
 
-  Fixpoint left_hd_cps {A n} :
-    tuple A (S n) -> forall {R}, (A -> R) -> R :=
+  Fixpoint left_hd_cps {A n} (xs : tuple A (S n)) {R} :
+    (A -> R) -> R :=
   match
-    n as n0 return (tuple A (S n0) -> forall R, (A -> R) -> R)
+    n as n0 return (tuple A (S n0) -> (A -> R) -> R)
   with
-  | 0%nat => fun x _ f => f x
+  | 0%nat => fun x f => f x
   | S n' =>
-      fun xs _ f => tl_cps xs (fun xtl => left_hd_cps xtl f)
-  end.
+      fun xs f => tl_cps xs (fun xtl => left_hd_cps xtl f)
+  end xs.
   Lemma left_hd_cps_correct A n xs R f :
     @left_hd_cps A n xs R f = f (left_hd xs).
   Proof.
