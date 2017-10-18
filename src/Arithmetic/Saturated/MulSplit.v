@@ -71,3 +71,6 @@ Hint Opaque B.Associational.sat_mul B.Associational.sat_multerm : uncps.
 Hint Rewrite @B.Associational.sat_mul_id @B.Associational.sat_multerm_id : uncps.
 Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm using (omega || assumption) : push_basesystem_eval.
 
+Hint Unfold
+     B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul
+  : basesystem_partial_evaluation_unfolder.

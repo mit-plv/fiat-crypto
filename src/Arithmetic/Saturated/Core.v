@@ -432,6 +432,16 @@ Hint Rewrite
      @Columns.eval_nils
   using (assumption || omega): push_basesystem_eval.
 
+Hint Unfold
+     Columns.eval Columns.eval_from
+     Columns.compact_digit_cps Columns.compact_digit
+     Columns.compact_step_cps Columns.compact_step
+     Columns.compact_cps Columns.compact
+     Columns.cons_to_nth_cps Columns.cons_to_nth
+     Columns.nils
+     Columns.from_associational_cps Columns.from_associational
+  : basesystem_partial_evaluation_unfolder.
+
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t :=
       (eval

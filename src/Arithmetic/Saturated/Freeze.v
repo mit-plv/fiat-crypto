@@ -120,3 +120,7 @@ Section Freeze.
       reflexivity. }
   Qed.
 End Freeze.
+
+Hint Unfold
+     freeze freeze_cps
+  : basesystem_partial_evaluation_unfolder.

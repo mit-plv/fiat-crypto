@@ -238,3 +238,14 @@ End B.
 Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
 Hint Rewrite @B.Positional.sat_sub_id @B.Positional.sat_add_id @B.Positional.chain_op_id @B.Positional.chain_op' : uncps.
 Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (omega || assumption) : push_basesystem_eval.
+
+Hint Unfold
+     B.Positional.chain_op'_cps
+     B.Positional.chain_op'
+     B.Positional.chain_op_cps
+     B.Positional.chain_op
+     B.Positional.sat_add_cps
+     B.Positional.sat_add
+     B.Positional.sat_sub_cps
+     B.Positional.sat_sub
+     : basesystem_partial_evaluation_unfolder.

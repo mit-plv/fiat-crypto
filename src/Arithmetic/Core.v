@@ -995,6 +995,29 @@ End DivMod.
 
 Import B.
 
+Create HintDb basesystem_partial_evaluation_unfolder.
+
+Hint Unfold
+     id
+     Positional.to_associational_cps Positional.to_associational
+     Positional.eval Positional.zeros Positional.add_to_nth_cps
+     Positional.add_to_nth Positional.place_cps Positional.place
+     Positional.from_associational_cps Positional.from_associational
+     Positional.carry_cps Positional.carry
+     Positional.chained_carries_cps Positional.chained_carries
+     Positional.sub_cps Positional.sub Positional.split_cps
+     Positional.scmul_cps Positional.unbalanced_sub_cps
+     Positional.negate_snd_cps Positional.add_cps Positional.opp_cps
+     Associational.eval Associational.multerm Associational.mul_cps
+     Associational.mul Associational.split_cps Associational.split
+     Associational.reduce_cps Associational.reduce
+     Associational.carryterm_cps Associational.carryterm
+     Associational.carry_cps Associational.carry
+     Associational.negate_snd_cps Associational.negate_snd div modulo
+     id_tuple_with_alt id_tuple'_with_alt
+     Z.add_get_carry_full
+  : basesystem_partial_evaluation_unfolder.
+
 Ltac basesystem_partial_evaluation_unfolder t :=
   eval
     cbv
