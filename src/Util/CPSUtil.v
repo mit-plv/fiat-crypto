@@ -91,11 +91,11 @@ Proof.
 Qed.
 Hint Rewrite @flat_map_cps_correct using (intros; autorewrite with uncps; auto): uncps.
 
-Fixpoint from_list_default'_cps {A} (d y:A) n xs:
-  forall {T}, (Tuple.tuple' A n -> T) -> T:=
-  match n as n0 return (forall {T}, (Tuple.tuple' A n0 ->T) ->T) with
-  | O => fun T f => f y
-  | S n' => fun T f =>
+Fixpoint from_list_default'_cps {A} (d y:A) n xs {T}:
+  (Tuple.tuple' A n -> T) -> T:=
+  match n as n0 return ((Tuple.tuple' A n0 ->T) ->T) with
+  | O => fun f => f y
+  | S n' => fun f =>
               match xs with
               | nil => from_list_default'_cps d d n' nil (fun r => f (r, y))
               | x :: xs' => from_list_default'_cps d x n' xs' (fun r => f (r, y))
@@ -107,11 +107,11 @@ Proof.
   induction n as [|? IHn]; intros; simpl; [reflexivity|].
   break_match; subst; apply IHn.
 Qed.
-Definition from_list_default_cps {A} (d:A) n (xs:list A) :
-  forall {T}, (Tuple.tuple A n -> T) -> T:=
-  match n as n0 return (forall {T}, (Tuple.tuple A n0 ->T) ->T) with
-  | O => fun T f => f tt
-  | S n' => fun T f =>
+Definition from_list_default_cps {A} (d:A) n (xs:list A) {T} :
+  (Tuple.tuple A n -> T) -> T:=
+  match n as n0 return ((Tuple.tuple A n0 ->T) ->T) with
+  | O => fun f => f tt
+  | S n' => fun f =>
               match xs with
               | nil => from_list_default'_cps d d n' nil f
               | x :: xs' => from_list_default'_cps d x n' xs' f
