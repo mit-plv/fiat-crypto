@@ -1036,8 +1036,7 @@ Ltac apply_patterned t1 :=
 
 Ltac pattern_strip_full t :=
   let t := (eval pattern
-                 Z,
-            (@Let_In Z (fun _ => Z)),
+                 (@Let_In Z (fun _ => Z)),
             @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
             (@id_with_alt Z),
             @Z.add_get_carry, @Z.zselect, @Z.mul_split_at_bitwidth,
@@ -1047,7 +1046,7 @@ Ltac pattern_strip_full t :=
             (@ModularArithmetic.F.to_Z), (@ModularArithmetic.F.of_Z),
             2%Z, 1%Z, 0%Z
              in t) in
-  let t := match t with ?t _
+  let t := match t with ?t
                          _
                          _ _ _ _ _ _
                          _
@@ -1057,11 +1056,14 @@ Ltac pattern_strip_full t :=
                          _ _
                          _ _
                          _ _ _ => t end in
+  let t := (eval pattern Z, (@Let_In), (@id_with_alt) in t) in
+  let t := match t with ?t _ _ _ => t end in
   t.
 
 Ltac apply_patterned_full t1 :=
   constr:(t1
             Z
+            (@Let_In) (@id_with_alt)
             (@Let_In Z (fun _ => Z))
             (@runtime_mul) (@runtime_add) (@runtime_opp) (@runtime_shr) (@runtime_and) (@runtime_lor)
             (@id_with_alt Z)
