@@ -47,7 +47,7 @@ Interp-η
  uint64_t x143, uint8_t x144 = addcarryx_u64(x141, x107, x128);
  uint64_t x146, uint8_t x147 = addcarryx_u64(x144, x110, x131);
  uint64_t x149, uint8_t x150 = addcarryx_u64(x147, x113, x134);
- uint8_t x151 = x150 + x114;
+ uint8_t x151 = (x150 + x114);
  uint64_t x153, uint64_t x154 = mulx_u64(x9, x11);
  uint64_t x156, uint64_t x157 = mulx_u64(x9, x13);
  uint64_t x159, uint64_t x160 = mulx_u64(x9, x15);
@@ -73,7 +73,7 @@ Interp-η
  uint64_t x219, uint8_t x220 = addcarryx_u64(x217, x183, x204);
  uint64_t x222, uint8_t x223 = addcarryx_u64(x220, x186, x207);
  uint64_t x225, uint8_t x226 = addcarryx_u64(x223, x189, x210);
- uint8_t x227 = x226 + x190;
+ uint8_t x227 = (x226 + x190);
  uint64_t x229, uint64_t x230 = mulx_u64(x8, x11);
  uint64_t x232, uint64_t x233 = mulx_u64(x8, x13);
  uint64_t x235, uint64_t x236 = mulx_u64(x8, x15);
@@ -99,7 +99,7 @@ Interp-η
  uint64_t x295, uint8_t x296 = addcarryx_u64(x293, x259, x280);
  uint64_t x298, uint8_t x299 = addcarryx_u64(x296, x262, x283);
  uint64_t x301, uint8_t x302 = addcarryx_u64(x299, x265, x286);
- uint8_t x303 = x302 + x266;
+ uint8_t x303 = (x302 + x266);
  uint64_t x305, uint8_t x306 = subborrow_u64(0x0, x292, 0xffffffffffffffffL);
  uint64_t x308, uint8_t x309 = subborrow_u64(x306, x295, 0xffffffff);
  uint64_t x311, uint8_t x312 = subborrow_u64(x309, x298, 0x0);

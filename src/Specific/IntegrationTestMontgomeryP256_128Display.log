@@ -29,7 +29,7 @@ Interp-η
  uint128_t _, uint8_t x82 = addcarryx_u128(0x0, x57, x69);
  uint128_t x84, uint8_t x85 = addcarryx_u128(x82, x60, x75);
  uint128_t x87, uint8_t x88 = addcarryx_u128(x85, x63, x78);
- uint8_t x89 = x88 + x64;
+ uint8_t x89 = (x88 + x64);
  uint128_t x91, uint8_t x92 = subborrow_u128(0x0, x84, 0xffffffffffffffffffffffffL);
  uint128_t x94, uint8_t x95 = subborrow_u128(x92, x87, 0xffffffff000000010000000000000000L);
  uint128_t _, uint8_t x98 = subborrow_u128(x95, x89, 0x0);
