@@ -53,10 +53,16 @@ Section with_notations.
        end.
 End with_notations.
 
-Ltac pose_a24_sig sz m wt a24 a24_sig :=
+Ltac pose_a24' a24 a24' :=
   let a24 := (eval vm_compute in (invert_Some a24)) in
   cache_term_with_type_by
-    { a24t : Z^sz | Positional.Fdecode (m:=m) wt a24t = F.of_Z m a24 }
+    Z
+    ltac:(exact a24)
+           a24'.
+
+Ltac pose_a24_sig sz m wt a24' a24_sig :=
+  cache_term_with_type_by
+    { a24t : Z^sz | Positional.Fdecode (m:=m) wt a24t = F.of_Z m a24' }
     solve_constant_sig
     a24_sig.
 

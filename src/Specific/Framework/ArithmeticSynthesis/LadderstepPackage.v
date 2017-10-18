@@ -7,9 +7,21 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := a24_sig | Mxzladderstep_sig.
+  Inductive tags := a24' | a24_sig | Mxzladderstep_sig.
 End TAG.
 
+Ltac add_a24' pkg :=
+  if_ladderstep
+    pkg
+    ltac:(fun _ => Tag.update_by_tac_if_not_exists
+                       pkg
+                       TAG.a24'
+                       ltac:(fun _ => let a24 := Tag.get pkg TAG.a24 in
+                                      let a24' := fresh "a24'" in
+                                      let a24' := pose_a24' a24 a24' in
+                                      constr:(a24')))
+    ltac:(fun _ => pkg)
+    ().
 Ltac add_a24_sig pkg :=
   if_ladderstep
     pkg
@@ -19,9 +31,9 @@ Ltac add_a24_sig pkg :=
                        ltac:(fun _ => let sz := Tag.get pkg TAG.sz in
                                       let m := Tag.get pkg TAG.m in
                                       let wt := Tag.get pkg TAG.wt in
-                                      let a24 := Tag.get pkg TAG.a24 in
+                                      let a24' := Tag.get pkg TAG.a24' in
                                       let a24_sig := fresh "a24_sig" in
-                                      let a24_sig := pose_a24_sig sz m wt a24 a24_sig in
+                                      let a24_sig := pose_a24_sig sz m wt a24' a24_sig in
                                       constr:(a24_sig)))
     ltac:(fun _ => pkg)
     ().
@@ -45,6 +57,7 @@ Ltac add_Mxzladderstep_sig pkg :=
     ltac:(fun _ => pkg)
     ().
 Ltac add_Ladderstep_package pkg :=
+  let pkg := add_a24' pkg in
   let pkg := add_a24_sig pkg in
   let pkg := add_Mxzladderstep_sig pkg in
   Tag.strip_subst_local pkg.
@@ -53,6 +66,8 @@ Ltac add_Ladderstep_package pkg :=
 Module MakeLadderstepPackage (PKG : PrePackage).
   Module Import MakeLadderstepPackageInternal := MakePackageBase PKG.
 
+  Ltac get_a24' _ := get TAG.a24'.
+  Notation a24' := (ltac:(let v := get_a24' () in exact v)) (only parsing).
   Ltac get_a24_sig _ := get TAG.a24_sig.
   Notation a24_sig := (ltac:(let v := get_a24_sig () in exact v)) (only parsing).
   Ltac get_Mxzladderstep_sig _ := get TAG.Mxzladderstep_sig.
