@@ -64,18 +64,28 @@ Lemma firstn_cps_correct {A} n l T f :
 Proof. induction n; destruct l; reflexivity. Qed.
 Hint Rewrite @firstn_cps_correct : uncps.
 
-Fixpoint flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)  :=
+Fixpoint flat_map_cps_specialized {T A B} (g:A->(list B->T)->T) (ls : list A) (f:list B->T)  :=
   match ls with
   | nil => f nil
-  | (x::tl)%list => g x (fun r => flat_map_cps g tl (fun rr => f (r ++ rr))%list)
+  | (x::tl)%list => g x (fun r => flat_map_cps_specialized g tl (fun rr => f (r ++ rr))%list)
   end.
+
+Definition flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)
+  := @flat_map_cps_specialized T A B (fun a => @g a T) ls f.
+Lemma unfold_flat_map_cps {A B} (g:A->forall {T}, (list B->T)->T) (ls : list A) {T} (f:list B->T)
+  : @flat_map_cps A B g ls T f
+    = match ls with
+      | nil => f nil
+      | (x::tl)%list => g x (fun r => flat_map_cps g tl (fun rr => f (r ++ rr))%list)
+      end.
+Proof. destruct ls; reflexivity. Qed.
 Lemma flat_map_cps_correct {A B} (g:A->forall {T}, (list B->T)->T) ls :
   forall {T} (f:list B->T),
     (forall x T h, @g x T h = h (g x id)) ->
     @flat_map_cps A B g ls T f = f (List.flat_map (fun x => g x id) ls).
 Proof.
   induction ls as [|?? IHls]; intros T f H; [reflexivity|].
-  simpl flat_map_cps. simpl flat_map.
+  rewrite unfold_flat_map_cps. simpl @flat_map.
   rewrite H; erewrite IHls by eassumption.
   reflexivity.
 Qed.
@@ -192,17 +202,26 @@ Qed.
 Hint Rewrite @combine_cps_correct: uncps.
 
 (* differs from fold_right_cps in that the functional argument `g` is also a CPS function *)
-Fixpoint fold_right_cps2 {A B} (g : B -> A -> forall {T}, (A->T)->T) (a0 : A) (l : list B) {T} (f : A -> T) :=
+Fixpoint fold_right_cps2_specialized {T A B} (g : B -> A -> (A->T)->T) (a0 : A) (l : list B) (f : A -> T) :=
   match l with
   | nil => f a0
-  | b :: tl => fold_right_cps2 g a0 tl (fun r => g b r f)
+  | b :: tl => fold_right_cps2_specialized g a0 tl (fun r => g b r f)
   end.
+Definition fold_right_cps2 {A B} (g : B -> A -> forall {T}, (A->T)->T) (a0 : A) (l : list B) {T} (f : A -> T) :=
+  @fold_right_cps2_specialized T A B (fun b a => @g b a T) a0 l f.
+Lemma unfold_fold_right_cps2 {A B} (g : B -> A -> forall {T}, (A->T)->T) (a0 : A) (l : list B) {T} (f : A -> T)
+  : @fold_right_cps2 A B g a0 l T f
+    = match l with
+      | nil => f a0
+      | b :: tl => fold_right_cps2 g a0 tl (fun r => g b r f)
+      end.
+Proof. destruct l; reflexivity. Qed.
 Lemma fold_right_cps2_correct {A B} g a0 l : forall {T} f,
   (forall b a T h, @g b a T h = h (@g b a A id)) ->
   @fold_right_cps2 A B g a0 l T f = f (List.fold_right (fun b a => @g b a A id) a0 l).
 Proof.
   induction l as [|?? IHl]; intros T f H; [reflexivity|].
-  simpl fold_right_cps2. simpl fold_right.
+  rewrite unfold_fold_right_cps2. simpl fold_right.
   rewrite H; erewrite IHl by eassumption.
   rewrite H; reflexivity.
 Qed.
