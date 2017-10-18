@@ -10,6 +10,7 @@ Require Crypto.Util.Tuple.
 Local Notation tuple := Tuple.tuple.
 Local Open Scope list_scope.
 Local Open Scope Z_scope.
+Local Infix "^" := tuple : type_scope.
 
 Ltac if_cond_else cond tac default id :=
   lazymatch (eval compute in cond) with
