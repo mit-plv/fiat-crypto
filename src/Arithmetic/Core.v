@@ -614,10 +614,10 @@ Module B.
 
       Definition from_associational_cps n (p:list limb)
                  {T} (f:tuple Z n->T):=
-        fold_right_cps
-          (fun t st =>
+        fold_right_cps2
+          (fun t st T' f' =>
              place_cps t (pred n)
-                       (fun p=> add_to_nth_cps (fst p) (snd p) st id))
+                       (fun p=> add_to_nth_cps (fst p) (snd p) st f'))
           (zeros n) p f.
 
       Definition from_associational n p := from_associational_cps n p id.

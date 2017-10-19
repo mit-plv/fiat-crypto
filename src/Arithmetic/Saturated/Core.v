@@ -394,10 +394,10 @@ Module Columns.
 
     Definition from_associational_cps n (p:list B.limb)
                {T} (f:(list Z)^n -> T) :=
-      fold_right_cps
-        (fun t st =>
+      fold_right_cps2
+        (fun t st T' f' =>
            B.Positional.place_cps weight t (pred n)
-             (fun p=> cons_to_nth_cps (fst p) (snd p) st id))
+             (fun p=> cons_to_nth_cps (fst p) (snd p) st f'))
         (nils n) p f.
 
     Definition from_associational n p := from_associational_cps n p id.
