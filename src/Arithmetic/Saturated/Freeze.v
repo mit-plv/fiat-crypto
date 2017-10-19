@@ -7,6 +7,7 @@ Require Import Crypto.Arithmetic.Saturated.Core.
 Require Import Crypto.Arithmetic.Saturated.Wrappers.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tuple Crypto.Util.LetIn.
@@ -101,6 +102,7 @@ Section Freeze.
     pose proof Z.add_get_carry_full_mod.
     pose proof Z.add_get_carry_full_div.
     pose proof div_correct. pose proof modulo_correct.
+    pose proof @Z.add_get_carry_full_cps_correct.
     autorewrite with uncps push_id push_basesystem_eval.
 
     pose proof (weight_nonzero n).

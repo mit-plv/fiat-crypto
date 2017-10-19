@@ -35,38 +35,38 @@ Module Z.
                  | break_innermost_match_step ].
 
   Definition get_carry_cps {T} (bitwidth : Z) (v : Z) (f : Z * Z -> T) : T
-    := let '(v, c) := Z.get_carry bitwidth v in f (v, c).
+    := f (Z.get_carry bitwidth v).
   Definition get_carry_cps_correct {T} bitwidth v f
     : @get_carry_cps T bitwidth v f = f (Z.get_carry bitwidth v)
     := eq_refl.
   Hint Rewrite @get_carry_cps_correct : uncps.
   Definition add_with_get_carry_cps {T} (bitwidth : Z) (c : Z) (x y : Z) (f : Z * Z -> T) : T
-    := let '(v, c) := Z.add_with_get_carry bitwidth c x y in f (v, c).
+    := f (Z.add_with_get_carry bitwidth c x y).
   Definition add_with_get_carry_cps_correct {T} bitwidth c x y f
     : @add_with_get_carry_cps T bitwidth c x y f = f (Z.add_with_get_carry bitwidth c x y)
     := eq_refl.
   Hint Rewrite @add_with_get_carry_cps_correct : uncps.
   Definition add_get_carry_cps {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T) : T
-    := let '(v, c) := Z.add_get_carry bitwidth x y in f (v, c).
+    := f (Z.add_get_carry bitwidth x y).
   Definition add_get_carry_cps_correct {T} bitwidth x y f
     : @add_get_carry_cps T bitwidth x y f = f (Z.add_get_carry bitwidth x y)
     := eq_refl.
   Hint Rewrite @add_get_carry_cps_correct : uncps.
 
   Definition get_borrow_cps {T} (bitwidth : Z) (v : Z) (f : Z * Z -> T)
-    := let '(v, c) := Z.get_borrow bitwidth v in f (v, c).
+    := f (Z.get_borrow bitwidth v).
   Definition get_borrow_cps_correct {T} bitwidth v f
     : @get_borrow_cps T bitwidth v f = f (Z.get_borrow bitwidth v)
     := eq_refl.
   Hint Rewrite @get_borrow_cps_correct : uncps.
   Definition sub_with_get_borrow_cps {T} (bitwidth : Z) (c : Z) (x y : Z) (f : Z * Z -> T) : T
-    := let '(v, c) := Z.sub_with_get_borrow bitwidth c x y in f (v, c).
+    := f (Z.sub_with_get_borrow bitwidth c x y).
   Definition sub_with_get_borrow_cps_correct {T} (bitwidth : Z) (c : Z) (x y : Z) (f : Z * Z -> T)
     : @sub_with_get_borrow_cps T bitwidth c x y f = f (Z.sub_with_get_borrow bitwidth c x y)
     := eq_refl.
   Hint Rewrite @sub_with_get_borrow_cps_correct : uncps.
   Definition sub_get_borrow_cps {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T) : T
-    := let '(v, c) := Z.sub_get_borrow bitwidth x y in f (v, c).
+    := f (Z.sub_get_borrow bitwidth x y).
   Definition sub_get_borrow_cps_correct {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T)
     : @sub_get_borrow_cps T bitwidth x y f = f (Z.sub_get_borrow bitwidth x y)
     := eq_refl.

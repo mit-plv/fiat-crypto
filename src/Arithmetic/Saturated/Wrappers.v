@@ -7,6 +7,7 @@ Require Import Crypto.Arithmetic.Saturated.Core.
 Require Import Crypto.Arithmetic.Saturated.MulSplit.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.Tuple.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 
@@ -21,7 +22,7 @@ Module Columns.
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.to_associational_cps weight q
         (fun Q => Columns.from_associational_cps weight n3 (P++Q)
-        (fun R => Columns.compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f))).
+        (fun R => Columns.compact_cps (div:=div) (modulo:=modulo) (add_get_carry_cps:=@Z.add_get_carry_full_cps) weight R f))).
 
     Definition unbalanced_sub_cps {n1 n2 n3} (p : Z^n1) (q:Z^n2)
                {T} (f : (Z*Z^n3)->T) :=
@@ -29,15 +30,15 @@ Module Columns.
         (fun P => B.Positional.negate_snd_cps weight q
         (fun nq => B.Positional.to_associational_cps weight nq
         (fun Q => Columns.from_associational_cps weight n3 (P++Q)
-        (fun R => Columns.compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f)))).
+        (fun R => Columns.compact_cps (div:=div) (modulo:=modulo) (add_get_carry_cps:=@Z.add_get_carry_full_cps) weight R f)))).
 
     Definition mul_cps {n1 n2 n3} s (p : Z^n1) (q : Z^n2)
                {T} (f : (Z*Z^n3)->T) :=
       B.Positional.to_associational_cps weight p
         (fun P => B.Positional.to_associational_cps weight q
-        (fun Q => B.Associational.sat_mul_cps (mul_split := Z.mul_split) s P Q
+        (fun Q => B.Associational.sat_mul_cps (mul_split_cps := @Z.mul_split_cps') s P Q
         (fun PQ => Columns.from_associational_cps weight n3 PQ
-        (fun R => Columns.compact_cps (div:=div) (modulo:=modulo) (add_get_carry:=Z.add_get_carry_full) weight R f)))).
+        (fun R => Columns.compact_cps (div:=div) (modulo:=modulo) (add_get_carry_cps:=@Z.add_get_carry_full_cps) weight R f)))).
 
     Definition conditional_add_cps {n1 n2 n3} mask cond (p:Z^n1) (q:Z^n2)
                {T} (f:_->T) :=

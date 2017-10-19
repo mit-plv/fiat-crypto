@@ -12,7 +12,7 @@ Ltac make_parameterized_sig t :=
                         Decidable.dec Decidable.dec_eq_Z
                         id_tuple_with_alt id_tuple'_with_alt
                         Z.add_get_carry_full Z.mul_split
-                        Z.add_get_carry_full_cps Z.mul_split_cps
+                        Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
                         Z.add_get_carry_cps];
   repeat autorewrite with pattern_runtime;
   reflexivity.
@@ -64,7 +64,7 @@ done
 echo "  End Positional."
 echo "End B."
 echo ""
-for i in modulo div; do
+for i in modulo_cps div_cps modulo div; do
   echo "Definition ${i}_sig := parameterize_sig (@Core.${i}).";
   echo "Definition ${i} := parameterize_from_sig ${i}_sig.";
   echo "Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
@@ -140,6 +140,7 @@ done
     Definition carry := parameterize_from_sig carry_sig.
     Definition carry_eq := parameterize_eq carry carry_sig.
     Hint Rewrite <- carry_eq : pattern_runtime.
+
   End Associational.
   Module Positional.
     Definition to_associational_cps_sig := parameterize_sig (@Core.B.Positional.to_associational_cps).
@@ -299,6 +300,16 @@ done
 
   End Positional.
 End B.
+
+Definition modulo_cps_sig := parameterize_sig (@Core.modulo_cps).
+Definition modulo_cps := parameterize_from_sig modulo_cps_sig.
+Definition modulo_cps_eq := parameterize_eq modulo_cps modulo_cps_sig.
+Hint Rewrite <- modulo_cps_eq : pattern_runtime.
+
+Definition div_cps_sig := parameterize_sig (@Core.div_cps).
+Definition div_cps := parameterize_from_sig div_cps_sig.
+Definition div_cps_eq := parameterize_eq div_cps div_cps_sig.
+Hint Rewrite <- div_cps_eq : pattern_runtime.
 
 Definition modulo_sig := parameterize_sig (@Core.modulo).
 Definition modulo := parameterize_from_sig modulo_sig.

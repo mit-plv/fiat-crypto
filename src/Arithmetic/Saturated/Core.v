@@ -112,16 +112,20 @@ Module Columns.
             {weight_multiples : forall i, weight (S i) mod weight i = 0}
             {weight_divides : forall i : nat, weight (S i) / weight i > 0}
             (* add_get_carry takes in a number at which to split output *)
-            {add_get_carry: Z ->Z -> Z -> (Z * Z)}
+            {add_get_carry_cps: forall {T}, Z ->Z -> Z -> (Z * Z -> T) -> T}
+            {add_get_carry_cps_id : forall {T} s x y f,
+                @add_get_carry_cps T s x y f = f (@add_get_carry_cps _ s x y id)}
             {add_get_carry_mod : forall s x y,
-                fst (add_get_carry s x y)  = (x + y) mod s}
+                fst (add_get_carry_cps s x y id)  = (x + y) mod s}
             {add_get_carry_div : forall s x y,
-                snd (add_get_carry s x y)  = (x + y) / s}
+                snd (add_get_carry_cps s x y id)  = (x + y) / s}
             {div modulo : Z -> Z -> Z}
             {div_correct : forall a b, div a b = a / b}
             {modulo_correct : forall a b, modulo a b = a mod b}
     .
     Hint Rewrite div_correct modulo_correct add_get_carry_mod add_get_carry_div : div_mod.
+    Let add_get_carry s x y := add_get_carry_cps _ s x y id.
+    Hint Rewrite (add_get_carry_cps_id : forall T s x y f, _ = f (@add_get_carry s x y)) : uncps.
 
     Definition eval {n} (x : (list Z)^n) : Z :=
       B.Positional.eval weight (Tuple.map sum x).
@@ -164,25 +168,27 @@ Module Columns.
         | nil => f (0, 0)
         | x :: nil => f (div x (weight (S n) / weight n), modulo x (weight (S n) / weight n))
         | x :: y :: nil =>
-            dlet sum_carry := add_get_carry (weight (S n) / weight n) x y in
+            add_get_carry_cps _ (weight (S n) / weight n) x y (fun sum_carry =>
+            dlet sum_carry := sum_carry in
             dlet carry := snd sum_carry in
-            f (carry, fst sum_carry)
+            f (carry, fst sum_carry))
         | x :: tl =>
           compact_digit_cps tl
             (fun rec =>
-              dlet sum_carry := add_get_carry (weight (S n) / weight n) x (snd rec) in
+              add_get_carry_cps _ (weight (S n) / weight n) x (snd rec) (fun sum_carry =>
+              dlet sum_carry := sum_carry in
               dlet carry' := (fst rec + snd sum_carry)%RT in
-              f (carry', fst sum_carry))
+              f (carry', fst sum_carry)))
         end.
     End compact_digit_cps.
 
     Definition compact_digit n digit := compact_digit_cps n digit id.
     Lemma compact_digit_id n digit: forall {T} f,
         @compact_digit_cps n T digit f = f (compact_digit n digit).
-    Proof using Type.
-      induction digit; intros; cbv [compact_digit]; [reflexivity|];
-        simpl compact_digit_cps; break_match; rewrite ?IHdigit;
-          reflexivity.
+    Proof using add_get_carry_cps_id.
+      induction digit; intros; cbv [compact_digit]; [reflexivity|].
+      simpl compact_digit_cps; break_match; rewrite ?IHdigit; clear IHdigit;
+        cbv [Let_In]; autorewrite with uncps; reflexivity.
     Qed.
     Hint Opaque compact_digit : uncps.
     Hint Rewrite compact_digit_id : uncps.
@@ -194,7 +200,7 @@ Module Columns.
     Definition compact_step i c d := compact_step_cps i c d id.
     Lemma compact_step_id i c d T f :
       @compact_step_cps i c d T f = f (compact_step i c d).
-    Proof using Type. cbv [compact_step_cps compact_step]; autorewrite with uncps; reflexivity. Qed.
+    Proof using add_get_carry_cps_id. cbv [compact_step_cps compact_step]; autorewrite with uncps; reflexivity. Qed.
     Hint Opaque compact_step : uncps.
     Hint Rewrite compact_step_id : uncps.
 
@@ -203,15 +209,15 @@ Module Columns.
 
     Definition compact {n} xs := @compact_cps n xs _ id.
     Lemma compact_id {n} xs {T} f : @compact_cps n xs T f = f (compact xs).
-    Proof using Type. cbv [compact_cps compact]; autorewrite with uncps; reflexivity. Qed.
+    Proof using add_get_carry_cps_id. cbv [compact_cps compact]; autorewrite with uncps; reflexivity. Qed.
 
     Lemma compact_digit_mod i (xs : list Z) :
       snd (compact_digit i xs)  = sum xs mod (weight (S i) / weight i).
-    Proof using add_get_carry_div add_get_carry_mod div_correct modulo_correct.
+    Proof using add_get_carry_div add_get_carry_mod div_correct modulo_correct add_get_carry_cps_id.
       induction xs; cbv [compact_digit]; simpl compact_digit_cps;
         cbv [Let_In];
         repeat match goal with
-               | _ => progress autorewrite with div_mod
+               | _ => cbv [add_get_carry]; progress autorewrite with div_mod
                | _ => rewrite IHxs, <-Z.add_mod_r
                | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
                | _ => progress (autorewrite with uncps push_id cancel_pair in * )
@@ -223,11 +229,11 @@ Module Columns.
 
     Lemma compact_digit_div i (xs : list Z) :
       fst (compact_digit i xs)  = sum xs / (weight (S i) / weight i).
-    Proof using add_get_carry_div add_get_carry_mod div_correct modulo_correct weight_0 weight_divides.
+    Proof using add_get_carry_div add_get_carry_mod div_correct modulo_correct weight_0 weight_divides add_get_carry_cps_id.
       induction xs; cbv [compact_digit]; simpl compact_digit_cps;
         cbv [Let_In];
         repeat match goal with
-               | _ => progress autorewrite with div_mod
+               | _ => cbv [add_get_carry]; progress autorewrite with div_mod
                | _ => rewrite IHxs
                | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
                | _ => progress (autorewrite with uncps push_id cancel_pair in * )
@@ -421,6 +427,9 @@ Hint Rewrite
      @Columns.compact_digit_id
      @Columns.compact_step_id
      @Columns.compact_id
+     using (assumption || (intros; autorewrite with uncps; reflexivity))
+  : uncps.
+Hint Rewrite
      @Columns.cons_to_nth_id
      @Columns.from_associational_id
   : uncps.

@@ -13,6 +13,7 @@ Require Import Crypto.Util.Tuple Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
@@ -106,7 +107,9 @@ Section API.
   Section CPSProofs.
 
     Local Ltac prove_id :=
-      repeat autounfold; autorewrite with uncps; reflexivity.
+      repeat autounfold;
+      repeat (intros; autorewrite with uncps push_id);
+      reflexivity.
 
     Lemma nonzero_id n p {cpsT} f : @nonzero_cps n p cpsT f = f (@nonzero n p).
     Proof. cbv [nonzero nonzero_cps]. prove_id. Qed.
@@ -281,7 +284,10 @@ Section API.
       pose proof Z.add_get_carry_full_div;
       pose proof Z.add_get_carry_full_mod;
       pose proof Z.mul_split_div; pose proof Z.mul_split_mod;
-      pose proof div_correct; pose proof modulo_correct.
+      pose proof div_correct; pose proof modulo_correct;
+      pose proof @Z.add_get_carry_full_cps_correct;
+      pose proof @Z.mul_split_cps_correct;
+      pose proof @Z.mul_split_cps'_correct.
 
     Lemma eval_add n p q :
       eval (@add n p q) = eval p + eval q.
@@ -308,8 +314,8 @@ Section API.
     Qed.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 using (omega || assumption): push_basesystem_eval.
 
-    Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
-    Local Definition compact_digit := Columns.compact_digit (add_get_carry:=Z.add_get_carry_full) (div:=div) (modulo:=modulo) (uweight bound).
+    Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div:=div) (modulo:=modulo) (uweight bound).
+    Local Definition compact_digit := Columns.compact_digit (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div:=div) (modulo:=modulo) (uweight bound).
     Lemma small_compact {n} (p:(list Z)^n) : small (snd (compact p)).
     Proof.
       pose_all.
@@ -329,7 +335,8 @@ Section API.
       match goal with H : _ /\ _ |- _ => destruct H end.
       destruct n0; subst f.
       { cbv [compact_digit uweight to_list to_list' In].
-        rewrite Columns.compact_digit_mod by assumption.
+        rewrite Columns.compact_digit_mod
+            by (assumption || (intros; autorewrite with uncps push_id; auto)).
         rewrite Z.pow_0_r, Z.pow_1_r, Z.div_1_r. intros x ?.
         match goal with
           H : _ \/ False |- _ => destruct H; [|exfalso; assumption] end.
@@ -340,7 +347,8 @@ Section API.
           [solve[auto]| cbv [In] in H; destruct H;
                         [|exfalso; assumption] ].
         subst x. cbv [compact_digit].
-        rewrite Columns.compact_digit_mod by assumption.
+        rewrite Columns.compact_digit_mod
+            by (assumption || (intros; autorewrite with uncps push_id; auto)).
         rewrite !uweight_succ, Z.div_mul by
             (apply Z.neq_mul_0; split; auto; omega).
         apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
@@ -554,6 +562,8 @@ Section API.
     Proof.
       intro Hsmall. pose_all. apply eval_small in Hsmall.
       intros. cbv [scmul scmul_cps eval] in *. repeat autounfold.
+      autorewrite with uncps.
+      autorewrite with push_basesystem_eval.
       autorewrite with uncps push_id push_basesystem_eval.
       rewrite uweight_0, Z.mul_1_l. apply Z.mod_small.
       split; [solve[Z.zero_bounds]|]. cbv [uweight] in *.
