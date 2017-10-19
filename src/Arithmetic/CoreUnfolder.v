@@ -51,6 +51,7 @@ for i in eval multerm mul_cps mul split_cps split reduce_cps reduce negate_snd_c
     echo "    Definition ${i}_sig := parameterize_sig (@Core.B.Associational.${i}).";
     echo "    Definition ${i} := parameterize_from_sig ${i}_sig.";
     echo "    Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
+    echo "    Hint Unfold ${i} : basesystem_partial_evaluation_unfolder.";
     echo "    Hint Rewrite <- ${i}_eq : pattern_runtime."; echo "";
 done
 echo "  End Associational."
@@ -59,6 +60,7 @@ for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_
   echo "    Definition ${i}_sig := parameterize_sig (@Core.B.Positional.${i}).";
   echo "    Definition ${i} := parameterize_from_sig ${i}_sig.";
   echo "    Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
+  echo "    Hint Unfold ${i} : basesystem_partial_evaluation_unfolder.";
   echo "    Hint Rewrite <- ${i}_eq : pattern_runtime."; echo "";
 done
 echo "  End Positional."
@@ -68,77 +70,92 @@ for i in modulo_cps div_cps modulo div; do
   echo "Definition ${i}_sig := parameterize_sig (@Core.${i}).";
   echo "Definition ${i} := parameterize_from_sig ${i}_sig.";
   echo "Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
+  echo "Hint Unfold ${i} : basesystem_partial_evaluation_unfolder.";
   echo "Hint Rewrite <- ${i}_eq : pattern_runtime."; echo "";
 done
 >> *)
     Definition eval_sig := parameterize_sig (@Core.B.Associational.eval).
     Definition eval := parameterize_from_sig eval_sig.
     Definition eval_eq := parameterize_eq eval eval_sig.
+    Hint Unfold eval : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- eval_eq : pattern_runtime.
 
     Definition multerm_sig := parameterize_sig (@Core.B.Associational.multerm).
     Definition multerm := parameterize_from_sig multerm_sig.
     Definition multerm_eq := parameterize_eq multerm multerm_sig.
+    Hint Unfold multerm : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- multerm_eq : pattern_runtime.
 
     Definition mul_cps_sig := parameterize_sig (@Core.B.Associational.mul_cps).
     Definition mul_cps := parameterize_from_sig mul_cps_sig.
     Definition mul_cps_eq := parameterize_eq mul_cps mul_cps_sig.
+    Hint Unfold mul_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- mul_cps_eq : pattern_runtime.
 
     Definition mul_sig := parameterize_sig (@Core.B.Associational.mul).
     Definition mul := parameterize_from_sig mul_sig.
     Definition mul_eq := parameterize_eq mul mul_sig.
+    Hint Unfold mul : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- mul_eq : pattern_runtime.
 
     Definition split_cps_sig := parameterize_sig (@Core.B.Associational.split_cps).
     Definition split_cps := parameterize_from_sig split_cps_sig.
     Definition split_cps_eq := parameterize_eq split_cps split_cps_sig.
+    Hint Unfold split_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- split_cps_eq : pattern_runtime.
 
     Definition split_sig := parameterize_sig (@Core.B.Associational.split).
     Definition split := parameterize_from_sig split_sig.
     Definition split_eq := parameterize_eq split split_sig.
+    Hint Unfold split : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- split_eq : pattern_runtime.
 
     Definition reduce_cps_sig := parameterize_sig (@Core.B.Associational.reduce_cps).
     Definition reduce_cps := parameterize_from_sig reduce_cps_sig.
     Definition reduce_cps_eq := parameterize_eq reduce_cps reduce_cps_sig.
+    Hint Unfold reduce_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- reduce_cps_eq : pattern_runtime.
 
     Definition reduce_sig := parameterize_sig (@Core.B.Associational.reduce).
     Definition reduce := parameterize_from_sig reduce_sig.
     Definition reduce_eq := parameterize_eq reduce reduce_sig.
+    Hint Unfold reduce : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- reduce_eq : pattern_runtime.
 
     Definition negate_snd_cps_sig := parameterize_sig (@Core.B.Associational.negate_snd_cps).
     Definition negate_snd_cps := parameterize_from_sig negate_snd_cps_sig.
     Definition negate_snd_cps_eq := parameterize_eq negate_snd_cps negate_snd_cps_sig.
+    Hint Unfold negate_snd_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- negate_snd_cps_eq : pattern_runtime.
 
     Definition negate_snd_sig := parameterize_sig (@Core.B.Associational.negate_snd).
     Definition negate_snd := parameterize_from_sig negate_snd_sig.
     Definition negate_snd_eq := parameterize_eq negate_snd negate_snd_sig.
+    Hint Unfold negate_snd : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- negate_snd_eq : pattern_runtime.
 
     Definition carryterm_cps_sig := parameterize_sig (@Core.B.Associational.carryterm_cps).
     Definition carryterm_cps := parameterize_from_sig carryterm_cps_sig.
     Definition carryterm_cps_eq := parameterize_eq carryterm_cps carryterm_cps_sig.
+    Hint Unfold carryterm_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carryterm_cps_eq : pattern_runtime.
 
     Definition carryterm_sig := parameterize_sig (@Core.B.Associational.carryterm).
     Definition carryterm := parameterize_from_sig carryterm_sig.
     Definition carryterm_eq := parameterize_eq carryterm carryterm_sig.
+    Hint Unfold carryterm : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carryterm_eq : pattern_runtime.
 
     Definition carry_cps_sig := parameterize_sig (@Core.B.Associational.carry_cps).
     Definition carry_cps := parameterize_from_sig carry_cps_sig.
     Definition carry_cps_eq := parameterize_eq carry_cps carry_cps_sig.
+    Hint Unfold carry_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_cps_eq : pattern_runtime.
 
     Definition carry_sig := parameterize_sig (@Core.B.Associational.carry).
     Definition carry := parameterize_from_sig carry_sig.
     Definition carry_eq := parameterize_eq carry carry_sig.
+    Hint Unfold carry : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_eq : pattern_runtime.
 
   End Associational.
@@ -146,156 +163,187 @@ done
     Definition to_associational_cps_sig := parameterize_sig (@Core.B.Positional.to_associational_cps).
     Definition to_associational_cps := parameterize_from_sig to_associational_cps_sig.
     Definition to_associational_cps_eq := parameterize_eq to_associational_cps to_associational_cps_sig.
+    Hint Unfold to_associational_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- to_associational_cps_eq : pattern_runtime.
 
     Definition to_associational_sig := parameterize_sig (@Core.B.Positional.to_associational).
     Definition to_associational := parameterize_from_sig to_associational_sig.
     Definition to_associational_eq := parameterize_eq to_associational to_associational_sig.
+    Hint Unfold to_associational : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- to_associational_eq : pattern_runtime.
 
     Definition eval_sig := parameterize_sig (@Core.B.Positional.eval).
     Definition eval := parameterize_from_sig eval_sig.
     Definition eval_eq := parameterize_eq eval eval_sig.
+    Hint Unfold eval : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- eval_eq : pattern_runtime.
 
     Definition zeros_sig := parameterize_sig (@Core.B.Positional.zeros).
     Definition zeros := parameterize_from_sig zeros_sig.
     Definition zeros_eq := parameterize_eq zeros zeros_sig.
+    Hint Unfold zeros : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- zeros_eq : pattern_runtime.
 
     Definition add_to_nth_cps_sig := parameterize_sig (@Core.B.Positional.add_to_nth_cps).
     Definition add_to_nth_cps := parameterize_from_sig add_to_nth_cps_sig.
     Definition add_to_nth_cps_eq := parameterize_eq add_to_nth_cps add_to_nth_cps_sig.
+    Hint Unfold add_to_nth_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- add_to_nth_cps_eq : pattern_runtime.
 
     Definition add_to_nth_sig := parameterize_sig (@Core.B.Positional.add_to_nth).
     Definition add_to_nth := parameterize_from_sig add_to_nth_sig.
     Definition add_to_nth_eq := parameterize_eq add_to_nth add_to_nth_sig.
+    Hint Unfold add_to_nth : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- add_to_nth_eq : pattern_runtime.
 
     Definition place_cps_sig := parameterize_sig (@Core.B.Positional.place_cps).
     Definition place_cps := parameterize_from_sig place_cps_sig.
     Definition place_cps_eq := parameterize_eq place_cps place_cps_sig.
+    Hint Unfold place_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- place_cps_eq : pattern_runtime.
 
     Definition place_sig := parameterize_sig (@Core.B.Positional.place).
     Definition place := parameterize_from_sig place_sig.
     Definition place_eq := parameterize_eq place place_sig.
+    Hint Unfold place : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- place_eq : pattern_runtime.
 
     Definition from_associational_cps_sig := parameterize_sig (@Core.B.Positional.from_associational_cps).
     Definition from_associational_cps := parameterize_from_sig from_associational_cps_sig.
     Definition from_associational_cps_eq := parameterize_eq from_associational_cps from_associational_cps_sig.
+    Hint Unfold from_associational_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- from_associational_cps_eq : pattern_runtime.
 
     Definition from_associational_sig := parameterize_sig (@Core.B.Positional.from_associational).
     Definition from_associational := parameterize_from_sig from_associational_sig.
     Definition from_associational_eq := parameterize_eq from_associational from_associational_sig.
+    Hint Unfold from_associational : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- from_associational_eq : pattern_runtime.
 
     Definition carry_cps_sig := parameterize_sig (@Core.B.Positional.carry_cps).
     Definition carry_cps := parameterize_from_sig carry_cps_sig.
     Definition carry_cps_eq := parameterize_eq carry_cps carry_cps_sig.
+    Hint Unfold carry_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_cps_eq : pattern_runtime.
 
     Definition carry_sig := parameterize_sig (@Core.B.Positional.carry).
     Definition carry := parameterize_from_sig carry_sig.
     Definition carry_eq := parameterize_eq carry carry_sig.
+    Hint Unfold carry : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_eq : pattern_runtime.
 
     Definition chained_carries_cps_sig := parameterize_sig (@Core.B.Positional.chained_carries_cps).
     Definition chained_carries_cps := parameterize_from_sig chained_carries_cps_sig.
     Definition chained_carries_cps_eq := parameterize_eq chained_carries_cps chained_carries_cps_sig.
+    Hint Unfold chained_carries_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- chained_carries_cps_eq : pattern_runtime.
 
     Definition chained_carries_sig := parameterize_sig (@Core.B.Positional.chained_carries).
     Definition chained_carries := parameterize_from_sig chained_carries_sig.
     Definition chained_carries_eq := parameterize_eq chained_carries chained_carries_sig.
+    Hint Unfold chained_carries : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- chained_carries_eq : pattern_runtime.
 
     Definition encode_sig := parameterize_sig (@Core.B.Positional.encode).
     Definition encode := parameterize_from_sig encode_sig.
     Definition encode_eq := parameterize_eq encode encode_sig.
+    Hint Unfold encode : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- encode_eq : pattern_runtime.
 
     Definition add_cps_sig := parameterize_sig (@Core.B.Positional.add_cps).
     Definition add_cps := parameterize_from_sig add_cps_sig.
     Definition add_cps_eq := parameterize_eq add_cps add_cps_sig.
+    Hint Unfold add_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- add_cps_eq : pattern_runtime.
 
     Definition mul_cps_sig := parameterize_sig (@Core.B.Positional.mul_cps).
     Definition mul_cps := parameterize_from_sig mul_cps_sig.
     Definition mul_cps_eq := parameterize_eq mul_cps mul_cps_sig.
+    Hint Unfold mul_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- mul_cps_eq : pattern_runtime.
 
     Definition reduce_cps_sig := parameterize_sig (@Core.B.Positional.reduce_cps).
     Definition reduce_cps := parameterize_from_sig reduce_cps_sig.
     Definition reduce_cps_eq := parameterize_eq reduce_cps reduce_cps_sig.
+    Hint Unfold reduce_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- reduce_cps_eq : pattern_runtime.
 
     Definition carry_reduce_cps_sig := parameterize_sig (@Core.B.Positional.carry_reduce_cps).
     Definition carry_reduce_cps := parameterize_from_sig carry_reduce_cps_sig.
     Definition carry_reduce_cps_eq := parameterize_eq carry_reduce_cps carry_reduce_cps_sig.
+    Hint Unfold carry_reduce_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_reduce_cps_eq : pattern_runtime.
 
     Definition negate_snd_cps_sig := parameterize_sig (@Core.B.Positional.negate_snd_cps).
     Definition negate_snd_cps := parameterize_from_sig negate_snd_cps_sig.
     Definition negate_snd_cps_eq := parameterize_eq negate_snd_cps negate_snd_cps_sig.
+    Hint Unfold negate_snd_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- negate_snd_cps_eq : pattern_runtime.
 
     Definition split_cps_sig := parameterize_sig (@Core.B.Positional.split_cps).
     Definition split_cps := parameterize_from_sig split_cps_sig.
     Definition split_cps_eq := parameterize_eq split_cps split_cps_sig.
+    Hint Unfold split_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- split_cps_eq : pattern_runtime.
 
     Definition scmul_cps_sig := parameterize_sig (@Core.B.Positional.scmul_cps).
     Definition scmul_cps := parameterize_from_sig scmul_cps_sig.
     Definition scmul_cps_eq := parameterize_eq scmul_cps scmul_cps_sig.
+    Hint Unfold scmul_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- scmul_cps_eq : pattern_runtime.
 
     Definition unbalanced_sub_cps_sig := parameterize_sig (@Core.B.Positional.unbalanced_sub_cps).
     Definition unbalanced_sub_cps := parameterize_from_sig unbalanced_sub_cps_sig.
     Definition unbalanced_sub_cps_eq := parameterize_eq unbalanced_sub_cps unbalanced_sub_cps_sig.
+    Hint Unfold unbalanced_sub_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- unbalanced_sub_cps_eq : pattern_runtime.
 
     Definition sub_cps_sig := parameterize_sig (@Core.B.Positional.sub_cps).
     Definition sub_cps := parameterize_from_sig sub_cps_sig.
     Definition sub_cps_eq := parameterize_eq sub_cps sub_cps_sig.
+    Hint Unfold sub_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- sub_cps_eq : pattern_runtime.
 
     Definition sub_sig := parameterize_sig (@Core.B.Positional.sub).
     Definition sub := parameterize_from_sig sub_sig.
     Definition sub_eq := parameterize_eq sub sub_sig.
+    Hint Unfold sub : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- sub_eq : pattern_runtime.
 
     Definition opp_cps_sig := parameterize_sig (@Core.B.Positional.opp_cps).
     Definition opp_cps := parameterize_from_sig opp_cps_sig.
     Definition opp_cps_eq := parameterize_eq opp_cps opp_cps_sig.
+    Hint Unfold opp_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- opp_cps_eq : pattern_runtime.
 
     Definition Fencode_sig := parameterize_sig (@Core.B.Positional.Fencode).
     Definition Fencode := parameterize_from_sig Fencode_sig.
     Definition Fencode_eq := parameterize_eq Fencode Fencode_sig.
+    Hint Unfold Fencode : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- Fencode_eq : pattern_runtime.
 
     Definition Fdecode_sig := parameterize_sig (@Core.B.Positional.Fdecode).
     Definition Fdecode := parameterize_from_sig Fdecode_sig.
     Definition Fdecode_eq := parameterize_eq Fdecode Fdecode_sig.
+    Hint Unfold Fdecode : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- Fdecode_eq : pattern_runtime.
 
     Definition eval_from_sig := parameterize_sig (@Core.B.Positional.eval_from).
     Definition eval_from := parameterize_from_sig eval_from_sig.
     Definition eval_from_eq := parameterize_eq eval_from eval_from_sig.
+    Hint Unfold eval_from : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- eval_from_eq : pattern_runtime.
 
     Definition select_cps_sig := parameterize_sig (@Core.B.Positional.select_cps).
     Definition select_cps := parameterize_from_sig select_cps_sig.
     Definition select_cps_eq := parameterize_eq select_cps select_cps_sig.
+    Hint Unfold select_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- select_cps_eq : pattern_runtime.
 
     Definition select_sig := parameterize_sig (@Core.B.Positional.select).
     Definition select := parameterize_from_sig select_sig.
     Definition select_eq := parameterize_eq select select_sig.
+    Hint Unfold select : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- select_eq : pattern_runtime.
 
   End Positional.
@@ -304,19 +352,23 @@ End B.
 Definition modulo_cps_sig := parameterize_sig (@Core.modulo_cps).
 Definition modulo_cps := parameterize_from_sig modulo_cps_sig.
 Definition modulo_cps_eq := parameterize_eq modulo_cps modulo_cps_sig.
+Hint Unfold modulo_cps : basesystem_partial_evaluation_unfolder.
 Hint Rewrite <- modulo_cps_eq : pattern_runtime.
 
 Definition div_cps_sig := parameterize_sig (@Core.div_cps).
 Definition div_cps := parameterize_from_sig div_cps_sig.
 Definition div_cps_eq := parameterize_eq div_cps div_cps_sig.
+Hint Unfold div_cps : basesystem_partial_evaluation_unfolder.
 Hint Rewrite <- div_cps_eq : pattern_runtime.
 
 Definition modulo_sig := parameterize_sig (@Core.modulo).
 Definition modulo := parameterize_from_sig modulo_sig.
 Definition modulo_eq := parameterize_eq modulo modulo_sig.
+Hint Unfold modulo : basesystem_partial_evaluation_unfolder.
 Hint Rewrite <- modulo_eq : pattern_runtime.
 
 Definition div_sig := parameterize_sig (@Core.div).
 Definition div := parameterize_from_sig div_sig.
 Definition div_eq := parameterize_eq div div_sig.
+Hint Unfold div : basesystem_partial_evaluation_unfolder.
 Hint Rewrite <- div_eq : pattern_runtime.
