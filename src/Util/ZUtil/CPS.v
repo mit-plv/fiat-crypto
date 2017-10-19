@@ -144,4 +144,16 @@ Module Z.
     : @mul_split_cps T s x y f = f (Z.mul_split s x y).
   Proof. prove_cps_correct (). Qed.
   Hint Rewrite @mul_split_cps_correct : uncps.
+
+  Definition mul_split_cps' {T} (s x y : Z) (f : Z * Z -> T) : T
+    := eqb_cps
+         s (2^Z.log2 s)
+         (fun b
+          => if b
+             then f (Z.mul_split_at_bitwidth (Z.log2 s) x y)
+             else f ((x * y) mod s, (x * y) / s)).
+  Lemma mul_split_cps'_correct {T} (s x y : Z) (f : Z * Z -> T)
+    : @mul_split_cps' T s x y f = f (Z.mul_split s x y).
+  Proof. prove_cps_correct (). Qed.
+  Hint Rewrite @mul_split_cps'_correct : uncps.
 End Z.
