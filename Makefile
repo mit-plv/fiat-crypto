@@ -69,7 +69,7 @@ CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
 
-SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% third_party/%
+SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% src/Specific/NISTP256/FancyMachine256/% third_party/%
 SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(REGULAR_VOFILES))
 
 COQ_VOFILES := $(filter-out $(SPECIFIC_GENERATED_VOFILES),$(REGULAR_VOFILES))
