@@ -1,4 +1,5 @@
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.Tactics.VM.
@@ -10,7 +11,9 @@ Ltac make_parameterized_sig t :=
                         CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
                         Decidable.dec Decidable.dec_eq_Z
                         id_tuple_with_alt id_tuple'_with_alt
-                        Z.add_get_carry_full Z.mul_split];
+                        Z.add_get_carry_full Z.mul_split
+                        Z.add_get_carry_full_cps Z.mul_split_cps
+                        Z.add_get_carry_cps];
   repeat autorewrite with pattern_runtime;
   reflexivity.
 
@@ -28,6 +31,16 @@ Ltac make_parameterized_eq t t_sig :=
   exact (proj2_sig t_sig : t = _).
 
 Notation parameterize_eq t t_sig := ltac:(let v := t in let v_sig := t_sig in make_parameterized_eq v v_sig) (only parsing).
+
+Ltac basesystem_partial_evaluation_RHS_fast :=
+  repeat autorewrite with pattern_runtime;
+  let t := match goal with |- _ _ ?t => t end in
+  let t := pattern_strip t in
+  let t1 := fresh "t1" in
+  pose t as t1;
+  let t1' := apply_patterned t1 in
+  transitivity t1';
+  [replace_with_vm_compute t1; clear t1|reflexivity].
 
 Module B.
   Module Associational.
@@ -296,13 +309,3 @@ Definition div_sig := parameterize_sig (@Core.div).
 Definition div := parameterize_from_sig div_sig.
 Definition div_eq := parameterize_eq div div_sig.
 Hint Rewrite <- div_eq : pattern_runtime.
-
-Ltac basesystem_partial_evaluation_RHS_fast :=
-  repeat autorewrite with pattern_runtime;
-  let t := match goal with |- _ _ ?t => t end in
-  let t := pattern_strip t in
-  let t1 := fresh "t1" in
-  pose t as t1;
-  let t1' := apply_patterned t1 in
-  transitivity t1';
-  [replace_with_vm_compute t1; clear t1|reflexivity].
