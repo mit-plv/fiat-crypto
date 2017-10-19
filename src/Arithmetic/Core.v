@@ -250,6 +250,7 @@ Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
@@ -1046,7 +1047,7 @@ Hint Unfold
      Positional.select
      modulo div
      id_tuple_with_alt id_tuple'_with_alt
-     Z.add_get_carry_full
+     Z.add_get_carry_full Z.add_get_carry_full_cps
   : basesystem_partial_evaluation_unfolder.
 
 Hint Unfold
@@ -1054,7 +1055,7 @@ Hint Unfold
      CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
      Decidable.dec Decidable.dec_eq_Z
      id_tuple_with_alt id_tuple'_with_alt
-     Z.add_get_carry_full Z.mul_split
+     Z.add_get_carry_full Z.add_get_carry_full_cps Z.mul_split Z.mul_split_cps
   : basesystem_partial_evaluation_unfolder.
 
 
@@ -1080,7 +1081,7 @@ Ltac basesystem_partial_evaluation_unfolder t :=
         Associational.carry_cps Associational.carry
         Associational.negate_snd_cps Associational.negate_snd div modulo
         id_tuple_with_alt id_tuple'_with_alt
-        Z.add_get_carry_full
+        Z.add_get_carry_full Z.add_get_carry_full_cps
     ] in t.
 
 Ltac pattern_strip t :=
@@ -1108,6 +1109,8 @@ Ltac apply_patterned t1 :=
 Ltac pattern_strip_full t :=
   let t := (eval pattern
                  (@Let_In Z (fun _ => Z)),
+            @Z.add_get_carry_cps, @Z.mul_split_at_bitwidth_cps,
+            Z.eq_dec_cps, Z.eqb_cps,
             @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
             (@id_with_alt Z),
             @Z.add_get_carry, @Z.zselect, @Z.mul_split_at_bitwidth,
@@ -1119,6 +1122,8 @@ Ltac pattern_strip_full t :=
              in t) in
   let t := match t with ?t
                          _
+                         _ _
+                         _ _
                          _ _ _ _ _ _
                          _
                          _ _ _
@@ -1136,6 +1141,8 @@ Ltac apply_patterned_full t1 :=
             Z
             (@Let_In) (@id_with_alt)
             (@Let_In Z (fun _ => Z))
+            (@Z.add_get_carry_cps) (@Z.mul_split_at_bitwidth_cps)
+            Z.eq_dec_cps Z.eqb_cps
             (@runtime_mul) (@runtime_add) (@runtime_opp) (@runtime_shr) (@runtime_and) (@runtime_lor)
             (@id_with_alt Z)
             (@Z.add_get_carry) (@Z.zselect) (@Z.mul_split_at_bitwidth)
