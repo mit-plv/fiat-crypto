@@ -28,7 +28,7 @@ int main() {
 	mp_size_t scratch_sz = mulscratch_sz;
 	          scratch_sz = (sqrscratch_sz > scratch_sz) ? sqrscratch_sz : scratch_sz;
 	          scratch_sz = (modscratch_sz > scratch_sz) ? modscratch_sz : scratch_sz;
-	          scratch_sz = (invscratch_sz > scratch_sz) ? modscratch_sz : scratch_sz;
+	          scratch_sz = (invscratch_sz > scratch_sz) ? invscratch_sz : scratch_sz;
 	mp_limb_t scratch[scratch_sz];
 
 	// allocate scratch space for use by the following macros.
