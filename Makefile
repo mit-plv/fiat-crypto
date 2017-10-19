@@ -64,7 +64,7 @@ SPECIFIC_GENERATED_VOFILES := src/Specific/solinas%.vo src/Specific/montgomery%.
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/X2448/Karatsuba/C64/Synthesis.vo src/Specific/NISTP256/AMD64/Synthesis.vo src/Specific/X25519/C64/ladderstep.vo src/Specific/X25519/C32/%.vo $(SPECIFIC_GENERATED_VOFILES)
-REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
+REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
@@ -72,9 +72,9 @@ NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffinePro
 SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% third_party/%
 SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(REGULAR_VOFILES))
 
-COQ_VOFILES := $(filter-out $(UNMADE_VOFILES),$(REGULAR_VOFILES))
-SPECIFIC_VO := $(filter src/Specific/%,$(COQ_VOFILES))
-NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(COQ_VOFILES))
+COQ_VOFILES := $(filter-out $(SPECIFIC_GENERATED_VOFILES),$(REGULAR_VOFILES))
+SPECIFIC_VO := $(filter src/Specific/%,$(REGULAR_VOFILES))
+NON_SPECIFIC_VO := $(filter-out $(SPECIFIC_VO),$(REGULAR_VOFILES))
 SPECIFIC_DISPLAY_VO := $(filter src/Specific/%Display.vo,$(filter-out $(UNMADE_VOFILES),$(VOFILES)))
 DISPLAY_VO := $(SPECIFIC_DISPLAY_VO)
 DISPLAY_JAVA_VO := $(filter %JavaDisplay.vo,$(DISPLAY_VO))
