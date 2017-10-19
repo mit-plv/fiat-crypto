@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.Head.
@@ -28,6 +29,8 @@ Module Z.
         end;
     repeat first [ reflexivity
                  | progress cbv [Decidable.dec Decidable.dec_eq_Z] in *
+                 | progress Z.ltb_to_lt
+                 | congruence
                  | progress autorewrite with uncps
                  | break_innermost_match_step ].
 
@@ -38,16 +41,16 @@ Module Z.
     := eq_refl.
   Hint Rewrite @get_carry_cps_correct : uncps.
   Definition add_with_get_carry_cps {T} (bitwidth : Z) (c : Z) (x y : Z) (f : Z * Z -> T) : T
-    := get_carry_cps bitwidth (Z.add_with_carry c x y) f.
-  Lemma add_with_get_carry_cps_correct {T} bitwidth c x y f
-    : @add_with_get_carry_cps T bitwidth c x y f = f (Z.add_with_get_carry bitwidth c x y).
-  Proof. prove_cps_correct (). Qed.
+    := let '(v, c) := Z.add_with_get_carry bitwidth c x y in f (v, c).
+  Definition add_with_get_carry_cps_correct {T} bitwidth c x y f
+    : @add_with_get_carry_cps T bitwidth c x y f = f (Z.add_with_get_carry bitwidth c x y)
+    := eq_refl.
   Hint Rewrite @add_with_get_carry_cps_correct : uncps.
   Definition add_get_carry_cps {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T) : T
-    := add_with_get_carry_cps bitwidth 0 x y f.
+    := let '(v, c) := Z.add_get_carry bitwidth x y in f (v, c).
   Definition add_get_carry_cps_correct {T} bitwidth x y f
     : @add_get_carry_cps T bitwidth x y f = f (Z.add_get_carry bitwidth x y)
-    := add_with_get_carry_cps_correct _ _ _ _ _.
+    := eq_refl.
   Hint Rewrite @add_get_carry_cps_correct : uncps.
 
   Definition get_borrow_cps {T} (bitwidth : Z) (v : Z) (f : Z * Z -> T)
@@ -57,13 +60,13 @@ Module Z.
     := eq_refl.
   Hint Rewrite @get_borrow_cps_correct : uncps.
   Definition sub_with_get_borrow_cps {T} (bitwidth : Z) (c : Z) (x y : Z) (f : Z * Z -> T) : T
-    := get_borrow_cps bitwidth (Z.sub_with_borrow c x y) f.
+    := let '(v, c) := Z.sub_with_get_borrow bitwidth c x y in f (v, c).
   Definition sub_with_get_borrow_cps_correct {T} (bitwidth : Z) (c : Z) (x y : Z) (f : Z * Z -> T)
     : @sub_with_get_borrow_cps T bitwidth c x y f = f (Z.sub_with_get_borrow bitwidth c x y)
     := eq_refl.
   Hint Rewrite @sub_with_get_borrow_cps_correct : uncps.
   Definition sub_get_borrow_cps {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T) : T
-    := sub_with_get_borrow_cps bitwidth 0 x y f.
+    := let '(v, c) := Z.sub_get_borrow bitwidth x y in f (v, c).
   Definition sub_get_borrow_cps_correct {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T)
     : @sub_get_borrow_cps T bitwidth x y f = f (Z.sub_get_borrow bitwidth x y)
     := eq_refl.
@@ -72,7 +75,7 @@ Module Z.
   (* splits at [bound], not [2^bitwidth]; wrapper to make add_getcarry
   work if input is not known to be a power of 2 *)
   Definition add_get_carry_full_cps {T} (bound : Z) (x y : Z) (f : Z * Z -> T) : T
-    := eq_dec_cps
+    := eqb_cps
          (2 ^ (Z.log2 bound)) bound
          (fun eqb
           => if eqb
@@ -83,7 +86,7 @@ Module Z.
   Proof. prove_cps_correct (). Qed.
   Hint Rewrite @add_get_carry_full_cps_correct : uncps.
   Definition add_with_get_carry_full_cps {T} (bound : Z) (c x y : Z) (f : Z * Z -> T) : T
-    := eq_dec_cps
+    := eqb_cps
          (2 ^ (Z.log2 bound)) bound
          (fun eqb
           => if eqb
@@ -94,7 +97,7 @@ Module Z.
   Proof. prove_cps_correct (). Qed.
   Hint Rewrite @add_with_get_carry_full_cps_correct : uncps.
   Definition sub_get_borrow_full_cps {T} (bound : Z) (x y : Z) (f : Z * Z -> T) : T
-    := eq_dec_cps
+    := eqb_cps
          (2 ^ (Z.log2 bound)) bound
          (fun eqb
           => if eqb
@@ -105,7 +108,7 @@ Module Z.
   Proof. prove_cps_correct (). Qed.
   Hint Rewrite @sub_get_borrow_full_cps_correct : uncps.
   Definition sub_with_get_borrow_full_cps {T} (bound : Z) (c x y : Z) (f : Z * Z -> T) : T
-    := eq_dec_cps
+    := eqb_cps
          (2 ^ (Z.log2 bound)) bound
          (fun eqb
           => if eqb

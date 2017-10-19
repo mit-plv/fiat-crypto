@@ -5,8 +5,10 @@ Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Local Open Scope Z_scope.
 
 Local Notation eta x := (fst x, snd x).
@@ -55,7 +57,7 @@ Module Z.
 
   Local Ltac easypeasy :=
     repeat progress autounfold;
-    break_match; autorewrite with cancel_pair zsimplify;
+    break_match; Z.ltb_to_lt; rewrite_hyp ?*; autorewrite with cancel_pair zsimplify;
     solve [repeat (f_equal; try ring)].
 
   Local Hint Unfold Z.get_carry Z.get_borrow

@@ -32,19 +32,19 @@ Module Z.
   (* splits at [bound], not [2^bitwidth]; wrapper to make add_getcarry
   work if input is not known to be a power of 2 *)
   Definition add_get_carry_full (bound : Z) (x y : Z) : Z * Z
-    := if dec (2 ^ (Z.log2 bound) = bound)
+    := if 2 ^ (Z.log2 bound) =? bound
        then add_get_carry (Z.log2 bound) x y
        else ((x + y) mod bound, (x + y) / bound).
   Definition add_with_get_carry_full (bound : Z) (c x y : Z) : Z * Z
-    := if dec (2 ^ (Z.log2 bound) = bound)
+    := if 2 ^ (Z.log2 bound) =? bound
        then add_with_get_carry (Z.log2 bound) c x y
        else ((c + x + y) mod bound, (c + x + y) / bound).
   Definition sub_get_borrow_full (bound : Z) (x y : Z) : Z * Z
-    := if dec (2 ^ (Z.log2 bound) = bound)
+    := if 2 ^ (Z.log2 bound) =? bound
        then sub_get_borrow (Z.log2 bound) x y
        else ((x - y) mod bound, -((x - y) / bound)).
   Definition sub_with_get_borrow_full (bound : Z) (c x y : Z) : Z * Z
-    := if dec (2 ^ (Z.log2 bound) = bound)
+    := if 2 ^ (Z.log2 bound) =? bound
        then sub_with_get_borrow (Z.log2 bound) c x y
        else ((x - y - c) mod bound, -((x - y - c) / bound)).
 
