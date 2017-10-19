@@ -34,31 +34,31 @@ int main() {
 	// allocate scratch space for use by the following macros.
 	mp_limb_t _product_tmp[modulus_limbs+modulus_limbs];
 
-	  #define fe_mul(out, x, y) do { \
-	  	mpn_sec_mul(_product_tmp, x, modulus_limbs, y, modulus_limbs, scratch); \
-	  	mpn_sec_div_r(_product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs, scratch); \
-	  	for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
-	  } while (0)
-	  
-	  #define fe_sqr(out, x) do { \
-	  	mpn_sec_sqr(_product_tmp, x, modulus_limbs, scratch); \
-	  	mpn_sec_div_r(_product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs, scratch); \
-	  	for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
-	  } while (0)
-	  
-	  #define fe_add(out, x, y) do { \
-	  	mpn_cnd_sub_n(mpn_add_n(out, x, y, modulus_limbs), out, out, m, modulus_limbs); \
-	  } while (0)
-	  
-	  #define fe_sub(out, x, y) do { \
-	  	mpn_cnd_add_n(mpn_sub_n(out, x, y, modulus_limbs), out, out, m, modulus_limbs); \
-	  } while (0)
-	  
-	  #define fe_inv(out, x) do { \
-	  	for (size_t i = 0; i<modulus_limbs; i++) { _product_tmp[i] = x[i]; } \
-	  	mp_size_t invertible = mpn_sec_invert(out, _product_tmp, m, modulus_limbs, 2*modulus_limbs*GMP_NUMB_BITS, scratch); \
-			mpn_cnd_sub_n(1-invertible, out, out, out, modulus_limbs); \
-	  } while (0)
+	#define fe_mul(out, x, y) do { \
+		mpn_sec_mul(_product_tmp, x, modulus_limbs, y, modulus_limbs, scratch); \
+		mpn_sec_div_r(_product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs, scratch); \
+		for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
+	} while (0)
+	
+	#define fe_sqr(out, x) do { \
+		mpn_sec_sqr(_product_tmp, x, modulus_limbs, scratch); \
+		mpn_sec_div_r(_product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs, scratch); \
+		for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
+	} while (0)
+	
+	#define fe_add(out, x, y) do { \
+		mpn_cnd_sub_n(mpn_add_n(out, x, y, modulus_limbs), out, out, m, modulus_limbs); \
+	} while (0)
+	
+	#define fe_sub(out, x, y) do { \
+		mpn_cnd_add_n(mpn_sub_n(out, x, y, modulus_limbs), out, out, m, modulus_limbs); \
+	} while (0)
+	
+	#define fe_inv(out, x) do { \
+		for (size_t i = 0; i<modulus_limbs; i++) { _product_tmp[i] = x[i]; } \
+		mp_size_t invertible = mpn_sec_invert(out, _product_tmp, m, modulus_limbs, 2*modulus_limbs*GMP_NUMB_BITS, scratch); \
+		mpn_cnd_sub_n(1-invertible, out, out, out, modulus_limbs); \
+	} while (0)
 
 	mp_limb_t x[modulus_limbs]; mpn_zero(x, modulus_limbs);
 	x[3] = 7;
