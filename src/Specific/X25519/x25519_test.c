@@ -13,6 +13,7 @@ int main() {
 	a[0] = 1;
 
 	for (int i = 0; i < 200; i++) {
+		// printf("0x"); for (int i = 31; i>=0; --i) { printf("%02x", in[i]); }; printf("\n");
 		crypto_scalarmult(out, in, basepoint);
     uint8_t* t = out;
     out = in;

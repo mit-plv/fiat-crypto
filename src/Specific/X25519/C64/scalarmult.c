@@ -41,6 +41,7 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 typedef uint8_t u8;
 typedef uint64_t limb;
 typedef limb felem[5];
+//static void crecip(felem out, const felem z);
 
 static void force_inline
 fmul(felem output, const felem in2, const felem in) {
@@ -200,6 +201,7 @@ swap_conditional(limb a[5], limb b[5], limb iswap) {
   }
 }
 
+
 /* Calculates nQ where Q is the x-coordinate of a point on the curve
  *
  *   resultx/resultz: the x coordinate of the resulting curve point (short form)
@@ -221,6 +223,7 @@ cmult(limb *resultx, limb *resultz, const u8 *n, const limb *q) {
     u8 byte = n[31 - i];
     for (j = 0; j < 8; ++j) {
       const limb bit = byte >> 7;
+      // printf("%01d ", bit);
 
       swap_conditional(nqx, nqpqx, bit);
       swap_conditional(nqz, nqpqz, bit);
@@ -246,6 +249,9 @@ cmult(limb *resultx, limb *resultz, const u8 *n, const limb *q) {
       nqpqz2 = t;
 
       byte <<= 1;
+
+      // { felem pr; crecip(pr, nqz); fmul(pr, pr, nqx); uint8_t s[32]; fcontract(s, pr); printf("0x"); for (int i = 31; i>=0; --i) { printf("%02x", s[i]); }; printf(" "); }
+      // { felem pr; crecip(pr, nqpqz); fmul(pr, pr, nqpqx); uint8_t s[32]; fcontract(s, pr); printf("0x"); for (int i = 31; i>=0; --i) { printf("%02x", s[i]); }; printf("\n"); }
     }
   }
 
