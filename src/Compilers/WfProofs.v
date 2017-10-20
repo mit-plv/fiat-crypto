@@ -158,6 +158,16 @@ Section language.
         induction Hwf; simpl in *; break_innermost_match; try congruence; eauto.
       Qed.
     End with_interp.
+
+    Lemma wff_SmartPairf_SmartVarfMap_same {var} G {t} v f g
+          (Hfg : forall t v, wff G (f t v) (g t v))
+      : wff G (t:=t) (var1:=var1) (var2:=var2)
+            (SmartPairf (SmartVarfMap f v))
+            (SmartPairf (SmartVarfMap (var:=var) g v)).
+    Proof.
+      induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
+      rewrite !SmartVarfMap_Pair, !SmartPairf_Pair; auto.
+    Qed.
   End with_var.
 
   Definition duplicate_type {var1 var2}
