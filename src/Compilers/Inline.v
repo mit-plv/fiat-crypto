@@ -21,13 +21,20 @@ Section language.
     Inductive inline_directive : flat_type -> Type :=
     | default_inline {t} (e : @exprf var t) : inline_directive t
     | inline {t} (e : interp_flat_type (fun t => @exprf var (Tbase t)) t) : inline_directive t
-    | no_inline {t} (e : @exprf var t) : inline_directive t.
+    | no_inline {t} (e : @exprf var t) : inline_directive t
+    | partial_inline
+        {tx tC}
+        (ex : @exprf var tx)
+        (eC : interp_flat_type var tx -> interp_flat_type (fun t => @exprf var (Tbase t)) tC)
+      : inline_directive tC.
 
     Definition exprf_of_inline_directive {t} (v : inline_directive t) : @exprf var t
       := match v with
          | default_inline t e => e
          | inline t e => SmartPairf e
          | no_inline t e => e
+         | partial_inline _ _ ex eC
+           => LetIn ex (fun x => SmartPairf (eC x))
          end.
 
     Context (postprocess : forall {t}, @exprf var t -> inline_directive t).
@@ -45,6 +52,8 @@ Section language.
               | no_inline _ ex
                 => fun eC => LetIn ex (fun x => eC (SmartVarVarf x))
               | inline _ ex => fun eC => eC ex
+              | partial_inline _ _ ex eC'
+                => fun eC => LetIn ex (fun x => eC (eC' x))
               end (fun x => @inline_const_genf _ (eC x))
          | Var _ x => x
          | TT => TT
@@ -86,6 +95,7 @@ Global Arguments inline_directive {_} _ _ _, {_ _ _} _.
 Global Arguments no_inline {_ _ _ _} _.
 Global Arguments inline {_ _ _ _} _.
 Global Arguments default_inline {_ _ _ _} _.
+Global Arguments partial_inline {_ _ _ _ _} ex eC.
 Global Arguments inline_const_genf {_ _ _} postprocess {_} _.
 Global Arguments inline_const_gen {_ _ _} postprocess {_} _.
 Global Arguments InlineConstGen {_ _} postprocess {_} _ var.

@@ -33,10 +33,12 @@ Section language.
             | default_inline _ _, default_inline _ _
             | no_inline _ _, no_inline _ _
             | inline _ _, inline _ _
+            | partial_inline _ _ _ _, partial_inline _ _ _ _
               => True
             | default_inline _ _, _
             | no_inline _ _, _
             | inline _ _, _
+            | partial_inline _ _ _ _, _
               => False
             end) x y).
 
@@ -118,7 +120,7 @@ Section language.
              | _ => progress inversion_sigma
              | _ => progress inversion_prod
              | _ => progress destruct_head' and
-             | _ => inversion_wf_step; progress subst
+             | _ => inversion_wf_step; destruct_head' sig; progress subst
              | _ => progress specialize_by_assumption
              | _ => progress break_match
              | _ => progress invert_inline_directive
@@ -146,6 +148,8 @@ Section language.
         intros; destruct_head or; t_fin. }
       { match goal with H : _ |- _ => apply H end.
         intros; destruct_head' or; t_fin. }
+      { match goal with H : _ |- _ => apply H end.
+        intros; destruct_head or; t_fin. }
       { match goal with H : _ |- _ => apply H end.
         intros; destruct_head or; t_fin. }
       { match goal with H : _ |- _ => apply H end.
