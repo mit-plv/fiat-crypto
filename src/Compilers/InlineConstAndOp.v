@@ -49,7 +49,9 @@ Section language.
               | partial_inline tx tC ex eC, partial_inline ty tC' ey eC'
                 => fun _ => partial_inline
                               (tC:=Prod _ _)
-                              (Pair ex ey) (fun '(x, y) => (eC x, eC' y))
+                              (Pair ex ey)
+                              (fun xy : interp_flat_type _ _ * interp_flat_type _ _
+                               => (eC (fst xy), eC' (snd xy)))
               | no_inline _ ex, no_inline _ ey
                 => fun _ => no_inline (Pair ex ey)
               | no_inline tx ex, inline ty ey
@@ -71,11 +73,15 @@ Section language.
               | partial_inline tx tC ex eC, no_inline ty ey
                 => fun _ => partial_inline
                               (tC:=Prod _ _)
-                              (Pair ex ey) (fun '(x, y) => (eC x, SmartVarVarf y))
+                              (Pair ex ey)
+                              (fun xy : interp_flat_type _ _ * interp_flat_type _ _
+                               => (eC (fst xy), SmartVarVarf (snd xy)))
               | no_inline tx ex, partial_inline ty tC ey eC
                 => fun _ => partial_inline
                               (tC:=Prod _ _)
-                              (Pair ex ey) (fun '(x, y) => (SmartVarVarf x, eC y))
+                              (Pair ex ey)
+                              (fun xy : interp_flat_type _ _ * interp_flat_type _ _
+                               => (SmartVarVarf (fst xy), eC (snd xy)))
               | default_inline _ ex, default_inline _ ey
                 => fun d => d
               | default_inline _ _, _
