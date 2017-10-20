@@ -248,6 +248,33 @@ Section language.
     : List.In (existT _ t (a, b)) (@flatten_binding_list base_type_code var var T x x) -> a = b.
   Proof using Type. intro; eapply flatten_binding_list_In_eq_iff; eauto. Qed.
 
+  Lemma flatten_binding_list_interpf_SmartPairf_same
+        interp_base_type
+        (interp_op : forall s d, op s d -> interp_flat_type interp_base_type s -> interp_flat_type interp_base_type d)
+        T T' x y e
+        (Hin : List.In
+                 (existT
+                    (fun t => (exprf (Tbase t) * interp_base_type t)%type)
+                    T (x, y))
+                 (flatten_binding_list (t:=T') e (interpf interp_op (SmartMap.SmartPairf e))))
+    : interpf interp_op x = y.
+  Proof using Type.
+    induction T';
+      repeat first [ progress simpl in *
+                   | reflexivity
+                   | exfalso; assumption
+                   | progress subst
+                   | progress inversion_sigma
+                   | progress inversion_prod
+                   | progress destruct_head'_or
+                   | match goal with
+                     | [ H : List.In _ (_ ++ _) |- _ ] => rewrite List.in_app_iff in H
+                     | [ H : forall x y, x = y -> forall t a b, List.In _ _ -> _, H' : List.In _ _ |- _ ]
+                       => specialize (H _ _ eq_refl _ _ _ H')
+                     end
+                   | solve [ eauto ] ].
+  Qed.
+
   Lemma flatten_binding_list_SmartVarfMap2_pair_In_split
         {var1 var1' var2 var2' T x x' y y' t a b}
     : List.In (existT _ t (a, b))
