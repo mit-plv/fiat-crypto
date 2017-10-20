@@ -124,6 +124,20 @@ Section language.
                | _ => progress inversion_wf
                end.
     Qed.
+
+    Lemma wff_SmartPairf G {t t'} v1 v2 x1 x2
+          (Hin : List.In (existT (fun t : base_type_code => (exprf (Tbase t) * exprf (Tbase t))%type) t (x1, x2))
+                         (flatten_binding_list (t:=t') v1 v2))
+          (Hwf : wff G (SmartPairf v1) (SmartPairf v2))
+      : @wff var1 var2 G (Tbase t) x1 x2.
+    Proof using Type.
+      revert dependent G; induction t'; intros; simpl in *; try tauto.
+      { intuition (inversion_sigma; inversion_prod; subst; simpl; eauto). }
+      { unfold SmartPairf in *; simpl in *.
+        inversion_wf; destruct_head'_and.
+        apply List.in_app_iff in Hin.
+        intuition (inversion_sigma; inversion_prod; subst; eauto). }
+    Qed.
   End with_var.
 
   Definition duplicate_type {var1 var2}
