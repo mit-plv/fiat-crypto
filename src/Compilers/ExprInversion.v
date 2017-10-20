@@ -203,6 +203,7 @@ Global Arguments invert_Op {_ _ _ _} _.
 Global Arguments invert_LetIn {_ _ _ _} _.
 Global Arguments invert_Pair {_ _ _ _ _} _.
 Global Arguments invert_Pairs {_ _ _ _} _.
+Global Arguments invert_PairsConst {_ _ _ _} _ {T} _.
 Global Arguments invert_Abs {_ _ _ _} _ _.
 
 Module Export Notations.
