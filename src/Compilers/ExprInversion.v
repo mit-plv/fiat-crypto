@@ -54,6 +54,26 @@ Section language.
     Definition invert_Abs {T} (e : expr T) : interp_flat_type_gen var (domain T) -> exprf (codomain T)
       := match e with Abs _ _ f => f end.
 
+    Section const.
+      Context (invert_Const : forall s d, op s d -> exprf s -> option (interp_flat_type d)).
+
+      Fixpoint invert_PairsConst {T} (e : exprf T)
+        : option (interp_flat_type T)
+      := match e in Syntax.exprf _ _ t return option (interp_flat_type t) with
+         | TT => Some tt
+         | Pair tx ex ty ey
+           => match @invert_PairsConst tx ex, @invert_PairsConst ty ey with
+              | Some x, Some y => Some (x, y)
+              | Some _, None | None, Some _ | None, None => None
+              end
+         | Op s d opv args
+           => invert_Const s d opv args
+         | Var _ _
+         | LetIn _ _ _ _
+           => None
+         end.
+    End const.
+
     Fixpoint invert_Pairs {T} (e : exprf T) : option (interp_flat_type_gen (fun ty => exprf (Tbase ty)) T)
       := match e in Syntax.exprf _ _ t
                return option (interp_flat_type_gen (fun ty => exprf (Tbase ty)) t)
