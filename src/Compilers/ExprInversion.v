@@ -54,6 +54,25 @@ Section language.
     Definition invert_Abs {T} (e : expr T) : interp_flat_type_gen var (domain T) -> exprf (codomain T)
       := match e with Abs _ _ f => f end.
 
+    Fixpoint invert_Pairs {T} (e : exprf T) : option (interp_flat_type_gen (fun ty => exprf (Tbase ty)) T)
+      := match e in Syntax.exprf _ _ t
+               return option (interp_flat_type_gen (fun ty => exprf (Tbase ty)) t)
+         with
+         | TT => Some tt
+         | Var t _ as e => Some e
+         | Pair tx ex ty ey
+           => match @invert_Pairs tx ex, @invert_Pairs ty ey with
+              | Some x, Some y => Some (x, y)
+              | Some _, None | None, Some _ | None, None => None
+              end
+         | Op _ t _ _ as e
+         | LetIn _ _ t _ as e
+           => match t return exprf t -> option (interp_flat_type_gen _ t) with
+              | Tbase _ => fun e => Some e
+              | _ => fun _ => None
+              end e
+         end.
+
     Definition compose {A B C} (f : expr (B -> C)) (g : expr (A -> B))
       : expr (A -> C)
       := Abs (fun v => LetIn (invert_Abs g v)
@@ -163,6 +182,7 @@ Global Arguments invert_Var {_ _ _ _} _.
 Global Arguments invert_Op {_ _ _ _} _.
 Global Arguments invert_LetIn {_ _ _ _} _.
 Global Arguments invert_Pair {_ _ _ _ _} _.
+Global Arguments invert_Pairs {_ _ _ _} _.
 Global Arguments invert_Abs {_ _ _ _} _ _.
 
 Module Export Notations.
