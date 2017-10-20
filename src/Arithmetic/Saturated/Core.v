@@ -166,7 +166,9 @@ Module Columns.
       Fixpoint compact_digit_cps (digit : list Z) (f:Z * Z->T) :=
         match digit with
         | nil => f (0, 0)
-        | x :: nil => f (div x (weight (S n) / weight n), modulo x (weight (S n) / weight n))
+        | x :: nil => div_cps x (weight (S n) / weight n) (fun d =>
+                      modulo_cps x (weight (S n) / weight n) (fun m =>
+                      f (d, m)))
         | x :: y :: nil =>
             add_get_carry_cps _ (weight (S n) / weight n) x y (fun sum_carry =>
             dlet sum_carry := sum_carry in
