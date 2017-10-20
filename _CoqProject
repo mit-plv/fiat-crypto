@@ -57,6 +57,7 @@ src/Compilers/FilterLive.v
 src/Compilers/FoldTypes.v
 src/Compilers/Inline.v
 src/Compilers/InlineConstAndOp.v
+src/Compilers/InlineConstAndOpInterp.v
 src/Compilers/InlineConstAndOpWf.v
 src/Compilers/InlineInterp.v
 src/Compilers/InlineWf.v
