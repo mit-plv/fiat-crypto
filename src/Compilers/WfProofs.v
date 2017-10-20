@@ -8,6 +8,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope ctype_scope.
 Section language.
@@ -138,6 +139,25 @@ Section language.
         apply List.in_app_iff in Hin.
         intuition (inversion_sigma; inversion_prod; subst; eauto). }
     Qed.
+
+    Section with_interp.
+      Context {interp_base_type : base_type_code -> Type}.
+
+      Lemma wff_invert_PairsConst G {t} e1 e2
+            invert_Const1 invert_Const2
+            (Hinvert_Const : forall s d (opv : op s d) G args1 args2,
+                invert_PairsConst invert_Const1 args1
+                = invert_PairsConst invert_Const2 args2
+                -> wff G args1 args2
+                -> invert_Const1 s d opv args1
+                   = invert_Const2 s d opv args2)
+            (Hwf : wff G (t:=t) (var1:=var1) (var2:=var2) e1 e2)
+        : invert_PairsConst (interp_base_type:=interp_base_type) invert_Const1 e1
+          = invert_PairsConst invert_Const2 e2.
+      Proof using Type.
+        induction Hwf; simpl in *; break_innermost_match; try congruence; eauto.
+      Qed.
+    End with_interp.
   End with_var.
 
   Definition duplicate_type {var1 var2}
