@@ -20,13 +20,13 @@ Section language.
 
     Inductive inline_directive : flat_type -> Type :=
     | default_inline {t} (e : @exprf var t) : inline_directive t
-    | inline {t : base_type_code} (e : @exprf var t) : inline_directive t
+    | inline {t} (e : interp_flat_type (fun t => @exprf var (Tbase t)) t) : inline_directive t
     | no_inline {t} (e : @exprf var t) : inline_directive t.
 
     Definition exprf_of_inline_directive {t} (v : inline_directive t) : @exprf var t
       := match v with
          | default_inline t e => e
-         | inline t e => e
+         | inline t e => SmartPairf e
          | no_inline t e => e
          end.
 
@@ -63,7 +63,7 @@ Section language.
       Definition postprocess_for_const (t : flat_type) (v : @exprf var t) : inline_directive t
         := if match v with Op _ _ op _ => @is_const _ _ op | _ => false end
            then match t return @exprf _ t -> inline_directive t with
-                | Syntax.Tbase _ => @inline _
+                | Syntax.Tbase _ => @inline (Tbase _)
                 | _ => @default_inline _
                 end v
            else default_inline v.

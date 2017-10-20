@@ -61,6 +61,7 @@ Section language.
     | [ H : _, H' : _ |- _ ] => rewrite H in H' by fail
     | [ H : _ |- _ ] => apply H; solve [ repeat t_fin_step ]
     | [ H : _ |- _ ] => rewrite H; solve [ repeat t_fin_step ]
+    | _ => solve [ eapply WfProofs.flatten_binding_list_interpf_SmartPairf_same; eauto ]
     end.
   Local Ltac t_fin := repeat t_fin_step.
 

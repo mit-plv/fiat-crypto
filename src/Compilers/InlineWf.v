@@ -62,7 +62,8 @@ Section language.
                    | progress subst
                    | solve [ auto with nocore
                            | eapply (@wff_SmartVarVarf _ _ _ _ _ _ (_ * _)); auto
-                           | eapply wff_SmartVarVarf; eauto with nocore ]
+                           | eapply wff_SmartVarVarf; eauto with nocore
+                           | eapply wff_SmartPairf; eauto with nocore ]
                    | progress simpl in *
                    | constructor
                    | solve [ eauto ] ].
@@ -167,6 +168,7 @@ Section language.
                      | progress inversion_prod
                      | progress destruct_head' False
                      | progress simpl in *
+                     | progress unfold SmartMap.SmartPairf
                      | progress invert_expr
                      | progress inversion_wf
                      | progress break_innermost_match_step

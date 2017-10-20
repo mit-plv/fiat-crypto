@@ -125,7 +125,7 @@ Section reflection.
        | opt_noinline => no_inline e
        | opt_default => default_inline e
        | opt_inline => match t as t' return exprf _ _ t' -> inline_directive t' with
-                       | Tbase _ => fun e => inline e
+                       | Tbase _ => fun e => @inline _ _ _ (Tbase _) e
                        | _ => fun e => default_inline e
                        end e
        end.
