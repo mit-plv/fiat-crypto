@@ -102,6 +102,7 @@ Section Freeze.
     pose proof Z.add_get_carry_full_mod.
     pose proof Z.add_get_carry_full_div.
     pose proof div_correct. pose proof modulo_correct.
+    pose proof @div_id. pose proof @modulo_id.
     pose proof @Z.add_get_carry_full_cps_correct.
     autorewrite with uncps push_id push_basesystem_eval.
 

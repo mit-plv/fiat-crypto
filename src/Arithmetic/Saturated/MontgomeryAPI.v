@@ -285,6 +285,7 @@ Section API.
       pose proof Z.add_get_carry_full_mod;
       pose proof Z.mul_split_div; pose proof Z.mul_split_mod;
       pose proof div_correct; pose proof modulo_correct;
+      pose proof @div_id; pose proof @modulo_id;
       pose proof @Z.add_get_carry_full_cps_correct;
       pose proof @Z.mul_split_cps_correct;
       pose proof @Z.mul_split_cps'_correct.
@@ -314,8 +315,8 @@ Section API.
     Qed.
     Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 using (omega || assumption): push_basesystem_eval.
 
-    Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div:=div) (modulo:=modulo) (uweight bound).
-    Local Definition compact_digit := Columns.compact_digit (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div:=div) (modulo:=modulo) (uweight bound).
+    Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) (uweight bound).
+    Local Definition compact_digit := Columns.compact_digit (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) (uweight bound).
     Lemma small_compact {n} (p:(list Z)^n) : small (snd (compact p)).
     Proof.
       pose_all.
