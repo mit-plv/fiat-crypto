@@ -193,6 +193,24 @@ Section language.
       = Syntax.interp interp_op e x.
   Proof using Type. destruct e; reflexivity. Qed.
 
+  Lemma interpf_invert_PairsConst invert_Const interp_op {T} e v
+        (Hinvert_Const
+         : forall s d opc e v, invert_Const s d opc e = Some v
+                               -> interp_op s d opc (interpf interp_op e) = v)
+        (H : invert_PairsConst (T:=T) invert_Const e = Some v)
+    : Syntax.interpf interp_op e = v.
+  Proof using Type.
+    induction e;
+      repeat first [ reflexivity
+                   | progress subst
+                   | solve [ auto ]
+                   | progress inversion_option
+                   | progress inversion_prod
+                   | progress simpl in *
+                   | progress break_innermost_match_hyps
+                   | apply (f_equal2 (@pair _ _)) ].
+  Qed.
+
   Definition Compose {A B C} (f : Expr (B -> C)) (g : Expr (A -> B))
     : Expr (A -> C)
     := fun var => compose (f var) (g var).
