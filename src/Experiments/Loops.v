@@ -73,60 +73,29 @@ Section Loops.
     cbv [terminates loop_default] in *; break_match; congruence.
   Qed.
 
-  Definition invariant_for
-             (inv : continue_state -> Prop)
-             (P : break_state -> Prop) : Prop :=
-    (forall state state',
-        body state = inr state' -> inv state ->
-        inv state') /\ 
-    (forall state state',
-        body state = inl state' -> inv state ->
-        P state').      
-
-  Local Ltac loop_simplify :=
-    repeat match goal with
-           | _ => progress (simpl loop in * )
-           | _ => progress intros
-           | H: exists _, _ |- _ => destruct H
-           | H: _ /\ _ |- _ => destruct H
-           | _ => erewrite loop_default_eq by eassumption
-           | _ => erewrite loop_continue_step in * by eassumption
-           | _ => erewrite loop_break_step in * by eassumption
-           | |- context [match (body ?s) with | _ => _ end] =>
-             let Heq := fresh "H" in
-             case_eq (body s); intros ? Heq; rewrite Heq in *
-           | _ => congruence
-           | _ => solve [eauto] 
-           end.             
-  
-  Lemma loop_invariant fuel :
-    forall start
-        (P : break_state -> Prop) default
-        (Hterm : terminates fuel start),
-    (exists (inv : continue_state -> Prop),
-        inv start /\
-        invariant_for inv P)
-    <-> P (loop_default fuel start default).
+  Lemma invariant_iff fuel start default (H : terminates fuel start) P :
+      P (loop_default fuel start default) <->
+      (exists (inv : continue_state -> Prop),
+          inv start
+          /\ (forall s s', body s = continue s' -> inv s -> inv s')
+          /\ (forall s s', body s = break s' -> inv s -> P s')).
   Proof.
-    intros; split;
-      [ intro H; destruct H as [? [Hstart ?]];
-        revert start Hterm Hstart;
-        induction fuel |
-      exists (fun st =>
-                exists f e, (loop f st = Some e /\ P e)) ];
+    split;
+      [ exists (fun st => exists f e, (loop f st = Some e /\ P e ))
+      | destruct 1 as [?[??]]; revert dependent start; induction fuel ];
       repeat match goal with
-               | _ => progress (cbv [invariant_for
-                                       loop_default
-                                       terminates] in * )
+             | _ => solve [ trivial | congruence | eauto ] 
+             | _ => progress destruct_head' @ex
+             | _ => progress destruct_head' @and
              | _ => progress intros
-             | _ => progress loop_simplify
-             | H: _ = ?x |- _ = ?x =>
-               etransitivity; [|apply H]
-             | H: context
-                    [match ?x with | O => _
-                              | S _ => _ end] |- _ =>
-               destruct x; try congruence
-             | _ => eexists
+             | _ => progress (cbv [loop_default terminates] in * )
+             | _ => progress (cbn [loop] in * )
+             | _ => progress erewrite loop_default_eq by eassumption
+             | _ => progress erewrite loop_continue_step in * by eassumption
+             | _ => progress erewrite loop_break_step in * by eassumption
+             | _ => progress break_match_hyps
+             | _ => progress break_match
+             | _ => progress eexists
              end.
   Qed.
 
@@ -139,16 +108,68 @@ Section Loops.
   Proof.
     induction fuel; intros;
       repeat match goal with
+             | _ => solve [ congruence | lia ]
              | _ => progress cbv [terminates]
-             | _ => progress simpl loop
-             | _ => progress break_match; try congruence
+             | _ => progress cbn [loop]
+             | _ => progress break_match
              | H : forall _ _, body _ = continue _ -> _ , Heq : body _ = continue _ |- _ => specialize (H _ _ Heq)
-             | _ => eapply IHfuel; lia
-             | _ => lia
+             | _ => eapply IHfuel
     end.
   Qed.
   
 End Loops.
+
+Definition by_invariant {continue_state break_state body fuel start default}
+           invariant P term invariant_start invariant_continue invariant_break
+  := proj2 (@invariant_iff continue_state break_state body fuel start default term P)
+           (ex_intro _ invariant (conj invariant_start (conj invariant_continue invariant_break))).
+                 
+Section While.
+  Context {state}
+          (test : state -> bool)
+          (body : state -> state).
+
+  Fixpoint while (fuel: nat) (s : state) {struct fuel} : option state :=
+    if test s
+    then
+      match fuel with
+      | O => None
+      | S fuel' => while fuel' (body s)
+      end
+    else Some s.
+
+  Section AsLoop.
+    Local Definition lbody := fun s => if test s then continue (body s) else break s.
+    Definition while_using_loop := loop lbody.
+
+    Lemma while_eq_loop : forall n s, while n s = while_using_loop n s.
+    Proof.
+      induction n; intros;
+        cbv [lbody while_using_loop]; cbn [while loop]; break_match; auto.
+    Qed.
+  End AsLoop.
+
+  Definition while_default d f s :=
+    match while f s with
+    | None => d
+    | Some x => x
+    end.
+End While.
+
+Definition for2 {state} (test : state -> bool) (increment body : state -> state)
+  := while test (fun s => increment (body s)). 
+Definition for2_default {state} d test increment body f s :=
+  match @for2 state test increment body f s with
+  | None => d
+  | Some x => x
+  end.
+
+Definition for3 {state} init test increment body fuel := @for2 state test increment body fuel init.
+Definition for3_default {state} d init test increment body fuel :=
+  match @for3 state init test increment body fuel with
+  | None => d
+  | Some x => x
+  end.
 
 Section GCD.
   Definition gcd_step :=
@@ -218,16 +239,11 @@ Section ZeroLoop.
      forall n, nth_default 0 (zero_loop arr) n = 0.
    Proof.
      intros. cbv [zero_loop].
-     eapply loop_invariant.
-     apply zero_body_terminates.
-     exists zero_invariant.
-     split.
-     { cbv [zero_invariant].
-       autorewrite with cancel_pair.
-       split; intros; lia. }
-     { cbv [invariant_for zero_invariant zero_body]. split;
+     eapply (by_invariant zero_invariant); auto using zero_body_terminates;
+       [ cbv [zero_invariant]; autorewrite with cancel_pair; split; intros; lia | ..];
+       cbv [zero_invariant zero_body];
        intros until 0;
-         break_match; intros; inversion_sum;
+       break_match; intros; inversion_sum;
          repeat match goal with
                 | _ => progress split
                 | _ => progress intros
@@ -241,9 +257,8 @@ Section ZeroLoop.
                 | H : _ |- _ => apply H; lia
                 | _ => lia
                 end.
-         destruct (Compare_dec.lt_dec n (fst state)).
+         destruct (Compare_dec.lt_dec n (fst s)).
          apply H1; lia.
          apply nth_default_out_of_bounds; lia. }
    Qed.
-
 End ZeroLoop.
