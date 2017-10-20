@@ -247,6 +247,17 @@ Section homogenous_type.
   Proof using Type. destruct t; simpl; rewrite !SmartVarfMap_id; reflexivity. Qed.
   Definition SmartVarVarf {t} : interp_flat_type var t -> interp_flat_type exprfb t
     := SmartVarfMap (fun t => Var).
+  Definition SmartVarVarf_Pair {A B} (v : interp_flat_type _ _ * interp_flat_type _ _)
+    : @SmartVarVarf (Prod A B) v
+      = (SmartVarVarf (fst v), SmartVarVarf (snd v))
+    := eq_refl.
+  Lemma SmartPairfSmartVarVarf_SmartVarf {t} v
+    : SmartPairf (SmartVarVarf v) = SmartVarf (t:=t) v.
+  Proof.
+    induction t; try reflexivity; simpl.
+    rewrite SmartVarf_Pair, SmartVarVarf_Pair, SmartPairf_Pair; f_equal;
+      auto.
+  Qed.
 End homogenous_type.
 
 Global Arguments SmartVarf {_ _ _ _} _.
