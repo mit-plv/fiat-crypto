@@ -149,6 +149,9 @@ src/Compilers/Z/CommonSubexpressionEliminationWf.v
 src/Compilers/Z/FoldTypes.v
 src/Compilers/Z/HexNotationConstants.v
 src/Compilers/Z/Inline.v
+src/Compilers/Z/InlineConstAndOp.v
+src/Compilers/Z/InlineConstAndOpInterp.v
+src/Compilers/Z/InlineConstAndOpWf.v
 src/Compilers/Z/InlineInterp.v
 src/Compilers/Z/InlineWf.v
 src/Compilers/Z/InterpSideConditions.v
