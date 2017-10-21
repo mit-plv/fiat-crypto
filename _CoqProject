@@ -192,6 +192,7 @@ src/Compilers/Z/Named/RewriteAddToAdc.v
 src/Compilers/Z/Named/RewriteAddToAdcInterp.v
 src/Compilers/Z/Syntax/Equality.v
 src/Compilers/Z/Syntax/Util.v
+src/Compilers/ZExtended/Syntax.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
