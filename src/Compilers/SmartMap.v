@@ -87,11 +87,33 @@ Section homogenous_type.
        | Unit => tt
        | Prod A B => (@SmartValf T val A, @SmartValf T val B)
        end.
+  Section SmartValf_monad.
+    Context (M : Type -> Type) (ret : forall T, T -> M T)
+            (bind : forall A B, M A -> (A -> M B) -> M B).
+    Fixpoint SmartValfM
+             {T} (val : forall t : base_type_code, M (T t)) t : M (interp_flat_type T t)
+      := match t return M (interp_flat_type T t) with
+         | Syntax.Tbase _ => val _
+         | Unit => ret _ tt
+         | Prod A B => bind _ _ (@SmartValfM T val A)
+                            (fun a => bind _ _ (@SmartValfM T val B)
+                                           (fun b => ret _ (a, b)))
+         end.
+  End SmartValf_monad.
 
   (** [SmartVar] is like [Var], except that it inserts
       pair-projections and [Pair] as necessary to handle [flat_type],
       and not just [base_type_code] *)
   Local Notation exprfb := (fun t => exprf (Tbase t)).
+  Definition SmartValf_option {T} (val : forall t, option (T t)) t
+    : option (interp_flat_type T t)
+    := @SmartValfM
+         (fun t => option t) (fun t v => @Some t v)
+         (fun _ _ x f => match x with
+                         | Some x => f x
+                         | None => None
+                         end)
+         T val t.
   Definition SmartPairf {t} : interp_flat_type exprfb t -> exprf t
     := @smart_interp_flat_map exprfb exprf (fun t x => x) TT (fun A B x y => Pair x y) t.
   Lemma SmartPairf_Pair {A B} (e1 : interp_flat_type _ A) (e2 : interp_flat_type _ B)
