@@ -118,7 +118,7 @@ Section language.
         [ reflexivity | auto | .. | eassumption ];
         auto using name_list_unique_DefaultNamesFor. }
     { intro; eapply wf_map_cast with (t := Arrow _ _) (fValues := empty); eauto using PositiveContextOk with typeclass_instances.
-      { eapply (wf_compile (ContextOk:=PositiveContextOk)) with (e':= e _);
+      { eapply (wf_compile (ContextOk:=PositiveContextOk) (make_var':=fun _ => id)) with (e':= e _);
           [ auto | .. | eassumption ];
           auto using name_list_unique_DefaultNamesFor. }
       { intros ???; rewrite lookupb_empty by apply PositiveContextOk; congruence. } }

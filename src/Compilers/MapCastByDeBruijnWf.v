@@ -87,7 +87,7 @@ Section language.
               PositiveContextOk PositiveContextOk
               (failb _) (failb _) _ e1);
       (eapply wf_map_cast with (fValues:=empty); eauto using PositiveContextOk with typeclass_instances);
-      try (eapply (wf_compile (ContextOk:=PositiveContextOk));
+      try (eapply (wf_compile (make_var':=fun _ => id) (ContextOk:=PositiveContextOk));
            [ eauto
            | ..
            | eassumption ]);

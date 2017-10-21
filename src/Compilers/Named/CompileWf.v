@@ -23,20 +23,21 @@ Local Open Scope ctype_scope.
 Local Open Scope nexpr_scope.
 Local Open Scope expr_scope.
 Section language.
-  Context {base_type_code var}
+  Context {base_type_code var} {var' : base_type_code -> Type}
           {op : flat_type base_type_code -> flat_type base_type_code -> Type}
           {Name : Type}
           {base_type_dec : DecidableRel (@eq base_type_code)}
           {Name_dec : DecidableRel (@eq Name)}
           {Context : @Context base_type_code Name var}
-          {ContextOk : ContextOk Context}.
+          {ContextOk : ContextOk Context}
+          {make_var' : forall t, var t -> var' t} (* probably only needed because I was clumsy in the proof method *).
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
   Local Notation exprf := (@exprf base_type_code op (fun _ => Name)).
   Local Notation expr := (@expr base_type_code op (fun _ => Name)).
-  Local Notation wff := (@wff base_type_code op (fun _ => Name) var).
-  Local Notation wf := (@wf base_type_code op (fun _ => Name) var).
+  Local Notation wff := (@wff base_type_code op (fun _ => Name) var').
+  Local Notation wf := (@wf base_type_code op (fun _ => Name) var').
   Local Notation nexprf := (@Named.exprf base_type_code op Name).
   Local Notation nexpr := (@Named.expr base_type_code op Name).
   Local Notation nwff := (@Named.wff base_type_code Name op var Context).
@@ -46,9 +47,33 @@ Section language.
   Local Notation compilef := (@compilef base_type_code op Name).
   Local Notation compile := (@compile base_type_code op Name).
 
+  Local Ltac finish_with_var' :=
+    (* FIXME: clean this up *)
+    lazymatch goal with
+    | [ H : find_Name_and_val _ _ ?b ?n ?i ?v None = Some _
+        |- find_Name_and_val _ _ ?b ?n ?i _ None <> None ]
+      => (is_evar v;
+          let T := type of v in
+          let H := fresh in
+          assert (H : { k : T | k = v }));
+         [
+                | let H' := fresh in
+                  let H'' := fresh in
+                  intro H';
+                  let T := match type of H with ?T = _ => T end in
+                  assert (H'' : T <> None) by congruence; apply H''; revert H';
+                  rewrite <- !find_Name_and_val_None_iff;
+                  tauto ]
+    end;
+    match goal with
+    | [ v : interp_flat_type _ ?t |- @sig (interp_flat_type _ ?t) _ ]
+      => exists (SmartMap.SmartVarfMap make_var' v)
+    end;
+    reflexivity.
+
   Lemma wff_ocompilef (ctx : Context) G
         (HG : forall t n v,
-            List.In (existT _ t (n, v)%core) G -> lookupb t ctx n = Some v)
+            List.In (existT _ t (n, v)%core) G -> lookupb t ctx n <> None)
         {t} (e : exprf t) e' (ls : list (option Name))
         (Hwf : wff G e e')
         v
@@ -56,7 +81,7 @@ Section language.
         (Hls : oname_list_unique ls)
         (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In (Some n) ls -> False)
     : prop_of_option (nwff ctx v).
-  Proof using ContextOk Name_dec base_type_dec.
+  Proof using ContextOk Name_dec base_type_dec make_var'.
     revert dependent ctx; revert dependent ls; induction Hwf;
       repeat first [ progress intros
                    | progress subst
@@ -119,7 +144,7 @@ Section language.
                        => progress rewrite ?firstn_nil, ?skipn_nil, ?skipn_skipn in H
                      | [ H : List.In ?x (List.firstn ?a (List.skipn ?b ?ls)), H' : List.In ?x (List.skipn (?b + ?a) ?ls) |- False ]
                        => rewrite firstn_skipn_add in H; apply In_skipn in H
-                     | [ H : _ |- prop_of_option (nwff _ ?v) ]
+                     | [ H : ?T |- prop_of_option (nwff _ ?v) ]
                        => eapply H; clear H
                      end ];
       repeat match goal with
@@ -158,6 +183,7 @@ Section language.
                                                 |- _ ]
                => exfalso; apply (IH _ _ _ H); clear IH H
              end.
+    finish_with_var'.
   Qed.
 
   Lemma wf_ocompile (ctx : Context) {t} (e : expr t) e' (ls : list (option Name))
@@ -166,7 +192,7 @@ Section language.
         (Hls : oname_list_unique ls)
         (H : ocompile e ls = Some f)
     : nwf ctx f.
-  Proof using ContextOk Name_dec base_type_dec.
+  Proof using ContextOk Name_dec base_type_dec make_var'.
     revert H; destruct Hwf;
       repeat first [ progress simpl in *
                    | progress unfold option_map, Named.interp in *
@@ -199,19 +225,20 @@ Section language.
                      | [ H : _ |- _ ] => first [ erewrite find_Name_and_val_wrong_type in H by eassumption
                                                | erewrite find_Name_and_val_different in H by eassumption ]
                      end
-                   | progress intros ]. }
+                   | progress intros ].
+      finish_with_var'. }
   Qed.
 
   Lemma wff_compilef (ctx : Context) {t} (e : exprf t) e' (ls : list Name)
         G
         (Hwf : wff G e e')
-        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb t ctx n = Some x)
+        (HG : forall t n x, List.In (existT _ t (n, x)%core) G -> lookupb t ctx n <> None)
         v
         (H : compilef e ls = Some v)
         (Hls : name_list_unique ls)
         (HGls : forall t n x, List.In (existT _ t (n, x)%core) G -> List.In n ls -> False)
     : prop_of_option (nwff ctx v).
-  Proof using ContextOk Name_dec base_type_dec.
+  Proof using ContextOk Name_dec base_type_dec make_var'.
     eapply wff_ocompilef; try eassumption.
     setoid_rewrite List.in_map_iff; intros; destruct_head' ex; destruct_head' and; inversion_option; subst.
     eauto.
@@ -223,5 +250,5 @@ Section language.
         (Hls : name_list_unique ls)
         (H : compile e ls = Some f)
     : nwf ctx f.
-  Proof using ContextOk Name_dec base_type_dec. eapply wf_ocompile; eassumption. Qed.
+  Proof using ContextOk Name_dec base_type_dec make_var'. eapply wf_ocompile; eassumption. Qed.
 End language.
