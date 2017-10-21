@@ -126,6 +126,7 @@ src/Compilers/Named/InterpretToPHOASWf.v
 src/Compilers/Named/MapCast.v
 src/Compilers/Named/MapCastInterp.v
 src/Compilers/Named/MapCastWf.v
+src/Compilers/Named/MapType.v
 src/Compilers/Named/NameUtil.v
 src/Compilers/Named/NameUtilProperties.v
 src/Compilers/Named/PositiveContext.v
