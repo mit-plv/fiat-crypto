@@ -94,6 +94,9 @@ src/Compilers/WfInversion.v
 src/Compilers/WfProofs.v
 src/Compilers/WfReflective.v
 src/Compilers/WfReflectiveGen.v
+src/Compilers/InSet/Syntax.v
+src/Compilers/InSet/Typeify.v
+src/Compilers/InSet/TypeifyInterp.v
 src/Compilers/Named/AListContext.v
 src/Compilers/Named/Compile.v
 src/Compilers/Named/CompileInterp.v
