@@ -56,6 +56,8 @@ src/Compilers/ExprInversion.v
 src/Compilers/FilterLive.v
 src/Compilers/FoldTypes.v
 src/Compilers/GeneralizeVar.v
+src/Compilers/GeneralizeVarInterp.v
+src/Compilers/GeneralizeVarWf.v
 src/Compilers/Inline.v
 src/Compilers/InlineConstAndOp.v
 src/Compilers/InlineConstAndOpInterp.v
