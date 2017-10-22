@@ -304,6 +304,11 @@ Ltac nonzero_preglue op_sig cbv_runtime :=
       | (fun x => ?montgomery_to_F (?meval (?feBW_of_feBW_small _)))
         => cbv [feBW_of_feBW_small phi meval]
       end in
+  lazymatch goal with
+  | [ |- @sig (?feBW_small -> BoundedWord 1 _ ?bound1) _ ]
+    => let b1 := (eval vm_compute in bound1) in
+       change bound1 with b1
+  end;
   apply_lift_sig; intros; eexists_sig_etransitivity;
   do_red ();
   [ refine (_ : (if Decidable.dec (_ = 0) then true else false) = _);
