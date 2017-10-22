@@ -87,6 +87,7 @@ src/Compilers/Rewriter.v
 src/Compilers/RewriterInterp.v
 src/Compilers/RewriterWf.v
 src/Compilers/SmartMap.v
+src/Compilers/StripExpr.v
 src/Compilers/Syntax.v
 src/Compilers/TestCase.v
 src/Compilers/Tuple.v
