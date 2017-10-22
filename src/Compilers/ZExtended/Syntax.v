@@ -74,4 +74,4 @@ Definition interp_op {s d} (opv : op s d) : interp_flat_type interp_base_type s 
      end.
 
 Notation Expr := (Expr base_type op).
-Notation Interp := (Interp interp_op).
+Notation Interp := (Interp (@interp_op)).
