@@ -1,8 +1,14 @@
+Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.IdfunWithAlt.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.Tactics.VM.
+
+Create HintDb arithmetic_cps_unfolder.
+
+Hint Unfold Core.div Core.modulo : arithmetic_cps_unfolder.
 
 Ltac make_parameterized_sig t :=
   refine (_ : { v : _ | v = t });

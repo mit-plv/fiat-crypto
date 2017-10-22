@@ -1,6 +1,8 @@
 Require Import Crypto.Arithmetic.CoreUnfolder.
 Require Import Crypto.Arithmetic.Saturated.Core.
 
+Hint Unfold Core.Columns.compact_digit_cps Core.Columns.compact_step_cps Core.Columns.compact_cps : arithmetic_cps_unfolder.
+
 Module Columns.
   (**
 <<

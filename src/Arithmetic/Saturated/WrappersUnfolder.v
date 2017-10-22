@@ -3,6 +3,8 @@ Require Import Crypto.Arithmetic.Saturated.CoreUnfolder.
 Require Import Crypto.Arithmetic.Saturated.MulSplitUnfolder.
 Require Import Crypto.Arithmetic.Saturated.Wrappers.
 
+Hint Unfold Wrappers.Columns.add_cps Wrappers.Columns.unbalanced_sub_cps Wrappers.Columns.mul_cps : arithmetic_cps_unfolder.
+
 Module Columns.
   (**
 <<

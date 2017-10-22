@@ -1133,7 +1133,7 @@ Ltac pattern_strip_full t :=
   let t := (eval pattern
                  (@Let_In Z (fun _ => Z)),
             @Z.add_get_carry_cps, @Z.mul_split_at_bitwidth_cps,
-            Z.eq_dec_cps, Z.eqb_cps,
+            (@Z.eq_dec_cps), (@Z.eqb_cps),
             @runtime_mul, @runtime_add, @runtime_opp, @runtime_shr, @runtime_and, @runtime_lor,
             (@id_with_alt Z),
             @Z.add_get_carry, @Z.zselect, @Z.mul_split_at_bitwidth,
@@ -1165,7 +1165,7 @@ Ltac apply_patterned_full t1 :=
             (@Let_In) (@id_with_alt)
             (@Let_In Z (fun _ => Z))
             (@Z.add_get_carry_cps) (@Z.mul_split_at_bitwidth_cps)
-            Z.eq_dec_cps Z.eqb_cps
+            (@Z.eq_dec_cps) (@Z.eqb_cps)
             (@runtime_mul) (@runtime_add) (@runtime_opp) (@runtime_shr) (@runtime_and) (@runtime_lor)
             (@id_with_alt Z)
             (@Z.add_get_carry) (@Z.zselect) (@Z.mul_split_at_bitwidth)
