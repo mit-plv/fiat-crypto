@@ -77,22 +77,26 @@ Module PackageSynthesis (PKG : PrePackage).
   Include MP.
   Include MRP.
 
-  Ltac synthesize_with_carry do_rewrite get_op_sig :=
-    let carry_sig := get_carry_sig () in
+  Ltac synthesize do_rewrite get_op_sig :=
     let op_sig := get_op_sig () in
     let allowable_bit_widths := get_allowable_bit_widths () in
     start_preglue;
-    [ do_rewrite op_sig carry_sig; cbv_runtime
+    [ do_rewrite op_sig; cbv_runtime
     | .. ];
     fin_preglue;
     refine_reflectively_gen allowable_bit_widths default.
+  Ltac synthesize_with_carry do_rewrite get_op_sig :=
+    let carry_sig := get_carry_sig () in
+    synthesize ltac:(fun op_sig => do_rewrite op_sig carry_sig) get_op_sig.
+  Ltac synthesize_narg get_op_sig :=
+    synthesize do_rewrite_with_sig get_op_sig.
   Ltac synthesize_2arg_with_carry get_op_sig :=
     synthesize_with_carry do_rewrite_with_2sig_add_carry get_op_sig.
   Ltac synthesize_1arg_with_carry get_op_sig :=
     synthesize_with_carry do_rewrite_with_1sig_add_carry get_op_sig.
 
   Ltac synthesize_montgomery get_op_sig get_op_bounded :=
-    let phi := get_phi_for_preglue () in
+    let phi := get_phi1_for_preglue () in
     let op_sig := get_op_sig () in
     let op_bounded := get_op_bounded () in
     let allowable_bit_widths := get_allowable_bit_widths () in
@@ -110,30 +114,38 @@ Module PackageSynthesis (PKG : PrePackage).
     factor_out_bounds_and_strip_eval op_bounded op_sig_side_conditions_t;
     refine_reflectively_gen allowable_bit_widths anf.
 
-  Ltac synthesize_2arg_choice get_op_sig get_op_bounded :=
+  Ltac synthesize_narg_choice_gen synthesize get_op_sig get_op_bounded :=
     let montgomery := get_montgomery () in
     lazymatch (eval vm_compute in montgomery) with
     | true => synthesize_montgomery get_op_sig get_op_bounded
-    | false => synthesize_2arg_with_carry get_op_sig
+    | false => synthesize get_op_sig
     end.
-  Ltac synthesize_1arg_choice get_op_sig get_op_bounded :=
-    let montgomery := get_montgomery () in
-    lazymatch (eval vm_compute in montgomery) with
-    | true => synthesize_montgomery get_op_sig get_op_bounded
-    | false => synthesize_1arg_with_carry get_op_sig
-    end.
+  Ltac synthesize_narg_choice get_op_sig get_op_bounded :=
+    synthesize_narg_choice_gen synthesize_narg get_op_sig get_op_bounded.
+  Ltac synthesize_2arg_choice_with_carry get_op_sig get_op_bounded :=
+    synthesize_narg_choice_gen synthesize_2arg_with_carry get_op_sig get_op_bounded.
+  Ltac synthesize_1arg_choice_with_carry get_op_sig get_op_bounded :=
+    synthesize_narg_choice_gen synthesize_1arg_with_carry get_op_sig get_op_bounded.
 
-  Ltac synthesize_mul _ := synthesize_2arg_choice get_mul_sig get_mul_bounded.
-  Ltac synthesize_add _ := synthesize_2arg_choice get_add_sig get_add_bounded.
-  Ltac synthesize_sub _ := synthesize_2arg_choice get_sub_sig get_sub_bounded.
-  Ltac synthesize_opp _ := synthesize_1arg_choice get_opp_sig get_opp_bounded.
-  Ltac synthesize_square _ := synthesize_1arg_with_carry get_square_sig.
+  Ltac synthesize_carry_mul _ := synthesize_2arg_choice_with_carry get_mul_sig get_mul_bounded.
+  Ltac synthesize_carry_add _ := synthesize_2arg_choice_with_carry get_add_sig get_add_bounded.
+  Ltac synthesize_carry_sub _ := synthesize_2arg_choice_with_carry get_sub_sig get_sub_bounded.
+  Ltac synthesize_carry_opp _ := synthesize_1arg_choice_with_carry get_opp_sig get_opp_bounded.
+  Ltac synthesize_carry_square _ := synthesize_1arg_with_carry get_square_sig.
+  Ltac synthesize_nocarry_mul _ := synthesize_narg_choice get_mul_sig get_mul_bounded.
+  Ltac synthesize_add _ := synthesize_narg_choice get_add_sig get_add_bounded.
+  Ltac synthesize_sub _ := synthesize_narg_choice get_sub_sig get_sub_bounded.
+  Ltac synthesize_opp _ := synthesize_narg_choice get_opp_sig get_opp_bounded.
+  Ltac synthesize_carry _ := synthesize_narg_choice get_carry_sig get_carry_bounded.
+  Ltac synthesize_nocarry_square _ := synthesize_narg get_square_sig.
+  Ltac synthesize_mul _ := synthesize_carry_mul ().
+  Ltac synthesize_square _ := synthesize_carry_square ().
   Ltac synthesize_freeze _ :=
     let freeze_sig := get_freeze_sig () in
-    let feBW_bounded := get_feBW_bounded () in
+    let feBW_tight_bounded := get_feBW_tight_bounded () in
     let freeze_allowable_bit_widths := get_freeze_allowable_bit_widths () in
     start_preglue;
-    [ do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_bounded); cbv_runtime
+    [ do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_tight_bounded); cbv_runtime
     | .. ];
     fin_preglue;
     refine_reflectively_gen freeze_allowable_bit_widths anf.

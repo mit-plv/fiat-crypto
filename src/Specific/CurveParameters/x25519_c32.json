@@ -6,7 +6,7 @@
     "bitwidth"         : "32",
     "carry_chains"     : "default",
     "coef_div_modulus" : "2",
-    "operations"       : ["femul", "fesquare", "freeze"],
+    "operations"       : ["femul", "feadd", "fesub", "fecarry", "fesquare", "freeze"],
     "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
     "mul_header"       : "(* Micro-optimized form from curve25519-donna by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)",
     "mul_code"

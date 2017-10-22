@@ -44,21 +44,6 @@ def compute_c(modulus_str):
         return list(reversed(ret))
     # XXX FIXME: Is this the right way to extract c?
     return [('1', rest)]
-def compute_goldilocks(s, c):
-    # true if the prime is of the form 2^2k - 2^k - 1
-    ms = re.match(r'^2\^([0-9]+)$', s)
-    if ms is None: return False
-    two_k = int(ms.groups()[0])
-    assert(isinstance(c, list))
-    if len(c) != 2: return False
-    one_vs = [str(v) for k, v in c if str(k) == '1']
-    others = [(str(k), str(v)) for k, v in c if str(k) != '1']
-    if len(one_vs) != 1 or len(others) != 1 or one_vs[0] != '1' or others[0][1] != '1': return False
-    mk = re.match(r'^2\^([0-9]+)$', others[0][0])
-    if mk is None: return False
-    k = int(mk.groups()[0])
-    if two_k != 2 * k: return False
-    return True
 
 def parse_base(base):
     ret = 0
@@ -235,7 +220,6 @@ def make_curve_parameters(parameters):
         replacements['carry_chains'] = 'Some %s%%nat' % nested_list_to_string(default_carry_chains(replacements['sz']))
     replacements['s'] = parameters.get('s', compute_s(parameters['modulus']))
     replacements['c'] = parameters.get('c', compute_c(parameters['modulus']))
-    replacements['goldilocks'] = parameters.get('goldilocks', compute_goldilocks(replacements['s'], replacements['c']))
     for op, nargs in (('mul', 2), ('square', 1)):
         replacements[op] = format_c_code(parameters.get(op + '_header', None),
                                          parameters.get(op + '_code', None),
@@ -244,7 +228,8 @@ def make_curve_parameters(parameters):
     replacements['coef_div_modulus_raw'] = replacements.get('coef_div_modulus', '0')
     replacements['freeze'] = fix_option(nested_list_to_string(replacements.get('freeze', 'freeze' in parameters.get('operations', []))))
     replacements['ladderstep'] = nested_list_to_string(replacements.get('ladderstep', any(f in parameters.get('operations', []) for f in ('ladderstep', 'xzladderstep'))))
-    for k, scope_string in (('upper_bound_of_exponent', ''),
+    for k, scope_string in (('upper_bound_of_exponent_loose', ''),
+                            ('upper_bound_of_exponent_tight', ''),
                             ('allowable_bit_widths', '%nat'),
                             ('freeze_extra_allowable_bit_widths', '%nat'),
                             ('coef_div_modulus', '%nat'),
@@ -288,7 +273,8 @@ Definition curve : CurveParameters :=
 
     square_code := %(square)s;
 
-    upper_bound_of_exponent := %(upper_bound_of_exponent)s;
+    upper_bound_of_exponent_loose := %(upper_bound_of_exponent_loose)s;
+    upper_bound_of_exponent_tight := %(upper_bound_of_exponent_tight)s;
     allowable_bit_widths := %(allowable_bit_widths)s;
     freeze_extra_allowable_bit_widths := %(freeze_extra_allowable_bit_widths)s;
     modinv_fuel := %(modinv_fuel)s
@@ -312,31 +298,34 @@ Module Export S := PackageSynthesis P.
 """ % prefix
 
 def make_synthesized_arg(fearg, prefix, montgomery=False):
-    if fearg in ('femul', 'fesub', 'feadd'):
+    def make_from_arg(arg, nargs, phi_arg_postfix='', phi_output_postfix='', prefix=prefix):
+        LETTERS = 'abcdefghijklmnopqrstuvwxyz'
+        assert(nargs <= len(LETTERS))
+        arg_names = ' '.join(LETTERS[:nargs])
         if not montgomery:
-            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition %(arg)s :
-  { %(arg)s : feBW -> feBW -> feBW
-  | forall a b, phiBW (%(arg)s a b) = F.%(arg)s (phiBW a) (phiBW b) }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_%(arg)s ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions %(arg)s.
-""" % {'prefix':prefix, 'arg':fearg[2:]}
+            arg_types = ' -> '.join(['feBW%s' % phi_arg_postfix] * nargs)
+            mapped_args = ' '.join('(phiBW%s %s)' % (phi_arg_postfix, l)
+                                   for l in LETTERS[:nargs])
+            feBW_output = 'feBW' + phi_output_postfix
+            phi_output = 'phiBW' + phi_output_postfix
         else:
-            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+            arg_types = ' -> '.join(['feBW_small'] * nargs)
+            mapped_args = ' '.join('(phiM_small %s)' % l
+                                   for l in LETTERS[:nargs])
+            feBW_output = 'feBW_small'
+            phi_output = 'phiM_small'
+        return locals()
+    GEN_PREARG = r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import %(prefix)s.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition %(arg)s :
-  { %(arg)s : feBW_small -> feBW_small -> feBW_small
-  | forall a b, phiM_small (%(arg)s a b) = F.%(arg)s (phiM_small a) (phiM_small b) }.
+  { %(arg)s : %(arg_types)s -> %(feBW_output)s
+  | forall %(arg_names)s, %(phi_output)s (%(arg)s %(arg_names)s) = """
+    GEN_MIDARG = "F.%(arg)s %(mapped_args)s"
+    SQUARE_MIDARG = "F.mul %(mapped_args)s %(mapped_args)s"
+    CARRY_MIDARG = "%(mapped_args)s"
+    GEN_POSTARG = r""" }.
 Proof.
   Set Ltac Profiling.
   Time synthesize_%(arg)s ().
@@ -344,31 +333,31 @@ Proof.
 Time Defined.
 
 Print Assumptions %(arg)s.
-""" % {'prefix':prefix, 'arg':fearg[2:]}
-    elif fearg in ('fesquare',):
-        return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition square :
-  { square : feBW -> feBW
-  | forall a, phiBW (square a) = F.mul (phiBW a) (phiBW a) }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_square ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions square.
-""" % {'prefix':prefix}
+"""
+    GEN_ARG = GEN_PREARG + GEN_MIDARG + GEN_POSTARG
+    SQUARE_ARG = GEN_PREARG + SQUARE_MIDARG + GEN_POSTARG
+    CARRY_ARG = GEN_PREARG + CARRY_MIDARG + GEN_POSTARG
+    nargs_map = {'mul':2, 'sub':2, 'add':2, 'square':1, 'opp':1, 'carry':1}
+    special_args = {'fecarry':CARRY_ARG, 'fecarry_square':SQUARE_ARG, 'fesquare':SQUARE_ARG}
+    if fearg in ('fecarry_mul', 'fecarry_sub', 'fecarry_add', 'fecarry_square', 'fecarry_opp'):
+        nargs = nargs_map[fearg.split('_')[-1]]
+        ARG = special_args.get(fearg, GEN_ARG)
+        return ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_tight', phi_output_postfix='_tight')
+    elif fearg in ('femul', 'fesquare', 'fecarry'):
+        ARG = special_args.get(fearg, GEN_ARG)
+        nargs = nargs_map[fearg[2:]]
+        return ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_loose', phi_output_postfix='_tight')
+    if fearg in ('fesub', 'feadd', 'feopp'):
+        nargs = nargs_map[fearg[2:]]
+        return GEN_ARG % make_from_arg(fearg[2:], nargs=nargs, phi_arg_postfix='_tight', phi_output_postfix='_loose')
     elif fearg in ('freeze',):
         return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import %(prefix)s.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition freeze :
-  { freeze : feBW -> feBW
-  | forall a, phiBW (freeze a) = phiBW a }.
+  { freeze : feBW_tight -> feBW_limbwidths
+  | forall a, phiBW_limbwidths (freeze a) = phiBW_tight a }.
 Proof.
   Set Ltac Profiling.
   Time synthesize_freeze ().
@@ -377,39 +366,6 @@ Time Defined.
 
 Print Assumptions freeze.
 """ % {'prefix':prefix}
-    elif fearg in ('feopp',):
-        if not montgomery:
-            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition %(arg)s :
-  { %(arg)s : feBW -> feBW
-  | forall a, phiBW (%(arg)s a) = F.%(arg)s (phiBW a) }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_%(arg)s ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions %(arg)s.
-""" % {'prefix':prefix, 'arg':fearg[2:]}
-        else:
-            return r"""Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import %(prefix)s.Synthesis.
-
-(* TODO : change this to field once field isomorphism happens *)
-Definition %(arg)s :
-  { %(arg)s : feBW_small -> feBW_small
-  | forall a, phiM_small (%(arg)s a) = F.%(arg)s (phiM_small a) }.
-Proof.
-  Set Ltac Profiling.
-  Time synthesize_%(arg)s ().
-  Show Ltac Profile.
-Time Defined.
-
-Print Assumptions %(arg)s.
-""" % {'prefix':prefix, 'arg':fearg[2:]}
     elif fearg in ('fenz',):
         assert(fearg == 'fenz')
         assert(montgomery)
@@ -443,11 +399,11 @@ Definition xzladderstep :
   | forall x1 Q Q',
       let xz := xzladderstep x1 Q Q' in
       let eval := B.Positional.Fdecode wt in
-      feW_bounded x1
-      -> feW_bounded (fst Q) /\ feW_bounded (snd Q)
-      -> feW_bounded (fst Q') /\ feW_bounded (snd Q')
-      -> ((feW_bounded (fst (fst xz)) /\ feW_bounded (snd (fst xz)))
-          /\ (feW_bounded (fst (snd xz)) /\ feW_bounded (snd (snd xz))))
+      feW_tight_bounded x1
+      -> feW_tight_bounded (fst Q) /\ feW_tight_bounded (snd Q)
+      -> feW_tight_bounded (fst Q') /\ feW_tight_bounded (snd Q')
+      -> ((feW_tight_bounded (fst (fst xz)) /\ feW_tight_bounded (snd (fst xz)))
+          /\ (feW_tight_bounded (fst (snd xz)) /\ feW_tight_bounded (snd (snd xz))))
          /\ Tuple.map (n:=2) (Tuple.map (n:=2) phiW) xz = FMxzladderstep (m:=m) (eval (proj1_sig a24_sig)) (phiW x1) (Tuple.map (n:=2) phiW Q) (Tuple.map (n:=2) phiW Q') }.
 Proof.
   Set Ltac Profiling.
@@ -465,7 +421,8 @@ Print Assumptions xzladderstep.
 def make_display_arg(fearg, prefix):
     file_name = fearg
     function_name = fearg
-    if fearg in ('femul', 'fesub', 'feadd', 'fesquare', 'feopp'):
+    if fearg in ('femul', 'fesub', 'feadd', 'fesquare', 'feopp', 'fecarry',
+                 'fecarry_mul', 'fecarry_sub', 'fecarry_add', 'fecarry_square', 'fecarry_opp'):
         function_name = fearg[2:]
     elif fearg in ('freeze', 'xzladderstep'):
         pass
@@ -489,6 +446,17 @@ set -eu
 %s "$@"
 """ % compiler
 
+DONT_EDIT_STR = 'WARNING: This file was copied from %s.\n If you edit it here, changes will be erased the next time remake_curves.sh is run.'
+DONT_EDIT_HEADERS = {
+    '.c' : '/* ' + DONT_EDIT_STR + ' */',
+    '.h' : '/* ' + DONT_EDIT_STR + ' */',
+    '.v' : '(* ' + DONT_EDIT_STR + ' *)',
+    '.ml' : '(* ' + DONT_EDIT_STR + ' *)',
+    '.ml4' : '(* ' + DONT_EDIT_STR + ' *)',
+    '.py' : '# ' + DONT_EDIT_STR.replace('\n', '\n# '),
+}
+
+
 
 def main(*args):
     if '--help' in args[1:] or '-h' in args[1:]: usage(0)
@@ -509,7 +477,11 @@ def main(*args):
         outputs[arg + '.v'] = make_synthesized_arg(arg, output_prefix, montgomery=as_bool(parameters.get('montgomery', 'false')))
         outputs[arg + 'Display.v'] = make_display_arg(arg, output_prefix)
     for fname in parameters.get('extra_files', []):
-        outputs[os.path.basename(fname)] = open(os.path.join(parameters_folder, fname), 'r').read()
+        _, ext = os.path.splitext(fname)
+        header = ''
+        if ext in DONT_EDIT_HEADERS.keys():
+            header = DONT_EDIT_HEADERS[ext] % os.path.relpath(fname, os.path.join(root, 'src'))
+        outputs[os.path.basename(fname)] = header + '\n' + open(os.path.join(parameters_folder, fname), 'r').read()
     if 'compiler' in parameters.keys():
         outputs['compiler.sh'] = make_compiler(parameters['compiler'])
     file_list = tuple((k, os.path.join(output_folder, k)) for k in sorted(outputs.keys()))

@@ -137,7 +137,7 @@ Ltac get_proj2_sig_map_arg _ :=
     => let P := get_proj2_sig_map_arg_helper E in
        uconstr:(fun e : T => P)
   end.
-Ltac get_phi_for_preglue _ :=
+Ltac get_phi1_for_preglue _ :=
   lazymatch goal with
   | [ |- { e | @?E e } ]
     => lazymatch E with
@@ -147,9 +147,22 @@ Ltac get_phi_for_preglue _ :=
          => phi
        end
   end.
+Ltac get_phi2_for_preglue _ :=
+  lazymatch goal with
+  | [ |- { e | @?E e } ]
+    => lazymatch E with
+       | context[_ = ?f (Tuple.map ?phi _)]
+         => phi
+       | context[_ = ?f (?phi _)]
+         => phi
+       | context[_ = ?phi _]
+         => phi
+       end
+  end.
 Ltac start_preglue :=
   apply_lift_sig; intros; cbv beta iota zeta;
-  let phi := get_phi_for_preglue () in
+  let phi := get_phi1_for_preglue () in
+  let phi2 := get_phi2_for_preglue () in
   let P' := get_proj2_sig_map_arg () in
   refine (proj2_sig_map (P:=P') _ _);
   [ let FINAL := fresh "FINAL" in
@@ -158,11 +171,11 @@ Ltac start_preglue :=
     repeat (let H := fresh in intro H; specialize (FINAL H));
     lazymatch goal with
     | [ |- ?phi _ = ?RHS ]
-      => refine (@eq_trans _ _ _ RHS FINAL _); cbv [phi]; clear a FINAL
+      => refine (@eq_trans _ _ _ RHS FINAL _); cbv [phi phi2]; clear a FINAL
     | [ |- _ /\ Tuple.map (Tuple.map ?phi) _ = _ ]
-      => split; cbv [phi]; [ refine (proj1 FINAL); shelve | ]
+      => split; cbv [phi phi2]; [ refine (proj1 FINAL); shelve | ]
     end
-  | cbv [phi] ].
+  | cbv [phi phi2] ].
 Ltac do_set_sig f_sig :=
   let fZ := fresh f_sig in
   set (fZ := proj1_sig f_sig);

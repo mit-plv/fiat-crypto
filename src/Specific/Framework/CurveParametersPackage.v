@@ -67,8 +67,10 @@ Module MakeCurveParametersPackage (PKG : PrePackage).
   Notation allowable_bit_widths := (ltac:(let v := get_allowable_bit_widths () in exact v)) (only parsing).
   Ltac get_freeze_allowable_bit_widths _ := get TAG.freeze_allowable_bit_widths.
   Notation freeze_allowable_bit_widths := (ltac:(let v := get_freeze_allowable_bit_widths () in exact v)) (only parsing).
-  Ltac get_upper_bound_of_exponent _ := get TAG.upper_bound_of_exponent.
-  Notation upper_bound_of_exponent := (ltac:(let v := get_upper_bound_of_exponent () in exact v)) (only parsing).
+  Ltac get_upper_bound_of_exponent_tight _ := get TAG.upper_bound_of_exponent_tight.
+  Notation upper_bound_of_exponent_tight := (ltac:(let v := get_upper_bound_of_exponent_tight () in exact v)) (only parsing).
+  Ltac get_upper_bound_of_exponent_loose _ := get TAG.upper_bound_of_exponent_loose.
+  Notation upper_bound_of_exponent_loose := (ltac:(let v := get_upper_bound_of_exponent_loose () in exact v)) (only parsing).
   Ltac get_modinv_fuel _ := get TAG.modinv_fuel.
   Notation modinv_fuel := (ltac:(let v := get_modinv_fuel () in exact v)) (only parsing).
   Ltac get_mul_code _ := get TAG.mul_code.

@@ -12,7 +12,7 @@ Local Set Primitive Projections.
 Module Export Notations := RawCurveParameters.Notations.
 
 Module TAG. (* namespacing *)
-  Inductive tags := CP | sz | base | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | montgomery | freeze | ladderstep | upper_bound_of_exponent | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel | mul_code | square_code.
+  Inductive tags := CP | sz | base | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | montgomery | freeze | ladderstep | upper_bound_of_exponent_tight | upper_bound_of_exponent_loose | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel | mul_code | square_code.
 End TAG.
 
 Module Export CurveParameters.
@@ -48,7 +48,8 @@ Module Export CurveParameters.
 
       mul_code : option (Z^sz -> Z^sz -> Z^sz);
       square_code : option (Z^sz -> Z^sz);
-      upper_bound_of_exponent : Z -> Z;
+      upper_bound_of_exponent_tight : Z -> Z;
+      upper_bound_of_exponent_loose : Z -> Z;
       allowable_bit_widths : list nat;
       freeze_allowable_bit_widths : list nat;
       modinv_fuel : nat
@@ -69,7 +70,8 @@ Module Export CurveParameters.
               ladderstep
               mul_code
               square_code
-              upper_bound_of_exponent
+              upper_bound_of_exponent_tight
+              upper_bound_of_exponent_loose
               allowable_bit_widths
               freeze_allowable_bit_widths
               modinv_fuel].
@@ -118,7 +120,17 @@ Module Export CurveParameters.
                    then [8]
                    else nil)
                     ++ (Z.to_nat bitwidth :: 2*Z.to_nat bitwidth :: nil))%nat in
-
+        let upper_bound_of_exponent_tight
+            := defaulted (RawCurveParameters.upper_bound_of_exponent_tight CP)
+                         (if montgomery
+                          then (fun exp => (2^exp - 1)%Z)
+                          else (fun exp => (2^exp + 2^(exp-3))%Z))
+        (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *) in
+        let upper_bound_of_exponent_loose
+            := defaulted (RawCurveParameters.upper_bound_of_exponent_loose CP)
+                         (if montgomery
+                          then (fun exp => (2^exp - 1)%Z)
+                          else (fun exp => (3 * upper_bound_of_exponent_tight exp)%Z)) in
         {|
           sz := sz;
           base := base;
@@ -136,12 +148,8 @@ Module Export CurveParameters.
 
           mul_code := RawCurveParameters.mul_code CP;
           square_code := RawCurveParameters.square_code CP;
-          upper_bound_of_exponent
-          := defaulted (RawCurveParameters.upper_bound_of_exponent CP)
-                       (if montgomery
-                        then (fun exp => (2^exp - 1)%Z)
-                        else (fun exp => (2^exp + 2^(exp-3))%Z));
-          (* max is [(0, 2^(exp+2) + 2^exp + 2^(exp-1) + 2^(exp-3) + 2^(exp-4) + 2^(exp-5) + 2^(exp-6) + 2^(exp-10) + 2^(exp-12) + 2^(exp-13) + 2^(exp-14) + 2^(exp-15) + 2^(exp-17) + 2^(exp-23) + 2^(exp-24))%Z] *)
+          upper_bound_of_exponent_tight := upper_bound_of_exponent_tight;
+          upper_bound_of_exponent_loose := upper_bound_of_exponent_loose;
 
           allowable_bit_widths := allowable_bit_widths;
           freeze_allowable_bit_widths
@@ -174,7 +182,8 @@ Module Export CurveParameters.
           ladderstep := ?ladderstep';
           mul_code := ?mul_code';
           square_code := ?square_code';
-          upper_bound_of_exponent := ?upper_bound_of_exponent';
+          upper_bound_of_exponent_tight := ?upper_bound_of_exponent_tight';
+          upper_bound_of_exponent_loose := ?upper_bound_of_exponent_loose';
           allowable_bit_widths := ?allowable_bit_widths';
           freeze_allowable_bit_widths := ?freeze_allowable_bit_widths';
           modinv_fuel := ?modinv_fuel'
@@ -205,7 +214,8 @@ Module Export CurveParameters.
                     ladderstep := ladderstep';
                     mul_code := mul_code';
                     square_code := square_code';
-                    upper_bound_of_exponent := upper_bound_of_exponent';
+                    upper_bound_of_exponent_tight := upper_bound_of_exponent_tight';
+                    upper_bound_of_exponent_loose := upper_bound_of_exponent_loose';
                     allowable_bit_widths := allowable_bit_widths';
                     freeze_allowable_bit_widths := freeze_allowable_bit_widths';
                     modinv_fuel := modinv_fuel'
@@ -246,8 +256,10 @@ Module Export CurveParameters.
     internal_pose_of_CP CP CurveParameters.allowable_bit_widths allowable_bit_widths.
   Ltac pose_freeze_allowable_bit_widths CP freeze_allowable_bit_widths :=
     internal_pose_of_CP CP CurveParameters.freeze_allowable_bit_widths freeze_allowable_bit_widths.
-  Ltac pose_upper_bound_of_exponent CP upper_bound_of_exponent :=
-    internal_pose_of_CP CP CurveParameters.upper_bound_of_exponent upper_bound_of_exponent.
+  Ltac pose_upper_bound_of_exponent_tight CP upper_bound_of_exponent_tight :=
+    internal_pose_of_CP CP CurveParameters.upper_bound_of_exponent_tight upper_bound_of_exponent_tight.
+  Ltac pose_upper_bound_of_exponent_loose CP upper_bound_of_exponent_loose :=
+    internal_pose_of_CP CP CurveParameters.upper_bound_of_exponent_loose upper_bound_of_exponent_loose.
   Ltac pose_modinv_fuel CP modinv_fuel :=
     internal_pose_of_CP CP CurveParameters.modinv_fuel modinv_fuel.
   Ltac pose_mul_code CP mul_code :=
@@ -340,11 +352,17 @@ Module Export CurveParameters.
     let freeze_allowable_bit_widths := pose_freeze_allowable_bit_widths CP freeze_allowable_bit_widths in
     Tag.update pkg TAG.freeze_allowable_bit_widths freeze_allowable_bit_widths.
 
-  Ltac add_upper_bound_of_exponent pkg :=
+  Ltac add_upper_bound_of_exponent_tight pkg :=
     let CP := Tag.get pkg TAG.CP in
-    let upper_bound_of_exponent := fresh "upper_bound_of_exponent" in
-    let upper_bound_of_exponent := pose_upper_bound_of_exponent CP upper_bound_of_exponent in
-    Tag.update pkg TAG.upper_bound_of_exponent upper_bound_of_exponent.
+    let upper_bound_of_exponent_tight := fresh "upper_bound_of_exponent_tight" in
+    let upper_bound_of_exponent_tight := pose_upper_bound_of_exponent_tight CP upper_bound_of_exponent_tight in
+    Tag.update pkg TAG.upper_bound_of_exponent_tight upper_bound_of_exponent_tight.
+
+  Ltac add_upper_bound_of_exponent_loose pkg :=
+    let CP := Tag.get pkg TAG.CP in
+    let upper_bound_of_exponent_loose := fresh "upper_bound_of_exponent_loose" in
+    let upper_bound_of_exponent_loose := pose_upper_bound_of_exponent_loose CP upper_bound_of_exponent_loose in
+    Tag.update pkg TAG.upper_bound_of_exponent_loose upper_bound_of_exponent_loose.
 
   Ltac add_modinv_fuel pkg :=
     let CP := Tag.get pkg TAG.CP in
@@ -379,7 +397,8 @@ Module Export CurveParameters.
     let pkg := add_ladderstep pkg in
     let pkg := add_allowable_bit_widths pkg in
     let pkg := add_freeze_allowable_bit_widths pkg in
-    let pkg := add_upper_bound_of_exponent pkg in
+    let pkg := add_upper_bound_of_exponent_tight pkg in
+    let pkg := add_upper_bound_of_exponent_loose pkg in
     let pkg := add_modinv_fuel pkg in
     let pkg := add_mul_code pkg in
     let pkg := add_square_code pkg in

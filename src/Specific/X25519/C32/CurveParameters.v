@@ -18,7 +18,7 @@ Definition curve : CurveParameters :=
     a24 := Some 121665;
     coef_div_modulus := Some 2%nat;
 
-    goldilocks := Some false;
+    goldilocks := None;
     montgomery := false;
     freeze := Some true;
     ladderstep := false;
@@ -245,7 +245,8 @@ Definition curve : CurveParameters :=
       (output9, output8, output7, output6, output5, output4, output3, output2, output1, output0)
             );
 
-    upper_bound_of_exponent := None;
+    upper_bound_of_exponent_loose := None;
+    upper_bound_of_exponent_tight := None;
     allowable_bit_widths := None;
     freeze_extra_allowable_bit_widths := None;
     modinv_fuel := None
