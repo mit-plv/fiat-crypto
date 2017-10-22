@@ -17,31 +17,31 @@ Require Crypto.Arithmetic.Saturated.MontgomeryAPI.
 Require Import Crypto.Util.Tactics.PoseTermWithName.
 Require Import Crypto.Util.Tactics.CacheTerm.
 
-Ltac pose_meval feBW r meval :=
+Ltac pose_meval feBW_tight r meval :=
   cache_term_with_type_by
-    (feBW -> Z)
-    ltac:(exact (fun x : feBW => MontgomeryAPI.eval (Z.pos r) (BoundedWordToZ _ _ _ x)))
+    (feBW_tight -> Z)
+    ltac:(exact (fun x : feBW_tight => MontgomeryAPI.eval (Z.pos r) (BoundedWordToZ _ _ _ x)))
            meval.
 
-Ltac pose_feBW_small sz feBW meval r m_enc feBW_small :=
+Ltac pose_feBW_small sz feBW_tight meval r m_enc feBW_small :=
   cache_term
-    { v : feBW | meval v < MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc }
+    { v : feBW_tight | meval v < MontgomeryAPI.eval (n:=sz) (Z.pos r) m_enc }
     feBW_small.
 
-Ltac pose_feBW_of_feBW_small feBW feBW_small feBW_of_feBW_small :=
+Ltac pose_feBW_tight_of_feBW_small feBW_tight feBW_small feBW_tight_of_feBW_small :=
   cache_term_with_type_by
-    (feBW_small -> feBW)
+    (feBW_small -> feBW_tight)
     ltac:(refine (@proj1_sig _ _))
-           feBW_of_feBW_small.
+           feBW_tight_of_feBW_small.
 
-Ltac pose_phiM feBW m meval montgomery_to_F phiM :=
+Ltac pose_phiM feBW_tight m meval montgomery_to_F phiM :=
   cache_term_with_type_by
-    (feBW -> F m)
-    ltac:(exact (fun x : feBW => montgomery_to_F (meval x)))
+    (feBW_tight -> F m)
+    ltac:(exact (fun x : feBW_tight => montgomery_to_F (meval x)))
            phiM.
 
-Ltac pose_phiM_small feBW_small feBW_of_feBW_small m meval montgomery_to_F phiM_small :=
+Ltac pose_phiM_small feBW_small feBW_tight_of_feBW_small m meval montgomery_to_F phiM_small :=
   cache_term_with_type_by
     (feBW_small -> F m)
-    ltac:(exact (fun x : feBW_small => montgomery_to_F (meval (feBW_of_feBW_small x))))
+    ltac:(exact (fun x : feBW_small => montgomery_to_F (meval (feBW_tight_of_feBW_small x))))
            phiM_small.

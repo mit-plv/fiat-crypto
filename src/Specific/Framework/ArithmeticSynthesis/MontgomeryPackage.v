@@ -9,7 +9,7 @@ Require Import Crypto.Specific.Framework.Packages.
 Require Import Crypto.Util.TagList.
 
 Module TAG.
-  Inductive tags := m' | r' | m'_correct | r'_correct | m_enc_correct_montgomery | r'_pow_correct | montgomery_to_F | r_big | m_big | m_enc_small | map_m_enc | mul_ext | add_ext | sub_ext | opp_ext | nonzero_ext | mul_bounded | add_bounded | sub_bounded | opp_bounded | nonzero_sig.
+  Inductive tags := m' | r' | m'_correct | r'_correct | m_enc_correct_montgomery | r'_pow_correct | montgomery_to_F | r_big | m_big | m_enc_small | map_m_enc | mul_ext | add_ext | sub_ext | opp_ext | carry_ext | nonzero_ext | mul_bounded | add_bounded | sub_bounded | opp_bounded | carry_bounded | nonzero_sig.
 End TAG.
 
 Ltac add_m' pkg :=
@@ -206,6 +206,21 @@ Ltac add_opp_ext pkg :=
                    Tag.update pkg TAG.opp_ext opp_ext)
     ltac:(fun _ => pkg)
     ().
+Ltac add_carry_ext pkg :=
+  if_montgomery
+    pkg
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m := Tag.get pkg TAG.m in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let r' := Tag.get pkg TAG.r' in
+                   let r_big := Tag.get pkg TAG.r_big in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let carry_ext := fresh "carry_ext" in
+                   let carry_ext := pose_carry_ext r sz m m_enc r' r_big montgomery_to_F carry_ext in
+                   Tag.update pkg TAG.carry_ext carry_ext)
+    ltac:(fun _ => pkg)
+    ().
 Ltac add_nonzero_ext pkg :=
   if_montgomery
     pkg
@@ -331,6 +346,33 @@ Ltac add_opp_bounded pkg :=
                    Tag.update pkg TAG.opp_bounded opp_bounded)
     ltac:(fun _ => pkg)
     ().
+Ltac add_carry_sig pkg :=
+  if_montgomery
+    pkg
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let carry_ext := Tag.get pkg TAG.carry_ext in
+                   let carry_sig := fresh "carry_sig" in
+                   let carry_sig := pose_carry_sig r sz m_enc montgomery_to_F carry_ext carry_sig in
+                   Tag.update pkg TAG.carry_sig carry_sig)
+    ltac:(fun _ => pkg)
+    ().
+Ltac add_carry_bounded pkg :=
+  if_montgomery
+    pkg
+    ltac:(fun _ => let r := Tag.get pkg TAG.r in
+                   let sz := Tag.get pkg TAG.sz in
+                   let m_enc := Tag.get pkg TAG.m_enc in
+                   let montgomery_to_F := Tag.get pkg TAG.montgomery_to_F in
+                   let carry_ext := Tag.get pkg TAG.carry_ext in
+                   let carry_sig := Tag.get pkg TAG.carry_sig in
+                   let carry_bounded := fresh "carry_bounded" in
+                   let carry_bounded := pose_carry_bounded r sz m_enc montgomery_to_F carry_ext carry_sig carry_bounded in
+                   Tag.update pkg TAG.carry_bounded carry_bounded)
+    ltac:(fun _ => pkg)
+    ().
 Ltac add_nonzero_sig pkg :=
   if_montgomery
     pkg
@@ -351,14 +393,6 @@ Ltac add_ring pkg :=
     ltac:(fun _ => let ring := fresh "ring" in
                    let ring := pose_ring ring in
                    Tag.update pkg TAG.ring ring)
-    ltac:(fun _ => pkg)
-    ().
-Ltac add_carry_sig pkg :=
-  if_montgomery
-    pkg
-    ltac:(fun _ => let carry_sig := fresh "carry_sig" in
-                   let carry_sig := pose_carry_sig carry_sig in
-                   Tag.update pkg TAG.carry_sig carry_sig)
     ltac:(fun _ => pkg)
     ().
 Ltac add_freeze_sig pkg :=
@@ -393,6 +427,7 @@ Ltac add_Montgomery_package pkg :=
   let pkg := add_add_ext pkg in
   let pkg := add_sub_ext pkg in
   let pkg := add_opp_ext pkg in
+  let pkg := add_carry_ext pkg in
   let pkg := add_nonzero_ext pkg in
   let pkg := add_mul_sig pkg in
   let pkg := add_mul_bounded pkg in
@@ -402,9 +437,10 @@ Ltac add_Montgomery_package pkg :=
   let pkg := add_sub_bounded pkg in
   let pkg := add_opp_sig pkg in
   let pkg := add_opp_bounded pkg in
+  let pkg := add_carry_sig pkg in
+  let pkg := add_carry_bounded pkg in
   let pkg := add_nonzero_sig pkg in
   let pkg := add_ring pkg in
-  let pkg := add_carry_sig pkg in
   let pkg := add_freeze_sig pkg in
   let pkg := add_Mxzladderstep_sig pkg in
   Tag.strip_subst_local pkg.
@@ -443,6 +479,8 @@ Module MakeMontgomeryPackage (PKG : PrePackage).
   Notation sub_ext := (ltac:(let v := get_sub_ext () in exact v)) (only parsing).
   Ltac get_opp_ext _ := get TAG.opp_ext.
   Notation opp_ext := (ltac:(let v := get_opp_ext () in exact v)) (only parsing).
+  Ltac get_carry_ext _ := get TAG.carry_ext.
+  Notation carry_ext := (ltac:(let v := get_carry_ext () in exact v)) (only parsing).
   Ltac get_nonzero_ext _ := get TAG.nonzero_ext.
   Notation nonzero_ext := (ltac:(let v := get_nonzero_ext () in exact v)) (only parsing).
   Ltac get_mul_bounded _ := get TAG.mul_bounded.
@@ -453,6 +491,8 @@ Module MakeMontgomeryPackage (PKG : PrePackage).
   Notation sub_bounded := (ltac:(let v := get_sub_bounded () in exact v)) (only parsing).
   Ltac get_opp_bounded _ := get TAG.opp_bounded.
   Notation opp_bounded := (ltac:(let v := get_opp_bounded () in exact v)) (only parsing).
+  Ltac get_carry_bounded _ := get TAG.carry_bounded.
+  Notation carry_bounded := (ltac:(let v := get_carry_bounded () in exact v)) (only parsing).
   Ltac get_nonzero_sig _ := get TAG.nonzero_sig.
   Notation nonzero_sig := (ltac:(let v := get_nonzero_sig () in exact v)) (only parsing).
 End MakeMontgomeryPackage.

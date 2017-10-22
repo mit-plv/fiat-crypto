@@ -183,6 +183,25 @@ Section with_args.
       ).
   Defined.
 
+  (* This is kind-of stupid, but we add it for consistency *)
+  Local Definition carry_ext_gen
+    : { f:Z^sz -> Z^sz
+      | let eval := MontgomeryAPI.eval (Z.pos r) in
+        ((forall (A : Z^sz) (_ : small (Z.pos r) A),
+             (eval A < eval m_enc
+              -> montgomery_to_F_gen (eval (f A))
+                 = montgomery_to_F_gen (eval A))))
+         /\ (forall (A : Z^sz) (_ : small (Z.pos r) A),
+                (eval A < eval m_enc
+                 -> 0 <= eval (f A) < eval m_enc))%Z }.
+  Proof.
+    exists (fun A => A).
+    abstract (
+        split; eauto; split; auto;
+        apply MontgomeryAPI.eval_small; auto; lia
+      ).
+  Defined.
+
   Local Definition nonzero_ext_gen
     : { f:Z^sz -> Z
       | let eval := MontgomeryAPI.eval (Z.pos r) in
@@ -347,6 +366,21 @@ Ltac pose_opp_ext r sz m m_enc r' m_enc_correct_montgomery r_big m_enc_small map
     ltac:(fun _ => reduce_eq (); reflexivity)
            opp_ext.
 
+Ltac pose_carry_ext r sz m m_enc r' r_big montgomery_to_F carry_ext :=
+  internal_pose_sig_by_eq
+    { f:Z^sz -> Z^sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      ((forall (A : Z^sz) (_ : small (Z.pos r) A),
+           (eval A < eval m_enc
+            -> montgomery_to_F (eval (f A))
+               = (montgomery_to_F (eval A))))
+       /\ (forall (A : Z^sz) (_ : small (Z.pos r) A),
+              (eval A < eval m_enc
+               -> 0 <= eval (f A) < eval m_enc)))%Z }
+    (@carry_ext_gen r sz m m_enc r' r_big)
+    ltac:(fun _ => reduce_eq (); reflexivity)
+           carry_ext.
+
 Ltac pose_nonzero_ext r sz m m_enc r' m_enc_correct_montgomery r'_pow_correct r_big m_big montgomery_to_F nonzero_ext :=
   internal_pose_sig_by_eq
     { f:Z^sz -> Z
@@ -462,6 +496,29 @@ Ltac pose_opp_bounded r sz m_enc montgomery_to_F opp_ext opp_sig opp_bounded :=
     ltac:(apply (proj2_sig opp_ext))
            opp_bounded.
 
+Ltac pose_carry_sig r sz m_enc montgomery_to_F carry_ext carry_sig :=
+  cache_term_with_type_by
+    { f:Z^sz -> Z^sz
+    | let eval := MontgomeryAPI.eval (Z.pos r) in
+      forall (A : Z^sz) (_ : small (Z.pos r) A),
+        (eval A < eval m_enc
+         -> montgomery_to_F (eval (f A))
+            = (montgomery_to_F (eval A)))%Z }
+    ltac:(idtac;
+          let v := (eval cbv [proj1_sig carry_ext_gen carry_ext sig_by_eq] in (proj1_sig carry_ext)) in
+          (exists v);
+          abstract apply (proj2_sig carry_ext))
+           carry_sig.
+
+Ltac pose_carry_bounded r sz m_enc montgomery_to_F carry_ext carry_sig carry_bounded :=
+  cache_proof_with_type_by
+    (let eval := MontgomeryAPI.eval (Z.pos r) in
+     (forall (A : Z^sz) (_ : small (Z.pos r) A),
+         (eval A < eval m_enc
+          -> 0 <= eval (proj1_sig carry_sig A) < eval m_enc))%Z)
+    ltac:(apply (proj2_sig carry_ext))
+           carry_bounded.
+
 
 Ltac pose_nonzero_sig r sz m m_enc montgomery_to_F nonzero_ext nonzero_sig :=
   cache_term_with_type_by
@@ -483,8 +540,8 @@ Ltac pose_ring ring :=
     ring.
 
 (* disable default unused things *)
-Ltac pose_carry_sig carry_sig :=
-  cache_term tt carry_sig.
+(*Ltac pose_carry_sig carry_sig :=
+  cache_term tt carry_sig.*)
 Ltac pose_freeze_sig freeze_sig :=
   cache_term tt freeze_sig.
 Ltac pose_Mxzladderstep_sig Mxzladderstep_sig :=

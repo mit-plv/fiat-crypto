@@ -27,7 +27,8 @@ Definition curve : CurveParameters :=
 
     square_code := None;
 
-    upper_bound_of_exponent := None;
+    upper_bound_of_exponent_loose := None;
+    upper_bound_of_exponent_tight := None;
     allowable_bit_widths := None;
     freeze_extra_allowable_bit_widths := None;
     modinv_fuel := None

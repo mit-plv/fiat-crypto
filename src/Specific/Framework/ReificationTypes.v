@@ -10,6 +10,8 @@ Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZRange Crypto.Util.BoundedWord.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Decidable.
 
 Require Import Crypto.Util.Tactics.PoseTermWithName.
@@ -33,13 +35,19 @@ Ltac pose_local_bounds_exp sz limb_widths bounds_exp :=
                (Tuple.from_list sz limb_widths eq_refl))
            bounds_exp.
 
-Ltac pose_local_bounds sz upper_bound_of_exponent bounds_exp bounds :=
+Ltac internal_pose_local_bounds sz upper_bound_of_exponent bounds_exp bounds :=
   let b_of := get_b_of upper_bound_of_exponent in
   pose_term_with_type
     (Tuple.tuple zrange sz)
     ltac:(fun _ => eval compute in
                (Tuple.map (fun e => b_of e) bounds_exp))
            bounds.
+Ltac pose_local_bounds_tight sz upper_bound_of_exponent_tight bounds_exp bounds_tight :=
+  internal_pose_local_bounds sz upper_bound_of_exponent_tight bounds_exp bounds_tight.
+Ltac pose_local_bounds_loose sz upper_bound_of_exponent_loose bounds_exp bounds_loose :=
+  internal_pose_local_bounds sz upper_bound_of_exponent_loose bounds_exp bounds_loose.
+Ltac pose_local_bounds_limbwidths sz bounds_exp bounds_limbwidths :=
+  internal_pose_local_bounds sz (fun exp => (2^exp - 1)%Z) bounds_exp bounds_limbwidths.
 
 Ltac pose_bound1 r bound1 :=
   cache_term_with_type_by
@@ -69,16 +77,73 @@ Ltac pose_feW sz lgbitwidth feW :=
     Type
     ltac:(let v := eval cbv [lgbitwidth] in (tuple (wordT lgbitwidth) sz) in exact v)
            feW.
-Ltac pose_feW_bounded feW bounds feW_bounded :=
+Ltac internal_pose_feW_bounded feW bounds feW_bounded :=
   cache_term_with_type_by
     (feW -> Prop)
     ltac:(let v := eval cbv [bounds] in (fun w : feW => is_bounded_by None bounds (map wordToZ w)) in exact_no_check v)
            feW_bounded.
-Ltac pose_feBW sz adjusted_bitwidth' bounds feBW :=
+Ltac pose_feW_tight_bounded feW bounds_tight feW_tight_bounded :=
+  internal_pose_feW_bounded feW bounds_tight feW_tight_bounded.
+Ltac pose_feW_loose_bounded feW bounds_loose feW_loose_bounded :=
+  internal_pose_feW_bounded feW bounds_loose feW_loose_bounded.
+Ltac pose_feW_limbwidths_bounded feW bounds_limbwidths feW_limbwidths_bounded :=
+  internal_pose_feW_bounded feW bounds_limbwidths feW_limbwidths_bounded.
+
+Ltac internal_pose_feBW sz adjusted_bitwidth' bounds feBW :=
   cache_term_with_type_by
     Type
     ltac:(let v := eval cbv [adjusted_bitwidth' bounds] in (BoundedWord sz adjusted_bitwidth' bounds) in exact v)
            feBW.
+Ltac pose_feBW_tight sz adjusted_bitwidth' bounds_tight feBW_tight :=
+  internal_pose_feBW sz adjusted_bitwidth' bounds_tight feBW_tight.
+Ltac pose_feBW_loose sz adjusted_bitwidth' bounds_loose feBW_loose :=
+  internal_pose_feBW sz adjusted_bitwidth' bounds_loose feBW_loose.
+Ltac pose_feBW_limbwidths sz adjusted_bitwidth' bounds_limbwidths feBW_limbwidths :=
+  internal_pose_feBW sz adjusted_bitwidth' bounds_limbwidths feBW_limbwidths.
+
+Lemma relax'_pf {sz in_bounds out_bounds} {v : tuple Z sz}
+      (Htight : fieldwiseb is_tighter_than_bool in_bounds out_bounds = true)
+  : is_bounded_by None in_bounds v -> is_bounded_by None out_bounds v.
+Proof.
+  destruct sz as [|sz]; simpl in *; trivial.
+  induction sz as [|sz IHsz]; simpl in *;
+    repeat first [ exact I
+                 | progress destruct_head'_prod
+                 | progress destruct_head' zrange
+                 | progress cbv [is_tighter_than_bool] in *
+                 | progress split_andb
+                 | progress Z.ltb_to_lt
+                 | progress cbn [fst snd ZRange.lower ZRange.upper] in *
+                 | progress destruct_head_hnf' and
+                 | progress intros
+                 | apply conj
+                 | omega
+                 | solve [ eauto ] ].
+Qed.
+
+Definition relax' {sz adjusted_bitwidth'} {in_bounds out_bounds}
+           (Htight : Tuple.fieldwiseb ZRange.is_tighter_than_bool in_bounds out_bounds = true)
+  : BoundedWord sz adjusted_bitwidth' in_bounds
+    -> BoundedWord sz adjusted_bitwidth' out_bounds
+  := fun w => exist _ (proj1_sig w) (relax'_pf Htight (proj2_sig w)).
+
+Ltac internal_pose_feBW_relax sz feBW_in feBW_out feBW_relax :=
+  cache_term_with_type_by
+    (feBW_in -> feBW_out)
+    ltac:(refine (@relax' sz _ _ _ _);
+          lazymatch goal with
+          | [ |- fieldwiseb is_tighter_than_bool ?in_bounds ?out_bounds = true ]
+            => try cbv [in_bounds];
+               try cbv [out_bounds]
+          end;
+          abstract vm_cast_no_check (eq_refl true))
+           feBW_relax.
+Ltac pose_feBW_relax sz feBW_tight feBW_loose feBW_relax :=
+  internal_pose_feBW_relax sz feBW_tight feBW_loose feBW_relax.
+Ltac pose_feBW_relax_limbwidths_to_tight sz feBW_limbwidths feBW_tight feBW_relax_limbwidths_to_tight :=
+  internal_pose_feBW_relax sz feBW_limbwidths feBW_tight feBW_relax_limbwidths_to_tight.
+Ltac pose_feBW_relax_limbwidths_to_loose sz feBW_limbwidths feBW_loose feBW_relax_limbwidths_to_loose :=
+  internal_pose_feBW_relax sz feBW_limbwidths feBW_loose feBW_relax_limbwidths_to_loose.
 
 Lemma feBW_bounded_helper'
       sz adjusted_bitwidth' bounds
@@ -130,25 +195,36 @@ Proof.
     assumption.
 Qed.
 
-Ltac pose_feBW_bounded freeze wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded :=
-  match (eval vm_compute in freeze) with
+Ltac internal_pose_feBW_bounded freeze wt sz feBW adjusted_bitwidth' bounds m wt_nonneg feBW_bounded :=
+  lazymatch (eval vm_compute in freeze) with
   | true
     => cache_proof_with_type_by
          (forall a : feBW, 0 <= B.Positional.eval wt (BoundedWordToZ sz adjusted_bitwidth' bounds a) < 2 * Z.pos m)
          ltac:(apply (@feBW_bounded_helper sz adjusted_bitwidth' bounds wt wt_nonneg);
-               vm_compute; clear; split; congruence)
+               cbv -[Z.lt Z.le];
+               clear; vm_decide)
                 feBW_bounded
   | false
     => cache_term tt feBW_bounded
   end.
+Ltac pose_feBW_tight_bounded freeze wt sz feBW_tight adjusted_bitwidth' bounds_tight m wt_nonneg feBW_tight_bounded :=
+  internal_pose_feBW_bounded freeze wt sz feBW_tight adjusted_bitwidth' bounds_tight m wt_nonneg feBW_tight_bounded.
+Ltac pose_feBW_limbwidths_bounded freeze wt sz feBW_limbwidths adjusted_bitwidth' bounds_limbwidths m wt_nonneg feBW_limbwidths_bounded :=
+  internal_pose_feBW_bounded freeze wt sz feBW_limbwidths adjusted_bitwidth' bounds_limbwidths m wt_nonneg feBW_limbwidths_bounded.
 
 Ltac pose_phiW feW m wt phiW :=
   cache_term_with_type_by
     (feW -> F m)
     ltac:(exact (fun x : feW => B.Positional.Fdecode wt (Tuple.map wordToZ x)))
            phiW.
-Ltac pose_phiBW feBW m wt phiBW :=
+Ltac internal_pose_phiBW feBW m wt phiBW :=
   cache_term_with_type_by
     (feBW -> F m)
     ltac:(exact (fun x : feBW => B.Positional.Fdecode wt (BoundedWordToZ _ _ _ x)))
            phiBW.
+Ltac pose_phiBW_tight feBW_tight m wt phiBW_tight :=
+  internal_pose_phiBW feBW_tight m wt phiBW_tight.
+Ltac pose_phiBW_loose feBW_loose m wt phiBW_loose :=
+  internal_pose_phiBW feBW_loose m wt phiBW_loose.
+Ltac pose_phiBW_limbwidths feBW_limbwidths m wt phiBW_limbwidths :=
+  internal_pose_phiBW feBW_limbwidths m wt phiBW_limbwidths.

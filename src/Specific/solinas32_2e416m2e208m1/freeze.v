@@ -3,8 +3,8 @@ Require Import Crypto.Specific.solinas32_2e416m2e208m1.Synthesis.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition freeze :
-  { freeze : feBW -> feBW
-  | forall a, phiBW (freeze a) = phiBW a }.
+  { freeze : feBW_tight -> feBW_limbwidths
+  | forall a, phiBW_limbwidths (freeze a) = phiBW_tight a }.
 Proof.
   Set Ltac Profiling.
   Time synthesize_freeze ().
