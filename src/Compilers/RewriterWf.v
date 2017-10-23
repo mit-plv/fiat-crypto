@@ -35,7 +35,7 @@ Section language.
       induction Hwf; simpl; try constructor; auto.
     Qed.
 
-    Lemma wf_rewrite_opf {t} (e1 : @expr var1 t) (e2 : @expr var2 t)
+    Lemma wf_rewrite_op {t} (e1 : @expr var1 t) (e2 : @expr var2 t)
           (Hwf : wf e1 e2)
       : wf (rewrite_op rewrite_op_expr1 e1) (rewrite_op rewrite_op_expr2 e2).
     Proof using Type*.
@@ -54,7 +54,7 @@ Section language.
         (Hwf : Wf e)
     : Wf (RewriteOp rewrite_op_expr e).
   Proof using Type.
-    intros var1 var2; apply wf_rewrite_opf; auto.
+    intros var1 var2; apply wf_rewrite_op; auto.
   Qed.
 End language.
 

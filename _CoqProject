@@ -60,6 +60,9 @@ src/Compilers/GeneralizeVarInterp.v
 src/Compilers/GeneralizeVarWf.v
 src/Compilers/Inline.v
 src/Compilers/InlineConstAndOp.v
+src/Compilers/InlineConstAndOpByRewrite.v
+src/Compilers/InlineConstAndOpByRewriteInterp.v
+src/Compilers/InlineConstAndOpByRewriteWf.v
 src/Compilers/InlineConstAndOpInterp.v
 src/Compilers/InlineConstAndOpWf.v
 src/Compilers/InlineInterp.v
@@ -158,6 +161,9 @@ src/Compilers/Z/FoldTypes.v
 src/Compilers/Z/HexNotationConstants.v
 src/Compilers/Z/Inline.v
 src/Compilers/Z/InlineConstAndOp.v
+src/Compilers/Z/InlineConstAndOpByRewrite.v
+src/Compilers/Z/InlineConstAndOpByRewriteInterp.v
+src/Compilers/Z/InlineConstAndOpByRewriteWf.v
 src/Compilers/Z/InlineConstAndOpInterp.v
 src/Compilers/Z/InlineConstAndOpWf.v
 src/Compilers/Z/InlineInterp.v
@@ -195,6 +201,9 @@ src/Compilers/Z/Named/RewriteAddToAdcInterp.v
 src/Compilers/Z/Syntax/Equality.v
 src/Compilers/Z/Syntax/Util.v
 src/Compilers/ZExtended/InlineConstAndOp.v
+src/Compilers/ZExtended/InlineConstAndOpByRewrite.v
+src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.v
+src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.v
 src/Compilers/ZExtended/InlineConstAndOpInterp.v
 src/Compilers/ZExtended/InlineConstAndOpWf.v
 src/Compilers/ZExtended/Syntax.v
