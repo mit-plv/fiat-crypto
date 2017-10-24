@@ -198,8 +198,11 @@ Ltac inversion_wf_step_gen guard_tac :=
   end.
 Ltac inversion_wf_step_constr :=
   inversion_wf_step_gen ltac:(fun x y => is_expr_constructor x; is_expr_constructor y).
+Ltac inversion_wf_step_one_constr :=
+  inversion_wf_step_gen ltac:(fun x y => first [ is_expr_constructor x | is_expr_constructor y]).
 Ltac inversion_wf_step_var :=
   inversion_wf_step_gen ltac:(fun x y => first [ is_var x; is_var y; fail 1 | idtac ]).
 Ltac inversion_wf_step := first [ inversion_wf_step_constr | inversion_wf_step_var ].
 Ltac inversion_wf_constr := repeat inversion_wf_step_constr.
+Ltac inversion_wf_one_constr := repeat inversion_wf_step_one_constr.
 Ltac inversion_wf := repeat inversion_wf_step.
