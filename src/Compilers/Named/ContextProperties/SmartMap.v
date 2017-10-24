@@ -239,6 +239,26 @@ Section with_context2.
                    | break_t_step ].
   Qed.
 
+  Local Ltac t' :=
+    repeat first [ reflexivity
+                 | progress subst
+                 | progress inversion_step
+                 | progress intros
+                 | progress simpl in *
+                 | rewrite cast_if_eq_refl
+                 | break_innermost_match_step
+                 | break_innermost_match_hyps_step
+                 | solve [ auto ]
+                 | specializer_t_step
+                 | symmetry; find_Name_and_val_default_to_None_step; symmetry;
+                   rewrite find_Name_transfer_interp_flat_type
+                 | find_Name_and_val_default_to_None_step;
+                   match goal with
+                   | [ H : ?x = None |- context[?x] ] => rewrite H
+                   end
+                 | progress cbv [option_map] in *
+                 | congruence ].
+
   Lemma find_Name_and_val_transfer_interp_flat_type {t T} {n : Name} {N' N} {default default'}
         (H' : find_Name Name_dec n N = Some t)
     : find_Name_and_val1 t n N (cast_back T N') default
@@ -255,23 +275,25 @@ Section with_context2.
     revert default default'; induction T; intros;
       [ | | specialize (IHT1 (fst N') (fst N));
             specialize (IHT2 (snd N') (snd N)) ];
-      repeat first [ reflexivity
-                   | progress subst
-                   | progress inversion_step
-                   | progress intros
-                   | progress simpl in *
-                   | rewrite cast_if_eq_refl
-                   | break_innermost_match_step
-                   | break_innermost_match_hyps_step
-                   | solve [ auto ]
-                   | specializer_t_step
-                   | symmetry; find_Name_and_val_default_to_None_step; symmetry;
-                     rewrite find_Name_transfer_interp_flat_type
-                   | find_Name_and_val_default_to_None_step;
-                     match goal with
-                     | [ H : ?x = None |- context[?x] ] => rewrite H
-                     end
-                   | progress cbv [option_map] in *
-                   | congruence ].
+      t'.
+  Qed.
+
+  Lemma find_Name_and_val_transfer_interp_flat_type_None {t T} {n : Name} {N' N} {default'}
+        (H' : find_Name Name_dec n N = None)
+    : find_Name_and_val2
+        (var':=var2)
+        (f_base t) n
+        (transfer_interp_flat_type
+           (t:=T)
+           f_base
+           (fun _ (n : Name) => n) N)
+        N'
+        default'
+      = default'.
+  Proof.
+    revert default'; induction T; intros;
+      [ | | specialize (IHT1 (fst N') (fst N));
+            specialize (IHT2 (snd N') (snd N)) ];
+      t'.
   Qed.
 End with_context2.
