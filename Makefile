@@ -61,7 +61,7 @@ UNMADE_VOFILES := src/Specific/X2555/C128/%.vo # x2555-c128 currently doesn't bu
 UNMADE_C_FILES := \
 	src/Specific/X25519/C64/fesub.c src/Specific/X25519/C64/feadd.c src/Specific/X25519/C64/fecarry.c \
 	src/Specific/X25519/C64/fesub.h src/Specific/X25519/C64/feadd.h src/Specific/X25519/C64/fecarry.h \
-	src/Specific/X25519/C32/fesub.c src/Specific/X25519/C32/feadd.c src/Specific/X25519/C32/fecarry.c
+	src/Specific/X25519/C32/fesub.c src/Specific/X25519/C32/feadd.c src/Specific/X25519/C32/fecarry.c \
 	src/Specific/X25519/C32/fesub.h src/Specific/X25519/C32/feadd.h src/Specific/X25519/C32/fecarry.h
 # files that are treated specially
 SPECIAL_VOFILES := src/Specific/%Display.vo
