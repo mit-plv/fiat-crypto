@@ -367,6 +367,48 @@ Section hetero_type.
         rewrite_hyp ?*; reflexivity.
     Qed.
   End smart_flat_type_map2.
+
+  Section smart_flat_type.
+    Context {base_type_code1 base_type_code2 : Type}
+            (f : base_type_code1 -> base_type_code2).
+    Fixpoint lift_flat_type (t : flat_type base_type_code1)
+      : flat_type base_type_code2
+      := match t with
+         | Tbase T => Tbase (f T)
+         | Unit => Unit
+         | Prod A B => Prod (lift_flat_type A) (lift_flat_type B)
+         end.
+
+    Section with_var.
+      Context {var1 : base_type_code1 -> Type}
+              {var2 : base_type_code2 -> Type}
+              (fvar : forall t, var1 t -> var2 (f t))
+              (fvar' : forall t, var2 (f t) -> var1 t).
+
+      Fixpoint transfer_interp_flat_type {t}
+        : interp_flat_type var1 t
+          -> interp_flat_type var2 (lift_flat_type t)
+        := match t with
+           | Tbase T => fvar _
+           | Unit => fun v => v
+           | Prod A B => fun ab : interp_flat_type _ A * interp_flat_type _ B
+                         => (@transfer_interp_flat_type _ (fst ab),
+                             @transfer_interp_flat_type _ (snd ab))%core
+           end.
+
+      Fixpoint untransfer_interp_flat_type {t}
+        : interp_flat_type var2 (lift_flat_type t)
+          -> interp_flat_type var1 t
+        := match t with
+           | Tbase T => fvar' _
+           | Unit => fun v => v
+           | Prod A B => fun ab : interp_flat_type _ (lift_flat_type A)
+                                  * interp_flat_type _ (lift_flat_type B)
+                         => (@untransfer_interp_flat_type _ (fst ab),
+                             @untransfer_interp_flat_type _ (snd ab))%core
+           end.
+    End with_var.
+  End smart_flat_type.
 End hetero_type.
 
 Global Arguments SmartFlatTypeMap2 {_ _ _} _ {!_} _ / .
