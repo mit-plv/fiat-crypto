@@ -79,6 +79,7 @@ src/Compilers/Linearize.v
 src/Compilers/LinearizeInterp.v
 src/Compilers/LinearizeWf.v
 src/Compilers/Map.v
+src/Compilers/MapBaseType.v
 src/Compilers/MapCastByDeBruijn.v
 src/Compilers/MapCastByDeBruijnInterp.v
 src/Compilers/MapCastByDeBruijnWf.v
