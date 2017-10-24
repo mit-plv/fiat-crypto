@@ -177,6 +177,13 @@ Section language.
     Proof.
       induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
     Qed.
+  End with_var.
+
+  Section with_var2.
+    Context {base_type_code2 : Type}
+            {var1 : base_type_code -> Type}
+            {var2 : base_type_code2 -> Type}.
+    Local Hint Constructors Wf.wff.
 
     Lemma In_flatten_binding_list_untransfer_interp_flat_type
           var1' var2' f_base
@@ -212,7 +219,7 @@ Section language.
                        | [ H : _ |- _ ] => rewrite List.in_app_iff in H
                        end ].
     Qed.
-  End with_var.
+  End with_var2.
 
   Definition duplicate_type {var1 var2}
     : { t : base_type_code & (var1 t * var2 t)%type }
