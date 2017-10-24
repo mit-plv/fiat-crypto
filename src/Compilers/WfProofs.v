@@ -168,6 +168,15 @@ Section language.
       induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
       rewrite !SmartVarfMap_Pair, !SmartPairf_Pair; auto.
     Qed.
+
+    Lemma wff_SmartPairf_SmartValf G {t} f g
+          (Hfg : forall t, wff G (f t) (g t))
+      : wff G (t:=t) (var1:=var1) (var2:=var2)
+            (SmartPairf (SmartValf (fun t => exprf (Tbase t)) f _))
+            (SmartPairf (SmartValf (fun t => exprf (Tbase t)) g _)).
+    Proof.
+      induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
+    Qed.
   End with_var.
 
   Definition duplicate_type {var1 var2}
