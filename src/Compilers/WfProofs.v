@@ -177,6 +177,41 @@ Section language.
     Proof.
       induction t; try solve [ cbv [SmartPairf]; simpl; auto ].
     Qed.
+
+    Lemma In_flatten_binding_list_untransfer_interp_flat_type
+          var1' var2' f_base
+          (f_var12 : forall t, var1 t -> var2 (f_base t))
+          (f_var21 : forall t, var2 (f_base t) -> var1 t)
+          (f_var'12 : forall t, var1' t -> var2' (f_base t))
+          (f_var'21 : forall t, var2' (f_base t) -> var1' t)
+          (Hvar12 : forall t v, f_var12 t (f_var21 t v) = v)
+          (Hvar'12 : forall t v, f_var'12 t (f_var'21 t v) = v)
+      : forall T t x x' x1 x2,
+        List.In
+          (existT _ t (x, x'))
+          (flatten_binding_list
+             (t:=T)
+             (untransfer_interp_flat_type f_base f_var21 x1)
+             (untransfer_interp_flat_type f_base f_var'21 x2))
+        -> List.In
+             (existT _ (f_base t) (f_var12 t x, f_var'12 t x'))
+             (flatten_binding_list x1 x2).
+    Proof.
+      induction T;
+        repeat first [ progress simpl in *
+                     | progress intros
+                     | progress subst
+                     | exfalso; assumption
+                     | progress inversion_sigma
+                     | progress inversion_prod
+                     | progress destruct_head'_or
+                     | rewrite List.in_app_iff
+                     | solve [ eauto ]
+                     | rewrite Hvar12, Hvar'12
+                     | match goal with
+                       | [ H : _ |- _ ] => rewrite List.in_app_iff in H
+                       end ].
+    Qed.
   End with_var.
 
   Definition duplicate_type {var1 var2}
