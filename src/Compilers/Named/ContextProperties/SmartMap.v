@@ -6,6 +6,7 @@ Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.ContextProperties.
 Require Import Crypto.Compilers.Named.ContextProperties.Tactics.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Section with_context.
   Context {base_type_code Name var} (Context : @Context base_type_code Name var)
@@ -198,3 +199,79 @@ Section with_context.
                      end ].
   Qed.
 End with_context.
+
+Section with_context2.
+  Context {base_type_code1 base_type_code2 Name var1 var2}
+          {Context1 : @Context base_type_code1 Name var1}
+          {Context2 : @Context base_type_code2 Name var2}
+          {base_type_code1_dec : DecidableRel (@eq base_type_code1)}
+          {base_type_code2_dec : DecidableRel (@eq base_type_code2)}
+          {Name_dec : DecidableRel (@eq Name)}
+          {Context1Ok : ContextOk Context1}
+          {Context2Ok : ContextOk Context2}
+          {f_base : base_type_code1 -> base_type_code2}
+          {cast_backb: forall t, var2 (f_base t) -> var1 t}.
+
+  Let cast_back : forall t, interp_flat_type var2 (lift_flat_type _ t) -> interp_flat_type var1 t
+    := fun t => untransfer_interp_flat_type f_base cast_backb.
+
+  Local Notation find_Name1 := (@find_Name base_type_code1 Name Name_dec).
+  Local Notation find_Name_and_val1 := (@find_Name_and_val base_type_code1 Name base_type_code1_dec Name_dec).
+  Local Notation find_Name2 := (@find_Name base_type_code2 Name Name_dec).
+  Local Notation find_Name_and_val2 := (@find_Name_and_val base_type_code2 Name base_type_code2_dec Name_dec).
+
+  Lemma find_Name_transfer_interp_flat_type {T n N}
+    : find_Name2
+        n
+        (transfer_interp_flat_type
+           f_base (fun _ (n : Name) => n)
+           N)
+      = option_map f_base (find_Name1 (T:=T) n N).
+  Proof.
+    induction T; simpl in *;
+      [ | | specialize (IHT1 (fst N));
+            specialize (IHT2 (snd N)) ];
+      repeat first [ reflexivity
+                   | misc_t_step
+                   | rewriter_t_step
+                   | progress cbv [option_map] in *
+                   | fin_t_late_step
+                   | break_t_step ].
+  Qed.
+
+  Lemma find_Name_and_val_transfer_interp_flat_type {t T} {n : Name} {N' N} {default default'}
+        (H' : find_Name Name_dec n N = Some t)
+    : find_Name_and_val1 t n N (cast_back T N') default
+      = option_map
+          (cast_backb _)
+          (find_Name_and_val2
+             (f_base t) n
+             (transfer_interp_flat_type
+                f_base
+                (fun _ (n : Name) => n) N)
+             N'
+             default').
+  Proof.
+    revert default default'; induction T; intros;
+      [ | | specialize (IHT1 (fst N') (fst N));
+            specialize (IHT2 (snd N') (snd N)) ];
+      repeat first [ reflexivity
+                   | progress subst
+                   | progress inversion_step
+                   | progress intros
+                   | progress simpl in *
+                   | rewrite cast_if_eq_refl
+                   | break_innermost_match_step
+                   | break_innermost_match_hyps_step
+                   | solve [ auto ]
+                   | specializer_t_step
+                   | symmetry; find_Name_and_val_default_to_None_step; symmetry;
+                     rewrite find_Name_transfer_interp_flat_type
+                   | find_Name_and_val_default_to_None_step;
+                     match goal with
+                     | [ H : ?x = None |- context[?x] ] => rewrite H
+                     end
+                   | progress cbv [option_map] in *
+                   | congruence ].
+  Qed.
+End with_context2.
