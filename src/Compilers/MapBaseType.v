@@ -55,7 +55,8 @@ Section language.
   End with_var.
 
   Section bool_gen.
-    Context {var : base_type_code1 -> Type}
+    Context (check_base_type : base_type_code1 -> bool)
+            {var : base_type_code1 -> Type}
             (val : forall t, var t).
 
     Fixpoint check_mapf_base_type_gen
@@ -63,7 +64,7 @@ Section language.
     : bool
       := match e with
          | TT => true
-         | Var t x => true
+         | Var t x => check_base_type t
          | Op t1 tR opc args
            => let opc := f_op _ _ opc in
               let check_args := @check_mapf_base_type_gen _ args in
@@ -90,10 +91,10 @@ Section language.
   End bool_gen.
 
   Section bool.
-    Definition check_mapf_base_type {t} e
-      := @check_mapf_base_type_gen (fun _ => unit) (fun _ => tt) t e.
-    Definition check_map_base_type {t} e
-      := @check_map_base_type_gen (fun _ => unit) (fun _ => tt) t e.
+    Definition check_mapf_base_type check_base_type {t} e
+      := @check_mapf_base_type_gen check_base_type (fun _ => unit) (fun _ => tt) t e.
+    Definition check_map_base_type check_base_type {t} e
+      := @check_map_base_type_gen check_base_type (fun _ => unit) (fun _ => tt) t e.
   End bool.
 
   Definition MapBaseType
