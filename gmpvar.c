@@ -88,6 +88,10 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 	for (size_t i = secretbits-1; i < secretbits; --i) {
 		mp_limb_t bit = (secret[i/8] >> (i%8))&1;
 		// printf("%01d ", bit);
+		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqz); fe_mul(pr, pr, nqx); fe_print(pr); }
+		// printf(" "); 
+		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqpqz); fe_mul(pr, pr, nqpqx); fe_print(pr); }
+		// printf("\n");
 
 		mpn_cnd_swap(bit, nqx, nqpqx, modulus_limbs);
 		mpn_cnd_swap(bit, nqz, nqpqz, modulus_limbs);
@@ -149,11 +153,6 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 		t = nqpqz;
 		nqpqz = nqpqz2;
 		nqpqz2 = t;
-
-		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqz); fe_mul(pr, pr, nqx); fe_print(pr); }
-		// printf(" "); 
-		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqpqz); fe_mul(pr, pr, nqpqx); fe_print(pr); }
-		// printf("\n");
 
 	}
 
