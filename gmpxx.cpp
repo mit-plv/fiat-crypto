@@ -57,7 +57,7 @@ ladderstep(const mpz_class &x1, const mpz_class &x, const mpz_class &z, const mp
 }
 
 static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secretbits, const uint8_t *point) {
-	mpz_class x1; for (size_t i = 0; i<32; i++) { x1 |= mpz_class(point[i]) << (8*i); }
+	mpz_class x1; for (size_t i = 0; i<modulus_bytes; i++) { x1 |= mpz_class(point[i]) << (8*i); }
 	mpz_class x = 1, z = 0, x_p = x1, z_p = 1;
 
 	bool swap = false;
