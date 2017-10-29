@@ -12,7 +12,7 @@ Interp-η
  uint64_t x50, uint8_t x51 = subborrow_u64(0x0, x29, 0xffffffffffffffffL);
  uint64_t x53, uint8_t x54 = subborrow_u64(x51, x32, 0xffffffffffffffffL);
  uint64_t x56, uint8_t x57 = subborrow_u64(x54, x35, 0xffffffffffffffffL);
- uint64_t x59, uint8_t x60 = subborrow_u64(x57, x38, Const 18446744069414584319);
+ uint64_t x59, uint8_t x60 = subborrow_u64(x57, x38, 0xfffffffeffffffffL);
  uint64_t x62, uint8_t x63 = subborrow_u64(x60, x41, 0xffffffffffffffffL);
  uint64_t x65, uint8_t x66 = subborrow_u64(x63, x44, 0xffffffffffffffffL);
  uint64_t x68, uint8_t x69 = subborrow_u64(x66, x47, 0xffffffffffffffffL);
