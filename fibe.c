@@ -157,7 +157,7 @@ static void fe_frombytes(limb_t x[modulus_limbs], const uint8_t s[modulus_bytes]
   int i = 0;
   int in_limb = 0; int in_bit = 0;
   int out_limb = 0; int out_bit = 0;
-  
+
   while (i < modulus_bits) {
     if (in_bit > byte_weight_gaps[in_limb]) {
       in_limb++;
@@ -167,7 +167,7 @@ static void fe_frombytes(limb_t x[modulus_limbs], const uint8_t s[modulus_bytes]
       out_limb++;
       out_bit = 0;
     }
-    
+
     limb_t bit = (s[in_limb] >> in_bit)&1;
     x[out_limb] |= bit << out_bit;
 

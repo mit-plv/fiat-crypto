@@ -3,27 +3,27 @@ modulus_bytes = 56
 a24 = 39081
 
 def ladderstep(x1, x, z, x_p, z_p):
-  origx = x			
-  x = (x + z)%q		
-  z = (origx - z)%q		
-  origx_p = x_p			
-  x_p = (x_p + z_p)%q		
-  z_p = (origx_p - z_p)%q	
-  xx_p = (x_p * z)%q		
-  zz_p = (x * z_p)%q		
-  origx_p = xx_p			
-  xx_p = (xx_p + zz_p)%q		
-  zz_p = (origx_p - zz_p)%q	
-  x3 = (xx_p*xx_p)%q		
-  zzz_p = (zz_p*zz_p)%q		
-  z3 = (zzz_p * x1)%q		
-  xx = (x*x)%q			
-  zz = (z*z)%q			
-  x2 = (xx * zz)%q		
-  zz = (xx - zz)%q		
-  zzz = (zz * a24)%q		
-  zzz = (zzz + xx)%q		
-  z2 = (zz * zzz)%q		
+  origx = x
+  x = (x + z)%q
+  z = (origx - z)%q
+  origx_p = x_p
+  x_p = (x_p + z_p)%q
+  z_p = (origx_p - z_p)%q
+  xx_p = (x_p * z)%q
+  zz_p = (x * z_p)%q
+  origx_p = xx_p
+  xx_p = (xx_p + zz_p)%q
+  zz_p = (origx_p - zz_p)%q
+  x3 = (xx_p*xx_p)%q
+  zzz_p = (zz_p*zz_p)%q
+  z3 = (zzz_p * x1)%q
+  xx = (x*x)%q
+  zz = (z*z)%q
+  x2 = (xx * zz)%q
+  zz = (xx - zz)%q
+  zzz = (zz * a24)%q
+  zzz = (zzz + xx)%q
+  z2 = (zz * zzz)%q
   return ((x2, z2), (x3, z3))
 
 def crypto_scalarmult(secret, secretbits, point):
