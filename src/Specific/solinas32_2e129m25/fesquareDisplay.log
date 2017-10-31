@@ -11,7 +11,7 @@ Interp-η
  uint32_t x17 = (uint32_t) (x16 >> 0x16);
  uint32_t x18 = ((uint32_t)x16 & 0x3fffff);
  uint64_t x19 = (x17 + x15);
- uint32_t x20 = (uint32_t) (x19 >> 0x15);
+ uint64_t x20 = (x19 >> 0x15);
  uint32_t x21 = ((uint32_t)x19 & 0x1fffff);
  uint64_t x22 = (x20 + x14);
  uint32_t x23 = (uint32_t) (x22 >> 0x16);
@@ -25,9 +25,9 @@ Interp-η
  uint64_t x31 = (x29 + x11);
  uint32_t x32 = (uint32_t) (x31 >> 0x15);
  uint32_t x33 = ((uint32_t)x31 & 0x1fffff);
- uint32_t x34 = (x18 + (0x19 * x32));
- uint32_t x35 = (x34 >> 0x16);
- uint32_t x36 = (x34 & 0x3fffff);
+ uint64_t x34 = (x18 + ((uint64_t)0x19 * x32));
+ uint32_t x35 = (uint32_t) (x34 >> 0x16);
+ uint32_t x36 = ((uint32_t)x34 & 0x3fffff);
  uint32_t x37 = (x35 + x21);
  uint32_t x38 = (x37 >> 0x15);
  uint32_t x39 = (x37 & 0x1fffff);

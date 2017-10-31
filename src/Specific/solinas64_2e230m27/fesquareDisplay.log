@@ -12,7 +12,7 @@ Interp-η
  uint128_t x14 = (x13 >> 0x39);
  uint64_t x15 = ((uint64_t)x13 & 0x1ffffffffffffff);
  uint128_t x16 = (x14 + x8);
- uint64_t x17 = (uint64_t) (x16 >> 0x3a);
+ uint128_t x17 = (x16 >> 0x3a);
  uint64_t x18 = ((uint64_t)x16 & 0x3ffffffffffffff);
  uint128_t x19 = (x17 + x7);
  uint64_t x20 = (uint64_t) (x19 >> 0x39);

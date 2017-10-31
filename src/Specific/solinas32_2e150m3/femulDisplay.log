@@ -2,25 +2,25 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
- uint64_t x20 = (((uint64_t)x5 * x18) + (((uint64_t)x7 * x19) + (((uint64_t)x9 * x17) + (((uint64_t)x11 * x15) + ((uint64_t)x10 * x13)))));
- uint64_t x21 = ((((uint64_t)x5 * x19) + (((uint64_t)x7 * x17) + (((uint64_t)x9 * x15) + ((uint64_t)x11 * x13)))) + (0x3 * ((uint64_t)x10 * x18)));
- uint64_t x22 = ((((uint64_t)x5 * x17) + (((uint64_t)x7 * x15) + ((uint64_t)x9 * x13))) + (0x3 * (((uint64_t)x11 * x18) + ((uint64_t)x10 * x19))));
- uint64_t x23 = ((((uint64_t)x5 * x15) + ((uint64_t)x7 * x13)) + (0x3 * (((uint64_t)x9 * x18) + (((uint64_t)x11 * x19) + ((uint64_t)x10 * x17)))));
- ℤ x24 = (((uint64_t)x5 * x13) +ℤ (0x3 * (((uint64_t)x7 * x18) + (((uint64_t)x9 * x19) + (((uint64_t)x11 * x17) + ((uint64_t)x10 * x15))))));
+ ℤ x20 = (((uint64_t)x5 * x18) +ℤ (((uint64_t)x7 * x19) +ℤ (((uint64_t)x9 * x17) +ℤ (((uint64_t)x11 * x15) +ℤ ((uint64_t)x10 * x13)))));
+ ℤ x21 = ((((uint64_t)x5 * x19) +ℤ (((uint64_t)x7 * x17) +ℤ (((uint64_t)x9 * x15) +ℤ ((uint64_t)x11 * x13)))) +ℤ (0x3 *ℤ ((uint64_t)x10 * x18)));
+ ℤ x22 = ((((uint64_t)x5 * x17) +ℤ (((uint64_t)x7 * x15) +ℤ ((uint64_t)x9 * x13))) +ℤ (0x3 *ℤ (((uint64_t)x11 * x18) +ℤ ((uint64_t)x10 * x19))));
+ ℤ x23 = ((((uint64_t)x5 * x15) +ℤ ((uint64_t)x7 * x13)) +ℤ (0x3 *ℤ (((uint64_t)x9 * x18) +ℤ (((uint64_t)x11 * x19) +ℤ ((uint64_t)x10 * x17)))));
+ ℤ x24 = (((uint64_t)x5 * x13) +ℤ (0x3 *ℤ (((uint64_t)x7 * x18) +ℤ (((uint64_t)x9 * x19) +ℤ (((uint64_t)x11 * x17) +ℤ ((uint64_t)x10 * x15))))));
  uint64_t x25 = (x24 >> 0x1e);
  uint32_t x26 = (x24 & 0x3fffffff);
- uint64_t x27 = (x25 + x23);
+ ℤ x27 = (x25 +ℤ x23);
  uint64_t x28 = (x27 >> 0x1e);
- uint32_t x29 = ((uint32_t)x27 & 0x3fffffff);
- uint64_t x30 = (x28 + x22);
+ uint32_t x29 = (x27 & 0x3fffffff);
+ ℤ x30 = (x28 +ℤ x22);
  uint64_t x31 = (x30 >> 0x1e);
- uint32_t x32 = ((uint32_t)x30 & 0x3fffffff);
- uint64_t x33 = (x31 + x21);
+ uint32_t x32 = (x30 & 0x3fffffff);
+ ℤ x33 = (x31 +ℤ x21);
  uint64_t x34 = (x33 >> 0x1e);
- uint32_t x35 = ((uint32_t)x33 & 0x3fffffff);
- uint64_t x36 = (x34 + x20);
+ uint32_t x35 = (x33 & 0x3fffffff);
+ ℤ x36 = (x34 +ℤ x20);
  uint64_t x37 = (x36 >> 0x1e);
- uint32_t x38 = ((uint32_t)x36 & 0x3fffffff);
+ uint32_t x38 = (x36 & 0x3fffffff);
  uint64_t x39 = (x26 + (0x3 * x37));
  uint32_t x40 = (uint32_t) (x39 >> 0x1e);
  uint32_t x41 = ((uint32_t)x39 & 0x3fffffff);

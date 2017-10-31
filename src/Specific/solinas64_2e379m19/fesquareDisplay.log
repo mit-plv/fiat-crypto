@@ -9,10 +9,10 @@ Interp-η
  uint128_t x17 = ((((uint128_t)x2 * x6) + ((0x2 * ((uint128_t)x4 * x4)) + ((uint128_t)x6 * x2))) + (0x13 * (((uint128_t)x8 * x11) + (((uint128_t)x10 * x12) + (((uint128_t)x12 * x10) + ((uint128_t)x11 * x8))))));
  uint128_t x18 = ((((uint128_t)x2 * x4) + ((uint128_t)x4 * x2)) + (0x13 * (((uint128_t)x6 * x11) + (((uint128_t)x8 * x12) + (((uint128_t)x10 * x10) + (((uint128_t)x12 * x8) + ((uint128_t)x11 * x6)))))));
  uint128_t x19 = (((uint128_t)x2 * x2) + (0x13 * ((0x2 * ((uint128_t)x4 * x11)) + ((0x2 * ((uint128_t)x6 * x12)) + ((0x2 * ((uint128_t)x8 * x10)) + ((0x2 * ((uint128_t)x10 * x8)) + ((0x2 * ((uint128_t)x12 * x6)) + (0x2 * ((uint128_t)x11 * x4)))))))));
- uint64_t x20 = (uint64_t) (x19 >> 0x37);
+ uint128_t x20 = (x19 >> 0x37);
  uint64_t x21 = ((uint64_t)x19 & 0x7fffffffffffff);
  uint128_t x22 = (x20 + x18);
- uint64_t x23 = (uint64_t) (x22 >> 0x36);
+ uint128_t x23 = (x22 >> 0x36);
  uint64_t x24 = ((uint64_t)x22 & 0x3fffffffffffff);
  uint128_t x25 = (x23 + x17);
  uint64_t x26 = (uint64_t) (x25 >> 0x36);
@@ -29,9 +29,9 @@ Interp-η
  uint128_t x37 = (x35 + x13);
  uint64_t x38 = (uint64_t) (x37 >> 0x36);
  uint64_t x39 = ((uint64_t)x37 & 0x3fffffffffffff);
- uint64_t x40 = (x21 + (0x13 * x38));
- uint64_t x41 = (x40 >> 0x37);
- uint64_t x42 = (x40 & 0x7fffffffffffff);
+ uint128_t x40 = (x21 + ((uint128_t)0x13 * x38));
+ uint64_t x41 = (uint64_t) (x40 >> 0x37);
+ uint64_t x42 = ((uint64_t)x40 & 0x7fffffffffffff);
  uint64_t x43 = (x41 + x24);
  uint64_t x44 = (x43 >> 0x36);
  uint64_t x45 = (x43 & 0x3fffffffffffff);

@@ -28,12 +28,12 @@ Interp-η
  uint128_t x38 = (x37 >> 0x3a);
  uint64_t x39 = ((uint64_t)x37 & 0x3ffffffffffffff);
  uint128_t x40 = (x38 + x16);
- uint64_t x41 = (uint64_t) (x40 >> 0x3b);
+ uint128_t x41 = (x40 >> 0x3b);
  uint64_t x42 = ((uint64_t)x40 & 0x7ffffffffffffff);
  uint128_t x43 = (x41 + x15);
- uint64_t x44 = (uint64_t) (x43 >> 0x3a);
+ uint128_t x44 = (x43 >> 0x3a);
  uint64_t x45 = ((uint64_t)x43 & 0x3ffffffffffffff);
- uint128_t x46 = (x24 + ((uint128_t)0x11 * x44));
+ uint128_t x46 = (x24 + (0x11 * x44));
  uint64_t x47 = (uint64_t) (x46 >> 0x3b);
  uint64_t x48 = ((uint64_t)x46 & 0x7ffffffffffffff);
  uint64_t x49 = (x47 + x27);

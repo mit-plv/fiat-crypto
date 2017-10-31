@@ -22,13 +22,13 @@ Interp-η
  uint64_t x32 = (x31 >> 0x18);
  uint32_t x33 = ((uint32_t)x31 & 0xffffff);
  uint64_t x34 = (x32 + x18);
- uint32_t x35 = (uint32_t) (x34 >> 0x19);
+ uint64_t x35 = (x34 >> 0x19);
  uint32_t x36 = ((uint32_t)x34 & 0x1ffffff);
  uint64_t x37 = (x35 + x17);
- uint32_t x38 = (uint32_t) (x37 >> 0x18);
+ uint64_t x38 = (x37 >> 0x18);
  uint32_t x39 = ((uint32_t)x37 & 0xffffff);
  uint64_t x40 = (x38 + x16);
- uint32_t x41 = (uint32_t) (x40 >> 0x18);
+ uint64_t x41 = (x40 >> 0x18);
  uint32_t x42 = ((uint32_t)x40 & 0xffffff);
  uint64_t x43 = (x41 + x15);
  uint32_t x44 = (uint32_t) (x43 >> 0x18);

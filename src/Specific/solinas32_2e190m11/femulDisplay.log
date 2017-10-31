@@ -8,9 +8,9 @@ Interp-η
  uint64_t x31 = ((((uint64_t)x5 * x23) + ((0x2 * ((uint64_t)x7 * x21)) + ((0x2 * ((uint64_t)x9 * x19)) + ((uint64_t)x11 * x17)))) + (0xb * (((uint64_t)x13 * x26) + (((uint64_t)x15 * x27) + ((uint64_t)x14 * x25)))));
  uint64_t x32 = ((((uint64_t)x5 * x21) + ((0x2 * ((uint64_t)x7 * x19)) + ((uint64_t)x9 * x17))) + (0xb * (((uint64_t)x11 * x26) + (((uint64_t)x13 * x27) + (((uint64_t)x15 * x25) + ((uint64_t)x14 * x23))))));
  uint64_t x33 = ((((uint64_t)x5 * x19) + ((uint64_t)x7 * x17)) + (0xb * (((uint64_t)x9 * x26) + (((uint64_t)x11 * x27) + (((uint64_t)x13 * x25) + (((uint64_t)x15 * x23) + ((uint64_t)x14 * x21)))))));
- uint64_t x34 = (((uint64_t)x5 * x17) + (0xb * ((0x2 * ((uint64_t)x7 * x26)) + ((0x2 * ((uint64_t)x9 * x27)) + ((0x2 * ((uint64_t)x11 * x25)) + ((0x2 * ((uint64_t)x13 * x23)) + ((0x2 * ((uint64_t)x15 * x21)) + (0x2 * ((uint64_t)x14 * x19)))))))));
+ ℤ x34 = (((uint64_t)x5 * x17) +ℤ (0xb *ℤ ((0x2 * ((uint64_t)x7 * x26)) + ((0x2 * ((uint64_t)x9 * x27)) + ((0x2 * ((uint64_t)x11 * x25)) + ((0x2 * ((uint64_t)x13 * x23)) + ((0x2 * ((uint64_t)x15 * x21)) + (0x2 * ((uint64_t)x14 * x19)))))))));
  uint64_t x35 = (x34 >> 0x1c);
- uint32_t x36 = ((uint32_t)x34 & 0xfffffff);
+ uint32_t x36 = (x34 & 0xfffffff);
  uint64_t x37 = (x35 + x33);
  uint64_t x38 = (x37 >> 0x1b);
  uint32_t x39 = ((uint32_t)x37 & 0x7ffffff);
@@ -24,12 +24,12 @@ Interp-η
  uint64_t x47 = (x46 >> 0x1b);
  uint32_t x48 = ((uint32_t)x46 & 0x7ffffff);
  uint64_t x49 = (x47 + x29);
- uint32_t x50 = (uint32_t) (x49 >> 0x1b);
+ uint64_t x50 = (x49 >> 0x1b);
  uint32_t x51 = ((uint32_t)x49 & 0x7ffffff);
  uint64_t x52 = (x50 + x28);
- uint32_t x53 = (uint32_t) (x52 >> 0x1b);
+ uint64_t x53 = (x52 >> 0x1b);
  uint32_t x54 = ((uint32_t)x52 & 0x7ffffff);
- uint64_t x55 = (x36 + ((uint64_t)0xb * x53));
+ uint64_t x55 = (x36 + (0xb * x53));
  uint32_t x56 = (uint32_t) (x55 >> 0x1c);
  uint32_t x57 = ((uint32_t)x55 & 0xfffffff);
  uint32_t x58 = (x56 + x39);
