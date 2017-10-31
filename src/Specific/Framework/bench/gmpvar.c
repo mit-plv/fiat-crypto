@@ -4,8 +4,14 @@
 #include <gmp.h>
 
 // modulus, encoded as big-endian bytes
-static const unsigned char modulus[] = {0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xed};
-static const unsigned char a_minus_two_over_four[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xdb,0x41};
+#ifndef q
+#define q {0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xed}
+#endif
+#ifndef a24
+#define a24 {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xdb,0x41}
+#endif
+static const unsigned char modulus[] = q;
+static const unsigned char a_minus_two_over_four[] = a24;
 #define modulus_bytes (sizeof(modulus))
 #define modulus_limbs ((8*sizeof(modulus) + GMP_LIMB_BITS-1)/GMP_LIMB_BITS)
 
@@ -19,9 +25,9 @@ static void fe_print(mp_limb_t* fe) {
 static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secretbits, const uint8_t *point) {
 	// curve constants
 	mp_limb_t m[modulus_limbs+1];
-	mp_limb_t a24[modulus_limbs+1];
+	mp_limb_t a24v[modulus_limbs+1];
 	assert(mpn_set_str(m, modulus, modulus_bytes, 256) == (mp_size_t)modulus_limbs);
-	assert(mpn_set_str(a24, a_minus_two_over_four, sizeof(a_minus_two_over_four), 256) <= (mp_size_t)modulus_limbs);
+	assert(mpn_set_str(a24v, a_minus_two_over_four, sizeof(a_minus_two_over_four), 256) <= (mp_size_t)modulus_limbs);
 
 	// allocate scratch space for internal use by GMP.
 	// as GMP _itch are documented as functions, not macros, we use a
@@ -36,31 +42,31 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 
 	// allocate scratch space for use by the field operation macros.
 	mp_limb_t _product_tmp[modulus_limbs+modulus_limbs];
-	
+
 	#define fe_mul(out, x, y) do { \
 		mpn_mul(_product_tmp, x, modulus_limbs, y, modulus_limbs); \
 		mpn_tdiv_qr(scratch, _product_tmp, 0, _product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs); \
 		for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
 	} while (0)
-	
+
 	#define fe_sqr(out, x) do { \
 		mpn_sqr(_product_tmp, x, modulus_limbs); \
 		mpn_tdiv_qr(scratch, _product_tmp, 0, _product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs); \
 		for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
 	} while (0)
-	
+
 	#define fe_add(out, x, y) do { \
 		if (mpn_add_n(out, x, y, modulus_limbs)) { \
 			mpn_sub_n(out, out, m, modulus_limbs); \
 		} \
 	} while (0)
-	
+
 	#define fe_sub(out, x, y) do { \
 		if (mpn_sub_n(out, x, y, modulus_limbs)) { \
 			mpn_add_n(out, out, m, modulus_limbs); \
 		} \
 	} while (0)
-	
+
 	#define fe_inv(out, x) do { \
 		for (size_t i = 0; i<modulus_limbs; i++) { _product_tmp[i] = x[i]; } \
 		mp_size_t invertible = mpn_sec_invert(out, _product_tmp, m, modulus_limbs, 2*modulus_limbs*GMP_NUMB_BITS, scratch); \
@@ -89,7 +95,7 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 		mp_limb_t bit = (secret[i/8] >> (i%8))&1;
 		// printf("%01d ", bit);
 		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqz); fe_mul(pr, pr, nqx); fe_print(pr); }
-		// printf(" "); 
+		// printf(" ");
 		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqpqz); fe_mul(pr, pr, nqpqx); fe_print(pr); }
 		// printf("\n");
 
@@ -132,7 +138,7 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 		fe_sqr(zz, z);
 		fe_mul(x2, xx, zz);
 		fe_sub(zz, xx, zz);
-		fe_mul(zzz, zz, a24);
+		fe_mul(zzz, zz, a24v);
 		fe_add(zzz, zzz, xx);
 		fe_mul(z2, zz, zzz);
 
