@@ -14,7 +14,7 @@ Interp-η
  uint64_t x52, uint8_t x53 = addcarryx_u64(x50, x35, x37);
  uint64_t x55, uint8_t x56 = addcarryx_u64(x53, x38, x40);
  uint64_t x58, uint8_t _ = addcarryx_u64(0x0, x56, x41);
- uint64_t x61, uint64_t _ = mulx_u64(x25, Const 14897608040525528621);
+ uint64_t x61, uint64_t _ = mulx_u64(x25, 0xcebeef94fa86fe2dL);
  uint64_t x64, uint64_t x65 = mulx_u64(x61, 0xfffffffffffffe5bL);
  uint64_t x67, uint64_t x68 = mulx_u64(x61, 0xffffffffffffffffL);
  uint64_t x70, uint64_t x71 = mulx_u64(x61, 0xffffffffffffffffL);
@@ -53,7 +53,7 @@ Interp-η
  uint64_t x169, uint8_t x170 = addcarryx_u64(x167, x115, x148);
  uint64_t x172, uint8_t x173 = addcarryx_u64(x170, x118, x151);
  uint64_t x175, uint8_t x176 = addcarryx_u64(x173, x119, x154);
- uint64_t x178, uint64_t _ = mulx_u64(x157, Const 14897608040525528621);
+ uint64_t x178, uint64_t _ = mulx_u64(x157, 0xcebeef94fa86fe2dL);
  uint64_t x181, uint64_t x182 = mulx_u64(x178, 0xfffffffffffffe5bL);
  uint64_t x184, uint64_t x185 = mulx_u64(x178, 0xffffffffffffffffL);
  uint64_t x187, uint64_t x188 = mulx_u64(x178, 0xffffffffffffffffL);
@@ -93,7 +93,7 @@ Interp-η
  uint64_t x287, uint8_t x288 = addcarryx_u64(x285, x232, x266);
  uint64_t x290, uint8_t x291 = addcarryx_u64(x288, x235, x269);
  uint64_t x293, uint8_t x294 = addcarryx_u64(x291, x237, x272);
- uint64_t x296, uint64_t _ = mulx_u64(x275, Const 14897608040525528621);
+ uint64_t x296, uint64_t _ = mulx_u64(x275, 0xcebeef94fa86fe2dL);
  uint64_t x299, uint64_t x300 = mulx_u64(x296, 0xfffffffffffffe5bL);
  uint64_t x302, uint64_t x303 = mulx_u64(x296, 0xffffffffffffffffL);
  uint64_t x305, uint64_t x306 = mulx_u64(x296, 0xffffffffffffffffL);
@@ -133,7 +133,7 @@ Interp-η
  uint64_t x405, uint8_t x406 = addcarryx_u64(x403, x350, x384);
  uint64_t x408, uint8_t x409 = addcarryx_u64(x406, x353, x387);
  uint64_t x411, uint8_t x412 = addcarryx_u64(x409, x355, x390);
- uint64_t x414, uint64_t _ = mulx_u64(x393, Const 14897608040525528621);
+ uint64_t x414, uint64_t _ = mulx_u64(x393, 0xcebeef94fa86fe2dL);
  uint64_t x417, uint64_t x418 = mulx_u64(x414, 0xfffffffffffffe5bL);
  uint64_t x420, uint64_t x421 = mulx_u64(x414, 0xffffffffffffffffL);
  uint64_t x423, uint64_t x424 = mulx_u64(x414, 0xffffffffffffffffL);
@@ -173,7 +173,7 @@ Interp-η
  uint64_t x523, uint8_t x524 = addcarryx_u64(x521, x468, x502);
  uint64_t x526, uint8_t x527 = addcarryx_u64(x524, x471, x505);
  uint64_t x529, uint8_t x530 = addcarryx_u64(x527, x473, x508);
- uint64_t x532, uint64_t _ = mulx_u64(x511, Const 14897608040525528621);
+ uint64_t x532, uint64_t _ = mulx_u64(x511, 0xcebeef94fa86fe2dL);
  uint64_t x535, uint64_t x536 = mulx_u64(x532, 0xfffffffffffffe5bL);
  uint64_t x538, uint64_t x539 = mulx_u64(x532, 0xffffffffffffffffL);
  uint64_t x541, uint64_t x542 = mulx_u64(x532, 0xffffffffffffffffL);
@@ -213,7 +213,7 @@ Interp-η
  uint64_t x641, uint8_t x642 = addcarryx_u64(x639, x586, x620);
  uint64_t x644, uint8_t x645 = addcarryx_u64(x642, x589, x623);
  uint64_t x647, uint8_t x648 = addcarryx_u64(x645, x591, x626);
- uint64_t x650, uint64_t _ = mulx_u64(x629, Const 14897608040525528621);
+ uint64_t x650, uint64_t _ = mulx_u64(x629, 0xcebeef94fa86fe2dL);
  uint64_t x653, uint64_t x654 = mulx_u64(x650, 0xfffffffffffffe5bL);
  uint64_t x656, uint64_t x657 = mulx_u64(x650, 0xffffffffffffffffL);
  uint64_t x659, uint64_t x660 = mulx_u64(x650, 0xffffffffffffffffL);

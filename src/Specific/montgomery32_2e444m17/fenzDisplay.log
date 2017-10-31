@@ -17,16 +17,4 @@ Interp-η
  uint32_t x39 = (x2 | x38);
  return x39)
 x
-     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (Tbase match (if match match (let (lower, _) := Synthesis.P.bound1 in
-                                                                                                                                                                              lower) with
-                                                                                                                                                                       | 0%Z => Eq
-                                                                                                                                                                       | Z.pos _ => Lt
-                                                                                                                                                                       | Z.neg _ => Gt
-                                                                                                                                                                       end with
-                                                                                                                                                                 | Eq => true
-                                                                                                                                                                 | Lt => true
-                                                                                                                                                                 | Gt => false
-                                                                                                                                                                 end then Some 5 else None) with
-                                                                                                                                                       | Some lgsz => Syntax.TWord lgsz
-                                                                                                                                                       | None => Syntax.TZ
-                                                                                                                                                       end)
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType uint32_t
