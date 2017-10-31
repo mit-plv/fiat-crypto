@@ -1,6 +1,43 @@
+#!/usr/bin/env python
+import sys, re
+
 q = 2**448 - 2**224 - 1
 modulus_bytes = 56
 a24 = 39081
+
+def eval_numexpr(numexpr):
+  # copying from https://stackoverflow.com/a/25437733/377022
+  numexpr = re.sub(r"\.(?![0-9])", "", numexpr) # purge any instance of '.' not followed by a number
+  return eval(numexpr, {'__builtins__':None})
+
+def usage(args, updates, retcode=0):
+  print('USAGE: %s %s' % (args[0], ' '.join('[-D%s=NUMEXPR]' % k for k, v in updates)))
+  sys.exit(retcode)
+
+def update_defaults(args):
+  global q
+  global modulus_bytes
+  global a24
+  updates = (('q',q), ('modulus_bytes',modulus_bytes), ('a24',a24))
+  if '--help' in args or '-h' in args: usage(args, updates)
+  updates = dict(updates)
+  found = []
+  for k in updates.keys():
+    for arg in args[1:]:
+      if arg.startswith('-D%s=' % k):
+        found.append(arg)
+        updates[k] = eval_numexpr(arg[len('-D%s=' % k):])
+      elif arg.startswith('-D%s' % k):
+        found.append(arg)
+        updates[k] = eval_numexpr(arg[len('-D%s' % k):])
+  unfound = [arg for arg in args[1:] if arg not in found]
+  if len(unfound) > 0:
+    print('ERROR: unrecognized arguments: ' + ' '.join(map(repr, unfound)))
+    usage(args, updates, retcode=1)
+  q = updates['q']
+  modulus_bytes = updates['modulus_bytes']
+  a24 = updates['a24']
+  print('q: %(q)s, modulus_bytes: %(modulus_bytes)s, a24: %(a24)s' % updates)
 
 def ladderstep(x1, x, z, x_p, z_p):
   origx = x
@@ -44,6 +81,7 @@ def crypto_scalarmult(secret, secretbits, point):
   return [((x >> (8*i)) & 0xff) for i in range(modulus_bytes)]
 
 if __name__ == '__main__':
+  update_defaults(sys.argv)
   BASE = [5]+(modulus_bytes-1)*[0]
   print (crypto_scalarmult([1]+(modulus_bytes-1)*[0], 8*modulus_bytes, BASE))
 
