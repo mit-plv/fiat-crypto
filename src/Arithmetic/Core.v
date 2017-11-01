@@ -755,8 +755,11 @@ Module B.
           to_associational_cps p
             (fun P => Associational.split_cps s P
             (fun split_P =>
-              f (from_associational m1 (fst split_P),
-                (from_associational m2 (snd split_P))))).
+               from_associational_cps m1 (fst split_P)
+                 (fun m1_P =>
+               from_associational_cps m2 (snd split_P)
+                 (fun m2_P =>
+                    f (m1_P, m2_P))))).
 
         Definition scmul_cps {n} (x : Z) (p: tuple Z n)
                     {T} (f:tuple Z n->T) :=
