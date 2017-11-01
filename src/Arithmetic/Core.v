@@ -249,6 +249,7 @@ Require Import Crypto.Util.Decidable Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -279,6 +280,7 @@ Local Ltac prove_eval :=
          | _ => progress intros
          | _ => progress simpl
          | _ => progress cbv [Let_In]
+         | _ => progress Z.ltb_to_lt
          | _ => progress (autorewrite with push_basesystem_eval uncps push_id cancel_pair in * )
          | _ => break_innermost_match_step
          | _ => split
@@ -359,9 +361,11 @@ Module B.
         | cons x xs' =>
           split_cps xs'
                 (fun sxs' =>
-          if dec (fst x mod s = 0)
+          Z.eqb_cps (fst x mod s) 0
+                    (fun b =>
+          if b
           then f (fst sxs',          cons (fst x / s, snd x) (snd sxs'))
-          else f (cons x (fst sxs'), snd sxs'))
+          else f (cons x (fst sxs'), snd sxs')))
         end.
     End split_cps.
 
