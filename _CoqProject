@@ -208,6 +208,7 @@ src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.v
 src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.v
 src/Compilers/ZExtended/InlineConstAndOpInterp.v
 src/Compilers/ZExtended/InlineConstAndOpWf.v
+src/Compilers/ZExtended/MapBaseType.v
 src/Compilers/ZExtended/Syntax.v
 src/Compilers/ZExtended/Syntax/Util.v
 src/Curves/Edwards/AffineProofs.v
