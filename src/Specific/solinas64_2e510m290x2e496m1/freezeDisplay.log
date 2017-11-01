@@ -2,7 +2,7 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x17, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
- uint64_t x20, uint8_t x21 = Op (Syntax.SubWithGetBorrow 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, Const 4503599627370015);
+ uint64_t x20, uint8_t x21 = subborrow_u51(0x0, x2, 0x7ffffffffffff);
  uint64_t x23, uint8_t x24 = subborrow_u51(x21, x4, 0x7ffffffffffff);
  uint64_t x26, uint8_t x27 = subborrow_u51(x24, x6, 0x7ffffffffffff);
  uint64_t x29, uint8_t x30 = subborrow_u51(x27, x8, 0x7ffffffffffff);
@@ -11,10 +11,10 @@ Interp-η
  uint64_t x38, uint8_t x39 = subborrow_u51(x36, x14, 0x7ffffffffffff);
  uint64_t x41, uint8_t x42 = subborrow_u51(x39, x16, 0x7ffffffffffff);
  uint64_t x44, uint8_t x45 = subborrow_u51(x42, x18, 0x7ffffffffffff);
- uint64_t x47, uint8_t x48 = subborrow_u51(x45, x17, 0x7ffffffffffff);
+ uint64_t x47, uint8_t x48 = subborrow_u51(x45, x17, Const 2211942517178367);
  uint64_t x49 = (uint64_t)cmovznz(x48, 0x0, 0xffffffffffffffffL);
- uint64_t x50 = (x49 & Const 4503599627370015);
- uint64_t x52, uint8_t x53 = Op (Syntax.AddWithGetCarry 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x20, Return x50);
+ uint64_t x50 = (x49 & 0x7ffffffffffff);
+ uint64_t x52, uint8_t x53 = addcarryx_u51(0x0, x20, x50);
  uint64_t x54 = (x49 & 0x7ffffffffffff);
  uint64_t x56, uint8_t x57 = addcarryx_u51(x53, x23, x54);
  uint64_t x58 = (x49 & 0x7ffffffffffff);
@@ -31,7 +31,7 @@ Interp-η
  uint64_t x80, uint8_t x81 = addcarryx_u51(x77, x41, x78);
  uint64_t x82 = (x49 & 0x7ffffffffffff);
  uint64_t x84, uint8_t x85 = addcarryx_u51(x81, x44, x82);
- uint64_t x86 = (x49 & 0x7ffffffffffff);
+ uint64_t x86 = (x49 & Const 2211942517178367);
  uint64_t x88, uint8_t _ = addcarryx_u51(x85, x47, x86);
  (Return x88, Return x84, Return x80, Return x76, Return x72, Return x68, Return x64, Return x60, Return x56, Return x52))
 x
