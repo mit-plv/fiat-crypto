@@ -1089,6 +1089,17 @@ Proof.
   f_equal. eapply IHa.
   destruct (wordToN a); destruct (wordToN (wtl b0)); simpl in *; try congruence.
 Qed.
+Lemma wneg_involutive : forall sz (a : word sz),
+    wneg (wneg a) = a.
+Proof.
+  intros; eapply Ropp_opp; [ exact _ | apply wring_eq_ext | apply wring ].
+Qed.
+Lemma wneg_inj : forall sz (a b : word sz),
+    wneg a = wneg b -> a = b.
+Proof.
+  intros sz a b H.
+  cut (wneg (wneg a) = wneg (wneg b)); [ rewrite !wneg_involutive | ]; congruence.
+Qed.
 Lemma unique_inverse : forall sz (a b1 b2 : word sz),
   a ^+ b1 = wzero _ ->
   a ^+ b2 = wzero _ ->
