@@ -57,6 +57,30 @@ Section language.
     Section const.
       Context (invert_Const : forall s d, op s d -> exprf s -> option (interp_flat_type d)).
 
+      Fixpoint lift_option {t} : interp_flat_type t -> interp_flat_type_gen (fun t => option (interp_base_type t)) t
+        := match t with
+           | Tbase T => fun x => Some x
+           | Unit => fun _ => tt
+           | Prod A B => fun (ab : interp_flat_type A * interp_flat_type B)
+                         => let '(a, b) := ab in
+                            (lift_option a, lift_option b)
+           end.
+
+      Fixpoint invert_PairsConst_gen {T} (e : exprf T)
+        : option (interp_flat_type_gen (fun t => option (interp_base_type t)) T)
+      := match e in Syntax.exprf _ _ t return option (interp_flat_type_gen (fun t => option (interp_base_type t)) t) with
+         | TT => Some tt
+         | Pair tx ex ty ey
+           => match @invert_PairsConst_gen tx ex, @invert_PairsConst_gen ty ey with
+              | Some x, Some y => Some (x, y)
+              | Some _, None | None, Some _ | None, None => None
+              end
+         | Op s d opv args
+           => option_map lift_option (invert_Const s d opv args)
+         | Var _ _
+         | LetIn _ _ _ _
+           => None
+         end.
       Fixpoint invert_PairsConst {T} (e : exprf T)
         : option (interp_flat_type T)
       := match e in Syntax.exprf _ _ t return option (interp_flat_type t) with
