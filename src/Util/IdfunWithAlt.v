@@ -34,8 +34,7 @@ Definition id_tuple_with_alt {A n}
      | O => id_with_alt
      | S n' => id_tuple'_with_alt
      end.
-Fixpoint id_tuple_with_alt_proof {A n}
-         {struct n}
+Definition id_tuple_with_alt_proof {A n}
   : forall (value value_for_alt : tuple A n) {pf : value = value_for_alt},
     tuple A n
   := match n with

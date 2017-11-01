@@ -3,11 +3,108 @@ Require Import Coq.ZArith.ZArith Coq.omega.Omega.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.IdfunWithAlt.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 Local Open Scope Z_scope.
 
+Create HintDb push_id discriminated.
+Create HintDb uncps discriminated.
+
 Lemma push_id {A} (a:A) : id a = a. reflexivity. Qed.
-Create HintDb push_id discriminated. Hint Rewrite @push_id : push_id.
+Hint Rewrite @push_id : push_id.
+
+Definition id_with_alt_cps {R A} (value : A) (value_for_alt : A) (f : A -> R) : R
+  := f (id_with_alt value value_for_alt).
+Definition id_with_alt_cps_correct {R A} value value_for_alt f
+  : @id_with_alt_cps R A value value_for_alt f = f (id_with_alt value value_for_alt)
+  := eq_refl.
+Hint Rewrite @id_with_alt_cps_correct : uncps.
+
+Definition id_with_alt_proof_cps {R A} (value : A) (value_for_alt : A)
+           {pf : value = value_for_alt} (f : A -> R)
+  : R
+  := id_with_alt_cps value value_for_alt f.
+Definition id_with_alt_proof_cps_correct {R A} value value_for_alt pf f
+  : @id_with_alt_proof_cps R A value value_for_alt pf f = f (@id_with_alt_proof A value value_for_alt pf)
+  := eq_refl.
+Hint Rewrite @id_with_alt_proof_cps_correct : uncps.
+
+Section id_tuple_with_alt.
+  Context {R A : Type}.
+
+  Fixpoint id_tuple'_with_alt_cps {n}
+           {struct n}
+    : forall (value value_for_alt : Tuple.tuple' A n),
+      (Tuple.tuple' A n -> R)
+      -> R
+    := match n return forall value value_for_alt : Tuple.tuple' A n, (Tuple.tuple' A n -> R) -> R with
+       | O => id_with_alt_cps
+       | S n' => fun (value value_for_alt : Tuple.tuple' A n' * A) (f : Tuple.tuple' A n' * A -> R)
+                 => @id_tuple'_with_alt_cps
+                      n' (fst value) (fst value_for_alt)
+                      (fun ts
+                       => @id_with_alt_cps
+                            R A (snd value) (snd value_for_alt)
+                            (fun t => f (ts, t)))
+       end.
+  Fixpoint id_tuple'_with_alt_proof_cps {n}
+           {struct n}
+    : forall (value value_for_alt : Tuple.tuple' A n) {pf : value = value_for_alt},
+      (Tuple.tuple' A n -> R)
+      -> R
+    := match n return forall value value_for_alt : Tuple.tuple' A n, _ -> (Tuple.tuple' A n -> R) -> R with
+       | O => id_with_alt_proof_cps
+       | S n' => fun (value value_for_alt : Tuple.tuple' A n' * A) (pf : value = value_for_alt)
+                     (f : Tuple.tuple' A n' * A -> R)
+                 => @id_tuple'_with_alt_proof_cps
+                      n' (fst value) (fst value_for_alt)
+                      (f_equal (@fst _ _) pf)
+                      (fun ts
+                       => @id_with_alt_proof_cps
+                            R A (snd value) (snd value_for_alt)
+                            (f_equal (@snd _ _) pf)
+                            (fun t => f (ts, t)))
+       end.
+  Definition id_tuple_with_alt_cps {n}
+    : forall (value value_for_alt : Tuple.tuple A n), (Tuple.tuple A n -> R) -> R
+    := match n with
+       | O => id_with_alt_cps
+       | S n' => id_tuple'_with_alt_cps
+       end.
+  Definition id_tuple_with_alt_proof_cps {n}
+    : forall (value value_for_alt : Tuple.tuple A n) {pf : value = value_for_alt},
+      (Tuple.tuple A n -> R) -> R
+    := match n with
+       | O => id_with_alt_proof_cps
+       | S n' => id_tuple'_with_alt_proof_cps
+       end.
+End id_tuple_with_alt.
+
+Local Ltac t_ind n :=
+  let IHn := fresh "IHn" in
+  induction n as [|n IHn]; cbn [id_tuple'_with_alt_cps id_tuple'_with_alt_proof_cps id_tuple'_with_alt id_tuple'_with_alt_proof];
+  [ reflexivity
+  | rewrite IHn; try reflexivity ].
+Lemma id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
+  : @id_tuple'_with_alt_cps R A n value value_for_alt f
+    = f (@id_tuple'_with_alt A n value value_for_alt).
+Proof. t_ind n. Qed.
+Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
+Lemma id_tuple'_with_alt_proof_cps_correct {R A n} value value_for_alt pf f
+  : @id_tuple'_with_alt_proof_cps R A n value value_for_alt pf f
+    = f (@id_tuple'_with_alt_proof A n value value_for_alt pf).
+Proof. t_ind n. Qed.
+Hint Rewrite @id_tuple'_with_alt_proof_cps_correct : uncps.
+Lemma id_tuple_with_alt_cps_correct {R A n} value value_for_alt f
+  : @id_tuple_with_alt_cps R A n value value_for_alt f
+    = f (@id_tuple_with_alt A n value value_for_alt).
+Proof. destruct n; [ reflexivity | apply id_tuple'_with_alt_cps_correct ]. Qed.
+Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
+Lemma id_tuple_with_alt_proof_cps_correct {R A n} value value_for_alt pf f
+  : @id_tuple_with_alt_proof_cps R A n value value_for_alt pf f
+    = f (@id_tuple_with_alt_proof A n value value_for_alt pf).
+Proof. destruct n; [ reflexivity | apply id_tuple'_with_alt_proof_cps_correct ]. Qed.
+Hint Rewrite @id_tuple_with_alt_proof_cps_correct : uncps.
 
 Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
 Proof.
@@ -49,7 +146,7 @@ Fixpoint map_cps {A B} (g : A->B) ls
 Lemma map_cps_correct {A B} g ls: forall {T} f,
     @map_cps A B g ls T f = f (map g ls).
 Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls; reflexivity. Qed.
-Create HintDb uncps discriminated. Hint Rewrite @map_cps_correct : uncps.
+Hint Rewrite @map_cps_correct : uncps.
 
 Fixpoint firstn_cps {A} (n:nat) (l:list A) {T} (f:list A->T) :=
   match n with
