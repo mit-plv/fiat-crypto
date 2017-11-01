@@ -1001,7 +1001,7 @@ Ltac word_contra1 := match goal with
 Open Scope word_scope.
 
 (** * Signed Logic **)
-Fixpoint wordToZ sz (w : word sz) : Z :=
+Definition wordToZ sz (w : word sz) : Z :=
   if wmsb w true then
     (** Negative **)
     match wordToN (wneg w) with
@@ -1014,6 +1014,13 @@ Fixpoint wordToZ sz (w : word sz) : Z :=
       | N0 => 0%Z
       | Npos x => Zpos x
     end.
+Definition ZToWord sz (v : Z) : word sz :=
+  if (v <? 0)%Z then
+    (** Negative **)
+    wneg (NToWord (Z.to_N (-v)))
+  else
+    (** Positive **)
+    wordToN (Z.to_N v).
 
 (** * Comparison Predicates and Deciders **)
 Definition wlt sz (l r : word sz) : Prop :=
