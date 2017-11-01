@@ -38,9 +38,13 @@ Definition word_case_dep {T : nat -> Set -> Type} (logsz : nat)
 Definition ZToWord_gen {sz} (v : Z) : word sz := NToWord _ (Z.to_N v).
 Definition wordToZ_gen {sz} (v : word sz) : Z := Z.of_N (wordToN v).
 
+Definition ZToSignedWord_gen {sz} (v : Z) : word sz := Word.ZToWord _ v.
+Definition signedWordToZ_gen {sz} (v : word sz) : Z := Word.wordToZ v.
 
 Definition ZToWord32 : Z -> word32 := @ZToWord_gen _.
 Definition word32ToZ : word32 -> Z := @wordToZ_gen _.
+Definition ZToSignedWord32 : Z -> word32 := @ZToSignedWord_gen _.
+Definition signedWord32ToZ : word32 -> Z := @signedWordToZ_gen _.
 Definition wadd32 : word32 -> word32 -> word32 := @wplus _.
 Definition wsub32 : word32 -> word32 -> word32 := @wminus _.
 Definition wmul32 : word32 -> word32 -> word32 := @wmult _.
@@ -51,6 +55,8 @@ Definition wlor32 : word32 -> word32 -> word32 := @wor _.
 
 Definition ZToWord64 : Z -> word64 := @ZToWord_gen _.
 Definition word64ToZ : word64 -> Z := @wordToZ_gen _.
+Definition ZToSignedWord64 : Z -> word64 := @ZToSignedWord_gen _.
+Definition signedWord64ToZ : word64 -> Z := @signedWordToZ_gen _.
 Definition wadd64 : word64 -> word64 -> word64 := @wplus _.
 Definition wsub64 : word64 -> word64 -> word64 := @wminus _.
 Definition wmul64 : word64 -> word64 -> word64 := @wmult _.
@@ -61,6 +67,8 @@ Definition wlor64 : word64 -> word64 -> word64 := @wor _.
 
 Definition ZToWord128 : Z -> word128 := @ZToWord_gen _.
 Definition word128ToZ : word128 -> Z := @wordToZ_gen _.
+Definition ZToSignedWord128 : Z -> word128 := @ZToSignedWord_gen _.
+Definition signedWord128ToZ : word128 -> Z := @signedWordToZ_gen _.
 Definition wadd128 : word128 -> word128 -> word128 := @wplus _.
 Definition wsub128 : word128 -> word128 -> word128 := @wminus _.
 Definition wmul128 : word128 -> word128 -> word128 := @wmult _.
@@ -75,6 +83,12 @@ Definition ZToWord {logsz}
 Definition wordToZ {logsz}
   := word_case_dep (T:=fun _ word => word -> Z)
                    logsz word32ToZ word64ToZ word128ToZ (fun _ => @wordToZ_gen _).
+Definition ZToSignedWord {logsz}
+  := word_case_dep (T:=fun _ word => Z -> word)
+                   logsz ZToSignedWord32 ZToSignedWord64 ZToSignedWord128 (fun _ => @ZToSignedWord_gen _).
+Definition signedWordToZ {logsz}
+  := word_case_dep (T:=fun _ word => word -> Z)
+                   logsz signedWord32ToZ signedWord64ToZ signedWord128ToZ (fun _ => @signedWordToZ_gen _).
 Definition wadd {logsz}
   := word_case_dep (T:=fun _ word => word -> word -> word)
                    logsz wadd32 wadd64 wadd128 (fun _ => @wplus _).
