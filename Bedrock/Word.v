@@ -818,9 +818,12 @@ Theorem wmult_plus_distr : forall sz (x y z : word sz), (x ^+ y) ^* z = (x ^* z)
   rewrite (mult_comm (wordToNat x + wordToNat y)).
   rewrite <- (mult_assoc (wordToNat z)).
   auto with arith.
-  generalize dependent (wordToNat x * wordToNat z).
-  generalize dependent (wordToNat y * wordToNat z).
-  intros.
+  generalize dependent (pow2 sz); intros.
+  repeat match goal with
+         | [ |- context[natToWord ?sz (?f ?x ?y)] ] => generalize dependent (f x y); intros
+         | [ H : context[natToWord ?sz (?f ?x ?y)] |- _ ] => generalize dependent (f x y); intros
+         | [ H : wordToNat (natToWord _ _) = _ |- _ ] => clear H
+         end.
   omega.
 Qed.
 
@@ -859,6 +862,7 @@ Theorem wminus_inv : forall sz (x : word sz), x ^+ ^~ x = wzero sz.
   rewrite drop_sub; auto with arith.
   apply natToWord_pow2.
   generalize (wordToNat_bound x).
+  match goal with Heq : wordToNat (natToWord _ _) = _ |- _ => clear Heq end.
   omega.
 Qed.
 
@@ -867,6 +871,11 @@ Definition wring (sz : nat) : ring_theory (wzero sz) (wone sz) (@wplus sz) (@wmu
   (@wplus_unit _) (@wplus_comm _) (@wplus_assoc _)
   (@wmult_unit _) (@wmult_comm _) (@wmult_assoc _)
   (@wmult_plus_distr _) (@wminus_def _) (@wminus_inv _).
+
+Lemma wring_eq_ext (sz : nat) : ring_eq_ext (@wplus sz) (@wmult sz) (@wneg sz) (@eq _).
+Proof.
+  constructor; repeat intro; subst; reflexivity.
+Qed.
 
 Theorem weqb_sound : forall sz (x y : word sz), weqb x y = true -> x = y.
 Proof.
@@ -1017,10 +1026,10 @@ Definition wordToZ sz (w : word sz) : Z :=
 Definition ZToWord sz (v : Z) : word sz :=
   if (v <? 0)%Z then
     (** Negative **)
-    wneg (NToWord (Z.to_N (-v)))
+    wneg (NToWord sz (Z.to_N (-v)))
   else
     (** Positive **)
-    wordToN (Z.to_N v).
+    NToWord sz (Z.to_N v).
 
 (** * Comparison Predicates and Deciders **)
 Definition wlt sz (l r : word sz) : Prop :=
