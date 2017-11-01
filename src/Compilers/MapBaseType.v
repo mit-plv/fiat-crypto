@@ -8,8 +8,9 @@ Section language.
           {op1 : flat_type base_type_code1 -> flat_type base_type_code1 -> Type}
           {op2 : flat_type base_type_code2 -> flat_type base_type_code2 -> Type}
           (f_base : base_type_code1 -> base_type_code2)
-          (f_op : forall s d,
+          (f_op : forall var s d,
               op1 s d
+              -> exprf base_type_code1 op1 (var:=var) s
               -> option (op2 (lift_flat_type f_base s) (lift_flat_type f_base d))).
 
   Section with_var.
@@ -29,7 +30,7 @@ Section language.
          | TT => TT
          | Var t x => Var (f_var12 _ x)
          | Op t1 tR opc args
-           => let opc := f_op _ _ opc in
+           => let opc := f_op _ _ _ opc args in
               let args := @mapf_base_type _ args in
               match opc with
               | Some opc => Op opc args
@@ -66,7 +67,7 @@ Section language.
          | TT => true
          | Var t x => check_base_type t
          | Op t1 tR opc args
-           => let opc := f_op _ _ opc in
+           => let opc := f_op _ _ _ opc args in
               let check_args := @check_mapf_base_type_gen _ args in
               match opc with
               | Some opc => check_args
@@ -97,11 +98,19 @@ Section language.
       := @check_map_base_type_gen check_base_type (fun _ => unit) (fun _ => tt) t e.
   End bool.
 
-  Definition MapBaseType
+  Definition MapBaseType'
              (failb : forall var t, exprf _ op2 (var:=var) (Tbase t))
              {t} (e : Expr base_type_code1 op1 t)
     : Expr base_type_code2 op2 (Arrow (lift_flat_type f_base (domain t)) (lift_flat_type f_base (codomain t)))
     := fun var => map_base_type
                     (var1:=fun t => var (f_base t)) (var2:=var)
                     (fun _ x => x) (fun _ x => x) (failb _) (e _).
+
+  Definition MapBaseType
+             (failb : forall var t, exprf _ op2 (var:=var) (Tbase t))
+             {t} (e : Expr base_type_code1 op1 t)
+    : option (Expr base_type_code2 op2 (Arrow (lift_flat_type f_base (domain t)) (lift_flat_type f_base (codomain t))))
+    := if check_map_base_type (fun _ => true (* any base type is allowed *)) (e _)
+       then Some (MapBaseType' failb e)
+       else None.
 End language.
