@@ -26,6 +26,8 @@ Definition interp_base_type (v : base_type) : Set :=
 Inductive op : flat_type base_type -> flat_type base_type -> Set :=
 | AddGetCarry : op (tuple tZ 3) (tuple tZ 2)
 | MulSplitAtBitwidth : op (tuple tZ 3) (tuple tZ 2)
+| AddGetCarryZ (bitwidth : Z) : op (tuple tZ 2) (tuple tZ 2)
+| MulSplitAtBitwidthZ (bitwidth : Z) : op (tuple tZ 2) (tuple tZ 2)
 | Zselect : op (tuple tZ 3) (tuple tZ 1)
 | Zmul    : op (tuple tZ 2) (tuple tZ 1)
 | Zadd    : op (tuple tZ 2) (tuple tZ 1)
@@ -54,6 +56,8 @@ Definition interp_op {s d} (opv : op s d) : interp_flat_type interp_base_type s 
   := match opv with
      | AddGetCarry => curry3 Z.add_get_carry
      | MulSplitAtBitwidth => curry3 Z.mul_split_at_bitwidth
+     | AddGetCarryZ bitwidth => curry2 (Z.add_get_carry bitwidth)
+     | MulSplitAtBitwidthZ bitwidth => curry2 (Z.mul_split_at_bitwidth bitwidth)
      | Zselect => curry3 Z.zselect
      | Zmul => curry2 Z.mul
      | Zadd => curry2 Z.add

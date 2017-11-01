@@ -209,6 +209,7 @@ src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.v
 src/Compilers/ZExtended/InlineConstAndOpInterp.v
 src/Compilers/ZExtended/InlineConstAndOpWf.v
 src/Compilers/ZExtended/Syntax.v
+src/Compilers/ZExtended/Syntax/Util.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
