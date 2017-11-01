@@ -14,9 +14,9 @@ Definition invert_Const s d (opc : op s d) : option (interp_flat_type interp_bas
   := match opc with
      | ConstZ v => Some v
      | ConstBool v => Some v
-     | AddGetCarry
+     | AddWithGetCarry
      | MulSplitAtBitwidth
-     | AddGetCarryZ _
+     | AddWithGetCarryZ _
      | MulSplitAtBitwidthZ _
      | Zselect
      | Zmul
@@ -43,9 +43,9 @@ Definition unextend_op {s d} (opc : ZExtended.Syntax.op s d)
            return option (Z.Syntax.op (lift_flat_type unextend_base_type s)
                                       (lift_flat_type unextend_base_type d))
      with
-     | AddGetCarry => None
-     | AddGetCarryZ bitwidth
-       => None (* XXX FIXME Some (Z.Syntax.AddGetCarry bitwidth _ _ _ _ _) *)
+     | AddWithGetCarry => None
+     | AddWithGetCarryZ bitwidth
+       => Some (Z.Syntax.AddWithGetCarry bitwidth _ _ _ _ _)
      | MulSplitAtBitwidth => None
      | MulSplitAtBitwidthZ bitwidth
        => Some (Z.Syntax.MulSplit bitwidth _ _ _ _)
