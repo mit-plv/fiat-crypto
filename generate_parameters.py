@@ -142,13 +142,21 @@ def eval_numexpr(numexpr):
   numexpr = re.sub(r"\.(?![0-9])", "", numexpr) # purge any instance of '.' not followed by a number
   return eval(numexpr, {'__builtins__':None})
 
-def get_extra_compiler_params(q, base):
-    q_mpz = repr(re.sub(r'2(\s*)\^(\s*)([0-9]+)', r'(1_mpz\1<<\2\3)', str(q)))
-    modulus_bytes_val = repr(str(base))
+def get_extra_compiler_params(q, base, bitwidth, sz):
+    def log_wt(i):
+        return 2 ** int(math.ceil(base * i))
     q_hex_stripped = hex(eval_numexpr(q.replace('^', '**')))[2:].strip('L')
     q_hex_padded = q_hex_stripped.rjust(2 * int((len(q_hex_stripped) + 1) / 2), '0')
-    modulus_array = repr('{%s}' % ','.join('0x%s' % s for s in textwrap.wrap(q_hex_padded, 2)))
-    return ' -Dq_mpz=%(q_mpz)s -Dmodulus_bytes_val=%(modulus_bytes_val)s -Dmodulus_array=%(modulus_array)s' % locals()
+    limb_widths = repr('{%s}' % ','.join(str(int(log_wt(i + 1) - log_wt(i))) for i in range(sz)))
+    defs = {
+        'q_mpz' : repr(re.sub(r'2(\s*)\^(\s*)([0-9]+)', r'(1_mpz\1<<\2\3)', str(q))),
+        'modulus_bytes_val' : repr(str(base)),
+        'modulus_array' : repr('{%s}' % ','.join('0x%s' % s for s in textwrap.wrap(q_hex_padded, 2))),
+        'limb_t' : 'uint%d_t' % bitwidth,
+        'modulus_limbs' : repr(str(sz)),
+        'limb_weight_gaps_array' : limb_widths
+    }
+    return ' ' + ' '.join('-D%s=%s' % (k, v) for k, v in defs.items())
 
 def num_bits(p):
     return p[0][1]
@@ -163,8 +171,8 @@ def get_params_montgomery(prime, bitwidth):
             "sz" : str(sz),
             "montgomery" : True,
             "operations" : ["fenz", "feadd", "femul", "feopp", "fesub"],
-            "compiler" : COMPILER_MONT + get_extra_compiler_params(prime, bitwidth),
-            "compilerxx" : COMPILERXX_MONT + get_extra_compiler_params(prime, bitwidth)
+            "compiler" : COMPILER_MONT + get_extra_compiler_params(prime, bitwidth, bitwidth, sz),
+            "compilerxx" : COMPILERXX_MONT + get_extra_compiler_params(prime, bitwidth, bitwidth, sz)
             }
 
 # given a parsed prime, pick a number of (unsaturated) limbs
@@ -240,8 +248,8 @@ def get_params_solinas(prime, bitwidth):
             "carry_chains" : carry_chains,
             "coef_div_modulus" : str(2),
             "operations"       : ["femul", "fesquare", "freeze"],
-            "compiler"         : COMPILER_SOLI + get_extra_compiler_params(prime, base),
-            "compilerxx"       : COMPILERXX_SOLI + get_extra_compiler_params(prime, base)
+            "compiler"         : COMPILER_SOLI + get_extra_compiler_params(prime, base, bitwidth, sz),
+            "compilerxx"       : COMPILERXX_SOLI + get_extra_compiler_params(prime, base, bitwidth, sz)
             }
     if is_goldilocks(p):
         output["goldilocks"] = True

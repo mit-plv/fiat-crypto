@@ -3,12 +3,30 @@
 #include <stdio.h>
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 
-#define modulus_bytes 32
-#define modulus_limbs 5
-#define limb_t uint64_t
+#ifndef modulus_bytes_val
+#define modulus_bytes_val 32
+#endif
 
-static const limb_t a24[modulus_limbs] = {121665};
-static const limb_t limb_weight_gaps[modulus_limbs] = {51,51,51,51,51};
+#ifndef limb_t
+#define limb_t uint64_t
+#endif
+
+#ifndef a24_val
+#define a24_val 121665
+#endif
+
+#ifndef modulus_limbs
+#define modulus_limbs 5
+#endif
+
+#ifndef limb_weight_gaps_array
+#define limb_weight_gaps_array {51,51,51,51,51}
+#endif
+
+#define modulus_bytes modulus_bytes_val
+
+static const limb_t a24[modulus_limbs] = {a24_val};
+static const limb_t limb_weight_gaps[modulus_limbs] = limb_weight_gaps_array;
 
 static void fe_add(uint64_t out[5], const uint64_t in1[5], const uint64_t in2[5]) {
   { const uint64_t x10 = in1[4];
