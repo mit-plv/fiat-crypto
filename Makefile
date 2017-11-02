@@ -284,6 +284,16 @@ $(MEASUREMENTS) : %/measurements.txt : %/measure capture.sh etc/machine.sh etc/c
 src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP256/AMD64/feadd.c src/Specific/NISTP256/AMD64/femul.c src/Specific/NISTP256/AMD64/fenz.c src/Specific/NISTP256/AMD64/fesub.c src/Specific/NISTP256/AMD64/p256_jacobian_add_affine.c extract-function.sh
 	(cd src/Specific/NISTP256/AMD64 && ( BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ../../../../extract-function.sh "stdint" < /dev/null | grep -v stdint && sed 's:^uint64_t:static inline &:' ../../../../liblow/cmovznz.c && echo fenz.c feadd.c fesub.c femul.c p256_jacobian_add_affine.c | xargs -n1 grep -A99999 void -- ) | sed 's:^void force_inline:static inline void force_inline:' | grep -v liblow > icc/combined.c )
 
+GENERATED_FOLDERS := $(sort $(dir $(filter $(SPECIFIC_GENERATED_VOFILES),$(REGULAR_VOFILES))))
+GENERATED_PY_MEASUREMENTS := $(addsuffix montladder.log,$(GENERATED_FOLDERS))
+
+$(GENERATED_PY_MEASUREMENTS) : %/montladder.log : %/py_interpreter.sh src/Specific/Framework/bench/montladder.py
+	sh $*/py_interpreter.sh src/Specific/Framework/bench/montladder.py > $@
+
+.PHONY: generated-py-bench
+generated-py-bench: $(GENERATED_PY_MEASUREMENTS)
+	head -999999 $?
+
 bench: $(MEASUREMENTS)
 	head -999999 $?
 
