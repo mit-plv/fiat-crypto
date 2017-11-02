@@ -4,8 +4,16 @@
 #include <gmp.h>
 
 // modulus, encoded as big-endian bytes
-static const unsigned char modulus[] = {0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xed};
-static const unsigned char a_minus_two_over_four[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xdb,0x41};
+#ifndef modulus_array
+#define modulus_array {0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xed}
+#endif
+
+#ifndef a_minus_two_over_four_array
+#define a_minus_two_over_four_array {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xdb,0x41}
+#endif
+
+static const unsigned char modulus[] = modulus_array;
+static const unsigned char a_minus_two_over_four[] = a_minus_two_over_four_array;
 #define modulus_bytes (sizeof(modulus))
 #define modulus_limbs ((8*sizeof(modulus) + GMP_LIMB_BITS-1)/GMP_LIMB_BITS)
 
@@ -41,27 +49,27 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 
 	// allocate scratch space for use by the field operation macros.
 	mp_limb_t _product_tmp[modulus_limbs+modulus_limbs];
-	
+
 	#define fe_mul(out, x, y) do { \
 		mpn_sec_mul(_product_tmp, x, modulus_limbs, y, modulus_limbs, scratch); \
 		mpn_sec_div_r(_product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs, scratch); \
 		for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
 	} while (0)
-	
+
 	#define fe_sqr(out, x) do { \
 		mpn_sec_sqr(_product_tmp, x, modulus_limbs, scratch); \
 		mpn_sec_div_r(_product_tmp, modulus_limbs+modulus_limbs, m, modulus_limbs, scratch); \
 		for (size_t i = 0; i<modulus_limbs; i++) { out[i] = _product_tmp[i]; } \
 	} while (0)
-	
+
 	#define fe_add(out, x, y) do { \
 		mpn_cnd_sub_n(mpn_add_n(out, x, y, modulus_limbs), out, out, m, modulus_limbs); \
 	} while (0)
-	
+
 	#define fe_sub(out, x, y) do { \
 		mpn_cnd_add_n(mpn_sub_n(out, x, y, modulus_limbs), out, out, m, modulus_limbs); \
 	} while (0)
-	
+
 	#define fe_inv(out, x) do { \
 		for (size_t i = 0; i<modulus_limbs; i++) { _product_tmp[i] = x[i]; } \
 		mp_size_t invertible = mpn_sec_invert(out, _product_tmp, m, modulus_limbs, 2*modulus_limbs*GMP_NUMB_BITS, scratch); \
@@ -90,7 +98,7 @@ static void crypto_scalarmult(uint8_t *out, const uint8_t *secret, size_t secret
 		mp_limb_t bit = (secret[i/8] >> (i%8))&1;
 		// printf("%01d ", bit);
 		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqz); fe_mul(pr, pr, nqx); fe_print(pr); }
-		// printf(" "); 
+		// printf(" ");
 		// { mp_limb_t pr[modulus_limbs]; fe_inv(pr, nqpqz); fe_mul(pr, pr, nqpqx); fe_print(pr); }
 		// printf("\n");
 
