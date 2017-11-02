@@ -3,8 +3,8 @@
     "bitwidth": 64,
     "carry_chains": "default",
     "coef_div_modulus": "2",
-    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<140) - 27' -Dmodulus_bytes_val='35' -Dmodulus_array='{0x0f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe5}'",
-    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<140) - 27' -Dmodulus_bytes_val='35' -Dmodulus_array='{0x0f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe5}'",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dmodulus_limbs='4' -Dmodulus_bytes_val='35' -Dlimb_t=uint64_t -Dlimb_weight_gaps_array='{35,35,35,35}' -Dmodulus_array='{0x0f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe5}' -Dq_mpz='(1_mpz<<140) - 27'",
+    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dmodulus_limbs='4' -Dmodulus_bytes_val='35' -Dlimb_t=uint64_t -Dlimb_weight_gaps_array='{35,35,35,35}' -Dmodulus_array='{0x0f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xe5}' -Dq_mpz='(1_mpz<<140) - 27'",
     "modulus": "2^140 - 27",
     "operations": [
         "femul",
