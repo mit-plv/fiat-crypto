@@ -179,7 +179,7 @@ c: $(filter-out $(UNMADE_C_FILES),$(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY
 
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
-DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO)
+DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO) $(filter src/Specific/solinas32% src/Specific/montgomery32%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_NON_JAVA_C64_VO := $(filter-out $(DISPLAY_NON_JAVA_C32_VO),$(DISPLAY_NON_JAVA_VO))
 
 $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
