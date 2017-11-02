@@ -145,7 +145,9 @@ def eval_numexpr(numexpr):
 def get_extra_compiler_params(q, base):
     q_mpz = repr(re.sub(r'2(\s*)\^(\s*)([0-9]+)', r'(1_mpz\1<<\2\3)', str(q)))
     modulus_bytes_val = repr(str(base))
-    modulus_array = '{%s}' % ','.join(textwrap.wrap(hex(eval_numexpr(q))[2:].strip('L'), 2))
+    q_hex_stripped = hex(eval_numexpr(q.replace('^', '**')))[2:].strip('L')
+    q_hex_padded = q_hex_stripped.rjust(2 * int((len(q_hex_stripped) + 1) / 2), '0')
+    modulus_array = repr('{%s}' % ','.join('0x%s' % s for s in textwrap.wrap(q_hex_padded, 2)))
     return ' -Dq_mpz=%(q_mpz)s -Dmodulus_bytes_val=%(modulus_bytes_val)s -Dmodulus_array=%(modulus_array)s' % locals()
 
 def num_bits(p):
