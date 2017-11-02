@@ -62,7 +62,7 @@ static void feadd(uint32_t out[16], const uint32_t in1[16], const uint32_t in2[1
   { uint32_t x149; uint8_t x150 = _subborrow_u32(x147, x101, 0xffffffff, &x149);
   { uint32_t x152; uint8_t x153 = _subborrow_u32(x150, x104, 0xffffffff, &x152);
   { uint32_t x155; uint8_t x156 = _subborrow_u32(x153, x107, 0xffffffff, &x155);
-  { uint32_t x158; uint8_t x159 = _subborrow_u32(x156, x110, Const 1054736383, &x158);
+  { uint32_t x158; uint8_t x159 = _subborrow_u32(x156, x110, 0x3eddffff, &x158);
   { uint32_t _; uint8_t x162 = _subborrow_u32(x159, x111, 0x0, &_);
   { uint32_t x163 = cmovznz(x162, x158, x110);
   { uint32_t x164 = cmovznz(x162, x155, x107);
