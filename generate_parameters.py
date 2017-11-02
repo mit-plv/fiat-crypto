@@ -247,7 +247,7 @@ def get_params_solinas(prime, bitwidth):
             "bitwidth" : bitwidth,
             "carry_chains" : carry_chains,
             "coef_div_modulus" : str(2),
-            "operations"       : ["femul", "fesquare", "freeze"],
+            "operations"       : ["femul", "feadd", "fesub", "fesquare", "freeze"],
             "compiler"         : COMPILER_SOLI + get_extra_compiler_params(prime, base, bitwidth, sz),
             "compilerxx"       : COMPILERXX_SOLI + get_extra_compiler_params(prime, base, bitwidth, sz)
             }
