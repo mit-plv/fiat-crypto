@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 
-g++ -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing -Dq_mpz='(1_mpz<<254) - 127*(1_mpz<<240) - 1' -Dmodulus_bytes_val='64' "$@"
+g++ -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing -Dq_mpz='(1_mpz<<254) - 127*(1_mpz<<240) - 1' -Dmodulus_bytes_val='64' -Dmodulus_array='{0x3f,0x80,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}' "$@"

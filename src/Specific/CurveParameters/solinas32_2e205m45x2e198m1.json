@@ -24,8 +24,8 @@
         ]
     ],
     "coef_div_modulus": "2",
-    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<205) - 45*(1_mpz<<198) - 1' -Dmodulus_bytes_val='20.5'",
-    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<205) - 45*(1_mpz<<198) - 1' -Dmodulus_bytes_val='20.5'",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<205) - 45*(1_mpz<<198) - 1' -Dmodulus_bytes_val='20.5' -Dmodulus_array='{0x14,0xbf,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}'",
+    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<205) - 45*(1_mpz<<198) - 1' -Dmodulus_bytes_val='20.5' -Dmodulus_array='{0x14,0xbf,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}'",
     "modulus": "2^205 - 45*2^198 - 1",
     "operations": [
         "femul",

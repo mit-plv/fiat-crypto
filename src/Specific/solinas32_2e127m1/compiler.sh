@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 
-gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<127) - 1 ' -Dmodulus_bytes_val='21 + 1/6' "$@"
+gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<127) - 1 ' -Dmodulus_bytes_val='21 + 1/6' -Dmodulus_array='{0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff}' "$@"
