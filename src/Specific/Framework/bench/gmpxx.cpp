@@ -3,10 +3,21 @@
 #include <stdio.h>
 #include <gmpxx.h>
 
+#ifndef q_mpz
+#define q_mpz ((1_mpz<<255)-19)
+#endif
 
-static const mpz_class q = (1_mpz<<255)-19;
-static const size_t modulus_bytes = 32;
-static const unsigned int a24 = 0x01db41;
+#ifndef modulus_bytes_val
+#define modulus_bytes_val 32
+#endif
+
+#ifndef a24_hex
+#define a24_hex 0x01db41
+#endif
+
+static const mpz_class q = q_mpz;
+static const size_t modulus_bytes = modulus_bytes_val;
+static const unsigned int a24 = a24_hex;
 
 static void fe_print(const mpz_class &x) {
 	printf("0x"); for (size_t i = modulus_bytes-1; i<modulus_bytes; --i) { printf("%02x", mpz_class(x>>(8*i)).get_ui()&0xff); }

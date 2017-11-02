@@ -1,6 +1,7 @@
 {
     "base": "32",
-    "compiler": "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing",
+    "compiler": "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing -Dq_mpz='(1_mpz<<194) - 33' -Dmodulus_bytes_val='32'",
+    "compilerxx": "g++ -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing -Dq_mpz='(1_mpz<<194) - 33' -Dmodulus_bytes_val='32'",
     "modulus": "2^194 - 33",
     "montgomery": true,
     "operations": [

@@ -22,7 +22,8 @@
         ]
     ],
     "coef_div_modulus": "2",
-    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<384) - 79*(1_mpz<<376) - 1' -Dmodulus_bytes_val='48'",
+    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<384) - 79*(1_mpz<<376) - 1' -Dmodulus_bytes_val='48'",
     "modulus": "2^384 - 79*2^376 - 1",
     "operations": [
         "femul",

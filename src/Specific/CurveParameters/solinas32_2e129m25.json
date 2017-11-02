@@ -3,7 +3,8 @@
     "bitwidth": 32,
     "carry_chains": "default",
     "coef_div_modulus": "2",
-    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<129) - 25' -Dmodulus_bytes_val='21.5'",
+    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<129) - 25' -Dmodulus_bytes_val='21.5'",
     "modulus": "2^129 - 25",
     "operations": [
         "femul",

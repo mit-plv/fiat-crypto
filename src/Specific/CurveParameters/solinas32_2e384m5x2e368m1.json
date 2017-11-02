@@ -30,7 +30,8 @@
         ]
     ],
     "coef_div_modulus": "2",
-    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<384) - 5*(1_mpz<<368) - 1' -Dmodulus_bytes_val='24'",
+    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dq_mpz='(1_mpz<<384) - 5*(1_mpz<<368) - 1' -Dmodulus_bytes_val='24'",
     "modulus": "2^384 - 5*2^368 - 1",
     "operations": [
         "femul",

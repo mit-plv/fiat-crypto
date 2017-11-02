@@ -496,6 +496,8 @@ def main(*args):
         outputs[os.path.basename(fname)] = header + '\n' + open(os.path.join(parameters_folder, fname), 'r').read()
     if 'compiler' in parameters.keys():
         outputs['compiler.sh'] = make_compiler(parameters['compiler'])
+    if 'compilerxx' in parameters.keys():
+        outputs['compilerxx.sh'] = make_compiler(parameters['compilerxx'])
     outputs['py_interpreter.sh'] = make_py_interpreter(parameters)
     file_list = tuple((k, os.path.join(output_folder, k)) for k in sorted(outputs.keys()))
     if not force:
@@ -515,7 +517,7 @@ def main(*args):
         new_files.append(fname)
         with io.open(fname, 'w', newline='\n') as f:
             f.write(unicode(outputs[k]))
-            if fname.endswith('compiler.sh') or fname.endswith('py_interpreter.sh'):
+            if any(fname.endswith(name) for name in ('compiler.sh', 'compilerxx.sh', 'py_interpreter.sh')):
                 mode = os.fstat(f.fileno()).st_mode
                 mode |= 0o111
                 mode &= 0o7777

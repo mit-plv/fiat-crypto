@@ -66,13 +66,15 @@ EXAMPLES (handwritten):
 
 '''
 
-import math,json,sys,os,traceback
+import math,json,sys,os,traceback,re
 from fractions import Fraction
 
 # for montgomery
 COMPILER_MONT = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+COMPILERXX_MONT = "g++ -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
 # for solinas
 COMPILER_SOLI = "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"
+COMPILERXX_SOLI = "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"
 CUR_PATH = os.path.dirname(os.path.realpath(__file__))
 JSON_DIRECTORY = os.path.join(CUR_PATH, "src/Specific/CurveParameters")
 REMAKE_CURVES = os.path.join(JSON_DIRECTORY, 'remake_curves.sh')
@@ -135,6 +137,11 @@ def sanity_check(p):
         raise UnexpectedPrimeException("Parsed prime %s has unexpected format" %p)
 
 
+def get_extra_compiler_params(q, base):
+    q_mpz = repr(re.sub(r'2(\s*)\^(\s*)([0-9]+)', r'(1_mpz\1<<\2\3)', str(q)))
+    modulus_bytes_val = repr(str(base))
+    return ' -Dq_mpz=%(q_mpz)s -Dmodulus_bytes_val=%(modulus_bytes_val)s' % locals()
+
 def num_bits(p):
     return p[0][1]
 
@@ -148,7 +155,8 @@ def get_params_montgomery(prime, bitwidth):
             "sz" : str(sz),
             "montgomery" : True,
             "operations" : ["fenz", "feadd", "femul", "feopp", "fesub"],
-            "compiler" : COMPILER_MONT
+            "compiler" : COMPILER_MONT + get_extra_compiler_params(prime, bitwidth),
+            "compilerxx" : COMPILERXX_MONT + get_extra_compiler_params(prime, bitwidth)
             }
 
 # given a parsed prime, pick a number of (unsaturated) limbs
@@ -224,7 +232,8 @@ def get_params_solinas(prime, bitwidth):
             "carry_chains" : carry_chains,
             "coef_div_modulus" : str(2),
             "operations"       : ["femul", "fesquare", "freeze"],
-            "compiler"         : COMPILER_SOLI
+            "compiler"         : COMPILER_SOLI + get_extra_compiler_params(prime, base),
+            "compilerxx"       : COMPILERXX_SOLI + get_extra_compiler_params(prime, base)
             }
     if is_goldilocks(p):
         output["goldilocks"] = True
