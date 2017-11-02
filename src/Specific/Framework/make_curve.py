@@ -3,6 +3,7 @@ from __future__ import with_statement
 import json, sys, os, math, re, shutil, io
 from fractions import Fraction
 
+DEFAULT_A24_FOR_BENCH = 121665
 def compute_bitwidth(base):
     return 2**int(math.ceil(math.log(base, 2)))
 def compute_sz(modulus, base):
@@ -446,6 +447,17 @@ set -eu
 %s "$@"
 """ % compiler
 
+def make_py_interpreter(parameters):
+    q = repr(str(parameters['modulus'])).replace('^', '**')
+    modulus_bytes = repr(str(parameters['base']))
+    a24 = repr(str(parameters.get('a24', DEFAULT_A24_FOR_BENCH)))
+    return r"""#!/bin/sh
+set -eu
+
+/usr/bin/env python3 "$@" -Dq=%(q)s -Dmodulus_bytes=%(modulus_bytes)s -Da24=%(a24)s
+""" % locals()
+
+
 DONT_EDIT_STR = 'WARNING: This file was copied from %s.\n If you edit it here, changes will be erased the next time remake_curves.sh is run.'
 DONT_EDIT_HEADERS = {
     '.c' : '/* ' + DONT_EDIT_STR + ' */',
@@ -484,6 +496,7 @@ def main(*args):
         outputs[os.path.basename(fname)] = header + '\n' + open(os.path.join(parameters_folder, fname), 'r').read()
     if 'compiler' in parameters.keys():
         outputs['compiler.sh'] = make_compiler(parameters['compiler'])
+    outputs['py_interpreter.sh'] = make_py_interpreter(parameters)
     file_list = tuple((k, os.path.join(output_folder, k)) for k in sorted(outputs.keys()))
     if not force:
         extant_files = [os.path.relpath(fname, os.getcwd())
@@ -502,7 +515,7 @@ def main(*args):
         new_files.append(fname)
         with io.open(fname, 'w', newline='\n') as f:
             f.write(unicode(outputs[k]))
-            if fname[-len('compiler.sh'):] == 'compiler.sh':
+            if fname.endswith('compiler.sh') or fname.endswith('py_interpreter.sh'):
                 mode = os.fstat(f.fileno()).st_mode
                 mode |= 0o111
                 mode &= 0o7777
