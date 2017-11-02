@@ -288,6 +288,10 @@ GENERATED_FOLDERS := $(sort $(dir $(filter $(SPECIFIC_GENERATED_VOFILES),$(REGUL
 GENERATED_PY_MEASUREMENTS := $(addsuffix montladder.log,$(GENERATED_FOLDERS))
 GENERATED_GMPXX := $(addsuffix gmpxx,$(GENERATED_FOLDERS))
 GENERATED_GMPXX_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPXX))
+GENERATED_GMPVAR := $(addsuffix gmpvar,$(GENERATED_FOLDERS))
+GENERATED_GMPVAR_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPVAR))
+GENERATED_GMPSEC := $(addsuffix gmpsec,$(GENERATED_FOLDERS))
+GENERATED_GMPSEC_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPSEC))
 
 $(GENERATED_PY_MEASUREMENTS) : %/montladder.log : %/py_interpreter.sh src/Specific/Framework/bench/montladder.py
 	sh $*/py_interpreter.sh src/Specific/Framework/bench/montladder.py > $@
@@ -298,12 +302,32 @@ $(GENERATED_GMPXX) : %/gmpxx : %/compilerxx.sh src/Specific/Framework/bench/gmpx
 $(GENERATED_GMPXX_MEASUREMENTS) : %/gmpxx.log : %/gmpxx
 	$< > $@
 
+$(GENERATED_GMPVAR) : %/gmpvar : %/compiler.sh src/Specific/Framework/bench/gmpvar.c
+	sh $*/compiler.sh src/Specific/Framework/bench/gmpvar.c -o $@
+
+$(GENERATED_GMPVAR_MEASUREMENTS) : %/gmpvar.log : %/gmpvar
+	$< > $@
+
+$(GENERATED_GMPSEC) : %/gmpsec : %/compiler.sh src/Specific/Framework/bench/gmpsec.c
+	sh $*/compiler.sh src/Specific/Framework/bench/gmpsec.c -o $@
+
+$(GENERATED_GMPSEC_MEASUREMENTS) : %/gmpsec.log : %/gmpsec
+	$< > $@
+
 .PHONY: generated-py-bench
 generated-py-bench: $(GENERATED_PY_MEASUREMENTS)
 	head -999999 $?
 
 .PHONY: generated-gmpxx-bench
 generated-gmpxx-bench: $(GENERATED_GMPXX_MEASUREMENTS)
+	head -999999 $?
+
+.PHONY: generated-gmpvar-bench
+generated-gmpvar-bench: $(GENERATED_GMPVAR_MEASUREMENTS)
+	head -999999 $?
+
+.PHONY: generated-gmpsec-bench
+generated-gmpsec-bench: $(GENERATED_GMPSEC_MEASUREMENTS)
 	head -999999 $?
 
 bench: $(MEASUREMENTS)
