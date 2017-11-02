@@ -296,7 +296,7 @@ $(GENERATED_GMPXX) : %/gmpxx : %/compilerxx.sh src/Specific/Framework/bench/gmpx
 	sh $*/compilerxx.sh src/Specific/Framework/bench/gmpxx.cpp -o $@
 
 $(GENERATED_GMPXX_MEASUREMENTS) : %/gmpxx.log : %/gmpxx
-	$<
+	$< > $@
 
 .PHONY: generated-py-bench
 generated-py-bench: $(GENERATED_PY_MEASUREMENTS)
