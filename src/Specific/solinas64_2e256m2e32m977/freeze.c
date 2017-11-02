@@ -1,25 +1,29 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include <x86intrin.h>
-#include "liblow.h"
-
-#include "freeze.h"
-
-typedef unsigned int uint128_t __attribute__((mode(TI)));
-
-#if (defined(__GNUC__) || defined(__GNUG__)) && !(defined(__clang__)||defined(__INTEL_COMPILER))
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81294
-#define _subborrow_u32 __builtin_ia32_sbb_u32
-#define _subborrow_u64 __builtin_ia32_sbb_u64
-#endif
-
-#undef force_inline
-#define force_inline __attribute__((always_inline))
-
-void force_inline freeze(uint64_t* out, uint64_t x7, uint64_t x8, uint64_t x6, uint64_t x4, uint64_t x2)
-out[0] = uint64_t x10;
-out[1] = uint8_t x11 = Op Syntax.SubWithGetBorrow 52 Syntax.TWord 3 Syntax.TWord 6 Syntax.TWord 6 Syntax.TWord 6 Syntax.TWord 3 0x0;
-out[2] = x2;
-out[3] = 0xffffefffffc2f;;
+static void freeze(uint64_t out[5], const uint64_t in1[5]) {
+  { const uint64_t x7 = in1[4];
+  { const uint64_t x8 = in1[3];
+  { const uint64_t x6 = in1[2];
+  { const uint64_t x4 = in1[1];
+  { const uint64_t x2 = in1[0];
+  { uint64_t x10, uint8_t x11 = Op (Syntax.SubWithGetBorrow 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, 0xffffefffffc2f);
+  { uint64_t x13; uint8_t x14 = _subborrow_u51(x11, x4, 0x7ffffffffffff, &x13);
+  { uint64_t x16; uint8_t x17 = _subborrow_u51(x14, x6, 0x7ffffffffffff, &x16);
+  { uint64_t x19; uint8_t x20 = _subborrow_u51(x17, x8, 0x7ffffffffffff, &x19);
+  { uint64_t x22; uint8_t x23 = _subborrow_u51(x20, x7, 0x7ffffffffffff, &x22);
+  { uint64_t x24 = (uint64_t)cmovznz(x23, 0x0, 0xffffffffffffffffL);
+  { uint64_t x25 = (x24 & 0xffffefffffc2f);
+  { uint64_t x27, uint8_t x28 = Op (Syntax.AddWithGetCarry 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x10, Return x25);
+  { uint64_t x29 = (x24 & 0x7ffffffffffff);
+  { uint64_t x31; uint8_t x32 = _addcarryx_u51(x28, x13, x29, &x31);
+  { uint64_t x33 = (x24 & 0x7ffffffffffff);
+  { uint64_t x35; uint8_t x36 = _addcarryx_u51(x32, x16, x33, &x35);
+  { uint64_t x37 = (x24 & 0x7ffffffffffff);
+  { uint64_t x39; uint8_t x40 = _addcarryx_u51(x36, x19, x37, &x39);
+  { uint64_t x41 = (x24 & 0x7ffffffffffff);
+  { uint64_t x43; uint8_t _ = _addcarryx_u51(x40, x22, x41, &x43);
+  out[0] = x27;
+  out[1] = x31;
+  out[2] = x35;
+  out[3] = x39;
+  out[4] = x43;
+  }}}}}}}}}}}}}}}}}}}}}
 }
-// caller: uint64_t out[4];

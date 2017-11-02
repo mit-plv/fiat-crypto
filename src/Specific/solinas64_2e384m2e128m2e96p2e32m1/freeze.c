@@ -1,25 +1,43 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include <x86intrin.h>
-#include "liblow.h"
-
-#include "freeze.h"
-
-typedef unsigned int uint128_t __attribute__((mode(TI)));
-
-#if (defined(__GNUC__) || defined(__GNUG__)) && !(defined(__clang__)||defined(__INTEL_COMPILER))
-// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81294
-#define _subborrow_u32 __builtin_ia32_sbb_u32
-#define _subborrow_u64 __builtin_ia32_sbb_u64
-#endif
-
-#undef force_inline
-#define force_inline __attribute__((always_inline))
-
-void force_inline freeze(uint64_t* out, uint64_t x13, uint64_t x14, uint64_t x12, uint64_t x10, uint64_t x8, uint64_t x6, uint64_t x4, uint64_t x2)
-out[0] = uint64_t x16;
-out[1] = ℤ x17 = Op Syntax.SubWithGetBorrow 48 Syntax.TWord 3 Syntax.TWord 6 Syntax.TWord 6 Syntax.TWord 6 Syntax.TZ 0x0;
-out[2] = x2;
-out[3] = 0xffffffff;;
+static void freeze(uint64_t out[8], const uint64_t in1[8]) {
+  { const uint64_t x13 = in1[7];
+  { const uint64_t x14 = in1[6];
+  { const uint64_t x12 = in1[5];
+  { const uint64_t x10 = in1[4];
+  { const uint64_t x8 = in1[3];
+  { const uint64_t x6 = in1[2];
+  { const uint64_t x4 = in1[1];
+  { const uint64_t x2 = in1[0];
+  { uint64_t x16, ℤ x17 = Op (Syntax.SubWithGetBorrow 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) Syntax.TZ) (0x0, Return x2, 0xffffffff);
+  { uint64_t x19, ℤ x20 = Op (Syntax.SubWithGetBorrow 48 Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) Syntax.TZ) (Return x17, Return x4, 0x0);
+  { uint64_t x22, uint8_t x23 = Op (Syntax.SubWithGetBorrow 48 Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x20, Return x6, 0xfffeffffffff);
+  { uint64_t x25, uint8_t x26 = Op (Syntax.SubWithGetBorrow 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x23, Return x8, 0xffffffffffff);
+  { uint64_t x28, uint8_t x29 = Op (Syntax.SubWithGetBorrow 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x26, Return x10, 0xffffffffffff);
+  { uint64_t x31, uint8_t x32 = Op (Syntax.SubWithGetBorrow 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x29, Return x12, 0xffffffffffff);
+  { uint64_t x34, uint8_t x35 = Op (Syntax.SubWithGetBorrow 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x32, Return x14, 0xffffffffffff);
+  { uint64_t x37, uint8_t x38 = Op (Syntax.SubWithGetBorrow 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x35, Return x13, 0xffffffffffff);
+  { uint64_t x39 = (uint64_t)cmovznz(x38, 0x0, 0xffffffffffffffffL);
+  { uint64_t x40 = (x39 & 0xffffffff);
+  { uint64_t x42, uint8_t x43 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x16, Return x40);
+  { uint64_t x45, uint8_t x46 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x43, Return x19, 0x0);
+  { uint64_t x47 = (x39 & 0xfffeffffffff);
+  { uint64_t x49, uint8_t x50 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x46, Return x22, Return x47);
+  { uint64_t x51 = (x39 & 0xffffffffffff);
+  { uint64_t x53, uint8_t x54 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x50, Return x25, Return x51);
+  { uint64_t x55 = (x39 & 0xffffffffffff);
+  { uint64_t x57, uint8_t x58 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x54, Return x28, Return x55);
+  { uint64_t x59 = (x39 & 0xffffffffffff);
+  { uint64_t x61, uint8_t x62 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x58, Return x31, Return x59);
+  { uint64_t x63 = (x39 & 0xffffffffffff);
+  { uint64_t x65, uint8_t x66 = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x62, Return x34, Return x63);
+  { uint64_t x67 = (x39 & 0xffffffffffff);
+  { uint64_t x69, uint8_t _ = Op (Syntax.AddWithGetCarry 48 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x66, Return x37, Return x67);
+  out[0] = x42;
+  out[1] = x45;
+  out[2] = x49;
+  out[3] = x53;
+  out[4] = x57;
+  out[5] = x61;
+  out[6] = x65;
+  out[7] = x69;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 }
-// caller: uint64_t out[4];
