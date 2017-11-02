@@ -145,13 +145,15 @@ def eval_numexpr(numexpr):
 def get_extra_compiler_params(q, base, bitwidth, sz):
     def log_wt(i):
         return int(math.ceil(sum(map(Fraction, map(str.strip, str(base).split('+')))) * i))
-    q_hex_stripped = hex(eval_numexpr(q.replace('^', '**')))[2:].strip('L')
-    q_hex_padded = q_hex_stripped.rjust(2 * int((len(q_hex_stripped) + 1) / 2), '0')
+    q_int = eval_numexpr(q.replace('^', '**'))
+    a24 = 12345 # TODO
+    modulus_bytes = (q_int.bit_length()+7)//8
     limb_widths = repr('{%s}' % ','.join(str(int(log_wt(i + 1) - log_wt(i))) for i in range(sz)))
     defs = {
         'q_mpz' : repr(re.sub(r'2(\s*)\^(\s*)([0-9]+)', r'(1_mpz\1<<\2\3)', str(q))),
-        'modulus_bytes_val' : repr(str(base)),
-        'modulus_array' : repr('{%s}' % ','.join('0x%s' % s for s in textwrap.wrap(q_hex_padded, 2))),
+        'modulus_bytes_val' : repr(str(modulus_bytes)),
+        'modulus_array' : repr('{%s}' % ','.join(reversed(list('0x%02x' % ((q_int >> 8*i)&0xff) for i in range(modulus_bytes))))),
+        'a_minus_two_over_four_array' : repr('{%s}' % ','.join(reversed(list('0x%02x' % ((a24 >> 8*i)&0xff) for i in range(modulus_bytes))))),
         'limb_t' : 'uint%d_t' % bitwidth,
         'modulus_limbs' : repr(str(sz)),
         'limb_weight_gaps_array' : limb_widths
