@@ -18,7 +18,7 @@ Interp-η
  uint32_t x104, uint8_t x105 = addcarryx_u32(x102, x31, x61);
  uint32_t x107, uint8_t x108 = addcarryx_u32(x105, x33, x63);
  uint32_t x110, uint8_t x111 = addcarryx_u32(x108, x32, x62);
- uint32_t x113, uint8_t x114 = subborrow_u32(0x0, x65, Const 4294966727);
+ uint32_t x113, uint8_t x114 = subborrow_u32(0x0, x65, 0xfffffdc7);
  uint32_t x116, uint8_t x117 = subborrow_u32(x114, x68, 0xffffffff);
  uint32_t x119, uint8_t x120 = subborrow_u32(x117, x71, 0xffffffff);
  uint32_t x122, uint8_t x123 = subborrow_u32(x120, x74, 0xffffffff);
