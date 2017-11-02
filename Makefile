@@ -292,6 +292,8 @@ GENERATED_GMPVAR := $(addsuffix gmpvar,$(GENERATED_FOLDERS))
 GENERATED_GMPVAR_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPVAR))
 GENERATED_GMPSEC := $(addsuffix gmpsec,$(GENERATED_FOLDERS))
 GENERATED_GMPSEC_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPSEC))
+GENERATED_FIBE := $(addsuffix fibe,$(GENERATED_FOLDERS))
+GENERATED_FIBE_MEASUREMENTS := $(addsuffix .log,$(GENERATED_FIBE))
 
 $(GENERATED_PY_MEASUREMENTS) : %/montladder.log : %/py_interpreter.sh src/Specific/Framework/bench/montladder.py
 	sh $*/py_interpreter.sh src/Specific/Framework/bench/montladder.py > $@
@@ -314,6 +316,12 @@ $(GENERATED_GMPSEC) : %/gmpsec : %/compiler.sh src/Specific/Framework/bench/gmps
 $(GENERATED_GMPSEC_MEASUREMENTS) : %/gmpsec.log : %/gmpsec
 	$< > $@
 
+$(GENERATED_FIBE) : %/fibe : %/compiler.sh src/Specific/Framework/bench/fibe.c %/feadd.c %/femul.c %/fesquare.c %/fesub.c
+	sh $*/compiler.sh src/Specific/Framework/bench/fibe.c -I $*/ -o $@
+
+$(GENERATED_FIBE_MEASUREMENTS) : %/fibe.log : %/fibe
+	$< > $@
+
 .PHONY: generated-py-bench
 generated-py-bench: $(GENERATED_PY_MEASUREMENTS)
 	head -999999 $?
@@ -328,6 +336,10 @@ generated-gmpvar-bench: $(GENERATED_GMPVAR_MEASUREMENTS)
 
 .PHONY: generated-gmpsec-bench
 generated-gmpsec-bench: $(GENERATED_GMPSEC_MEASUREMENTS)
+	head -999999 $?
+
+.PHONY: generated-fibe-bench
+generated-fibe-bench: $(GENERATED_FIBE_MEASUREMENTS)
 	head -999999 $?
 
 bench: $(MEASUREMENTS)
