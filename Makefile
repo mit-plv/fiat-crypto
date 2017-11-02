@@ -286,12 +286,24 @@ src/Specific/NISTP256/AMD64/icc/combined.c: liblow/cmovznz.c src/Specific/NISTP2
 
 GENERATED_FOLDERS := $(sort $(dir $(filter $(SPECIFIC_GENERATED_VOFILES),$(REGULAR_VOFILES))))
 GENERATED_PY_MEASUREMENTS := $(addsuffix montladder.log,$(GENERATED_FOLDERS))
+GENERATED_GMPXX := $(addsuffix gmpxx,$(GENERATED_FOLDERS))
+GENERATED_GMPXX_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPXX))
 
 $(GENERATED_PY_MEASUREMENTS) : %/montladder.log : %/py_interpreter.sh src/Specific/Framework/bench/montladder.py
 	sh $*/py_interpreter.sh src/Specific/Framework/bench/montladder.py > $@
 
+$(GENERATED_GMPXX) : %/gmpxx : %/compilerxx.sh src/Specific/Framework/bench/gmpxx.cpp
+	sh $*/compilerxx.sh src/Specific/Framework/bench/gmpxx.cpp -o $@
+
+$(GENERATED_GMPXX_MEASUREMENTS) : %/gmpxx.log : %/gmpxx
+	$<
+
 .PHONY: generated-py-bench
 generated-py-bench: $(GENERATED_PY_MEASUREMENTS)
+	head -999999 $?
+
+.PHONY: generated-gmpxx-bench
+generated-gmpxx-bench: $(GENERATED_GMPXX_MEASUREMENTS)
 	head -999999 $?
 
 bench: $(MEASUREMENTS)
