@@ -3,11 +3,13 @@
     "bitwidth": 64,
     "carry_chains": "default",
     "coef_div_modulus": "2",
-    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dmodulus_limbs='3' -Dmodulus_bytes_val='50' -Dlimb_t=uint64_t -Dlimb_weight_gaps_array='{50,50,50}' -Dmodulus_array='{0x3f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfb}' -Dq_mpz='(1_mpz<<150) - 5'",
-    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dmodulus_limbs='3' -Dmodulus_bytes_val='50' -Dlimb_t=uint64_t -Dlimb_weight_gaps_array='{50,50,50}' -Dmodulus_array='{0x3f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfb}' -Dq_mpz='(1_mpz<<150) - 5'",
+    "compiler": "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dmodulus_bytes_val='50' -Dlimb_t=uint64_t -Dq_mpz='(1_mpz<<150) - 5' -Dmodulus_limbs='3' -Dlimb_weight_gaps_array='{50,50,50}' -Dmodulus_array='{0x3f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfb}'",
+    "compilerxx": "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Dmodulus_bytes_val='50' -Dlimb_t=uint64_t -Dq_mpz='(1_mpz<<150) - 5' -Dmodulus_limbs='3' -Dlimb_weight_gaps_array='{50,50,50}' -Dmodulus_array='{0x3f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xfb}'",
     "modulus": "2^150 - 5",
     "operations": [
         "femul",
+        "feadd",
+        "fesub",
         "fesquare",
         "freeze"
     ],
