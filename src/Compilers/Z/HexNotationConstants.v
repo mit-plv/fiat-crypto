@@ -131,6 +131,8 @@ nums = tuple(sorted(set(systematic_nums + [
     4294963199,
     4294966319,
     4294966531,
+    4294966727,
+    4294966815,
     4294966875,
     4294966979,
     4294967107,
@@ -1635,6 +1637,14 @@ Notation "'0xfffffd03'" (* 4294966531 (0xfffffd03) *)
   := (Const 4294966531%Z).
 Notation "'0xfffffd03'" (* 4294966531 (0xfffffd03) *)
   := (Const WO~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~0~0~0~0~0~0~1~1).
+Notation "'0xfffffdc7'" (* 4294966727 (0xfffffdc7) *)
+  := (Const 4294966727%Z).
+Notation "'0xfffffdc7'" (* 4294966727 (0xfffffdc7) *)
+  := (Const WO~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0~0~0~1~1~1).
+Notation "'0xfffffe1f'" (* 4294966815 (0xfffffe1f) *)
+  := (Const 4294966815%Z).
+Notation "'0xfffffe1f'" (* 4294966815 (0xfffffe1f) *)
+  := (Const WO~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~0~0~0~1~1~1~1~1).
 Notation "'0xfffffe5b'" (* 4294966875 (0xfffffe5b) *)
   := (Const 4294966875%Z).
 Notation "'0xfffffe5b'" (* 4294966875 (0xfffffe5b) *)
