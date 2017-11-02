@@ -175,13 +175,14 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z
 	$(SHOW)"COQC $*Display > $@"
 	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 
-c: $(filter-out $(UNMADE_C_FILES),$(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_JAVA_VO:Display.vo=.h))
-
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO)
 DISPLAY_NON_JAVA_C64_VO := $(filter-out $(DISPLAY_NON_JAVA_C32_VO) $(SPECIFIC_GENERATED_VOFILES),$(DISPLAY_NON_JAVA_VO))
 DISPLAY_GENERATED_VO := $(filter $(SPECIFIC_GENERATED_VOFILES),$(DISPLAY_NON_JAVA_VO))
+DISPLAY_NON_GENERATED_VO := $(filter-out $(DISPLAY_GENERATED_VO),$(DISPLAY_NON_JAVA_VO))
+
+c: $(filter-out $(UNMADE_C_FILES),$(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_GENERATED_VO:Display.vo=.h))
 
 $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
 	BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
