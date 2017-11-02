@@ -144,7 +144,7 @@ def eval_numexpr(numexpr):
 
 def get_extra_compiler_params(q, base, bitwidth, sz):
     def log_wt(i):
-        return 2 ** int(math.ceil(base * i))
+        return int(math.ceil(sum(map(Fraction, map(str.strip, str(base).split('+')))) * i))
     q_hex_stripped = hex(eval_numexpr(q.replace('^', '**')))[2:].strip('L')
     q_hex_padded = q_hex_stripped.rjust(2 * int((len(q_hex_stripped) + 1) / 2), '0')
     limb_widths = repr('{%s}' % ','.join(str(int(log_wt(i + 1) - log_wt(i))) for i in range(sz)))
