@@ -28,6 +28,9 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 static const limb_t a24[modulus_limbs] = {a24_val};
 static const limb_t limb_weight_gaps[modulus_limbs] = limb_weight_gaps_array;
 
+#include <immintrin.h>
+#include <x86intrin.h>
+#include "liblow.h"
 #include "feadd.c"
 #include "femul.c"
 #include "fesquare.c"
