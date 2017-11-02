@@ -11,11 +11,11 @@ static void fesub(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { const uint32_t x19 = in2[2];
   { const uint32_t x17 = in2[1];
   { const uint32_t x15 = in2[0];
-  out[0] = ((Const 33554414 + x5) - x15);
-  out[1] = ((Const 16777214 + x7) - x17);
-  out[2] = ((Const 33554430 + x9) - x19);
-  out[3] = ((Const 16777214 + x11) - x21);
-  out[4] = ((Const 33554430 + x13) - x23);
-  out[5] = ((Const 16777214 + x12) - x22);
+  out[0] = ((0x1ffffee + x5) - x15);
+  out[1] = ((0xfffffe + x7) - x17);
+  out[2] = ((0x1fffffe + x9) - x19);
+  out[3] = ((0xfffffe + x11) - x21);
+  out[4] = ((0x1fffffe + x13) - x23);
+  out[5] = ((0xfffffe + x12) - x22);
   }}}}}}}}}}}}
 }
