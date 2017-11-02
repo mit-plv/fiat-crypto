@@ -66,7 +66,7 @@ EXAMPLES (handwritten):
 
 '''
 
-import math,json,sys,os,traceback,re
+import math,json,sys,os,traceback,re,textwrap
 from fractions import Fraction
 
 # for montgomery
@@ -137,10 +137,16 @@ def sanity_check(p):
         raise UnexpectedPrimeException("Parsed prime %s has unexpected format" %p)
 
 
+def eval_numexpr(numexpr):
+  # copying from https://stackoverflow.com/a/25437733/377022
+  numexpr = re.sub(r"\.(?![0-9])", "", numexpr) # purge any instance of '.' not followed by a number
+  return eval(numexpr, {'__builtins__':None})
+
 def get_extra_compiler_params(q, base):
     q_mpz = repr(re.sub(r'2(\s*)\^(\s*)([0-9]+)', r'(1_mpz\1<<\2\3)', str(q)))
     modulus_bytes_val = repr(str(base))
-    return ' -Dq_mpz=%(q_mpz)s -Dmodulus_bytes_val=%(modulus_bytes_val)s' % locals()
+    modulus_array = '{%s}' % ','.join(textwrap.wrap(hex(eval_numexpr(q))[2:].strip('L'), 2))
+    return ' -Dq_mpz=%(q_mpz)s -Dmodulus_bytes_val=%(modulus_bytes_val)s -Dmodulus_array=%(modulus_array)s' % locals()
 
 def num_bits(p):
     return p[0][1]
