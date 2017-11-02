@@ -17,7 +17,7 @@ Interp-η
  uint32_t x68, uint8_t x69 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x66, Return x26, 0xffffff);
  uint32_t x71, uint8_t x72 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x69, Return x28, 0xffffff);
  uint32_t x74, uint8_t x75 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x72, Return x30, 0xffffff);
- uint32_t x77, uint8_t x78 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x75, Return x29, Const 16775935);
+ uint32_t x77, uint8_t x78 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x75, Return x29, 0xfffaff);
  uint32_t x79 = (uint32_t)cmovznz(x78, 0x0, 0xffffffff);
  uint32_t x80 = (x79 & 0xffffff);
  uint32_t x82, uint8_t x83 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x32, Return x80);
@@ -49,7 +49,7 @@ Interp-η
  uint32_t x134, uint8_t x135 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x131, Return x71, Return x132);
  uint32_t x136 = (x79 & 0xffffff);
  uint32_t x138, uint8_t x139 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x135, Return x74, Return x136);
- uint32_t x140 = (x79 & Const 16775935);
+ uint32_t x140 = (x79 & 0xfffaff);
  uint32_t x142, uint8_t _ = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x139, Return x77, Return x140);
  (Return x142, Return x138, Return x134, Return x130, Return x126, Return x122, Return x118, Return x114, Return x110, Return x106, Return x102, Return x98, Return x94, Return x90, Return x86, Return x82))
 x
