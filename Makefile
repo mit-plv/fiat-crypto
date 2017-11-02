@@ -179,8 +179,9 @@ c: $(filter-out $(UNMADE_C_FILES),$(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY
 
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
-DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO) $(filter src/Specific/solinas32% src/Specific/montgomery32%,$(DISPLAY_NON_JAVA_VO))
-DISPLAY_NON_JAVA_C64_VO := $(filter-out $(DISPLAY_NON_JAVA_C32_VO),$(DISPLAY_NON_JAVA_VO))
+DISPLAY_NON_JAVA_C32_VO := $(DISPLAY_X25519_C32_VO)
+DISPLAY_NON_JAVA_C64_VO := $(filter-out $(DISPLAY_NON_JAVA_C32_VO) $(SPECIFIC_GENERATED_VOFILES),$(DISPLAY_NON_JAVA_VO))
+DISPLAY_GENERATED_VO := $(filter $(SPECIFIC_GENERATED_VOFILES),$(DISPLAY_NON_JAVA_VO))
 
 $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
 	BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
@@ -193,6 +194,9 @@ $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.h) : %.h : %Display.log extract-function-h
 
 $(DISPLAY_NON_JAVA_C32_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
 	BITWIDTH=32 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+
+$(DISPLAY_GENERATED_VO:Display.vo=.c) : %.c : %Display.log src/Specific/Framework/bench/prettyprint.py
+	./src/Specific/Framework/bench/prettyprint.py $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
 
 $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
 	$(SHOW)"COQC $*JavaDisplay > $@"
