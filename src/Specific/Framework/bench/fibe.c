@@ -28,8 +28,40 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 static const limb_t a24[modulus_limbs] = {a24_val};
 static const limb_t limb_weight_gaps[modulus_limbs] = limb_weight_gaps_array;
 
+#if 0
+
 #include <immintrin.h>
 #include <x86intrin.h>
+
+#if (defined(__GNUC__) || defined(__GNUG__)) && !(defined(__clang__)||defined(__INTEL_COMPILER))
+// https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81294
+#define _subborrow_u32 __builtin_ia32_sbb_u32
+#define _subborrow_u64 __builtin_ia32_sbb_u64
+#endif
+
+#else
+
+static uint64_t _mulx_u64(uint64_t a, uint64_t b, uint64_t *high) {
+  uint128_t x = (uint128_t)a * b;
+  *high = (uint64_t) (x >> 64);
+  return (uint64_t) x;
+}
+
+static uint64_t _addcarryx_u64(uint8_t c, uint64_t a, uint64_t b, uint64_t *low) {
+  uint128_t x = (uint128_t)a + b + c;
+  *low = (uint64_t) x;
+  return (uint64_t) (x>>64);
+}
+
+static uint64_t _subborrow_u64(uint8_t c, uint64_t a, uint64_t b, uint64_t *low) {
+  uint128_t t = ((uint128_t) b + c);
+  uint128_t x = a-t;
+  *low = (uint64_t) x;
+  return (uint8_t) (x>>127);
+}
+
+#endif
+
 #include "liblow.h"
 #include "feadd.c"
 #include "femul.c"
