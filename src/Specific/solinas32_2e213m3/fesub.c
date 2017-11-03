@@ -29,20 +29,20 @@ static void fesub(uint32_t out[15], const uint32_t in1[15], const uint32_t in2[1
   { const uint32_t x37 = in2[2];
   { const uint32_t x35 = in2[1];
   { const uint32_t x33 = in2[0];
-  out[0] = ((Const 65530 + x5) - x33);
-  out[1] = ((Const 32766 + x7) - x35);
-  out[2] = ((Const 32766 + x9) - x37);
-  out[3] = ((Const 32766 + x11) - x39);
-  out[4] = ((Const 32766 + x13) - x41);
+  out[0] = ((0xfffa + x5) - x33);
+  out[1] = ((0x7ffe + x7) - x35);
+  out[2] = ((0x7ffe + x9) - x37);
+  out[3] = ((0x7ffe + x11) - x39);
+  out[4] = ((0x7ffe + x13) - x41);
   out[5] = ((0xfffe + x15) - x43);
-  out[6] = ((Const 32766 + x17) - x45);
-  out[7] = ((Const 32766 + x19) - x47);
-  out[8] = ((Const 32766 + x21) - x49);
-  out[9] = ((Const 32766 + x23) - x51);
+  out[6] = ((0x7ffe + x17) - x45);
+  out[7] = ((0x7ffe + x19) - x47);
+  out[8] = ((0x7ffe + x21) - x49);
+  out[9] = ((0x7ffe + x23) - x51);
   out[10] = ((0xfffe + x25) - x53);
-  out[11] = ((Const 32766 + x27) - x55);
-  out[12] = ((Const 32766 + x29) - x57);
-  out[13] = ((Const 32766 + x31) - x59);
-  out[14] = ((Const 32766 + x30) - x58);
+  out[11] = ((0x7ffe + x27) - x55);
+  out[12] = ((0x7ffe + x29) - x57);
+  out[13] = ((0x7ffe + x31) - x59);
+  out[14] = ((0x7ffe + x30) - x58);
   }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 }
