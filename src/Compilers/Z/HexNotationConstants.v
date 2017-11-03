@@ -24,6 +24,8 @@ nums = tuple(sorted(set(systematic_nums + [
     977,
     5311,
     32765,
+    32766,
+    65530,
     65531,
     65534,
     114687,
@@ -53,6 +55,7 @@ nums = tuple(sorted(set(systematic_nums + [
     1048538,
     1048549,
     1048557,
+    1048558,
     1048559,
     1048573,
     1048574,
@@ -107,6 +110,7 @@ nums = tuple(sorted(set(systematic_nums + [
     16777201,
     16777207,
     16777210,
+    16777212,
     16777213,
     16777214,
     33423358,
@@ -170,6 +174,7 @@ nums = tuple(sorted(set(systematic_nums + [
     1073741822,
     1332920885,
     1749801491,
+    2147418110,
     2147483631,
     2147483642,
     2147483646,
@@ -1152,6 +1157,10 @@ Notation "'0x7ffd'" (* 32765 (0x7ffd) *)
   := (Const 32765%Z).
 Notation "'0x7ffd'" (* 32765 (0x7ffd) *)
   := (Const WO~0~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1).
+Notation "'0x7ffe'" (* 32766 (0x7ffe) *)
+  := (Const 32766%Z).
+Notation "'0x7ffe'" (* 32766 (0x7ffe) *)
+  := (Const WO~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0).
 Notation "'0x7fff'" (* 32767 (0x7fff) *)
   := (Const 32767%Z).
 Notation "'0x7fff'" (* 32767 (0x7fff) *)
@@ -1164,6 +1173,10 @@ Notation "'0x8001'" (* 32769 (0x8001) *)
   := (Const 32769%Z).
 Notation "'0x8001'" (* 32769 (0x8001) *)
   := (Const WO~1~0~0~0~0~0~0~0~0~0~0~0~0~0~0~1).
+Notation "'0xfffa'" (* 65530 (0xfffa) *)
+  := (Const 65530%Z).
+Notation "'0xfffa'" (* 65530 (0xfffa) *)
+  := (Const WO~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~0).
 Notation "'0xfffb'" (* 65531 (0xfffb) *)
   := (Const 65531%Z).
 Notation "'0xfffb'" (* 65531 (0xfffb) *)
@@ -1328,6 +1341,10 @@ Notation "'0xfffed'" (* 1048557 (0xfffed) *)
   := (Const 1048557%Z).
 Notation "'0xfffed'" (* 1048557 (0xfffed) *)
   := (Const WO~0~0~0~0~0~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~0~1).
+Notation "'0xfffee'" (* 1048558 (0xfffee) *)
+  := (Const 1048558%Z).
+Notation "'0xfffee'" (* 1048558 (0xfffee) *)
+  := (Const WO~0~0~0~0~0~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~0).
 Notation "'0xfffef'" (* 1048559 (0xfffef) *)
   := (Const 1048559%Z).
 Notation "'0xfffef'" (* 1048559 (0xfffef) *)
@@ -1592,6 +1609,10 @@ Notation "'0xfffffa'" (* 16777210 (0xfffffa) *)
   := (Const 16777210%Z).
 Notation "'0xfffffa'" (* 16777210 (0xfffffa) *)
   := (Const WO~0~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~0).
+Notation "'0xfffffc'" (* 16777212 (0xfffffc) *)
+  := (Const 16777212%Z).
+Notation "'0xfffffc'" (* 16777212 (0xfffffc) *)
+  := (Const WO~0~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~0).
 Notation "'0xfffffd'" (* 16777213 (0xfffffd) *)
   := (Const 16777213%Z).
 Notation "'0xfffffd'" (* 16777213 (0xfffffd) *)
@@ -1928,6 +1949,10 @@ Notation "'0x684bda13'" (* 1749801491 (0x684bda13) *)
   := (Const 1749801491%Z).
 Notation "'0x684bda13'" (* 1749801491 (0x684bda13) *)
   := (Const WO~0~1~1~0~1~0~0~0~0~1~0~0~1~0~1~1~1~1~0~1~1~0~1~0~0~0~0~1~0~0~1~1).
+Notation "'0x7ffefffe'" (* 2147418110 (0x7ffefffe) *)
+  := (Const 2147418110%Z).
+Notation "'0x7ffefffe'" (* 2147418110 (0x7ffefffe) *)
+  := (Const WO~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0).
 Notation "'0x7fffffef'" (* 2147483631 (0x7fffffef) *)
   := (Const 2147483631%Z).
 Notation "'0x7fffffef'" (* 2147483631 (0x7fffffef) *)
