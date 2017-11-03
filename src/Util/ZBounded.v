@@ -128,15 +128,27 @@ Defined.
 
 Definition modulo (z : Z) (r : zrange) : zbounded r.
 Proof.
-  refine {| value := lower r + Z.modulo (z - lower r) (upper r - lower r) |}.
+  refine {| value := if (upper r <? lower r)
+                     then z
+                     else lower r + Z.modulo (z - lower r) (upper r - lower r + 1) |}.
   abstract (
       destruct (upper r <? lower r) eqn:H; [ reflexivity | ];
-      pose proof (Z.mod_pos_bound (z - lower r) (upper r - lower r)) as Hmod;
+      pose proof (Z.mod_pos_bound (z - lower r) (upper r - lower r + 1)) as Hmod;
       destruct r as [l u];
       simpl in *; apply Bool.andb_true_iff; split;
       destruct (l =? u) eqn:H';
       Z.ltb_to_lt; subst;
-      rewrite ?Z.sub_diag, ?Zmod_0_r, ?Z.add_0_r;
-      try reflexivity; omega
+      repeat rewrite ?Z.sub_diag, ?Zmod_0_r, ?Z.add_0_r, ?Z.add_0_l, ?Z.mod_1_r;
+      try reflexivity; try omega
     ).
 Defined.
+
+Lemma modulo_value_id {r} (v : zbounded r) : modulo (value v) r = v.
+Proof.
+  apply path_zbounded; simpl.
+  destruct v as [v H]; simpl.
+  destruct (upper r <? lower r) eqn:H'; [ reflexivity | ].
+  simpl in *; unfold is_true in *; split_andb; Z.ltb_to_lt.
+  rewrite Z.mod_small by omega.
+  omega.
+Qed.
