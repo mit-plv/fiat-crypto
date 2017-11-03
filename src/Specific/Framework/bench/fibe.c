@@ -41,6 +41,25 @@ static const limb_t limb_weight_gaps[modulus_limbs] = limb_weight_gaps_array;
 
 #else
 
+static uint32_t _mulx_u32(uint32_t a, uint32_t b, uint32_t *high) {
+  uint64_t x = (uint64_t)a * b;
+  *high = (uint32_t) (x >> 32);
+  return (uint32_t) x;
+}
+
+static uint32_t _addcarryx_u32(uint8_t c, uint32_t a, uint32_t b, uint32_t *low) {
+  uint64_t x = (uint64_t)a + b + c;
+  *low = (uint32_t) x;
+  return (uint32_t) (x>>32);
+}
+
+static uint32_t _subborrow_u32(uint8_t c, uint32_t a, uint32_t b, uint32_t *low) {
+  uint64_t t = ((uint64_t) b + c);
+  uint64_t x = a-t;
+  *low = (uint32_t) x;
+  return (uint8_t) (x>>63);
+}
+
 static uint64_t _mulx_u64(uint64_t a, uint64_t b, uint64_t *high) {
   uint128_t x = (uint128_t)a * b;
   *high = (uint64_t) (x >> 64);
@@ -215,32 +234,45 @@ int main() {
   // }
   // return 0;
 
-  {
-    const uint8_t expected[32] = {0x89, 0x16, 0x1f, 0xde, 0x88, 0x7b, 0x2b, 0x53, 0xde, 0x54, 0x9a, 0xf4, 0x83, 0x94, 0x01, 0x06, 0xec, 0xc1, 0x14, 0xd6, 0x98, 0x2d, 0xaa, 0x98, 0x25, 0x6d, 0xe2, 0x3b, 0xdf, 0x77, 0x66, 0x1a};
-    const uint8_t basepoint[32] = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  //{
+  //  const uint8_t expected[32] = {0x89, 0x16, 0x1f, 0xde, 0x88, 0x7b, 0x2b, 0x53, 0xde, 0x54, 0x9a, 0xf4, 0x83, 0x94, 0x01, 0x06, 0xec, 0xc1, 0x14, 0xd6, 0x98, 0x2d, 0xaa, 0x98, 0x25, 0x6d, 0xe2, 0x3b, 0xdf, 0x77, 0x66, 0x1a};
+  //  const uint8_t basepoint[32] = {9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 
-    uint8_t a[32] = {0}, b[32] = {0};
-    uint8_t* in = a;
-    uint8_t* out = b;
-    a[0] = 1;
+  //  uint8_t a[32] = {0}, b[32] = {0};
+  //  uint8_t* in = a;
+  //  uint8_t* out = b;
+  //  a[0] = 1;
 
-    for (int i = 0; i < 200; i++) {
-      in[0] &= 248;
-      in[31] &= 127;
-      in[31] |= 64;
+  //  for (int i = 0; i < 200; i++) {
+  //    in[0] &= 248;
+  //    in[31] &= 127;
+  //    in[31] |= 64;
 
-      crypto_scalarmult(out, in, 256, basepoint);
-      uint8_t* t = out;
-      out = in;
-      in = t;
-    }
+  //    crypto_scalarmult(out, in, 256, basepoint);
+  //    uint8_t* t = out;
+  //    out = in;
+  //    in = t;
+  //  }
 
-    for (int i = 0; i < 32; i++) {
-      if (in[i] != expected[i]) {
-        return (i+1);
+  //  for (int i = 0; i < 32; i++) {
+  //    if (in[i] != expected[i]) {
+  //      return (i+1);
+  //    }
+  //  }
+  //  return 0;
+  //}
+
+  uint8_t secret[32];
+  uint8_t point[modulus_bytes];
+
+  for (int i = 0; i < modulus_bytes; i++) { point[modulus_bytes-i] = i; }
+  
+  for (int i = 0; i < 1000; i++) {
+      for (int j = 0; j<modulus_bytes; j++) {
+          secret[j%32] ^= point[j];
       }
-    }
-    return 0;
+      crypto_scalarmult(point, secret, 32*8, point);
   }
+  return 0;
 }

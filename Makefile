@@ -302,25 +302,25 @@ $(GENERATED_GMPXX) : %/gmpxx : %/compilerxx.sh src/Specific/Framework/bench/gmpx
 	sh $*/compilerxx.sh src/Specific/Framework/bench/gmpxx.cpp -lgmp -lgmpxx -o $@
 
 $(GENERATED_GMPXX_MEASUREMENTS) : %/gmpxx.log : %/gmpxx
-	$(STDTIME) $< > $@
+	$(STDTIME) $< 2>&1 | tee $@
 
 $(GENERATED_GMPVAR) : %/gmpvar : %/compiler.sh src/Specific/Framework/bench/gmpvar.c
 	sh $*/compiler.sh src/Specific/Framework/bench/gmpvar.c -lgmp -o $@
 
 $(GENERATED_GMPVAR_MEASUREMENTS) : %/gmpvar.log : %/gmpvar
-	$(STDTIME) $< > $@
+	$(STDTIME) $< 2>&1 | tee $@
 
 $(GENERATED_GMPSEC) : %/gmpsec : %/compiler.sh src/Specific/Framework/bench/gmpsec.c
 	sh $*/compiler.sh src/Specific/Framework/bench/gmpsec.c -lgmp -o $@
 
 $(GENERATED_GMPSEC_MEASUREMENTS) : %/gmpsec.log : %/gmpsec
-	$(STDTIME) $< > $@
+	$(STDTIME) $< 2>&1 | tee $@
 
 $(GENERATED_FIBE) : %/fibe : %/compiler.sh src/Specific/Framework/bench/fibe.c %/feadd.c %/femul.c %/fesquare.c %/fesub.c liblow/liblow.h liblow/cmovznz.c
 	sh $*/compiler.sh -I liblow/ liblow/cmovznz.c src/Specific/Framework/bench/fibe.c -I $*/ -o $@
 
 $(GENERATED_FIBE_MEASUREMENTS) : %/fibe.log : %/fibe
-	$(STDTIME) $< > $@
+	$(STDTIME) $< 2>&1 | tee $@
 
 .PHONY: generated-py-bench
 generated-py-bench: $(GENERATED_PY_MEASUREMENTS)
