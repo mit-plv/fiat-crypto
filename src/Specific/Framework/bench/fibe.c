@@ -93,6 +93,22 @@ static uint64_t _subborrow_u64(uint8_t c, uint64_t a, uint64_t b, uint64_t *low)
 
 #endif
 
+static uint32_t _mulx_u32_out_u8(uint32_t a, uint32_t b, uint8_t *high) {
+  uint32_t tmp_high;
+  uint32_t ret = _mulx_u32(a, b, &tmp_high);
+  *high = (uint8_t) (*tmp_high);
+  return ret;
+}
+
+static uint64_t _mulx_u64_out_u8(uint64_t a, uint64_t b, uint8_t *high) {
+  uint64_t tmp_high;
+  uint64_t ret = _mulx_u64(a, b, &tmp_high);
+  *high = (uint8_t) (*tmp_high);
+  return ret;
+}
+
+
+
 #include "liblow.h"
 #include "feadd.c"
 #include "femul.c"
