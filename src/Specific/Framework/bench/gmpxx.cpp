@@ -20,7 +20,7 @@ static const size_t modulus_bytes = modulus_bytes_val;
 static const unsigned int a24 = a24_hex;
 
 static void fe_print(const mpz_class &x) {
-	printf("0x"); for (size_t i = modulus_bytes-1; i<modulus_bytes; --i) { printf("%02x", mpz_class(x>>(8*i)).get_ui()&0xff); }
+	printf("0x"); for (size_t i = modulus_bytes-1; i<modulus_bytes; --i) { printf("%02lx", mpz_class(x>>(8*i)).get_ui()&0xff); }
 }
 
 static void fe_print_frac(mpz_class x, mpz_class z) {
@@ -142,7 +142,7 @@ int main() {
   uint8_t point[modulus_bytes];
 
   for (int i = 0; i < modulus_bytes; i++) { point[modulus_bytes-i] = i; }
-  
+
   for (int i = 0; i < 1000; i++) {
       for (int j = 0; j<modulus_bytes; j++) {
           secret[j%32] ^= point[j];
