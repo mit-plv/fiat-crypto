@@ -46,6 +46,6 @@ static void fesub(uint32_t out[16], const uint32_t in1[16], const uint32_t in2[1
   out[12] = ((0x1fffffe + x29) - x59);
   out[13] = ((0x1fffffe + x31) - x61);
   out[14] = ((0x1fffffe + x33) - x63);
-  out[15] = ((Const 33551870 + x32) - x62);
+  out[15] = ((0x1fff5fe + x32) - x62);
   }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 }
