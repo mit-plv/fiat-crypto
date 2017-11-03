@@ -35,7 +35,7 @@ sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(mulx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \
    Once we get https://coq.inria.fr/bugs/show_bug.cgi?id=5526, we can print actual C notations:
 <<
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c_in , a , b , & out ) ; REST"
- (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+ (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u32' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out ) ; REST"
  (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
 >> *)
@@ -50,6 +50,12 @@ Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
+Reserved Notation "'(bool)' 'mulx_u32' ( a , b )" (format "'(bool)' 'mulx_u32' ( a ,  b )").
+Reserved Notation "'(bool)' 'mulx_u64' ( a , b )" (format "'(bool)' 'mulx_u64' ( a ,  b )").
+Reserved Notation "'(bool)' 'mulx_u128' ( a , b )" (format "'(bool)' 'mulx_u128' ( a ,  b )").
+Reserved Notation "'(uint8_t)' 'mulx_u32' ( a , b )" (format "'(uint8_t)' 'mulx_u32' ( a ,  b )").
+Reserved Notation "'(uint8_t)' 'mulx_u64' ( a , b )" (format "'(uint8_t)' 'mulx_u64' ( a ,  b )").
+Reserved Notation "'(uint8_t)' 'mulx_u128' ( a , b )" (format "'(uint8_t)' 'mulx_u128' ( a ,  b )").
 
 Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
@@ -110,7 +116,7 @@ sed s':^\([^,]*\) \([^, ]*\)\(\s*\),\(.*\)\(mulx.*\))\([; ]*\)$:\1 \2\3;\4_\5, \
    Once we get https://coq.inria.fr/bugs/show_bug.cgi?id=5526, we can print actual C notations:
 <<
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u32' ( c_in , a , b , & out ) ; REST"
- (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
+ (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u32' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
 Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out ) ; REST"
  (at level 200, REST at level 200, only printing format "T0  out ; '//' T1  c_out  =  '_addcarryx_u64' ( c_in ,  a ,  b ,  & out ) ; '//' REST").
 >> *""" + r""")
@@ -125,6 +131,12 @@ Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
+Reserved Notation "'(bool)' 'mulx_u32' ( a , b )" (format "'(bool)' 'mulx_u32' ( a ,  b )").
+Reserved Notation "'(bool)' 'mulx_u64' ( a , b )" (format "'(bool)' 'mulx_u64' ( a ,  b )").
+Reserved Notation "'(bool)' 'mulx_u128' ( a , b )" (format "'(bool)' 'mulx_u128' ( a ,  b )").
+Reserved Notation "'(uint8_t)' 'mulx_u32' ( a , b )" (format "'(uint8_t)' 'mulx_u32' ( a ,  b )").
+Reserved Notation "'(uint8_t)' 'mulx_u64' ( a , b )" (format "'(uint8_t)' 'mulx_u64' ( a ,  b )").
+Reserved Notation "'(uint8_t)' 'mulx_u128' ( a , b )" (format "'(uint8_t)' 'mulx_u128' ( a ,  b )").
 
 Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
