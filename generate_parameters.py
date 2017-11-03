@@ -310,7 +310,7 @@ if __name__ == "__main__":
         # skip comments and empty lines
         if line.strip().startswith("#") or len(line.strip()) == 0:
             continue
-        prime = line.strip().split("#")[0] # remove trailing comments and trailing/leading whitespace
+        prime = line.split("#")[0].strip() # remove trailing comments and trailing/leading whitespace
         try_write_output("montgomery32", get_params_montgomery, prime, 32)
         try_write_output("montgomery64", get_params_montgomery, prime, 64)
         try_write_output("solinas32", get_params_solinas, prime, 32)
