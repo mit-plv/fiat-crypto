@@ -29,7 +29,7 @@ static void femul(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { uint32_t x71;  uint32_t x70 = _mulx_u32(x61, 0xffffffff, &x71);
   { uint32_t x74;  uint32_t x73 = _mulx_u32(x61, 0xffffffff, &x74);
   { uint32_t x77;  uint32_t x76 = _mulx_u32(x61, 0xffffffff, &x77);
-  { uint32_t x79, uint8_t x80 = Op (Syntax.MulSplit 32 (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x61, 0x3f);
+  { uint8_t x80;  uint32_t x79 = (uint8_t)_mulx_u32(x61, 0x3f, &x80);
   { uint32_t x82; uint8_t x83 = _addcarryx_u32(0x0, x65, x67, &x82);
   { uint32_t x85; uint8_t x86 = _addcarryx_u32(x83, x68, x70, &x85);
   { uint32_t x88; uint8_t x89 = _addcarryx_u32(x86, x71, x73, &x88);
@@ -68,7 +68,7 @@ static void femul(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { uint32_t x186;  uint32_t x185 = _mulx_u32(x176, 0xffffffff, &x186);
   { uint32_t x189;  uint32_t x188 = _mulx_u32(x176, 0xffffffff, &x189);
   { uint32_t x192;  uint32_t x191 = _mulx_u32(x176, 0xffffffff, &x192);
-  { uint32_t x194, uint8_t x195 = Op (Syntax.MulSplit 32 (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x176, 0x3f);
+  { uint8_t x195;  uint32_t x194 = (uint8_t)_mulx_u32(x176, 0x3f, &x195);
   { uint32_t x197; uint8_t x198 = _addcarryx_u32(0x0, x180, x182, &x197);
   { uint32_t x200; uint8_t x201 = _addcarryx_u32(x198, x183, x185, &x200);
   { uint32_t x203; uint8_t x204 = _addcarryx_u32(x201, x186, x188, &x203);
@@ -108,7 +108,7 @@ static void femul(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { uint32_t x302;  uint32_t x301 = _mulx_u32(x292, 0xffffffff, &x302);
   { uint32_t x305;  uint32_t x304 = _mulx_u32(x292, 0xffffffff, &x305);
   { uint32_t x308;  uint32_t x307 = _mulx_u32(x292, 0xffffffff, &x308);
-  { uint32_t x310, uint8_t x311 = Op (Syntax.MulSplit 32 (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x292, 0x3f);
+  { uint8_t x311;  uint32_t x310 = (uint8_t)_mulx_u32(x292, 0x3f, &x311);
   { uint32_t x313; uint8_t x314 = _addcarryx_u32(0x0, x296, x298, &x313);
   { uint32_t x316; uint8_t x317 = _addcarryx_u32(x314, x299, x301, &x316);
   { uint32_t x319; uint8_t x320 = _addcarryx_u32(x317, x302, x304, &x319);
@@ -148,7 +148,7 @@ static void femul(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { uint32_t x418;  uint32_t x417 = _mulx_u32(x408, 0xffffffff, &x418);
   { uint32_t x421;  uint32_t x420 = _mulx_u32(x408, 0xffffffff, &x421);
   { uint32_t x424;  uint32_t x423 = _mulx_u32(x408, 0xffffffff, &x424);
-  { uint32_t x426, uint8_t x427 = Op (Syntax.MulSplit 32 (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x408, 0x3f);
+  { uint8_t x427;  uint32_t x426 = (uint8_t)_mulx_u32(x408, 0x3f, &x427);
   { uint32_t x429; uint8_t x430 = _addcarryx_u32(0x0, x412, x414, &x429);
   { uint32_t x432; uint8_t x433 = _addcarryx_u32(x430, x415, x417, &x432);
   { uint32_t x435; uint8_t x436 = _addcarryx_u32(x433, x418, x420, &x435);
@@ -188,7 +188,7 @@ static void femul(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { uint32_t x534;  uint32_t x533 = _mulx_u32(x524, 0xffffffff, &x534);
   { uint32_t x537;  uint32_t x536 = _mulx_u32(x524, 0xffffffff, &x537);
   { uint32_t x540;  uint32_t x539 = _mulx_u32(x524, 0xffffffff, &x540);
-  { uint32_t x542, uint8_t x543 = Op (Syntax.MulSplit 32 (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x524, 0x3f);
+  { uint8_t x543;  uint32_t x542 = (uint8_t)_mulx_u32(x524, 0x3f, &x543);
   { uint32_t x545; uint8_t x546 = _addcarryx_u32(0x0, x528, x530, &x545);
   { uint32_t x548; uint8_t x549 = _addcarryx_u32(x546, x531, x533, &x548);
   { uint32_t x551; uint8_t x552 = _addcarryx_u32(x549, x534, x536, &x551);
@@ -228,7 +228,7 @@ static void femul(uint32_t out[6], const uint32_t in1[6], const uint32_t in2[6])
   { uint32_t x650;  uint32_t x649 = _mulx_u32(x640, 0xffffffff, &x650);
   { uint32_t x653;  uint32_t x652 = _mulx_u32(x640, 0xffffffff, &x653);
   { uint32_t x656;  uint32_t x655 = _mulx_u32(x640, 0xffffffff, &x656);
-  { uint32_t x658, uint8_t x659 = Op (Syntax.MulSplit 32 (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x640, 0x3f);
+  { uint8_t x659;  uint32_t x658 = (uint8_t)_mulx_u32(x640, 0x3f, &x659);
   { uint32_t x661; uint8_t x662 = _addcarryx_u32(0x0, x644, x646, &x661);
   { uint32_t x664; uint8_t x665 = _addcarryx_u32(x662, x647, x649, &x664);
   { uint32_t x667; uint8_t x668 = _addcarryx_u32(x665, x650, x652, &x667);

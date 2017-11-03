@@ -19,7 +19,7 @@ static void femul(uint64_t out[4], const uint64_t in1[4], const uint64_t in2[4])
   { uint64_t x45;  uint64_t x44 = _mulx_u64(x41, 0xfffffffffffffff1L, &x45);
   { uint64_t x48;  uint64_t x47 = _mulx_u64(x41, 0xffffffffffffffffL, &x48);
   { uint64_t x51;  uint64_t x50 = _mulx_u64(x41, 0xffffffffffffffffL, &x51);
-  { uint64_t x53, uint8_t x54 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x41, 0xf);
+  { uint8_t x54;  uint64_t x53 = (uint8_t)_mulx_u64(x41, 0xf, &x54);
   { uint64_t x56; uint8_t x57 = _addcarryx_u64(0x0, x45, x47, &x56);
   { uint64_t x59; uint8_t x60 = _addcarryx_u64(x57, x48, x50, &x59);
   { uint64_t x62; uint8_t x63 = _addcarryx_u64(x60, x51, x53, &x62);
@@ -46,7 +46,7 @@ static void femul(uint64_t out[4], const uint64_t in1[4], const uint64_t in2[4])
   { uint64_t x124;  uint64_t x123 = _mulx_u64(x120, 0xfffffffffffffff1L, &x124);
   { uint64_t x127;  uint64_t x126 = _mulx_u64(x120, 0xffffffffffffffffL, &x127);
   { uint64_t x130;  uint64_t x129 = _mulx_u64(x120, 0xffffffffffffffffL, &x130);
-  { uint64_t x132, uint8_t x133 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x120, 0xf);
+  { uint8_t x133;  uint64_t x132 = (uint8_t)_mulx_u64(x120, 0xf, &x133);
   { uint64_t x135; uint8_t x136 = _addcarryx_u64(0x0, x124, x126, &x135);
   { uint64_t x138; uint8_t x139 = _addcarryx_u64(x136, x127, x129, &x138);
   { uint64_t x141; uint8_t x142 = _addcarryx_u64(x139, x130, x132, &x141);
@@ -74,7 +74,7 @@ static void femul(uint64_t out[4], const uint64_t in1[4], const uint64_t in2[4])
   { uint64_t x204;  uint64_t x203 = _mulx_u64(x200, 0xfffffffffffffff1L, &x204);
   { uint64_t x207;  uint64_t x206 = _mulx_u64(x200, 0xffffffffffffffffL, &x207);
   { uint64_t x210;  uint64_t x209 = _mulx_u64(x200, 0xffffffffffffffffL, &x210);
-  { uint64_t x212, uint8_t x213 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x200, 0xf);
+  { uint8_t x213;  uint64_t x212 = (uint8_t)_mulx_u64(x200, 0xf, &x213);
   { uint64_t x215; uint8_t x216 = _addcarryx_u64(0x0, x204, x206, &x215);
   { uint64_t x218; uint8_t x219 = _addcarryx_u64(x216, x207, x209, &x218);
   { uint64_t x221; uint8_t x222 = _addcarryx_u64(x219, x210, x212, &x221);
@@ -102,7 +102,7 @@ static void femul(uint64_t out[4], const uint64_t in1[4], const uint64_t in2[4])
   { uint64_t x284;  uint64_t x283 = _mulx_u64(x280, 0xfffffffffffffff1L, &x284);
   { uint64_t x287;  uint64_t x286 = _mulx_u64(x280, 0xffffffffffffffffL, &x287);
   { uint64_t x290;  uint64_t x289 = _mulx_u64(x280, 0xffffffffffffffffL, &x290);
-  { uint64_t x292, uint8_t x293 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x280, 0xf);
+  { uint8_t x293;  uint64_t x292 = (uint8_t)_mulx_u64(x280, 0xf, &x293);
   { uint64_t x295; uint8_t x296 = _addcarryx_u64(0x0, x284, x286, &x295);
   { uint64_t x298; uint8_t x299 = _addcarryx_u64(x296, x287, x289, &x298);
   { uint64_t x301; uint8_t x302 = _addcarryx_u64(x299, x290, x292, &x301);
