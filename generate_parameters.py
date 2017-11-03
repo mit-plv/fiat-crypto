@@ -154,6 +154,8 @@ def get_extra_compiler_params(q, base, bitwidth, sz):
         'modulus_bytes_val' : repr(str(modulus_bytes)),
         'modulus_array' : repr('{%s}' % ','.join(reversed(list('0x%02x' % ((q_int >> 8*i)&0xff) for i in range(modulus_bytes))))),
         'a_minus_two_over_four_array' : repr('{%s}' % ','.join(reversed(list('0x%02x' % ((a24 >> 8*i)&0xff) for i in range(modulus_bytes))))),
+        'a24_val' : repr(str(a24)),
+        'a24_hex' : repr(hex(a24)),
         'limb_t' : 'uint%d_t' % bitwidth,
         'modulus_limbs' : repr(str(sz)),
         'limb_weight_gaps_array' : limb_widths
