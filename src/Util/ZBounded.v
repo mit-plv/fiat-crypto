@@ -152,3 +152,12 @@ Proof.
   rewrite Z.mod_small by omega.
   omega.
 Qed.
+
+Lemma value_modulo_in_range z r (Hr : lower r <= z <= upper r)
+  : value (modulo z r) = z.
+Proof.
+  simpl.
+  destruct (upper r <? lower r) eqn:H'; [ reflexivity | ].
+  rewrite Z.mod_small by omega.
+  omega.
+Qed.
