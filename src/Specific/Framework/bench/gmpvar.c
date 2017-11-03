@@ -12,6 +12,10 @@
 #define a_minus_two_over_four_array {0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x01,0xdb,0x41}
 #endif
 
+#ifdef modulus_limbs
+#undef modulus_limbs // We currently recompute this; TODO(andreser): is this the right thing to do?
+#endif
+
 static const unsigned char modulus[] = modulus_array;
 static const unsigned char a_minus_two_over_four[] = a_minus_two_over_four_array;
 #define modulus_bytes (sizeof(modulus))
@@ -217,7 +221,7 @@ int main() {
   uint8_t point[modulus_bytes];
 
   for (int i = 0; i < modulus_bytes; i++) { point[modulus_bytes-i] = i; }
-  
+
   for (int i = 0; i < 1000; i++) {
       for (int j = 0; j<modulus_bytes; j++) {
           secret[j%32] ^= point[j];
