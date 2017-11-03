@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <inttypes.h>
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 
 #ifndef modulus_bytes_val
@@ -9,6 +10,14 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 
 #ifndef limb_t
 #define limb_t uint64_t
+#endif
+
+#ifndef PRIxlimb
+#define PRIxlimb PRIx64
+#endif
+
+#ifndef PRIulimb
+#define PRIulimb PRIu64
 #endif
 
 #ifndef a24_val
@@ -122,9 +131,9 @@ static void fe_frombytes(limb_t x[modulus_limbs], const uint8_t s[modulus_bytes]
 static void fe_print(limb_t x[modulus_limbs]) {
   for (unsigned i=0; i<modulus_limbs-1; i++) { printf("(("); }
   for (unsigned i=modulus_limbs-1; i > 0; --i) {
-    printf("0x%016llx)<< %lu) + ", x[i], limb_weight_gaps[i-1]);
+    printf("0x%016"PRIxlimb")<< %"PRIulimb") + ", x[i], limb_weight_gaps[i-1]);
   }
-  printf("0x%016llx", x[0]);
+  printf("0x%016"PRIxlimb, x[0]);
 }
 
 static void fe_cswap(limb_t bit, limb_t x[modulus_limbs], limb_t y[modulus_limbs]) {
