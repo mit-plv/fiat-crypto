@@ -2,7 +2,7 @@ Require Import Crypto.Specific.Framework.RawCurveParameters.
 Require Import Crypto.Util.LetIn.
 
 (***
-Modulus : 2^256 - 2^32 - 977 
+Modulus : 2^256 - 2^32 - 977
 Base: 51.2
 ***)
 
