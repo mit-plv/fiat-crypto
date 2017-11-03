@@ -228,5 +228,6 @@ int main() {
       }
       crypto_scalarmult(point, secret, 32*8, point);
   }
+  __asm__ __volatile__("" :: "m" (point)); // do not optimize buf away
   return 0;
 }

@@ -69,12 +69,15 @@ EXAMPLES (handwritten):
 import math,json,sys,os,traceback,re,textwrap
 from fractions import Fraction
 
+CC = "clang -march=native -mtune=native -std=gnu11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+CCX = "clang++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+
 # for montgomery
-COMPILER_MONT = "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
-COMPILERXX_MONT = "g++ -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+COMPILER_MONT = CC
+COMPILERXX_MONT = CCX
 # for solinas
-COMPILER_SOLI = "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"
-COMPILERXX_SOLI = "g++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes"
+COMPILER_SOLI = CC
+COMPILERXX_SOLI = CCX
 CUR_PATH = os.path.dirname(os.path.realpath(__file__))
 JSON_DIRECTORY = os.path.join(CUR_PATH, "src/Specific/CurveParameters")
 REMAKE_CURVES = os.path.join(JSON_DIRECTORY, 'remake_curves.sh')
