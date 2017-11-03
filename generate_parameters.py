@@ -173,6 +173,7 @@ def get_params_montgomery(prime, bitwidth):
             "sz" : str(sz),
             "montgomery" : True,
             "operations" : ["fenz", "feadd", "femul", "feopp", "fesub"],
+            "extra_files" : ["montgomery%s/fesquare.c" % str(bitwidth)],
             "compiler" : COMPILER_MONT + get_extra_compiler_params(prime, bitwidth, bitwidth, sz),
             "compilerxx" : COMPILERXX_MONT + get_extra_compiler_params(prime, bitwidth, bitwidth, sz)
             }
