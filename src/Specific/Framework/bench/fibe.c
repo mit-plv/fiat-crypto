@@ -4,20 +4,19 @@
 #include <inttypes.h>
 typedef unsigned int uint128_t __attribute__((mode(TI)));
 
+#define limb_t_(bitwidth) limb_t__(bitwidth)
+#define PRIxlimb_(bitwidth) PRIxlimb__(bitwidth)
+#define PRIulimb_(bitwidth) PRIulimb__(bitwidth)
+#define limb_t__(bitwidth) uint ## bitwidth ## _t
+#define PRIxlimb__(bitwidth) PRIx ## bitwidth
+#define PRIulimb__(bitwidth) PRIu ## bitwidth
+
 #ifndef modulus_bytes_val
 #define modulus_bytes_val 32
 #endif
 
-#ifndef limb_t
-#define limb_t uint64_t
-#endif
-
-#ifndef PRIxlimb
-#define PRIxlimb PRIx64
-#endif
-
-#ifndef PRIulimb
-#define PRIulimb PRIu64
+#ifndef bitwidth
+#define bitwidth 64
 #endif
 
 #ifndef a24_val
@@ -33,6 +32,10 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 #endif
 
 #define modulus_bytes modulus_bytes_val
+
+#define limb_t limb_t_(bitwidth)
+#define PRIxlimb PRIxlimb_(bitwidth)
+#define PRIulimb PRIulimb_(bitwidth)
 
 static const limb_t a24[modulus_limbs] = {a24_val};
 static const limb_t limb_weight_gaps[modulus_limbs] = limb_weight_gaps_array;
