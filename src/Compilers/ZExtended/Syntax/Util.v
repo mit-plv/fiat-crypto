@@ -23,6 +23,7 @@ Definition invert_Const s d (opc : op s d) : option (interp_flat_type interp_bas
      | Zselect
      | Zmul
      | Zadd
+     | Zsub
      | Zopp
      | Zshiftr
      | Zshiftl
@@ -57,6 +58,7 @@ Definition unextend_op {s d} (opc : ZExtended.Syntax.op s d)
      | Zselect => Some (Z.Syntax.Zselect _ _ _ _)
      | Zmul => Some (Z.Syntax.Mul _ _ _)
      | Zadd => Some (Z.Syntax.Add _ _ _)
+     | Zsub => Some (Z.Syntax.Sub _ _ _)
      | Zopp => Some (Z.Syntax.Opp _ _)
      | Zshiftr => Some (Z.Syntax.Shr _ _ _)
      | Zshiftl => Some (Z.Syntax.Shl _ _ _)

@@ -33,6 +33,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Set :=
 | Zselect : op (tuple tZ 3) (tuple tZ 1)
 | Zmul    : op (tuple tZ 2) (tuple tZ 1)
 | Zadd    : op (tuple tZ 2) (tuple tZ 1)
+| Zsub    : op (tuple tZ 2) (tuple tZ 1)
 | Zopp    : op (tuple tZ 1) (tuple tZ 1)
 | Zshiftr : op (tuple tZ 2) (tuple tZ 1)
 | Zshiftl : op (tuple tZ 2) (tuple tZ 1)
@@ -65,6 +66,7 @@ Definition interp_op {s d} (opv : op s d) : interp_flat_type interp_base_type s 
      | Zselect => curry3 Z.zselect
      | Zmul => curry2 Z.mul
      | Zadd => curry2 Z.add
+     | Zsub => curry2 Z.sub
      | Zopp => Z.opp
      | Zshiftr => curry2 Z.shiftr
      | Zshiftl => curry2 Z.shiftl
