@@ -80,6 +80,19 @@ Module Z.
   Hint Rewrite pow_Zpow : push_Zof_nat.
   Hint Rewrite <- pow_Zpow : pull_Zof_nat.
 
+  Lemma Zpow_sub_1_nat_pow a v
+    : (Z.pos a^Z.of_nat v - 1 = Z.of_nat (Z.to_nat (Z.pos a)^v - 1))%Z.
+  Proof.
+    rewrite <- (Z2Nat.id (Z.pos a)) at 1 by lia.
+    change 2%Z with (Z.of_nat 2); change 1%Z with (Z.of_nat 1);
+      autorewrite with pull_Zof_nat.
+    rewrite Nat2Z.inj_sub
+      by (change 1%nat with (Z.to_nat (Z.pos a)^0)%nat; apply Nat.pow_le_mono_r; simpl; lia).
+    reflexivity.
+  Qed.
+  Hint Rewrite Zpow_sub_1_nat_pow : pull_Zof_nat.
+  Hint Rewrite <- Zpow_sub_1_nat_pow : push_Zof_nat.
+
   Lemma divide_mul_div: forall a b c (a_nonzero : a <> 0) (c_nonzero : c <> 0),
     (a | b * (a / c)) -> (c | a) -> (c | b).
   Proof.
