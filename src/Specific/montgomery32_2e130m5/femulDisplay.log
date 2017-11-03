@@ -17,7 +17,7 @@ Interp-η
  uint32_t x57, uint32_t x58 = mulx_u32(x51, 0xffffffff);
  uint32_t x60, uint32_t x61 = mulx_u32(x51, 0xffffffff);
  uint32_t x63, uint32_t x64 = mulx_u32(x51, 0xffffffff);
- uint32_t x66, uint8_t x67 = (uint8_t)mulx_u32(x51, 0x3);
+ uint32_t x66, uint8_t x67 = mulx_u32_out_u8(x51, 0x3);
  uint32_t x69, uint8_t x70 = addcarryx_u32(0x0, x55, x57);
  uint32_t x72, uint8_t x73 = addcarryx_u32(x70, x58, x60);
  uint32_t x75, uint8_t x76 = addcarryx_u32(x73, x61, x63);
@@ -50,7 +50,7 @@ Interp-η
  uint32_t x154, uint32_t x155 = mulx_u32(x148, 0xffffffff);
  uint32_t x157, uint32_t x158 = mulx_u32(x148, 0xffffffff);
  uint32_t x160, uint32_t x161 = mulx_u32(x148, 0xffffffff);
- uint32_t x163, uint8_t x164 = (uint8_t)mulx_u32(x148, 0x3);
+ uint32_t x163, uint8_t x164 = mulx_u32_out_u8(x148, 0x3);
  uint32_t x166, uint8_t x167 = addcarryx_u32(0x0, x152, x154);
  uint32_t x169, uint8_t x170 = addcarryx_u32(x167, x155, x157);
  uint32_t x172, uint8_t x173 = addcarryx_u32(x170, x158, x160);
@@ -84,7 +84,7 @@ Interp-η
  uint32_t x252, uint32_t x253 = mulx_u32(x246, 0xffffffff);
  uint32_t x255, uint32_t x256 = mulx_u32(x246, 0xffffffff);
  uint32_t x258, uint32_t x259 = mulx_u32(x246, 0xffffffff);
- uint32_t x261, uint8_t x262 = (uint8_t)mulx_u32(x246, 0x3);
+ uint32_t x261, uint8_t x262 = mulx_u32_out_u8(x246, 0x3);
  uint32_t x264, uint8_t x265 = addcarryx_u32(0x0, x250, x252);
  uint32_t x267, uint8_t x268 = addcarryx_u32(x265, x253, x255);
  uint32_t x270, uint8_t x271 = addcarryx_u32(x268, x256, x258);
@@ -118,7 +118,7 @@ Interp-η
  uint32_t x350, uint32_t x351 = mulx_u32(x344, 0xffffffff);
  uint32_t x353, uint32_t x354 = mulx_u32(x344, 0xffffffff);
  uint32_t x356, uint32_t x357 = mulx_u32(x344, 0xffffffff);
- uint32_t x359, uint8_t x360 = (uint8_t)mulx_u32(x344, 0x3);
+ uint32_t x359, uint8_t x360 = mulx_u32_out_u8(x344, 0x3);
  uint32_t x362, uint8_t x363 = addcarryx_u32(0x0, x348, x350);
  uint32_t x365, uint8_t x366 = addcarryx_u32(x363, x351, x353);
  uint32_t x368, uint8_t x369 = addcarryx_u32(x366, x354, x356);
@@ -152,7 +152,7 @@ Interp-η
  uint32_t x448, uint32_t x449 = mulx_u32(x442, 0xffffffff);
  uint32_t x451, uint32_t x452 = mulx_u32(x442, 0xffffffff);
  uint32_t x454, uint32_t x455 = mulx_u32(x442, 0xffffffff);
- uint32_t x457, uint8_t x458 = (uint8_t)mulx_u32(x442, 0x3);
+ uint32_t x457, uint8_t x458 = mulx_u32_out_u8(x442, 0x3);
  uint32_t x460, uint8_t x461 = addcarryx_u32(0x0, x446, x448);
  uint32_t x463, uint8_t x464 = addcarryx_u32(x461, x449, x451);
  uint32_t x466, uint8_t x467 = addcarryx_u32(x464, x452, x454);

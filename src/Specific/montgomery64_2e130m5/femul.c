@@ -14,7 +14,7 @@ static void femul(uint64_t out[3], const uint64_t in1[3], const uint64_t in2[3])
   { uint64_t _;  uint64_t x31 = _mulx_u64(x13, 0xcccccccccccccccdL, &_);
   { uint64_t x35;  uint64_t x34 = _mulx_u64(x31, 0xfffffffffffffffbL, &x35);
   { uint64_t x38;  uint64_t x37 = _mulx_u64(x31, 0xffffffffffffffffL, &x38);
-  { uint8_t x41;  uint64_t x40 = (uint8_t)_mulx_u64(x31, 0x3, &x41);
+  { uint8_t x41;  uint64_t x40 = _mulx_u64_out_u8(x31, 0x3, &x41);
   { uint64_t x43; uint8_t x44 = _addcarryx_u64(0x0, x35, x37, &x43);
   { uint64_t x46; uint8_t x47 = _addcarryx_u64(x44, x38, x40, &x46);
   { uint8_t x48 = (x47 + x41);
@@ -35,7 +35,7 @@ static void femul(uint64_t out[3], const uint64_t in1[3], const uint64_t in2[3])
   { uint64_t _;  uint64_t x92 = _mulx_u64(x80, 0xcccccccccccccccdL, &_);
   { uint64_t x96;  uint64_t x95 = _mulx_u64(x92, 0xfffffffffffffffbL, &x96);
   { uint64_t x99;  uint64_t x98 = _mulx_u64(x92, 0xffffffffffffffffL, &x99);
-  { uint8_t x102;  uint64_t x101 = (uint8_t)_mulx_u64(x92, 0x3, &x102);
+  { uint8_t x102;  uint64_t x101 = _mulx_u64_out_u8(x92, 0x3, &x102);
   { uint64_t x104; uint8_t x105 = _addcarryx_u64(0x0, x96, x98, &x104);
   { uint64_t x107; uint8_t x108 = _addcarryx_u64(x105, x99, x101, &x107);
   { uint8_t x109 = (x108 + x102);
@@ -57,7 +57,7 @@ static void femul(uint64_t out[3], const uint64_t in1[3], const uint64_t in2[3])
   { uint64_t _;  uint64_t x154 = _mulx_u64(x142, 0xcccccccccccccccdL, &_);
   { uint64_t x158;  uint64_t x157 = _mulx_u64(x154, 0xfffffffffffffffbL, &x158);
   { uint64_t x161;  uint64_t x160 = _mulx_u64(x154, 0xffffffffffffffffL, &x161);
-  { uint8_t x164;  uint64_t x163 = (uint8_t)_mulx_u64(x154, 0x3, &x164);
+  { uint8_t x164;  uint64_t x163 = _mulx_u64_out_u8(x154, 0x3, &x164);
   { uint64_t x166; uint8_t x167 = _addcarryx_u64(0x0, x158, x160, &x166);
   { uint64_t x169; uint8_t x170 = _addcarryx_u64(x167, x161, x163, &x169);
   { uint8_t x171 = (x170 + x164);
