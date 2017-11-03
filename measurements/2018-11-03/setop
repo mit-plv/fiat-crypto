@@ -1,0 +1,33 @@
+clang version 6.0.0 (trunk 313786)
+Target: x86_64-unknown-linux-gnu
+Thread model: posix
+InstalledDir: /home/andreser/boringssl/util/bot/llvm-build/bin
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                16
+On-line CPU(s) list:   0-15
+Thread(s) per core:    2
+Core(s) per socket:    8
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 63
+Model name:            Intel(R) Xeon(R) CPU @ 2.30GHz
+Stepping:              0
+CPU MHz:               2300.000
+BogoMIPS:              4600.00
+Hypervisor vendor:     KVM
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              46080K
+NUMA node0 CPU(s):     0-15
+Flags:                 fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ss ht syscall nx pdpe1gb rdtscp lm constant_tsc rep_good nopl xtopology nonstop_tsc eagerfpu pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm abm fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms xsaveopt
+commit 788b2eb9e4beae39fab6f64538d11c4539d1038e
+Author: Andres Erbsen <andreser@google.com>
+Date:   Fri Nov 3 18:06:49 2017 +0000
+
+    clang -fbracket-depth=999999
