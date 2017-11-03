@@ -14,7 +14,8 @@ Local Open Scope Z_scope.
 Local Set Primitive Projections.
 Record zbounded {r : zrange}
   := { value :> Z ;
-       value_bounded : is_true ((lower r <=? value) && (value <=? upper r)) }.
+       value_bounded : is_true ((upper r <? lower r)
+                                || ((lower r <=? value) && (value <=? upper r))) }.
 Bind Scope zbounded_scope with zbounded.
 Global Arguments Build_zbounded {r} value {_}, {r} value _, r value _.
 Global Arguments zbounded r : clear implicits.
@@ -31,7 +32,7 @@ Section eq.
 
   Definition value_bounded_path {r} {u v : zbounded r} (p : u = v)
     : eq_rect
-        _ (fun v => is_true ((lower r <=? v) && (v <=? upper r)))
+        _ (fun v => is_true (_ || ((lower r <=? v) && (v <=? upper r))))
         (value_bounded u) _ (value_path p)
       = value_bounded v.
   Proof.
@@ -41,7 +42,7 @@ Section eq.
   Definition path_zbounded_full {r} (u v : zbounded r)
              (p : value u = value v)
              (q : eq_rect
-                    _ (fun v => is_true ((lower r <=? v) && (v <=? upper r)))
+                    _ (fun v => is_true (_ || ((lower r <=? v) && (v <=? upper r))))
                     (value_bounded u) _ p
                   = value_bounded v)
     : u = v.
@@ -55,7 +56,8 @@ Section eq.
   Proof.
     apply (path_zbounded_full u v p).
     destruct u as [u1 u2], v as [v1 v2]; simpl in *; subst v1; simpl.
-    generalize dependent ((lower r <=? u1) && (u1 <=? upper r))%bool.
+    let P := lazymatch type of u2 with is_true ?P => P end in
+    generalize dependent P.
     compute; intros b p q; clear.
     transitivity (adjust_is_true q); clear; subst; reflexivity.
   Defined.
@@ -78,7 +80,8 @@ Section eq.
       destruct u as [u0 u1], p.
     simpl in *.
     generalize dependent (@Build_zbounded r u0); intros.
-    generalize dependent ((lower r <=? u0) && (u0 <=? upper r))%bool; intros.
+    let P := lazymatch type of u1 with is_true ?P => P end in
+    generalize dependent P; intros.
     unfold is_true in *.
     subst.
     exact f.
@@ -108,11 +111,11 @@ Ltac inversion_zbounded_step :=
   end.
 Ltac inversion_zbounded := repeat inversion_zbounded_step.
 
-Lemma is_bounded_by'_zbounded {r} (v : zbounded r) : is_bounded_by' None r v.
+Lemma is_bounded_by'_zbounded {r} (v : zbounded r) : lower r <= upper r -> is_bounded_by' None r v.
 Proof.
   destruct v as [v H]; cbv [is_bounded_by']; simpl.
-  unfold is_true in *; split_andb; Z.ltb_to_lt.
-  repeat apply conj; trivial.
+  apply Bool.orb_true_iff in H; destruct H; split_andb; Z.ltb_to_lt; try omega.
+  intros; repeat apply conj; trivial.
 Qed.
 
 Global Instance dec_eq_zrange {r} : DecidableRel (@eq (zbounded r)) | 10.
@@ -121,4 +124,19 @@ Proof.
   destruct (dec (x = y));
     [ left; apply path_zbounded; assumption
     | abstract (right; intro H; inversion_zbounded; tauto) ].
+Defined.
+
+Definition modulo (z : Z) (r : zrange) : zbounded r.
+Proof.
+  refine {| value := lower r + Z.modulo (z - lower r) (upper r - lower r) |}.
+  abstract (
+      destruct (upper r <? lower r) eqn:H; [ reflexivity | ];
+      pose proof (Z.mod_pos_bound (z - lower r) (upper r - lower r)) as Hmod;
+      destruct r as [l u];
+      simpl in *; apply Bool.andb_true_iff; split;
+      destruct (l =? u) eqn:H';
+      Z.ltb_to_lt; subst;
+      rewrite ?Z.sub_diag, ?Zmod_0_r, ?Z.add_0_r;
+      try reflexivity; omega
+    ).
 Defined.
