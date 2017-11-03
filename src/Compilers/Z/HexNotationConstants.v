@@ -52,6 +52,7 @@ nums = tuple(sorted(set(systematic_nums + [
     679935,
     1048471,
     1048526,
+    1048534,
     1048538,
     1048549,
     1048557,
@@ -1347,6 +1348,10 @@ Notation "'0xfffce'" (* 1048526 (0xfffce) *)
   := (Const 1048526%Z).
 Notation "'0xfffce'" (* 1048526 (0xfffce) *)
   := (Const WO~0~0~0~0~0~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~0~1~1~1~0).
+Notation "'0xfffd6'" (* 1048534 (0xfffd6) *)
+  := (Const 1048534%Z).
+Notation "'0xfffd6'" (* 1048534 (0xfffd6) *)
+  := (Const WO~0~0~0~0~0~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~0~1~1~0).
 Notation "'0xfffda'" (* 1048538 (0xfffda) *)
   := (Const 1048538%Z).
 Notation "'0xfffda'" (* 1048538 (0xfffda) *)
