@@ -86,10 +86,10 @@ static uint64_t _subborrow_u64(uint8_t c, uint64_t a, uint64_t b, uint64_t *low)
 #include "femul.c"
 #include "fesquare.c"
 #include "fesub.c"
+#define fe_add feadd
 #define fe_mul femul
 #define fe_sqr fesquare
 #define fe_sub fesub
-#define fe_add feadd
 
 static void fe_frombytes(limb_t x[modulus_limbs], const uint8_t s[modulus_bytes]) {
   limb_t byte_weight_gaps[modulus_bytes] = {0};
@@ -267,7 +267,7 @@ int main() {
   uint8_t point[modulus_bytes];
 
   for (int i = 0; i < modulus_bytes; i++) { point[modulus_bytes-i] = i; }
-  
+
   for (int i = 0; i < 1000; i++) {
       for (int j = 0; j<modulus_bytes; j++) {
           secret[j%32] ^= point[j];
