@@ -160,7 +160,7 @@ def get_extra_compiler_params(q, base, bitwidth, sz):
         'modulus_limbs' : repr(str(sz)),
         'limb_weight_gaps_array' : limb_widths
     }
-    return ' ' + ' '.join('-D%s=%s' % (k, v) for k, v in defs.items())
+    return ' ' + ' '.join('-D%s=%s' % (k, v) for k, v in sorted(defs.items()))
 
 def num_bits(p):
     return p[0][1]
