@@ -17,7 +17,7 @@ static void fesub(uint64_t out[9], const uint64_t in1[9], const uint64_t in2[9])
   { const uint64_t x25 = in2[2];
   { const uint64_t x23 = in2[1];
   { const uint64_t x21 = in2[0];
-  out[0] = ((Const 140737488355294 + x5) - x21);
+  out[0] = ((0x7fffffffffde + x5) - x21);
   out[1] = ((0x7ffffffffffe + x7) - x23);
   out[2] = ((0x7ffffffffffe + x9) - x25);
   out[3] = ((0x7ffffffffffe + x11) - x27);
