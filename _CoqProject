@@ -4177,8 +4177,10 @@ src/Util/Tower.v
 src/Util/Tuple.v
 src/Util/Unit.v
 src/Util/WordUtil.v
+src/Util/ZBounded.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
+src/Util/Bool/IsTrue.v
 src/Util/Decidable/Bool2Prop.v
 src/Util/ForLoop/Instances.v
 src/Util/ForLoop/InvariantFramework.v
