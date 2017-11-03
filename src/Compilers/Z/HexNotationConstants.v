@@ -111,6 +111,7 @@ nums = tuple(sorted(set(systematic_nums + [
     16777214,
     33423358,
     33554378,
+    33554398,
     33554399,
     33554413,
     33554414,
@@ -1619,6 +1620,10 @@ Notation "'0x1ffffca'" (* 33554378 (0x1ffffca) *)
   := (Const 33554378%Z).
 Notation "'0x1ffffca'" (* 33554378 (0x1ffffca) *)
   := (Const WO~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~0~1~0~1~0).
+Notation "'0x1ffffde'" (* 33554398 (0x1ffffde) *)
+  := (Const 33554398%Z).
+Notation "'0x1ffffde'" (* 33554398 (0x1ffffde) *)
+  := (Const WO~0~0~0~0~0~0~0~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~1~0~1~1~1~1~0).
 Notation "'0x1ffffdf'" (* 33554399 (0x1ffffdf) *)
   := (Const 33554399%Z).
 Notation "'0x1ffffdf'" (* 33554399 (0x1ffffdf) *)
