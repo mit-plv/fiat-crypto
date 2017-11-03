@@ -69,8 +69,8 @@ EXAMPLES (handwritten):
 import math,json,sys,os,traceback,re,textwrap
 from fractions import Fraction
 
-CC = "clang -march=native -mtune=native -std=gnu11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
-CCX = "clang++ -march=native -mtune=native -std=gnu++11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+CC = "clang -fbracket-depth=999999 -march=native -mtune=native -std=gnu11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+CCX = "clang++ -fbracket-depth=999999 -march=native -mtune=native -std=gnu++11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
 
 # for montgomery
 COMPILER_MONT = CC
