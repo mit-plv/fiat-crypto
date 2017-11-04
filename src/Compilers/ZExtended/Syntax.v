@@ -30,6 +30,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Set :=
 | AddWithGetCarryZ (bitwidth : Z) : op (tuple tZ 3) (tuple tZ 2)
 | SubWithGetBorrowZ (bitwidth : Z) : op (tuple tZ 3) (tuple tZ 2)
 | MulSplitAtBitwidthZ (bitwidth : Z) : op (tuple tZ 2) (tuple tZ 2)
+| IdWithAlt {T} : op (tuple (Tbase T) 2) (tuple (Tbase T) 1)
 | Zselect : op (tuple tZ 3) (tuple tZ 1)
 | Zmul    : op (tuple tZ 2) (tuple tZ 1)
 | Zadd    : op (tuple tZ 2) (tuple tZ 1)
@@ -63,6 +64,7 @@ Definition interp_op {s d} (opv : op s d) : interp_flat_type interp_base_type s 
      | AddWithGetCarryZ bitwidth => curry3 (Z.add_with_get_carry bitwidth)
      | SubWithGetBorrowZ bitwidth => curry3 (Z.sub_with_get_borrow bitwidth)
      | MulSplitAtBitwidthZ bitwidth => curry2 (Z.mul_split_at_bitwidth bitwidth)
+     | IdWithAlt T => curry2 id_with_alt
      | Zselect => curry3 Z.zselect
      | Zmul => curry2 Z.mul
      | Zadd => curry2 Z.add
