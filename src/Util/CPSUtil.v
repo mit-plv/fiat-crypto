@@ -17,27 +17,33 @@ Hint Rewrite @push_id : push_id.
 Definition id_with_alt_cps' {R A} (value value_for_alt : (A -> A) -> A) (f : A -> R) : R
   := dlet z := id_with_alt (value id) (value_for_alt id) in
      f z.
-Definition id_with_alt_cps {R A} (value value_for_alt : (A -> R) -> R) (f : A -> R) : R
+Definition id_with_alt_cps'' {R A} (value value_for_alt : (A -> R) -> R) (f : A -> R) : R
   := id_with_alt (value f) (value_for_alt f).
+Definition id_with_alt_cps {R A} (value value_for_alt : forall R, (A -> R) -> R) (f : A -> R) : R
+  := id_with_alt_cps' (value _) (value_for_alt _) f.
 Definition id_with_alt_cps'_correct {R A} value value_for_alt f
   : @id_with_alt_cps' R A value value_for_alt f = f (id_with_alt (value id) (value_for_alt id))
   := eq_refl.
 Hint Rewrite @id_with_alt_cps'_correct : uncps.
+Definition id_with_alt_cps''_correct {R A} value value_for_alt f
+  : @id_with_alt_cps'' R A value value_for_alt f = id_with_alt (value f) (value_for_alt f)
+  := eq_refl.
+Hint Rewrite @id_with_alt_cps''_correct : uncps.
 Definition id_with_alt_cps_correct {R A} value value_for_alt f
-  : @id_with_alt_cps R A value value_for_alt f = id_with_alt (value f) (value_for_alt f)
+  : @id_with_alt_cps R A value value_for_alt f = f (id_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
 Hint Rewrite @id_with_alt_cps_correct : uncps.
 Definition id_with_alt_cps'_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
   : @id_with_alt_cps' R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
 Hint Rewrite @id_with_alt_cps'_correct_gen : uncps.
-Definition id_with_alt_cps_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
+Definition id_with_alt_cps''_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
            (Hvalue : value _ f = f (value _ id))
-  : @id_with_alt_cps R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id)).
+  : @id_with_alt_cps'' R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id)).
 Proof.
-  cbv [id_with_alt_cps id_with_alt]; assumption.
+  cbv [id_with_alt_cps'' id_with_alt]; assumption.
 Defined.
-Hint Rewrite @id_with_alt_cps_correct_gen : uncps.
+Hint Rewrite @id_with_alt_cps''_correct_gen : uncps.
 
 Definition id_tuple'_with_alt_cps' {R A n}
            (value value_for_alt : (Tuple.tuple' A n -> Tuple.tuple' A n) -> Tuple.tuple' A n)
@@ -62,48 +68,71 @@ Definition id_tuple_with_alt_cps'_correct {R A n} value value_for_alt f
   := eq_refl.
 Hint Rewrite @id_tuple_with_alt_cps'_correct : uncps.
 
-Definition id_tuple'_with_alt_cps {R A n}
+Definition id_tuple'_with_alt_cps'' {R A n}
            (value value_for_alt : (Tuple.tuple' A n -> R) -> R)
            (f : Tuple.tuple' A n -> R)
   : R
   := id_with_alt (value f) (value_for_alt f).
-Definition id_tuple_with_alt_cps {R A n}
+Definition id_tuple_with_alt_cps'' {R A n}
            (value value_for_alt : (Tuple.tuple A n -> R) -> R)
            (f : Tuple.tuple A n -> R)
   : R
   := id_with_alt (value f) (value_for_alt f).
 
-Definition id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
-  : @id_tuple'_with_alt_cps R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
+Definition id_tuple'_with_alt_cps''_correct {R A n} value value_for_alt f
+  : @id_tuple'_with_alt_cps'' R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
   := eq_refl.
-Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
+Hint Rewrite @id_tuple'_with_alt_cps''_correct : uncps.
 
-Definition id_tuple_with_alt_cps_correct {R A n} value value_for_alt f
-  : @id_tuple_with_alt_cps R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
+Definition id_tuple_with_alt_cps''_correct {R A n} value value_for_alt f
+  : @id_tuple_with_alt_cps'' R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
   := eq_refl.
-Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
+Hint Rewrite @id_tuple_with_alt_cps''_correct : uncps.
 
-Definition id_tuple'_with_alt_cps_correct_gen {R A n}
+Definition id_tuple'_with_alt_cps''_correct_gen {R A n}
            (value value_for_alt : forall R, (_ -> R) -> R) f
            (Hvalue : value _ f = f (value _ id))
-  : @id_tuple'_with_alt_cps R A n (value _) (value_for_alt _) f = f (id_tuple'_with_alt (value _ id) (value_for_alt _ id)).
+  : @id_tuple'_with_alt_cps'' R A n (value _) (value_for_alt _) f = f (id_tuple'_with_alt (value _ id) (value_for_alt _ id)).
 Proof.
   autorewrite with uncps.
   rewrite ?unfold_id_tuple'_with_alt, ?unfold_id_tuple_with_alt, ?unfold_id_with_alt, Hvalue.
   reflexivity.
 Qed.
-Hint Rewrite @id_tuple'_with_alt_cps_correct_gen : uncps.
+Hint Rewrite @id_tuple'_with_alt_cps''_correct_gen : uncps.
 
-Definition id_tuple_with_alt_cps_correct_gen {R A n}
+Definition id_tuple_with_alt_cps''_correct_gen {R A n}
            (value value_for_alt : forall R, (_ -> R) -> R) f
            (Hvalue : value _ f = f (value _ id))
-  : @id_tuple_with_alt_cps R A n (value _) (value_for_alt _) f = f (id_tuple_with_alt (value _ id) (value_for_alt _ id)).
+  : @id_tuple_with_alt_cps'' R A n (value _) (value_for_alt _) f = f (id_tuple_with_alt (value _ id) (value_for_alt _ id)).
 Proof.
   autorewrite with uncps.
   rewrite ?unfold_id_tuple_with_alt, ?unfold_id_tuple_with_alt, ?unfold_id_with_alt, Hvalue.
   reflexivity.
 Qed.
-Hint Rewrite @id_tuple_with_alt_cps_correct_gen : uncps.
+Hint Rewrite @id_tuple_with_alt_cps''_correct_gen : uncps.
+
+Definition id_tuple'_with_alt_cps {R A n}
+           (value value_for_alt : forall R, (Tuple.tuple' A n -> R) -> R)
+           (f : Tuple.tuple' A n -> R)
+  : R
+  := dlet z := id_tuple'_with_alt (value _ id) (value_for_alt _ id) in
+     f z.
+Definition id_tuple_with_alt_cps {R A n}
+           (value value_for_alt : forall R, (Tuple.tuple A n -> R) -> R)
+           (f : Tuple.tuple A n -> R)
+  : R
+  := dlet z := id_tuple_with_alt (value _ id) (value_for_alt _ id) in
+     f z.
+
+Definition id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
+  : @id_tuple'_with_alt_cps R A n value value_for_alt f = f (id_tuple'_with_alt (value _ id) (value_for_alt _ id))
+  := eq_refl.
+Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
+
+Definition id_tuple_with_alt_cps_correct {R A n} value value_for_alt f
+  : @id_tuple_with_alt_cps R A n value value_for_alt f = f (id_tuple_with_alt (value _ id) (value_for_alt _ id))
+  := eq_refl.
+Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
 
 Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
 Proof.
