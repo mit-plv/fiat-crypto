@@ -115,14 +115,12 @@ Definition id_tuple'_with_alt_cps {R A n}
            (value value_for_alt : forall R, (Tuple.tuple' A n -> R) -> R)
            (f : Tuple.tuple' A n -> R)
   : R
-  := dlet z := id_tuple'_with_alt (value _ id) (value_for_alt _ id) in
-     f z.
+  := id_tuple'_with_alt_cps' (value _) (value_for_alt _) f.
 Definition id_tuple_with_alt_cps {R A n}
            (value value_for_alt : forall R, (Tuple.tuple A n -> R) -> R)
            (f : Tuple.tuple A n -> R)
   : R
-  := dlet z := id_tuple_with_alt (value _ id) (value_for_alt _ id) in
-     f z.
+  := id_tuple_with_alt_cps' (value _) (value_for_alt _) f.
 
 Definition id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
   : @id_tuple'_with_alt_cps R A n value value_for_alt f = f (id_tuple'_with_alt (value _ id) (value_for_alt _ id))
