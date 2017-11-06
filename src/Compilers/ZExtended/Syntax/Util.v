@@ -56,8 +56,10 @@ Definition unextend_op {s d} (opc : ZExtended.Syntax.op s d)
      | MulSplitAtBitwidth => None
      | MulSplitAtBitwidthZ bitwidth
        => Some (Z.Syntax.MulSplit bitwidth _ _ _ _)
-     | IdWithAlt _
+     | IdWithAlt (Tbase _)
        => Some (Z.Syntax.IdWithAlt _ _ _)
+     | IdWithAlt _
+       => None
      | Zselect => Some (Z.Syntax.Zselect _ _ _ _)
      | Zmul => Some (Z.Syntax.Mul _ _ _)
      | Zadd => Some (Z.Syntax.Add _ _ _)

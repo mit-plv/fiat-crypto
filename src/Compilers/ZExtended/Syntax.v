@@ -30,7 +30,7 @@ Inductive op : flat_type base_type -> flat_type base_type -> Set :=
 | AddWithGetCarryZ (bitwidth : Z) : op (tuple tZ 3) (tuple tZ 2)
 | SubWithGetBorrowZ (bitwidth : Z) : op (tuple tZ 3) (tuple tZ 2)
 | MulSplitAtBitwidthZ (bitwidth : Z) : op (tuple tZ 2) (tuple tZ 2)
-| IdWithAlt {T} : op (tuple (Tbase T) 2) (tuple (Tbase T) 1)
+| IdWithAlt {T} : op (tuple T 2) (tuple T 1)
 | Zselect : op (tuple tZ 3) (tuple tZ 1)
 | Zmul    : op (tuple tZ 2) (tuple tZ 1)
 | Zadd    : op (tuple tZ 2) (tuple tZ 1)
