@@ -1076,7 +1076,7 @@ Hint Unfold
      Positional.select_cps
      Positional.select
      modulo div modulo_cps div_cps
-     id_tuple_with_alt id_tuple'_with_alt
+     id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
      Z.add_get_carry_full Z.add_get_carry_full_cps
   : basesystem_partial_evaluation_unfolder.
 
@@ -1084,7 +1084,7 @@ Hint Unfold
      B.limb ListUtil.sum ListUtil.sum_firstn
      CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
      Decidable.dec Decidable.dec_eq_Z
-     id_tuple_with_alt id_tuple'_with_alt
+     id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
      Z.add_get_carry_full Z.add_get_carry_full_cps Z.mul_split Z.mul_split_cps Z.mul_split_cps'
   : basesystem_partial_evaluation_unfolder.
 
@@ -1110,7 +1110,7 @@ Ltac basesystem_partial_evaluation_unfolder t :=
         Associational.carryterm_cps Associational.carryterm
         Associational.carry_cps Associational.carry
         Associational.negate_snd_cps Associational.negate_snd div modulo
-        id_tuple_with_alt id_tuple'_with_alt
+        id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
         Z.add_get_carry_full Z.add_get_carry_full_cps
     ] in t.
 

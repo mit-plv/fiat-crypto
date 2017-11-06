@@ -3,6 +3,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.IdfunWithAlt.
+Require Import Crypto.Util.CPSUtil.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.Tactics.VM.
 
@@ -16,7 +17,7 @@ Ltac make_parameterized_sig t :=
                         B.limb ListUtil.sum ListUtil.sum_firstn
                         CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
                         Decidable.dec Decidable.dec_eq_Z
-                        id_tuple_with_alt id_tuple'_with_alt
+                        id_tuple_with_alt id_tuple'_with_alt id_tuple_with_alt_cps'
                         Z.add_get_carry_full Z.mul_split
                         Z.add_get_carry_full_cps Z.mul_split_cps Z.mul_split_cps'
                         Z.add_get_carry_cps];

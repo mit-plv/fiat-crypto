@@ -78,7 +78,7 @@ Context (weight : nat -> Z)
     actually run and a version to bounds-check, along with a proof
     that they are exactly equal. This works around cases where the
     bounds proof requires high-level reasoning. *)
-  Local Notation id_with_alt_bounds := id_tuple_with_alt.
+  Local Notation id_with_alt_bounds_cps := id_tuple_with_alt_cps'.
 
   (*
     If:
@@ -134,7 +134,8 @@ Context (weight : nat -> Z)
       (fun sum_y => mul_cps weight sum_x sum_y
       (fun mul_sumxy =>
 
-      dlet z1 := id_with_alt_bounds (unbalanced_sub_cps weight mul_sumxy z0 id) (
+      id_with_alt_bounds_cps (fun f =>
+      (unbalanced_sub_cps weight mul_sumxy z0 f)) (fun f =>
 
       (mul_cps weight (fst x0_x1) (snd y0_y1)
       (fun x0_y1 => mul_cps weight (snd x0_x1) (fst y0_y1)
@@ -142,19 +143,19 @@ Context (weight : nat -> Z)
       (fun z0 => mul_cps weight (snd x0_x1) (snd y0_y1)
       (fun z2 => add_cps weight z0 z2
       (fun sum_z => add_cps weight x0_y1 x1_y0
-      (fun z1' => add_cps weight z1' z2 id))))))))  in
+      (fun z1' => add_cps weight z1' z2 f)))))))) (fun z1 =>
 
                  Positional.to_associational_cps weight z1
       (fun z1 => Associational.mul_cps (pair s 1::nil) z1
       (fun sz1 => Positional.to_associational_cps weight sum_z
       (fun sum_z => Positional.from_associational_cps weight _ (sum_z++sz1) f
-      ))))))))))).
+      )))))))))))).
 
   Definition goldilocks_mul s xs ys := goldilocks_mul_cps s xs ys id.
   Lemma goldilocks_mul_id s xs ys R f :
     @goldilocks_mul_cps s xs ys R f = f (goldilocks_mul s xs ys).
   Proof.
-    cbv [goldilocks_mul goldilocks_mul_cps id_with_alt_bounds Let_In].
+    cbv [goldilocks_mul goldilocks_mul_cps Let_In].
     repeat autounfold. autorewrite with uncps push_id.
     reflexivity.
   Qed.
