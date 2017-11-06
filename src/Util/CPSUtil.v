@@ -4,6 +4,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.IdfunWithAlt.
+Require Import Crypto.Util.LetIn.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.
 Local Open Scope Z_scope.
 
@@ -13,98 +14,96 @@ Create HintDb uncps discriminated.
 Lemma push_id {A} (a:A) : id a = a. reflexivity. Qed.
 Hint Rewrite @push_id : push_id.
 
-Definition id_with_alt_cps {R A} (value : A) (value_for_alt : A) (f : A -> R) : R
-  := f (id_with_alt value value_for_alt).
+Definition id_with_alt_cps' {R A} (value value_for_alt : (A -> A) -> A) (f : A -> R) : R
+  := dlet z := id_with_alt (value id) (value_for_alt id) in
+     f z.
+Definition id_with_alt_cps {R A} (value value_for_alt : (A -> R) -> R) (f : A -> R) : R
+  := id_with_alt (value f) (value_for_alt f).
+Definition id_with_alt_cps'_correct {R A} value value_for_alt f
+  : @id_with_alt_cps' R A value value_for_alt f = f (id_with_alt (value id) (value_for_alt id))
+  := eq_refl.
+Hint Rewrite @id_with_alt_cps'_correct : uncps.
 Definition id_with_alt_cps_correct {R A} value value_for_alt f
-  : @id_with_alt_cps R A value value_for_alt f = f (id_with_alt value value_for_alt)
+  : @id_with_alt_cps R A value value_for_alt f = id_with_alt (value f) (value_for_alt f)
   := eq_refl.
 Hint Rewrite @id_with_alt_cps_correct : uncps.
-
-Definition id_with_alt_proof_cps {R A} (value : A) (value_for_alt : A)
-           {pf : value = value_for_alt} (f : A -> R)
-  : R
-  := id_with_alt_cps value value_for_alt f.
-Definition id_with_alt_proof_cps_correct {R A} value value_for_alt pf f
-  : @id_with_alt_proof_cps R A value value_for_alt pf f = f (@id_with_alt_proof A value value_for_alt pf)
+Definition id_with_alt_cps'_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
+  : @id_with_alt_cps' R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id))
   := eq_refl.
-Hint Rewrite @id_with_alt_proof_cps_correct : uncps.
+Hint Rewrite @id_with_alt_cps'_correct_gen : uncps.
+Definition id_with_alt_cps_correct_gen {R A} (value value_for_alt : forall R, (A -> R) -> R) f
+           (Hvalue : value _ f = f (value _ id))
+  : @id_with_alt_cps R A (value _) (value_for_alt _) f = f (id_with_alt (value _ id) (value_for_alt _ id)).
+Proof.
+  cbv [id_with_alt_cps id_with_alt]; assumption.
+Defined.
+Hint Rewrite @id_with_alt_cps_correct_gen : uncps.
 
-Section id_tuple_with_alt.
-  Context {R A : Type}.
+Definition id_tuple'_with_alt_cps' {R A n}
+           (value value_for_alt : (Tuple.tuple' A n -> Tuple.tuple' A n) -> Tuple.tuple' A n)
+           (f : Tuple.tuple' A n -> R)
+  : R
+  := dlet z := id_tuple'_with_alt (value id) (value_for_alt id) in
+     f z.
+Definition id_tuple_with_alt_cps' {R A n}
+           (value value_for_alt : (Tuple.tuple A n -> Tuple.tuple A n) -> Tuple.tuple A n)
+           (f : Tuple.tuple A n -> R)
+  : R
+  := dlet z := id_tuple_with_alt (value id) (value_for_alt id) in
+     f z.
 
-  Fixpoint id_tuple'_with_alt_cps {n}
-           {struct n}
-    : forall (value value_for_alt : Tuple.tuple' A n),
-      (Tuple.tuple' A n -> R)
-      -> R
-    := match n return forall value value_for_alt : Tuple.tuple' A n, (Tuple.tuple' A n -> R) -> R with
-       | O => id_with_alt_cps
-       | S n' => fun (value value_for_alt : Tuple.tuple' A n' * A) (f : Tuple.tuple' A n' * A -> R)
-                 => @id_tuple'_with_alt_cps
-                      n' (fst value) (fst value_for_alt)
-                      (fun ts
-                       => @id_with_alt_cps
-                            R A (snd value) (snd value_for_alt)
-                            (fun t => f (ts, t)))
-       end.
-  Fixpoint id_tuple'_with_alt_proof_cps {n}
-           {struct n}
-    : forall (value value_for_alt : Tuple.tuple' A n) {pf : value = value_for_alt},
-      (Tuple.tuple' A n -> R)
-      -> R
-    := match n return forall value value_for_alt : Tuple.tuple' A n, _ -> (Tuple.tuple' A n -> R) -> R with
-       | O => id_with_alt_proof_cps
-       | S n' => fun (value value_for_alt : Tuple.tuple' A n' * A) (pf : value = value_for_alt)
-                     (f : Tuple.tuple' A n' * A -> R)
-                 => @id_tuple'_with_alt_proof_cps
-                      n' (fst value) (fst value_for_alt)
-                      (f_equal (@fst _ _) pf)
-                      (fun ts
-                       => @id_with_alt_proof_cps
-                            R A (snd value) (snd value_for_alt)
-                            (f_equal (@snd _ _) pf)
-                            (fun t => f (ts, t)))
-       end.
-  Definition id_tuple_with_alt_cps {n}
-    : forall (value value_for_alt : Tuple.tuple A n), (Tuple.tuple A n -> R) -> R
-    := match n with
-       | O => id_with_alt_cps
-       | S n' => id_tuple'_with_alt_cps
-       end.
-  Definition id_tuple_with_alt_proof_cps {n}
-    : forall (value value_for_alt : Tuple.tuple A n) {pf : value = value_for_alt},
-      (Tuple.tuple A n -> R) -> R
-    := match n with
-       | O => id_with_alt_proof_cps
-       | S n' => id_tuple'_with_alt_proof_cps
-       end.
-End id_tuple_with_alt.
+Definition id_tuple'_with_alt_cps'_correct {R A n} value value_for_alt f
+  : @id_tuple'_with_alt_cps' R A n value value_for_alt f = f (id_tuple'_with_alt (value id) (value_for_alt id))
+  := eq_refl.
+Hint Rewrite @id_tuple'_with_alt_cps'_correct : uncps.
 
-Local Ltac t_ind n :=
-  let IHn := fresh "IHn" in
-  induction n as [|n IHn]; cbn [id_tuple'_with_alt_cps id_tuple'_with_alt_proof_cps id_tuple'_with_alt id_tuple'_with_alt_proof];
-  [ reflexivity
-  | rewrite IHn; try reflexivity ].
-Lemma id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
-  : @id_tuple'_with_alt_cps R A n value value_for_alt f
-    = f (@id_tuple'_with_alt A n value value_for_alt).
-Proof. t_ind n. Qed.
+Definition id_tuple_with_alt_cps'_correct {R A n} value value_for_alt f
+  : @id_tuple_with_alt_cps' R A n value value_for_alt f = f (id_tuple_with_alt (value id) (value_for_alt id))
+  := eq_refl.
+Hint Rewrite @id_tuple_with_alt_cps'_correct : uncps.
+
+Definition id_tuple'_with_alt_cps {R A n}
+           (value value_for_alt : (Tuple.tuple' A n -> R) -> R)
+           (f : Tuple.tuple' A n -> R)
+  : R
+  := id_with_alt (value f) (value_for_alt f).
+Definition id_tuple_with_alt_cps {R A n}
+           (value value_for_alt : (Tuple.tuple A n -> R) -> R)
+           (f : Tuple.tuple A n -> R)
+  : R
+  := id_with_alt (value f) (value_for_alt f).
+
+Definition id_tuple'_with_alt_cps_correct {R A n} value value_for_alt f
+  : @id_tuple'_with_alt_cps R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
+  := eq_refl.
 Hint Rewrite @id_tuple'_with_alt_cps_correct : uncps.
-Lemma id_tuple'_with_alt_proof_cps_correct {R A n} value value_for_alt pf f
-  : @id_tuple'_with_alt_proof_cps R A n value value_for_alt pf f
-    = f (@id_tuple'_with_alt_proof A n value value_for_alt pf).
-Proof. t_ind n. Qed.
-Hint Rewrite @id_tuple'_with_alt_proof_cps_correct : uncps.
-Lemma id_tuple_with_alt_cps_correct {R A n} value value_for_alt f
-  : @id_tuple_with_alt_cps R A n value value_for_alt f
-    = f (@id_tuple_with_alt A n value value_for_alt).
-Proof. destruct n; [ reflexivity | apply id_tuple'_with_alt_cps_correct ]. Qed.
+
+Definition id_tuple_with_alt_cps_correct {R A n} value value_for_alt f
+  : @id_tuple_with_alt_cps R A n value value_for_alt f = id_with_alt (value f) (value_for_alt f)
+  := eq_refl.
 Hint Rewrite @id_tuple_with_alt_cps_correct : uncps.
-Lemma id_tuple_with_alt_proof_cps_correct {R A n} value value_for_alt pf f
-  : @id_tuple_with_alt_proof_cps R A n value value_for_alt pf f
-    = f (@id_tuple_with_alt_proof A n value value_for_alt pf).
-Proof. destruct n; [ reflexivity | apply id_tuple'_with_alt_proof_cps_correct ]. Qed.
-Hint Rewrite @id_tuple_with_alt_proof_cps_correct : uncps.
+
+Definition id_tuple'_with_alt_cps_correct_gen {R A n}
+           (value value_for_alt : forall R, (_ -> R) -> R) f
+           (Hvalue : value _ f = f (value _ id))
+  : @id_tuple'_with_alt_cps R A n (value _) (value_for_alt _) f = f (id_tuple'_with_alt (value _ id) (value_for_alt _ id)).
+Proof.
+  autorewrite with uncps.
+  rewrite ?unfold_id_tuple'_with_alt, ?unfold_id_tuple_with_alt, ?unfold_id_with_alt, Hvalue.
+  reflexivity.
+Qed.
+Hint Rewrite @id_tuple'_with_alt_cps_correct_gen : uncps.
+
+Definition id_tuple_with_alt_cps_correct_gen {R A n}
+           (value value_for_alt : forall R, (_ -> R) -> R) f
+           (Hvalue : value _ f = f (value _ id))
+  : @id_tuple_with_alt_cps R A n (value _) (value_for_alt _) f = f (id_tuple_with_alt (value _ id) (value_for_alt _ id)).
+Proof.
+  autorewrite with uncps.
+  rewrite ?unfold_id_tuple_with_alt, ?unfold_id_tuple_with_alt, ?unfold_id_with_alt, Hvalue.
+  reflexivity.
+Qed.
+Hint Rewrite @id_tuple_with_alt_cps_correct_gen : uncps.
 
 Lemma update_nth_id {T} i (xs:list T) : ListUtil.update_nth i id xs = xs.
 Proof.
