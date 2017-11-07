@@ -4212,6 +4212,7 @@ src/Util/Tactics/EvarExists.v
 src/Util/Tactics/Forward.v
 src/Util/Tactics/GetGoal.v
 src/Util/Tactics/Head.v
+src/Util/Tactics/HeadUnderBinders.v
 src/Util/Tactics/MoveLetIn.v
 src/Util/Tactics/Not.v
 src/Util/Tactics/OnSubterms.v
