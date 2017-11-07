@@ -1216,13 +1216,17 @@ Ltac apply_patterned_full t1 :=
             (@ModularArithmetic.F.to_Z) (@ModularArithmetic.F.of_Z)
             2%Z 1%Z 0%Z).
 
-Ltac basesystem_partial_evaluation_RHS_gen unfold_tac :=
-  let t := match goal with |- _ _ ?t => t end in
+Ltac basesystem_partial_evaluation_gen unfold_tac t t1 :=
   let t := unfold_tac t in
   let t := pattern_strip t in
-  let t1 := fresh "t1" in
-  pose t as t1;
+  let dummy := match goal with _ => pose t as t1 end in
   let t1' := apply_patterned t1 in
+  t1'.
+
+Ltac basesystem_partial_evaluation_RHS_gen unfold_tac :=
+  let t := match goal with |- _ _ ?t => t end in
+  let t1 := fresh "t1" in
+  let t1' := basesystem_partial_evaluation_gen unfold_tac t t1 in
   transitivity t1';
   [replace_with_vm_compute t1; clear t1|reflexivity].
 
@@ -1231,6 +1235,8 @@ Ltac basesystem_partial_evaluation_default_unfolder t :=
 
 Ltac basesystem_partial_evaluation_RHS :=
   basesystem_partial_evaluation_RHS_gen basesystem_partial_evaluation_default_unfolder.
+Ltac basesystem_partial_evaluation :=
+  basesystem_partial_evaluation_gen basesystem_partial_evaluation_default_unfolder.
 
 
 (** This block of tactic code works around bug #5434
