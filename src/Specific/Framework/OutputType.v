@@ -36,7 +36,7 @@ Section gen.
                        (T:=Tbase _)
                        (Tuple.map
                           (fun v => Op (OpConst v) TT)
-                          (@Positional.Fencode wt curve.(sz) m modulo div v)))).
+                          (@Positional.Fencode wt curve.(sz) m (@modulo_cps) (@div_cps) v)))).
     Definition decode : T' -> F m
       := fun v => @Positional.Fdecode
                     wt (curve.(sz)) m
