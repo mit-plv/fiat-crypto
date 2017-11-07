@@ -272,7 +272,6 @@ src/Specific/Framework/Packages.v
 src/Specific/Framework/RawCurveParameters.v
 src/Specific/Framework/ReificationTypes.v
 src/Specific/Framework/ReificationTypesPackage.v
-src/Specific/Framework/SideConditionFramework.v
 src/Specific/Framework/SynthesisFramework.v
 src/Specific/Framework/ArithmeticSynthesis/Base.v
 src/Specific/Framework/ArithmeticSynthesis/BasePackage.v
@@ -4189,6 +4188,7 @@ src/Util/ForLoop/Tests.v
 src/Util/ForLoop/Unrolling.v
 src/Util/ListUtil/FoldBool.v
 src/Util/Logic/ImplAnd.v
+src/Util/SideConditions/Autosolve.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
