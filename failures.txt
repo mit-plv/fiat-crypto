@@ -1,0 +1,144 @@
+First, some failures are detected with in the heuristic script that picks number of limbs and etc:
+
+solinas32 2^383 - 421: Unable to pick a number of limbs for prime [[1, 383], [-421, 0]] and bitwidth 32 in range 17-85 limbs
+solinas64 2^383 - 421: Unable to pick a number of limbs for prime [[1, 383], [-421, 0]] and bitwidth 64 in range 7-35 limbs
+solinas32 2^383 - 187: Unable to pick a number of limbs for prime [[1, 383], [-187, 0]] and bitwidth 32 in range 16-80 limbs
+solinas64 2^383 - 187: Unable to pick a number of limbs for prime [[1, 383], [-187, 0]] and bitwidth 64 in range 7-35 limbs
+solinas32 2^383 - 31: Unable to pick a number of limbs for prime [[1, 383], [-31, 0]] and bitwidth 32 in range 15-75 limbs
+solinas64 2^383 - 31: Unable to pick a number of limbs for prime [[1, 383], [-31, 0]] and bitwidth 64 in range 7-35 limbs
+solinas32 2^389 - 21: Unable to pick a number of limbs for prime [[1, 389], [-21, 0]] and bitwidth 32 in range 15-75 limbs
+solinas64 2^389 - 21: Unable to pick a number of limbs for prime [[1, 389], [-21, 0]] and bitwidth 64 in range 7-35 limbs
+solinas32 2^413 - 21: Unable to pick a number of limbs for prime [[1, 413], [-21, 0]] and bitwidth 32 in range 16-80 limbs
+solinas32 2^256 - 4294968273: Unable to pick a number of limbs for prime [[1, 256], [-4294968273, 0]] and bitwidth 32 in range -256--1280 limbs
+
+Failures in the makefile pipeline are below.
+
+"." is a filler
+"synth" means that no code was synthesizd, either due to a side condition failure or timeout
+"bounds" means that code was synthesized but the intermediate values did not fit within machine registers
+Op means that code was synthesized, but some operations in it are not available in C
+the above are not mutually exclusive -- some files may fail to "synth" while others get "bounds" or "Op"
+
+src/Specific/solinas32_2e150m3                      .      bounds  Op
+src/Specific/solinas32_2e174m3                      .      bounds  Op
+src/Specific/solinas32_2e189m25                     .      bounds  Op
+src/Specific/solinas32_2e190m11                     .      bounds  Op
+src/Specific/solinas32_2e192m2e64m1                 .      bounds  Op
+src/Specific/solinas32_2e196m15                     .      bounds  Op
+src/Specific/solinas32_2e205m45x2e198m1             synth  .       Op
+src/Specific/solinas32_2e212m29                     .      bounds  Op
+src/Specific/solinas32_2e224m2e96p1                 synth  bounds  Op
+src/Specific/solinas32_2e226m5                      .      bounds  Op
+src/Specific/solinas32_2e254m127x2e240m1            synth  .       Op
+src/Specific/solinas32_2e255m2e4m2e1m1              .      bounds  Op
+src/Specific/solinas32_2e256m2e224p2e192p2e96m1     synth  bounds  Op
+src/Specific/solinas32_2e256m88x2e240m1             synth  .       Op
+src/Specific/solinas32_2e336m3                      .      bounds  Op
+src/Specific/solinas32_2e383m187                    synth  .       .
+src/Specific/solinas32_2e383m31                     synth  .       .
+src/Specific/solinas32_2e383m421                    synth  .       .
+src/Specific/solinas32_2e384m2e128m2e96p2e32m1      synth  bounds  Op
+src/Specific/solinas32_2e384m5x2e368m1              synth  .       Op
+src/Specific/solinas32_2e384m79x2e376m1             synth  .       Op
+src/Specific/solinas32_2e389m21                     synth  .       .
+src/Specific/solinas32_2e413m21                     synth  .       .
+src/Specific/solinas32_2e448m2e224m1                .      bounds  Op
+src/Specific/solinas32_2e450m2e225m1                synth  .       Op
+src/Specific/solinas32_2e452m3                      .      bounds  Op
+src/Specific/solinas32_2e480m2e240m1                .      bounds  Op
+src/Specific/solinas32_2e488m17                     synth  .       Op
+src/Specific/solinas32_2e489m21                     synth  .       Op
+src/Specific/solinas32_2e495m31                     .      bounds  Op
+src/Specific/solinas32_2e510m290x2e496m1            synth  .       Op
+src/Specific/solinas32_2e511m187                    synth  .       Op
+src/Specific/solinas32_2e511m481                    synth  .       Op
+src/Specific/solinas32_2e512m491x2e496m1            synth  .       Op
+src/Specific/solinas32_2e512m569                    synth  .       Op
+src/Specific/solinas64_2e205m45x2e198m1             synth  .       Op
+src/Specific/solinas64_2e224m2e96p1                 synth  bounds  Op
+src/Specific/solinas64_2e254m127x2e240m1            synth  .       Op
+src/Specific/solinas64_2e256m2e224p2e192p2e96m1     synth  bounds  Op
+src/Specific/solinas64_2e256m2e32m977               .      bounds  Op
+src/Specific/solinas64_2e256m4294968273             synth  .       .
+src/Specific/solinas64_2e256m88x2e240m1             synth  .       Op
+src/Specific/solinas64_2e322m2e161m1                synth  .       Op
+src/Specific/solinas64_2e383m187                    synth  .       .
+src/Specific/solinas64_2e383m31                     synth  .       .
+src/Specific/solinas64_2e383m421                    synth  .       .
+src/Specific/solinas64_2e384m2e128m2e96p2e32m1      synth  bounds  Op
+src/Specific/solinas64_2e384m5x2e368m1              synth  .       Op
+src/Specific/solinas64_2e384m79x2e376m1             synth  .       Op
+src/Specific/solinas64_2e389m21                     synth  .       .
+src/Specific/solinas64_2e413m21                     .      bounds  Op
+src/Specific/solinas64_2e510m290x2e496m1            synth  .       .
+src/Specific/solinas64_2e512m491x2e496m1            synth  .       Op
+src/Specific/montgomery32_2e194m33                  .      .       Op
+src/Specific/montgomery32_2e196m15                  .      .       Op
+src/Specific/montgomery32_2e198m17                  .      .       Op
+src/Specific/montgomery32_2e226m5                   .      .       Op
+src/Specific/montgomery32_2e230m27                  synth  .       Op
+src/Specific/montgomery32_2e235m15                  synth  .       .
+src/Specific/montgomery32_2e243m9                   synth  .       .
+src/Specific/montgomery32_2e251m9                   synth  .       .
+src/Specific/montgomery32_2e254m127x2e240m1         synth  .       .
+src/Specific/montgomery32_2e255m19                  synth  .       .
+src/Specific/montgomery32_2e255m2e4m2e1m1           synth  .       .
+src/Specific/montgomery32_2e255m765                 synth  .       .
+src/Specific/montgomery32_2e256m189                 synth  .       .
+src/Specific/montgomery32_2e256m2e224p2e192p2e96m1  synth  .       .
+src/Specific/montgomery32_2e256m2e32m977            synth  .       .
+src/Specific/montgomery32_2e256m4294968273          synth  .       .
+src/Specific/montgomery32_2e256m88x2e240m1          synth  .       .
+src/Specific/montgomery32_2e266m3                   synth  .       .
+src/Specific/montgomery32_2e285m9                   synth  .       .
+src/Specific/montgomery32_2e291m19                  synth  .       .
+src/Specific/montgomery32_2e321m9                   synth  .       .
+src/Specific/montgomery32_2e322m2e161m1             synth  .       .
+src/Specific/montgomery32_2e336m17                  synth  .       .
+src/Specific/montgomery32_2e336m3                   synth  .       .
+src/Specific/montgomery32_2e338m15                  synth  .       .
+src/Specific/montgomery32_2e369m25                  synth  .       .
+src/Specific/montgomery32_2e379m19                  synth  .       .
+src/Specific/montgomery32_2e382m105                 synth  .       .
+src/Specific/montgomery32_2e383m187                 synth  .       .
+src/Specific/montgomery32_2e383m31                  synth  .       .
+src/Specific/montgomery32_2e383m421                 synth  .       .
+src/Specific/montgomery32_2e384m2e128m2e96p2e32m1   synth  .       .
+src/Specific/montgomery32_2e384m317                 synth  .       .
+src/Specific/montgomery32_2e384m5x2e368m1           synth  .       .
+src/Specific/montgomery32_2e384m79x2e376m1          synth  .       .
+src/Specific/montgomery32_2e389m21                  synth  .       .
+src/Specific/montgomery32_2e401m31                  synth  .       .
+src/Specific/montgomery32_2e413m21                  synth  .       .
+src/Specific/montgomery32_2e414m17                  synth  .       .
+src/Specific/montgomery32_2e416m2e208m1             synth  .       .
+src/Specific/montgomery32_2e444m17                  synth  .       .
+src/Specific/montgomery32_2e448m2e224m1             synth  .       .
+src/Specific/montgomery32_2e450m2e225m1             synth  .       .
+src/Specific/montgomery32_2e452m3                   synth  .       .
+src/Specific/montgomery32_2e468m17                  synth  .       .
+src/Specific/montgomery32_2e480m2e240m1             synth  .       .
+src/Specific/montgomery32_2e488m17                  synth  .       .
+src/Specific/montgomery32_2e489m21                  synth  .       .
+src/Specific/montgomery32_2e495m31                  synth  .       .
+src/Specific/montgomery32_2e510m290x2e496m1         synth  .       .
+src/Specific/montgomery32_2e511m187                 synth  .       .
+src/Specific/montgomery32_2e511m481                 synth  .       .
+src/Specific/montgomery32_2e512m491x2e496m1         synth  .       .
+src/Specific/montgomery32_2e512m569                 synth  .       .
+src/Specific/montgomery32_2e521m1                   synth  .       .
+src/Specific/montgomery64_2e256m4294968273          synth  .       .
+src/Specific/montgomery64_2e413m21                  synth  .       .
+src/Specific/montgomery64_2e450m2e225m1             synth  .       .
+src/Specific/montgomery64_2e452m3                   synth  .       .
+src/Specific/montgomery64_2e468m17                  synth  .       .
+src/Specific/montgomery64_2e480m2e240m1             synth  .       .
+src/Specific/montgomery64_2e488m17                  synth  .       .
+src/Specific/montgomery64_2e489m21                  synth  .       .
+src/Specific/montgomery64_2e495m31                  synth  .       .
+src/Specific/montgomery64_2e510m290x2e496m1         synth  .       .
+src/Specific/montgomery64_2e511m187                 synth  .       .
+src/Specific/montgomery64_2e511m481                 synth  .       .
+src/Specific/montgomery64_2e512m491x2e496m1         synth  .       .
+src/Specific/montgomery64_2e512m569                 synth  .       .
+src/Specific/montgomery64_2e521m1                   synth  .       .
