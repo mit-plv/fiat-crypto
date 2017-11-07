@@ -26,9 +26,10 @@ Module Internal.
       => let v' := (eval vm_compute in v) in
          (exists v'); abstract vm_cast_no_check (eq_refl v)
     | [ |- vm_cast_evar_package ?v ?d ]
-      => simple refine {| vald := (v <: d) |};
+      => unshelve eexists (v <: d);
          [ vm_compute; reflexivity
-         | let lhs := lazymatch goal with |- ?lhs = _ => lhs end in
+         | cbv beta;
+           let lhs := lazymatch goal with |- ?lhs = _ => lhs end in
            abstract exact_no_check (eq_refl lhs) ]
     | [ |- cast_evar_package (s:=?s) ?v ?d ]
       => exact (@Build_evard_package

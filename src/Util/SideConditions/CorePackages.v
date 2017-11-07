@@ -1,23 +1,42 @@
 Import EqNotations.
 
-Record evar_package {T} (v : T) :=
-  { val : T;
-    evar_package_pf : val = v }.
-Arguments val {T v} _.
-Arguments evar_package_pf {T v} _.
+Local Set Primitive Projections.
 
-Record evar_rel_package {A} (f : A) B (R : B -> A -> Prop) :=
-  { valr : B;
-    evarr_package_pf : R valr f }.
-Arguments valr {A f B R} _.
-Arguments evarr_package_pf {A f B R} _.
+Definition raw_evar_package (T : Type) := T.
 
-Record evard_package {s d} (v : s) :=
-  { vald : d;
-    evard_package_pfT : s = d;
-    evard_package_pf : vald = rew evard_package_pfT in v }.
-Arguments vald {s d v} _.
-Arguments evard_package_pfT {s d v} _.
-Arguments evard_package_pf {s d v} _.
+Record evar_Prop_package {T} (P : T -> Prop) :=
+  { val :> raw_evar_package T;
+    evar_package_pf : P val }.
+Arguments val {T P} _.
+Arguments evar_package_pf {T P} _.
+
+Definition evar_package {T} (v : T)
+  := @evar_Prop_package T (fun val => val = v).
+Definition evar_package_pf_eq {T v} (pkg : @evar_package T v)
+  : val pkg = v
+  := Eval hnf in evar_package_pf pkg.
+
+Definition evar_rel_package {A} (v : A) B (R : B -> A -> Prop)
+  := @evar_Prop_package B (fun val => R val v).
+Definition evar_package_pf_rel {A v B R} (pkg : @evar_rel_package A v B R)
+  : R (val pkg) v
+  := Eval hnf in evar_package_pf pkg.
+
+Definition evard_package {s d} (v : s)
+  := @evar_Prop_package
+       d
+       (fun vald => { pf : s = d | vald = rew pf in v }).
+Definition Build_evard_package {s d} (v : s)
+           (vald : d)
+           (evard_package_pfT : s = d)
+           (evard_package_pf : vald = rew evard_package_pfT in v)
+  : @evard_package s d v
+  := {| evar_package_pf := exist _ evard_package_pfT evard_package_pf |}.
+Definition evard_package_pfT {s d v} (pkg : @evard_package s d v)
+  : s = d
+  := Eval cbv [proj1_sig evar_package_pf] in proj1_sig (evar_package_pf pkg).
+Definition evard_package_pf {s d v} (pkg : @evard_package s d v)
+  : val pkg = rew (evard_package_pfT pkg) in v
+  := Eval cbv [proj1_sig evar_package_pf] in proj2_sig (evar_package_pf pkg).
 
 Ltac autosolve else_tac := else_tac ().
