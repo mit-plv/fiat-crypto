@@ -1,5 +1,6 @@
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.SideConditions.CorePackages.
+Require Import Crypto.Util.Tactics.HeadUnderBinders.
 
 Definition vm_decide_package (P : Prop) := P.
 Definition cbv_minus_then_vm_decide_package {T} (ident : T) (P : Prop) := P.
@@ -31,7 +32,7 @@ Notation optional_evar_package pkg_type
         pkg_type)
        (only parsing).
 
-Definition optional_evar_rel_package {A} (v : option A) B (R : B -> A -> Prop) (alt_pkg : A -> Type)
+Definition option_evar_rel_package {A} (v : option A) B (R : B -> A -> Prop) (alt_pkg : A -> Type)
   := @evar_Prop_package
        (option B)
        (fun v' => match v', v with
@@ -40,18 +41,36 @@ Definition optional_evar_rel_package {A} (v : option A) B (R : B -> A -> Prop) (
                   | Some _, None | None, Some _ => False
                   end).
 
+Ltac project_rel_from_evar_rel_package pkg_type :=
+  lazymatch pkg_type with
+  | evar_rel_package ?v ?B ?R
+    => R
+  | ?T
+    => let h := head_under_binders T in
+       let pkg_type' := (eval cbv [h] in T) in
+       project_rel_from_evar_rel_package pkg_type'
+  end.
+
+Notation optional_evar_rel_package pkg_type x
+  := (option_evar_rel_package
+        x
+        _
+        (ltac:(let R := project_rel_from_evar_rel_package pkg_type in exact r))
+        pkg_type)
+       (only parsing).
+
 Definition unoption_evar_rel_package {A v B R alt_pkg}
            (f : forall v, alt_pkg v -> @evar_rel_package A v B R)
   : forall (pkg : match v with
                   | Some v => alt_pkg v
                   | None => True
                   end),
-    @optional_evar_rel_package A v B R alt_pkg
+    @option_evar_rel_package A v B R alt_pkg
   := match v
            return match v with
                   | Some v => alt_pkg v
                   | None => True
-                  end -> @optional_evar_rel_package A v B R alt_pkg
+                  end -> @option_evar_rel_package A v B R alt_pkg
      with
      | Some v => fun pkg => {| val := Some (val (f _ pkg));
                                evar_package_pf := evar_package_pf (f _ pkg) |}
@@ -83,7 +102,7 @@ Ltac autosolve else_tac :=
     => exact (@Build_evard_package
                 s d v
                 v eq_refl eq_refl)
-  | [ |- @optional_evar_rel_package ?A ?v ?B ?R ?alt_pkg ]
+  | [ |- @option_evar_rel_package ?A ?v ?B ?R ?alt_pkg ]
     => refine (@unoption_evar_rel_package A v B R alt_pkg (fun _ x => x) _);
        autosolve else_tac
   | _ => CorePackages.autosolve else_tac
