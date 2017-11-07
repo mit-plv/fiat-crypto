@@ -77,11 +77,11 @@ Section chained_carries_cps'.
        | nil => f a
        | carry_chain :: nil
          => Positional.chained_carries_cps
-              (n:=sz) (div:=div) (modulo:=modulo) wt a carry_chain f
+              (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain f
        | carry_chain :: carry_chains
          => Positional.chained_carries_cps
-              (n:=sz) (div:=div) (modulo:=modulo) wt a carry_chain
-              (fun r => Positional.carry_reduce_cps (n:=sz) (div:=div) (modulo:=modulo) wt s c r
+              (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain
+              (fun r => Positional.carry_reduce_cps (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt s c r
               (fun r' => chained_carries_cps' r' carry_chains f))
        end.
   Fixpoint chained_carries_cps' (a : Tuple.tuple Z sz) (carry_chains : list (list nat))
@@ -93,11 +93,11 @@ Section chained_carries_cps'.
     : chained_carries_cps' a (carry_chain :: carry_chains) f
       = match length carry_chains with
         | O => Positional.chained_carries_cps
-                 (n:=sz) (div:=div) (modulo:=modulo) wt a carry_chain f
+                 (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain f
         | S _
           => Positional.chained_carries_cps
-               (n:=sz) (div:=div) (modulo:=modulo) wt a carry_chain
-               (fun r => Positional.carry_reduce_cps (n:=sz) (div:=div) (modulo:=modulo) wt s c r
+               (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain
+               (fun r => Positional.carry_reduce_cps (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt s c r
                (fun r' => chained_carries_cps' r' carry_chains f))
         end.
   Proof.
@@ -114,7 +114,7 @@ Section chained_carries_cps'.
     destruct carry_chains as [|carry_chain carry_chains]; [ reflexivity | ].
     cbv [chained_carries'].
     revert a carry_chain; induction carry_chains as [|? carry_chains IHcarry_chains]; intros.
-    { simpl; repeat autounfold; autorewrite with uncps; reflexivity. }
+    { simpl; repeat autounfold; autorewrite with uncps. reflexivity. }
     { rewrite !step_chained_carries_cps'.
       simpl @length; cbv iota beta.
       repeat autounfold; autorewrite with uncps.
@@ -179,6 +179,6 @@ Ltac solve_constant_sig :=
   lazymatch goal with
   | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
     => let t := (eval vm_compute in
-                    (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v))) in
+                    (Positional.encode (n:=sz) (modulo_cps:=@modulo_cps) (div_cps:=@div_cps) wt (F.to_Z (m:=M) v))) in
        (exists t; vm_decide)
   end.

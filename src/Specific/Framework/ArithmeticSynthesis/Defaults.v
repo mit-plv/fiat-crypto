@@ -28,7 +28,7 @@ Local Ltac solve_constant_local_sig :=
   idtac;
   lazymatch goal with
   | [ |- { c : Z^?sz | Positional.Fdecode (m:=?M) ?wt c = ?v } ]
-    => (exists (Positional.encode (n:=sz) (modulo:=modulo) (div:=div) wt (F.to_Z (m:=M) v)));
+    => (exists (Positional.encode (n:=sz) (modulo_cps:=@modulo_cps) (div_cps:=@div_cps) wt (F.to_Z (m:=M) v)));
        lazymatch goal with
        | [ sz_nonzero : sz <> 0%nat, base_pos : (1 <= _)%Q |- _ ]
          => clear -base_pos sz_nonzero
@@ -37,7 +37,8 @@ Local Ltac solve_constant_local_sig :=
   abstract (
       setoid_rewrite Positional.Fdecode_Fencode_id;
       [ reflexivity
-      | auto using wt_gen0_1, wt_gen_nonzero, wt_gen_divides', div_mod.. ]
+      | auto using wt_gen0_1, wt_gen_nonzero, wt_gen_divides', div_mod;
+        intros; autorewrite with uncps push_id; auto using div_mod.. ]
     ).
 
 Section gen.
@@ -118,8 +119,7 @@ Section gen.
         unfold chained_carries'.
         rewrite IHcarry_chains by auto.
         repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
-        rewrite Positional.eval_carry by auto.
-        rewrite Positional.eval_chained_carries by auto; reflexivity. } }
+        reflexivity. } }
   Defined.
 
   Definition constant_sig' v
@@ -264,6 +264,7 @@ Section gen.
       | [ |- context[@proj1_sig ?A ?P ?x] ]
         => pattern (@proj1_sig A P x);
              exact (@proj2_sig A P x)
+      | _ => eauto using @Core.modulo_id, @Core.div_id with nocore
       end.
   Defined.
 
@@ -403,6 +404,8 @@ Ltac pose_ring sz m wt wt_divides' sz_nonzero wt_nonzero zero_sig one_sig opp_si
        (Positional.Fdecode_Fencode_id
           (sz_nonzero := sz_nonzero)
           (div_mod := div_mod)
+          (modulo_cps_id:=@Core.modulo_id)
+          (div_cps_id:=@Core.div_id)
           wt eq_refl wt_nonzero wt_divides')
        (Positional.eq_Feq_iff wt)
        (proj2_sig add_sig)

@@ -49,7 +49,7 @@ Section gen.
   Definition half_sz' := (sz / 2)%nat.
 
   Definition m_enc'
-    := Positional.encode (modulo:=modulo) (div:=div) (n:=sz) wt (Z.pos m).
+    := Positional.encode (modulo_cps:=@modulo_cps) (div_cps:=@div_cps) (n:=sz) wt (Z.pos m).
 
   Lemma sz2'_nonzero
         (sz_nonzero : sz <> 0%nat)
@@ -152,7 +152,7 @@ Section gen.
     destruct (Nat.eq_dec sz 0).
     { subst; reflexivity. }
     { repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
-      rewrite Positional.eval_encode by auto.
+      rewrite Positional.eval_encode by (intros; autorewrite with uncps; unfold id; auto).
       cbv [mod_eq] in *.
       push_Zmod; rewrite Hv'; pull_Zmod.
       reflexivity. }
