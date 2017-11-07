@@ -127,3 +127,13 @@ End Freeze.
 Hint Unfold
      freeze freeze_cps
   : basesystem_partial_evaluation_unfolder.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t := (eval cbv delta [freeze freeze_cps] in t) in
+  let t := Saturated.Wrappers.basesystem_partial_evaluation_unfolder t in
+  let t := Saturated.Core.basesystem_partial_evaluation_unfolder t in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.

@@ -265,3 +265,21 @@ Hint Unfold
      B.Positional.sat_sub_cps
      B.Positional.sat_sub
      : basesystem_partial_evaluation_unfolder.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t := (eval cbv delta [
+                   B.Positional.chain_op'_cps
+                     B.Positional.chain_op'
+                     B.Positional.chain_op_cps
+                     B.Positional.chain_op
+                     B.Positional.sat_add_cps
+                     B.Positional.sat_add
+                     B.Positional.sat_sub_cps
+                     B.Positional.sat_sub
+                 ] in t) in
+  let t := Arithmetic.Saturated.Core.basesystem_partial_evaluation_unfolder t in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.

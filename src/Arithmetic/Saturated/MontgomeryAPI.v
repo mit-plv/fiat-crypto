@@ -616,3 +616,48 @@ Section API.
   End Proofs.
 End API.
 Hint Rewrite nonzero_id join0_id divmod_id drop_high_id scmul_id add_id add_S1_id add_S2_id sub_then_maybe_add_id conditional_sub_id : uncps.
+
+Hint Unfold
+     nonzero_cps
+     nonzero
+     scmul_cps
+     scmul
+     add_cps
+     add
+     add_S1_cps
+     add_S1
+     add_S2_cps
+     add_S2
+     sub_then_maybe_add_cps
+     sub_then_maybe_add
+     conditional_sub_cps
+     conditional_sub
+     eval
+  : basesystem_partial_evaluation_unfolder.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t := (eval cbv delta [
+                   nonzero_cps
+                     nonzero
+                     scmul_cps
+                     scmul
+                     add_cps
+                     add
+                     add_S1_cps
+                     add_S1
+                     add_S2_cps
+                     add_S2
+                     sub_then_maybe_add_cps
+                     sub_then_maybe_add
+                     conditional_sub_cps
+                     conditional_sub
+                     eval
+                 ] in t) in
+  let t := Saturated.AddSub.basesystem_partial_evaluation_unfolder t in
+  let t := Saturated.Wrappers.basesystem_partial_evaluation_unfolder t in
+  let t := Saturated.Core.basesystem_partial_evaluation_unfolder t in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.

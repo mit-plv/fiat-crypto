@@ -90,3 +90,11 @@ Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm
 Hint Unfold
      B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul
   : basesystem_partial_evaluation_unfolder.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t := (eval cbv delta [B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul] in t) in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.

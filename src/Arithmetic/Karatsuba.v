@@ -202,3 +202,11 @@ Context (weight : nat -> Z)
 End Karatsuba.
 Hint Opaque goldilocks_mul : uncps.
 Hint Rewrite goldilocks_mul_id : uncps.
+
+Ltac basesystem_partial_evaluation_unfolder t :=
+  let t := (eval cbv delta [goldilocks_mul karatsuba_mul goldilocks_mul_cps karatsuba_mul_cps] in t) in
+  let t := Arithmetic.Core.basesystem_partial_evaluation_unfolder t in
+  t.
+
+Ltac Arithmetic.Core.basesystem_partial_evaluation_default_unfolder t ::=
+  basesystem_partial_evaluation_unfolder t.
