@@ -41,21 +41,16 @@ Definition option_evar_rel_package {A} (v : option A) B (R : B -> A -> Prop) (al
                   | Some _, None | None, Some _ => False
                   end).
 
-Ltac project_rel_from_evar_rel_package pkg_type :=
-  lazymatch pkg_type with
-  | evar_rel_package ?v ?B ?R
-    => R
-  | ?T
-    => let h := head_under_binders T in
-       let pkg_type' := (eval cbv [h] in T) in
-       project_rel_from_evar_rel_package pkg_type'
-  end.
-
 Notation optional_evar_rel_package pkg_type x
   := (option_evar_rel_package
         x
         _
-        (ltac:(let R := project_rel_from_evar_rel_package pkg_type in exact r))
+        (fun a b
+         => ltac:(lazymatch eval hnf in (pkg_type b) with
+                  | evar_Prop_package ?P
+                    => let P := (eval cbv beta in (P a)) in
+                       exact P
+                  end))
         pkg_type)
        (only parsing).
 
