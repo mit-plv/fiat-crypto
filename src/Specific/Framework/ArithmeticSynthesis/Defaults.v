@@ -123,7 +123,7 @@ Section gen.
   Defined.
 
   Definition constant_sig' v
-    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = v}.
+    : { c : Z^sz | Positional.Fdecode (m:=m) wt c = v}.
   Proof. solve_constant_local_sig. Defined.
 
   Definition zero_sig'
@@ -131,7 +131,7 @@ Section gen.
     := Eval hnf in constant_sig' _.
 
   Definition one_sig'
-    : { zero : Z^sz | Positional.Fdecode (m:=m) wt zero = 1%F}
+    : { one : Z^sz | Positional.Fdecode (m:=m) wt one = 1%F}
     := Eval hnf in constant_sig' _.
 
   Definition add_sig'
