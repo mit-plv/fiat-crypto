@@ -1,21 +1,9 @@
-Import EqNotations.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.SideConditions.CorePackages.
 
 Definition vm_decide_package (P : Prop) := P.
 Definition cbv_minus_then_vm_decide_package {T} (ident : T) (P : Prop) := P.
 Definition vm_compute_reflexivity_package (P : Prop) := P.
-Record evar_package {T} (v : T) :=
-  { val : T;
-    evar_package_pf : val = v }.
-Arguments val {T v} _.
-Arguments evar_package_pf {T v} _.
-Record evard_package {s d} (v : s) :=
-  { vald : d;
-    evard_package_pfT : s = d;
-    evard_package_pf : vald = rew evard_package_pfT in v }.
-Arguments vald {s d v} _.
-Arguments evard_package_pfT {s d v} _.
-Arguments evard_package_pf {s d v} _.
 Inductive cast_bias := LHS | RHS.
 Definition vm_compute_evar_package_gen {bias : cast_bias} {T} (v : T) :=
   @evar_package T v.
@@ -50,4 +38,4 @@ Module Internal.
     end.
 End Internal.
 
-Ltac autosolve := Internal.autosolve.
+Ltac autosolve ::= Internal.autosolve.

@@ -4189,6 +4189,7 @@ src/Util/ForLoop/Unrolling.v
 src/Util/ListUtil/FoldBool.v
 src/Util/Logic/ImplAnd.v
 src/Util/SideConditions/Autosolve.v
+src/Util/SideConditions/CorePackages.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
