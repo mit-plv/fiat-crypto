@@ -98,28 +98,10 @@ Section gen.
     pose proof wt_nonzero; pose proof div_mod.
     pose proof (wt_gen_divides_chains base base_pos carry_chains).
     pose proof wt_divides'.
-    let x := constr:(chained_carries' sz wt s c a carry_chains) in
+    let x := constr:(Positional.chained_carries_reduce (n:=sz) (modulo_cps:=@modulo_cps) (div_cps:=@div_cps) wt s c a carry_chains) in
     presolve_op_F constr:(wt) x;
-      [ cbv [chained_carries_cps' chained_carries_cps'_step];
-        autorewrite with pattern_runtime;
-        reflexivity
-      | ].
-    { cbv [chained_carries'].
-      change a with (id a) at 2.
-      revert a; induction carry_chains as [|carry_chain carry_chains' IHcarry_chains];
-        [ reflexivity | destruct_head_hnf' and ]; intros.
-      rewrite step_chained_carries_cps'.
-      destruct (length carry_chains') eqn:Hlenc.
-      { destruct carry_chains'; [ | simpl in Hlenc; congruence ].
-        destruct_head'_and;
-          autorewrite with uncps push_id push_basesystem_eval;
-          reflexivity. }
-      { repeat autounfold;
-          autorewrite with uncps push_id push_basesystem_eval.
-        unfold chained_carries'.
-        rewrite IHcarry_chains by auto.
-        repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
-        reflexivity. } }
+      [ autorewrite with pattern_runtime; reflexivity | ].
+    reflexivity.
   Defined.
 
   Definition constant_sig' v

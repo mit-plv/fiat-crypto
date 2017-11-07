@@ -14,6 +14,7 @@ Hint Unfold Core.div Core.modulo : arithmetic_cps_unfolder.
 Ltac make_parameterized_sig t :=
   refine (_ : { v : _ | v = t });
   eexists; cbv delta [t
+                        Core.B.Positional.chained_carries_reduce_cps_step
                         B.limb ListUtil.sum ListUtil.sum_firstn
                         CPSUtil.Tuple.mapi_with_cps CPSUtil.Tuple.mapi_with'_cps CPSUtil.flat_map_cps CPSUtil.on_tuple_cps CPSUtil.fold_right_cps2
                         Decidable.dec Decidable.dec_eq_Z
@@ -63,7 +64,7 @@ for i in eval multerm mul_cps mul split_cps split reduce_cps reduce negate_snd_c
 done
 echo "  End Associational."
 echo "  Module Positional."
-for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_nth place_cps place from_associational_cps from_associational carry_cps carry chained_carries_cps chained_carries encode add_cps mul_cps reduce_cps carry_reduce_cps negate_snd_cps split_cps scmul_cps unbalanced_sub_cps sub_cps sub opp_cps Fencode Fdecode eval_from select_cps select; do
+for i in to_associational_cps to_associational eval zeros add_to_nth_cps add_to_nth place_cps place from_associational_cps from_associational carry_cps carry chained_carries_cps chained_carries encode add_cps mul_cps reduce_cps carry_reduce_cps  chained_carries_reduce_cps_step chained_carries_reduce_cps chained_carries_reduce negate_snd_cps split_cps scmul_cps unbalanced_sub_cps sub_cps sub opp_cps Fencode Fdecode eval_from select_cps select; do
   echo "    Definition ${i}_sig := parameterize_sig (@Core.B.Positional.${i}).";
   echo "    Definition ${i} := parameterize_from_sig ${i}_sig.";
   echo "    Definition ${i}_eq := parameterize_eq ${i} ${i}_sig.";
@@ -280,6 +281,24 @@ done
     Definition carry_reduce_cps_eq := parameterize_eq carry_reduce_cps carry_reduce_cps_sig.
     Hint Unfold carry_reduce_cps : basesystem_partial_evaluation_unfolder.
     Hint Rewrite <- carry_reduce_cps_eq : pattern_runtime.
+
+    Definition chained_carries_reduce_cps_step_sig := parameterize_sig (@Core.B.Positional.chained_carries_reduce_cps_step).
+    Definition chained_carries_reduce_cps_step := parameterize_from_sig chained_carries_reduce_cps_step_sig.
+    Definition chained_carries_reduce_cps_step_eq := parameterize_eq chained_carries_reduce_cps_step chained_carries_reduce_cps_step_sig.
+    Hint Unfold chained_carries_reduce_cps_step : basesystem_partial_evaluation_unfolder.
+    Hint Rewrite <- chained_carries_reduce_cps_step_eq : pattern_runtime.
+
+    Definition chained_carries_reduce_cps_sig := parameterize_sig (@Core.B.Positional.chained_carries_reduce_cps).
+    Definition chained_carries_reduce_cps := parameterize_from_sig chained_carries_reduce_cps_sig.
+    Definition chained_carries_reduce_cps_eq := parameterize_eq chained_carries_reduce_cps chained_carries_reduce_cps_sig.
+    Hint Unfold chained_carries_reduce_cps : basesystem_partial_evaluation_unfolder.
+    Hint Rewrite <- chained_carries_reduce_cps_eq : pattern_runtime.
+
+    Definition chained_carries_reduce_sig := parameterize_sig (@Core.B.Positional.chained_carries_reduce).
+    Definition chained_carries_reduce := parameterize_from_sig chained_carries_reduce_sig.
+    Definition chained_carries_reduce_eq := parameterize_eq chained_carries_reduce chained_carries_reduce_sig.
+    Hint Unfold chained_carries_reduce : basesystem_partial_evaluation_unfolder.
+    Hint Rewrite <- chained_carries_reduce_eq : pattern_runtime.
 
     Definition negate_snd_cps_sig := parameterize_sig (@Core.B.Positional.negate_snd_cps).
     Definition negate_snd_cps := parameterize_from_sig negate_snd_cps_sig.

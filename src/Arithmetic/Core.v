@@ -662,87 +662,6 @@ Module B.
       Hint Rewrite @eval_from_associational using omega
         : push_basesystem_eval.
 
-      Section Carries.
-        Context {modulo_cps div_cps:forall {R},Z->Z->(Z->R)->R}.
-        Let modulo x y := modulo_cps _ x y id.
-        Let div x y := div_cps _ x y id.
-        Context {modulo_cps_id : forall R x y f, modulo_cps R x y f = f (modulo x y)}
-                {div_cps_id : forall R x y f, div_cps R x y f = f (div x y)}.
-        Context {div_mod : forall a b:Z, b <> 0 ->
-                                         a = b * (div a b) + modulo a b}.
-        Hint Rewrite modulo_cps_id div_cps_id : uncps.
-
-        Definition carry_cps {n m} (index:nat) (p:tuple Z n)
-                   {T} (f:tuple Z m->T) :=
-          to_associational_cps p
-            (fun P =>  @Associational.carry_cps
-                         modulo_cps div_cps
-                         (weight index)
-                         (weight (S index) / weight index)
-                         P T
-             (fun R => from_associational_cps m R f)).
-
-      Definition carry {n m} i p := @carry_cps n m i p _ id.
-      Lemma carry_cps_id {n m} i p {T} f:
-        @carry_cps n m i p T f = f (carry i p).
-      Proof.
-        cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity.
-      Qed.
-      Hint Opaque carry : uncps. Hint Rewrite @carry_cps_id : uncps.
-
-      Lemma eval_carry {n m} i p: (n <> 0%nat) -> (m <> 0%nat) ->
-                                weight (S i) / weight i <> 0 ->
-        eval (carry (n:=n) (m:=m) i p) = eval p.
-      Proof.
-        cbv [carry_cps carry]; intros. prove_eval.
-        rewrite @eval_carry by eauto.
-        apply eval_to_associational.
-      Qed.
-      Hint Rewrite @eval_carry : push_basesystem_eval.
-
-      (* N.B. It is important to reverse [idxs] here. Like
-      [fold_right], [fold_right_cps2] is written such that the first
-      terms in the list are actually used last in the computation. For
-      example, running:
-
-      `Eval cbv - [Z.add] in (fun a b c d => fold_right Z.add d [a;b;c]).`
-
-      will produce [fun a b c d => (a + (b + (c + d)))].*)
-      Definition chained_carries_cps {n} (p:tuple Z n) (idxs : list nat)
-                 {T} (f:tuple Z n->T) :=
-        fold_right_cps2 carry_cps p (rev idxs) f.
-
-      Definition chained_carries {n} p idxs := @chained_carries_cps n p idxs _ id.
-      Lemma chained_carries_id {n} p idxs : forall {T} f,
-          @chained_carries_cps n p idxs T f = f (chained_carries p idxs).
-      Proof using modulo_cps_id div_cps_id.
-        cbv [chained_carries_cps chained_carries]; prove_id.
-      Qed.
-      Hint Opaque chained_carries : uncps.
-      Hint Rewrite @chained_carries_id : uncps.
-
-      Lemma eval_chained_carries {n} (p:tuple Z n) idxs :
-        (forall i, In i idxs -> weight (S i) / weight i <> 0) ->
-        eval (chained_carries p idxs) = eval p.
-      Proof using Type*.
-        cbv [chained_carries chained_carries_cps]; intros;
-          autorewrite with uncps push_id.
-        apply fold_right_invariant; [|intro; rewrite <-in_rev];
-          destruct n; prove_eval; auto.
-      Qed. Hint Rewrite @eval_chained_carries : push_basesystem_eval.
-
-      (* Reverse of [eval]; ranslate from Z to basesystem by putting
-      everything in first digit and then carrying. This function, like
-      [eval], is not defined using CPS. *)
-      Definition encode {n} (x : Z) : tuple Z n :=
-        chained_carries (from_associational n [(1,x)]) (seq 0 n).
-      Lemma eval_encode {n} x : (n <> 0%nat) ->
-        (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
-        eval (@encode n x) = x.
-      Proof using Type*. cbv [encode]; intros; prove_eval; auto. Qed.
-      Hint Rewrite @eval_encode : push_basesystem_eval.
-
-      End Carries.
 
       Section Wrappers.
         (* Simple wrappers for Associational definitions; convert to
@@ -764,12 +683,6 @@ Module B.
           to_associational_cps p
             (fun P => Associational.reduce_cps s c P
                (fun R => from_associational_cps n R f)).
-
-        Definition carry_reduce_cps {n div_cps modulo_cps}
-                   (s:Z) (c:list limb) (p : tuple Z n)
-                   {T} (f: tuple Z n ->T) :=
-          carry_cps (div_cps:=div_cps) (modulo_cps:=modulo_cps) (n:=n) (m:=S n) (pred n) p
-            (fun r => reduce_cps (m:=S n) (n:=n) s c r f).
 
         Definition negate_snd_cps {n} (p : tuple Z n)
                    {T} (f:tuple Z n->T) :=
@@ -808,12 +721,192 @@ Module B.
            Positional.add_cps
            Positional.mul_cps
            Positional.reduce_cps
-           Positional.carry_reduce_cps
            Positional.negate_snd_cps
            Positional.split_cps
            Positional.scmul_cps
            Positional.unbalanced_sub_cps
       .
+
+      Section Carries.
+        Context {modulo_cps div_cps:forall {R},Z->Z->(Z->R)->R}.
+        Let modulo x y := modulo_cps _ x y id.
+        Let div x y := div_cps _ x y id.
+        Context {modulo_cps_id : forall R x y f, modulo_cps R x y f = f (modulo x y)}
+                {div_cps_id : forall R x y f, div_cps R x y f = f (div x y)}.
+        Context {div_mod : forall a b:Z, b <> 0 ->
+                                         a = b * (div a b) + modulo a b}.
+        Hint Rewrite modulo_cps_id div_cps_id : uncps.
+
+        Definition carry_cps {n m} (index:nat) (p:tuple Z n)
+                   {T} (f:tuple Z m->T) :=
+          to_associational_cps p
+            (fun P =>  @Associational.carry_cps
+                         modulo_cps div_cps
+                         (weight index)
+                         (weight (S index) / weight index)
+                         P T
+             (fun R => from_associational_cps m R f)).
+
+        Definition carry {n m} i p := @carry_cps n m i p _ id.
+        Lemma carry_cps_id {n m} i p {T} f:
+          @carry_cps n m i p T f = f (carry i p).
+        Proof.
+          cbv [carry_cps carry]; prove_id; rewrite carry_cps_id; reflexivity.
+        Qed.
+        Hint Opaque carry : uncps. Hint Rewrite @carry_cps_id : uncps.
+
+        Lemma eval_carry {n m} i p: (n <> 0%nat) -> (m <> 0%nat) ->
+                                  weight (S i) / weight i <> 0 ->
+          eval (carry (n:=n) (m:=m) i p) = eval p.
+        Proof.
+          cbv [carry_cps carry]; intros. prove_eval.
+          rewrite @eval_carry by eauto.
+          apply eval_to_associational.
+        Qed.
+        Hint Rewrite @eval_carry : push_basesystem_eval.
+
+        Definition carry_reduce_cps {n}
+                   (s:Z) (c:list limb) (p : tuple Z n)
+                   {T} (f: tuple Z n ->T) :=
+          carry_cps (n:=n) (m:=S n) (pred n) p
+            (fun r => reduce_cps (m:=S n) (n:=n) s c r f).
+        Hint Unfold carry_reduce_cps.
+
+        (* N.B. It is important to reverse [idxs] here. Like
+        [fold_right], [fold_right_cps2] is written such that the first
+        terms in the list are actually used last in the computation. For
+        example, running:
+
+        `Eval cbv - [Z.add] in (fun a b c d => fold_right Z.add d [a;b;c]).`
+
+        will produce [fun a b c d => (a + (b + (c + d)))].*)
+        Definition chained_carries_cps {n} (p:tuple Z n) (idxs : list nat)
+                   {T} (f:tuple Z n->T) :=
+          fold_right_cps2 carry_cps p (rev idxs) f.
+
+        Definition chained_carries {n} p idxs := @chained_carries_cps n p idxs _ id.
+        Lemma chained_carries_id {n} p idxs : forall {T} f,
+            @chained_carries_cps n p idxs T f = f (chained_carries p idxs).
+        Proof using modulo_cps_id div_cps_id.
+          cbv [chained_carries_cps chained_carries]; prove_id.
+        Qed.
+        Hint Opaque chained_carries : uncps.
+        Hint Rewrite @chained_carries_id : uncps.
+
+        Lemma eval_chained_carries {n} (p:tuple Z n) idxs :
+          (forall i, In i idxs -> weight (S i) / weight i <> 0) ->
+          eval (chained_carries p idxs) = eval p.
+        Proof using Type*.
+          cbv [chained_carries chained_carries_cps]; intros;
+            autorewrite with uncps push_id.
+          apply fold_right_invariant; [|intro; rewrite <-in_rev];
+            destruct n; prove_eval; auto.
+        Qed. Hint Rewrite @eval_chained_carries : push_basesystem_eval.
+
+        Definition chained_carries_reduce_cps_step {n} (s:Z) (c:list limb) {T}
+                   (chained_carries_reduce_cps : forall (p:tuple Z n) (carry_chains : list (list nat)) (f : tuple Z n -> T), T)
+                   (p : tuple Z n) (carry_chains : list (list nat))
+                   (f : tuple Z n -> T)
+          : T
+          := match carry_chains with
+             | nil => f p
+             | carry_chain :: nil
+               => chained_carries_cps
+                    (n:=n) p carry_chain f
+             | carry_chain :: carry_chains
+               => chained_carries_cps
+                    (n:=n) p carry_chain
+                    (fun r => carry_reduce_cps (n:=n) s c r
+                    (fun r' => chained_carries_reduce_cps r' carry_chains f))
+             end.
+        Section chained_carries_reduce_cps.
+          Context {n:nat} (s:Z) (c:list limb) {T:Type}.
+
+          Fixpoint chained_carries_reduce_cps
+                   (p : tuple Z n) (carry_chains : list (list nat))
+                   (f : tuple Z n -> T)
+            : T
+            := @chained_carries_reduce_cps_step
+                 n s c T
+                 chained_carries_reduce_cps p carry_chains f.
+        End chained_carries_reduce_cps.
+
+        Lemma step_chained_carries_reduce_cps {n} (s:Z) (c:list limb) {T} p carry_chain carry_chains (f : tuple Z n -> T)
+          : chained_carries_reduce_cps s c p (carry_chain :: carry_chains) f
+            = match length carry_chains with
+              | O => chained_carries_cps
+                       (n:=n) p carry_chain f
+              | S _
+                => chained_carries_cps
+                     (n:=n) p carry_chain
+                     (fun r => carry_reduce_cps (n:=n) s c r
+                     (fun r' => chained_carries_reduce_cps s c r' carry_chains f))
+              end.
+        Proof.
+          destruct carry_chains; reflexivity.
+        Qed.
+
+        Definition chained_carries_reduce {n} (s:Z) (c:list limb) (p:tuple Z n) (carry_chains : list (list nat))
+          : tuple Z n
+          := chained_carries_reduce_cps s c p carry_chains id.
+
+        Lemma chained_carries_reduce_id {n} s c {T} p carry_chains f
+          : @chained_carries_reduce_cps n s c T p carry_chains f
+            = f (@chained_carries_reduce n s c p carry_chains).
+        Proof.
+          destruct carry_chains as [|carry_chain carry_chains]; [ reflexivity | ].
+          cbv [chained_carries_reduce].
+          revert p carry_chain; induction carry_chains as [|? carry_chains IHcarry_chains]; intros.
+          { simpl; repeat autounfold; autorewrite with uncps. reflexivity. }
+          { rewrite !step_chained_carries_reduce_cps.
+            simpl @length; cbv iota beta.
+            repeat autounfold; autorewrite with uncps.
+            rewrite !IHcarry_chains.
+            reflexivity. }
+        Qed.
+        Hint Opaque chained_carries_reduce : uncps.
+        Hint Rewrite @chained_carries_reduce_id : uncps.
+
+        Lemma eval_chained_carries_reduce {n} (s:Z) (c:list limb) (p:tuple Z n) carry_chains
+              (Hn : n <> 0%nat)
+              (s_nonzero:s<>0) m (m_eq : Z.pos m = s - Associational.eval c)
+              (Hwt : weight (S (Init.Nat.pred n)) / weight (Init.Nat.pred n) <> 0)
+          : (List.fold_right
+               and
+               True
+               (List.map
+                  (fun idxs
+                   => forall i, In i idxs -> weight (S i) / weight i <> 0)
+                  carry_chains)) ->
+            mod_eq m (eval (chained_carries_reduce s c p carry_chains)) (eval p).
+        Proof using Type*.
+          destruct carry_chains as [|carry_chain carry_chains]; [ reflexivity | ].
+          cbv [chained_carries_reduce].
+          revert p carry_chain; induction carry_chains as [|? carry_chains IHcarry_chains]; intros.
+          { cbn in *; prove_eval; auto. }
+          { rewrite !step_chained_carries_reduce_cps.
+            simpl @length; cbv iota beta.
+            repeat autounfold; autorewrite with uncps push_id push_basesystem_eval.
+            cbv [chained_carries_reduce].
+            rewrite !IHcarry_chains by (cbn in *; tauto); clear IHcarry_chains.
+            cbn in * |- .
+            prove_eval; auto. }
+        Qed.
+        Hint Rewrite @eval_chained_carries_reduce using (omega || assumption) : push_basesystem_eval.
+
+        (* Reverse of [eval]; translate from Z to basesystem by putting
+        everything in first digit and then carrying. This function, like
+        [eval], is not defined using CPS. *)
+        Definition encode {n} (x : Z) : tuple Z n :=
+          chained_carries (from_associational n [(1,x)]) (seq 0 n).
+        Lemma eval_encode {n} x : (n <> 0%nat) ->
+          (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
+          eval (@encode n x) = x.
+        Proof using Type*. cbv [encode]; intros; prove_eval; auto. Qed.
+        Hint Rewrite @eval_encode : push_basesystem_eval.
+
+      End Carries.
+      Hint Unfold carry_reduce_cps.
 
       Section Subtraction.
         Context {m n} {coef : tuple Z n}
@@ -982,6 +1075,7 @@ Module B.
        @Associational.carryterm_cps_id
        @Positional.carry_cps_id
        @Positional.chained_carries_id
+       @Positional.chained_carries_reduce_id
        using div_mod_cps_t : uncps.
   Hint Rewrite
        @Associational.eval_mul
@@ -998,6 +1092,7 @@ Module B.
        @Positional.eval_from_associational
        @Positional.eval_add_to_nth
        @Positional.eval_chained_carries
+       @Positional.eval_chained_carries_reduce
        @Positional.eval_sub
        @Positional.eval_select
        using (assumption || (div_mod_cps_t; auto) || vm_decide) : push_basesystem_eval.
@@ -1092,6 +1187,9 @@ Hint Unfold
      Positional.carry
      Positional.chained_carries_cps
      Positional.chained_carries
+     Positional.chained_carries_reduce_cps_step
+     Positional.chained_carries_reduce_cps
+     Positional.chained_carries_reduce
      Positional.encode
      Positional.add_cps
      Positional.mul_cps
@@ -1135,6 +1233,9 @@ Ltac basesystem_partial_evaluation_unfolder t :=
         Positional.from_associational_cps Positional.from_associational
         Positional.carry_cps Positional.carry
         Positional.chained_carries_cps Positional.chained_carries
+        Positional.chained_carries_reduce_cps
+        Positional.chained_carries_reduce
+        Positional.chained_carries_reduce_cps_step
         Positional.sub_cps Positional.sub Positional.split_cps
         Positional.scmul_cps Positional.unbalanced_sub_cps
         Positional.negate_snd_cps Positional.add_cps Positional.opp_cps

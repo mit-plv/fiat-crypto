@@ -64,72 +64,9 @@ Ltac pose_proof_tuple ls :=
        end
   end.
 
-
-Section chained_carries_cps'.
-  Context (sz : nat) (wt : nat -> Z) (s : Z) (c : list limb).
-
-  Definition chained_carries_cps'_step
-             (chained_carries_cps' : forall (a : Tuple.tuple Z sz) (carry_chains : list (list nat)) (f : Tuple.tuple Z sz -> Tuple.tuple Z sz), Tuple.tuple Z sz)
-             (a : Tuple.tuple Z sz) (carry_chains : list (list nat))
-             (f : Tuple.tuple Z sz -> Tuple.tuple Z sz)
-    : Tuple.tuple Z sz
-    := match carry_chains with
-       | nil => f a
-       | carry_chain :: nil
-         => Positional.chained_carries_cps
-              (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain f
-       | carry_chain :: carry_chains
-         => Positional.chained_carries_cps
-              (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain
-              (fun r => Positional.carry_reduce_cps (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt s c r
-              (fun r' => chained_carries_cps' r' carry_chains f))
-       end.
-  Fixpoint chained_carries_cps' (a : Tuple.tuple Z sz) (carry_chains : list (list nat))
-           (f : Tuple.tuple Z sz -> Tuple.tuple Z sz)
-    : Tuple.tuple Z sz
-    := chained_carries_cps'_step (chained_carries_cps') a carry_chains f.
-
-  Lemma step_chained_carries_cps' a carry_chain carry_chains (f : tuple Z sz -> tuple Z sz)
-    : chained_carries_cps' a (carry_chain :: carry_chains) f
-      = match length carry_chains with
-        | O => Positional.chained_carries_cps
-                 (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain f
-        | S _
-          => Positional.chained_carries_cps
-               (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt a carry_chain
-               (fun r => Positional.carry_reduce_cps (n:=sz) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) wt s c r
-               (fun r' => chained_carries_cps' r' carry_chains f))
-        end.
-  Proof.
-    destruct carry_chains; reflexivity.
-  Qed.
-
-  Definition chained_carries' (a : Tuple.tuple Z sz) (carry_chains : list (list nat))
-    : Tuple.tuple Z sz
-    := chained_carries_cps' a carry_chains id.
-
-  Lemma chained_carries'_id a carry_chains f
-    : @chained_carries_cps' a carry_chains f = f (@chained_carries' a carry_chains).
-  Proof.
-    destruct carry_chains as [|carry_chain carry_chains]; [ reflexivity | ].
-    cbv [chained_carries'].
-    revert a carry_chain; induction carry_chains as [|? carry_chains IHcarry_chains]; intros.
-    { simpl; repeat autounfold; autorewrite with uncps. reflexivity. }
-    { rewrite !step_chained_carries_cps'.
-      simpl @length; cbv iota beta.
-      repeat autounfold; autorewrite with uncps.
-      rewrite !IHcarry_chains.
-      reflexivity. }
-  Qed.
-End chained_carries_cps'.
-
-Hint Opaque chained_carries' : uncps.
-Hint Unfold chained_carries'.
-Hint Rewrite chained_carries'_id : uncps.
-
 Ltac make_chained_carries_cps sz wt s c a carry_chains :=
-  (eval cbv [chained_carries_cps' chained_carries_cps'_step carry_chains] in
-      (chained_carries_cps' sz wt s c a carry_chains id)).
+  (eval cbv [Positional.chained_carries_reduce_cps Positional.chained_carries_reduce_cps_step carry_chains] in
+      (Positional.chained_carries_reduce_cps sz wt s c a carry_chains id)).
 
 Ltac specialize_existing_sig existing_sig :=
   lazymatch type of existing_sig with
@@ -151,7 +88,7 @@ Ltac cache_sig_with_type_by_existing_sig_helper cbv_tac ty existing_sig id :=
           [ apply f_equal
           | solve [ eapply (proj2_sig existing_sig); eassumption ] ];
           do 2 (cbv [proj1_sig
-                       chained_carries_cps' chained_carries_cps'_step
+                       Positional.chained_carries_reduce_cps Positional.chained_carries_reduce_cps_step
                        Positional.mul_cps Positional.reduce_cps];
                 cbv_tac ());
           repeat autounfold;
