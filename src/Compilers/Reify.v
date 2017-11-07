@@ -7,6 +7,7 @@ Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.InputSyntax.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.DebugPrint.
+Require Import Crypto.Util.SideConditions.CorePackages.
 (*Require Import Crypto.Util.Tactics.PrintContext.*)
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstLet.
@@ -499,6 +500,33 @@ Ltac Reify_rhs base_type_code interp_base_type op make_const interp_op :=
            prove_compile_correct
            interp_op
            ltac:(fun tac => tac ()).
+
+Definition Reify_evar_package
+           {base_type_code interp_base_type op}
+           (make_const : forall t : base_type_code,
+               interp_base_type t -> op ()%ctype (Tbase t))
+           (interp_op : forall s d : flat_type base_type_code, op s d -> interp_flat_type interp_base_type s -> interp_flat_type interp_base_type d)
+           {t}
+           (f : Syntax.interp_type interp_base_type t)
+  := evar_rel_package
+       f (Compilers.Syntax.Expr _ op t)
+       (fun e f
+        => forall x, Compilers.Syntax.Interp interp_op e x = f x).
+
+Definition Interp_Reify_evar_package
+           {base_type_code interp_base_type op make_const interp_op t f}
+           (pkg : @Reify_evar_package base_type_code interp_base_type op make_const interp_op t f)
+  : forall x, Compilers.Syntax.Interp interp_op (val pkg) x = f x
+  := evar_package_pf pkg.
+
+Ltac autosolve else_tac :=
+  lazymatch goal with
+  | [ |- @Reify_evar_package ?base_type_code ?interp_base_type ?op ?make_const ?interp_op _ _ ]
+    => eexists; cbv beta; Reify_rhs base_type_code interp_base_type op make_const interp_op
+  | _ => else_tac ()
+  end.
+
+Ltac SideConditions.CorePackages.autosolve ::= autosolve.
 
 (** Reification of context variables of the form [F := _ :
     Syntax.interp_type _ _] *)

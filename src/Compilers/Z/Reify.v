@@ -9,6 +9,7 @@ Require Import Crypto.Compilers.Eta.
 Require Import Crypto.Compilers.EtaInterp.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.IdfunWithAlt.
+Require Import Crypto.Util.SideConditions.CorePackages.
 Require Import Crypto.Util.Tactics.DebugPrint.
 
 Ltac base_reify_op op op_head extra ::=
@@ -72,7 +73,25 @@ Ltac prove_ExprEta_Compile_correct :=
      prove_compile_correct_using ltac:(fun _ => apply make_const_correct) ().
 
 Ltac Reify_rhs :=
- Compilers.Reify.Reify_rhs_gen Reify prove_ExprEta_Compile_correct interp_op ltac:(fun tac => tac ()).
+  Compilers.Reify.Reify_rhs_gen Reify prove_ExprEta_Compile_correct interp_op ltac:(fun tac => tac ()).
+
+Definition Reify_evar_package {t} f
+  := @Reify_evar_package base_type interp_base_type op make_const interp_op t f.
+
+Definition Interp_Reify_evar_package
+           {t f}
+           (pkg : @Reify_evar_package t f)
+  : forall x, Interp (val pkg) x = f x
+  := evar_package_pf pkg.
+
+Ltac autosolve else_tac :=
+  lazymatch goal with
+  | [ |- @Reify_evar_package _ _ ]
+    => eexists; cbv beta; Reify_rhs
+  | _ => Compilers.Reify.autosolve else_tac
+  end.
+
+Ltac SideConditions.CorePackages.autosolve ::= autosolve.
 
 Ltac prereify_context_variables :=
  Compilers.Reify.prereify_context_variables interp_base_type.
