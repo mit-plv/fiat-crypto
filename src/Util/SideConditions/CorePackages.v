@@ -2,6 +2,8 @@ Import EqNotations.
 
 Local Set Primitive Projections.
 
+Create HintDb autosolve discriminated.
+
 Definition raw_evar_package (T : Type) := T.
 
 Record evar_Prop_package {T} (P : T -> Prop) :=
@@ -38,5 +40,8 @@ Definition evard_package_pfT {s d v} (pkg : @evard_package s d v)
 Definition evard_package_pf {s d v} (pkg : @evard_package s d v)
   : val pkg = rew (evard_package_pfT pkg) in v
   := Eval cbv [proj1_sig evar_package_pf] in proj2_sig (evar_package_pf pkg).
+
+Ltac preautosolve _ :=
+  repeat autounfold with autosolve in *.
 
 Ltac autosolve else_tac := else_tac ().
