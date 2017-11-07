@@ -13,9 +13,57 @@ Notation vm_compute_evar_package := vm_compute_evar_package_vm_small.
 Definition vm_cast_evar_package {s} (v : s) d := @evard_package s d v.
 Definition cast_evar_package {s} (v : s) d := @evard_package s d v.
 
+Definition optional_evar_Prop_package {T} (P : T -> Prop) (alt_pkg : Type)
+  := @evar_Prop_package
+       (option T)
+       (fun v => match v with
+                 | Some v => P v
+                 | None => True
+                 end).
+
+Definition None_evar_Prop_package' {alt_pkg T P} : @optional_evar_Prop_package T P alt_pkg
+  := {| val := None ; evar_package_pf := I |}.
+Notation None_evar_Prop_package := (@None_evar_Prop_package' unit).
+
+Notation optional_evar_package pkg_type
+  := (optional_evar_Prop_package
+        (ltac:(lazymatch eval hnf in pkg_type with evar_Prop_package ?P => exact P end))
+        pkg_type)
+       (only parsing).
+
+Definition optional_evar_rel_package {A} (v : option A) B (R : B -> A -> Prop) (alt_pkg : A -> Type)
+  := @evar_Prop_package
+       (option B)
+       (fun v' => match v', v with
+                  | Some v', Some v => R v' v
+                  | None, None => True
+                  | Some _, None | None, Some _ => False
+                  end).
+
+Definition unoption_evar_rel_package {A v B R alt_pkg}
+           (f : forall v, alt_pkg v -> @evar_rel_package A v B R)
+  : forall (pkg : match v with
+                  | Some v => alt_pkg v
+                  | None => True
+                  end),
+    @optional_evar_rel_package A v B R alt_pkg
+  := match v
+           return match v with
+                  | Some v => alt_pkg v
+                  | None => True
+                  end -> @optional_evar_rel_package A v B R alt_pkg
+     with
+     | Some v => fun pkg => {| val := Some (val (f _ pkg));
+                               evar_package_pf := evar_package_pf (f _ pkg) |}
+     | None => fun _ => None_evar_Prop_package
+     end.
+
 Ltac autosolve else_tac :=
   CorePackages.preautosolve ();
   lazymatch goal with
+  | [ |- True ] => exact I
+  | [ |- unit ] => exact tt
+  | [ |- IDProp ] => exact idProp
   | [ |- vm_decide_package ?P ] => cbv beta delta [vm_decide_package]; vm_decide
   | [ |- cbv_minus_then_vm_decide_package ?ident ?P ] => cbv -[ident]; vm_decide
   | [ |- vm_compute_reflexivity_package ?P ] => vm_compute; reflexivity
@@ -35,5 +83,8 @@ Ltac autosolve else_tac :=
     => exact (@Build_evard_package
                 s d v
                 v eq_refl eq_refl)
+  | [ |- @optional_evar_rel_package ?A ?v ?B ?R ?alt_pkg ]
+    => refine (@unoption_evar_rel_package A v B R alt_pkg (fun _ x => x) _);
+       autosolve else_tac
   | _ => CorePackages.autosolve else_tac
   end.
