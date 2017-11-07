@@ -448,14 +448,15 @@ Module B.
       Hint Rewrite modulo_cps_id div_cps_id : uncps.
 
       Definition carryterm_cps (w fw:Z) (t:limb) {T} (f:list limb->T) :=
-        if dec (fst t = w)
+        Z.eqb_cps (fst t) w (fun eqb =>
+        if eqb
         then dlet t2 := snd t in
              div_cps _ t2 fw (fun d2 =>
              modulo_cps _ t2 fw (fun m2 =>
              dlet d2 := d2 in
              dlet m2 := m2 in
              f ((w*fw, d2) :: (w, m2) :: @nil limb)))
-        else f [t].
+        else f [t]).
 
       Definition carryterm w fw t := carryterm_cps w fw t id.
       Lemma carryterm_cps_id w fw t {T} f :
