@@ -17,7 +17,7 @@ NORMAL_PACKAGE_NAMES = [('Base.v', (CP_LIST, None)),
                         ('Montgomery.v', (CP_BASE_DEFAULTS_FREEZE_LADDERSTEP_LIST, 'montgomery')),
                         ('../MontgomeryReificationTypes.v', (CP_BASE_LIST + ['MontgomeryPackage.v', '../ReificationTypesPackage.v'], 'montgomery'))]
 ALL_FILE_NAMES = PACKAGE_NAMES + NORMAL_PACKAGE_NAMES # PACKAGE_CP_NAMES + WITH_CURVE_BASE_NAMES + ['../ReificationTypes.v']
-CONFIGS = ('goldilocks', 'montgomery', 'freeze', 'ladderstep')
+CONFIGS = ('goldilocks', 'karatsuba', 'montgomery', 'freeze', 'ladderstep')
 
 EXCLUDES = ('constr:((wt_divides_chain, wt_divides_chains))', )
 

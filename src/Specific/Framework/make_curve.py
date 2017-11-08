@@ -235,12 +235,13 @@ def make_curve_parameters(parameters):
                             ('freeze_extra_allowable_bit_widths', '%nat'),
                             ('coef_div_modulus', '%nat'),
                             ('modinv_fuel', '%nat'),
+                            ('karatsuba', ''),
                             ('goldilocks', '')):
         replacements[k] = fix_option(nested_list_to_string(replacements.get(k, 'None')), scope_string=scope_string)
     for k in ('montgomery', ):
         if k not in replacements.keys():
             replacements[k] = False
-    for k in ('s', 'c', 'goldilocks', 'montgomery'):
+    for k in ('s', 'c', 'karatsuba', 'goldilocks', 'montgomery'):
         replacements[k] = nested_list_to_string(replacements[k])
     for k in ('extra_prove_mul_eq', 'extra_prove_square_eq'):
         if k not in replacements.keys():
@@ -266,6 +267,7 @@ Definition curve : CurveParameters :=
     coef_div_modulus := %(coef_div_modulus)s;
 
     goldilocks := %(goldilocks)s;
+    karatsuba := %(karatsuba)s;
     montgomery := %(montgomery)s;
     freeze := %(freeze)s;
     ladderstep := %(ladderstep)s;

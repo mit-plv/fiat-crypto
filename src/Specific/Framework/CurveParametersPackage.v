@@ -11,6 +11,14 @@ Ltac if_goldilocks pkg tac_true tac_false arg :=
   | false => tac_false arg
   end.
 
+Ltac if_karatsuba pkg tac_true tac_false arg :=
+  let karatsuba := Tag.get pkg TAG.karatsuba in
+  let karatsuba := (eval vm_compute in (karatsuba : bool)) in
+  lazymatch karatsuba with
+  | true => tac_true arg
+  | false => tac_false arg
+  end.
+
 Ltac if_montgomery pkg tac_true tac_false arg :=
   let montgomery := Tag.get pkg TAG.montgomery in
   let montgomery := (eval vm_compute in (montgomery : bool)) in
@@ -57,6 +65,8 @@ Module MakeCurveParametersPackage (PKG : PrePackage).
   Notation coef_div_modulus := (ltac:(let v := get_coef_div_modulus () in exact v)) (only parsing).
   Ltac get_goldilocks _ := get TAG.goldilocks.
   Notation goldilocks := (ltac:(let v := get_goldilocks () in exact v)) (only parsing).
+  Ltac get_karatsuba _ := get TAG.karatsuba.
+  Notation karatsuba := (ltac:(let v := get_karatsuba () in exact v)) (only parsing).
   Ltac get_montgomery _ := get TAG.montgomery.
   Notation montgomery := (ltac:(let v := get_montgomery () in exact v)) (only parsing).
   Ltac get_freeze _ := get TAG.freeze.

@@ -19,6 +19,7 @@ Definition curve : CurveParameters :=
     coef_div_modulus := None;
 
     goldilocks := None;
+    karatsuba := None;
     montgomery := true;
     freeze := Some false;
     ladderstep := false;

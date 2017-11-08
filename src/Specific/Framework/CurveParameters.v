@@ -12,7 +12,7 @@ Local Set Primitive Projections.
 Module Export Notations := RawCurveParameters.Notations.
 
 Module TAG. (* namespacing *)
-  Inductive tags := CP | sz | base | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | montgomery | freeze | ladderstep | upper_bound_of_exponent_tight | upper_bound_of_exponent_loose | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel | mul_code | square_code.
+  Inductive tags := CP | sz | base | bitwidth | s | c | carry_chains | a24 | coef_div_modulus | goldilocks | karatsuba | montgomery | freeze | ladderstep | upper_bound_of_exponent_tight | upper_bound_of_exponent_loose | allowable_bit_widths | freeze_allowable_bit_widths | modinv_fuel | mul_code | square_code.
 End TAG.
 
 Module Export CurveParameters.
@@ -42,6 +42,7 @@ Module Export CurveParameters.
       coef_div_modulus : nat;
 
       goldilocks : bool;
+      karatsuba : bool;
       montgomery : bool;
       freeze : bool;
       ladderstep : bool;
@@ -65,6 +66,7 @@ Module Export CurveParameters.
               a24
               coef_div_modulus
               goldilocks
+              karatsuba
               montgomery
               freeze
               ladderstep
@@ -102,6 +104,7 @@ Module Export CurveParameters.
         let base := RawCurveParameters.base CP in
         let bitwidth := RawCurveParameters.bitwidth CP in
         let montgomery := RawCurveParameters.montgomery CP in
+        let karatsuba := defaulted (RawCurveParameters.karatsuba CP) false in
         let s := RawCurveParameters.s CP in
         let c := RawCurveParameters.c CP in
         let freeze
@@ -142,6 +145,7 @@ Module Export CurveParameters.
           coef_div_modulus := defaulted (RawCurveParameters.coef_div_modulus CP) 0%nat;
 
           goldilocks := goldilocks;
+          karatsuba := karatsuba;
           montgomery := montgomery;
           freeze := freeze;
           ladderstep := RawCurveParameters.ladderstep CP;
@@ -177,6 +181,7 @@ Module Export CurveParameters.
           a24 := ?a24';
           coef_div_modulus := ?coef_div_modulus';
           goldilocks := ?goldilocks';
+          karatsuba := ?karatsuba';
           montgomery := ?montgomery';
           freeze := ?freeze';
           ladderstep := ?ladderstep';
@@ -193,6 +198,7 @@ Module Export CurveParameters.
          let bitwidth' := do_compute bitwidth' in
          let carry_chains' := do_compute carry_chains' in
          let goldilocks' := do_compute goldilocks' in
+         let karatsuba' := do_compute karatsuba' in
          let montgomery' := do_compute montgomery' in
          let freeze' := do_compute freeze' in
          let ladderstep' := do_compute ladderstep' in
@@ -209,6 +215,7 @@ Module Export CurveParameters.
                     a24 := a24';
                     coef_div_modulus := coef_div_modulus';
                     goldilocks := goldilocks';
+                    karatsuba := karatsuba';
                     montgomery := montgomery';
                     freeze := freeze';
                     ladderstep := ladderstep';
@@ -221,8 +228,6 @@ Module Export CurveParameters.
                     modinv_fuel := modinv_fuel'
                   |})
     end.
-  (*existsb Nat.eqb List.app seq pred Z_add_red Z_sub_red Z_mul_red Z_div_red Z_pow_red Z_eqb_red
-                     Z.to_nat Pos.to_nat Pos.iter_op Nat.add Nat.mul orb andb] in*)
   Notation fill_CurveParameters CP := ltac:(let v := get_fill_CurveParameters CP in exact v) (only parsing).
 
   Ltac internal_pose_of_CP CP proj id :=
@@ -246,6 +251,8 @@ Module Export CurveParameters.
     internal_pose_of_CP CP CurveParameters.coef_div_modulus coef_div_modulus.
   Ltac pose_goldilocks CP goldilocks :=
     internal_pose_of_CP CP CurveParameters.goldilocks goldilocks.
+  Ltac pose_karatsuba CP karatsuba :=
+    internal_pose_of_CP CP CurveParameters.karatsuba karatsuba.
   Ltac pose_montgomery CP montgomery :=
     internal_pose_of_CP CP CurveParameters.montgomery montgomery.
   Ltac pose_freeze CP freeze :=
@@ -322,6 +329,12 @@ Module Export CurveParameters.
     let goldilocks := pose_goldilocks CP goldilocks in
     Tag.update pkg TAG.goldilocks goldilocks.
 
+  Ltac add_karatsuba pkg :=
+    let CP := Tag.get pkg TAG.CP in
+    let karatsuba := fresh "karatsuba" in
+    let karatsuba := pose_karatsuba CP karatsuba in
+    Tag.update pkg TAG.karatsuba karatsuba.
+
   Ltac add_montgomery pkg :=
     let CP := Tag.get pkg TAG.CP in
     let montgomery := fresh "montgomery" in
@@ -392,6 +405,7 @@ Module Export CurveParameters.
     let pkg := add_a24 pkg in
     let pkg := add_coef_div_modulus pkg in
     let pkg := add_goldilocks pkg in
+    let pkg := add_karatsuba pkg in
     let pkg := add_montgomery pkg in
     let pkg := add_freeze pkg in
     let pkg := add_ladderstep pkg in

@@ -31,6 +31,7 @@ Record CurveParameters :=
     coef_div_modulus : option nat;
 
     goldilocks : option bool; (* defaults to true iff the prime ([s-c]) is of the form [2²ᵏ - 2ᵏ - 1] *)
+    karatsuba : option bool; (* defaults to false, currently unused *)
     montgomery : bool;
     freeze : option bool; (* defaults to true iff [s = 2^(base * sz)] *)
     ladderstep : bool;
@@ -58,6 +59,7 @@ Declare Reduction cbv_RawCurveParameters
             a24
             coef_div_modulus
             goldilocks
+            karatsuba
             montgomery
             freeze
             ladderstep
