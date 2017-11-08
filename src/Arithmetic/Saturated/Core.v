@@ -79,26 +79,26 @@ bit. We add a 0 to the next column and continue.
 This time, we have a carry. We add it to the third column and process
 that:
 
-     STEP [9,6,28,25] (9 + 6  = 15)
-     {carry_acc = 1; output=(9,5)}
-     STEP [5,28,25] (5 + 28 = 33)
-     {carry_acc = 4; output=(9,5)}
-     STEP [3,25] (3 + 25 = 28)
-     {carry_acc = 2; output=(8,9,5)}
+     STEP [3,6,28,25] (3 + 6  = 9)
+     {carry_acc = 0; output=(9,5)}
+     STEP [9,28,25] (9 + 28 = 37)
+     {carry_acc = 3; output=(9,5)}
+     STEP [7,25] (7 + 25 = 32)
+     {carry_acc = 6; output=(2,9,5)}
 
 You're probably getting the idea, but here are the fourth and fifth
 columns:
 
-     STEP [2,42,20] (2 + 42 = 44)
-     {carry_acc = 4; output=(8,9,5)}
-     STEP [4,20] (4 + 20 = 24)
-     {carry_acc = 6; output=(4,8,9,5)}
+     STEP [6,42,20] (6 + 42 = 48)
+     {carry_acc = 4; output=(2,9,5)}
+     STEP [8,20] (8 + 20 = 28)
+     {carry_acc = 6; output=(8,2,9,5)}
 
      STEP [6,30] (6 + 30 = 36)
-     {carry_acc = 3; output=(6,4,8,9,5)}
+     {carry_acc = 3; output=(6,8,2,9,5)}
 
 The final result is the output plus the final carry, so we produce
-(6,4,8,9,5) and 3, representing the number 364895. A quick calculator
+(6,8,2,9,5) and 3, representing the number 368295. A quick calculator
 check confirms our result.
 
  ***)
