@@ -126,7 +126,7 @@ End Freeze.
 Hint Opaque freeze_cps : uncps.
 Hint Rewrite @freeze_id : uncps.
 Hint Rewrite @eval_freeze
-     using (assumption || auto) : push_basesystem_eval.
+     using (assumption || reflexivity || auto || eassumption || omega) : push_basesystem_eval.
 
 Hint Unfold
      freeze freeze_cps

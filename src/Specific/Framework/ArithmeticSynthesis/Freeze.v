@@ -58,8 +58,7 @@ Section gen.
     let x := constr:(freeze (n:=sz) wt (Z.ones bitwidth) m_enc a) in
     presolve_op_F constr:(wt) x;
       [ autorewrite with pattern_runtime; reflexivity | ].
-    rewrite eval_freeze with (c := c);
-      try eassumption; try omega; try reflexivity.
+    reflexivity.
   Defined.
 End gen.
 
