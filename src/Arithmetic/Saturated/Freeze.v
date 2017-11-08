@@ -123,6 +123,10 @@ Section Freeze.
       reflexivity. }
   Qed.
 End Freeze.
+Hint Opaque freeze_cps : uncps.
+Hint Rewrite @freeze_id : uncps.
+Hint Rewrite @eval_freeze
+     using (assumption || (div_mod_cps_t; auto)) : push_basesystem_eval.
 
 Hint Unfold
      freeze freeze_cps
