@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.ZUtil Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Arithmetic.Core. Import B. Import Positional.
@@ -55,6 +56,8 @@ Context (weight : nat -> Z)
     autorewrite with cancel_pair push_id uncps.
     reflexivity.
   Qed.
+  Hint Opaque karatsuba_mul : uncps.
+  Hint Rewrite karatsuba_mul_id : uncps.
 
   Lemma eval_karatsuba_mul s x y (s_nonzero:s <> 0) :
     eval weight (karatsuba_mul s x y) = eval weight x * eval weight y.
@@ -199,9 +202,21 @@ Context (weight : nat -> Z)
     apply f_equal2; nsatz.
     assumption. assumption. omega.
   Qed.
+
+  Lemma eval_goldilocks_mul (p : positive) s (s_nonzero : s <> 0) (s2_modp : mod_eq p (s^2) (s+1)) xs ys :
+    mod_eq p (eval weight (goldilocks_mul s xs ys)) (eval weight xs * eval weight ys).
+  Proof.
+    apply goldilocks_mul_correct; auto; lia.
+  Qed.
 End Karatsuba.
-Hint Opaque goldilocks_mul : uncps.
-Hint Rewrite goldilocks_mul_id : uncps.
+Hint Opaque karatsuba_mul goldilocks_mul : uncps.
+Hint Rewrite karatsuba_mul_id goldilocks_mul_id : uncps.
+
+Hint Rewrite
+     @eval_karatsuba_mul
+     @eval_goldilocks_mul
+     @goldilocks_mul_correct
+     using (assumption || (div_mod_cps_t; auto)) : push_basesystem_eval.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
   let t := (eval cbv delta [goldilocks_mul karatsuba_mul goldilocks_mul_cps karatsuba_mul_cps] in t) in

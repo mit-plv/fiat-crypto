@@ -76,7 +76,7 @@ Section gen.
         autorewrite with pattern_runtime;
         reflexivity
       | ].
-    apply goldilocks_mul_correct; auto; try congruence.
+    reflexivity.
   Defined.
 End gen.
 
