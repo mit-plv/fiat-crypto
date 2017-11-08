@@ -68,6 +68,12 @@ Proof.
   destruct v; reflexivity.
 Qed.
 
+Lemma option_map_map : forall {A B C} (f:A->B) (g:B->C) v,
+    option_map g (option_map f v) = option_map (fun v => g (f v)) v.
+Proof.
+  destruct v; reflexivity.
+Qed.
+
 Lemma option_rect_function {A B C S' N' v} f
   : f (option_rect (fun _ : option A => option B) S' N' v)
     = option_rect (fun _ : option A => C) (fun x => f (S' x)) (f N') v.
