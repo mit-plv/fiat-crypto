@@ -25,9 +25,11 @@ Definition evar_package_pf_rel {A v B R} (pkg : @evar_rel_package A v B R)
   := Eval hnf in evar_package_pf pkg.
 
 Definition evard_package {s d} (v : s)
-  := @evar_Prop_package
+  := @evar_rel_package
+       s
+       v
        d
-       (fun vald => { pf : s = d | vald = rew pf in v }).
+       (fun vald v => { pf : s = d | vald = rew pf in v }).
 Definition Build_evard_package {s d} (v : s)
            (vald : d)
            (evard_package_pfT : s = d)
