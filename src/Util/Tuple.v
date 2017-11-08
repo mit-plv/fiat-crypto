@@ -527,6 +527,16 @@ Proof.
   destruct n; unfold fieldwise; exact _.
 Defined.
 
+Global Instance dec_eq' {A} {HA : DecidableRel (@eq A)} : forall {n}, DecidableRel (@eq (tuple' A n)) | 10.
+Proof.
+  induction n; typeclasses eauto.
+Defined.
+
+Global Instance dec_eq {A} {HA : DecidableRel (@eq A)} : forall {n}, DecidableRel (@eq (tuple A n)) | 10.
+Proof.
+  destruct n; typeclasses eauto.
+Defined.
+
 Section fieldwise_map.
   Local Arguments map : simpl never.
   Lemma fieldwise'_map_eq {A A' B B' n} R (f:A -> A') (g:B -> B') (t1:tuple' A n) (t2:tuple' B n)
