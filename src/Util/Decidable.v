@@ -1,6 +1,7 @@
 (** Typeclass for decidable propositions *)
 
 Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Lists.List.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.HProp.
@@ -112,6 +113,13 @@ Global Instance dec_lt_Z : DecidableRel BinInt.Z.lt := ZArith_dec.Z_lt_dec.
 Global Instance dec_le_Z : DecidableRel BinInt.Z.le := ZArith_dec.Z_le_dec.
 Global Instance dec_gt_Z : DecidableRel BinInt.Z.gt := ZArith_dec.Z_gt_dec.
 Global Instance dec_ge_Z : DecidableRel BinInt.Z.ge := ZArith_dec.Z_ge_dec.
+
+Global Instance dec_Forall {A P} {HD : forall x : A, Decidable (P x)} {ls}
+  : Decidable (Forall P ls)
+  := @Forall_dec A P HD ls.
+Global Instance dec_Exists {A P} {HD : forall x : A, Decidable (P x)} {ls}
+  : Decidable (Exists P ls)
+  := @Exists_dec A P ls HD.
 
 Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
        {HD : Decidable (P (fst x) (snd x))}
