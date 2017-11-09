@@ -682,6 +682,20 @@ Proof.
       apply IHn; auto.
 Qed.
 
+Lemma fieldwise_map_from_list_iff
+      {T0 T T'} R ls {n} pf1 pf2 (f : T0 -> T) (g : T0 -> T')
+  : ((fieldwise R (map f (from_list n ls pf1))
+                (map g (from_list n ls pf2)))
+     <-> List.Forall (fun x => R (f x) (g x)) ls).
+Proof.
+  split; intro H; revert H; revert dependent n;
+    (induction ls as [|x xs IHxs]; intro n; [ | specialize (IHxs (pred n)) ]);
+    destruct n as [|[|n]]; try destruct xs; simpl in *; auto;
+      try congruence; intros; destruct_head'_and; eauto.
+  { inversion H; auto. }
+  { inversion H; auto. }
+Qed.
+
 Fixpoint eta_tuple'_dep {T n} : forall (P : tuple' T n -> Type),
     (forall ts : tuple' T n, P ts) -> forall ts : tuple' T n, P ts
   := match n with
