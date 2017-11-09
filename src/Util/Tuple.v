@@ -1042,3 +1042,20 @@ Proof.
   destruct n; intros; [ | apply map'_Proper ].
   { repeat (intros [] || intro); auto. }
 Qed.
+
+Global Instance fieldwise'_Proper
+  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.
+Proof.
+  induction n as [|n IHn]; intros.
+  { compute; intros; subst; auto. }
+  { cbv [pointwise_relation Proper respectful impl] in *.
+    intros f g Hfg x y ? x' y' ? H'; subst y y'.
+    simpl in *; destruct H'; eauto. }
+Qed.
+
+Global Instance fieldwise_Proper
+  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise A B n) | 10.
+Proof.
+  destruct n; intros; [ | apply fieldwise'_Proper ].
+  compute; trivial.
+Qed.
