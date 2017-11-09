@@ -1043,6 +1043,23 @@ Proof.
   { repeat (intros [] || intro); auto. }
 Qed.
 
+Lemma fieldwise'_lift_and {n A B R1 R2} x y
+  : (@fieldwise' A B n R1 x y /\ @fieldwise' A B n R2 x y)
+    <-> (@fieldwise' A B n (fun a b => R1 a b /\ R2 a b) x y).
+Proof.
+  induction n as [|n IHn]; intros.
+  { compute; intros; subst; auto. }
+  { simpl; rewrite <- IHn; tauto. }
+Qed.
+
+Lemma fieldwise_lift_and {n A B R1 R2} x y
+  : (@fieldwise A B n R1 x y /\ @fieldwise A B n R2 x y)
+    <-> (@fieldwise A B n (fun a b => R1 a b /\ R2 a b) x y).
+Proof.
+  destruct n; [ compute; tauto | apply fieldwise'_lift_and ].
+Qed.
+
+
 Global Instance fieldwise'_Proper
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.
 Proof.
