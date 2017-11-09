@@ -567,6 +567,18 @@ Section fieldwise_map.
   Proof. rewrite fieldwise_map_eq; reflexivity. Qed.
 End fieldwise_map.
 
+Lemma fieldwise'_eq_iff {A n} x y : fieldwise' (@eq A) x y <-> @eq (tuple' A n) x y.
+Proof.
+  induction n as [|n IHn]; [ reflexivity | ].
+  simpl; rewrite IHn; split; [ destruct x, y | ]; simpl; intuition (subst; auto).
+Qed.
+
+Lemma fieldwise_eq_iff {A n} x y : fieldwise (@eq A) x y <-> @eq (tuple A n) x y.
+Proof.
+  destruct n; [ destruct x, y | apply fieldwise'_eq_iff ]; simpl.
+  tauto.
+Qed.
+
 Fixpoint fieldwiseb' {A B} (n:nat) (R:A->B->bool) (a:tuple' A n) (b:tuple' B n) {struct n} : bool.
   destruct n; simpl @tuple' in *.
   { exact (R a b). }
