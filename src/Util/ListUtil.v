@@ -1654,10 +1654,10 @@ Proof.
   rewrite fold_right_andb_true_map_iff, fold_right_and_True_forall_In_iff; reflexivity.
 Qed.
 
-Lemma Forall2_forall_iff : forall {A} R (xs ys : list A) d, length xs = length ys ->
-  (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
+Lemma Forall2_forall_iff : forall {A B} (R : A -> B -> Prop) (xs : list A) (ys : list B) d1 d2, length xs = length ys ->
+  (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d1 xs i) (nth_default d2 ys i))).
 Proof.
-  intros A R xs ys d H; split; [ intros H0 i H1 | intros H0 ].
+  intros A B R xs ys d1 d2 H; split; [ intros H0 i H1 | intros H0 ].
 
   + revert xs ys H H0 H1.
     induction i as [|i IHi]; intros xs ys H H0 H1; destruct H0; distr_length; autorewrite with push_nth_default; auto.
@@ -1672,6 +1672,10 @@ Proof.
       autorewrite with push_nth_default in *; auto.
       apply H0; omega.
 Qed.
+
+Lemma Forall2_forall_iff' : forall {A} R (xs ys : list A) d, length xs = length ys ->
+  (Forall2 R xs ys <-> (forall i, (i < length xs)%nat -> R (nth_default d xs i) (nth_default d ys i))).
+Proof. intros; apply Forall2_forall_iff; assumption. Qed.
 
 Lemma nth_default_firstn : forall {A} (d : A) l i n,
   nth_default d (firstn n l) i = if le_dec n (length l)
