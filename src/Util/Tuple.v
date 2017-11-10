@@ -514,7 +514,7 @@ End Equivalence.
 Arguments fieldwise' {A B n} _ _ _.
 Arguments fieldwise {A B n} _ _ _.
 
-Global Instance dec_fieldwise' {A RA} {HA : DecidableRel RA} : forall {n}, DecidableRel (@fieldwise' A A n RA) | 10.
+Global Instance dec_fieldwise' {A B R} {H : forall a b, Decidable (R a b)} : forall {n}, DecidableRel (@fieldwise' A B n R) | 10.
 Proof.
   induction n; simpl @fieldwise'.
   { exact _. }
@@ -522,7 +522,7 @@ Proof.
     exact _. }
 Defined.
 
-Global Instance dec_fieldwise {A RA} {HA : DecidableRel RA} : forall {n}, DecidableRel (@fieldwise A A n RA) | 10.
+Global Instance dec_fieldwise {A B R} {H : forall a b, Decidable (R a b)} : forall {n}, DecidableRel (@fieldwise A B n R) | 10.
 Proof.
   destruct n; unfold fieldwise; exact _.
 Defined.
