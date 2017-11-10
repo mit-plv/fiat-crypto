@@ -7,8 +7,8 @@ Interp-η
  uint128_t x15, uint8_t x16 = subborrow_u128(0x0, x9, 0xffffffffffffffffffffffffL);
  uint128_t x18, uint8_t x19 = subborrow_u128(x16, x12, 0xffffffff000000010000000000000000L);
  uint128_t _, uint8_t x22 = subborrow_u128(x19, x13, 0x0);
- uint128_t x23 = cmovznz(x22, x18, x12);
- uint128_t x24 = cmovznz(x22, x15, x9);
+ uint128_t x23 = cmovznz128(x22, x18, x12);
+ uint128_t x24 = cmovznz128(x22, x15, x9);
  return (x23, x24))
 (x, x0)%core
      : word128 * word128 → word128 * word128 → ReturnType (uint128_t * uint128_t)

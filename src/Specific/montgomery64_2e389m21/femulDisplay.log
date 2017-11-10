@@ -23,7 +23,7 @@ Interp-η
  uint64_t x83, uint64_t x84 = mulx_u64(x71, 0xffffffffffffffffL);
  uint64_t x86, uint64_t x87 = mulx_u64(x71, 0xffffffffffffffffL);
  uint64_t x89, uint64_t x90 = mulx_u64(x71, 0xffffffffffffffffL);
- uint64_t x92, uint8_t x93 = mulx_u64_out_u8(x71, 0x1f);
+ uint64_t x92, uint8_t x93 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x71, 0x1f);
  uint64_t x95, uint8_t x96 = addcarryx_u64(0x0, x75, x77);
  uint64_t x98, uint8_t x99 = addcarryx_u64(x96, x78, x80);
  uint64_t x101, uint8_t x102 = addcarryx_u64(x99, x81, x83);
@@ -68,7 +68,7 @@ Interp-η
  uint64_t x216, uint64_t x217 = mulx_u64(x204, 0xffffffffffffffffL);
  uint64_t x219, uint64_t x220 = mulx_u64(x204, 0xffffffffffffffffL);
  uint64_t x222, uint64_t x223 = mulx_u64(x204, 0xffffffffffffffffL);
- uint64_t x225, uint8_t x226 = mulx_u64_out_u8(x204, 0x1f);
+ uint64_t x225, uint8_t x226 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x204, 0x1f);
  uint64_t x228, uint8_t x229 = addcarryx_u64(0x0, x208, x210);
  uint64_t x231, uint8_t x232 = addcarryx_u64(x229, x211, x213);
  uint64_t x234, uint8_t x235 = addcarryx_u64(x232, x214, x216);
@@ -114,7 +114,7 @@ Interp-η
  uint64_t x350, uint64_t x351 = mulx_u64(x338, 0xffffffffffffffffL);
  uint64_t x353, uint64_t x354 = mulx_u64(x338, 0xffffffffffffffffL);
  uint64_t x356, uint64_t x357 = mulx_u64(x338, 0xffffffffffffffffL);
- uint64_t x359, uint8_t x360 = mulx_u64_out_u8(x338, 0x1f);
+ uint64_t x359, uint8_t x360 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x338, 0x1f);
  uint64_t x362, uint8_t x363 = addcarryx_u64(0x0, x342, x344);
  uint64_t x365, uint8_t x366 = addcarryx_u64(x363, x345, x347);
  uint64_t x368, uint8_t x369 = addcarryx_u64(x366, x348, x350);
@@ -160,7 +160,7 @@ Interp-η
  uint64_t x484, uint64_t x485 = mulx_u64(x472, 0xffffffffffffffffL);
  uint64_t x487, uint64_t x488 = mulx_u64(x472, 0xffffffffffffffffL);
  uint64_t x490, uint64_t x491 = mulx_u64(x472, 0xffffffffffffffffL);
- uint64_t x493, uint8_t x494 = mulx_u64_out_u8(x472, 0x1f);
+ uint64_t x493, uint8_t x494 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x472, 0x1f);
  uint64_t x496, uint8_t x497 = addcarryx_u64(0x0, x476, x478);
  uint64_t x499, uint8_t x500 = addcarryx_u64(x497, x479, x481);
  uint64_t x502, uint8_t x503 = addcarryx_u64(x500, x482, x484);
@@ -206,7 +206,7 @@ Interp-η
  uint64_t x618, uint64_t x619 = mulx_u64(x606, 0xffffffffffffffffL);
  uint64_t x621, uint64_t x622 = mulx_u64(x606, 0xffffffffffffffffL);
  uint64_t x624, uint64_t x625 = mulx_u64(x606, 0xffffffffffffffffL);
- uint64_t x627, uint8_t x628 = mulx_u64_out_u8(x606, 0x1f);
+ uint64_t x627, uint8_t x628 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x606, 0x1f);
  uint64_t x630, uint8_t x631 = addcarryx_u64(0x0, x610, x612);
  uint64_t x633, uint8_t x634 = addcarryx_u64(x631, x613, x615);
  uint64_t x636, uint8_t x637 = addcarryx_u64(x634, x616, x618);
@@ -252,7 +252,7 @@ Interp-η
  uint64_t x752, uint64_t x753 = mulx_u64(x740, 0xffffffffffffffffL);
  uint64_t x755, uint64_t x756 = mulx_u64(x740, 0xffffffffffffffffL);
  uint64_t x758, uint64_t x759 = mulx_u64(x740, 0xffffffffffffffffL);
- uint64_t x761, uint8_t x762 = mulx_u64_out_u8(x740, 0x1f);
+ uint64_t x761, uint8_t x762 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x740, 0x1f);
  uint64_t x764, uint8_t x765 = addcarryx_u64(0x0, x744, x746);
  uint64_t x767, uint8_t x768 = addcarryx_u64(x765, x747, x749);
  uint64_t x770, uint8_t x771 = addcarryx_u64(x768, x750, x752);
@@ -298,7 +298,7 @@ Interp-η
  uint64_t x886, uint64_t x887 = mulx_u64(x874, 0xffffffffffffffffL);
  uint64_t x889, uint64_t x890 = mulx_u64(x874, 0xffffffffffffffffL);
  uint64_t x892, uint64_t x893 = mulx_u64(x874, 0xffffffffffffffffL);
- uint64_t x895, uint8_t x896 = mulx_u64_out_u8(x874, 0x1f);
+ uint64_t x895, uint8_t x896 = Op (Syntax.MulSplit 64 (Syntax.TWord 6) (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x874, 0x1f);
  uint64_t x898, uint8_t x899 = addcarryx_u64(0x0, x878, x880);
  uint64_t x901, uint8_t x902 = addcarryx_u64(x899, x881, x883);
  uint64_t x904, uint8_t x905 = addcarryx_u64(x902, x884, x886);
