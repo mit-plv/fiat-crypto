@@ -15,7 +15,8 @@ Section language.
       Fixpoint flat_interp_tuple' {T n} : interp_flat_type (tuple' T n) -> Tuple.tuple' (interp_flat_type T) n
         := match n return interp_flat_type (tuple' T n) -> Tuple.tuple' (interp_flat_type T) n with
            | O => fun x => x
-           | S n' => fun xy => (@flat_interp_tuple' _ n' (fst xy), snd xy)
+           | S n' => fun '((x, y) : interp_flat_type (tuple' T n' * T))
+                     => (@flat_interp_tuple' _ n' x, y)
            end.
       Definition flat_interp_tuple {T n} : interp_flat_type (tuple T n) -> Tuple.tuple (interp_flat_type T) n
         := match n return interp_flat_type (tuple T n) -> Tuple.tuple (interp_flat_type T) n with
@@ -25,7 +26,8 @@ Section language.
       Fixpoint flat_interp_untuple' {T n} : Tuple.tuple' (interp_flat_type T) n -> interp_flat_type (tuple' T n)
         := match n return Tuple.tuple' (interp_flat_type T) n -> interp_flat_type (tuple' T n) with
            | O => fun x => x
-           | S n' => fun xy => (@flat_interp_untuple' _ n' (fst xy), snd xy)
+           | S n' => fun '((x, y) : Tuple.tuple' _ n' * _)
+                     => (@flat_interp_untuple' _ n' x, y)
            end.
       Definition flat_interp_untuple {T n} : Tuple.tuple (interp_flat_type T) n -> interp_flat_type (tuple T n)
         := match n return Tuple.tuple (interp_flat_type T) n -> interp_flat_type (tuple T n) with
@@ -34,13 +36,13 @@ Section language.
            end.
       Lemma flat_interp_untuple'_tuple' {T n v}
         : @flat_interp_untuple' T n (flat_interp_tuple' v) = v.
-      Proof using Type. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Proof using Type. induction n; [ reflexivity | simpl; destruct v; rewrite IHn; reflexivity ]. Qed.
       Lemma flat_interp_untuple_tuple {T n v}
         : flat_interp_untuple (@flat_interp_tuple T n v) = v.
       Proof using Type. destruct n; [ reflexivity | apply flat_interp_untuple'_tuple' ]. Qed.
       Lemma flat_interp_tuple'_untuple' {T n v}
         : @flat_interp_tuple' T n (flat_interp_untuple' v) = v.
-      Proof using Type. induction n; [ reflexivity | simpl; rewrite IHn; destruct v; reflexivity ]. Qed.
+      Proof using Type. induction n; [ reflexivity | simpl; destruct v; rewrite IHn; reflexivity ]. Qed.
       Lemma flat_interp_tuple_untuple {T n v}
         : @flat_interp_tuple T n (flat_interp_untuple v) = v.
       Proof using Type. destruct n; [ reflexivity | apply flat_interp_tuple'_untuple' ]. Qed.
