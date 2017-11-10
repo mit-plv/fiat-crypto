@@ -80,5 +80,9 @@ Ltac unfold_flat_interp_tuple _ :=
            => handle n
          | [ |- context[@flat_interp_untuple' _ _ _ ?n] ]
            => handle n
+         | [ |- context[@tuple _ _ ?n] ]
+           => handle n
+         | [ |- context[@tuple' _ _ ?n] ]
+           => handle n
          end;
-  cbv [flat_interp_tuple flat_interp_tuple' flat_interp_untuple flat_interp_untuple'].
+  cbv [flat_interp_tuple flat_interp_tuple' flat_interp_untuple flat_interp_untuple' tuple tuple'].
