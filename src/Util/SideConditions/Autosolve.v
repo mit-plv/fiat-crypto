@@ -13,6 +13,7 @@ Notation vm_compute_evar_package_vm_large := (@vm_compute_evar_package_gen RHS).
 Notation vm_compute_evar_package := vm_compute_evar_package_vm_small.
 Definition vm_cast_evar_package {s} (v : s) d := @evard_package s d v.
 Definition cast_evar_package {s} (v : s) d := @evard_package s d v.
+Definition vm_compute_cast_evar_package {s} (v : s) d := @evard_package s d v.
 
 Definition optional_evar_Prop_package {T} (P : T -> Prop) (alt_pkg : Type)
   := @evar_Prop_package
@@ -97,8 +98,14 @@ Ltac autosolve else_tac :=
     => exact (@Build_evard_package
                 s d v
                 v eq_refl eq_refl)
+  | [ |- vm_compute_cast_evar_package (s:=?s) ?v ?d ]
+    => let v' := (eval vm_compute in v) in
+       exact (@Build_evard_package
+                s d v
+                v' eq_refl eq_refl)
   | [ |- @option_evar_rel_package ?A ?v ?B ?R ?alt_pkg ]
     => refine (@unoption_evar_rel_package A v B R alt_pkg (fun _ x => x) _);
+       cbn [val];
        autosolve else_tac
   | _ => CorePackages.autosolve else_tac
   end.
