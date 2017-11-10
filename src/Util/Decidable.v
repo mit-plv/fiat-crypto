@@ -126,6 +126,12 @@ Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
   : Decidable (let '(a, b) := x in P a b) | 1.
 Proof. edestruct (_ : _ * _); assumption. Defined.
 
+Global Instance dec_if_bool {b : bool} {A B} {HA : Decidable A} {HB : Decidable B}
+  : Decidable (if b then A else B) | 10
+  := if b return Decidable (if b then A else B)
+     then HA
+     else HB.
+
 Lemma not_not P {d:Decidable P} : not (not P) <-> P.
 Proof. destruct (dec P); intuition. Qed.
 
