@@ -3,6 +3,14 @@ from __future__ import with_statement
 import json, sys, os, math, re, shutil, io
 from fractions import Fraction
 
+### Python 2/3 compatibility hacks
+# unicode doesn't exist in python3 (str is unicode by default), so we
+# set unicode to str there (but we need proper unicode in python2)
+try:
+    unicode
+except NameError:
+    unicode = str
+
 DEFAULT_A24_FOR_BENCH = 121665
 def compute_bitwidth(base):
     return 2**int(math.ceil(math.log(base, 2)))
