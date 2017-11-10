@@ -57,7 +57,7 @@ update-_CoqProject::
 $(VOFILES): | coqprime
 
 # add files to this list to prevent them from being built by default
-UNMADE_VOFILES := src/Specific/X2555/C128/%.vo # x2555-c128 currently doesn't build
+UNMADE_VOFILES := 
 UNMADE_C_FILES := \
 	src/Specific/X25519/C64/fesub.c src/Specific/X25519/C64/feadd.c src/Specific/X25519/C64/fecarry.c \
 	src/Specific/X25519/C64/fesub.h src/Specific/X25519/C64/feadd.h src/Specific/X25519/C64/fecarry.h \
