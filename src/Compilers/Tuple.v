@@ -66,3 +66,19 @@ Global Arguments flat_interp_tuple {_ _ _ _} _.
 Global Arguments flat_interp_untuple' {_ _ _ _} _.
 Global Arguments flat_interp_untuple {_ _ _ _} _.
 Global Arguments tuple_map {_ _ _ _ _ n} _ _.
+
+Ltac unfold_flat_interp_tuple _ :=
+  let handle n :=
+      ltac:(let n' := (eval cbv in n) in
+            progress change n with n') in
+  repeat match goal with
+         | [ |- context[@flat_interp_tuple _ _ _ ?n] ]
+           => handle n
+         | [ |- context[@flat_interp_tuple' _ _ _ ?n] ]
+           => handle n
+         | [ |- context[@flat_interp_untuple _ _ _ ?n] ]
+           => handle n
+         | [ |- context[@flat_interp_untuple' _ _ _ ?n] ]
+           => handle n
+         end;
+  cbv [flat_interp_tuple flat_interp_tuple' flat_interp_untuple flat_interp_untuple'].
