@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <inttypes.h>
-typedef unsigned int uint128_t __attribute__((mode(TI)));
 
 #define limb_t_(bitwidth) limb_t__(bitwidth)
 #define PRIxlimb_(bitwidth) PRIxlimb__(bitwidth)
@@ -40,6 +39,11 @@ typedef unsigned int uint128_t __attribute__((mode(TI)));
 static const limb_t a24[modulus_limbs] = {a24_val};
 static const limb_t limb_weight_gaps[modulus_limbs] = limb_weight_gaps_array;
 
+#if bitwidth >= 64
+typedef unsigned int uint128_t __attribute__((mode(TI)));
+#endif
+
+// intrinsics?
 #if 0
 
 #include <immintrin.h>
@@ -72,6 +76,8 @@ static uint32_t _subborrow_u32(uint8_t c, uint32_t a, uint32_t b, uint32_t *low)
   return (uint8_t) (x>>63);
 }
 
+#if bitwidth >= 64
+
 static uint64_t _mulx_u64(uint64_t a, uint64_t b, uint64_t *high) {
   uint128_t x = (uint128_t)a * b;
   *high = (uint64_t) (x >> 64);
@@ -93,6 +99,8 @@ static uint64_t _subborrow_u64(uint8_t c, uint64_t a, uint64_t b, uint64_t *low)
 
 #endif
 
+#endif
+
 static uint32_t _mulx_u32_out_u8(uint32_t a, uint32_t b, uint8_t *high) {
   uint32_t tmp_high;
   uint32_t ret = _mulx_u32(a, b, &tmp_high);
@@ -100,12 +108,14 @@ static uint32_t _mulx_u32_out_u8(uint32_t a, uint32_t b, uint8_t *high) {
   return ret;
 }
 
+# if bitwidth >= 64
 static uint64_t _mulx_u64_out_u8(uint64_t a, uint64_t b, uint8_t *high) {
   uint64_t tmp_high;
   uint64_t ret = _mulx_u64(a, b, &tmp_high);
   *high = (uint8_t) (tmp_high);
   return ret;
 }
+#endif
 
 
 
