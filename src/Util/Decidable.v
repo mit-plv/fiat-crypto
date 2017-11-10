@@ -115,11 +115,21 @@ Global Instance dec_gt_Z : DecidableRel BinInt.Z.gt := ZArith_dec.Z_gt_dec.
 Global Instance dec_ge_Z : DecidableRel BinInt.Z.ge := ZArith_dec.Z_ge_dec.
 
 Global Instance dec_Forall {A P} {HD : forall x : A, Decidable (P x)} {ls}
-  : Decidable (Forall P ls)
-  := @Forall_dec A P HD ls.
+  : Decidable (Forall P ls) | 10.
+Proof.
+  induction ls as [|x xs IHxs]; [ left | destruct (HD x), IHxs; [ left | right.. ] ];
+    [ constructor; assumption | constructor; assumption | intro Hn.. ];
+    clear HD;
+    try abstract (inversion Hn; subst; tauto).
+Defined.
 Global Instance dec_Exists {A P} {HD : forall x : A, Decidable (P x)} {ls}
-  : Decidable (Exists P ls)
-  := @Exists_dec A P ls HD.
+  : Decidable (Exists P ls) | 10.
+Proof.
+  induction ls as [|x xs IHxs]; [ right | destruct (HD x), IHxs; [ left.. | right ] ];
+    [ intro Hn | constructor; assumption.. | intro Hn ];
+    clear HD;
+    try abstract (inversion Hn; subst; tauto).
+Defined.
 
 Global Instance dec_match_pair {A B} {P : A -> B -> Prop} {x : A * B}
        {HD : Decidable (P (fst x) (snd x))}
