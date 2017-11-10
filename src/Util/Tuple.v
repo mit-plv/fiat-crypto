@@ -1060,54 +1060,65 @@ Proof.
 Qed.
 
 
-Global Instance fieldwise'_Proper
-  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.
-Proof.
-  induction n as [|n IHn]; intros.
-  { compute; intros; subst; auto. }
-  { cbv [pointwise_relation Proper respectful impl] in *.
-    intros f g Hfg x y ? x' y' ? H'; subst y y'.
-    simpl in *; destruct H'; eauto. }
-Qed.
-
-Global Instance fieldwise_Proper
-  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise A B n) | 10.
-Proof.
-  destruct n; intros; [ | apply fieldwise'_Proper ].
-  compute; trivial.
-Qed.
-
-Global Instance fieldwise'_Proper_iff
-  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@fieldwise' A B n) | 10.
+Global Instance fieldwise'_Proper_gen {A B RA RB R}
+       {R_Proper_and : Proper (R ==> R ==> R) and}
+  : forall {n}, Proper ((RA ==> RB ==> R) ==> fieldwise' RA ==> fieldwise' RB ==> R) (@fieldwise' A B n) | 10.
 Proof.
   induction n as [|n IHn]; intros.
   { compute; intros; subst; auto. }
   { cbv [pointwise_relation Proper respectful] in *.
-    intros f g Hfg x y ? x' y' ?; subst y y'.
-    simpl; erewrite IHn by first [ eassumption | eauto ].
-    rewrite Hfg; reflexivity. }
+    intros f g Hfg x y H x' y' H'.
+    simpl in *; apply R_Proper_and; destruct H, H'; auto. }
 Qed.
+
+Global Instance fieldwise_Proper_gen {A B RA RB R}
+       {R_Proper_and : Proper (R ==> R ==> R) and}
+       (R_True : R True True)
+  : forall {n}, Proper ((RA ==> RB ==> R) ==> fieldwise RA ==> fieldwise RB ==> R) (@fieldwise A B n) | 10.
+Proof.
+  destruct n; intros; [ | apply fieldwise'_Proper_gen ].
+  compute; trivial.
+Qed.
+
+Global Instance fieldwise'_Proper_gen_eq {A B R}
+       {R_Proper_and : Proper (R ==> R ==> R) and}
+  : forall {n}, Proper (pointwise_relation _ (pointwise_relation _ R) ==> eq ==> eq ==> R) (@fieldwise' A B n) | 10.
+Proof.
+  cbv [pointwise_relation].
+  repeat intro; subst; apply (@fieldwise'_Proper_gen A B eq eq); try assumption;
+    repeat intro; subst; auto; reflexivity.
+Qed.
+
+Global Instance fieldwise_Proper_gen_eq {A B R}
+       {R_Proper_and : Proper (R ==> R ==> R) and}
+       (R_True : R True True)
+  : forall {n}, Proper (pointwise_relation _ (pointwise_relation _ R) ==> eq ==> eq ==> R) (@fieldwise A B n) | 10.
+Proof.
+  cbv [pointwise_relation].
+  repeat intro; subst; apply (@fieldwise_Proper_gen A B eq eq); try assumption;
+    repeat intro; subst; auto; reflexivity.
+Qed.
+
+Global Instance fieldwise'_Proper
+  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.
+Proof. intros; apply fieldwise'_Proper_gen_eq. Qed.
+
+Global Instance fieldwise_Proper
+  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise A B n) | 10.
+Proof. intros; now apply fieldwise_Proper_gen_eq. Qed.
+
+Global Instance fieldwise'_Proper_iff
+  : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@fieldwise' A B n) | 10.
+Proof. intros; apply fieldwise'_Proper_gen_eq. Qed.
 
 Global Instance fieldwise_Proper_iff
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@fieldwise A B n) | 10.
-Proof.
-  destruct n; intros; [ | apply fieldwise'_Proper_iff ].
-  compute; tauto.
-Qed.
+Proof. intros; now apply fieldwise_Proper_gen_eq. Qed.
 
 Global Instance fieldwise'_Proper_flip_impl
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ (flip impl)) ==> eq ==> eq ==> flip impl) (@fieldwise' A B n) | 10.
-Proof.
-  induction n as [|n IHn]; intros.
-  { compute; intros; subst; auto. }
-  { cbv [pointwise_relation Proper respectful flip impl] in *.
-    intros f g Hfg x y ? x' y' ? H'; subst y y'.
-    simpl in *; destruct H'; eauto. }
-Qed.
+Proof. intros; apply @fieldwise'_Proper_gen_eq; compute; tauto. Qed.
 
 Global Instance fieldwise_Proper_flip_impl
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ (flip impl)) ==> eq ==> eq ==> flip impl) (@fieldwise A B n) | 10.
-Proof.
-  destruct n; intros; [ | apply fieldwise'_Proper_flip_impl ].
-  compute; trivial.
-Qed.
+Proof. intros; apply @fieldwise_Proper_gen_eq; compute; tauto. Qed.
