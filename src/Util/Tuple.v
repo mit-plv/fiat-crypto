@@ -1060,15 +1060,50 @@ Proof.
 Qed.
 
 
-Global Instance fieldwise'_Proper_gen {A B RA RB R}
+Lemma fieldwise'_Proper_gen_dep {A B A' B'} {RA RB : _ -> _ -> Prop} {R}
        {R_Proper_and : Proper (R ==> R ==> R) and}
-  : forall {n}, Proper ((RA ==> RB ==> R) ==> fieldwise' RA ==> fieldwise' RB ==> R) (@fieldwise' A B n) | 10.
+  : forall {n},
+    forall
+      (f : A -> B -> Prop)
+      (g : A' -> B' -> Prop)
+      (Hfg : forall a a', RA a a' -> forall b b', RB b b' -> R (f a b) (g a' b'))
+      x x'
+      (Hx : fieldwise' RA x x')
+      y y'
+      (Hy : fieldwise' RB y y'),
+      R (@fieldwise' A B n f x y) (@fieldwise' A' B' n g x' y').
 Proof.
-  induction n as [|n IHn]; intros.
+  induction n as [|n IHn].
   { compute; intros; subst; auto. }
   { cbv [pointwise_relation Proper respectful] in *.
     intros f g Hfg x y H x' y' H'.
     simpl in *; apply R_Proper_and; destruct H, H'; auto. }
+Qed.
+
+Lemma fieldwise_Proper_gen_dep {A B A' B'} {RA RB : _ -> _ -> Prop} {R}
+      {R_Proper_and : Proper (R ==> R ==> R) and}
+      (R_True : R True True)
+  : forall {n},
+    forall
+      (f : A -> B -> Prop)
+      (g : A' -> B' -> Prop)
+      (Hfg : forall a a', RA a a' -> forall b b', RB b b' -> R (f a b) (g a' b'))
+      x x'
+      (Hx : fieldwise RA x x')
+      y y'
+      (Hy : fieldwise RB y y'),
+      R (@fieldwise A B n f x y) (@fieldwise A' B' n g x' y').
+Proof.
+  destruct n; intros; [ | eapply fieldwise'_Proper_gen_dep; eauto ].
+  compute; trivial.
+Qed.
+
+Global Instance fieldwise'_Proper_gen {A B RA RB R}
+       {R_Proper_and : Proper (R ==> R ==> R) and}
+  : forall {n}, Proper ((RA ==> RB ==> R) ==> fieldwise' RA ==> fieldwise' RB ==> R) (@fieldwise' A B n) | 10.
+Proof.
+  cbv [Proper respectful].
+  eapply (@fieldwise'_Proper_gen_dep A B A B RA RB R); assumption.
 Qed.
 
 Global Instance fieldwise_Proper_gen {A B RA RB R}
@@ -1076,8 +1111,8 @@ Global Instance fieldwise_Proper_gen {A B RA RB R}
        (R_True : R True True)
   : forall {n}, Proper ((RA ==> RB ==> R) ==> fieldwise RA ==> fieldwise RB ==> R) (@fieldwise A B n) | 10.
 Proof.
-  destruct n; intros; [ | apply fieldwise'_Proper_gen ].
-  compute; trivial.
+  cbv [Proper respectful].
+  eapply (@fieldwise_Proper_gen_dep A B A B RA RB R); assumption.
 Qed.
 
 Global Instance fieldwise'_Proper_gen_eq {A B R}
