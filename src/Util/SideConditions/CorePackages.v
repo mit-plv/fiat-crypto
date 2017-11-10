@@ -46,4 +46,14 @@ Definition evard_package_pf {s d v} (pkg : @evard_package s d v)
 Ltac preautosolve _ :=
   repeat autounfold with autosolve in *.
 
+Module Internal.
+  Ltac autosolve else_tac :=
+    lazymatch goal with
+    | [ |- True ] => exact I
+    | [ |- unit ] => exact tt
+    | [ |- IDProp ] => exact idProp
+    | _ => else_tac ()
+    end.
+End Internal.
+
 Ltac autosolve else_tac := else_tac ().
