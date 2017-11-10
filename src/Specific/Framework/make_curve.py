@@ -176,7 +176,7 @@ def format_c_code(header, code, numargs, sz, indent='      ', closing_indent='  
 def nested_list_to_string(v):
     if isinstance(v, bool):
         return {True:'true', False:'false'}[v]
-    elif isinstance(v, str) or isinstance(v, int) or isinstance(v, unicode):
+    elif isinstance(v, basestring) or isinstance(v, int):
         return str(v)
     elif isinstance(v, list):
         return '[%s]' % '; '.join(map(nested_list_to_string, v))
@@ -187,13 +187,13 @@ def nested_list_to_string(v):
         assert(False)
 
 def as_bool(v):
-    if isinstance(v, str) or isinstance(v, unicode): return {'true':True, 'false':False}[v]
+    if isinstance(v, basestring): return {'true':True, 'false':False}[v]
     if isinstance(v, bool): return v
     raise Exception('Not a bool: %s' % repr(v))
 
 def make_curve_parameters(parameters):
     def fix_option(term, scope_string=''):
-        if not isinstance(term, str) and not isinstance(term, unicode):
+        if not isinstance(term, basestring):
             return term
         if term[:len('Some ')] != 'Some ' and term != 'None':
             if ' ' in term and (term[0] + term[-1]) not in ('()', '[]'):
@@ -470,7 +470,11 @@ DONT_EDIT_HEADERS = {
     '.py' : '# ' + DONT_EDIT_STR.replace('\n', '\n# '),
 }
 
-
+# in python3, unicode doesn't exist, so we replace it
+try:
+    unicode
+except NameError:
+    unicode = str
 
 def main(*args):
     if '--help' in args[1:] or '-h' in args[1:]: usage(0)
