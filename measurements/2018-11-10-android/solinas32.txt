@@ -1,0 +1,94 @@
+andreser@andreser:~/fiat-crypto$ for d in $(cat td32) ; do arm-linux-androideabi-gcc -pie    -I liblow -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing -Dbitwidth=32 src/Specific/Framework/bench/fibe.c -I "$d"     -o /tmp/main && adb push /tmp/main /data/local/tmp/main >/dev/null && echo "$d" && adb shell "time /data/local/tmp/main" | grep -v WARNING ; done
+src/Specific/solinas32_2e127m1
+    0m0.40s real     0m0.36s user     0m0.01s system
+src/Specific/solinas32_2e129m25
+    0m0.48s real     0m0.45s user     0m0.01s system
+src/Specific/solinas32_2e130m5
+    0m0.42s real     0m0.38s user     0m0.01s system
+src/Specific/solinas32_2e137m13
+    0m0.68s real     0m0.65s user     0m0.01s system
+src/Specific/solinas32_2e140m27
+    0m0.46s real     0m0.43s user     0m0.01s system
+src/Specific/solinas32_2e141m9
+    0m0.47s real     0m0.44s user     0m0.01s system
+src/Specific/solinas32_2e150m5
+    0m0.50s real     0m0.47s user     0m0.00s system
+src/Specific/solinas32_2e152m17
+    0m0.48s real     0m0.46s user     0m0.00s system
+src/Specific/solinas32_2e158m15
+    0m0.50s real     0m0.47s user     0m0.01s system
+src/Specific/solinas32_2e165m25
+    0m0.79s real     0m0.77s user     0m0.00s system
+src/Specific/solinas32_2e166m5
+    0m1.17s real     0m1.14s user     0m0.00s system
+src/Specific/solinas32_2e171m19
+    0m0.78s real     0m0.74s user     0m0.02s system
+src/Specific/solinas32_2e174m17
+    0m0.84s real     0m0.80s user     0m0.02s system
+src/Specific/solinas32_2e191m19
+    0m0.94s real     0m0.92s user     0m0.00s system
+src/Specific/solinas32_2e194m33
+    0m0.75s real     0m0.72s user     0m0.01s system
+src/Specific/solinas32_2e198m17
+    0m0.81s real     0m0.79s user     0m0.00s system
+src/Specific/solinas32_2e206m5
+    0m1.28s real     0m1.27s user     0m0.00s system
+src/Specific/solinas32_2e213m3
+    0m2.24s real     0m2.19s user     0m0.02s system
+src/Specific/solinas32_2e216m2e108m1
+    0m0.70s real     0m0.64s user     0m0.02s system
+src/Specific/solinas32_2e221m3
+    0m0.94s real     0m0.91s user     0m0.00s system
+src/Specific/solinas32_2e222m117
+    0m0.96s real     0m0.92s user     0m0.01s system
+src/Specific/solinas32_2e230m27
+    0m0.94s real     0m0.90s user     0m0.02s system
+src/Specific/solinas32_2e235m15
+    0m0.88s real     0m0.84s user     0m0.01s system
+src/Specific/solinas32_2e243m9
+    0m0.78s real     0m0.75s user     0m0.01s system
+src/Specific/solinas32_2e251m9
+    0m1.12s real     0m1.07s user     0m0.01s system
+src/Specific/solinas32_2e255m19
+    0m0.98s real     0m0.94s user     0m0.02s system
+src/Specific/solinas32_2e255m765
+    0m1.39s real     0m1.35s user     0m0.01s system
+src/Specific/solinas32_2e256m189
+    0m1.40s real     0m1.35s user     0m0.02s system
+src/Specific/solinas32_2e256m2e32m977
+    0m1.55s real     0m1.52s user     0m0.01s system
+src/Specific/solinas32_2e266m3
+    0m1.23s real     0m1.19s user     0m0.01s system
+src/Specific/solinas32_2e285m9
+    0m2.17s real     0m2.11s user     0m0.02s system
+src/Specific/solinas32_2e291m19
+    0m1.28s real     0m1.23s user     0m0.02s system
+src/Specific/solinas32_2e321m9
+    0m2.59s real     0m2.56s user     0m0.01s system
+src/Specific/solinas32_2e322m2e161m1
+    0m1.67s real     0m1.63s user     0m0.02s system
+src/Specific/solinas32_2e336m17
+    0m1.79s real     0m1.74s user     0m0.02s system
+src/Specific/solinas32_2e338m15
+    0m1.55s real     0m1.51s user     0m0.00s system
+src/Specific/solinas32_2e369m25
+    0m2.53s real     0m2.48s user     0m0.01s system
+src/Specific/solinas32_2e379m19
+    0m3.17s real     0m3.12s user     0m0.01s system
+src/Specific/solinas32_2e382m105
+    0m6.06s real     0m5.97s user     0m0.01s system
+src/Specific/solinas32_2e384m317
+    0m4.06s real     0m4.00s user     0m0.01s system
+src/Specific/solinas32_2e401m31
+    0m2.65s real     0m2.60s user     0m0.01s system
+src/Specific/solinas32_2e414m17
+    0m3.09s real     0m3.06s user     0m0.01s system
+src/Specific/solinas32_2e416m2e208m1
+    0m2.21s real     0m2.18s user     0m0.01s system
+src/Specific/solinas32_2e444m17
+    0m7.17s real     0m7.10s user     0m0.00s system
+src/Specific/solinas32_2e468m17
+    0m3.02s real     0m2.95s user     0m0.01s system
+src/Specific/solinas32_2e521m1
+    0m3.89s real     0m3.83s user     0m0.01s system
+
