@@ -20,11 +20,11 @@ static void feadd(uint64_t out[5], const uint64_t in1[5], const uint64_t in2[5])
   { uint64_t x45; uint8_t x46 = _subborrow_u64(x43, x30, 0xffffffffffffffffL, &x45);
   { uint64_t x48; uint8_t x49 = _subborrow_u64(x46, x33, 0x3ff, &x48);
   { uint64_t _; uint8_t x52 = _subborrow_u64(x49, x34, 0x0, &_);
-  { uint64_t x53 = cmovznz(x52, x48, x33);
-  { uint64_t x54 = cmovznz(x52, x45, x30);
-  { uint64_t x55 = cmovznz(x52, x42, x27);
-  { uint64_t x56 = cmovznz(x52, x39, x24);
-  { uint64_t x57 = cmovznz(x52, x36, x21);
+  { uint64_t x53 = cmovznz64(x52, x48, x33);
+  { uint64_t x54 = cmovznz64(x52, x45, x30);
+  { uint64_t x55 = cmovznz64(x52, x42, x27);
+  { uint64_t x56 = cmovznz64(x52, x39, x24);
+  { uint64_t x57 = cmovznz64(x52, x36, x21);
   out[0] = x57;
   out[1] = x56;
   out[2] = x55;

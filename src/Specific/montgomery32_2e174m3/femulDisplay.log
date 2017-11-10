@@ -241,12 +241,12 @@ Interp-η
  uint32_t x723, uint8_t x724 = subborrow_u32(x721, x704, 0xffffffff);
  uint32_t x726, uint8_t x727 = subborrow_u32(x724, x707, 0x3fff);
  uint32_t _, uint8_t x730 = subborrow_u32(x727, x709, 0x0);
- uint32_t x731 = cmovznz(x730, x726, x707);
- uint32_t x732 = cmovznz(x730, x723, x704);
- uint32_t x733 = cmovznz(x730, x720, x701);
- uint32_t x734 = cmovznz(x730, x717, x698);
- uint32_t x735 = cmovznz(x730, x714, x695);
- uint32_t x736 = cmovznz(x730, x711, x692);
+ uint32_t x731 = cmovznz32(x730, x726, x707);
+ uint32_t x732 = cmovznz32(x730, x723, x704);
+ uint32_t x733 = cmovznz32(x730, x720, x701);
+ uint32_t x734 = cmovznz32(x730, x717, x698);
+ uint32_t x735 = cmovznz32(x730, x714, x695);
+ uint32_t x736 = cmovznz32(x730, x711, x692);
  return (x731, x732, x733, x734, x735, x736))
 (x, x0)%core
      : word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

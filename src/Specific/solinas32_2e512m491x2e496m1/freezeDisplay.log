@@ -26,7 +26,7 @@ Interp-η
  uint32_t x111, uint8_t x112 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x109, Return x44, 0x3fffff);
  uint32_t x114, uint8_t x115 = Op (Syntax.SubWithGetBorrow 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x112, Return x46, 0x1fffff);
  uint32_t x117, uint8_t x118 = Op (Syntax.SubWithGetBorrow 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x115, Return x45, 0x1fc29f);
- uint32_t x119 = (uint32_t)cmovznz(x118, 0x0, 0xffffffff);
+ uint32_t x119 = cmovznz32(x118, 0x0, 0xffffffff);
  uint32_t x120 = (x119 & 0x3fffff);
  uint32_t x122, uint8_t x123 = Op (Syntax.AddWithGetCarry 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x48, Return x120);
  uint32_t x124 = (x119 & 0x1fffff);

@@ -7,7 +7,7 @@ Interp-η
  uint64_t x16, ℤ x17 = subborrow_u51ℤ(x14, x6, 0x0);
  uint64_t x19, ℤ x20 = subborrow_u51ℤ(x17, x8, 0x4000000000);
  uint64_t x22, uint8_t x23 = Op (Syntax.SubWithGetBorrow 51 Syntax.TZ (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x20, Return x7, 0x7fffffff80000);
- uint64_t x24 = (uint64_t)cmovznz(x23, 0x0, 0xffffffffffffffffL);
+ uint64_t x24 = cmovznz64(x23, 0x0, 0xffffffffffffffffL);
  uint64_t x25 = (x24 & 0xfffffffffffff);
  uint64_t x27, uint8_t x28 = Op (Syntax.AddWithGetCarry 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x10, Return x25);
  uint64_t x29 = (x24 & 0xfffffffffff);

@@ -105,10 +105,10 @@ Interp-η
  uint64_t x311, uint8_t x312 = subborrow_u64(x309, x298, 0x0);
  uint64_t x314, uint8_t x315 = subborrow_u64(x312, x301, 0xffffffff00000001L);
  uint64_t _, uint8_t x318 = subborrow_u64(x315, x303, 0x0);
- uint64_t x319 = cmovznz(x318, x314, x301);
- uint64_t x320 = cmovznz(x318, x311, x298);
- uint64_t x321 = cmovznz(x318, x308, x295);
- uint64_t x322 = cmovznz(x318, x305, x292);
+ uint64_t x319 = cmovznz64(x318, x314, x301);
+ uint64_t x320 = cmovznz64(x318, x311, x298);
+ uint64_t x321 = cmovznz64(x318, x308, x295);
+ uint64_t x322 = cmovznz64(x318, x305, x292);
  return (x319, x320, x321, x322))
 (x, x0)%core
      : word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t)

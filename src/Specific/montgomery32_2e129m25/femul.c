@@ -168,11 +168,11 @@ static void femul(uint32_t out[5], const uint32_t in1[5], const uint32_t in2[5])
   { uint32_t x481; uint8_t x482 = _subborrow_u32(x479, x465, 0xffffffff, &x481);
   { uint32_t x484; uint8_t x485 = _subborrow_u32(x482, x468, 0x1, &x484);
   { uint32_t _; uint8_t x488 = _subborrow_u32(x485, x470, 0x0, &_);
-  { uint32_t x489 = cmovznz(x488, x484, x468);
-  { uint32_t x490 = cmovznz(x488, x481, x465);
-  { uint32_t x491 = cmovznz(x488, x478, x462);
-  { uint32_t x492 = cmovznz(x488, x475, x459);
-  { uint32_t x493 = cmovznz(x488, x472, x456);
+  { uint32_t x489 = cmovznz32(x488, x484, x468);
+  { uint32_t x490 = cmovznz32(x488, x481, x465);
+  { uint32_t x491 = cmovznz32(x488, x478, x462);
+  { uint32_t x492 = cmovznz32(x488, x475, x459);
+  { uint32_t x493 = cmovznz32(x488, x472, x456);
   out[0] = x493;
   out[1] = x492;
   out[2] = x491;

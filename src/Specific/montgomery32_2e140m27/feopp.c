@@ -9,7 +9,7 @@ static void feopp(uint32_t out[5], const uint32_t in1[5]) {
   { uint32_t x16; uint8_t x17 = _subborrow_u32(x14, 0x0, x6, &x16);
   { uint32_t x19; uint8_t x20 = _subborrow_u32(x17, 0x0, x8, &x19);
   { uint32_t x22; uint8_t x23 = _subborrow_u32(x20, 0x0, x7, &x22);
-  { uint32_t x24 = (uint32_t)cmovznz(x23, 0x0, 0xffffffff);
+  { uint32_t x24 = cmovznz32(x23, 0x0, 0xffffffff);
   { uint32_t x25 = (x24 & 0xffffffe5);
   { uint32_t x27; uint8_t x28 = _addcarryx_u32(0x0, x10, x25, &x27);
   { uint32_t x29 = (x24 & 0xffffffff);

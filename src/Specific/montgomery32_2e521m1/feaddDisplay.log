@@ -37,23 +37,23 @@ Interp-η
  uint32_t x165, uint8_t x166 = subborrow_u32(x163, x114, 0xffffffff);
  uint32_t x168, uint8_t x169 = subborrow_u32(x166, x117, 0x1ff);
  uint32_t _, uint8_t x172 = subborrow_u32(x169, x118, 0x0);
- uint32_t x173 = cmovznz(x172, x168, x117);
- uint32_t x174 = cmovznz(x172, x165, x114);
- uint32_t x175 = cmovznz(x172, x162, x111);
- uint32_t x176 = cmovznz(x172, x159, x108);
- uint32_t x177 = cmovznz(x172, x156, x105);
- uint32_t x178 = cmovznz(x172, x153, x102);
- uint32_t x179 = cmovznz(x172, x150, x99);
- uint32_t x180 = cmovznz(x172, x147, x96);
- uint32_t x181 = cmovznz(x172, x144, x93);
- uint32_t x182 = cmovznz(x172, x141, x90);
- uint32_t x183 = cmovznz(x172, x138, x87);
- uint32_t x184 = cmovznz(x172, x135, x84);
- uint32_t x185 = cmovznz(x172, x132, x81);
- uint32_t x186 = cmovznz(x172, x129, x78);
- uint32_t x187 = cmovznz(x172, x126, x75);
- uint32_t x188 = cmovznz(x172, x123, x72);
- uint32_t x189 = cmovznz(x172, x120, x69);
+ uint32_t x173 = cmovznz32(x172, x168, x117);
+ uint32_t x174 = cmovznz32(x172, x165, x114);
+ uint32_t x175 = cmovznz32(x172, x162, x111);
+ uint32_t x176 = cmovznz32(x172, x159, x108);
+ uint32_t x177 = cmovznz32(x172, x156, x105);
+ uint32_t x178 = cmovznz32(x172, x153, x102);
+ uint32_t x179 = cmovznz32(x172, x150, x99);
+ uint32_t x180 = cmovznz32(x172, x147, x96);
+ uint32_t x181 = cmovznz32(x172, x144, x93);
+ uint32_t x182 = cmovznz32(x172, x141, x90);
+ uint32_t x183 = cmovznz32(x172, x138, x87);
+ uint32_t x184 = cmovznz32(x172, x135, x84);
+ uint32_t x185 = cmovznz32(x172, x132, x81);
+ uint32_t x186 = cmovznz32(x172, x129, x78);
+ uint32_t x187 = cmovznz32(x172, x126, x75);
+ uint32_t x188 = cmovznz32(x172, x123, x72);
+ uint32_t x189 = cmovznz32(x172, x120, x69);
  return (x173, x174, x175, x176, x177, x178, x179, x180, x181, x182, x183, x184, x185, x186, x187, x188, x189))
 (x, x0)%core
      : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

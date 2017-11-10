@@ -33,21 +33,21 @@ Interp-η
  uint32_t x145, uint8_t x146 = subborrow_u32(x143, x100, 0xffffffff);
  uint32_t x148, uint8_t x149 = subborrow_u32(x146, x103, 0xf);
  uint32_t _, uint8_t x152 = subborrow_u32(x149, x104, 0x0);
- uint32_t x153 = cmovznz(x152, x148, x103);
- uint32_t x154 = cmovznz(x152, x145, x100);
- uint32_t x155 = cmovznz(x152, x142, x97);
- uint32_t x156 = cmovznz(x152, x139, x94);
- uint32_t x157 = cmovznz(x152, x136, x91);
- uint32_t x158 = cmovznz(x152, x133, x88);
- uint32_t x159 = cmovznz(x152, x130, x85);
- uint32_t x160 = cmovznz(x152, x127, x82);
- uint32_t x161 = cmovznz(x152, x124, x79);
- uint32_t x162 = cmovznz(x152, x121, x76);
- uint32_t x163 = cmovznz(x152, x118, x73);
- uint32_t x164 = cmovznz(x152, x115, x70);
- uint32_t x165 = cmovznz(x152, x112, x67);
- uint32_t x166 = cmovznz(x152, x109, x64);
- uint32_t x167 = cmovznz(x152, x106, x61);
+ uint32_t x153 = cmovznz32(x152, x148, x103);
+ uint32_t x154 = cmovznz32(x152, x145, x100);
+ uint32_t x155 = cmovznz32(x152, x142, x97);
+ uint32_t x156 = cmovznz32(x152, x139, x94);
+ uint32_t x157 = cmovznz32(x152, x136, x91);
+ uint32_t x158 = cmovznz32(x152, x133, x88);
+ uint32_t x159 = cmovznz32(x152, x130, x85);
+ uint32_t x160 = cmovznz32(x152, x127, x82);
+ uint32_t x161 = cmovznz32(x152, x124, x79);
+ uint32_t x162 = cmovznz32(x152, x121, x76);
+ uint32_t x163 = cmovznz32(x152, x118, x73);
+ uint32_t x164 = cmovznz32(x152, x115, x70);
+ uint32_t x165 = cmovznz32(x152, x112, x67);
+ uint32_t x166 = cmovznz32(x152, x109, x64);
+ uint32_t x167 = cmovznz32(x152, x106, x61);
  return (x153, x154, x155, x156, x157, x158, x159, x160, x161, x162, x163, x164, x165, x166, x167))
 (x, x0)%core
      : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

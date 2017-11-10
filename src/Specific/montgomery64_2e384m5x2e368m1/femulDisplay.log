@@ -235,12 +235,12 @@ Interp-η
  uint64_t x705, uint8_t x706 = subborrow_u64(x703, x686, 0xffffffffffffffffL);
  uint64_t x708, uint8_t x709 = subborrow_u64(x706, x689, 0xfffaffffffffffffL);
  uint64_t _, uint8_t x712 = subborrow_u64(x709, x691, 0x0);
- uint64_t x713 = cmovznz(x712, x708, x689);
- uint64_t x714 = cmovznz(x712, x705, x686);
- uint64_t x715 = cmovznz(x712, x702, x683);
- uint64_t x716 = cmovznz(x712, x699, x680);
- uint64_t x717 = cmovznz(x712, x696, x677);
- uint64_t x718 = cmovznz(x712, x693, x674);
+ uint64_t x713 = cmovznz64(x712, x708, x689);
+ uint64_t x714 = cmovznz64(x712, x705, x686);
+ uint64_t x715 = cmovznz64(x712, x702, x683);
+ uint64_t x716 = cmovznz64(x712, x699, x680);
+ uint64_t x717 = cmovznz64(x712, x696, x677);
+ uint64_t x718 = cmovznz64(x712, x693, x674);
  return (x713, x714, x715, x716, x717, x718))
 (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

@@ -29,7 +29,7 @@ static void freeze(uint32_t out[15], const uint32_t in1[15]) {
   { uint32_t x66, uint8_t x67 = Op (Syntax.SubWithGetBorrow 14 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x64, Return x26, 0x3fff);
   { uint32_t x69, uint8_t x70 = Op (Syntax.SubWithGetBorrow 14 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x67, Return x28, 0x3fff);
   { uint32_t x72, uint8_t x73 = Op (Syntax.SubWithGetBorrow 14 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x70, Return x27, 0x3fff);
-  { uint32_t x74 = (uint32_t)cmovznz(x73, 0x0, 0xffffffff);
+  { uint32_t x74 = cmovznz32(x73, 0x0, 0xffffffff);
   { uint32_t x75 = (x74 & 0x7ffd);
   { uint32_t x77, uint8_t x78 = Op (Syntax.AddWithGetCarry 15 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x30, Return x75);
   { uint32_t x79 = (x74 & 0x3fff);

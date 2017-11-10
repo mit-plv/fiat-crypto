@@ -8,7 +8,7 @@ Interp-η
  uint32_t x34, uint8_t x35 = subborrow_u32(x32, x11, x21);
  uint32_t x37, uint8_t x38 = subborrow_u32(x35, x13, x23);
  uint32_t x40, uint8_t x41 = subborrow_u32(x38, x12, x22);
- uint32_t x42 = (uint32_t)cmovznz(x41, 0x0, 0xffffffff);
+ uint32_t x42 = cmovznz32(x41, 0x0, 0xffffffff);
  uint32_t x43 = (x42 & 0xfffffff5);
  uint32_t x45, uint8_t x46 = addcarryx_u32(0x0, x25, x43);
  uint32_t x47 = (x42 & 0xffffffff);

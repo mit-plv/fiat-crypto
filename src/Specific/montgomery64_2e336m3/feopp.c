@@ -11,7 +11,7 @@ static void feopp(uint64_t out[6], const uint64_t in1[6]) {
   { uint64_t x21; uint8_t x22 = _subborrow_u64(x19, 0x0, x8, &x21);
   { uint64_t x24; uint8_t x25 = _subborrow_u64(x22, 0x0, x10, &x24);
   { uint64_t x27; uint8_t x28 = _subborrow_u64(x25, 0x0, x9, &x27);
-  { uint64_t x29 = (uint64_t)cmovznz(x28, 0x0, 0xffffffffffffffffL);
+  { uint64_t x29 = cmovznz64(x28, 0x0, 0xffffffffffffffffL);
   { uint64_t x30 = (x29 & 0xfffffffffffffffdL);
   { uint64_t x32; uint8_t x33 = _addcarryx_u64(0x0, x12, x30, &x32);
   { uint64_t x34 = (x29 & 0xffffffffffffffffL);

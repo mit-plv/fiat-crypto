@@ -61,9 +61,9 @@ Interp-η
  uint64_t x177, uint8_t x178 = subborrow_u64(x175, x167, 0xffffffffffffffffL);
  uint64_t x180, uint8_t x181 = subborrow_u64(x178, x170, 0x1);
  uint64_t _, uint8_t x184 = subborrow_u64(x181, x172, 0x0);
- uint64_t x185 = cmovznz(x184, x180, x170);
- uint64_t x186 = cmovznz(x184, x177, x167);
- uint64_t x187 = cmovznz(x184, x174, x164);
+ uint64_t x185 = cmovznz64(x184, x180, x170);
+ uint64_t x186 = cmovznz64(x184, x177, x167);
+ uint64_t x187 = cmovznz64(x184, x174, x164);
  return (x185, x186, x187))
 (x, x0)%core
      : word64 * word64 * word64 → word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t)

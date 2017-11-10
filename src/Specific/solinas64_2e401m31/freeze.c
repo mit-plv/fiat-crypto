@@ -15,7 +15,7 @@ static void freeze(uint64_t out[8], const uint64_t in1[8]) {
   { uint64_t x31, uint8_t x32 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x29, Return x12, 0x3ffffffffffff);
   { uint64_t x34, uint8_t x35 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x32, Return x14, 0x3ffffffffffff);
   { uint64_t x37, uint8_t x38 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x35, Return x13, 0x3ffffffffffff);
-  { uint64_t x39 = (uint64_t)cmovznz(x38, 0x0, 0xffffffffffffffffL);
+  { uint64_t x39 = cmovznz64(x38, 0x0, 0xffffffffffffffffL);
   { uint64_t x40 = (x39 & 0x7ffffffffffe1);
   { uint64_t x42; uint8_t x43 = _addcarryx_u51(0x0, x16, x40, &x42);
   { uint64_t x44 = (x39 & 0x3ffffffffffff);

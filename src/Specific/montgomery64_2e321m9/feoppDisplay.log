@@ -8,7 +8,7 @@ Interp-η
  uint64_t x21, uint8_t x22 = subborrow_u64(x19, 0x0, x8);
  uint64_t x24, uint8_t x25 = subborrow_u64(x22, 0x0, x10);
  uint64_t x27, uint8_t x28 = subborrow_u64(x25, 0x0, x9);
- uint64_t x29 = (uint64_t)cmovznz(x28, 0x0, 0xffffffffffffffffL);
+ uint64_t x29 = cmovznz64(x28, 0x0, 0xffffffffffffffffL);
  uint64_t x30 = (x29 & 0xfffffffffffffff7L);
  uint64_t x32, uint8_t x33 = addcarryx_u64(0x0, x12, x30);
  uint64_t x34 = (x29 & 0xffffffffffffffffL);

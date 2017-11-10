@@ -19,14 +19,14 @@ Interp-η
  uint32_t x75, uint8_t x76 = subborrow_u32(x73, x51, 0xffffffff);
  uint32_t x78, uint8_t x79 = subborrow_u32(x76, x54, 0x7ffffff);
  uint32_t _, uint8_t x82 = subborrow_u32(x79, x55, 0x0);
- uint32_t x83 = cmovznz(x82, x78, x54);
- uint32_t x84 = cmovznz(x82, x75, x51);
- uint32_t x85 = cmovznz(x82, x72, x48);
- uint32_t x86 = cmovznz(x82, x69, x45);
- uint32_t x87 = cmovznz(x82, x66, x42);
- uint32_t x88 = cmovznz(x82, x63, x39);
- uint32_t x89 = cmovznz(x82, x60, x36);
- uint32_t x90 = cmovznz(x82, x57, x33);
+ uint32_t x83 = cmovznz32(x82, x78, x54);
+ uint32_t x84 = cmovznz32(x82, x75, x51);
+ uint32_t x85 = cmovznz32(x82, x72, x48);
+ uint32_t x86 = cmovznz32(x82, x69, x45);
+ uint32_t x87 = cmovznz32(x82, x66, x42);
+ uint32_t x88 = cmovznz32(x82, x63, x39);
+ uint32_t x89 = cmovznz32(x82, x60, x36);
+ uint32_t x90 = cmovznz32(x82, x57, x33);
  return (x83, x84, x85, x86, x87, x88, x89, x90))
 (x, x0)%core
      : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

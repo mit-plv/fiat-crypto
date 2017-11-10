@@ -178,11 +178,11 @@ static void femul(uint64_t out[5], const uint64_t in1[5], const uint64_t in2[5])
   { uint64_t x511; uint8_t x512 = _subborrow_u64(x509, x495, 0xffffffffffffffffL, &x511);
   { uint64_t x514; uint8_t x515 = _subborrow_u64(x512, x498, 0x1fffffff, &x514);
   { uint64_t _; uint8_t x518 = _subborrow_u64(x515, x500, 0x0, &_);
-  { uint64_t x519 = cmovznz(x518, x514, x498);
-  { uint64_t x520 = cmovznz(x518, x511, x495);
-  { uint64_t x521 = cmovznz(x518, x508, x492);
-  { uint64_t x522 = cmovznz(x518, x505, x489);
-  { uint64_t x523 = cmovznz(x518, x502, x486);
+  { uint64_t x519 = cmovznz64(x518, x514, x498);
+  { uint64_t x520 = cmovznz64(x518, x511, x495);
+  { uint64_t x521 = cmovznz64(x518, x508, x492);
+  { uint64_t x522 = cmovznz64(x518, x505, x489);
+  { uint64_t x523 = cmovznz64(x518, x502, x486);
   out[0] = x523;
   out[1] = x522;
   out[2] = x521;

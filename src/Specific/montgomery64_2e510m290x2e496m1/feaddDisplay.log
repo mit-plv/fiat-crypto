@@ -19,14 +19,14 @@ Interp-η
  uint64_t x75, uint8_t x76 = subborrow_u64(x73, x51, 0xffffffffffffffffL);
  uint64_t x78, uint8_t x79 = subborrow_u64(x76, x54, 0x3eddffffffffffff);
  uint64_t _, uint8_t x82 = subborrow_u64(x79, x55, 0x0);
- uint64_t x83 = cmovznz(x82, x78, x54);
- uint64_t x84 = cmovznz(x82, x75, x51);
- uint64_t x85 = cmovznz(x82, x72, x48);
- uint64_t x86 = cmovznz(x82, x69, x45);
- uint64_t x87 = cmovznz(x82, x66, x42);
- uint64_t x88 = cmovznz(x82, x63, x39);
- uint64_t x89 = cmovznz(x82, x60, x36);
- uint64_t x90 = cmovznz(x82, x57, x33);
+ uint64_t x83 = cmovznz64(x82, x78, x54);
+ uint64_t x84 = cmovznz64(x82, x75, x51);
+ uint64_t x85 = cmovznz64(x82, x72, x48);
+ uint64_t x86 = cmovznz64(x82, x69, x45);
+ uint64_t x87 = cmovznz64(x82, x66, x42);
+ uint64_t x88 = cmovznz64(x82, x63, x39);
+ uint64_t x89 = cmovznz64(x82, x60, x36);
+ uint64_t x90 = cmovznz64(x82, x57, x33);
  return (x83, x84, x85, x86, x87, x88, x89, x90))
 (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

@@ -11,7 +11,7 @@ static void fesub(uint32_t out[4], const uint32_t in1[4], const uint32_t in2[4])
   { uint32_t x20; uint8_t x21 = _subborrow_u32(x18, x7, x13, &x20);
   { uint32_t x23; uint8_t x24 = _subborrow_u32(x21, x9, x15, &x23);
   { uint32_t x26; uint8_t x27 = _subborrow_u32(x24, x8, x14, &x26);
-  { uint32_t x28 = (uint32_t)cmovznz(x27, 0x0, 0xffffffff);
+  { uint32_t x28 = cmovznz32(x27, 0x0, 0xffffffff);
   { uint32_t x29 = (x28 & 0xffffffff);
   { uint32_t x31; uint8_t x32 = _addcarryx_u32(0x0, x17, x29, &x31);
   { uint32_t x33 = (x28 & 0xffffffff);

@@ -8,7 +8,7 @@ static void fesub(uint64_t out[3], const uint64_t in1[3], const uint64_t in2[3])
   { uint64_t x13; uint8_t x14 = _subborrow_u64(0x0, x5, x9, &x13);
   { uint64_t x16; uint8_t x17 = _subborrow_u64(x14, x7, x11, &x16);
   { uint64_t x19; uint8_t x20 = _subborrow_u64(x17, x6, x10, &x19);
-  { uint64_t x21 = (uint64_t)cmovznz(x20, 0x0, 0xffffffffffffffffL);
+  { uint64_t x21 = cmovznz64(x20, 0x0, 0xffffffffffffffffL);
   { uint64_t x22 = (x21 & 0xfffffffffffffff7L);
   { uint64_t x24; uint8_t x25 = _addcarryx_u64(0x0, x13, x22, &x24);
   { uint64_t x26 = (x21 & 0xffffffffffffffffL);
