@@ -79,6 +79,11 @@ Ltac autosolve else_tac :=
   | [ |- True ] => exact I
   | [ |- unit ] => exact tt
   | [ |- IDProp ] => exact idProp
+  | [ |- match ?x with Some _ => _ | None => _ end ]
+    => let x' := (eval hnf in x) in
+       progress change x with x';
+       cbv beta iota;
+       autosolve else_tac
   | [ |- vm_decide_package ?P ] => cbv beta delta [vm_decide_package]; vm_decide
   | [ |- cbv_minus_then_vm_decide_package ?ident ?P ] => cbv -[ident]; vm_decide
   | [ |- vm_compute_reflexivity_package ?P ] => vm_compute; reflexivity
@@ -105,7 +110,6 @@ Ltac autosolve else_tac :=
                 v' eq_refl eq_refl)
   | [ |- @option_evar_rel_package ?A ?v ?B ?R ?alt_pkg ]
     => refine (@unoption_evar_rel_package A v B R alt_pkg (fun _ x => x) _);
-       cbn [val];
        autosolve else_tac
   | _ => CorePackages.autosolve else_tac
   end.
