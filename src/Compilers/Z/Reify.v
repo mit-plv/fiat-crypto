@@ -58,6 +58,11 @@ Ltac base_reify_op op op_head extra ::=
 Ltac base_reify_type T ::=
      lazymatch T with
      | Z => TZ
+     | Z.Syntax.interp_base_type TZ => TZ
+     | ?T
+       => lazymatch (eval hnf in T) with
+          | Z => TZ
+          end
      end.
 Ltac Reify' e :=
   let e := (eval cbv beta delta [Z.add_get_carry Z.sub_get_borrow] in e) in
