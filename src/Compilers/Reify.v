@@ -5,6 +5,7 @@ Require Import Coq.Strings.String.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Compilers.InputSyntax.
+Require Crypto.Compilers.Tuple.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.SideConditions.CorePackages.
@@ -116,6 +117,18 @@ Ltac reify_flat_type T :=
          => T
        | Syntax.interp_flat_type _ ?T
          => T
+       | Syntax.tuple _ _
+         => T
+       | Syntax.tuple' _ _
+         => T
+       | Tuple.tuple ?A ?n
+         => let a := reify_flat_type A in
+            constr:(@Syntax.tuple _ a n)
+       | Tuple.tuple' ?A ?n
+         => let a := reify_flat_type A in
+            constr:(@Syntax.tuple' _ a n)
+       | unit
+         => Unit
        | _
          => let v := reify_base_type T in
             constr:(@Tbase _ v)
@@ -442,6 +455,7 @@ Ltac transitivity_tt term :=
         | let x := fresh in intro x; transitivity (term x); revert x  ].
 
 Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
+  Tuple.unfold_flat_interp_tuple ();
   let rhs := rhs_of_goal in
   let RHS := Reify rhs in
   let RHS' := (eval vm_compute in RHS) in
