@@ -76,6 +76,11 @@ static uint32_t _subborrow_u32(uint8_t c, uint32_t a, uint32_t b, uint32_t *low)
   return (uint8_t) (x>>63);
 }
 
+static uint32_t cmovznz32(uint32_t t, uint32_t z, uint32_t nz) {
+  t = -!!t;
+  return (t&nz) | ((~t)&z);
+}
+
 #if bitwidth >= 64
 
 static uint64_t _mulx_u64(uint64_t a, uint64_t b, uint64_t *high) {
@@ -95,6 +100,11 @@ static uint64_t _subborrow_u64(uint8_t c, uint64_t a, uint64_t b, uint64_t *low)
   uint128_t x = a-t;
   *low = (uint64_t) x;
   return (uint8_t) (x>>127);
+}
+
+static uint64_t cmovznz64(uint64_t t, uint64_t z, uint64_t nz) {
+  t = -!!t;
+  return (t&nz) | ((~t)&z);
 }
 
 #endif
@@ -119,7 +129,6 @@ static uint64_t _mulx_u64_out_u8(uint64_t a, uint64_t b, uint8_t *high) {
 
 
 
-#include "liblow.h"
 #include "feadd.c"
 #include "femul.c"
 #include "fesquare.c"

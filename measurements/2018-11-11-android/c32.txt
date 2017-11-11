@@ -1,0 +1,975 @@
+montgomery32_2e127m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.15s real     0m1.13s user     0m0.00s system
+montgomery32_2e127m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.24s real     0m3.19s user     0m0.02s system
+montgomery32_2e127m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m2.84s real     0m2.81s user     0m0.00s system
+
+montgomery32_2e129m25	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.70s real     0m1.67s user     0m0.00s system
+montgomery32_2e129m25	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.77s real     0m3.73s user     0m0.01s system
+montgomery32_2e129m25	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.39s real     0m3.35s user     0m0.02s system
+
+montgomery32_2e130m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.84s real     0m1.82s user     0m0.00s system
+montgomery32_2e130m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.75s real     0m3.70s user     0m0.02s system
+montgomery32_2e130m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.41s real     0m3.36s user     0m0.00s system
+
+montgomery32_2e137m13	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.97s real     0m1.92s user     0m0.02s system
+montgomery32_2e137m13	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.80s real     0m3.74s user     0m0.01s system
+montgomery32_2e137m13	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.58s real     0m3.49s user     0m0.01s system
+
+montgomery32_2e140m27	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.97s real     0m1.93s user     0m0.02s system
+montgomery32_2e140m27	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.78s real     0m3.73s user     0m0.02s system
+montgomery32_2e140m27	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.40s real     0m3.33s user     0m0.02s system
+
+montgomery32_2e141m9	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.97s real     0m1.92s user     0m0.02s system
+montgomery32_2e141m9	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.88s real     0m3.84s user     0m0.00s system
+montgomery32_2e141m9	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.41s real     0m3.35s user     0m0.02s system
+
+montgomery32_2e150m3	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.01s real     0m1.95s user     0m0.02s system
+montgomery32_2e150m3	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.77s real     0m3.74s user     0m0.00s system
+montgomery32_2e150m3	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.41s real     0m3.36s user     0m0.00s system
+
+montgomery32_2e150m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.99s real     0m1.96s user     0m0.01s system
+montgomery32_2e150m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.79s real     0m3.71s user     0m0.02s system
+montgomery32_2e150m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.41s real     0m3.36s user     0m0.01s system
+
+montgomery32_2e152m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.94s real     0m1.88s user     0m0.02s system
+montgomery32_2e152m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.81s real     0m3.75s user     0m0.00s system
+montgomery32_2e152m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.41s real     0m3.36s user     0m0.01s system
+
+montgomery32_2e158m15	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.03s real     0m2.00s user     0m0.00s system
+montgomery32_2e158m15	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.86s real     0m3.80s user     0m0.01s system
+montgomery32_2e158m15	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.53s real     0m3.44s user     0m0.01s system
+
+montgomery32_2e165m25	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.45s real     0m2.41s user     0m0.02s system
+montgomery32_2e165m25	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.52s real     0m4.44s user     0m0.01s system
+montgomery32_2e165m25	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.02s real     0m3.97s user     0m0.01s system
+
+montgomery32_2e166m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.48s real     0m2.43s user     0m0.02s system
+montgomery32_2e166m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.45s real     0m4.38s user     0m0.01s system
+montgomery32_2e166m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.00s real     0m3.96s user     0m0.01s system
+
+montgomery32_2e171m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.60s real     0m2.57s user     0m0.01s system
+montgomery32_2e171m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.37s real     0m4.30s user     0m0.02s system
+montgomery32_2e171m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.04s real     0m4.00s user     0m0.01s system
+
+montgomery32_2e174m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.60s real     0m2.58s user     0m0.00s system
+montgomery32_2e174m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.39s real     0m4.33s user     0m0.00s system
+montgomery32_2e174m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.07s real     0m4.01s user     0m0.00s system
+
+montgomery32_2e174m3	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.62s real     0m2.60s user     0m0.00s system
+montgomery32_2e174m3	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.40s real     0m4.31s user     0m0.03s system
+montgomery32_2e174m3	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.02s real     0m3.97s user     0m0.01s system
+
+montgomery32_2e189m25	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.63s real     0m2.60s user     0m0.00s system
+montgomery32_2e189m25	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.43s real     0m4.36s user     0m0.01s system
+montgomery32_2e189m25	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.06s real     0m4.03s user     0m0.00s system
+
+montgomery32_2e190m11	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.66s real     0m2.60s user     0m0.01s system
+montgomery32_2e190m11	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.37s real     0m4.35s user     0m0.00s system
+montgomery32_2e190m11	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.12s real     0m4.05s user     0m0.01s system
+
+montgomery32_2e191m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.64s real     0m2.59s user     0m0.02s system
+montgomery32_2e191m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.41s real     0m4.36s user     0m0.02s system
+montgomery32_2e191m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.10s real     0m4.04s user     0m0.02s system
+
+montgomery32_2e192m2e64m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.39s real     0m2.34s user     0m0.01s system
+montgomery32_2e192m2e64m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.30s real     0m4.25s user     0m0.01s system
+montgomery32_2e192m2e64m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.56s real     0m3.51s user     0m0.00s system
+
+solinas32_2e127m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.41s real     0m0.37s user     0m0.01s system
+solinas32_2e127m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.28s real     0m3.22s user     0m0.01s system
+solinas32_2e127m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m2.88s real     0m2.83s user     0m0.01s system
+
+solinas32_2e129m25	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.45s real     0m0.42s user     0m0.01s system
+solinas32_2e129m25	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.79s real     0m3.74s user     0m0.00s system
+solinas32_2e129m25	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.43s real     0m3.35s user     0m0.02s system
+
+solinas32_2e130m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.40s real     0m0.37s user     0m0.00s system
+solinas32_2e130m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.88s real     0m3.73s user     0m0.01s system
+solinas32_2e130m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.39s real     0m3.36s user     0m0.00s system
+
+solinas32_2e137m13	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.66s real     0m0.64s user     0m0.00s system
+solinas32_2e137m13	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.83s real     0m3.77s user     0m0.01s system
+solinas32_2e137m13	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.40s real     0m3.32s user     0m0.02s system
+
+solinas32_2e140m27	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.47s real     0m0.43s user     0m0.01s system
+solinas32_2e140m27	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.85s real     0m3.77s user     0m0.02s system
+solinas32_2e140m27	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.44s real     0m3.40s user     0m0.01s system
+
+solinas32_2e141m9	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.48s real     0m0.43s user     0m0.03s system
+solinas32_2e141m9	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.79s real     0m3.78s user     0m0.00s system
+solinas32_2e141m9	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.41s real     0m3.38s user     0m0.00s system
+
+solinas32_2e150m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.47s real     0m0.43s user     0m0.01s system
+solinas32_2e150m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.85s real     0m3.78s user     0m0.00s system
+solinas32_2e150m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.35s real     0m3.34s user     0m0.00s system
+
+solinas32_2e152m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.49s real     0m0.47s user     0m0.00s system
+solinas32_2e152m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.78s real     0m3.73s user     0m0.02s system
+solinas32_2e152m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.43s real     0m3.38s user     0m0.00s system
+
+solinas32_2e158m15	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.49s real     0m0.46s user     0m0.01s system
+solinas32_2e158m15	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.80s real     0m3.74s user     0m0.01s system
+solinas32_2e158m15	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m3.42s real     0m3.38s user     0m0.01s system
+
+solinas32_2e165m25	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.82s real     0m0.79s user     0m0.01s system
+solinas32_2e165m25	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.51s real     0m4.40s user     0m0.01s system
+solinas32_2e165m25	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.04s real     0m3.99s user     0m0.01s system
+
+solinas32_2e166m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.20s real     0m1.17s user     0m0.01s system
+solinas32_2e166m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.44s real     0m4.39s user     0m0.02s system
+solinas32_2e166m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.07s real     0m3.99s user     0m0.02s system
+
+solinas32_2e171m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.81s real     0m0.76s user     0m0.02s system
+solinas32_2e171m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.37s real     0m4.34s user     0m0.00s system
+solinas32_2e171m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.05s real     0m3.99s user     0m0.01s system
+
+solinas32_2e174m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.83s real     0m0.81s user     0m0.00s system
+solinas32_2e174m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.32s real     0m4.30s user     0m0.00s system
+solinas32_2e174m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.01s real     0m3.98s user     0m0.01s system
+
+solinas32_2e191m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.02s real     0m0.99s user     0m0.00s system
+solinas32_2e191m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.34s real     0m4.33s user     0m0.00s system
+solinas32_2e191m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.09s real     0m4.04s user     0m0.01s system
+
+solinas32_2e194m33	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.73s real     0m0.70s user     0m0.01s system
+solinas32_2e194m33	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.93s real     0m4.88s user     0m0.02s system
+solinas32_2e194m33	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.67s real     0m4.61s user     0m0.00s system
+
+solinas32_2e198m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.93s real     0m0.88s user     0m0.01s system
+solinas32_2e198m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.97s real     0m4.95s user     0m0.01s system
+solinas32_2e198m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.65s real     0m4.59s user     0m0.01s system
+
+solinas32_2e206m5	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.36s real     0m1.32s user     0m0.01s system
+solinas32_2e206m5	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.00s real     0m4.92s user     0m0.02s system
+solinas32_2e206m5	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.66s real     0m4.61s user     0m0.00s system
+
+solinas32_2e213m3	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.44s real     0m2.41s user     0m0.00s system
+solinas32_2e213m3	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.95s real     0m4.90s user     0m0.00s system
+solinas32_2e213m3	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.67s real     0m4.59s user     0m0.02s system
+
+solinas32_2e216m2e108m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.68s real     0m0.64s user     0m0.01s system
+solinas32_2e216m2e108m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.92s real     0m4.88s user     0m0.01s system
+solinas32_2e216m2e108m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.67s real     0m4.61s user     0m0.00s system
+
+solinas32_2e221m3	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.95s real     0m0.91s user     0m0.01s system
+solinas32_2e221m3	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.94s real     0m4.92s user     0m0.00s system
+solinas32_2e221m3	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.67s real     0m4.61s user     0m0.00s system
+
+solinas32_2e222m117	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.98s real     0m0.97s user     0m0.00s system
+solinas32_2e222m117	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.98s real     0m4.89s user     0m0.00s system
+solinas32_2e222m117	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.66s real     0m4.58s user     0m0.02s system
+
+solinas32_2e230m27	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.96s real     0m0.91s user     0m0.02s system
+solinas32_2e230m27	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.72s real     0m5.62s user     0m0.01s system
+solinas32_2e230m27	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.29s real     0m5.21s user     0m0.02s system
+
+solinas32_2e235m15	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.93s real     0m0.89s user     0m0.01s system
+solinas32_2e235m15	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.72s real     0m5.64s user     0m0.00s system
+solinas32_2e235m15	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.27s real     0m5.19s user     0m0.02s system
+
+solinas32_2e243m9	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.81s real     0m0.79s user     0m0.00s system
+solinas32_2e243m9	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.70s real     0m5.62s user     0m0.00s system
+solinas32_2e243m9	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.31s real     0m5.23s user     0m0.01s system
+
+solinas32_2e251m9	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.15s real     0m1.10s user     0m0.01s system
+solinas32_2e251m9	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.68s real     0m5.61s user     0m0.03s system
+solinas32_2e251m9	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.23s real     0m5.18s user     0m0.01s system
+
+solinas32_2e255m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m0.99s real     0m0.97s user     0m0.00s system
+solinas32_2e255m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.74s real     0m5.69s user     0m0.00s system
+solinas32_2e255m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.23s real     0m5.19s user     0m0.02s system
+
+solinas32_2e255m765	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.45s real     0m1.41s user     0m0.01s system
+solinas32_2e255m765	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.73s real     0m5.66s user     0m0.02s system
+solinas32_2e255m765	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.30s real     0m5.23s user     0m0.00s system
+
+solinas32_2e256m189	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.45s real     0m1.42s user     0m0.00s system
+solinas32_2e256m189	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.53s real     0m5.45s user     0m0.01s system
+solinas32_2e256m189	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.73s real     0m4.67s user     0m0.00s system
+
+solinas32_2e256m2e32m977	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.64s real     0m1.60s user     0m0.01s system
+solinas32_2e256m2e32m977	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m5.51s real     0m5.45s user     0m0.02s system
+solinas32_2e256m2e32m977	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m4.74s real     0m4.67s user     0m0.01s system
+
+solinas32_2e266m3	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.30s real     0m1.26s user     0m0.01s system
+solinas32_2e266m3	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m6.42s real     0m6.35s user     0m0.01s system
+solinas32_2e266m3	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m6.11s real     0m6.06s user     0m0.01s system
+
+solinas32_2e285m9	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.25s real     0m2.21s user     0m0.01s system
+solinas32_2e285m9	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m6.36s real     0m6.31s user     0m0.01s system
+solinas32_2e285m9	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m6.07s real     0m6.01s user     0m0.00s system
+
+solinas32_2e291m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.35s real     0m1.33s user     0m0.00s system
+solinas32_2e291m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.08s real     0m6.99s user     0m0.00s system
+solinas32_2e291m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m6.95s real     0m6.87s user     0m0.01s system
+
+solinas32_2e321m9	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.81s real     0m2.76s user     0m0.02s system
+solinas32_2e321m9	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.75s real     0m7.67s user     0m0.00s system
+solinas32_2e321m9	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.66s real     0m7.56s user     0m0.01s system
+
+solinas32_2e322m2e161m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.85s real     0m1.75s user     0m0.02s system
+solinas32_2e322m2e161m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.77s real     0m7.70s user     0m0.00s system
+solinas32_2e322m2e161m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.62s real     0m7.54s user     0m0.00s system
+
+solinas32_2e336m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.86s real     0m1.80s user     0m0.01s system
+solinas32_2e336m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.76s real     0m7.68s user     0m0.01s system
+solinas32_2e336m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.66s real     0m7.57s user     0m0.01s system
+
+solinas32_2e338m15	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m1.57s real     0m1.52s user     0m0.01s system
+solinas32_2e338m15	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.76s real     0m7.67s user     0m0.01s system
+solinas32_2e338m15	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.56s real     0m7.51s user     0m0.02s system
+
+solinas32_2e369m25	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.70s real     0m2.66s user     0m0.01s system
+solinas32_2e369m25	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.15s real     0m9.07s user     0m0.01s system
+solinas32_2e369m25	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m8.39s real     0m8.35s user     0m0.01s system
+
+solinas32_2e379m19	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m3.23s real     0m3.18s user     0m0.02s system
+solinas32_2e379m19	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.10s real     0m9.00s user     0m0.01s system
+solinas32_2e379m19	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m8.43s real     0m8.33s user     0m0.02s system
+
+solinas32_2e382m105	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m6.05s real     0m5.98s user     0m0.00s system
+solinas32_2e382m105	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.06s real     0m9.03s user     0m0.00s system
+solinas32_2e382m105	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m8.40s real     0m8.33s user     0m0.01s system
+
+solinas32_2e384m317	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m4.26s real     0m4.19s user     0m0.01s system
+solinas32_2e384m317	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m8.81s real     0m8.72s user     0m0.01s system
+solinas32_2e384m317	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m7.66s real     0m7.59s user     0m0.00s system
+
+solinas32_2e401m31	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.84s real     0m2.79s user     0m0.01s system
+solinas32_2e401m31	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.92s real     0m9.81s user     0m0.02s system
+solinas32_2e401m31	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.35s real     0m9.25s user     0m0.02s system
+
+solinas32_2e414m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m3.22s real     0m3.15s user     0m0.02s system
+solinas32_2e414m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.96s real     0m9.88s user     0m0.00s system
+solinas32_2e414m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.31s real     0m9.27s user     0m0.01s system
+
+solinas32_2e416m2e208m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x228
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m2.51s real     0m2.48s user     0m0.01s system
+solinas32_2e416m2e208m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m9.65s real     0m9.55s user     0m0.02s system
+solinas32_2e416m2e208m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m8.54s real     0m8.50s user     0m0.01s system
+
+solinas32_2e444m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m7.06s real     0m7.03s user     0m0.01s system
+solinas32_2e444m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m10.90s real     0m10.83s user     0m0.00s system
+solinas32_2e444m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m10.46s real     0m10.34s user     0m0.00s system
+
+solinas32_2e468m17	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m3.18s real     0m3.13s user     0m0.01s system
+solinas32_2e468m17	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m11.67s real     0m11.57s user     0m0.02s system
+solinas32_2e468m17	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m11.29s real     0m11.25s user     0m0.00s system
+
+solinas32_2e521m1	fibe
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x244
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+    0m3.87s real     0m3.81s user     0m0.01s system
+solinas32_2e521m1	gmpvar
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m13.95s real     0m13.87s user     0m0.02s system
+solinas32_2e521m1	gmpsec
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6ffffffe arg 0x42c
+WARNING: linker: /data/local/tmp/main: unused DT entry: type 0x6fffffff arg 0x1
+WARNING: linker: /data/local/tmp/main has text relocations. This is wasting memory and prevents security hardening. Please fix.
+    0m13.37s real     0m13.21s user     0m0.02s system
+
