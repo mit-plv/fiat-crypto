@@ -6,15 +6,22 @@ Require Export Crypto.Util.FixCoqMistakes.
 
 Definition eq_by_Zring_prod_package (P : Prop) := P.
 
-Ltac auto_split_prod_step _ :=
+Ltac auto_split_prod_step_early _ :=
   match goal with
+  | _ => progress hnf
   | [ H : prod _ _ |- _ ] => destruct H
   | [ |- forall a, _ ] => let a := fresh in intro a; compute in a
+  end.
+
+Ltac auto_split_prod_step _ :=
+  match goal with
+  | _ => auto_split_prod_step_early ()
   | [ |- pair _ _ = pair _ _ ] => apply f_equal2
   | [ |- @eq (prod _ _) _ _ ] => apply path_prod
   end.
 
 Ltac Zring_prod_eq_tac _ :=
+  repeat auto_split_prod_step_early ();
   cbv -[Z.add Z.sub Z.mul Z.div Z.pow Z.opp Z.log2 Z.land Z.lor Z.log2_up Z.abs];
   repeat match goal with
          | _ => auto_split_prod_step ()
