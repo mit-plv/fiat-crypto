@@ -4187,6 +4187,7 @@ src/Util/ForLoop/InvariantFramework.v
 src/Util/ForLoop/Tests.v
 src/Util/ForLoop/Unrolling.v
 src/Util/ListUtil/FoldBool.v
+src/Util/ListUtil/Forall.v
 src/Util/Logic/ImplAnd.v
 src/Util/SideConditions/Autosolve.v
 src/Util/SideConditions/CorePackages.v
