@@ -4182,6 +4182,7 @@ src/Util/ZRange.v
 src/Util/ZUtil.v
 src/Util/Bool/IsTrue.v
 src/Util/Decidable/Bool2Prop.v
+src/Util/Decidable/Decidable2Bool.v
 src/Util/ForLoop/Instances.v
 src/Util/ForLoop/InvariantFramework.v
 src/Util/ForLoop/Tests.v
