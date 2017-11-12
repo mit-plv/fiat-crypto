@@ -31,6 +31,6 @@ Ltac Zring_prod_eq_tac _ :=
 Ltac autosolve else_tac :=
   lazymatch goal with
   | [ |- eq_by_Zring_prod_package _ ]
-    => solve [ Zring_prod_eq_tac () ]
+    => abstract Zring_prod_eq_tac ()
   | _ => else_tac ()
   end.
