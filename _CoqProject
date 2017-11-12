@@ -5866,6 +5866,7 @@ src/Util/ForLoop/Unrolling.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/Forall.v
 src/Util/Logic/ImplAnd.v
+src/Util/SideConditions/AdmitPackage.v
 src/Util/SideConditions/Autosolve.v
 src/Util/SideConditions/CorePackages.v
 src/Util/SideConditions/ReductionPackages.v
