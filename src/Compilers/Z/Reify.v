@@ -92,7 +92,7 @@ Definition Interp_Reify_evar_package
 Ltac autosolve else_tac :=
   lazymatch goal with
   | [ |- @Reify_evar_package _ _ ]
-    => eexists; cbv beta; Reify_rhs
+    => eexists; cbv beta; Reify_rhs; reflexivity
   | _ => Compilers.Reify.autosolve else_tac
   end.
 

@@ -536,7 +536,7 @@ Definition Interp_Reify_evar_package
 Ltac autosolve else_tac :=
   lazymatch goal with
   | [ |- @Reify_evar_package ?base_type_code ?interp_base_type ?op ?make_const ?interp_op _ _ ]
-    => eexists; cbv beta; Reify_rhs base_type_code interp_base_type op make_const interp_op
+    => eexists; cbv beta; Reify_rhs base_type_code interp_base_type op make_const interp_op; reflexivity
   | _ => else_tac ()
   end.
 
