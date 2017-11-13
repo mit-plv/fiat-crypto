@@ -326,10 +326,8 @@ Ltac refine_with_pipeline_correct opts :=
     The other choices are tactics that are specialized to the specific
     side-condition for which they are used (reification, boundedness
     of input, reduction of [Interp], renaming). *)
-Ltac solve_side_conditions :=
+Ltac solve_post_reified_side_conditions :=
   [>
-   (** ** reification *)
-   do_reify |
    (** ** pre-wf pipeline *)
    unify_abstract_vm_compute_rhs_reflexivity |
    (** ** reflective wf side-condition 1 *)
@@ -360,7 +358,12 @@ Ltac solve_side_conditions :=
    abstract handle_bounds_from_hyps |
    (** ** boundedness side-condition *)
    handle_boundedness_side_condition ].
-
+Ltac solve_side_conditions :=
+  [>
+   (** ** reification *)
+   do_reify |
+   .. ];
+  solve_post_reified_side_conditions.
 
 (** ** The Entire Pipeline *)
 (** The [do_reflective_pipeline] tactic solves a goal of the form that
