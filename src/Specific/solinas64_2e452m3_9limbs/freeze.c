@@ -8,7 +8,7 @@ static void freeze(uint64_t out[9], const uint64_t in1[9]) {
   { const uint64_t x6 = in1[2];
   { const uint64_t x4 = in1[1];
   { const uint64_t x2 = in1[0];
-  { uint64_t x18; uint8_t x19 = _subborrow_u51(0x0, x2, Const 2251799813685245, &x18);
+  { uint64_t x18; uint8_t x19 = _subborrow_u51(0x0, x2, 0x7fffffffffffd, &x18);
   { uint64_t x21, uint8_t x22 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x19, Return x4, 0x3ffffffffffff);
   { uint64_t x24, uint8_t x25 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x22, Return x6, 0x3ffffffffffff);
   { uint64_t x27, uint8_t x28 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x25, Return x8, 0x3ffffffffffff);
@@ -18,7 +18,7 @@ static void freeze(uint64_t out[9], const uint64_t in1[9]) {
   { uint64_t x39, uint8_t x40 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x37, Return x16, 0x3ffffffffffff);
   { uint64_t x42, uint8_t x43 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x40, Return x15, 0x3ffffffffffff);
   { uint64_t x44 = cmovznz64(x43, 0x0, 0xffffffffffffffffL);
-  { uint64_t x45 = (x44 & Const 2251799813685245);
+  { uint64_t x45 = (x44 & 0x7fffffffffffd);
   { uint64_t x47; uint8_t x48 = _addcarryx_u51(0x0, x18, x45, &x47);
   { uint64_t x49 = (x44 & 0x3ffffffffffff);
   { uint64_t x51, uint8_t x52 = Op (Syntax.AddWithGetCarry 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x48, Return x21, Return x49);

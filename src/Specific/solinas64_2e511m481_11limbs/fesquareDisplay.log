@@ -1,0 +1,56 @@
+λ x : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x19, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint128_t x21 = (((uint128_t)x2 * x19) + ((0x2 * ((uint128_t)x4 * x20)) + (((uint128_t)x6 * x18) + ((0x2 * ((uint128_t)x8 * x16)) + (((uint128_t)x10 * x14) + ((0x2 * ((uint128_t)x12 * x12)) + (((uint128_t)x14 * x10) + ((0x2 * ((uint128_t)x16 * x8)) + (((uint128_t)x18 * x6) + ((0x2 * ((uint128_t)x20 * x4)) + ((uint128_t)x19 * x2)))))))))));
+ uint128_t x22 = ((((uint128_t)x2 * x20) + (((uint128_t)x4 * x18) + (((uint128_t)x6 * x16) + (((uint128_t)x8 * x14) + (((uint128_t)x10 * x12) + (((uint128_t)x12 * x10) + (((uint128_t)x14 * x8) + (((uint128_t)x16 * x6) + (((uint128_t)x18 * x4) + ((uint128_t)x20 * x2)))))))))) + (0x1e1 * ((uint128_t)x19 * x19)));
+ uint128_t x23 = ((((uint128_t)x2 * x18) + ((0x2 * ((uint128_t)x4 * x16)) + (((uint128_t)x6 * x14) + ((0x2 * ((uint128_t)x8 * x12)) + (((uint128_t)x10 * x10) + ((0x2 * ((uint128_t)x12 * x8)) + (((uint128_t)x14 * x6) + ((0x2 * ((uint128_t)x16 * x4)) + ((uint128_t)x18 * x2))))))))) + (0x1e1 * ((0x2 * ((uint128_t)x20 * x19)) + (0x2 * ((uint128_t)x19 * x20)))));
+ uint128_t x24 = ((((uint128_t)x2 * x16) + (((uint128_t)x4 * x14) + (((uint128_t)x6 * x12) + (((uint128_t)x8 * x10) + (((uint128_t)x10 * x8) + (((uint128_t)x12 * x6) + (((uint128_t)x14 * x4) + ((uint128_t)x16 * x2)))))))) + (0x1e1 * (((uint128_t)x18 * x19) + ((0x2 * ((uint128_t)x20 * x20)) + ((uint128_t)x19 * x18)))));
+ uint128_t x25 = ((((uint128_t)x2 * x14) + ((0x2 * ((uint128_t)x4 * x12)) + (((uint128_t)x6 * x10) + ((0x2 * ((uint128_t)x8 * x8)) + (((uint128_t)x10 * x6) + ((0x2 * ((uint128_t)x12 * x4)) + ((uint128_t)x14 * x2))))))) + (0x1e1 * ((0x2 * ((uint128_t)x16 * x19)) + ((0x2 * ((uint128_t)x18 * x20)) + ((0x2 * ((uint128_t)x20 * x18)) + (0x2 * ((uint128_t)x19 * x16)))))));
+ uint128_t x26 = ((((uint128_t)x2 * x12) + (((uint128_t)x4 * x10) + (((uint128_t)x6 * x8) + (((uint128_t)x8 * x6) + (((uint128_t)x10 * x4) + ((uint128_t)x12 * x2)))))) + (0x1e1 * (((uint128_t)x14 * x19) + ((0x2 * ((uint128_t)x16 * x20)) + (((uint128_t)x18 * x18) + ((0x2 * ((uint128_t)x20 * x16)) + ((uint128_t)x19 * x14)))))));
+ uint128_t x27 = ((((uint128_t)x2 * x10) + ((0x2 * ((uint128_t)x4 * x8)) + (((uint128_t)x6 * x6) + ((0x2 * ((uint128_t)x8 * x4)) + ((uint128_t)x10 * x2))))) + (0x1e1 * ((0x2 * ((uint128_t)x12 * x19)) + ((0x2 * ((uint128_t)x14 * x20)) + ((0x2 * ((uint128_t)x16 * x18)) + ((0x2 * ((uint128_t)x18 * x16)) + ((0x2 * ((uint128_t)x20 * x14)) + (0x2 * ((uint128_t)x19 * x12)))))))));
+ uint128_t x28 = ((((uint128_t)x2 * x8) + (((uint128_t)x4 * x6) + (((uint128_t)x6 * x4) + ((uint128_t)x8 * x2)))) + (0x1e1 * (((uint128_t)x10 * x19) + ((0x2 * ((uint128_t)x12 * x20)) + (((uint128_t)x14 * x18) + ((0x2 * ((uint128_t)x16 * x16)) + (((uint128_t)x18 * x14) + ((0x2 * ((uint128_t)x20 * x12)) + ((uint128_t)x19 * x10)))))))));
+ uint128_t x29 = ((((uint128_t)x2 * x6) + ((0x2 * ((uint128_t)x4 * x4)) + ((uint128_t)x6 * x2))) + (0x1e1 * ((0x2 * ((uint128_t)x8 * x19)) + ((0x2 * ((uint128_t)x10 * x20)) + ((0x2 * ((uint128_t)x12 * x18)) + ((0x2 * ((uint128_t)x14 * x16)) + ((0x2 * ((uint128_t)x16 * x14)) + ((0x2 * ((uint128_t)x18 * x12)) + ((0x2 * ((uint128_t)x20 * x10)) + (0x2 * ((uint128_t)x19 * x8)))))))))));
+ uint128_t x30 = ((((uint128_t)x2 * x4) + ((uint128_t)x4 * x2)) + (0x1e1 * (((uint128_t)x6 * x19) + ((0x2 * ((uint128_t)x8 * x20)) + (((uint128_t)x10 * x18) + ((0x2 * ((uint128_t)x12 * x16)) + (((uint128_t)x14 * x14) + ((0x2 * ((uint128_t)x16 * x12)) + (((uint128_t)x18 * x10) + ((0x2 * ((uint128_t)x20 * x8)) + ((uint128_t)x19 * x6)))))))))));
+ uint128_t x31 = (((uint128_t)x2 * x2) + (0x1e1 * ((0x2 * ((uint128_t)x4 * x19)) + ((0x2 * ((uint128_t)x6 * x20)) + ((0x2 * ((uint128_t)x8 * x18)) + ((0x2 * ((uint128_t)x10 * x16)) + ((0x2 * ((uint128_t)x12 * x14)) + ((0x2 * ((uint128_t)x14 * x12)) + ((0x2 * ((uint128_t)x16 * x10)) + ((0x2 * ((uint128_t)x18 * x8)) + ((0x2 * ((uint128_t)x20 * x6)) + (0x2 * ((uint128_t)x19 * x4)))))))))))));
+ uint64_t x32 = (uint64_t) (x31 >> 0x2f);
+ uint64_t x33 = ((uint64_t)x31 & 0x7fffffffffff);
+ uint128_t x34 = (x32 + x30);
+ uint64_t x35 = (uint64_t) (x34 >> 0x2e);
+ uint64_t x36 = ((uint64_t)x34 & 0x3fffffffffff);
+ uint128_t x37 = (x35 + x29);
+ uint64_t x38 = (uint64_t) (x37 >> 0x2f);
+ uint64_t x39 = ((uint64_t)x37 & 0x7fffffffffff);
+ uint128_t x40 = (x38 + x28);
+ uint64_t x41 = (uint64_t) (x40 >> 0x2e);
+ uint64_t x42 = ((uint64_t)x40 & 0x3fffffffffff);
+ uint128_t x43 = (x41 + x27);
+ uint64_t x44 = (uint64_t) (x43 >> 0x2f);
+ uint64_t x45 = ((uint64_t)x43 & 0x7fffffffffff);
+ uint128_t x46 = (x44 + x26);
+ uint64_t x47 = (uint64_t) (x46 >> 0x2e);
+ uint64_t x48 = ((uint64_t)x46 & 0x3fffffffffff);
+ uint128_t x49 = (x47 + x25);
+ uint64_t x50 = (uint64_t) (x49 >> 0x2f);
+ uint64_t x51 = ((uint64_t)x49 & 0x7fffffffffff);
+ uint128_t x52 = (x50 + x24);
+ uint64_t x53 = (uint64_t) (x52 >> 0x2e);
+ uint64_t x54 = ((uint64_t)x52 & 0x3fffffffffff);
+ uint128_t x55 = (x53 + x23);
+ uint64_t x56 = (uint64_t) (x55 >> 0x2f);
+ uint64_t x57 = ((uint64_t)x55 & 0x7fffffffffff);
+ uint128_t x58 = (x56 + x22);
+ uint64_t x59 = (uint64_t) (x58 >> 0x2e);
+ uint64_t x60 = ((uint64_t)x58 & 0x3fffffffffff);
+ uint128_t x61 = (x59 + x21);
+ uint64_t x62 = (uint64_t) (x61 >> 0x2e);
+ uint64_t x63 = ((uint64_t)x61 & 0x3fffffffffff);
+ uint64_t x64 = (x33 + (0x1e1 * x62));
+ uint64_t x65 = (x64 >> 0x2f);
+ uint64_t x66 = (x64 & 0x7fffffffffff);
+ uint64_t x67 = (x65 + x36);
+ uint64_t x68 = (x67 >> 0x2e);
+ uint64_t x69 = (x67 & 0x3fffffffffff);
+ return (Return x63, Return x60, Return x57, Return x54, Return x51, Return x48, Return x45, Return x42, (x68 + x39), Return x69, Return x66))
+x
+     : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
