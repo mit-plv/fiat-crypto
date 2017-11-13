@@ -14,7 +14,7 @@ static void freeze(uint32_t out[15], const uint32_t in1[15]) {
   { const uint32_t x6 = in1[2];
   { const uint32_t x4 = in1[1];
   { const uint32_t x2 = in1[0];
-  { uint32_t x30, uint8_t x31 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 33554407);
+  { uint32_t x30, uint8_t x31 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0x1ffffe7);
   { uint32_t x33, uint8_t x34 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x31, Return x4, 0x1ffffff);
   { uint32_t x36, uint8_t x37 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x34, Return x6, 0xffffff);
   { uint32_t x39, uint8_t x40 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x37, Return x8, 0x1ffffff);
@@ -30,7 +30,7 @@ static void freeze(uint32_t out[15], const uint32_t in1[15]) {
   { uint32_t x69, uint8_t x70 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x67, Return x28, 0x1ffffff);
   { uint32_t x72, uint8_t x73 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x70, Return x27, 0xffffff);
   { uint32_t x74 = cmovznz32(x73, 0x0, 0xffffffff);
-  { uint32_t x75 = (x74 & Const 33554407);
+  { uint32_t x75 = (x74 & 0x1ffffe7);
   { uint32_t x77, uint8_t x78 = Op (Syntax.AddWithGetCarry 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x30, Return x75);
   { uint32_t x79 = (x74 & 0x1ffffff);
   { uint32_t x81, uint8_t x82 = Op (Syntax.AddWithGetCarry 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x78, Return x33, Return x79);

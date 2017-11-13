@@ -7,7 +7,7 @@ static void freeze(uint32_t out[8], const uint32_t in1[8]) {
   { const uint32_t x6 = in1[2];
   { const uint32_t x4 = in1[1];
   { const uint32_t x2 = in1[0];
-  { uint32_t x16, uint8_t x17 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 16777205);
+  { uint32_t x16, uint8_t x17 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0xfffff5);
   { uint32_t x19, uint8_t x20 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x17, Return x4, 0xffffff);
   { uint32_t x22, uint8_t x23 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x20, Return x6, 0xffffff);
   { uint32_t x25, uint8_t x26 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x23, Return x8, 0x7fffff);
@@ -16,7 +16,7 @@ static void freeze(uint32_t out[8], const uint32_t in1[8]) {
   { uint32_t x34, uint8_t x35 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x32, Return x14, 0xffffff);
   { uint32_t x37, uint8_t x38 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x35, Return x13, 0x7fffff);
   { uint32_t x39 = cmovznz32(x38, 0x0, 0xffffffff);
-  { uint32_t x40 = (x39 & Const 16777205);
+  { uint32_t x40 = (x39 & 0xfffff5);
   { uint32_t x42, uint8_t x43 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x16, Return x40);
   { uint32_t x44 = (x39 & 0xffffff);
   { uint32_t x46, uint8_t x47 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x43, Return x19, Return x44);

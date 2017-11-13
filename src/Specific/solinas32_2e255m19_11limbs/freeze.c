@@ -10,7 +10,7 @@ static void freeze(uint32_t out[11], const uint32_t in1[11]) {
   { const uint32_t x6 = in1[2];
   { const uint32_t x4 = in1[1];
   { const uint32_t x2 = in1[0];
-  { uint32_t x22, uint8_t x23 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 16777197);
+  { uint32_t x22, uint8_t x23 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0xffffed);
   { uint32_t x25, uint8_t x26 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x23, Return x4, 0x7fffff);
   { uint32_t x28, uint8_t x29 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x26, Return x6, 0x7fffff);
   { uint32_t x31, uint8_t x32 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x29, Return x8, 0x7fffff);
@@ -22,7 +22,7 @@ static void freeze(uint32_t out[11], const uint32_t in1[11]) {
   { uint32_t x49, uint8_t x50 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x47, Return x20, 0x7fffff);
   { uint32_t x52, uint8_t x53 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x50, Return x19, 0x7fffff);
   { uint32_t x54 = cmovznz32(x53, 0x0, 0xffffffff);
-  { uint32_t x55 = (x54 & Const 16777197);
+  { uint32_t x55 = (x54 & 0xffffed);
   { uint32_t x57, uint8_t x58 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x22, Return x55);
   { uint32_t x59 = (x54 & 0x7fffff);
   { uint32_t x61, uint8_t x62 = Op (Syntax.AddWithGetCarry 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x58, Return x25, Return x59);

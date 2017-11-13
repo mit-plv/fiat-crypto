@@ -8,7 +8,7 @@ static void freeze(uint64_t out[9], const uint64_t in1[9]) {
   { const uint64_t x6 = in1[2];
   { const uint64_t x4 = in1[1];
   { const uint64_t x2 = in1[0];
-  { uint64_t x18, uint8_t x19 = Op (Syntax.SubWithGetBorrow 55 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, Const 36028797018963951);
+  { uint64_t x18, uint8_t x19 = Op (Syntax.SubWithGetBorrow 55 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, 0x7fffffffffffef);
   { uint64_t x21, uint8_t x22 = Op (Syntax.SubWithGetBorrow 54 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x19, Return x4, 0x3fffffffffffff);
   { uint64_t x24, uint8_t x25 = Op (Syntax.SubWithGetBorrow 54 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x22, Return x6, 0x3fffffffffffff);
   { uint64_t x27, uint8_t x28 = Op (Syntax.SubWithGetBorrow 54 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x25, Return x8, 0x3fffffffffffff);
@@ -18,7 +18,7 @@ static void freeze(uint64_t out[9], const uint64_t in1[9]) {
   { uint64_t x39, uint8_t x40 = Op (Syntax.SubWithGetBorrow 54 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x37, Return x16, 0x3fffffffffffff);
   { uint64_t x42, uint8_t x43 = Op (Syntax.SubWithGetBorrow 54 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x40, Return x15, 0x3fffffffffffff);
   { uint64_t x44 = cmovznz64(x43, 0x0, 0xffffffffffffffffL);
-  { uint64_t x45 = (x44 & Const 36028797018963951);
+  { uint64_t x45 = (x44 & 0x7fffffffffffef);
   { uint64_t x47, uint8_t x48 = Op (Syntax.AddWithGetCarry 55 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x18, Return x45);
   { uint64_t x49 = (x44 & 0x3fffffffffffff);
   { uint64_t x51, uint8_t x52 = Op (Syntax.AddWithGetCarry 54 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x48, Return x21, Return x49);

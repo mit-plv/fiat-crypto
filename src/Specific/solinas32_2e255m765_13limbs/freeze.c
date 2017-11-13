@@ -12,7 +12,7 @@ static void freeze(uint32_t out[13], const uint32_t in1[13]) {
   { const uint32_t x6 = in1[2];
   { const uint32_t x4 = in1[1];
   { const uint32_t x2 = in1[0];
-  { uint32_t x26, uint8_t x27 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 1047811);
+  { uint32_t x26, uint8_t x27 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0xffd03);
   { uint32_t x29, uint8_t x30 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x27, Return x4, 0xfffff);
   { uint32_t x32, uint8_t x33 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x30, Return x6, 0x7ffff);
   { uint32_t x35, uint8_t x36 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x33, Return x8, 0xfffff);
@@ -26,7 +26,7 @@ static void freeze(uint32_t out[13], const uint32_t in1[13]) {
   { uint32_t x59, uint8_t x60 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x57, Return x24, 0xfffff);
   { uint32_t x62, uint8_t x63 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x60, Return x23, 0x7ffff);
   { uint32_t x64 = cmovznz32(x63, 0x0, 0xffffffff);
-  { uint32_t x65 = (x64 & Const 1047811);
+  { uint32_t x65 = (x64 & 0xffd03);
   { uint32_t x67, uint8_t x68 = Op (Syntax.AddWithGetCarry 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x26, Return x65);
   { uint32_t x69 = (x64 & 0xfffff);
   { uint32_t x71, uint8_t x72 = Op (Syntax.AddWithGetCarry 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x68, Return x29, Return x69);

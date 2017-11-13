@@ -24,7 +24,7 @@ static void fesub(uint64_t out[10], const uint64_t in1[10], const uint64_t in2[1
   out[2] = ((0x1fffffffffffe + x9) - x27);
   out[3] = ((0x1fffffffffffe + x11) - x29);
   out[4] = ((0x1fffffffffffe + x13) - x31);
-  out[5] = ((Const 562949953421308 + x15) - x33);
+  out[5] = ((0x1fffffffffffc + x15) - x33);
   out[6] = ((0x1fffffffffffe + x17) - x35);
   out[7] = ((0x1fffffffffffe + x19) - x37);
   out[8] = ((0x1fffffffffffe + x21) - x39);
