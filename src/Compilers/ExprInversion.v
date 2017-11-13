@@ -238,6 +238,11 @@ Section language.
   Definition Compose {A B C} (f : Expr (B -> C)) (g : Expr (A -> B))
     : Expr (A -> C)
     := fun var => compose (f var) (g var).
+
+  Lemma InterpCompose {A B C} interp_op f g
+    : forall x, Interp interp_op (@Compose A B C f g) x
+                = Interp interp_op f (Interp (interp_base_type:=interp_base_type) interp_op g x).
+  Proof. reflexivity. Qed.
 End language.
 
 Global Arguments invert_Var {_ _ _ _} _.
@@ -247,6 +252,8 @@ Global Arguments invert_Pair {_ _ _ _ _} _.
 Global Arguments invert_Pairs {_ _ _ _} _.
 Global Arguments invert_PairsConst {_ _ _ _} _ {T} _.
 Global Arguments invert_Abs {_ _ _ _} _ _.
+
+Hint Rewrite @InterpCompose : reflective_rewrite.
 
 Module Export Notations.
   Infix "∘" := Compose : expr_scope.
