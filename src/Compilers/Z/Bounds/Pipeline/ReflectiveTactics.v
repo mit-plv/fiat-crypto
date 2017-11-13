@@ -104,9 +104,9 @@ Declare Reduction interp_red
     not contain evars.  Most tactics use [abstract] to reduce the load
     on [Defined] and to catch looping behavior early. *)
 
-(** The tactic [unify_abstract_renamify_rhs_reflexivity] calls [renamify] on [RHS] and unifies
-    that with [LHS]; and then costs one [vm_compute] to prove the
-    equality. *)
+(** The tactic [unify_abstract_renamify_rhs_reflexivity] calls
+    [renamify] on [RHS] and unifies that with [LHS]; and then costs
+    one [vm_compute] to prove the equality. *)
 Ltac unify_abstract_renamify_rhs_reflexivity :=
   unify_transformed_rhs_abstract_tac
     ltac:(renamify)
