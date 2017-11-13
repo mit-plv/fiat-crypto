@@ -290,17 +290,25 @@ End with_round_up_list.
     [PipelineCorrect] lemma to create side-conditions.  It assumes the
     goal is in exactly the form given in the conclusion of the
     [PipelineCorrect] lemma. *)
-
+(** The [refine_PipelineSideConditions_constructor] subtactic splits
+    up the [PipelineSideConditions] record goal into multiple
+    subgoals, to be discharged by automation lower in this file
+    ([solve_post_reified_side_conditions]). *)
+Ltac refine_PipelineSideConditions_constructor :=
+  lazymatch goal with
+  | [ |- PipelineSideConditions ?opts ?evars _ ]
+    => simple refine {| Hevar := _ |};
+       cbv [b e' e_final e_final_newtype e e_pre_pkg e_pkg proj1_sig]
+  end.
 Ltac refine_with_pipeline_correct opts :=
   lazymatch goal with
   | [ |- _ /\ ?castback ?fW = ?fZ ?arg ]
     => let lem := open_constr:(@PipelineCorrect _ opts _ _ _ _ _ _ {| e_pkg := _ |}) in
-       simple refine (lem _ {| Hevar := _ |});
-       cbv beta iota delta [b e' e_final e_final_newtype e e_pre_pkg e_pkg];
+       simple refine (lem _ _);
        subst fW fZ
   end;
   [ eexists
-  | cbv [proj1_sig].. ].
+  | refine_PipelineSideConditions_constructor ].
 
 (** The tactic [solve_side_conditions] uses the above
     reduction-and-proving-equality tactics to prove the
