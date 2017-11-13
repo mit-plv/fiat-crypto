@@ -1,0 +1,32 @@
+λ x x0 : word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
+ uint128_t x20 = (((uint128_t)x5 * x18) + ((0x2 * ((uint128_t)x7 * x19)) + (((uint128_t)x9 * x17) + ((0x2 * ((uint128_t)x11 * x15)) + ((uint128_t)x10 * x13)))));
+ uint128_t x21 = ((((uint128_t)x5 * x19) + (((uint128_t)x7 * x17) + (((uint128_t)x9 * x15) + ((uint128_t)x11 * x13)))) + (0x75 * ((uint128_t)x10 * x18)));
+ uint128_t x22 = ((((uint128_t)x5 * x17) + ((0x2 * ((uint128_t)x7 * x15)) + ((uint128_t)x9 * x13))) + (0x75 * ((0x2 * ((uint128_t)x11 * x18)) + (0x2 * ((uint128_t)x10 * x19)))));
+ uint128_t x23 = ((((uint128_t)x5 * x15) + ((uint128_t)x7 * x13)) + (0x75 * (((uint128_t)x9 * x18) + ((0x2 * ((uint128_t)x11 * x19)) + ((uint128_t)x10 * x17)))));
+ uint128_t x24 = (((uint128_t)x5 * x13) + (0x75 * ((0x2 * ((uint128_t)x7 * x18)) + ((0x2 * ((uint128_t)x9 * x19)) + ((0x2 * ((uint128_t)x11 * x17)) + (0x2 * ((uint128_t)x10 * x15)))))));
+ uint64_t x25 = (uint64_t) (x24 >> 0x2d);
+ uint64_t x26 = ((uint64_t)x24 & 0x1fffffffffff);
+ uint128_t x27 = (x25 + x23);
+ uint64_t x28 = (uint64_t) (x27 >> 0x2c);
+ uint64_t x29 = ((uint64_t)x27 & 0xfffffffffff);
+ uint128_t x30 = (x28 + x22);
+ uint64_t x31 = (uint64_t) (x30 >> 0x2d);
+ uint64_t x32 = ((uint64_t)x30 & 0x1fffffffffff);
+ uint128_t x33 = (x31 + x21);
+ uint64_t x34 = (uint64_t) (x33 >> 0x2c);
+ uint64_t x35 = ((uint64_t)x33 & 0xfffffffffff);
+ uint128_t x36 = (x34 + x20);
+ uint64_t x37 = (uint64_t) (x36 >> 0x2c);
+ uint64_t x38 = ((uint64_t)x36 & 0xfffffffffff);
+ uint64_t x39 = (x26 + (0x75 * x37));
+ uint64_t x40 = (x39 >> 0x2d);
+ uint64_t x41 = (x39 & 0x1fffffffffff);
+ uint64_t x42 = (x40 + x29);
+ uint64_t x43 = (x42 >> 0x2c);
+ uint64_t x44 = (x42 & 0xfffffffffff);
+ return (Return x38, Return x35, (x43 + x32), Return x44, Return x41))
+(x, x0)%core
+     : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

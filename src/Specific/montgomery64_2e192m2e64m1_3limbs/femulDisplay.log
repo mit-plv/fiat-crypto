@@ -1,0 +1,72 @@
+λ x x0 : word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x6, x7, x5, (x10, x11, x9))%core,
+ uint64_t x13, uint64_t x14 = mulx_u64(x5, x9);
+ uint64_t x16, uint64_t x17 = mulx_u64(x5, x11);
+ uint64_t x19, uint64_t x20 = mulx_u64(x5, x10);
+ uint64_t x22, uint8_t x23 = addcarryx_u64(0x0, x14, x16);
+ uint64_t x25, uint8_t x26 = addcarryx_u64(x23, x17, x19);
+ uint64_t x28, uint8_t _ = addcarryx_u64(0x0, x26, x20);
+ uint64_t x31, uint64_t x32 = mulx_u64(x13, 0xffffffffffffffffL);
+ uint64_t x34, uint64_t x35 = mulx_u64(x13, 0xfffffffffffffffeL);
+ uint64_t x37, uint64_t x38 = mulx_u64(x13, 0xffffffffffffffffL);
+ uint64_t x40, uint8_t x41 = addcarryx_u64(0x0, x32, x34);
+ uint64_t x43, uint8_t x44 = addcarryx_u64(x41, x35, x37);
+ uint64_t x46, uint8_t _ = addcarryx_u64(0x0, x44, x38);
+ uint64_t _, uint8_t x50 = addcarryx_u64(0x0, x13, x31);
+ uint64_t x52, uint8_t x53 = addcarryx_u64(x50, x22, x40);
+ uint64_t x55, uint8_t x56 = addcarryx_u64(x53, x25, x43);
+ uint64_t x58, uint8_t x59 = addcarryx_u64(x56, x28, x46);
+ uint64_t x61, uint64_t x62 = mulx_u64(x7, x9);
+ uint64_t x64, uint64_t x65 = mulx_u64(x7, x11);
+ uint64_t x67, uint64_t x68 = mulx_u64(x7, x10);
+ uint64_t x70, uint8_t x71 = addcarryx_u64(0x0, x62, x64);
+ uint64_t x73, uint8_t x74 = addcarryx_u64(x71, x65, x67);
+ uint64_t x76, uint8_t _ = addcarryx_u64(0x0, x74, x68);
+ uint64_t x79, uint8_t x80 = addcarryx_u64(0x0, x52, x61);
+ uint64_t x82, uint8_t x83 = addcarryx_u64(x80, x55, x70);
+ uint64_t x85, uint8_t x86 = addcarryx_u64(x83, x58, x73);
+ uint64_t x88, uint8_t x89 = addcarryx_u64(x86, x59, x76);
+ uint64_t x91, uint64_t x92 = mulx_u64(x79, 0xffffffffffffffffL);
+ uint64_t x94, uint64_t x95 = mulx_u64(x79, 0xfffffffffffffffeL);
+ uint64_t x97, uint64_t x98 = mulx_u64(x79, 0xffffffffffffffffL);
+ uint64_t x100, uint8_t x101 = addcarryx_u64(0x0, x92, x94);
+ uint64_t x103, uint8_t x104 = addcarryx_u64(x101, x95, x97);
+ uint64_t x106, uint8_t _ = addcarryx_u64(0x0, x104, x98);
+ uint64_t _, uint8_t x110 = addcarryx_u64(0x0, x79, x91);
+ uint64_t x112, uint8_t x113 = addcarryx_u64(x110, x82, x100);
+ uint64_t x115, uint8_t x116 = addcarryx_u64(x113, x85, x103);
+ uint64_t x118, uint8_t x119 = addcarryx_u64(x116, x88, x106);
+ uint8_t x120 = (x119 + x89);
+ uint64_t x122, uint64_t x123 = mulx_u64(x6, x9);
+ uint64_t x125, uint64_t x126 = mulx_u64(x6, x11);
+ uint64_t x128, uint64_t x129 = mulx_u64(x6, x10);
+ uint64_t x131, uint8_t x132 = addcarryx_u64(0x0, x123, x125);
+ uint64_t x134, uint8_t x135 = addcarryx_u64(x132, x126, x128);
+ uint64_t x137, uint8_t _ = addcarryx_u64(0x0, x135, x129);
+ uint64_t x140, uint8_t x141 = addcarryx_u64(0x0, x112, x122);
+ uint64_t x143, uint8_t x144 = addcarryx_u64(x141, x115, x131);
+ uint64_t x146, uint8_t x147 = addcarryx_u64(x144, x118, x134);
+ uint64_t x149, uint8_t x150 = addcarryx_u64(x147, x120, x137);
+ uint64_t x152, uint64_t x153 = mulx_u64(x140, 0xffffffffffffffffL);
+ uint64_t x155, uint64_t x156 = mulx_u64(x140, 0xfffffffffffffffeL);
+ uint64_t x158, uint64_t x159 = mulx_u64(x140, 0xffffffffffffffffL);
+ uint64_t x161, uint8_t x162 = addcarryx_u64(0x0, x153, x155);
+ uint64_t x164, uint8_t x165 = addcarryx_u64(x162, x156, x158);
+ uint64_t x167, uint8_t _ = addcarryx_u64(0x0, x165, x159);
+ uint64_t _, uint8_t x171 = addcarryx_u64(0x0, x140, x152);
+ uint64_t x173, uint8_t x174 = addcarryx_u64(x171, x143, x161);
+ uint64_t x176, uint8_t x177 = addcarryx_u64(x174, x146, x164);
+ uint64_t x179, uint8_t x180 = addcarryx_u64(x177, x149, x167);
+ uint8_t x181 = (x180 + x150);
+ uint64_t x183, uint8_t x184 = subborrow_u64(0x0, x173, 0xffffffffffffffffL);
+ uint64_t x186, uint8_t x187 = subborrow_u64(x184, x176, 0xfffffffffffffffeL);
+ uint64_t x189, uint8_t x190 = subborrow_u64(x187, x179, 0xffffffffffffffffL);
+ uint64_t _, uint8_t x193 = subborrow_u64(x190, x181, 0x0);
+ uint64_t x194 = cmovznz64(x193, x189, x179);
+ uint64_t x195 = cmovznz64(x193, x186, x176);
+ uint64_t x196 = cmovznz64(x193, x183, x173);
+ return (x194, x195, x196))
+(x, x0)%core
+     : word64 * word64 * word64 → word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t)

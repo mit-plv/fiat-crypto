@@ -1,0 +1,43 @@
+static void femul(uint64_t out[5], const uint64_t in1[5], const uint64_t in2[5]) {
+  { const uint64_t x10 = in1[4];
+  { const uint64_t x11 = in1[3];
+  { const uint64_t x9 = in1[2];
+  { const uint64_t x7 = in1[1];
+  { const uint64_t x5 = in1[0];
+  { const uint64_t x18 = in2[4];
+  { const uint64_t x19 = in2[3];
+  { const uint64_t x17 = in2[2];
+  { const uint64_t x15 = in2[1];
+  { const uint64_t x13 = in2[0];
+  { uint128_t x20 = (((uint128_t)x5 * x18) + (((uint128_t)x7 * x19) + (((uint128_t)x9 * x17) + (((uint128_t)x11 * x15) + ((uint128_t)x10 * x13)))));
+  { uint128_t x21 = ((((uint128_t)x5 * x19) + (((uint128_t)x7 * x17) + (((uint128_t)x9 * x15) + ((uint128_t)x11 * x13)))) + (0x9 * ((uint128_t)x10 * x18)));
+  { uint128_t x22 = ((((uint128_t)x5 * x17) + (((uint128_t)x7 * x15) + ((uint128_t)x9 * x13))) + (0x9 * (((uint128_t)x11 * x18) + ((uint128_t)x10 * x19))));
+  { uint128_t x23 = ((((uint128_t)x5 * x15) + ((uint128_t)x7 * x13)) + (0x9 * (((uint128_t)x9 * x18) + (((uint128_t)x11 * x19) + ((uint128_t)x10 * x17)))));
+  { uint128_t x24 = (((uint128_t)x5 * x13) + (0x9 * (((uint128_t)x7 * x18) + (((uint128_t)x9 * x19) + (((uint128_t)x11 * x17) + ((uint128_t)x10 * x15))))));
+  { uint128_t x25 = (x24 >> 0x39);
+  { uint64_t x26 = ((uint64_t)x24 & 0x1ffffffffffffff);
+  { uint128_t x27 = (x25 + x23);
+  { uint128_t x28 = (x27 >> 0x39);
+  { uint64_t x29 = ((uint64_t)x27 & 0x1ffffffffffffff);
+  { uint128_t x30 = (x28 + x22);
+  { uint128_t x31 = (x30 >> 0x39);
+  { uint64_t x32 = ((uint64_t)x30 & 0x1ffffffffffffff);
+  { uint128_t x33 = (x31 + x21);
+  { uint128_t x34 = (x33 >> 0x39);
+  { uint64_t x35 = ((uint64_t)x33 & 0x1ffffffffffffff);
+  { uint128_t x36 = (x34 + x20);
+  { uint64_t x37 = (uint64_t) (x36 >> 0x39);
+  { uint64_t x38 = ((uint64_t)x36 & 0x1ffffffffffffff);
+  { uint128_t x39 = (x26 + ((uint128_t)0x9 * x37));
+  { uint64_t x40 = (uint64_t) (x39 >> 0x39);
+  { uint64_t x41 = ((uint64_t)x39 & 0x1ffffffffffffff);
+  { uint64_t x42 = (x40 + x29);
+  { uint64_t x43 = (x42 >> 0x39);
+  { uint64_t x44 = (x42 & 0x1ffffffffffffff);
+  out[0] = x41;
+  out[1] = x44;
+  out[2] = (x43 + x32);
+  out[3] = x35;
+  out[4] = x38;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}

@@ -1,0 +1,32 @@
+λ x x0 : word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
+ uint64_t x20 = (((uint64_t)x5 * x18) + ((0x2 * ((uint64_t)x7 * x19)) + (((uint64_t)x9 * x17) + ((0x2 * ((uint64_t)x11 * x15)) + ((uint64_t)x10 * x13)))));
+ uint64_t x21 = ((((uint64_t)x5 * x19) + (((uint64_t)x7 * x17) + (((uint64_t)x9 * x15) + ((uint64_t)x11 * x13)))) + ((uint64_t)x10 * x18));
+ uint64_t x22 = ((((uint64_t)x5 * x17) + ((0x2 * ((uint64_t)x7 * x15)) + ((uint64_t)x9 * x13))) + ((0x2 * ((uint64_t)x11 * x18)) + (0x2 * ((uint64_t)x10 * x19))));
+ uint64_t x23 = ((((uint64_t)x5 * x15) + ((uint64_t)x7 * x13)) + (((uint64_t)x9 * x18) + ((0x2 * ((uint64_t)x11 * x19)) + ((uint64_t)x10 * x17))));
+ uint64_t x24 = (((uint64_t)x5 * x13) + ((0x2 * ((uint64_t)x7 * x18)) + ((0x2 * ((uint64_t)x9 * x19)) + ((0x2 * ((uint64_t)x11 * x17)) + (0x2 * ((uint64_t)x10 * x15))))));
+ uint32_t x25 = (uint32_t) (x24 >> 0x1a);
+ uint32_t x26 = ((uint32_t)x24 & 0x3ffffff);
+ uint64_t x27 = (x25 + x23);
+ uint32_t x28 = (uint32_t) (x27 >> 0x19);
+ uint32_t x29 = ((uint32_t)x27 & 0x1ffffff);
+ uint64_t x30 = (x28 + x22);
+ uint32_t x31 = (uint32_t) (x30 >> 0x1a);
+ uint32_t x32 = ((uint32_t)x30 & 0x3ffffff);
+ uint64_t x33 = (x31 + x21);
+ uint32_t x34 = (uint32_t) (x33 >> 0x19);
+ uint32_t x35 = ((uint32_t)x33 & 0x1ffffff);
+ uint64_t x36 = (x34 + x20);
+ uint64_t x37 = (x36 >> 0x19);
+ uint32_t x38 = ((uint32_t)x36 & 0x1ffffff);
+ uint64_t x39 = (x26 + x37);
+ uint32_t x40 = (uint32_t) (x39 >> 0x1a);
+ uint32_t x41 = ((uint32_t)x39 & 0x3ffffff);
+ uint32_t x42 = (x40 + x29);
+ uint32_t x43 = (x42 >> 0x19);
+ uint32_t x44 = (x42 & 0x1ffffff);
+ return (Return x38, Return x35, (x43 + x32), Return x44, Return x41))
+(x, x0)%core
+     : word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

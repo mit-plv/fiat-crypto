@@ -1,0 +1,17 @@
+λ x : word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x3, x4, x2)%core,
+ uint64_t x6, uint8_t x7 = subborrow_u64(0x0, 0x0, x2);
+ uint64_t x9, uint8_t x10 = subborrow_u64(x7, 0x0, x4);
+ uint64_t x12, uint8_t x13 = subborrow_u64(x10, 0x0, x3);
+ uint64_t x14 = cmovznz64(x13, 0x0, 0xffffffffffffffffL);
+ uint64_t x15 = (x14 & 0xfffffffffffffff7L);
+ uint64_t x17, uint8_t x18 = addcarryx_u64(0x0, x6, x15);
+ uint64_t x19 = (x14 & 0xffffffffffffffffL);
+ uint64_t x21, uint8_t x22 = addcarryx_u64(x18, x9, x19);
+ uint64_t x23 = (x14 & 0x1fff);
+ uint64_t x25, uint8_t _ = addcarryx_u64(x22, x12, x23);
+ (Return x25, Return x21, Return x17))
+x
+     : word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t)
