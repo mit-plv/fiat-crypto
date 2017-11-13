@@ -5,14 +5,14 @@ static void freeze(uint64_t out[6], const uint64_t in1[6]) {
   { const uint64_t x6 = in1[2];
   { const uint64_t x4 = in1[1];
   { const uint64_t x2 = in1[0];
-  { uint64_t x12, uint8_t x13 = Op (Syntax.SubWithGetBorrow 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, Const 8796093022019);
+  { uint64_t x12, uint8_t x13 = Op (Syntax.SubWithGetBorrow 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, 0x7ffffffff43);
   { uint64_t x15, uint8_t x16 = Op (Syntax.SubWithGetBorrow 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x13, Return x4, 0x7ffffffffff);
   { uint64_t x18, uint8_t x19 = Op (Syntax.SubWithGetBorrow 42 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x16, Return x6, 0x3ffffffffff);
   { uint64_t x21, uint8_t x22 = Op (Syntax.SubWithGetBorrow 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x19, Return x8, 0x7ffffffffff);
   { uint64_t x24, uint8_t x25 = Op (Syntax.SubWithGetBorrow 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x22, Return x10, 0x7ffffffffff);
   { uint64_t x27, uint8_t x28 = Op (Syntax.SubWithGetBorrow 42 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x25, Return x9, 0x3ffffffffff);
   { uint64_t x29 = cmovznz64(x28, 0x0, 0xffffffffffffffffL);
-  { uint64_t x30 = (x29 & Const 8796093022019);
+  { uint64_t x30 = (x29 & 0x7ffffffff43);
   { uint64_t x32, uint8_t x33 = Op (Syntax.AddWithGetCarry 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x12, Return x30);
   { uint64_t x34 = (x29 & 0x7ffffffffff);
   { uint64_t x36, uint8_t x37 = Op (Syntax.AddWithGetCarry 43 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x33, Return x15, Return x34);
