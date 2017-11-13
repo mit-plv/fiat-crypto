@@ -72,14 +72,19 @@ Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijn.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijnInterp.
 Require Import Crypto.Compilers.Z.Bounds.MapCastByDeBruijnWf.
 Require Import Crypto.Util.Sigma.MapProjections.
+Require Import Crypto.Util.DefaultedTypes.
 
 (** *** Definition of the Post-Wf Pipeline *)
 (** We define the record that holds various options to customize the
     pipeline. *)
-Record PipelineOptions := { anf : bool ; adc_fusion : bool }.
-Definition default_PipelineOptions :=
-  {| anf := false ;
-     adc_fusion := true |}.
+Record PipelineOptions :=
+  {
+    anf            : with_default bool false;
+    adc_fusion     : with_default bool true;
+    rename_binders : with_default bool false;
+  }.
+Definition default_PipelineOptions := {| anf := _ |}.
+
 (** Do not change the name or the type of these two definitions *)
 (** The definition [PostWfPreBoundsPipeline] is for the part of the
     pipeline that comes before [MapCast]; it must preserve the type of

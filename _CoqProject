@@ -5818,6 +5818,7 @@ src/Util/CPSUtil.v
 src/Util/ChangeInAll.v
 src/Util/Curry.v
 src/Util/Decidable.v
+src/Util/DefaultedTypes.v
 src/Util/Equality.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
