@@ -81,7 +81,6 @@ Record PipelineOptions :=
   {
     anf            : with_default bool false;
     adc_fusion     : with_default bool true;
-    rename_binders : with_default bool false;
   }.
 Definition default_PipelineOptions := {| anf := _ |}.
 

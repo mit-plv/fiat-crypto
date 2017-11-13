@@ -104,14 +104,6 @@ Declare Reduction interp_red
     not contain evars.  Most tactics use [abstract] to reduce the load
     on [Defined] and to catch looping behavior early. *)
 
-(** The tactic [unify_abstract_renamify_rhs_reflexivity] calls
-    [renamify] on [RHS] and unifies that with [LHS]; and then costs
-    one [vm_compute] to prove the equality. *)
-Ltac unify_abstract_renamify_rhs_reflexivity :=
-  unify_transformed_rhs_abstract_tac
-    ltac:(renamify)
-           unify_tac
-           vm_cast_no_check.
 (** The tactic [unify_abstract_cbv_interp_rhs_reflexivity] runs the interpretation
     reduction strategies in [RHS] and unifies the result with [LHS],
     and does not use the vm (and hence does not fully reduce things,
@@ -204,7 +196,6 @@ Section with_round_up_list.
     {
       b : interp_flat_type Bounds.interp_base_type (codomain t);
       e' : Expr (pick_type input_bounds -> pick_type b);
-      e_final : Expr (pick_type input_bounds -> pick_type b);
       e_final_newtype : Expr (pick_type input_bounds -> pick_type given_output_bounds);
       e : Expr (domain t -> codomain t);
       e_pre_pkg : Expr (domain t -> codomain t);
@@ -230,8 +221,6 @@ Section with_round_up_list.
       (** ** post-wf-pipeline *)
       Hpost : e_pkg = PostWfBoundsPipeline _ opts e e_pre_pkg input_bounds;
       Hpost_correct : Some {| OutputType.input_expr := e ; OutputType.input_bounds := input_bounds ; output_bounds := b ; output_expr := e' |} = e_pkg;
-      (** ** renaming *)
-      Hrenaming : e_final = e';
       (** ** bounds relaxation *)
       Hbounds_relax : Bounds.is_tighter_thanb b given_output_bounds = true;
       Hbounds_sane : pick_type given_output_bounds = pick_type b;
@@ -251,9 +240,9 @@ Section with_round_up_list.
       /\ cast_back_flat_const final_e_evar = fZ (cast_back_flat_const v').
   Proof using All.
     destruct side_conditions
-      as [He He_unnatize_for_wf Hwf Hpost_wf_pre_bounds Hpost Hpost_correct Hrenaming Hbounds_relax Hbounds_sane Hbounds_sane_refl Hevar Hv1 Hv2].
-    cbv [b e' e_final e_final_newtype e e_pre_pkg e_pkg] in *.
-    destruct evars as [b e' e_final e_final_newtype e e_pre_pkg e_pkg];
+      as [He He_unnatize_for_wf Hwf Hpost_wf_pre_bounds Hpost Hpost_correct Hbounds_relax Hbounds_sane Hbounds_sane_refl Hevar Hv1 Hv2].
+    cbv [b e' e_final_newtype e e_pre_pkg e_pkg] in *.
+    destruct evars as [b e' e_final_newtype e e_pre_pkg e_pkg];
       clear evars.
     destruct rexpr_sig as [? Hrexpr]; clear rexpr_sig.
     assert (Hwf' : Wf e)
@@ -291,7 +280,7 @@ Ltac refine_PipelineSideConditions_constructor :=
   lazymatch goal with
   | [ |- PipelineSideConditions ?opts ?evars _ ]
     => simple refine {| Hevar := _ |};
-       cbv [b e' e_final e_final_newtype e e_pre_pkg e_pkg proj1_sig]
+       cbv [b e' e_final_newtype e e_pre_pkg e_pkg proj1_sig]
   end.
 Ltac refine_with_pipeline_correct opts :=
   lazymatch goal with
@@ -341,8 +330,6 @@ Ltac solve_post_reified_side_conditions :=
    unify_abstract_vm_compute_rhs_reflexivity |
    (** ** post-wf pipeline gives [Some _] *)
    unify_abstract_rhs_reflexivity |
-   (** ** renaming binders *)
-   unify_abstract_renamify_rhs_reflexivity |
    (** ** computed output bounds are not looser than the given output bounds *)
    (** we do subst and we don't [vm_compute] first because we want to
        get an error message that displays the bounds *)
