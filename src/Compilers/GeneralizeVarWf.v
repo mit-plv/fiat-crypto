@@ -5,7 +5,7 @@ Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.ContextDefinitions.
 Require Import Crypto.Compilers.Named.InterpretToPHOASWf.
-Require Import Crypto.Compilers.Named.CompileWf.
+Require Import Crypto.Compilers.Named.WfFromUnit.
 Require Import Crypto.Compilers.Named.PositiveContext.
 Require Import Crypto.Compilers.Named.PositiveContext.Defaults.
 Require Import Crypto.Compilers.Named.PositiveContext.DefaultsProperties.
@@ -44,12 +44,10 @@ Section language.
   Defined.
 
   Local Arguments Compile.compile : simpl never.
-  Lemma Wf_GeneralizeVar'
-        {var'} {make_var' : forall t, var' t}
-        {t} (e1 e2 : expr base_type_code op t)
+  Lemma Wf_GeneralizeVar
+        {t} (e1 : expr base_type_code op t)
         e'
         (He' : GeneralizeVar e1 = Some e')
-        (Hwf : wf (var2:=var') e1 e2)
     : Wf e'.
   Proof using base_type_code_lb.
     unfold GeneralizeVar, option_map in *.
@@ -63,37 +61,17 @@ Section language.
               (PositiveContext base_type_code _ base_type_code_beq base_type_code_bl_transparent)
               PositiveContextOk PositiveContextOk
               (failb _) (failb _) _ _);
-      eapply (wf_compile (ContextOk:=PositiveContextOk) (make_var':=fun t _ => make_var' t));
-      try eassumption;
-      auto using name_list_unique_default_names_for.
+      [ revert v | revert v' ];
+      refine (_ : Wf.Named.Wf _ e);
+      apply Wf_from_unit; auto using PositiveContextOk.
   Qed.
-
-  Lemma Wf_GeneralizeVar
-        {t} (e : expr base_type_code op t)
-        e'
-        (He' : GeneralizeVar e = Some e')
-        (Hwf : wf e e)
-    : Wf e'.
-  Proof using base_type_code_lb.
-    eapply @Wf_GeneralizeVar'; eauto; intros; exact 1%positive.
-  Qed.
-
-  Lemma Wf_GeneralizeVar'_arrow
-        {var'} {make_var' : forall t, var' t}
-        {s d} (e1 e2 : expr base_type_code op (Arrow s d))
-        e'
-        (He' : GeneralizeVar e1 = Some e')
-        (Hwf : wf (var2:=var') e1 e2)
-    : Wf e'.
-  Proof using base_type_code_lb. eapply @Wf_GeneralizeVar'; eassumption. Qed.
 
   Lemma Wf_GeneralizeVar_arrow
         {s d} (e : expr base_type_code op (Arrow s d))
         e'
         (He' : GeneralizeVar e = Some e')
-        (Hwf : wf e e)
     : Wf e'.
   Proof using base_type_code_lb. eapply Wf_GeneralizeVar; eassumption. Qed.
 End language.
 
-Hint Resolve Wf_GeneralizeVar Wf_GeneralizeVar_arrow Wf_GeneralizeVar' Wf_GeneralizeVar'_arrow : wf.
+Hint Resolve Wf_GeneralizeVar Wf_GeneralizeVar_arrow : wf.

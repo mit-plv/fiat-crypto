@@ -6,6 +6,7 @@ Require Import Crypto.Compilers.Named.InterpretToPHOAS.
 Require Import Crypto.Compilers.Named.Compile.
 Require Import Crypto.Compilers.Named.PositiveContext.
 Require Import Crypto.Compilers.Named.PositiveContext.Defaults.
+Require Import Crypto.Compilers.Named.Wf.
 Require Import Crypto.Compilers.Syntax.
 
 (** N.B. This procedure only works when there are no nested lets,
@@ -24,6 +25,15 @@ Section language.
   Definition GeneralizeVar {t} (e : @Syntax.expr base_type_code op (fun _ => FMapPositive.PositiveMap.key) t)
     : option (@Syntax.Expr base_type_code op (domain t -> codomain t))
     := let e := compile e (default_names_for (fun _ => 1%positive) e) in
+       let e := match e with
+                | Some e
+                  => match wf_unit (Context:=PContext _) empty e with
+                     | Some PointedProp.trivial => Some e
+                     | Some (PointedProp.inject _) => None
+                     | None => None
+                     end
+                | None => None
+                end in
        let e := option_map (InterpToPHOAS (Context:=fun var => PContext var) failb) e in
        e.
 End language.
