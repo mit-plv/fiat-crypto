@@ -17,7 +17,7 @@ static void freeze(uint32_t out[18], const uint32_t in1[18]) {
   { const uint32_t x6 = in1[2];
   { const uint32_t x4 = in1[1];
   { const uint32_t x2 = in1[0];
-  { uint32_t x36, uint8_t x37 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 4193883);
+  { uint32_t x36, uint8_t x37 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0x3ffe5b);
   { uint32_t x39, uint8_t x40 = Op (Syntax.SubWithGetBorrow 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x37, Return x4, 0x1fffff);
   { uint32_t x42, uint8_t x43 = Op (Syntax.SubWithGetBorrow 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x40, Return x6, 0x1fffff);
   { uint32_t x45, uint8_t x46 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x43, Return x8, 0x3fffff);
@@ -36,7 +36,7 @@ static void freeze(uint32_t out[18], const uint32_t in1[18]) {
   { uint32_t x84, uint8_t x85 = Op (Syntax.SubWithGetBorrow 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x82, Return x34, 0x1fffff);
   { uint32_t x87, uint8_t x88 = Op (Syntax.SubWithGetBorrow 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x85, Return x33, 0x1fffff);
   { uint32_t x89 = cmovznz32(x88, 0x0, 0xffffffff);
-  { uint32_t x90 = (x89 & Const 4193883);
+  { uint32_t x90 = (x89 & 0x3ffe5b);
   { uint32_t x92, uint8_t x93 = Op (Syntax.AddWithGetCarry 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x36, Return x90);
   { uint32_t x94 = (x89 & 0x1fffff);
   { uint32_t x96, uint8_t x97 = Op (Syntax.AddWithGetCarry 21 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x93, Return x39, Return x94);

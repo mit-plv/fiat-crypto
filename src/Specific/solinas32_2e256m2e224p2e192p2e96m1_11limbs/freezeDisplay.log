@@ -11,7 +11,7 @@ Interp-η
  uint32_t x40, ℤ x41 = Op (Syntax.SubWithGetBorrow 23 Syntax.TZ (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) Syntax.TZ) (Return x38, Return x14, 0x0);
  uint32_t x43, ℤ x44 = Op (Syntax.SubWithGetBorrow 24 Syntax.TZ (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) Syntax.TZ) (Return x41, Return x16, 0x0);
  uint32_t x46, ℤ x47 = Op (Syntax.SubWithGetBorrow 23 Syntax.TZ (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) Syntax.TZ) (Return x44, Return x18, 0x20);
- uint32_t x49, uint8_t x50 = Op (Syntax.SubWithGetBorrow 23 Syntax.TZ (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x47, Return x20, Const 8372224);
+ uint32_t x49, uint8_t x50 = Op (Syntax.SubWithGetBorrow 23 Syntax.TZ (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x47, Return x20, 0x7fc000);
  uint32_t x52, uint8_t x53 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x50, Return x19, 0x7fffff);
  uint32_t x54 = cmovznz32(x53, 0x0, 0xffffffff);
  uint32_t x55 = (x54 & 0xffffff);
@@ -29,7 +29,7 @@ Interp-η
  uint32_t x82, uint8_t x83 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x80, Return x43, 0x0);
  uint8_t x84 = ((uint8_t)x54 & 0x20);
  uint32_t x86, uint8_t x87 = Op (Syntax.AddWithGetCarry 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x83, Return x46, Return x84);
- uint32_t x88 = (x54 & Const 8372224);
+ uint32_t x88 = (x54 & 0x7fc000);
  uint32_t x90, uint8_t x91 = Op (Syntax.AddWithGetCarry 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x87, Return x49, Return x88);
  uint32_t x92 = (x54 & 0x7fffff);
  uint32_t x94, uint8_t _ = Op (Syntax.AddWithGetCarry 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x91, Return x52, Return x92);

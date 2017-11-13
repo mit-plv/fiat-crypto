@@ -35,7 +35,7 @@ static void fesub(uint32_t out[18], const uint32_t in1[18], const uint32_t in2[1
   { const uint32_t x43 = in2[2];
   { const uint32_t x41 = in2[1];
   { const uint32_t x39 = in2[0];
-  out[0] = ((Const 8387766 + x5) - x39);
+  out[0] = ((0x7ffcb6 + x5) - x39);
   out[1] = ((0x3ffffe + x7) - x41);
   out[2] = ((0x3ffffe + x9) - x43);
   out[3] = ((0x7ffffe + x11) - x45);

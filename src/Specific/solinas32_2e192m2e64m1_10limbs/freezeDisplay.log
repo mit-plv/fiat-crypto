@@ -5,7 +5,7 @@ Interp-η
  uint32_t x20, uint8_t x21 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0xfffff);
  uint32_t x23, uint8_t x24 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x21, Return x4, 0x7ffff);
  uint32_t x26, uint8_t x27 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x24, Return x6, 0x7ffff);
- uint32_t x29, uint8_t x30 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x27, Return x8, Const 524223);
+ uint32_t x29, uint8_t x30 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x27, Return x8, 0x7ffbf);
  uint32_t x32, uint8_t x33 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x30, Return x10, 0x7ffff);
  uint32_t x35, uint8_t x36 = Op (Syntax.SubWithGetBorrow 20 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x33, Return x12, 0xfffff);
  uint32_t x38, uint8_t x39 = Op (Syntax.SubWithGetBorrow 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x36, Return x14, 0x7ffff);
@@ -19,7 +19,7 @@ Interp-η
  uint32_t x56, uint8_t x57 = Op (Syntax.AddWithGetCarry 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x53, Return x23, Return x54);
  uint32_t x58 = (x49 & 0x7ffff);
  uint32_t x60, uint8_t x61 = Op (Syntax.AddWithGetCarry 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x57, Return x26, Return x58);
- uint32_t x62 = (x49 & Const 524223);
+ uint32_t x62 = (x49 & 0x7ffbf);
  uint32_t x64, uint8_t x65 = Op (Syntax.AddWithGetCarry 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x61, Return x29, Return x62);
  uint32_t x66 = (x49 & 0x7ffff);
  uint32_t x68, uint8_t x69 = Op (Syntax.AddWithGetCarry 19 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x65, Return x32, Return x66);

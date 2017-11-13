@@ -18,7 +18,7 @@ static void freeze(uint32_t out[19], const uint32_t in1[19]) {
   { const uint32_t x6 = in1[2];
   { const uint32_t x4 = in1[1];
   { const uint32_t x2 = in1[0];
-  { uint32_t x38, uint8_t x39 = Op (Syntax.SubWithGetBorrow 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 67108843);
+  { uint32_t x38, uint8_t x39 = Op (Syntax.SubWithGetBorrow 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0x3ffffeb);
   { uint32_t x41, uint8_t x42 = Op (Syntax.SubWithGetBorrow 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x39, Return x4, 0x3ffffff);
   { uint32_t x44, uint8_t x45 = Op (Syntax.SubWithGetBorrow 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x42, Return x6, 0x3ffffff);
   { uint32_t x47, uint8_t x48 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x45, Return x8, 0x1ffffff);
@@ -38,7 +38,7 @@ static void freeze(uint32_t out[19], const uint32_t in1[19]) {
   { uint32_t x89, uint8_t x90 = Op (Syntax.SubWithGetBorrow 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x87, Return x36, 0x3ffffff);
   { uint32_t x92, uint8_t x93 = Op (Syntax.SubWithGetBorrow 25 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x90, Return x35, 0x1ffffff);
   { uint32_t x94 = cmovznz32(x93, 0x0, 0xffffffff);
-  { uint32_t x95 = (x94 & Const 67108843);
+  { uint32_t x95 = (x94 & 0x3ffffeb);
   { uint32_t x97, uint8_t x98 = Op (Syntax.AddWithGetCarry 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x38, Return x95);
   { uint32_t x99 = (x94 & 0x3ffffff);
   { uint32_t x101, uint8_t x102 = Op (Syntax.AddWithGetCarry 26 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x98, Return x41, Return x99);
