@@ -1,0 +1,26 @@
+λ x x0 : word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x12, x13, x11, x9, x7, x5, (x22, x23, x21, x19, x17, x15))%core,
+ uint32_t x25, uint8_t x26 = addcarryx_u32(0x0, x5, x15);
+ uint32_t x28, uint8_t x29 = addcarryx_u32(x26, x7, x17);
+ uint32_t x31, uint8_t x32 = addcarryx_u32(x29, x9, x19);
+ uint32_t x34, uint8_t x35 = addcarryx_u32(x32, x11, x21);
+ uint32_t x37, uint8_t x38 = addcarryx_u32(x35, x13, x23);
+ uint32_t x40, uint8_t x41 = addcarryx_u32(x38, x12, x22);
+ uint32_t x43, uint8_t x44 = subborrow_u32(0x0, x25, 0xffffffe7);
+ uint32_t x46, uint8_t x47 = subborrow_u32(x44, x28, 0xffffffff);
+ uint32_t x49, uint8_t x50 = subborrow_u32(x47, x31, 0xffffffff);
+ uint32_t x52, uint8_t x53 = subborrow_u32(x50, x34, 0xffffffff);
+ uint32_t x55, uint8_t x56 = subborrow_u32(x53, x37, 0xffffffff);
+ uint32_t x58, uint8_t x59 = subborrow_u32(x56, x40, 0x1fffffff);
+ uint32_t _, uint8_t x62 = subborrow_u32(x59, x41, 0x0);
+ uint32_t x63 = cmovznz32(x62, x58, x40);
+ uint32_t x64 = cmovznz32(x62, x55, x37);
+ uint32_t x65 = cmovznz32(x62, x52, x34);
+ uint32_t x66 = cmovznz32(x62, x49, x31);
+ uint32_t x67 = cmovznz32(x62, x46, x28);
+ uint32_t x68 = cmovznz32(x62, x43, x25);
+ return (x63, x64, x65, x66, x67, x68))
+(x, x0)%core
+     : word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
