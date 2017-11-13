@@ -1,0 +1,14 @@
+λ x : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x13, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint64_t x15 = (x14 | x13);
+ uint64_t x16 = (x12 | x15);
+ uint64_t x17 = (x10 | x16);
+ uint64_t x18 = (x8 | x17);
+ uint64_t x19 = (x6 | x18);
+ uint64_t x20 = (x4 | x19);
+ uint64_t x21 = (x2 | x20);
+ return x21)
+x
+     : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType uint64_t
