@@ -2,11 +2,11 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x3, x4, x2)%core,
- uint64_t x6, uint8_t x7 = subborrow_u51(0x0, x2, Const 2251799813685231);
+ uint64_t x6, uint8_t x7 = subborrow_u51(0x0, x2, 0x7ffffffffffef);
  uint64_t x9, uint8_t x10 = subborrow_u51(x7, x4, 0x7ffffffffffff);
  uint64_t x12, uint8_t x13 = Op (Syntax.SubWithGetBorrow 50 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x10, Return x3, 0x3ffffffffffff);
  uint64_t x14 = cmovznz64(x13, 0x0, 0xffffffffffffffffL);
- uint64_t x15 = (x14 & Const 2251799813685231);
+ uint64_t x15 = (x14 & 0x7ffffffffffef);
  uint64_t x17, uint8_t x18 = addcarryx_u51(0x0, x6, x15);
  uint64_t x19 = (x14 & 0x7ffffffffffff);
  uint64_t x21, uint8_t x22 = addcarryx_u51(x18, x9, x19);

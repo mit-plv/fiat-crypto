@@ -2,6 +2,6 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
- (((Const 35184372088830 + x10) - x18), ((Const 35184372088830 + x11) - x19), ((Const 35184372088830 + x9) - x17), ((Const 35184372088830 + x7) - x15), ((Const 70368744177658 + x5) - x13)))
+ (((0x1ffffffffffe + x10) - x18), ((0x1ffffffffffe + x11) - x19), ((0x1ffffffffffe + x9) - x17), ((0x1ffffffffffe + x7) - x15), ((0x3ffffffffffa + x5) - x13)))
 (x, x0)%core
      : word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

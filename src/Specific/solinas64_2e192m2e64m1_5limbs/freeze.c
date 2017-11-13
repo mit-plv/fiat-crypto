@@ -5,14 +5,14 @@ static void freeze(uint64_t out[5], const uint64_t in1[5]) {
   { const uint64_t x4 = in1[1];
   { const uint64_t x2 = in1[0];
   { uint64_t x10, uint8_t x11 = Op (Syntax.SubWithGetBorrow 39 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, 0x7fffffffff);
-  { uint64_t x13, uint8_t x14 = Op (Syntax.SubWithGetBorrow 38 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x11, Return x4, Const 274844352511);
+  { uint64_t x13, uint8_t x14 = Op (Syntax.SubWithGetBorrow 38 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x11, Return x4, 0x3ffdffffff);
   { uint64_t x16, uint8_t x17 = Op (Syntax.SubWithGetBorrow 39 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x14, Return x6, 0x7fffffffff);
   { uint64_t x19, uint8_t x20 = Op (Syntax.SubWithGetBorrow 38 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x17, Return x8, 0x3fffffffff);
   { uint64_t x22, uint8_t x23 = Op (Syntax.SubWithGetBorrow 38 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x20, Return x7, 0x3fffffffff);
   { uint64_t x24 = cmovznz64(x23, 0x0, 0xffffffffffffffffL);
   { uint64_t x25 = (x24 & 0x7fffffffff);
   { uint64_t x27, uint8_t x28 = Op (Syntax.AddWithGetCarry 39 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x10, Return x25);
-  { uint64_t x29 = (x24 & Const 274844352511);
+  { uint64_t x29 = (x24 & 0x3ffdffffff);
   { uint64_t x31, uint8_t x32 = Op (Syntax.AddWithGetCarry 38 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x28, Return x13, Return x29);
   { uint64_t x33 = (x24 & 0x7fffffffff);
   { uint64_t x35, uint8_t x36 = Op (Syntax.AddWithGetCarry 39 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (Return x32, Return x16, Return x33);

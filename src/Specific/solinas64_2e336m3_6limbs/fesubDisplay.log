@@ -1,0 +1,7 @@
+λ x x0 : word64 * word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x12, x13, x11, x9, x7, x5, (x22, x23, x21, x19, x17, x15))%core,
+ (((0x1fffffffffffffe + x12) - x22), ((0x1fffffffffffffe + x13) - x23), ((0x1fffffffffffffe + x11) - x21), ((0x1fffffffffffffe + x9) - x19), ((0x1fffffffffffffe + x7) - x17), ((0x1fffffffffffffa + x5) - x15)))
+(x, x0)%core
+     : word64 * word64 * word64 * word64 * word64 * word64 → word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

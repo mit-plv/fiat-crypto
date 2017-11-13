@@ -2,6 +2,6 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x10, x11, x9, x7, x5, (x18, x19, x17, x15, x13))%core,
- (((0xffffffe + x10) - x18), ((0xffffffe + x11) - x19), ((0x1ffffffe + x9) - x17), ((0xffffffe + x7) - x15), ((Const 536870886 + x5) - x13)))
+ (((0xffffffe + x10) - x18), ((0xffffffe + x11) - x19), ((0x1ffffffe + x9) - x17), ((0xffffffe + x7) - x15), ((0x1fffffe6 + x5) - x13)))
 (x, x0)%core
      : word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
