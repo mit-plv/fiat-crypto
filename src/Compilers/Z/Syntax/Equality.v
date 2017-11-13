@@ -16,6 +16,12 @@ Global Instance dec_eq_base_type : DecidableRel (@eq base_type)
 Global Instance dec_eq_flat_type : DecidableRel (@eq (flat_type base_type)) := _.
 Global Instance dec_eq_type : DecidableRel (@eq (type base_type)) := _.
 
+Notation base_type_dec_bl := internal_base_type_dec_bl.
+Notation base_type_dec_lb := internal_base_type_dec_lb.
+Notation flat_type_beq := (@flat_type_beq base_type base_type_beq).
+Notation flat_type_dec_bl := (@flat_type_dec_bl base_type base_type_beq base_type_dec_bl).
+Notation flat_type_dec_lb := (@flat_type_dec_lb base_type base_type_beq base_type_dec_lb).
+
 Definition base_type_eq_semidec_transparent (t1 t2 : base_type)
   : option (t1 = t2)
   := match base_type_eq_dec t1 t2 with
