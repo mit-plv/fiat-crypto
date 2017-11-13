@@ -11,6 +11,7 @@
 (** ** Preamble *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Compilers.Syntax.
+Require Import Crypto.Compilers.Intros.
 Require Import Crypto.Compilers.Wf.
 Require Import Crypto.Compilers.WfReflective.
 Require Import Crypto.Compilers.RenameBinders.
@@ -143,16 +144,7 @@ Ltac boundedness_side_condition_solver :=
          end;
   try abstract ring.
 Ltac handle_boundedness_side_condition :=
-  (** TODO: This next bit, with repeat intros [? ?], could be done
-        with a single [apply], if we make the right lemma.  We should
-        write that lemma. *)
-  cbv [PointedProp.to_prop Syntax.interp_flat_type Syntax.interp_base_type Syntax.domain Syntax.codomain];
-  repeat match goal with
-         | [ |- forall x : _ * _, _ ]
-           => let a := fresh in let b := fresh in intros [a b]; revert a b
-         | [ |- forall x, _ ]
-           => let x := fresh "x" in intro x
-         end;
+  post_intro_interp_flat_type_intros;
   cbv [id
          fst snd
          InterpSideConditions Compilers.InterpSideConditions.InterpSideConditions interp_side_conditions interpf_side_conditions interpf_side_conditions_gen
@@ -162,7 +154,7 @@ Ltac handle_boundedness_side_condition :=
          Syntax.Zinterp_op
          SmartMap.SmartFlatTypeMapUnInterp SmartMap.SmartValf SmartMap.SmartFlatTypeMapInterp2
          Syntax.cast_const Syntax.ZToInterp Syntax.interpToZ];
-  cbv [PointedProp.and_pointed_Prop];
+  cbv [PointedProp.and_pointed_Prop PointedProp.to_prop];
   try match goal with
       | [ |- True ] => exact I
       end;
@@ -250,7 +242,7 @@ Section with_round_up_list.
       Hevar : final_e_evar = InterpEta (t:=Arrow _ _) Syntax.interp_op e_final_newtype v';
       (** ** side conditions (boundedness) *)
       Hv1 : Bounds.is_bounded_by input_bounds (cast_back_flat_const v');
-      Hv2 : forall v, PointedProp.to_prop (InterpSideConditions e_pre_pkg v);
+      Hv2 : intros_interp_flat_type_Prop (fun v => PointedProp.to_prop (InterpSideConditions e_pre_pkg v));
     }.
 
   Definition PipelineCorrect
@@ -273,6 +265,7 @@ Section with_round_up_list.
     symmetry in Hpost_correct.
     subst; cbv [proj1_sig] in *.
     rewrite eq_InterpEta, <- Hrexpr.
+    pose proof (introsP_interp_flat_type Hv2) as Hv2'.
     eapply PostWfPipelineCorrect in Hpost_correct; [ | solve [ eauto ].. ].
     rewrite !@InterpPreWfPipeline in Hpost_correct.
     unshelve eapply relax_output_bounds; try eassumption; [].
