@@ -296,6 +296,8 @@ GENERATED_GMPSEC_MEASUREMENTS := $(addsuffix .log,$(GENERATED_GMPSEC))
 GENERATED_FIBE := $(addsuffix fibe,$(GENERATED_FOLDERS))
 GENERATED_FIBE_MEASUREMENTS := $(addsuffix .log,$(GENERATED_FIBE))
 
+generated-benchmarks: $(GENERATED_FIBE) $(GENERATED_GMPSEC) $(GENERATED_GMPVAR) $(GENERATED_GMPXX)
+
 $(GENERATED_PY_MEASUREMENTS) : %/montladder.log : %/py_interpreter.sh src/Specific/Framework/bench/montladder.py
 	sh $*/py_interpreter.sh src/Specific/Framework/bench/montladder.py > $@
 
