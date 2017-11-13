@@ -75,6 +75,7 @@ src/Compilers/InterpRewriting.v
 src/Compilers/InterpSideConditions.v
 src/Compilers/InterpWf.v
 src/Compilers/InterpWfRel.v
+src/Compilers/Intros.v
 src/Compilers/Linearize.v
 src/Compilers/LinearizeInterp.v
 src/Compilers/LinearizeWf.v
