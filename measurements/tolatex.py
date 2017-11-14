@@ -55,6 +55,7 @@ LEGEND = {
         }
 
 class ParseException(Exception): pass
+class MissingDataException(Exception): pass
 
 def parse_line(line):
     data = line.strip().split("\t")
@@ -98,8 +99,18 @@ def parse_prime(prime):
     terms = prime.split("+")
     return list(map(parse_term, terms))
 
+def final_lines(bits):
+    out = []
+    for s in SETUPS:
+        if (bits == 32 and s in EXCLUDE_32) or (bits == 64 and s in EXCLUDE_64):
+            continue
+        if any([x[1]==s for x in COMBINE]):
+            continue # in this case, the setup has been combined into some other one
+        out.append(s)
+    return out 
+
 # remove duplicates, reorganize, and parse primes
-def clean_data(parsed_lines):
+def clean_data(parsed_lines, bits):
     out = {s:{} for s in SETUPS}
     for ln in parsed_lines:
         prime2 = ln["prime"].replace("e", "^").replace("m", "-").replace("p","+").replace("x","*")
@@ -116,6 +127,13 @@ def clean_data(parsed_lines):
                 out[s1][p] = f(out[s1][p], out[s2][p])
             elif p in out[s2]:
                 out[s1][p] = out[s2][p]
+    # check for missing data points
+    all_primes = set()
+    for s in final_lines(bits):
+        all_primes = all_primes | set(out[s].keys())
+    for s in final_lines(bits):
+        if any([(p not in all_primes) for p in out[s]]):
+            raise MissingDataException("missing datapoint for %s: log2(p)=%s" %(LEGEND[s],math.log2(p))) 
     return out
 
 def makeplot(data, bits):
@@ -138,11 +156,7 @@ def makeplot(data, bits):
  \t\tymin=0,
  \t\txlabel=log2(prime),
  \t\tylabel=Time (seconds)]\n""" %bits
-    for s in SETUPS:
-        if (bits == 32 and s in EXCLUDE_32) or (bits == 64 and s in EXCLUDE_64):
-            continue
-        if any([x[1]==s for x in COMBINE]):
-            continue # in this case, the setup has been combined into some other one
+    for s in final_lines(bits):
         out +="\t\t\\addplot[%s,mark size=2pt] coordinates {\n" %SETUPS[s]
         for p,t in sorted(data[s].items()):
             out += "\t\t\t(%s, %s) \n" %(math.log2(p), t)
@@ -164,5 +178,5 @@ if __name__ == "__main__":
         except ParseException:
             print("WARNING: Could not parse line %s, skipping" %line.strip().split("\t"))
     f.close()
-    print(makeplot(clean_data(parsed_lines), bits))
+    print(makeplot(clean_data(parsed_lines, bits), bits))
 
