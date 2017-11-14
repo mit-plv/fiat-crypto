@@ -2,7 +2,7 @@
 Interp-η
 (λ var : Syntax.base_type → Type,
  λ '(x43, x44, x42, x40, x38, x36, x34, x32, x30, x28, x26, x24, x22, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
- uint32_t x46, uint8_t x47 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, Const 8388127);
+ uint32_t x46, uint8_t x47 = Op (Syntax.SubWithGetBorrow 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0x7ffe1f);
  uint32_t x49, uint8_t x50 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x47, Return x4, 0x3fffff);
  uint32_t x52, uint8_t x53 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x50, Return x6, 0x3fffff);
  uint32_t x55, uint8_t x56 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x53, Return x8, 0x3fffff);
@@ -26,7 +26,7 @@ Interp-η
  uint32_t x109, uint8_t x110 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x107, Return x44, 0x3fffff);
  uint32_t x112, uint8_t x113 = Op (Syntax.SubWithGetBorrow 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x110, Return x43, 0x3fffff);
  uint32_t x114 = cmovznz32(x113, 0x0, 0xffffffff);
- uint32_t x115 = (x114 & Const 8388127);
+ uint32_t x115 = (x114 & 0x7ffe1f);
  uint32_t x117, uint8_t x118 = Op (Syntax.AddWithGetCarry 23 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x46, Return x115);
  uint32_t x119 = (x114 & 0x3fffff);
  uint32_t x121, uint8_t x122 = Op (Syntax.AddWithGetCarry 22 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x118, Return x49, Return x119);
