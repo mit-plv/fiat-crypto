@@ -1,43 +1,65 @@
 # Generates benchmark graphs in LaTex (following format from the pgfplots
 # package)
-# 
-# This ignores duplicate entries, including different primes with the same
-# number of bits.
 import sys, math
 
-USAGE = "USAGE: python tolatex.py [input file]"
+USAGE = "USAGE: python tolatex.py [input file] [num bits]"
 
 SETUPS = {
+        "gmpvar32": "color=red,mark=o", 
+        "gmpxx32": "color=red,mark=x", 
+        "gmpsec32" : "color=red,mark=*",
+        "gmpvar64": "color=red,mark=o", 
+        "gmpxx64": "color=red,mark=x", 
+        "gmpsec64" : "color=red,mark=*",
         "fiat_montgomery32": "color=blue,mark=triangle*", 
-        "fiat_montgomery64": "color=blue,mark=square*", 
+        "fiat_montgomery64": "color=blue,mark=triangle*", 
         "fiat_solinas32": "color=blue,mark=triangle", 
-        "fiat_solinas64": "color=blue,mark=square", 
-        "gmpvar": "color=red,mark=*", 
-        "gmpxx": "color=red,mark=o", 
-        "gmpsec" : "color=red,mark=x"
+        "fiat_solinas64": "color=blue,mark=triangle"
         }
+
+# setups to combine and functions to combine them
+COMBINE = [
+        ("fiat_montgomery32", "fiat_solinas32", min),
+        ("fiat_montgomery64", "fiat_solinas64", min)
+        ]
+
+# setups to exclude
+EXCLUDE_32 = [
+        "fiat_montgomery64",
+        "fiat_solinas64",
+        "gmpvar64",
+        "gmpsec64",
+        "gmpxx64",
+        "gmpxx32"
+        ]
+EXCLUDE_64 = [
+        "fiat_montgomery32",
+        "fiat_solinas32",
+        "gmpvar32",
+        "gmpsec32",
+        "gmpxx64",
+        "gmpxx32"
+        ]
 
 LEGEND = {
-        "fiat_montgomery32": "ours, Montgomery reduction", 
-        "fiat_montgomery64": "ours, Montgomery reduction", 
-        "fiat_solinas32": "ours, Solinas reduction", 
-        "fiat_solinas64": "ours, Solinas reduction", 
-        "gmpvar": "GMP mpn_ API", 
-        "gmpxx": "GMP C++ API", 
-        "gmpsec" : "GMP mpn_sec API"
+        "fiat_montgomery32": "this paper", 
+        "fiat_montgomery64": "this paper", 
+        "fiat_solinas32": "this paper", 
+        "fiat_solinas64": "this paper", 
+        "gmpvar32": "GMP mpn API", 
+        "gmpxx32": "GMP C++ API", 
+        "gmpsec32" : "GMP mpn_sec API",
+        "gmpvar64": "GMP mpn API",
+        "gmpxx64": "GMP C++ API", 
+        "gmpsec64" : "GMP mpn_sec API"
         }
-
-EXCLUDE = [
-        "fiat_montgomery32",
-        "fiat_solinas32"
-        ]
 
 class ParseException(Exception): pass
 
 def parse_line(line):
     data = line.strip().split("\t")
     if len(data) != 3 or (data[1] not in SETUPS) or ("2e" not in data[0]) :
-        raise ParseException("Could not parse line %s" %line)
+        raise ParseException("Could not parse line %s" %line.strip())
     return { 
             "prime" : data[0],
             "setup" : data[1],
@@ -82,48 +104,65 @@ def clean_data(parsed_lines):
     for ln in parsed_lines:
         prime2 = ln["prime"].replace("e", "^").replace("m", "-").replace("p","+").replace("x","*")
         p = sum([(x * (2**e)) for x,e in parse_prime(prime2)])
-        n = math.log2(p)
         # if some measurement is duplicated, ignore the repeats
-        if n not in out[ln["setup"]]:
-            out[ln["setup"]][n] = ln["time"]
+        if p not in out[ln["setup"]]:
+            out[ln["setup"]][p] = ln["time"]
+    # combine setups according to COMBINE list
+    for s1, s2, f in COMBINE:
+        all_primes = list(out[s1].keys())
+        all_primes.extend(out[s2].keys())
+        for p in set(all_primes):
+            if p in out[s1] and p in out[s2]:
+                out[s1][p] = f(out[s1][p], out[s2][p])
+            elif p in out[s2]:
+                out[s1][p] = out[s2][p]
     return out
 
-def makeplot(data):
+def makeplot(data, bits):
     out = """
  \\begin{figure*}
  \\begin{tikzpicture}
  \t\\begin{axis}[
- \t\theight=9cm,
+ \t\theight=3.4cm,
+ \t\ttitle style={font=\small},
+ \t\ttitle=%s-bit Field Arithmetic Benchmarks,
  \t\twidth=\\textwidth,
  \t\tlegend pos= north west,
- \t\txtick distance=100,
- \t\textra x ticks={127,256,448,480},
- \t\textra x tick style={grid=major, tick label style={rotate=45,anchor=east}},
+ \t\txtick distance=64,
+ \t\tlegend style={font=\\tiny},
+ \t\tlabel style={font=\\footnotesize},
+ \t\txlabel style={at={(0.5,0.1)}, anchor=north},
+ \t\tlegend columns=2,
+ \t\ttick label style={font=\\footnotesize},
+ \t\tgrid=major,
  \t\tymin=0,
  \t\txlabel=log2(prime),
- \t\tylabel=Time (seconds)]"""
+ \t\tylabel=Time (seconds)]\n""" %bits
     for s in SETUPS:
-        if s in EXCLUDE:
+        if (bits == 32 and s in EXCLUDE_32) or (bits == 64 and s in EXCLUDE_64):
             continue
-        out +="\t\t\\addplot[%s] coordinates {\n" %SETUPS[s]
-        for n in data[s]:
-            out += "\t\t\t(%s, %s) \n" %(n, data[s][n])
+        if any([x[1]==s for x in COMBINE]):
+            continue # in this case, the setup has been combined into some other one
+        out +="\t\t\\addplot[%s,mark size=2pt] coordinates {\n" %SETUPS[s]
+        for p,t in sorted(data[s].items()):
+            out += "\t\t\t(%s, %s) \n" %(math.log2(p), t)
         out += "\t\t};\n"
         out += "\t\t\\addlegendentry{%s}\n\n" %LEGEND[s].replace("_", "\_")
     out += "\t\end{axis}\n\\end{tikzpicture}\n\\end{figure*}"
     return out
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) != 3:
         print(USAGE)
         sys.exit()
+    bits = int(sys.argv[2])
     f = open(sys.argv[1])
     parsed_lines = []
     for line in f:
         try:
             parsed_lines.append(parse_line(line))
         except ParseException:
-            print("WARNING: Could not parse line %s, skipping" %line)
+            print("WARNING: Could not parse line %s, skipping" %line.strip().split("\t"))
     f.close()
-    print(makeplot(clean_data(parsed_lines)))
+    print(makeplot(clean_data(parsed_lines), bits))
 
