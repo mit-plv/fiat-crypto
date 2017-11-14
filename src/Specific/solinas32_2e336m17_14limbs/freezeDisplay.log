@@ -1,0 +1,50 @@
+λ x : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x25, x26, x24, x22, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint32_t x28, uint8_t x29 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x2, 0xffffef);
+ uint32_t x31, uint8_t x32 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x29, Return x4, 0xffffff);
+ uint32_t x34, uint8_t x35 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x32, Return x6, 0xffffff);
+ uint32_t x37, uint8_t x38 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x35, Return x8, 0xffffff);
+ uint32_t x40, uint8_t x41 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x38, Return x10, 0xffffff);
+ uint32_t x43, uint8_t x44 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x41, Return x12, 0xffffff);
+ uint32_t x46, uint8_t x47 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x44, Return x14, 0xffffff);
+ uint32_t x49, uint8_t x50 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x47, Return x16, 0xffffff);
+ uint32_t x52, uint8_t x53 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x50, Return x18, 0xffffff);
+ uint32_t x55, uint8_t x56 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x53, Return x20, 0xffffff);
+ uint32_t x58, uint8_t x59 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x56, Return x22, 0xffffff);
+ uint32_t x61, uint8_t x62 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x59, Return x24, 0xffffff);
+ uint32_t x64, uint8_t x65 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x62, Return x26, 0xffffff);
+ uint32_t x67, uint8_t x68 = Op (Syntax.SubWithGetBorrow 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x65, Return x25, 0xffffff);
+ uint32_t x69 = cmovznz32(x68, 0x0, 0xffffffff);
+ uint32_t x70 = (x69 & 0xffffef);
+ uint32_t x72, uint8_t x73 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (0x0, Return x28, Return x70);
+ uint32_t x74 = (x69 & 0xffffff);
+ uint32_t x76, uint8_t x77 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x73, Return x31, Return x74);
+ uint32_t x78 = (x69 & 0xffffff);
+ uint32_t x80, uint8_t x81 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x77, Return x34, Return x78);
+ uint32_t x82 = (x69 & 0xffffff);
+ uint32_t x84, uint8_t x85 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x81, Return x37, Return x82);
+ uint32_t x86 = (x69 & 0xffffff);
+ uint32_t x88, uint8_t x89 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x85, Return x40, Return x86);
+ uint32_t x90 = (x69 & 0xffffff);
+ uint32_t x92, uint8_t x93 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x89, Return x43, Return x90);
+ uint32_t x94 = (x69 & 0xffffff);
+ uint32_t x96, uint8_t x97 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x93, Return x46, Return x94);
+ uint32_t x98 = (x69 & 0xffffff);
+ uint32_t x100, uint8_t x101 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x97, Return x49, Return x98);
+ uint32_t x102 = (x69 & 0xffffff);
+ uint32_t x104, uint8_t x105 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x101, Return x52, Return x102);
+ uint32_t x106 = (x69 & 0xffffff);
+ uint32_t x108, uint8_t x109 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x105, Return x55, Return x106);
+ uint32_t x110 = (x69 & 0xffffff);
+ uint32_t x112, uint8_t x113 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x109, Return x58, Return x110);
+ uint32_t x114 = (x69 & 0xffffff);
+ uint32_t x116, uint8_t x117 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x113, Return x61, Return x114);
+ uint32_t x118 = (x69 & 0xffffff);
+ uint32_t x120, uint8_t x121 = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x117, Return x64, Return x118);
+ uint32_t x122 = (x69 & 0xffffff);
+ uint32_t x124, uint8_t _ = Op (Syntax.AddWithGetCarry 24 (Syntax.TWord 3) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 5) (Syntax.TWord 3)) (Return x121, Return x67, Return x122);
+ (Return x124, Return x120, Return x116, Return x112, Return x108, Return x104, Return x100, Return x96, Return x92, Return x88, Return x84, Return x80, Return x76, Return x72))
+x
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
