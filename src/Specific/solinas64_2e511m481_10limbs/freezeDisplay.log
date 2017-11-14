@@ -1,0 +1,38 @@
+λ x : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x17, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint64_t x20, uint8_t x21 = Op (Syntax.SubWithGetBorrow 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x2, 0xffffffffffe1f);
+ uint64_t x23, uint8_t x24 = subborrow_u51(x21, x4, 0x7ffffffffffff);
+ uint64_t x26, uint8_t x27 = subborrow_u51(x24, x6, 0x7ffffffffffff);
+ uint64_t x29, uint8_t x30 = subborrow_u51(x27, x8, 0x7ffffffffffff);
+ uint64_t x32, uint8_t x33 = subborrow_u51(x30, x10, 0x7ffffffffffff);
+ uint64_t x35, uint8_t x36 = subborrow_u51(x33, x12, 0x7ffffffffffff);
+ uint64_t x38, uint8_t x39 = subborrow_u51(x36, x14, 0x7ffffffffffff);
+ uint64_t x41, uint8_t x42 = subborrow_u51(x39, x16, 0x7ffffffffffff);
+ uint64_t x44, uint8_t x45 = subborrow_u51(x42, x18, 0x7ffffffffffff);
+ uint64_t x47, uint8_t x48 = subborrow_u51(x45, x17, 0x7ffffffffffff);
+ uint64_t x49 = cmovznz64(x48, 0x0, 0xffffffffffffffffL);
+ uint64_t x50 = (x49 & 0xffffffffffe1f);
+ uint64_t x52, uint8_t x53 = Op (Syntax.AddWithGetCarry 52 (Syntax.TWord 3) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 6) (Syntax.TWord 3)) (0x0, Return x20, Return x50);
+ uint64_t x54 = (x49 & 0x7ffffffffffff);
+ uint64_t x56, uint8_t x57 = addcarryx_u51(x53, x23, x54);
+ uint64_t x58 = (x49 & 0x7ffffffffffff);
+ uint64_t x60, uint8_t x61 = addcarryx_u51(x57, x26, x58);
+ uint64_t x62 = (x49 & 0x7ffffffffffff);
+ uint64_t x64, uint8_t x65 = addcarryx_u51(x61, x29, x62);
+ uint64_t x66 = (x49 & 0x7ffffffffffff);
+ uint64_t x68, uint8_t x69 = addcarryx_u51(x65, x32, x66);
+ uint64_t x70 = (x49 & 0x7ffffffffffff);
+ uint64_t x72, uint8_t x73 = addcarryx_u51(x69, x35, x70);
+ uint64_t x74 = (x49 & 0x7ffffffffffff);
+ uint64_t x76, uint8_t x77 = addcarryx_u51(x73, x38, x74);
+ uint64_t x78 = (x49 & 0x7ffffffffffff);
+ uint64_t x80, uint8_t x81 = addcarryx_u51(x77, x41, x78);
+ uint64_t x82 = (x49 & 0x7ffffffffffff);
+ uint64_t x84, uint8_t x85 = addcarryx_u51(x81, x44, x82);
+ uint64_t x86 = (x49 & 0x7ffffffffffff);
+ uint64_t x88, uint8_t _ = addcarryx_u51(x85, x47, x86);
+ (Return x88, Return x84, Return x80, Return x76, Return x72, Return x68, Return x64, Return x60, Return x56, Return x52))
+x
+     : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)
