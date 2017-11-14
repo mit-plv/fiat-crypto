@@ -160,6 +160,9 @@ Section API.
     Definition eval {n} (p : T n) : Z :=
       B.Positional.eval (uweight bound) p.
 
+    Definition encode n (z : Z) : T n :=
+      B.Positional.encode (uweight bound) (modulo_cps:=@modulo_cps) (div_cps:=@div_cps) z.
+
     Lemma eval_small n (p : T n) (Hsmall : small p) :
       0 <= eval p < uweight bound n.
     Proof.
@@ -189,6 +192,23 @@ Section API.
         { rewrite Z.mul_add_distr_l.
           apply Z.add_le_lt_mono; omega. }
         { apply Z.mul_le_mono_nonneg; omega. }
+    Qed.
+
+    Lemma small_encode n (v : Z) (Hsmall : 0 <= v < uweight bound n)
+      : small (encode n v).
+    Proof.
+    Admitted. (* TODO(jadep): prove me *)
+
+    Lemma eval_encode n (v : Z) (Hsmall : 0 <= v < uweight bound n)
+      : eval (encode n v) = v.
+    Proof.
+      destruct n as [|n].
+      { cbv -[Z.le Z.lt Z.gt] in *; omega. }
+      { cbv [eval encode].
+        pose proof (@uweight_divides _ bound_pos) as Hdiv.
+        apply B.Positional.eval_encode; try reflexivity;
+          eauto using modulo_id, div_id, div_mod, uweight_nonzero.
+        { intros i ?; specialize (Hdiv i); omega. } }
     Qed.
 
     Lemma eval_zero n : eval (@zero n) = 0.
@@ -633,6 +653,7 @@ Hint Unfold
      conditional_sub_cps
      conditional_sub
      eval
+     encode
   : basesystem_partial_evaluation_unfolder.
 
 Ltac basesystem_partial_evaluation_unfolder t :=
@@ -652,6 +673,7 @@ Ltac basesystem_partial_evaluation_unfolder t :=
                      conditional_sub_cps
                      conditional_sub
                      eval
+                     encode
                  ] in t) in
   let t := Saturated.AddSub.basesystem_partial_evaluation_unfolder t in
   let t := Saturated.Wrappers.basesystem_partial_evaluation_unfolder t in
