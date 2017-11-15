@@ -77,25 +77,34 @@ Module PackageSynthesis (PKG : PrePackage).
   Include MP.
   Include MRP.
 
-  Ltac synthesize do_rewrite get_op_sig :=
+  Ltac get_synthesized _ := Pipeline.get_reify ().
+  Ltac refine_with_synthesized RHS := Pipeline.refine_with_reified RHS.
+  Ltac finish_synthesis _ := Pipeline.refine_postreflectively ().
+  Ltac synthesize_via presynthesize :=
+    presynthesize ();
+    [ let RHS := get_synthesized () in refine_with_synthesized RHS | .. ];
+    finish_synthesis ().
+
+
+  Ltac presynthesize do_rewrite get_op_sig :=
     let op_sig := get_op_sig () in
     let allowable_bit_widths := get_allowable_bit_widths () in
     start_preglue;
     [ do_rewrite op_sig; cbv_runtime
     | .. ];
     fin_preglue;
-    refine_reflectively_gen allowable_bit_widths default.
-  Ltac synthesize_with_carry do_rewrite get_op_sig :=
+    refine_prereflectively_gen allowable_bit_widths default.
+  Ltac presynthesize_with_carry do_rewrite get_op_sig :=
     let carry_sig := get_carry_sig () in
-    synthesize ltac:(fun op_sig => do_rewrite op_sig carry_sig) get_op_sig.
-  Ltac synthesize_narg get_op_sig :=
-    synthesize do_rewrite_with_sig get_op_sig.
-  Ltac synthesize_2arg_with_carry get_op_sig :=
-    synthesize_with_carry do_rewrite_with_2sig_add_carry get_op_sig.
-  Ltac synthesize_1arg_with_carry get_op_sig :=
-    synthesize_with_carry do_rewrite_with_1sig_add_carry get_op_sig.
+    presynthesize ltac:(fun op_sig => do_rewrite op_sig carry_sig) get_op_sig.
+  Ltac presynthesize_narg get_op_sig :=
+    presynthesize do_rewrite_with_sig get_op_sig.
+  Ltac presynthesize_2arg_with_carry get_op_sig :=
+    presynthesize_with_carry do_rewrite_with_2sig_add_carry get_op_sig.
+  Ltac presynthesize_1arg_with_carry get_op_sig :=
+    presynthesize_with_carry do_rewrite_with_1sig_add_carry get_op_sig.
 
-  Ltac synthesize_montgomery get_op_sig get_op_bounded :=
+  Ltac presynthesize_montgomery get_op_sig get_op_bounded :=
     let phi := get_phi1_for_preglue () in
     let op_sig := get_op_sig () in
     let op_bounded := get_op_bounded () in
@@ -112,35 +121,36 @@ Module PackageSynthesis (PKG : PrePackage).
     | .. ];
     fin_preglue;
     factor_out_bounds_and_strip_eval op_bounded op_sig_side_conditions_t;
-    refine_reflectively_gen allowable_bit_widths anf.
+    refine_prereflectively_gen allowable_bit_widths anf.
 
-  Ltac synthesize_narg_choice_gen synthesize get_op_sig get_op_bounded :=
+  Ltac presynthesize_narg_choice_gen presynthesize get_op_sig get_op_bounded :=
     let montgomery := get_montgomery () in
     lazymatch (eval vm_compute in montgomery) with
-    | true => synthesize_montgomery get_op_sig get_op_bounded
-    | false => synthesize get_op_sig
+    | true => presynthesize_montgomery get_op_sig get_op_bounded
+    | false => presynthesize get_op_sig
     end.
-  Ltac synthesize_narg_choice get_op_sig get_op_bounded :=
-    synthesize_narg_choice_gen synthesize_narg get_op_sig get_op_bounded.
-  Ltac synthesize_2arg_choice_with_carry get_op_sig get_op_bounded :=
-    synthesize_narg_choice_gen synthesize_2arg_with_carry get_op_sig get_op_bounded.
-  Ltac synthesize_1arg_choice_with_carry get_op_sig get_op_bounded :=
-    synthesize_narg_choice_gen synthesize_1arg_with_carry get_op_sig get_op_bounded.
+  Ltac presynthesize_narg_choice get_op_sig get_op_bounded :=
+    presynthesize_narg_choice_gen presynthesize_narg get_op_sig get_op_bounded.
+  Ltac presynthesize_2arg_choice_with_carry get_op_sig get_op_bounded :=
+    presynthesize_narg_choice_gen presynthesize_2arg_with_carry get_op_sig get_op_bounded.
+  Ltac presynthesize_1arg_choice_with_carry get_op_sig get_op_bounded :=
+    presynthesize_narg_choice_gen presynthesize_1arg_with_carry get_op_sig get_op_bounded.
 
-  Ltac synthesize_carry_mul _ := synthesize_2arg_choice_with_carry get_mul_sig get_mul_bounded.
-  Ltac synthesize_carry_add _ := synthesize_2arg_choice_with_carry get_add_sig get_add_bounded.
-  Ltac synthesize_carry_sub _ := synthesize_2arg_choice_with_carry get_sub_sig get_sub_bounded.
-  Ltac synthesize_carry_opp _ := synthesize_1arg_choice_with_carry get_opp_sig get_opp_bounded.
-  Ltac synthesize_carry_square _ := synthesize_1arg_with_carry get_square_sig.
-  Ltac synthesize_nocarry_mul _ := synthesize_narg_choice get_mul_sig get_mul_bounded.
-  Ltac synthesize_add _ := synthesize_narg_choice get_add_sig get_add_bounded.
-  Ltac synthesize_sub _ := synthesize_narg_choice get_sub_sig get_sub_bounded.
-  Ltac synthesize_opp _ := synthesize_narg_choice get_opp_sig get_opp_bounded.
-  Ltac synthesize_carry _ := synthesize_narg_choice get_carry_sig get_carry_bounded.
-  Ltac synthesize_nocarry_square _ := synthesize_narg get_square_sig.
-  Ltac synthesize_mul _ := synthesize_carry_mul ().
-  Ltac synthesize_square _ := synthesize_carry_square ().
-  Ltac synthesize_freeze _ :=
+
+  Ltac presynthesize_carry_mul _ := presynthesize_2arg_choice_with_carry get_mul_sig get_mul_bounded.
+  Ltac presynthesize_carry_add _ := presynthesize_2arg_choice_with_carry get_add_sig get_add_bounded.
+  Ltac presynthesize_carry_sub _ := presynthesize_2arg_choice_with_carry get_sub_sig get_sub_bounded.
+  Ltac presynthesize_carry_opp _ := presynthesize_1arg_choice_with_carry get_opp_sig get_opp_bounded.
+  Ltac presynthesize_carry_square _ := presynthesize_1arg_with_carry get_square_sig.
+  Ltac presynthesize_nocarry_mul _ := presynthesize_narg_choice get_mul_sig get_mul_bounded.
+  Ltac presynthesize_add _ := presynthesize_narg_choice get_add_sig get_add_bounded.
+  Ltac presynthesize_sub _ := presynthesize_narg_choice get_sub_sig get_sub_bounded.
+  Ltac presynthesize_opp _ := presynthesize_narg_choice get_opp_sig get_opp_bounded.
+  Ltac presynthesize_carry _ := presynthesize_narg_choice get_carry_sig get_carry_bounded.
+  Ltac presynthesize_nocarry_square _ := presynthesize_narg get_square_sig.
+  Ltac presynthesize_mul _ := presynthesize_carry_mul ().
+  Ltac presynthesize_square _ := presynthesize_carry_square ().
+  Ltac presynthesize_freeze _ :=
     let freeze_sig := get_freeze_sig () in
     let feBW_tight_bounded := get_feBW_tight_bounded () in
     let freeze_allowable_bit_widths := get_freeze_allowable_bit_widths () in
@@ -148,8 +158,8 @@ Module PackageSynthesis (PKG : PrePackage).
     [ do_rewrite_with_sig_by freeze_sig ltac:(fun _ => apply feBW_tight_bounded); cbv_runtime
     | .. ];
     fin_preglue;
-    refine_reflectively_gen freeze_allowable_bit_widths anf.
-  Ltac synthesize_xzladderstep _ :=
+    refine_prereflectively_gen freeze_allowable_bit_widths anf.
+  Ltac presynthesize_xzladderstep _ :=
     let Mxzladderstep_sig := get_Mxzladderstep_sig () in
     let a24_sig := get_a24_sig () in
     let allowable_bit_widths := get_allowable_bit_widths () in
@@ -161,10 +171,27 @@ Module PackageSynthesis (PKG : PrePackage).
       cbv_runtime
     | .. ];
     finish_conjoined_preglue ();
-    refine_reflectively_gen allowable_bit_widths default.
-  Ltac synthesize_nonzero _ :=
+    refine_prereflectively_gen allowable_bit_widths default.
+  Ltac presynthesize_nonzero _ :=
     let op_sig := get_nonzero_sig () in
     let allowable_bit_widths := get_allowable_bit_widths () in
     nonzero_preglue op_sig ltac:(fun _ => cbv_runtime);
-    refine_reflectively_gen allowable_bit_widths anf.
+    refine_prereflectively_gen allowable_bit_widths anf.
+
+  Ltac synthesize_carry_mul _ := synthesize_via presynthesize_carry_mul.
+  Ltac synthesize_carry_add _ := synthesize_via presynthesize_carry_add.
+  Ltac synthesize_carry_sub _ := synthesize_via presynthesize_carry_sub.
+  Ltac synthesize_carry_opp _ := synthesize_via presynthesize_carry_opp.
+  Ltac synthesize_carry_square _ := synthesize_via presynthesize_carry_square.
+  Ltac synthesize_nocarry_mul _ := synthesize_via presynthesize_nocarry_mul.
+  Ltac synthesize_add _ := synthesize_via presynthesize_add.
+  Ltac synthesize_sub _ := synthesize_via presynthesize_sub.
+  Ltac synthesize_opp _ := synthesize_via presynthesize_opp.
+  Ltac synthesize_carry _ := synthesize_via presynthesize_carry.
+  Ltac synthesize_nocarry_square _ := synthesize_via presynthesize_nocarry_square.
+  Ltac synthesize_mul _ := synthesize_via presynthesize_mul.
+  Ltac synthesize_square _ := synthesize_via presynthesize_square.
+  Ltac synthesize_freeze _ := synthesize_via presynthesize_freeze.
+  Ltac synthesize_xzladderstep _ := synthesize_via presynthesize_xzladderstep.
+  Ltac synthesize_nonzero _ := synthesize_via presynthesize_nonzero.
 End PackageSynthesis.

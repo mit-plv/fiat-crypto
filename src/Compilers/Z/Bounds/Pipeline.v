@@ -20,9 +20,20 @@ Module Export Exports.
   Existing Instance DefaultedTypes.by_default.
 End Exports.
 
-Ltac refine_reflectively_gen allowable_bit_widths opts :=
+Ltac refine_prereflectively_gen allowable_bit_widths opts :=
   refine_to_reflective_glue allowable_bit_widths;
-  do_reflective_pipeline opts.
+  refine_with_pipeline_correct opts;
+  [ do_pre_reify () | .. ].
+Ltac get_reify _ :=
+  ReflectiveTactics.get_reify ().
+Ltac refine_with_reified RHS :=
+  ReflectiveTactics.do_post_reify RHS.
+Ltac refine_postreflectively _ :=
+  solve_post_reified_side_conditions.
+Ltac refine_reflectively_gen allowable_bit_widths opts :=
+  refine_prereflectively_gen allowable_bit_widths opts;
+  [ let RHS := get_reify () in refine_with_reified RHS | .. ];
+  refine_postreflectively ().
 
 Ltac refine_reflectively128_with opts := refine_reflectively_gen [128; 256] opts.
 Ltac refine_reflectively64_with opts := refine_reflectively_gen [64; 128] opts.

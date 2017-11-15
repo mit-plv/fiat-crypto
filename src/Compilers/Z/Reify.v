@@ -77,6 +77,16 @@ Ltac prove_ExprEta_Compile_correct :=
      rewrite ?InterpExprEta;
      prove_compile_correct_using ltac:(fun _ => apply make_const_correct) ().
 
+Ltac pre_Reify_rhs _ :=
+  Compilers.Reify.pre_Reify_rhs ().
+
+Ltac get_Reify_rhs _ :=
+  Compilers.Reify.get_Reify_rhs_gen Reify.
+
+Ltac do_Reify_rhs_from_reified RHS :=
+  Compilers.Reify.do_Reify_rhs_gen_from_reified
+    prove_ExprEta_Compile_correct interp_op ltac:(fun tac => tac ()) RHS.
+
 Ltac Reify_rhs :=
   Compilers.Reify.Reify_rhs_gen Reify prove_ExprEta_Compile_correct interp_op ltac:(fun tac => tac ()).
 
