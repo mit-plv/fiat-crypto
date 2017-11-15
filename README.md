@@ -46,7 +46,7 @@ or, for a representative subset,
 Exploring the code
 -----
 
-# Push-button synthesis
+### Push-button synthesis
 
 To add a new prime, add a new line to [`primes.txt`](https://github.com/mit-plv/fiat-crypto/blob/master/primes.txt) with your prime.  Then run
 
@@ -58,12 +58,12 @@ You will see a bunch of lines starting with `git add`; any `.v` files that show 
 
 This will build all the necessary `.vo` and `.c` files, as well as the `fibe` binary, which is automatically run when you `make bench` or `make test`.
 
-# Curve Correctness Theorems
+### Curve Correctness Theorems
 
 Specifications live in [`src/Spec`](./src/Spec), e.g., [`src/Spec/Ed25519.v`](./src/Spec/Ed25519.v).
 Some selected cuve-level proofs live in [`src/Curves/Edwards/AffineProofs.v`](./src/Curves/Edwards/AffineProofs.v), [`src/Curves/Edwards/XYZT/Basic.v`](./src/Curves/Edwards/XYZT/Basic.v), [`src/Curves/Montgomery/AffineProofs.v`](./src/Curves/Montgomery/AffineProofs.v) [`src/Curves/Montgomery/XZProofs.v`](src/Curves/Montgomery/XZProofs.v).
 
-# Arithmetic Core
+### Arithmetic Core
 
 Generic mathematical optimization strategies live in [`src/Arithmetic`](./src/Arithmetic).  Good examples include [`src/Arithmetic/Core.v`](src/Arithmetic/Core.v), [`src/Arithmetic/Karatsuba.v`](src/Arithmetic/Karatsuba.v), [`src/Arithmetic/Saturated/Core.v`](./src/Arithmetic/Saturated/Core.v), [`src/Arithmetic/BarrettReduction/HAC.v`](./src/Arithmetic/BarrettReduction/HAC.v), [`src/Arithmetic/MontgomeryReduction/Definition.v`](./src/Arithmetic/MontgomeryReduction/Definition.v), [`src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.v`](./src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.v).
 
@@ -77,9 +77,9 @@ The curve-non-specific synthesis framework lives in [`src/Compilers/Z/Bounds/Pip
 
 The curve-specific synthesis framework lives in [`src/Specific/Framework`](./src/Specific/Framework).  The input `.json` files live in [`src/Specific/CurveParameters`](./src/Specific/CurveParameters), and the processor for those files lives in [`src/Specific/Framework/make_curve.py`](./src/Specific/Framework/make_curve.py).  The record of curve specific parameters is defined in [`src/Specific/Framework/RawCurveParameters.v`](./src/Specific/Framework/RawCurveParameters.v), and defaults are filled in [`src/Specific/Framework/CurveParameters.v`](src/Specific/Framework/CurveParameters.v).  The tactics that specialize the various arithmetic optimizations to specific curves live in [`src/Specific/Framework/ArithmeticSynthesis`](./src/Specific/Framework/ArithmeticSynthesis), e.g., [`src/Specific/Framework/ArithmeticSynthesis/Montgomery.v`](./src/Specific/Framework/ArithmeticSynthesis/Montgomery.v).  The script at [`src/Specific/Framework/ArithmeticSynthesis/remake_packages.py`](./src/Specific/Framework/ArithmeticSynthesis/remake_packages.py) processes these files to add relevant boilerplate, and gets run after significantly changing an optimization, or after adding a new optimization.  The synthesis tactics are assembled in [`src/Specific/Framework/SynthesisFramework.v`](./src/Specific/Framework/SynthesisFramework.v).  Note that magic<a name="magic-ref">[¹](#magic)</a> is used to create identifiers refering to the curve-specific parameters, from tactics, so that they can be used in other curve-specific files.
 
-# Example Output
+### Example Output
 
 The c output lives in the various subfolders of [`src/Specific`](./src/Specific).  For example, C-like code for X25519 multiplication on 64-bit machines lives in [`src/Specific/X25519/C64/femulDisplay.log`](./src/Specific/X25519/C64/femulDisplay.log), which is generated from [`src/Specific/X25519/C64/femulDisplay.v`](./src/Specific/X25519/C64/femulDisplay.v), which in turn uses synthesis run in [`src/Specific/X25519/C64/femul.v`](./src/Specific/X25519/C64/femul.v).  The `c` target turns this into `src/Specific/X25519/C64/femul.c`.
 
-# Footnotes
+## Footnotes
 <a name="magic">[¹](#magic-ref)</a> This magic comes in the form of calls to `transparent_abstract`, packaged up in some tactics in [`src/Util/Tactics/CacheTerm.v`](./src/Util/Tactics/CacheTerm.v).
