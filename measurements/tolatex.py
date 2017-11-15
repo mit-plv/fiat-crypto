@@ -131,9 +131,14 @@ def clean_data(parsed_lines, bits):
     all_primes = set()
     for s in final_lines(bits):
         all_primes = all_primes | set(out[s].keys())
+    missing = []
     for s in final_lines(bits):
-        if any([(p not in all_primes) for p in out[s]]):
-            raise MissingDataException("missing datapoint for %s: log2(p)=%s" %(LEGEND[s],math.log2(p))) 
+        x = all_primes ^ set(out[s].keys())
+        if len(x) != 0:
+            missing.append((s, x))
+    if len(missing) > 0:
+        message = "\n".join(["missing datapoints in %s: log2 of primes are %s" %(LEGEND[s],list(map(math.log2, list(x)))) for s,x in missing])
+        raise MissingDataException(message) 
     return out
 
 def makeplot(data, bits):
