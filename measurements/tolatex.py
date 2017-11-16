@@ -5,53 +5,29 @@ import sys, math, re
 USAGE = "USAGE: python tolatex.py [input file] {plot32, plot64, table32, table64}"
 
 SETUPS = {
-        "gmpvar32": "color=red,mark=o", 
-        "gmpxx32": "color=red,mark=x", 
-        "gmpsec32" : "color=red,mark=*",
-        "gmpvar64": "color=red,mark=o", 
-        "gmpxx64": "color=red,mark=x", 
-        "gmpsec64" : "color=red,mark=*",
-        "fiat_montgomery32": "color=blue,mark=triangle*", 
-        "fiat_montgomery64": "color=blue,mark=triangle*", 
-        "fiat_solinas32": "color=blue,mark=triangle", 
-        "fiat_solinas64": "color=blue,mark=triangle"
+        "gmpxx": "color=red,mark=x", 
+        "gmpsec" : "color=red,mark=*",
+        "gmpvar": "color=red,mark=o", 
+        "fiat_montgomery": "color=blue,mark=triangle*", 
+        "fiat_solinas": "color=blue,mark=triangle", 
         }
 
 # setups to combine and functions to combine them
 COMBINE = [
-        ("fiat_montgomery32", "fiat_solinas32", min),
-        ("fiat_montgomery64", "fiat_solinas64", min)
+        ("fiat_montgomery", "fiat_solinas", min),
         ]
 
 # setups to exclude
-EXCLUDE_32 = [
-        "fiat_montgomery64",
-        "fiat_solinas64",
-        "gmpvar64",
-        "gmpsec64",
-        "gmpxx64",
-        "gmpxx32"
-        ]
-EXCLUDE_64 = [
-        "fiat_montgomery32",
-        "fiat_solinas32",
-        "gmpvar32",
-        "gmpsec32",
-        "gmpxx64",
-        "gmpxx32"
+EXCLUDE = [
+        "gmpxx"
         ]
 
 LEGEND = {
-        "fiat_montgomery32": "this paper", 
-        "fiat_montgomery64": "this paper", 
-        "fiat_solinas32": "this paper", 
-        "fiat_solinas64": "this paper", 
-        "gmpvar32": "GMP mpn API", 
-        "gmpxx32": "GMP C++ API", 
-        "gmpsec32" : "GMP mpn_sec API",
-        "gmpvar64": "GMP mpn API",
-        "gmpxx64": "GMP C++ API", 
-        "gmpsec64" : "GMP mpn_sec API"
+        "fiat_montgomery": "this paper", 
+        "fiat_solinas": "this paper", 
+        "gmpvar": "GMP mpn API",
+        "gmpxx": "GMP C++ API", 
+        "gmpsec" : "GMP mpn_sec API"
         }
 
 class ParseException(Exception): pass
@@ -104,9 +80,7 @@ def parse_line(line):
 def final_lines(bits):
     out = []
     for s in SETUPS:
-        if (bits == 32 and s in EXCLUDE_32) or (bits == 64 and s in EXCLUDE_64):
-            continue
-        if any([x[1]==s for x in COMBINE]):
+        if (s in EXCLUDE) or any([x[1]==s for x in COMBINE]):
             continue # in this case, the setup has been combined into some other one
         out.append(s)
     return out 
@@ -168,14 +142,14 @@ def maketable(data, bits):
     else:
         out="""\\tablehead{%
   \\hline
-  & \\textbf{Our Code} & \\multicolumn{2}{c|}{\\textbf{GMP Code}} & \\\\
+  & \\multicolumn{2}{c|}{\\textbf{Our Code}} & \\multicolumn{2}{c|}{\\textbf{GMP Code}} & \\\\
   \\cline{2-5}
-  \\textbf{Prime} & \\textbf{Solinas} & \\textbf{const time} & \\textbf{var time} & \\textbf{Speedup} \\\\ \\hline}
+  \\textbf{Prime} & \\textbf{Solinas} & \\textbf{Mont.} & \\textbf{const time} & \\textbf{var time} & \\textbf{Speedup} \\\\ \\hline}
 \\footnotesize
-\\begin{xtabular}{|l|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.9cm}|}\n"""
+\\begin{xtabular}{|l|p{0.7cm}|p{0.7cm}|p{0.7cm}|p{0.7cm}|p{0.9cm}|}\n"""
 
-    cols_64 = ["fiat_solinas64", "fiat_montgomery64", "gmpsec64", "gmpvar64", "gmpxx64"]
-    cols_32 = ["fiat_solinas32", "gmpsec32", "gmpvar32"]
+    cols_64 = ["fiat_solinas", "fiat_montgomery", "gmpsec", "gmpvar", "gmpxx"]
+    cols_32 = ["fiat_solinas", "fiat_montgomery", "gmpsec", "gmpvar"]
     cols = cols_64 if bits == 64 else cols_32
 
     for p in sorted(data.keys()):
@@ -194,7 +168,7 @@ def maketable(data, bits):
             else:
                 row.append("-")
         if our_best != None and gmp_best != None:
-            row.append(str(round(1 - our_best/gmp_best, 2)))
+            row.append(str(round(gmp_best/our_best, 2)))
         else:
             row.append("-")
         out += ("\t" + " & ".join(row) + " \\\\ \n")
