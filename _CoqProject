@@ -5874,6 +5874,7 @@ src/Util/Logic/ImplAnd.v
 src/Util/SideConditions/AdmitPackage.v
 src/Util/SideConditions/Autosolve.v
 src/Util/SideConditions/CorePackages.v
+src/Util/SideConditions/ModInvPackage.v
 src/Util/SideConditions/ReductionPackages.v
 src/Util/SideConditions/RingPackage.v
 src/Util/Sigma/Associativity.v
