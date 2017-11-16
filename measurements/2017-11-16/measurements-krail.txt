@@ -1,0 +1,397 @@
+src/Specific/solinas32_2e127m1_5limbs/fibe    0.30
+src/Specific/solinas32_2e127m1_6limbs/fibe    0.41
+src/Specific/montgomery32_2e127m1_4limbs/fibe    1.19
+src/Specific/montgomery32_2e127m1_4limbs/gmpvar    3.23
+src/Specific/montgomery32_2e127m1_4limbs/gmpsec    2.86
+src/Specific/solinas32_2e129m25_5limbs/fibe    0.35
+src/Specific/solinas32_2e129m25_6limbs/fibe    0.46
+src/Specific/montgomery32_2e129m25_5limbs/fibe    1.70
+src/Specific/montgomery32_2e129m25_5limbs/gmpvar    3.77
+src/Specific/montgomery32_2e129m25_5limbs/gmpsec    3.38
+src/Specific/solinas32_2e130m5_5limbs/fibe    0.44
+src/Specific/solinas32_2e130m5_6limbs/fibe    0.49
+src/Specific/montgomery32_2e130m5_5limbs/fibe    1.87
+src/Specific/montgomery32_2e130m5_5limbs/gmpvar    3.79
+src/Specific/montgomery32_2e130m5_5limbs/gmpsec    3.56
+# MISSING src/Specific/solinas32_2e137m13_5limbs/fibe
+src/Specific/solinas32_2e137m13_6limbs/fibe    0.48
+src/Specific/montgomery32_2e137m13_5limbs/fibe    2.06
+src/Specific/montgomery32_2e137m13_5limbs/gmpvar    3.78
+src/Specific/montgomery32_2e137m13_5limbs/gmpsec    3.41
+src/Specific/solinas32_2e140m27_6limbs/fibe    0.51
+src/Specific/solinas32_2e140m27_7limbs/fibe    0.58
+src/Specific/montgomery32_2e140m27_5limbs/fibe    1.98
+src/Specific/montgomery32_2e140m27_5limbs/gmpvar    3.77
+src/Specific/montgomery32_2e140m27_5limbs/gmpsec    3.43
+src/Specific/solinas32_2e141m9_6limbs/fibe    0.51
+src/Specific/solinas32_2e141m9_7limbs/fibe    0.59
+src/Specific/montgomery32_2e141m9_5limbs/fibe    2.00
+src/Specific/montgomery32_2e141m9_5limbs/gmpvar    3.81
+src/Specific/montgomery32_2e141m9_5limbs/gmpsec    3.43
+src/Specific/solinas32_2e150m5_6limbs/fibe    0.49
+src/Specific/solinas32_2e150m5_7limbs/fibe    0.59
+src/Specific/montgomery32_2e150m5_5limbs/fibe    1.99
+src/Specific/montgomery32_2e150m5_5limbs/gmpvar    3.80
+src/Specific/montgomery32_2e150m5_5limbs/gmpsec    3.38
+src/Specific/solinas32_2e150m3_6limbs/fibe    0.42
+src/Specific/solinas32_2e150m3_7limbs/fibe    0.57
+src/Specific/montgomery32_2e150m3_5limbs/fibe    2.00
+src/Specific/montgomery32_2e150m3_5limbs/gmpvar    3.79
+src/Specific/montgomery32_2e150m3_5limbs/gmpsec    3.56
+src/Specific/solinas32_2e152m17_6limbs/fibe    0.50
+src/Specific/solinas32_2e152m17_7limbs/fibe    0.62
+src/Specific/montgomery32_2e152m17_5limbs/fibe    1.96
+src/Specific/montgomery32_2e152m17_5limbs/gmpvar    3.82
+src/Specific/montgomery32_2e152m17_5limbs/gmpsec    3.40
+src/Specific/solinas32_2e158m15_6limbs/fibe    0.52
+src/Specific/solinas32_2e158m15_7limbs/fibe    0.64
+src/Specific/montgomery32_2e158m15_5limbs/fibe    2.04
+src/Specific/montgomery32_2e158m15_5limbs/gmpvar    3.77
+src/Specific/montgomery32_2e158m15_5limbs/gmpsec    3.40
+src/Specific/solinas32_2e165m25_7limbs/fibe    0.59
+src/Specific/solinas32_2e165m25_8limbs/fibe    0.73
+src/Specific/montgomery32_2e165m25_6limbs/fibe    2.46
+src/Specific/montgomery32_2e165m25_6limbs/gmpvar    4.45
+src/Specific/montgomery32_2e165m25_6limbs/gmpsec    4.02
+# MISSING src/Specific/solinas32_2e166m5_6limbs/fibe
+src/Specific/solinas32_2e166m5_7limbs/fibe    0.61
+src/Specific/montgomery32_2e166m5_6limbs/fibe    2.43
+src/Specific/montgomery32_2e166m5_6limbs/gmpvar    4.43
+src/Specific/montgomery32_2e166m5_6limbs/gmpsec    4.02
+src/Specific/solinas32_2e171m19_7limbs/fibe    0.57
+src/Specific/solinas32_2e171m19_8limbs/fibe    0.75
+src/Specific/montgomery32_2e171m19_6limbs/fibe    2.68
+src/Specific/montgomery32_2e171m19_6limbs/gmpvar    4.51
+src/Specific/montgomery32_2e171m19_6limbs/gmpsec    4.04
+src/Specific/solinas32_2e174m17_7limbs/fibe    0.58
+src/Specific/solinas32_2e174m17_8limbs/fibe    0.77
+src/Specific/montgomery32_2e174m17_6limbs/fibe    2.63
+src/Specific/montgomery32_2e174m17_6limbs/gmpvar    4.39
+src/Specific/montgomery32_2e174m17_6limbs/gmpsec    4.03
+src/Specific/solinas32_2e174m3_7limbs/fibe    0.61
+src/Specific/solinas32_2e174m3_8limbs/fibe    0.71
+src/Specific/montgomery32_2e174m3_6limbs/fibe    2.62
+src/Specific/montgomery32_2e174m3_6limbs/gmpvar    4.40
+src/Specific/montgomery32_2e174m3_6limbs/gmpsec    4.02
+# MISSING src/Specific/solinas32_2e189m25_7limbs/fibe
+src/Specific/solinas32_2e189m25_8limbs/fibe    0.70
+src/Specific/montgomery32_2e189m25_6limbs/fibe    2.65
+src/Specific/montgomery32_2e189m25_6limbs/gmpvar    4.40
+src/Specific/montgomery32_2e189m25_6limbs/gmpsec    4.05
+# MISSING src/Specific/solinas32_2e190m11_7limbs/fibe
+src/Specific/solinas32_2e190m11_8limbs/fibe    0.71
+src/Specific/montgomery32_2e190m11_6limbs/fibe    2.64
+src/Specific/montgomery32_2e190m11_6limbs/gmpvar    4.42
+src/Specific/montgomery32_2e190m11_6limbs/gmpsec    4.10
+src/Specific/solinas32_2e191m19_8limbs/fibe    0.66
+src/Specific/solinas32_2e191m19_9limbs/fibe    0.86
+src/Specific/montgomery32_2e191m19_6limbs/fibe    2.69
+src/Specific/montgomery32_2e191m19_6limbs/gmpvar    4.40
+src/Specific/montgomery32_2e191m19_6limbs/gmpsec    4.03
+src/Specific/solinas32_2e194m33_8limbs/fibe    0.75
+src/Specific/solinas32_2e194m33_9limbs/fibe    0.94
+# MISSING src/Specific/montgomery32_2e194m33_7limbs/fibe
+src/Specific/montgomery32_2e194m33_7limbs/gmpvar    4.94
+src/Specific/montgomery32_2e194m33_7limbs/gmpsec    4.66
+src/Specific/solinas32_2e196m15_8limbs/fibe    0.77
+src/Specific/solinas32_2e196m15_9limbs/fibe    0.91
+# MISSING src/Specific/montgomery32_2e196m15_7limbs/fibe
+src/Specific/montgomery32_2e196m15_7limbs/gmpvar    4.94
+src/Specific/montgomery32_2e196m15_7limbs/gmpsec    4.64
+src/Specific/solinas32_2e198m17_8limbs/fibe    0.76
+src/Specific/solinas32_2e198m17_9limbs/fibe    0.89
+# MISSING src/Specific/montgomery32_2e198m17_7limbs/fibe
+src/Specific/montgomery32_2e198m17_7limbs/gmpvar    4.97
+src/Specific/montgomery32_2e198m17_7limbs/gmpsec    4.72
+src/Specific/solinas32_2e206m5_8limbs/fibe    0.76
+src/Specific/solinas32_2e206m5_9limbs/fibe    0.83
+# MISSING src/Specific/montgomery32_2e206m5_7limbs/fibe
+src/Specific/montgomery32_2e206m5_7limbs/gmpvar    4.91
+src/Specific/montgomery32_2e206m5_7limbs/gmpsec    4.62
+# MISSING src/Specific/solinas32_2e212m29_8limbs/fibe
+src/Specific/solinas32_2e212m29_9limbs/fibe    0.86
+# MISSING src/Specific/montgomery32_2e212m29_7limbs/fibe
+src/Specific/montgomery32_2e212m29_7limbs/gmpvar    4.91
+src/Specific/montgomery32_2e212m29_7limbs/gmpsec    4.68
+src/Specific/solinas32_2e213m3_8limbs/fibe    0.70
+src/Specific/solinas32_2e213m3_9limbs/fibe    0.84
+# MISSING src/Specific/montgomery32_2e213m3_7limbs/fibe
+src/Specific/montgomery32_2e213m3_7limbs/gmpvar    4.94
+src/Specific/montgomery32_2e213m3_7limbs/gmpsec    4.68
+# MISSING src/Specific/solinas32_2e221m3_8limbs/fibe
+src/Specific/solinas32_2e221m3_9limbs/fibe    0.80
+# MISSING src/Specific/montgomery32_2e221m3_7limbs/fibe
+src/Specific/montgomery32_2e221m3_7limbs/gmpvar    4.92
+src/Specific/montgomery32_2e221m3_7limbs/gmpsec    4.68
+src/Specific/solinas32_2e222m117_10limbs/fibe    1.03
+src/Specific/solinas32_2e222m117_9limbs/fibe    0.87
+# MISSING src/Specific/montgomery32_2e222m117_7limbs/fibe
+src/Specific/montgomery32_2e222m117_7limbs/gmpvar    4.87
+src/Specific/montgomery32_2e222m117_7limbs/gmpsec    4.72
+src/Specific/solinas32_2e226m5_10limbs/fibe    1.02
+src/Specific/solinas32_2e226m5_9limbs/fibe    0.87
+# MISSING src/Specific/montgomery32_2e226m5_8limbs/fibe
+src/Specific/montgomery32_2e226m5_8limbs/gmpvar    5.65
+src/Specific/montgomery32_2e226m5_8limbs/gmpsec    5.25
+src/Specific/solinas32_2e230m27_10limbs/fibe    1.00
+src/Specific/solinas32_2e230m27_9limbs/fibe    0.83
+# MISSING src/Specific/montgomery32_2e230m27_8limbs/fibe
+src/Specific/montgomery32_2e230m27_8limbs/gmpvar    5.71
+src/Specific/montgomery32_2e230m27_8limbs/gmpsec    5.29
+src/Specific/solinas32_2e235m15_10limbs/fibe    1.09
+src/Specific/solinas32_2e235m15_9limbs/fibe    0.90
+# MISSING src/Specific/montgomery32_2e235m15_8limbs/fibe
+src/Specific/montgomery32_2e235m15_8limbs/gmpvar    5.69
+src/Specific/montgomery32_2e235m15_8limbs/gmpsec    5.31
+src/Specific/solinas32_2e243m9_10limbs/fibe    1.07
+src/Specific/solinas32_2e243m9_9limbs/fibe    0.86
+# MISSING src/Specific/montgomery32_2e243m9_8limbs/fibe
+src/Specific/montgomery32_2e243m9_8limbs/gmpvar    5.62
+src/Specific/montgomery32_2e243m9_8limbs/gmpsec    5.29
+src/Specific/solinas32_2e251m9_10limbs/fibe    1.12
+src/Specific/solinas32_2e251m9_11limbs/fibe    1.18
+# MISSING src/Specific/montgomery32_2e251m9_8limbs/fibe
+src/Specific/montgomery32_2e251m9_8limbs/gmpvar    5.65
+src/Specific/montgomery32_2e251m9_8limbs/gmpsec    5.30
+src/Specific/solinas32_2e255m765_12limbs/fibe    1.43
+src/Specific/solinas32_2e255m765_13limbs/fibe    1.61
+# MISSING src/Specific/montgomery32_2e255m765_8limbs/fibe
+src/Specific/montgomery32_2e255m765_8limbs/gmpvar    5.71
+src/Specific/montgomery32_2e255m765_8limbs/gmpsec    5.27
+src/Specific/solinas32_2e255m19_10limbs/fibe    1.01
+src/Specific/solinas32_2e255m19_11limbs/fibe    1.14
+# MISSING src/Specific/montgomery32_2e255m19_8limbs/fibe
+src/Specific/montgomery32_2e255m19_8limbs/gmpvar    5.70
+src/Specific/montgomery32_2e255m19_8limbs/gmpsec    5.25
+src/Specific/solinas32_2e256m189_11limbs/fibe    1.20
+src/Specific/solinas32_2e256m189_12limbs/fibe    1.52
+# MISSING src/Specific/montgomery32_2e256m189_8limbs/fibe
+src/Specific/montgomery32_2e256m189_8limbs/gmpvar    5.49
+src/Specific/montgomery32_2e256m189_8limbs/gmpsec    4.71
+src/Specific/solinas32_2e266m3_10limbs/fibe    1.01
+src/Specific/solinas32_2e266m3_11limbs/fibe    1.11
+# MISSING src/Specific/montgomery32_2e266m3_9limbs/fibe
+src/Specific/montgomery32_2e266m3_9limbs/gmpvar    6.32
+src/Specific/montgomery32_2e266m3_9limbs/gmpsec    6.10
+src/Specific/solinas32_2e285m9_11limbs/fibe    1.13
+src/Specific/solinas32_2e285m9_12limbs/fibe    1.49
+# MISSING src/Specific/montgomery32_2e285m9_9limbs/fibe
+src/Specific/montgomery32_2e285m9_9limbs/gmpvar    6.34
+src/Specific/montgomery32_2e285m9_9limbs/gmpsec    6.13
+# MISSING src/Specific/solinas32_2e291m19_11limbs/fibe
+src/Specific/solinas32_2e291m19_12limbs/fibe    1.33
+# MISSING src/Specific/montgomery32_2e291m19_10limbs/fibe
+src/Specific/montgomery32_2e291m19_10limbs/gmpvar    6.98
+src/Specific/montgomery32_2e291m19_10limbs/gmpsec    6.94
+# MISSING src/Specific/solinas32_2e321m9_12limbs/fibe
+src/Specific/solinas32_2e321m9_13limbs/fibe    1.72
+# MISSING src/Specific/montgomery32_2e321m9_11limbs/fibe
+src/Specific/montgomery32_2e321m9_11limbs/gmpvar    7.66
+src/Specific/montgomery32_2e321m9_11limbs/gmpsec    7.60
+src/Specific/solinas32_2e336m17_13limbs/fibe    1.67
+src/Specific/solinas32_2e336m17_14limbs/fibe    1.83
+# MISSING src/Specific/montgomery32_2e336m17_11limbs/fibe
+src/Specific/montgomery32_2e336m17_11limbs/gmpvar    7.74
+src/Specific/montgomery32_2e336m17_11limbs/gmpsec    7.64
+# MISSING src/Specific/solinas32_2e336m3_12limbs/fibe
+src/Specific/solinas32_2e336m3_13limbs/fibe    1.59
+# MISSING src/Specific/montgomery32_2e336m3_11limbs/fibe
+src/Specific/montgomery32_2e336m3_11limbs/gmpvar    7.69
+src/Specific/montgomery32_2e336m3_11limbs/gmpsec    7.58
+src/Specific/solinas32_2e338m15_13limbs/fibe    1.70
+src/Specific/solinas32_2e338m15_14limbs/fibe    1.96
+# MISSING src/Specific/montgomery32_2e338m15_11limbs/fibe
+src/Specific/montgomery32_2e338m15_11limbs/gmpvar    7.67
+src/Specific/montgomery32_2e338m15_11limbs/gmpsec    7.66
+src/Specific/solinas32_2e369m25_15limbs/fibe    2.44
+src/Specific/solinas32_2e369m25_16limbs/fibe    2.74
+# MISSING src/Specific/montgomery32_2e369m25_12limbs/fibe
+src/Specific/montgomery32_2e369m25_12limbs/gmpvar    9.03
+src/Specific/montgomery32_2e369m25_12limbs/gmpsec    8.41
+src/Specific/solinas32_2e379m19_15limbs/fibe    2.47
+src/Specific/solinas32_2e379m19_16limbs/fibe    3.04
+# MISSING src/Specific/montgomery32_2e379m19_12limbs/fibe
+src/Specific/montgomery32_2e379m19_12limbs/gmpvar    9.25
+src/Specific/montgomery32_2e379m19_12limbs/gmpsec    8.44
+src/Specific/solinas32_2e382m105_16limbs/fibe    2.66
+src/Specific/solinas32_2e382m105_17limbs/fibe    4.05
+# MISSING src/Specific/montgomery32_2e382m105_12limbs/fibe
+src/Specific/montgomery32_2e382m105_12limbs/gmpvar    9.04
+src/Specific/montgomery32_2e382m105_12limbs/gmpsec    8.41
+src/Specific/solinas32_2e383m421_17limbs/fibe    4.19
+src/Specific/solinas32_2e383m421_18limbs/fibe    3.58
+# MISSING src/Specific/montgomery32_2e383m421_12limbs/fibe
+src/Specific/montgomery32_2e383m421_12limbs/gmpvar    9.11
+src/Specific/montgomery32_2e383m421_12limbs/gmpsec    8.45
+src/Specific/solinas32_2e383m187_16limbs/fibe    2.63
+src/Specific/solinas32_2e383m187_17limbs/fibe    4.14
+# MISSING src/Specific/montgomery32_2e383m187_12limbs/fibe
+src/Specific/montgomery32_2e383m187_12limbs/gmpvar    9.11
+src/Specific/montgomery32_2e383m187_12limbs/gmpsec    8.44
+# MISSING src/Specific/solinas32_2e383m31_15limbs/fibe
+src/Specific/solinas32_2e383m31_16limbs/fibe    2.60
+# MISSING src/Specific/montgomery32_2e383m31_12limbs/fibe
+src/Specific/montgomery32_2e383m31_12limbs/gmpvar    9.13
+src/Specific/montgomery32_2e383m31_12limbs/gmpsec    8.47
+src/Specific/solinas32_2e384m317_17limbs/fibe    3.95
+src/Specific/solinas32_2e384m317_18limbs/fibe    4.18
+# MISSING src/Specific/montgomery32_2e384m317_12limbs/fibe
+src/Specific/montgomery32_2e384m317_12limbs/gmpvar    8.82
+src/Specific/montgomery32_2e384m317_12limbs/gmpsec    7.62
+# MISSING src/Specific/solinas32_2e389m21_15limbs/fibe
+src/Specific/solinas32_2e389m21_16limbs/fibe    2.89
+# MISSING src/Specific/montgomery32_2e389m21_13limbs/fibe
+src/Specific/montgomery32_2e389m21_13limbs/gmpvar    9.93
+src/Specific/montgomery32_2e389m21_13limbs/gmpsec    9.41
+src/Specific/solinas32_2e401m31_16limbs/fibe    2.85
+src/Specific/solinas32_2e401m31_17limbs/fibe    4.17
+# MISSING src/Specific/montgomery32_2e401m31_13limbs/fibe
+src/Specific/montgomery32_2e401m31_13limbs/gmpvar    9.92
+src/Specific/montgomery32_2e401m31_13limbs/gmpsec    9.35
+# MISSING src/Specific/solinas32_2e413m21_16limbs/fibe
+src/Specific/solinas32_2e413m21_17limbs/fibe    3.53
+# MISSING src/Specific/montgomery32_2e413m21_13limbs/fibe
+src/Specific/montgomery32_2e413m21_13limbs/gmpvar    9.93
+src/Specific/montgomery32_2e413m21_13limbs/gmpsec    9.48
+# MISSING src/Specific/solinas32_2e414m17_16limbs/fibe
+src/Specific/solinas32_2e414m17_17limbs/fibe    3.72
+# MISSING src/Specific/montgomery32_2e414m17_13limbs/fibe
+src/Specific/montgomery32_2e414m17_13limbs/gmpvar    9.86
+src/Specific/montgomery32_2e414m17_13limbs/gmpsec    9.40
+# MISSING src/Specific/solinas32_2e444m17_17limbs/fibe
+src/Specific/solinas32_2e444m17_18limbs/fibe    3.70
+# MISSING src/Specific/montgomery32_2e444m17_14limbs/fibe
+src/Specific/montgomery32_2e444m17_14limbs/gmpvar    10.89
+src/Specific/montgomery32_2e444m17_14limbs/gmpsec    10.31
+src/Specific/solinas32_2e452m3_17limbs/fibe    3.76
+src/Specific/solinas32_2e452m3_18limbs/fibe    3.23
+# MISSING src/Specific/montgomery32_2e452m3_15limbs/fibe
+src/Specific/montgomery32_2e452m3_15limbs/gmpvar    11.63
+src/Specific/montgomery32_2e452m3_15limbs/gmpsec    11.33
+src/Specific/solinas32_2e468m17_18limbs/fibe    3.20
+src/Specific/solinas32_2e468m17_19limbs/fibe    5.38
+# MISSING src/Specific/montgomery32_2e468m17_15limbs/fibe
+src/Specific/montgomery32_2e468m17_15limbs/gmpvar    11.63
+src/Specific/montgomery32_2e468m17_15limbs/gmpsec    11.37
+# MISSING src/Specific/solinas32_2e488m17_19limbs/fibe
+src/Specific/solinas32_2e488m17_20limbs/fibe    7.99
+# MISSING src/Specific/montgomery32_2e488m17_16limbs/fibe
+src/Specific/montgomery32_2e488m17_16limbs/gmpvar    12.92
+src/Specific/montgomery32_2e488m17_16limbs/gmpsec    12.23
+# MISSING src/Specific/solinas32_2e489m21_19limbs/fibe
+src/Specific/solinas32_2e489m21_20limbs/fibe    7.70
+# MISSING src/Specific/montgomery32_2e489m21_16limbs/fibe
+src/Specific/montgomery32_2e489m21_16limbs/gmpvar    12.81
+src/Specific/montgomery32_2e489m21_16limbs/gmpsec    12.26
+src/Specific/solinas32_2e495m31_20limbs/fibe    6.07
+src/Specific/solinas32_2e495m31_21limbs/fibe    8.60
+# MISSING src/Specific/montgomery32_2e495m31_16limbs/fibe
+src/Specific/montgomery32_2e495m31_16limbs/gmpvar    13.10
+src/Specific/montgomery32_2e495m31_16limbs/gmpsec    12.20
+# MISSING src/Specific/solinas32_2e511m481_23limbs/fibe
+# MISSING src/Specific/solinas32_2e511m481_24limbs/fibe
+# MISSING src/Specific/montgomery32_2e511m481_16limbs/fibe
+src/Specific/montgomery32_2e511m481_16limbs/gmpvar    12.90
+src/Specific/montgomery32_2e511m481_16limbs/gmpsec    12.23
+src/Specific/solinas32_2e511m187_22limbs/fibe    9.73
+# MISSING src/Specific/solinas32_2e511m187_23limbs/fibe
+# MISSING src/Specific/montgomery32_2e511m187_16limbs/fibe
+src/Specific/montgomery32_2e511m187_16limbs/gmpvar    13.07
+src/Specific/montgomery32_2e511m187_16limbs/gmpsec    12.21
+# MISSING src/Specific/solinas32_2e512m569_24limbs/fibe
+# MISSING src/Specific/solinas32_2e512m569_25limbs/fibe
+# MISSING src/Specific/montgomery32_2e512m569_16limbs/fibe
+src/Specific/montgomery32_2e512m569_16limbs/gmpvar    12.55
+src/Specific/montgomery32_2e512m569_16limbs/gmpsec    11.23
+src/Specific/solinas32_2e521m1_19limbs/fibe    5.27
+src/Specific/solinas32_2e521m1_20limbs/fibe    3.90
+# MISSING src/Specific/montgomery32_2e521m1_17limbs/fibe
+src/Specific/montgomery32_2e521m1_17limbs/gmpvar    13.91
+src/Specific/montgomery32_2e521m1_17limbs/gmpsec    13.30
+# MISSING src/Specific/solinas32_2e192m2e64m1_10limbs/fibe
+# MISSING src/Specific/solinas32_2e192m2e64m1_9limbs/fibe
+src/Specific/montgomery32_2e192m2e64m1_6limbs/fibe    2.41
+src/Specific/montgomery32_2e192m2e64m1_6limbs/gmpvar    4.23
+src/Specific/montgomery32_2e192m2e64m1_6limbs/gmpsec    3.56
+src/Specific/solinas32_2e216m2e108m1_10limbs/fibe    1.00
+src/Specific/solinas32_2e216m2e108m1_8limbs/fibe    0.70
+# MISSING src/Specific/montgomery32_2e216m2e108m1_7limbs/fibe
+src/Specific/montgomery32_2e216m2e108m1_7limbs/gmpvar    4.92
+src/Specific/montgomery32_2e216m2e108m1_7limbs/gmpsec    4.67
+src/Specific/solinas32_2e322m2e161m1_12limbs/fibe    1.37
+src/Specific/solinas32_2e322m2e161m1_14limbs/fibe    1.82
+# MISSING src/Specific/montgomery32_2e322m2e161m1_11limbs/fibe
+src/Specific/montgomery32_2e322m2e161m1_11limbs/gmpvar    7.74
+src/Specific/montgomery32_2e322m2e161m1_11limbs/gmpsec    7.66
+src/Specific/solinas32_2e416m2e208m1_16limbs/fibe    2.48
+src/Specific/solinas32_2e416m2e208m1_18limbs/fibe    3.34
+# MISSING src/Specific/montgomery32_2e416m2e208m1_13limbs/fibe
+src/Specific/montgomery32_2e416m2e208m1_13limbs/gmpvar    9.67
+src/Specific/montgomery32_2e416m2e208m1_13limbs/gmpsec    8.54
+# MISSING src/Specific/solinas32_2e448m2e224m1_16limbs/fibe
+src/Specific/solinas32_2e448m2e224m1_18limbs/fibe    3.18
+# MISSING src/Specific/montgomery32_2e448m2e224m1_14limbs/fibe
+src/Specific/montgomery32_2e448m2e224m1_14limbs/gmpvar    10.51
+src/Specific/montgomery32_2e448m2e224m1_14limbs/gmpsec    9.57
+# MISSING src/Specific/solinas32_2e450m2e225m1_18limbs/fibe
+# MISSING src/Specific/solinas32_2e450m2e225m1_20limbs/fibe
+# MISSING src/Specific/montgomery32_2e450m2e225m1_15limbs/fibe
+src/Specific/montgomery32_2e450m2e225m1_15limbs/gmpvar    11.63
+src/Specific/montgomery32_2e450m2e225m1_15limbs/gmpsec    11.37
+src/Specific/solinas32_2e480m2e240m1_18limbs/fibe    3.58
+# MISSING src/Specific/solinas32_2e480m2e240m1_20limbs/fibe
+# MISSING src/Specific/montgomery32_2e480m2e240m1_15limbs/fibe
+src/Specific/montgomery32_2e480m2e240m1_15limbs/gmpvar    11.33
+src/Specific/montgomery32_2e480m2e240m1_15limbs/gmpsec    10.47
+# MISSING src/Specific/solinas32_2e205m45x2e198m1_*limbs
+# MISSING src/Specific/montgomery32_2e205m45x2e198m1_7limbs/fibe
+src/Specific/montgomery32_2e205m45x2e198m1_7limbs/gmpvar    5.03
+src/Specific/montgomery32_2e205m45x2e198m1_7limbs/gmpsec    4.66
+# MISSING src/Specific/solinas32_2e224m2e96p1_10limbs/fibe
+# MISSING src/Specific/solinas32_2e224m2e96p1_11limbs/fibe
+# MISSING src/Specific/montgomery32_2e224m2e96p1_7limbs/fibe
+src/Specific/montgomery32_2e224m2e96p1_7limbs/gmpvar    4.85
+src/Specific/montgomery32_2e224m2e96p1_7limbs/gmpsec    4.13
+# MISSING src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/fibe
+# MISSING src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/fibe
+# MISSING src/Specific/montgomery32_2e256m2e224p2e192p2e96m1_8limbs/fibe
+src/Specific/montgomery32_2e256m2e224p2e192p2e96m1_8limbs/gmpvar    5.46
+src/Specific/montgomery32_2e256m2e224p2e192p2e96m1_8limbs/gmpsec    4.70
+src/Specific/solinas32_2e256m2e32m977_12limbs/fibe    1.65
+src/Specific/solinas32_2e256m2e32m977_13limbs/fibe    2.00
+# MISSING src/Specific/montgomery32_2e256m2e32m977_8limbs/fibe
+src/Specific/montgomery32_2e256m2e32m977_8limbs/gmpvar    5.45
+src/Specific/montgomery32_2e256m2e32m977_8limbs/gmpsec    4.72
+# MISSING src/Specific/solinas32_2e256m4294968273_*limbs
+# MISSING src/Specific/montgomery32_2e256m4294968273_8limbs/fibe
+src/Specific/montgomery32_2e256m4294968273_8limbs/gmpvar    5.48
+src/Specific/montgomery32_2e256m4294968273_8limbs/gmpsec    4.77
+# MISSING src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/fibe
+# MISSING src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/fibe
+# MISSING src/Specific/montgomery32_2e384m2e128m2e96p2e32m1_12limbs/fibe
+src/Specific/montgomery32_2e384m2e128m2e96p2e32m1_12limbs/gmpvar    8.80
+src/Specific/montgomery32_2e384m2e128m2e96p2e32m1_12limbs/gmpsec    7.62
+# MISSING src/Specific/solinas32_2e256m88x2e240m1_*limbs
+# MISSING src/Specific/montgomery32_2e256m88x2e240m1_8limbs/fibe
+src/Specific/montgomery32_2e256m88x2e240m1_8limbs/gmpvar    5.46
+src/Specific/montgomery32_2e256m88x2e240m1_8limbs/gmpsec    4.78
+# MISSING src/Specific/solinas32_2e254m127x2e240m1_*limbs
+src/Specific/montgomery32_2e254m127x2e240m1_8limbs/fibe    3.97
+src/Specific/montgomery32_2e254m127x2e240m1_8limbs/gmpvar    5.70
+src/Specific/montgomery32_2e254m127x2e240m1_8limbs/gmpsec    5.26
+# MISSING src/Specific/solinas32_2e384m79x2e376m1_*limbs
+# MISSING src/Specific/montgomery32_2e384m79x2e376m1_12limbs/fibe
+src/Specific/montgomery32_2e384m79x2e376m1_12limbs/gmpvar    8.84
+src/Specific/montgomery32_2e384m79x2e376m1_12limbs/gmpsec    7.66
+# MISSING src/Specific/solinas32_2e384m5x2e368m1_*limbs
+# MISSING src/Specific/montgomery32_2e384m5x2e368m1_12limbs/fibe
+src/Specific/montgomery32_2e384m5x2e368m1_12limbs/gmpvar    8.94
+src/Specific/montgomery32_2e384m5x2e368m1_12limbs/gmpsec    7.64
+# MISSING src/Specific/solinas32_2e512m491x2e496m1_*limbs
+# MISSING src/Specific/montgomery32_2e512m491x2e496m1_16limbs/fibe
+src/Specific/montgomery32_2e512m491x2e496m1_16limbs/gmpvar    12.58
+src/Specific/montgomery32_2e512m491x2e496m1_16limbs/gmpsec    11.26
+# MISSING src/Specific/solinas32_2e510m290x2e496m1_*limbs
+# MISSING src/Specific/montgomery32_2e510m290x2e496m1_16limbs/fibe
+src/Specific/montgomery32_2e510m290x2e496m1_16limbs/gmpvar    12.90
+src/Specific/montgomery32_2e510m290x2e496m1_16limbs/gmpsec    12.17
