@@ -1,8 +1,8 @@
 # Generates benchmark graphs in LaTex (following format from the pgfplots
 # package)
-import sys, math
+import sys, math, re
 
-USAGE = "USAGE: python tolatex.py [input file] [num bits]"
+USAGE = "USAGE: python tolatex.py [input file] {plot32, plot64, table32, table64}"
 
 SETUPS = {
         "gmpvar32": "color=red,mark=o", 
@@ -57,15 +57,6 @@ LEGEND = {
 class ParseException(Exception): pass
 class MissingDataException(Exception): pass
 
-def parse_line(line):
-    data = line.strip().split("\t")
-    if len(data) != 3 or (data[1] not in SETUPS) or ("2e" not in data[0]) :
-        raise ParseException("Could not parse line %s" %line.strip())
-    return { 
-            "prime" : data[0],
-            "setup" : data[1],
-            "time" : data[2] }
-
 # given a string representing one term or "tap" in a prime, returns a pair of
 # integers representing the weight and coefficient of that tap
 #    "2 ^ y" -> [1, y]
@@ -89,15 +80,26 @@ def parse_term(t) :
 
     b,e = b.split("^")
     if int(b) != 2:
-        raise NonBase2Exception("Could not parse term, power with base other than 2: %s" %t)
+        raise ParseException("Could not parse term, power with base other than 2: %s" %t)
     return [int(a),int(e)]
 
 # expects prime to be a string and expressed as sum/difference of products of
 # two with small coefficients (e.g. '2^448 - 2^224 - 1', '2^255 - 19')
+# returns tuple (string representation, numeric value)
 def parse_prime(prime):
-    prime = prime.replace("-", "+ -").replace(' ', '').replace('+-2^', '+-1*2^')
-    terms = prime.split("+")
-    return list(map(parse_term, terms))
+    rep = prime.replace("e", "^").replace("m", "-").replace("p","+").replace("x","*")
+    terms = rep.replace("-", "+ -").replace(' ', '').replace('+-2^', '+-1*2^').split("+")
+    value = sum([(x * (2**e)) for x,e in map(parse_term, terms)])
+    return (rep, value)
+
+def parse_line(line):
+    data = line.strip().split("\t")
+    if len(data) != 3 or (data[1] not in SETUPS) or ("2e" not in data[0]) :
+        raise ParseException("Could not parse line %s" %line.strip())
+    return { 
+            "prime" : data[0],
+            "setup" : data[1],
+            "time" : data[2] }
 
 def final_lines(bits):
     out = []
@@ -109,12 +111,26 @@ def final_lines(bits):
         out.append(s)
     return out 
 
+# check for missing data points
+def check_missing(data, bits):
+    all_primes = set()
+    for s in final_lines(bits):
+        all_primes = all_primes | set(data[s].keys())
+    missing = []
+    for s in final_lines(bits):
+        x = all_primes ^ set(data[s].keys())
+        if len(x) != 0:
+            missing.append((s, x))
+    if len(missing) > 0:
+        message = "\n".join(["missing datapoints in %s: primes are %s" %(LEGEND[s],list(map(lambda t:t[0], x))) for s,x in missing])
+        print("WARNING: %s" %message)
+        #raise MissingDataException(message) 
+
 # remove duplicates, reorganize, and parse primes
-def clean_data(parsed_lines, bits):
+def clean_plot_data(parsed_lines, bits):
     out = {s:{} for s in SETUPS}
     for ln in parsed_lines:
-        prime2 = ln["prime"].replace("e", "^").replace("m", "-").replace("p","+").replace("x","*")
-        p = sum([(x * (2**e)) for x,e in parse_prime(prime2)])
+        p = parse_prime(ln["prime"])
         # if some measurement is duplicated, ignore the repeats
         if p not in out[ln["setup"]]:
             out[ln["setup"]][p] = ln["time"]
@@ -127,18 +143,63 @@ def clean_data(parsed_lines, bits):
                 out[s1][p] = f(out[s1][p], out[s2][p])
             elif p in out[s2]:
                 out[s1][p] = out[s2][p]
-    # check for missing data points
-    all_primes = set()
-    for s in final_lines(bits):
-        all_primes = all_primes | set(out[s].keys())
-    missing = []
-    for s in final_lines(bits):
-        x = all_primes ^ set(out[s].keys())
-        if len(x) != 0:
-            missing.append((s, x))
-    if len(missing) > 0:
-        message = "\n".join(["missing datapoints in %s: log2 of primes are %s" %(LEGEND[s],list(map(math.log2, list(x)))) for s,x in missing])
-        raise MissingDataException(message) 
+    check_missing(out, bits)
+    return out
+
+# remove duplicates, reorganize, and parse primes
+def clean_table_data(parsed_lines):
+    all_primes = set([ln["prime"] for ln in parsed_lines])
+    out = {p:{} for p in all_primes}
+    for ln in parsed_lines:
+        # ignore duplicates
+        if ln["setup"] not in out[ln["prime"]]:
+            out[ln["prime"]][ln["setup"]] = ln["time"]
+    return out
+
+def maketable(data, bits):
+    if bits == 64:
+        out="""\\tablehead{%
+  \\hline
+  & \\multicolumn{2}{c|}{\\textbf{Our Code}} & \\multicolumn{3}{c|}{\\textbf{GMP Code}} & \\\\
+  \\cline{2-6}
+  \\textbf{Prime} & \\textbf{Sol.} & \\textbf{Mont.} & \\textbf{const time} & \\textbf{var time} & \\textbf{C++} & \\textbf{Ratio} \\\\ \\hline}
+\\footnotesize
+\\begin{xtabular}{|l|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|}\n"""
+    else:
+        out="""\\tablehead{%
+  \\hline
+  & \\multicolumn{2}{c|}{\\textbf{Our Code}} & \\multicolumn{2}{c|}{\\textbf{GMP Code}} & \\\\
+  \\cline{2-5}
+  \\textbf{Prime} & \\textbf{Sol.} & \\textbf{Mont.} & \\textbf{const time} & \\textbf{var time} & \\textbf{Ratio} \\\\ \\hline}
+\\footnotesize
+\\begin{xtabular}{|l|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|}\n"""
+
+    cols_64 = ["fiat_solinas64", "fiat_montgomery64", "gmpsec64", "gmpvar64", "gmpxx64"]
+    cols_32 = ["fiat_solinas32", "fiat_montgomery32", "gmpsec32", "gmpvar32"]
+    cols = cols_64 if bits == 64 else cols_32
+
+    for p in sorted(data.keys()):
+        prime_latex= re.sub("2\^[0-9]+", lambda matchobj : "2^{%s}" %matchobj.group(0)[2:], parse_prime(p)[0])
+        prime_latex= re.sub("[0-9]\*[0-9]", lambda matchobj : "%s\cdot %s" %(matchobj.group(0)[0], matchobj.group(0)[2]), prime_latex)
+        row = ["$" + prime_latex + "$"]
+        our_best = None
+        gmp_best = None
+        for s in cols: 
+            if s in data[p]:
+                row.append(data[p][s])
+                if "fiat" in s and (our_best == None or float(data[p][s]) < our_best):
+                    our_best = float(data[p][s])
+                if "gmp" in s and (gmp_best == None or float(data[p][s]) < gmp_best):
+                    gmp_best = float(data[p][s])
+            else:
+                row.append("-")
+        if our_best != None and gmp_best != None:
+            row.append(str(round(our_best/gmp_best, 2)))
+        else:
+            row.append("-")
+        out += ("\t" + " & ".join(row) + " \\\\ \n")
+
+    out +="""\\hline\n\\end{xtabular}""" 
     return out
 
 def makeplot(data, bits):
@@ -164,17 +225,16 @@ def makeplot(data, bits):
     for s in final_lines(bits):
         out +="\t\t\\addplot[%s,mark size=2pt] coordinates {\n" %SETUPS[s]
         for p,t in sorted(data[s].items()):
-            out += "\t\t\t(%s, %s) \n" %(math.log2(p), t)
+            out += "\t\t\t(%s, %s) \n" %(math.log2(p[1]), t)
         out += "\t\t};\n"
         out += "\t\t\\addlegendentry{%s}\n\n" %LEGEND[s].replace("_", "\_")
     out += "\t\end{axis}\n\\end{tikzpicture}\n\\end{figure*}"
     return out
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 3 or sys.argv[2] not in ["plot32", "plot64", "table32", "table64"]:
         print(USAGE)
         sys.exit()
-    bits = int(sys.argv[2])
     f = open(sys.argv[1])
     parsed_lines = []
     for line in f:
@@ -183,5 +243,13 @@ if __name__ == "__main__":
         except ParseException:
             print("WARNING: Could not parse line %s, skipping" %line.strip().split("\t"))
     f.close()
-    print(makeplot(clean_data(parsed_lines, bits), bits))
+
+    if sys.argv[2] == "table32":
+        print(maketable(clean_table_data(parsed_lines), 32))
+    if sys.argv[2] == "table64":
+        print(maketable(clean_table_data(parsed_lines), 64))
+    elif sys.argv[2] == "plot32":
+        print(makeplot(clean_plot_data(parsed_lines, 32), 32))
+    elif sys.argv[2] == "plot64":
+        print(makeplot(clean_plot_data(parsed_lines, 64), 64))
 
