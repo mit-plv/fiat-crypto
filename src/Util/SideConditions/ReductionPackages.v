@@ -11,6 +11,11 @@ Definition vm_compute_evar_package_gen {bias : cast_bias} {T} (v : T) :=
 Notation vm_compute_evar_package_vm_small := (@vm_compute_evar_package_gen LHS).
 Notation vm_compute_evar_package_vm_large := (@vm_compute_evar_package_gen RHS).
 Notation vm_compute_evar_package := vm_compute_evar_package_vm_small.
+Definition native_compute_evar_package_gen {bias : cast_bias} {T} (v : T) :=
+  @evar_package T v.
+Notation native_compute_evar_package_native_small := (@native_compute_evar_package_gen LHS).
+Notation native_compute_evar_package_native_large := (@native_compute_evar_package_gen RHS).
+Notation native_compute_evar_package := native_compute_evar_package_native_small.
 Definition vm_compute_cbv_evar_package_gen {bias : cast_bias} {T} (v : T) :=
   @evar_package T v.
 Notation vm_compute_cbv_evar_package_vm_small := (@vm_compute_cbv_evar_package_gen LHS).
@@ -102,6 +107,12 @@ Ltac autosolve autosolve_tac else_tac :=
     => let v' := (eval vm_compute in v) in
        let v' := (eval cbv in v) in
        (exists v'); abstract vm_cast_no_check (eq_refl v)
+  | [ |- native_compute_evar_package_native_small ?v ]
+    => let v' := (eval native_compute in v) in
+       (exists v'); abstract native_cast_no_check (eq_refl v')
+  | [ |- native_compute_evar_package_native_large ?v ]
+    => let v' := (eval native_compute in v) in
+       (exists v'); abstract native_cast_no_check (eq_refl v)
   | [ |- vm_cast_evar_package ?v ?d ]
     => unshelve eexists (v <: d);
        [ vm_compute; reflexivity
