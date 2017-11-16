@@ -100,14 +100,15 @@ def check_missing(data, bits):
         print("WARNING: %s" %message)
         #raise MissingDataException(message) 
 
-# remove duplicates, reorganize, and parse primes
+# reorganize, and parse primes
 def clean_plot_data(parsed_lines, bits):
     out = {s:{} for s in SETUPS}
     for ln in parsed_lines:
         p = parse_prime(ln["prime"])
-        # if some measurement is duplicated, ignore the repeats
-        if p not in out[ln["setup"]]:
-            out[ln["setup"]][p] = ln["time"]
+        if p in out[ln["setup"]]:
+            out[ln["setup"]][p] = min(float(ln["time"]), out[ln["setup"]][p])
+        else:
+            out[ln["setup"]][p] = float(ln["time"])
     # combine setups according to COMBINE list
     for s1, s2, f in COMBINE:
         all_primes = list(out[s1].keys())
@@ -125,9 +126,12 @@ def clean_table_data(parsed_lines):
     all_primes = set([ln["prime"] for ln in parsed_lines])
     out = {p:{} for p in all_primes}
     for ln in parsed_lines:
-        # ignore duplicates
-        if ln["setup"] not in out[ln["prime"]]:
-            out[ln["prime"]][ln["setup"]] = ln["time"]
+        prime = ln["prime"]
+        s = ln["setup"]
+        if s in out[prime]:
+            out[prime][s] = min(float(ln["time"]), out[prime][s])
+        else:
+            out[prime][s] = float(ln["time"])
     return out
 
 def maketable(data, bits):
@@ -160,7 +164,7 @@ def maketable(data, bits):
         gmp_best = None
         for s in cols: 
             if s in data[p]:
-                row.append(data[p][s])
+                row.append(str(data[p][s]))
                 if "fiat" in s and (our_best == None or float(data[p][s]) < our_best):
                     our_best = float(data[p][s])
                 if "gmp" in s and (gmp_best == None or float(data[p][s]) < gmp_best):
