@@ -162,20 +162,20 @@ def maketable(data, bits):
   \\hline
   & \\multicolumn{2}{c|}{\\textbf{Our Code}} & \\multicolumn{3}{c|}{\\textbf{GMP Code}} & \\\\
   \\cline{2-6}
-  \\textbf{Prime} & \\textbf{Sol.} & \\textbf{Mont.} & \\textbf{const time} & \\textbf{var time} & \\textbf{C++} & \\textbf{Ratio} \\\\ \\hline}
+  \\textbf{Prime} & \\textbf{Sol.} & \\textbf{Mont.} & \\textbf{const time} & \\textbf{var time} & \\textbf{C++} & \\textbf{Speedup} \\\\ \\hline}
 \\footnotesize
 \\begin{xtabular}{|l|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|}\n"""
     else:
         out="""\\tablehead{%
   \\hline
-  & \\multicolumn{2}{c|}{\\textbf{Our Code}} & \\multicolumn{2}{c|}{\\textbf{GMP Code}} & \\\\
+  & \\textbf{Our Code} & \\multicolumn{2}{c|}{\\textbf{GMP Code}} & \\\\
   \\cline{2-5}
-  \\textbf{Prime} & \\textbf{Sol.} & \\textbf{Mont.} & \\textbf{const time} & \\textbf{var time} & \\textbf{Ratio} \\\\ \\hline}
+  \\textbf{Prime} & \\textbf{Solinas} & \\textbf{const time} & \\textbf{var time} & \\textbf{Speedup} \\\\ \\hline}
 \\footnotesize
-\\begin{xtabular}{|l|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|p{0.6cm}|}\n"""
+\\begin{xtabular}{|l|p{0.8cm}|p{0.8cm}|p{0.8cm}|p{0.9cm}|}\n"""
 
     cols_64 = ["fiat_solinas64", "fiat_montgomery64", "gmpsec64", "gmpvar64", "gmpxx64"]
-    cols_32 = ["fiat_solinas32", "fiat_montgomery32", "gmpsec32", "gmpvar32"]
+    cols_32 = ["fiat_solinas32", "gmpsec32", "gmpvar32"]
     cols = cols_64 if bits == 64 else cols_32
 
     for p in sorted(data.keys()):
@@ -194,7 +194,7 @@ def maketable(data, bits):
             else:
                 row.append("-")
         if our_best != None and gmp_best != None:
-            row.append(str(round(our_best/gmp_best, 2)))
+            row.append(str(round(1 - our_best/gmp_best, 2)))
         else:
             row.append("-")
         out += ("\t" + " & ".join(row) + " \\\\ \n")
@@ -209,7 +209,7 @@ def makeplot(data, bits):
  \t\\begin{axis}[
  \t\theight=3.4cm,
  \t\ttitle style={font=\small},
- \t\ttitle=%s-bit Field Arithmetic Benchmarks,
+ \t\ttitle=%s-Bit Field Arithmetic Benchmarks,
  \t\twidth=\\textwidth,
  \t\tlegend pos= north west,
  \t\txtick distance=64,
