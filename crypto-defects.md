@@ -16,7 +16,6 @@ appearing in our code.
 | [end-to-end#340](https://github.com/google/end-to-end/issues/340) | Curve25519 library | twisted Edwards coordinates | (0, 1) = ∞ |
 | [CVE-2006-4339](https://web.archive.org/web/20071010042708/http://www.imc.org/ietf-openpgp/mail-archive/msg14307.html) | RSA-PKCS-1 sig. verification | irrelevant | padding check |
 | [CVE-2014-3570](https://github.com/openssl/openssl/commit/a7a44ba55cb4f884c6bc9ceac90072dea38e66d0) | Bignum squaring | asm |  limb overflow |
-| [ref/sc25519.c:84](https://github.com/floodyberry/supercop/blob/master/crypto_sign/ed25519/ref/sc25519.c#L84) | x mod (order of Curve25519) |  Barrett reduction (code is likely correct) | "XXX" comment |
 | [ic#237002094](https://github.com/mit-plv/fiat-crypto/pull/42#issuecomment-237002094) | Barrett reduction for p256 | 1 conditional subtraction instead of 2 | unkown if ok |
 | [openssl#1593](https://rt.openssl.org/Ticket/Display.html?id=1593&user=guest&pass=guest) | P384 modular reduction | carry handling | [exploitable](https://eprint.iacr.org/2011/633.pdf) |
 | [go#fa09811d](https://github.com/golang/crypto/commit/84e98f45760e87786b7f24603b8166a6fa09811d) | poly1305 reduction | AMD64 asm, missing subtraction of 3 | found quickly |
@@ -35,6 +34,9 @@ appearing in our code.
 |[openjdk#01781d7e](http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/d99101781d7e) | EC scalarmult | mixed addition Jacobian+Affine | [missing case](https://twitter.com/asanso/status/887691580018176000) |
 
 
+Not a bug, but still relevant:
+
+| [ref/sc25519.c:84](https://github.com/floodyberry/supercop/blob/master/crypto_sign/ed25519/ref/sc25519.c#L84) | x mod (order of Curve25519) |  Barrett reduction (code is likely correct) | "XXX" comment |
 
 
 Not covered in the above list: memory mismanagement (buffer overrun, use-after-free, uninitialized read, null dereference), timing attacks (branch, cache, instruction). While these issues are very important, there are good programming disciplines for avoiding them without verifying intricate details of the computation.
