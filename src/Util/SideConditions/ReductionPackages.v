@@ -11,6 +11,11 @@ Definition vm_compute_evar_package_gen {bias : cast_bias} {T} (v : T) :=
 Notation vm_compute_evar_package_vm_small := (@vm_compute_evar_package_gen LHS).
 Notation vm_compute_evar_package_vm_large := (@vm_compute_evar_package_gen RHS).
 Notation vm_compute_evar_package := vm_compute_evar_package_vm_small.
+Definition vm_compute_cbv_evar_package_gen {bias : cast_bias} {T} (v : T) :=
+  @evar_package T v.
+Notation vm_compute_cbv_evar_package_vm_small := (@vm_compute_cbv_evar_package_gen LHS).
+Notation vm_compute_cbv_evar_package_vm_large := (@vm_compute_cbv_evar_package_gen RHS).
+Notation vm_compute_cbv_evar_package := vm_compute_cbv_evar_package_vm_small.
 Definition vm_cast_evar_package {s} (v : s) d := @evard_package s d v.
 Definition cast_evar_package {s} (v : s) d := @evard_package s d v.
 Definition vm_compute_cast_evar_package {s} (v : s) d := @evard_package s d v.
@@ -88,6 +93,14 @@ Ltac autosolve autosolve_tac else_tac :=
        (exists v'); abstract vm_cast_no_check (eq_refl v')
   | [ |- vm_compute_evar_package_vm_large ?v ]
     => let v' := (eval vm_compute in v) in
+       (exists v'); abstract vm_cast_no_check (eq_refl v)
+  | [ |- vm_compute_cbv_evar_package_vm_small ?v ]
+    => let v' := (eval vm_compute in v) in
+       let v' := (eval cbv in v) in
+       (exists v'); abstract vm_cast_no_check (eq_refl v')
+  | [ |- vm_compute_cbv_evar_package_vm_large ?v ]
+    => let v' := (eval vm_compute in v) in
+       let v' := (eval cbv in v) in
        (exists v'); abstract vm_cast_no_check (eq_refl v)
   | [ |- vm_cast_evar_package ?v ?d ]
     => unshelve eexists (v <: d);
