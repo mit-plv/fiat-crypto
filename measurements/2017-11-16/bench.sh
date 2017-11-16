@@ -12,7 +12,7 @@ for p in $(cat primes.txt | sed 's:#.*::g' | grep . | tr -d ' ' | tr '^*+-' 'exp
         printf "# MISSING %s\n" "$impl/fibe"
         continue
       fi
-      /usr/bin/time -f "$impl/fibe\t%e" "$impl/fibe"
+      /usr/bin/time -f "$impl/fibe\t%e" "$impl/fibe" 2>&1
     done
   done
   for ref in gmpvar gmpsec gmpxx; do
@@ -21,6 +21,6 @@ for p in $(cat primes.txt | sed 's:#.*::g' | grep . | tr -d ' ' | tr '^*+-' 'exp
       printf "# MISSING %s\n" "$impl/$ref"
       continue
     fi
-    /usr/bin/time -f "$impl/$ref\t%e" "$impl/$ref"
+    /usr/bin/time -f "$impl/$ref\t%e" "$impl/$ref" 2>&1
   done
 done
