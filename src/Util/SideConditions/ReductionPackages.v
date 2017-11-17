@@ -90,6 +90,7 @@ Ltac autosolve autosolve_tac else_tac :=
        progress change x with x';
        cbv beta iota;
        autosolve_tac else_tac
+  | [ |- vm_decide_package (_ = true) ] => abstract vm_cast_no_check (eq_refl true)
   | [ |- vm_decide_package ?P ] => cbv beta delta [vm_decide_package]; vm_decide
   | [ |- cbv_minus_then_vm_decide_package ?ident ?P ] => cbv -[ident]; vm_decide
   | [ |- vm_compute_reflexivity_package ?P ] => vm_compute; reflexivity
