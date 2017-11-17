@@ -94,6 +94,19 @@ Section language.
     : forall x, Interp (t:=Arrow s d) (@interp_op) (ExprEta' (t:=Arrow s d) e) x = Interp (@interp_op) e x.
   Proof using Type. exact (@InterpExprEta' (Arrow s d) e). Qed.
 
+  Lemma InterpExprEta_ind {t} (P : _ -> Prop) {e x}
+    : P (Interp (@interp_op) e x) -> P (Interp (@interp_op) (ExprEta (t:=t) e) x).
+  Proof using Type. rewrite InterpExprEta; exact id. Qed.
+  Lemma InterpExprEta'_ind {t} (P : _ -> Prop) {e x}
+    : P (Interp (@interp_op) e x) -> P (Interp (@interp_op) (ExprEta' (t:=t) e) x).
+  Proof using Type. rewrite InterpExprEta'; exact id. Qed.
+  Lemma InterpExprEta_arrow_ind {s d} (P : _ -> Prop) {e x}
+    : P (Interp (@interp_op) e x) -> P (Interp (t:=Arrow s d) (@interp_op) (ExprEta (t:=Arrow s d) e) x).
+  Proof using Type. rewrite InterpExprEta_arrow; exact id. Qed.
+  Lemma InterpExprEta'_arrow_ind {s d} (P : _ -> Prop) {e x}
+    : P (Interp (@interp_op) e x) -> P (Interp (t:=Arrow s d) (@interp_op) (ExprEta' (t:=Arrow s d) e) x).
+  Proof using Type. rewrite InterpExprEta'_arrow; exact id. Qed.
+
   Lemma eq_interp_eta {t e}
     : forall x, interp_eta interp_op (t:=t) e x = interp interp_op e x.
   Proof using Type. apply eq_interp_flat_type_eta. Qed.

@@ -97,6 +97,10 @@ Section language.
       unfold Interp, Linearize_gen.
       eapply interp_linearize_gen.
     Qed.
+
+    Lemma InterpLinearize_gen_ind {t} (P : _ -> Prop) {e : Expr t} {x}
+      : P (Interp interp_op e x) -> P (Interp interp_op (Linearize_gen let_bind_op_args e) x).
+    Proof using Type. rewrite InterpLinearize_gen; exact id. Qed.
   End gen.
 
   Definition interpf_linearizef {t} e
@@ -119,6 +123,13 @@ Section language.
   Definition InterpANormal {t} (e : Expr t)
     : forall x, Interp interp_op (ANormal e) x = Interp interp_op e x
     := InterpLinearize_gen _ e.
+
+  Definition InterpLinearize_ind {t} (P : _ -> Prop) {e : Expr t} {x}
+    : P (Interp interp_op e x) -> P (Interp interp_op (Linearize e) x)
+    := InterpLinearize_gen_ind _ P.
+  Definition InterpANormal_ind {t} (P : _ -> Prop) {e : Expr t} {x}
+    : P (Interp interp_op e x) -> P (Interp interp_op (ANormal e) x)
+    := InterpLinearize_gen_ind _ P.
 End language.
 
 Hint Rewrite @interpf_under_letsf : reflective_interp.
