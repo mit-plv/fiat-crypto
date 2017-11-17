@@ -20,6 +20,7 @@ nra.cache
 .nlia.cache
 .nia.cache
 .nra.cache
+/remake_curves.log
 
 # compilation outputs
 etc/tscfreq
