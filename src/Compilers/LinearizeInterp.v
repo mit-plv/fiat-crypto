@@ -10,10 +10,10 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 
 Local Open Scope ctype_scope.
 Section language.
-  Context (base_type_code : Type).
-  Context (interp_base_type : base_type_code -> Type).
-  Context (op : flat_type base_type_code -> flat_type base_type_code -> Type).
-  Context (interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst).
+  Context {base_type_code : Type}
+          {interp_base_type : base_type_code -> Type}
+          {op : flat_type base_type_code -> flat_type base_type_code -> Type}
+          {interp_op : forall src dst, op src dst -> interp_flat_type interp_base_type src -> interp_flat_type interp_base_type dst}.
 
   Local Notation flat_type := (flat_type base_type_code).
   Local Notation type := (type base_type_code).
