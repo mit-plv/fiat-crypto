@@ -89,6 +89,6 @@ Ltac intro_interp_flat_type :=
   lazymatch goal with
   | [ |- forall v : interp_flat_type ?var ?t, @?R v ]
     => let t' := (eval compute in t) in
-       refine (@intros_interp_flat_type _ var (fun v => id (R v)) t' _);
+       refine (@intros_interp_flat_type _ var t' (fun v => id (R v)) _);
        post_intro_interp_flat_type_intros
   end.
