@@ -424,6 +424,16 @@ Section interp_lemmas.
 
   Local Notation exprfb := (fun t => exprf _ op (Tbase t)).
 
+  Lemma interpf_SmartVarf
+        {t} (e : interp_flat_type _ t)
+  : @interpf _ interp_base_type _ interp_op _ (SmartVarf (var:=interp_base_type) e)
+    = e.
+  Proof.
+    induction t as [ t | | A IHA B IHB ]; try destruct e; try reflexivity.
+    rewrite !SmartVarf_Pair; cbn; rewrite IHA, IHB.
+    reflexivity.
+  Qed.
+
   Lemma interpf_SmartPairf'
         {t} (e : interp_flat_type exprfb t)
   : @interpf _ interp_base_type _ interp_op _ (SmartPairf e)
