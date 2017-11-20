@@ -9,9 +9,9 @@
 Require Export ZArith.
 Require Export ZCmisc.
 
-Open Local Scope positive_scope.
+Local Open Scope positive_scope.
 
-Open Local Scope P_scope.
+Local Open Scope P_scope.
 
 (* [div_eucl a b] return [(q,r)] such that a = q*b + r *)
 Fixpoint div_eucl (a b : positive) {struct a} : N * N :=
@@ -143,7 +143,7 @@ Fixpoint Pmod (a b : positive) {struct a} : N :=
   end.
 
 Infix "mod" := Pmod (at level 40, no associativity) : P_scope.
-Open Local Scope P_scope.
+Local Open Scope P_scope.
 
 Lemma Pmod_div_eucl : forall a b, a mod b = snd (a/b).
 Proof with auto.
