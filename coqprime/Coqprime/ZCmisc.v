@@ -7,7 +7,7 @@
 (*************************************************************)
 
 Require Export ZArith.
-Open Local Scope Z_scope.
+Local Open Scope Z_scope.
 
 Coercion Zpos : positive >-> Z.
 Coercion Z_of_N : N >-> Z.
@@ -88,10 +88,10 @@ Lemma Ppred_Zminus : forall p, 1< Zpos p ->  (p-1)%Z = Ppred p.
 Proof. destruct p;simpl;trivial. intros;elimtype False;omega. Qed.
 
 
-Open Local Scope positive_scope.
+Local Open Scope positive_scope.
 
 Delimit Scope P_scope with P.
-Open Local Scope P_scope.
+Local Open Scope P_scope.
 
 Definition is_lt (n m : positive) :=
   match (n ?= m) with
