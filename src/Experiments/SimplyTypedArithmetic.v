@@ -87,33 +87,30 @@ Module Positional. Section Positional.
           (weight_0 : weight 0%nat = 1)
           (weight_nz : forall i, weight i <> 0).
 
-  Definition to_associational {n:nat} (xs:tuple Z n) : list (Z*Z)
-    := combine (map weight (List.seq 0 n)) (Tuple.to_list n xs).
-  Definition eval {n} x := Associational.eval (@to_associational n x).
-  Lemma eval_to_associational {n} x :
-    Associational.eval (@to_associational n x) = eval x.
+  Definition to_associational (xs:list Z) : list (Z*Z)
+    := combine (map weight (List.seq 0 (List.length xs))) xs.
+  Definition eval x := Associational.eval (@to_associational x).
+  Lemma eval_to_associational x :
+    Associational.eval (@to_associational x) = eval x.
   Proof. trivial.                                             Qed.
 
   (* SKIP over this: zeros, add_to_nth *)
   Local Ltac push := autorewrite with push_eval push_map distr_length
     push_flat_map push_fold_right push_nth_default cancel_pair natsimplify.
-  Program Definition zeros n : tuple Z n
-    := Tuple.from_list n (List.map (fun _ => 0) (List.seq 0 n)) _.
-  Next Obligation. push; reflexivity. Qed.
+  Definition zeros n : list Z
+    := List.map (fun _ => 0) (seq 0 n).
   Lemma eval_zeros n : eval (zeros n) = 0.
   Proof.
-    cbv [eval Associational.eval to_associational zeros];
-      rewrite Tuple.to_list_from_list.
-    generalize dependent (List.seq 0 n); intro xs.
+    cbv [eval Associational.eval to_associational zeros].
+    rewrite map_length, seq_length; generalize (seq 0 n); intros xs.
     induction xs; simpl; nsatz.                               Qed.
-  Program Definition add_to_nth {n} i x : tuple Z n -> tuple Z n
-    := Tuple.on_tuple (ListUtil.update_nth i (runtime_add x)) _.
-  Next Obligation. apply ListUtil.length_update_nth. Defined.
-  Lemma eval_add_to_nth {n} (i:nat) (H:(i<n)%nat) (x:Z) (xs:tuple Z n) :
+  Definition add_to_nth i x : list Z -> list Z
+    := ListUtil.update_nth i (runtime_add x).
+  Lemma eval_add_to_nth (i:nat) (x:Z) (xs:list Z) (H:(i<length xs)%nat) :
     eval (add_to_nth i x xs) = weight i * x + eval xs.
   Proof.
-    cbv [eval to_associational add_to_nth Tuple.on_tuple runtime_add].
-    rewrite !Tuple.to_list_from_list.
+    cbv [eval to_associational add_to_nth runtime_add].
+    rewrite length_update_nth.
     rewrite ListUtil.combine_update_nth_r at 1.
     rewrite <-(update_nth_id i (List.combine _ _)) at 2.
     rewrite <-!(ListUtil.splice_nth_equiv_update_nth_update _ _
@@ -143,24 +140,31 @@ Module Positional. Section Positional.
     List.fold_right (fun t =>
       let p := place t (pred n) in
       add_to_nth (fst p) (snd p)    ) (zeros n) p.
-  Lemma eval_from_associational {n} p (n_nz:n<>O) :
+  Lemma eval_from_associational {n} p (n_nz:n<>O \/ p = nil) :
     eval (from_associational n p) = Associational.eval p.
-  Proof. induction p; cbv [from_associational] in *; push; try
-  pose proof place_in_range a (pred n); try omega; try nsatz. Qed.
+  Proof. destruct n_nz; [ induction p | subst p ];
+  cbv [from_associational] in *; push; try
+  pose proof place_in_range a (pred n); try omega; try nsatz;
+  apply fold_right_invariant; cbv [zeros add_to_nth];
+  intros; rewrite ?map_length, ?seq_length, ?length_update_nth;
+  try omega.                                                  Qed.
   Hint Rewrite @eval_from_associational : push_eval.
 
   Section mulmod.
     Context (m:Z) (m_nz:m <> 0) (s:Z) (s_nz:s <> 0)
             (c:list (Z*Z)) (Hm:m = s - Associational.eval c).
-    Definition mulmod {n} (a b:tuple Z n) : tuple Z n
+    Definition mulmod (a b:list Z) : list Z
       := let a_a := to_associational a in
          let b_a := to_associational b in
          let ab_a := Associational.mul a_a b_a in
          let abm_a := Associational.reduce s c ab_a in
-         from_associational n abm_a.
-    Lemma eval_mulmod {n} (H:(n<>0)%nat) (f g:tuple Z n) :
+         from_associational (max (length a) (length b)) abm_a.
+    Lemma eval_mulmod (f g:list Z) :
       eval (mulmod f g) mod m = (eval f * eval g) mod m.
-    Proof. cbv [mulmod]; rewrite Hm in *; push; trivial.      Qed.
+    Proof. cbv [mulmod]; rewrite Hm in *; push; trivial.
+    destruct f, g; simpl; [ right | left; omega.. ].
+    clear; cbv -[flat_map].
+    induction c as [|?? IHc]; simpl; trivial.                 Qed.
   End mulmod.
 End Positional. End Positional.
 
@@ -170,12 +174,12 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 
 Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).
 
-Example base_25_5_mul (f g:tuple Z 10) :
-  { fg : tuple Z 10 | (eval w fg) mod (2^255-19)
+Example base_25_5_mul (f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
+        (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
+        (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
+  : { fg : list Z | (eval w fg) mod (2^255-19)
                     = (eval w f * eval w g) mod (2^255-19) }.
   (* manually assign names to limbs for pretty-printing *)
-  destruct f as [[[[[[[[[f9 f8]f7]f6]f5]f4]f3]f2]f1]f0].
-  destruct g as [[[[[[[[[g9 g8]g7]g6]g5]g4]g3]g2]g1]g0].
   eexists ?[fg].
   erewrite <-eval_mulmod with (s:=2^255) (c:=[(1,19)])
       by (try eapply pow_ceil_mul_nat_nonzero; vm_decide).
