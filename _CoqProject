@@ -3,6 +3,7 @@
 Bedrock/Nomega.v
 Bedrock/Word.v
 src/Demo.v
+src/DemoWithReification.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v
 src/Algebra/Group.v
