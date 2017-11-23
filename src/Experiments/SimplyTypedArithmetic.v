@@ -125,14 +125,21 @@ Module Positional. Section Positional.
            end; lia.                                          Qed.
   Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
 
-  Fixpoint place (t:Z*Z) (i:nat) : nat * Z :=
-    if dec (fst t mod weight i = 0)
-    then (i, let c := fst t / weight i in (c * snd t)%RT)
-    else match i with S i' => place t i' | O => (O, fst t * snd t)%RT end.
+  Definition place (t:Z*Z) (i:nat) : nat * Z :=
+    nat_rect
+      (fun _ => (nat * Z)%type)
+      ((O, fst t * snd t)%RT)
+      (fun i' place_i'
+       => let i := S i' in
+          if (fst t mod weight i =? 0)
+          then (i, let c := fst t / weight i in (c * snd t)%RT)
+          else place_i')
+      i.
+
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
-  Proof. induction n; cbv [place] in *; break_match; autorewrite with cancel_pair; try omega. Qed.
+  Proof. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try omega. Qed.
   Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
-  Proof. induction i; cbv [place] in *; break_match; push;
+  Proof. induction i; cbv [place nat_rect] in *; break_match; push;
     repeat match goal with |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(auto) ltac:(auto))
            end; nsatz.                                        Qed.
