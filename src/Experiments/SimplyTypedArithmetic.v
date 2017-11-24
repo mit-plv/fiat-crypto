@@ -343,7 +343,7 @@ Module Compilers.
   Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
   Notation "( )" := TT : expr_scope.
   Notation "()" := TT : expr_scope.
-  Notation "'llet' x := A 'in' b" := (Op op.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
+  Notation "'expr_let' x := A 'in' b" := (Op op.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
   Notation "f ‘’ x" := (Op op.App (f, x)%expr) (at level 200) : expr_scope.
 
   Definition Expr t := forall var, @expr var t.
@@ -359,23 +359,23 @@ Module Compilers.
 
   Definition Interp {t} (e : Expr t) := interp (e _).
 
-  Ltac is_known_const_gen term on_success on_failure :=
-    let is_known_const term := is_known_const_gen term on_success on_failure in
+  Ltac is_known_const_cps2 term on_success on_failure :=
+    let recurse term := is_known_const_cps2 term on_success on_failure in
     lazymatch term with
-    | S ?term => is_known_const term
+    | S ?term => recurse term
     | O => on_success ()
     | Z0 => on_success ()
-    | Zpos ?p => is_known_const p
-    | Zneg ?p => is_known_const p
-    | xI ?p => is_known_const p
-    | xO ?p => is_known_const p
+    | Zpos ?p => recurse p
+    | Zneg ?p => recurse p
+    | xI ?p => recurse p
+    | xO ?p => recurse p
     | xH => on_success ()
     | ?term => on_failure term
     end.
+  Ltac require_known_const term :=
+    is_known_const_cps2 term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
   Ltac is_known_const term :=
-    is_known_const_gen term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
-  Ltac is_known_const_as_bool term :=
-    is_known_const_gen term ltac:(fun _ => true) ltac:(fun _ => false).
+    is_known_const_cps2 term ltac:(fun _ => true) ltac:(fun _ => false).
 
   Definition Uncurry0 {A var} (opc : op type.unit A) : @expr var A
     := Op opc TT.
@@ -460,7 +460,7 @@ Module Compilers.
          Uncurry3 (@op.bool_rect rT)
     | _
       => let assert_const := match goal with
-                             | _ => is_known_const term
+                             | _ => require_known_const term
                              end in
          let T := type of term in
          let rT := type.reify T in
@@ -540,7 +540,7 @@ Module Compilers.
       => constr:(@Var var rT v)
     | _
       =>
-      let term_is_known_const := is_known_const_as_bool term in
+      let term_is_known_const := is_known_const term in
       lazymatch term_is_known_const with
       | true => reify_op var term
       | false
