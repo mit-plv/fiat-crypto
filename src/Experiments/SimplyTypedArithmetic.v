@@ -167,11 +167,11 @@ Module Positional. Section Positional.
          let b_a := to_associational n b in
          let ab_a := Associational.mul a_a b_a in
          let abm_a := Associational.reduce s c ab_a in
-         from_associational (max (length a) (length b)) abm_a.
+         from_associational n abm_a.
     Lemma eval_mulmod n (f g:list Z)
           (Hf : length f = n) (Hg : length g = n) :
       eval n (mulmod n f g) mod m = (eval n f * eval n g) mod m.
-    Proof. cbv [mulmod]; rewrite Hm, Hf, Hg in *; push; trivial.
+    Proof. cbv [mulmod]; rewrite Hm in *; push; trivial.
     destruct f, g; simpl in *; [ right; subst n | left; try omega.. ].
     clear; cbv -[Associational.reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
