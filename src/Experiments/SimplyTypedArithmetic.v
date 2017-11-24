@@ -98,10 +98,11 @@ Module Positional. Section Positional.
   Local Ltac push := autorewrite with push_eval push_map distr_length
     push_flat_map push_fold_right push_nth_default cancel_pair natsimplify.
   Definition zeros n : list Z
-    := List.map (fun _ => 0) (List.seq 0 n).
+    := List.repeat 0 n.
   Lemma eval_zeros n : eval n (zeros n) = 0.
   Proof.
     cbv [eval Associational.eval to_associational zeros].
+    rewrite <- (seq_length n 0) at 2.
     generalize dependent (List.seq 0 n); intro xs.
     induction xs; simpl; nsatz.                               Qed.
   Definition add_to_nth i x : list Z -> list Z
@@ -147,7 +148,7 @@ Module Positional. Section Positional.
   cbv [from_associational] in *; push; try
   pose proof place_in_range a (pred n); try omega; try nsatz;
   apply fold_right_invariant; cbv [zeros add_to_nth];
-  intros; rewrite ?map_length, ?seq_length, ?length_update_nth;
+  intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
   try omega.                                                  Qed.
   Hint Rewrite @eval_from_associational : push_eval.
 
