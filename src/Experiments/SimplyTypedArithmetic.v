@@ -180,57 +180,158 @@ Module Positional. Section Positional.
 End Positional. End Positional.
 
 Module Compilers.
-  Inductive type := Unit | Prod (A B : type) | Arrow (s d : type) | List (A : type) | TNat | TZ | TBool.
-  Delimit Scope ctype_scope with ctype.
-  Bind Scope ctype_scope with type.
-  Notation "()" := Unit : ctype_scope.
-  Notation "A * B" := (Prod A B) : ctype_scope.
-  Notation "A -> B" := (Arrow A B) : ctype_scope.
-  Fixpoint interp_type (t : type)
-    := match t with
-       | Unit => unit
-       | Prod A B => interp_type A * interp_type B
-       | Arrow A B => interp_type A -> interp_type B
-       | List A => list (interp_type A)
-       | TNat => nat
-       | TZ => Z
-       | TBool => bool
-       end%type.
+  Module type.
+    Inductive type := unit | prod (A B : type) | arrow (s d : type) | list (A : type) | nat | Z | bool.
 
-  Inductive op : type -> type -> Set :=
-  | OpConst {t} (v : interp_type t) : op Unit t
-  | NatS : op TNat TNat
-  | Nil {t} : op Unit (List t)
-  | Cons {t} : op (t * List t) (List t)
-  | Fst {A B} : op (A * B) A
-  | Snd {A B} : op (A * B) B
-  | BoolRect {T} : op (T * T * TBool) T
-  | NatRect {P} : op (P * (TNat -> P -> P) * TNat) P
-  | Seq : op (TNat * TNat) (List TNat)
-  | Repeat {A} : op (A * TNat) (List A)
-  | LetIn {tx tC} : op (tx * (tx -> tC)) tC
-  | Combine {A B} : op (List A * List B) (List (A * B))
-  | Map {A B} : op ((A -> B) * List A) (List B)
-  | FlatMap {A B} : op ((A -> List B) * List A) (List B)
-  | Partition {A} : op ((A -> TBool) * List A) (List A * List A)
-  | ListApp {A} : op (List A * List A) (List A)
-  | FoldRight {A B} : op ((B -> A -> A) * A * List B) A
-  | Pred : op TNat TNat
-  | UpdateNth {T} : op (TNat * (T -> T) * List T) (List T)
-  | RuntimeMul : op (TZ * TZ) TZ
-  | RuntimeAdd : op (TZ * TZ) TZ
-  | Zadd : op (TZ * TZ) TZ
-  | Zmul : op (TZ * TZ) TZ
-  | Zpow : op (TZ * TZ) TZ
-  | Zopp : op TZ TZ
-  | Zdiv : op (TZ * TZ) TZ
-  | Zmodulo : op (TZ * TZ) TZ
-  | Zeqb : op (TZ * TZ) TBool
-  | ZofNat : op TNat TZ
-  | App {s d} : op ((s -> d) * s) d.
+    Fixpoint interp (t : type)
+      := match t with
+         | unit => Datatypes.unit
+         | prod A B => interp A * interp B
+         | arrow A B => interp A -> interp B
+         | list A => Datatypes.list (interp A)
+         | nat => Datatypes.nat
+         | Z => BinInt.Z
+         | bool => Datatypes.bool
+         end%type.
+
+    Ltac reify ty :=
+      lazymatch eval cbv beta in ty with
+      | Datatypes.unit => unit
+      | Datatypes.prod ?A ?B
+        => let rA := reify A in
+           let rB := reify B in
+           constr:(prod rA rB)
+      | ?A -> ?B
+        => let rA := reify A in
+           let rB := reify B in
+           constr:(arrow rA rB)
+      | Datatypes.list ?T
+        => let rT := reify T in
+           constr:(list rT)
+      | Datatypes.nat => nat
+      | Datatypes.bool => bool
+      | BinInt.Z => Z
+      end.
+
+    Module Export Notations.
+      Delimit Scope ctype_scope with ctype.
+      Bind Scope ctype_scope with type.
+      Notation "()" := unit : ctype_scope.
+      Notation "A * B" := (prod A B) : ctype_scope.
+      Notation "A -> B" := (arrow A B) : ctype_scope.
+      Notation type := type.
+    End Notations.
+  End type.
+  Export type.Notations.
+
+  Module op.
+    Import type.
+    Inductive op : type -> type -> Set :=
+    | Const {t} (v : interp t) : op unit t
+    | Let_In {tx tC} : op (tx * (tx -> tC)) tC
+    | App {s d} : op ((s -> d) * s) d
+    | S : op nat nat
+    | nil {t} : op unit (list t)
+    | cons {t} : op (t * list t) (list t)
+    | fst {A B} : op (A * B) A
+    | snd {A B} : op (A * B) B
+    | bool_rect {T} : op (T * T * bool) T
+    | nat_rect {P} : op (P * (nat -> P -> P) * nat) P
+    | pred : op nat nat
+    | List_seq : op (nat * nat) (list nat)
+    | List_repeat {A} : op (A * nat) (list A)
+    | List_combine {A B} : op (list A * list B) (list (A * B))
+    | List_map {A B} : op ((A -> B) * list A) (list B)
+    | List_flat_map {A B} : op ((A -> list B) * list A) (list B)
+    | List_partition {A} : op ((A -> bool) * list A) (list A * list A)
+    | List_app {A} : op (list A * list A) (list A)
+    | List_fold_right {A B} : op ((B -> A -> A) * A * list B) A
+    | List_update_nth {T} : op (nat * (T -> T) * list T) (list T)
+    | Z_runtime_mul : op (Z * Z) Z
+    | Z_runtime_add : op (Z * Z) Z
+    | Z_add : op (Z * Z) Z
+    | Z_mul : op (Z * Z) Z
+    | Z_pow : op (Z * Z) Z
+    | Z_opp : op Z Z
+    | Z_div : op (Z * Z) Z
+    | Z_modulo : op (Z * Z) Z
+    | Z_eqb : op (Z * Z) bool
+    | Z_of_nat : op nat Z.
+
+    Notation curry2 f
+      := (fun '(a, b) => f a b).
+    Notation curry3 f
+      := (fun '(a, b, c) => f a b c).
+
+    Definition interp {s d} (opc : op s d) : type.interp s -> type.interp d
+      := match opc in op s d return type.interp s -> type.interp d with
+         | Const t v => fun _ => v
+         | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
+         | App s d
+           => fun '((f, x) : (type.interp s -> type.interp d) * type.interp s)
+              => f x
+         | S => Datatypes.S
+         | nil t => fun _ => @Datatypes.nil (type.interp t)
+         | cons t => curry2 (@Datatypes.cons (type.interp t))
+         | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
+         | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
+         | bool_rect T => curry3 (@Datatypes.bool_rect (fun _ => type.interp T))
+         | nat_rect P => curry3 (@Datatypes.nat_rect (fun _ => type.interp P))
+         | pred => Nat.pred
+         | List_seq => curry2 List.seq
+         | List_combine A B => curry2 (@List.combine (type.interp A) (type.interp B))
+         | List_map A B => curry2 (@List.map (type.interp A) (type.interp B))
+         | List_repeat A => curry2 (@List.repeat (type.interp A))
+         | List_flat_map A B => curry2 (@List.flat_map (type.interp A) (type.interp B))
+         | List_partition A => curry2 (@List.partition (type.interp A))
+         | List_app A => curry2 (@List.app (type.interp A))
+         | List_fold_right A B => curry3 (@List.fold_right (type.interp A) (type.interp B))
+         | List_update_nth T => curry3 (@update_nth (type.interp T))
+         | Z_runtime_mul => curry2 runtime_mul
+         | Z_runtime_add => curry2 runtime_add
+         | Z_add => curry2 Z.add
+         | Z_mul => curry2 Z.mul
+         | Z_pow => curry2 Z.pow
+         | Z_modulo => curry2 Z.modulo
+         | Z_opp => Z.opp
+         | Z_div => curry2 Z.div
+         | Z_eqb => curry2 Z.eqb
+         | Z_of_nat => Z.of_nat
+         end.
+
+    Module List.
+      Notation seq := List_seq.
+      Notation repeat := List_repeat.
+      Notation combine := List_combine.
+      Notation map := List_map.
+      Notation flat_map := List_flat_map.
+      Notation partition := List_partition.
+      Notation app := List_app.
+      Notation fold_right := List_fold_right.
+      Notation update_nth := List_update_nth.
+    End List.
+
+    Module Z.
+      Notation runtime_mul := Z_runtime_mul.
+      Notation runtime_add := Z_runtime_add.
+      Notation add := Z_add.
+      Notation mul := Z_mul.
+      Notation pow := Z_pow.
+      Notation opp := Z_opp.
+      Notation div := Z_div.
+      Notation modulo := Z_modulo.
+      Notation eqb := Z_eqb.
+      Notation of_nat := Z_of_nat.
+    End Z.
+
+    Module Export Notations.
+      Notation op := op.
+    End Notations.
+  End op.
+  Export op.Notations.
 
   Inductive expr {var : type -> Type} : type -> Type :=
-  | TT : expr Unit
+  | TT : expr ()
   | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
   | Var {t} (v : var t) : expr t
   | Op {s d} (opc : op s d) (args : expr s) : expr d
@@ -242,80 +343,21 @@ Module Compilers.
   Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
   Notation "( )" := TT : expr_scope.
   Notation "()" := TT : expr_scope.
-  Notation "'llet' x := A 'in' b" := (Op LetIn (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
-  Notation "f ‘’ x" := (Op App (f, x)%expr) (at level 200) : expr_scope.
+  Notation "'llet' x := A 'in' b" := (Op op.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
+  Notation "f ‘’ x" := (Op op.App (f, x)%expr) (at level 200) : expr_scope.
 
   Definition Expr t := forall var, @expr var t.
 
-  Notation curry2 f
-    := (fun '(a, b) => f a b).
-  Notation curry3 f
-    := (fun '(a, b, c) => f a b c).
-
-  Definition interp_op {s d} (opc : op s d) : interp_type s -> interp_type d
-    := match opc in op s d return interp_type s -> interp_type d with
-       | OpConst t v => fun _ => v
-       | NatS => S
-       | Nil t => fun _ => @nil (interp_type t)
-       | Cons t => curry2 (@cons (interp_type t))
-       | BoolRect T => curry3 (@bool_rect (fun _ => interp_type T))
-       | Seq => curry2 seq
-       | LetIn tx tC => curry2 (@Let_In (interp_type tx) (fun _ => interp_type tC))
-       | Combine A B => curry2 (@combine (interp_type A) (interp_type B))
-       | Map A B => curry2 (@List.map (interp_type A) (interp_type B))
-       | Repeat A => curry2 (@List.repeat (interp_type A))
-       | FlatMap A B => curry2 (@List.flat_map (interp_type A) (interp_type B))
-       | Fst A B => @fst (interp_type A) (interp_type B)
-       | Snd A B => @snd (interp_type A) (interp_type B)
-       | Partition A => curry2 (@List.partition (interp_type A))
-       | ListApp A => curry2 (@List.app (interp_type A))
-       | FoldRight A B => curry3 (@List.fold_right (interp_type A) (interp_type B))
-       | NatRect P => curry3 (@nat_rect (fun _ => interp_type P))
-       | Pred => Nat.pred
-       | UpdateNth T => curry3 (@update_nth (interp_type T))
-       | RuntimeMul => curry2 runtime_mul
-       | RuntimeAdd => curry2 runtime_add
-       | Zadd => curry2 Z.add
-       | Zmul => curry2 Z.mul
-       | Zpow => curry2 Z.pow
-       | Zmodulo => curry2 Z.modulo
-       | Zopp => Z.opp
-       | Zdiv => curry2 Z.div
-       | Zeqb => curry2 Z.eqb
-       | ZofNat => Z.of_nat
-       | App s d => curry2 (fun (f : interp_type s -> interp_type d) (x : interp_type s)
-                            => f x)
-       end.
-
-  Fixpoint interp {t} (e : @expr interp_type t) : interp_type t
+  Fixpoint interp {t} (e : @expr type.interp t) : type.interp t
     := match e with
        | TT => tt
        | Pair A B a b => (interp a, interp b)
        | Var t v => v
-       | Op s d opc args => interp_op opc (interp args)
+       | Op s d opc args => op.interp opc (interp args)
        | Abs s d f => fun v => interp (f v)
        end.
 
   Definition Interp {t} (e : Expr t) := interp (e _).
-
-  Ltac reify_type term :=
-    lazymatch eval cbv beta in term with
-    | unit => Unit
-    | prod ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         constr:(Prod rA rB)
-    | ?A -> ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         constr:(Arrow rA rB)
-    | list ?T
-      => let rT := reify_type T in
-         constr:(List rT)
-    | nat => TNat
-    | bool => TBool
-    | Z => TZ
-    end.
 
   Ltac is_known_const_gen term on_success on_failure :=
     let is_known_const term := is_known_const_gen term on_success on_failure in
@@ -335,7 +377,7 @@ Module Compilers.
   Ltac is_known_const_as_bool term :=
     is_known_const_gen term ltac:(fun _ => true) ltac:(fun _ => false).
 
-  Definition Uncurry0 {A var} (opc : op Unit A) : @expr var A
+  Definition Uncurry0 {A var} (opc : op type.unit A) : @expr var A
     := Op opc TT.
   Definition Uncurry1 {A B var} (opc : op A B) : @expr var (A -> B)
     := λ a, Op opc (Var a).
@@ -351,83 +393,83 @@ Module Compilers.
     let Uncurry2 x := constr:(Uncurry2 (var:=var) x) in
     let Uncurry3 x := constr:(Uncurry3 (var:=var) x) in
     lazymatch term with
-    | S => Uncurry1 NatS
+    | S => Uncurry1 op.S
     | @nil ?T
-      => let rT := reify_type T in
-         Uncurry0 (@Nil rT)
+      => let rT := type.reify T in
+         Uncurry0 (@op.nil rT)
     | @cons ?T
-      => let rT := reify_type T in
-         Uncurry2 (@Cons rT)
-    | seq => Uncurry2 Seq
+      => let rT := type.reify T in
+         Uncurry2 (@op.cons rT)
+    | seq => Uncurry2 op.List.seq
     | @List.repeat ?A
-      => let rA := reify_type A in
-         Uncurry2 (@Repeat rA)
+      => let rA := type.reify A in
+         Uncurry2 (@op.List.repeat rA)
     | @Let_In ?A (fun _ => ?B)
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry2 (@LetIn rA rB)
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry2 (@op.Let_In rA rB)
     | @combine ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry2 (@Combine rA rB)
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry2 (@op.List.combine rA rB)
     | @List.map ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry2 (@Map rA rB)
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry2 (@op.List.map rA rB)
     | @List.flat_map ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry2 (@FlatMap rA rB)
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry2 (@op.List.flat_map rA rB)
     | @fst ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry1 (@Fst rA rB)
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry1 (@op.fst rA rB)
     | @snd ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry1 (@Snd rA rB)
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry1 (@op.snd rA rB)
     | @List.partition ?A
-      => let rA := reify_type A in
-         Uncurry2 (@Partition rA)
+      => let rA := type.reify A in
+         Uncurry2 (@op.List.partition rA)
     | @List.app ?A
-      => let rA := reify_type A in
-         Uncurry2 (@ListApp rA)
+      => let rA := type.reify A in
+         Uncurry2 (@op.List.app rA)
     | @List.fold_right ?A ?B
-      => let rA := reify_type A in
-         let rB := reify_type B in
-         Uncurry3 (@FoldRight rA rB)
-    | pred => Uncurry1 Pred
+      => let rA := type.reify A in
+         let rB := type.reify B in
+         Uncurry3 (@op.List.fold_right rA rB)
+    | pred => Uncurry1 op.pred
     | @update_nth ?T
-      => let rT := reify_type T in
-         Uncurry3 (@UpdateNth rT)
-    | runtime_mul => Uncurry2 RuntimeMul
-    | runtime_add => Uncurry2 RuntimeAdd
-    | Z.add => Uncurry2 Zadd
-    | Z.mul => Uncurry2 Zmul
-    | Z.pow => Uncurry2 Zpow
-    | Z.opp => Uncurry1 Zopp
-    | Z.div => Uncurry2 Zdiv
-    | Z.modulo => Uncurry2 Zmodulo
-    | Z.eqb => Uncurry2 Zeqb
-    | Z.of_nat => Uncurry1 ZofNat
+      => let rT := type.reify T in
+         Uncurry3 (@op.List.update_nth rT)
+    | runtime_mul => Uncurry2 op.Z.runtime_mul
+    | runtime_add => Uncurry2 op.Z.runtime_add
+    | Z.add => Uncurry2 op.Z.add
+    | Z.mul => Uncurry2 op.Z.mul
+    | Z.pow => Uncurry2 op.Z.pow
+    | Z.opp => Uncurry1 op.Z.opp
+    | Z.div => Uncurry2 op.Z.div
+    | Z.modulo => Uncurry2 op.Z.modulo
+    | Z.eqb => Uncurry2 op.Z.eqb
+    | Z.of_nat => Uncurry1 op.Z.of_nat
     | @nat_rect (fun _ => ?T)
-      => let rT := reify_type T in
-         Uncurry3 (@NatRect rT)
+      => let rT := type.reify T in
+         Uncurry3 (@op.nat_rect rT)
     | @bool_rect (fun _ => ?T)
-      => let rT := reify_type T in
-         Uncurry3 (@BoolRect rT)
+      => let rT := type.reify T in
+         Uncurry3 (@op.bool_rect rT)
     | _
       => let assert_const := match goal with
                              | _ => is_known_const term
                              end in
          let T := type of term in
-         let rT := reify_type T in
-         Uncurry0 (@OpConst rT term)
+         let rT := type.reify T in
+         Uncurry0 (@op.Const rT term)
     end.
 
   Inductive context_var_map {var : type -> Type} :=
   | cnil
-  | ccons {t} (gallina_v : interp_type t) (v : var t) (ctx : context_var_map).
+  | ccons {t} (gallina_v : type.interp t) (v : var t) (ctx : context_var_map).
 
   Ltac refresh n :=
     let n' := fresh n in
@@ -530,7 +572,7 @@ Module Compilers.
             let rx := reify_helper var x ctx dummy_args in
             (* in rf's delayed_arguments, tt stands for "dummy" *)
             let rf := reify_helper var f ctx (tt, delayed_arguments) in
-            constr:(Op (var:=var) App (Pair (var:=var) rf rx))
+            constr:(Op (var:=var) op.App (Pair (var:=var) rf rx))
           end
         | (fun x : ?T => ?f)
           =>
@@ -538,7 +580,7 @@ Module Compilers.
           lazymatch delayed_arguments with
           | (tt, ?delayed_arguments)
             => (* dummy, don't plug in *)
-            let rT := reify_type T in
+            let rT := type.reify T in
             let not_x := refresh x in
             let not_x2 := refresh not_x in
             let rf0 :=
@@ -590,7 +632,7 @@ Module Compilers.
     let RHS := lazymatch goal with |- _ = ?RHS => RHS end in
     let R := Reify RHS in
     transitivity (Interp R);
-    [ | cbv beta iota delta [Interp interp interp_op Uncurry0 Uncurry1 Uncurry2 Uncurry3 Let_In interp_type bool_rect];
+    [ | cbv beta iota delta [Interp interp op.interp Uncurry0 Uncurry1 Uncurry2 Uncurry3 Let_In type.interp bool_rect];
         reflexivity ].
 End Compilers.
 Import Associational Positional Compilers.
