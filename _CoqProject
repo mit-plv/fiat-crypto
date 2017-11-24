@@ -3,7 +3,6 @@
 Bedrock/Nomega.v
 Bedrock/Word.v
 src/Demo.v
-src/DemoWithReification.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v
 src/Algebra/Group.v
@@ -230,6 +229,7 @@ src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Projective.v
 src/Curves/Weierstrass/Jacobian/Precomputed.v
 src/Experiments/Loops.v
+src/Experiments/SimplyTypedArithmetic.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
 src/LegacyArithmetic/BarretReduction.v
