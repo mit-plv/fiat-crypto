@@ -467,10 +467,13 @@ Module Compilers.
          Uncurry0 (@op.Const rT term)
     end.
 
-  Inductive context_var_map {var : type -> Type} :=
-  | cnil
-  | ccons {t} (gallina_v : type.interp t) (v : var t) (ctx : context_var_map).
+  Module var_context.
+    Inductive list {var : type -> Type} :=
+    | nil
+    | cons {t} (gallina_v : type.interp t) (v : var t) (ctx : list).
+  End var_context.
 
+  (* cf COQBUG(https://github.com/coq/coq/issues/5448) *)
   Ltac refresh n :=
     let n' := fresh n in
     let n' := fresh n' in
@@ -492,7 +495,7 @@ Module Compilers.
       => let not_x := refresh x in
          let rest := constr:(
                        fun x : T
-                       => match P with
+                       => match P with (* c.f. COQBUG(https://github.com/coq/coq/issues/6243) *)
                           | not_x
                             => ltac:(
                                  let P := (eval cbv delta [not_x] in not_x) in
@@ -536,7 +539,7 @@ Module Compilers.
     (*let dummy := match goal with _ => idtac "reify_helper: attempting to reify:" term end in*)
     match constr:(Set) with _ => let ret :=
                                        lazymatch ctx with
-    | context[@ccons _ ?rT term ?v _]
+    | context[@var_context.cons _ ?rT term ?v _]
       => constr:(@Var var rT v)
     | _
       =>
@@ -591,7 +594,7 @@ Module Compilers.
                        => ltac:(
                             let f := (eval cbv delta [not_x2] in not_x2) in
                             (*idtac "rec call" f "was" term;*)
-                            let rf := reify_helper var f (@ccons var rT x not_x ctx) delayed_arguments in
+                            let rf := reify_helper var f (@var_context.cons var rT x not_x ctx) delayed_arguments in
                             exact rf)
                      end) in
             lazymatch rf0 with
@@ -623,7 +626,7 @@ Module Compilers.
   Ltac reify var term :=
     let ty := type of term in
     let dummy_args := build_dummy_delayed_arguments_for ty in
-    reify_helper var term (@cnil var) dummy_args.
+    reify_helper var term (@var_context.nil var) dummy_args.
   Ltac Reify term :=
     constr:(fun var : type -> Type
             => ltac:(let r := reify var term in
