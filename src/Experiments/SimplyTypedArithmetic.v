@@ -480,12 +480,12 @@ Module Compilers.
     let n' := fresh n' in
     n'.
 
-  Ltac is_type_arg arg_ty :=
-    lazymatch eval cbv beta in arg_ty with
+  Ltac is_template_parameter parameter_type :=
+    lazymatch parameter_type with
     | Prop => true
     | Set => true
     | Type => true
-    | _ -> ?A => is_type_arg A
+    | _ -> ?A => is_template_parameter A
     | _ => false
     end.
 
@@ -564,7 +564,7 @@ Module Compilers.
         | ?f ?x
           =>
           let x_ty := type of x in
-          let x_type_arg := is_type_arg x_ty in
+          let x_type_arg := is_template_parameter x_ty in
           lazymatch x_type_arg with
           | true
             => (* we can't reify things of type [Type], so we save it for later to plug in *)
