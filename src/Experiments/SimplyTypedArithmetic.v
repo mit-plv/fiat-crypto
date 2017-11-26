@@ -487,9 +487,12 @@ Module Compilers.
     | forall x : ?T, _ => T
     end.
 
-  (** Template parameters (things whose type or codomain is [Type],
-      [Set] or [Prop]) get handled specially, because our PHOAS
-      representation does not support dependent types.  During
+  (** Forms of abstraction in Gallina that our reflective language
+      cannot handle get handled by specializing the code "template" to
+      each particular application of that abstraction. In particular,
+      type arguments (nat, Z, (λ _, nat), etc) get substituted into
+      lambdas and treated as a integral part of primitive operations
+      (such as [@List.app T], [@list_rect (λ _, nat)]).  During
       reification, we accumulate them in a right-associated tuple,
       using [tt] as the "nil" base case.  When we hit a λ or an
       identifier, we plug in the template parameters as necessary. *)
