@@ -5908,6 +5908,7 @@ src/Util/Tactics/PoseTermWithName.v
 src/Util/Tactics/PrintContext.v
 src/Util/Tactics/Revert.v
 src/Util/Tactics/RewriteHyp.v
+src/Util/Tactics/RunTacticAsConstr.v
 src/Util/Tactics/SetEvars.v
 src/Util/Tactics/SetoidSubst.v
 src/Util/Tactics/SideConditionsBeforeToAfter.v
