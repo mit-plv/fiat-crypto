@@ -481,6 +481,18 @@ Module Compilers.
     let n' := fresh n' in
     n'.
 
+  Ltac type_of_first_argument_of f :=
+    let f_ty := type of f in
+    lazymatch eval hnf in f_ty with
+    | forall x : ?T, _ => T
+    end.
+
+  (** Template parameters (things whose type or codomain is [Type],
+      [Set] or [Prop]) get handled specially, because our PHOAS
+      representation does not support dependent types.  During
+      reification, we accumulate them in a right-associated tuple,
+      using [tt] as the "nil" base case.  When we hit a λ or an
+      identifier, we plug in the template parameters as necessary. *)
   Ltac require_template_parameter parameter_type :=
     first [ unify parameter_type Prop
           | unify parameter_type Set
@@ -493,34 +505,28 @@ Module Compilers.
                  idtac
             end ].
   Ltac is_template_parameter parameter_type :=
-    run_tactic_as_bool ltac:(fun _ => require_template_parameter parameter_type).
-  Ltac get_first_argument_type f :=
-    let f_ty := type of f in
-    lazymatch eval hnf in f_ty with
-    | forall x : ?T, _ => T
-    end.
-
-  Ltac plug_delayed_arguments f delayed_arguments :=
-    lazymatch delayed_arguments with
+    is_success_run_tactic ltac:(fun _ => require_template_parameter parameter_type).
+  Ltac plug_template_ctx f template_ctx :=
+    lazymatch template_ctx with
     | tt => f
-    | (?arg, ?delayed_arguments')
+    | (?arg, ?template_ctx')
       =>
-      let T := get_first_argument_type f in
+      let T := type_of_first_argument_of f in
       let x_is_template_parameter := is_template_parameter T in
       lazymatch x_is_template_parameter with
       | true
-        => plug_delayed_arguments (f arg) delayed_arguments'
+        => plug_template_ctx (f arg) template_ctx'
       | false
         => constr:(fun x : T
-                   => ltac:(let v := plug_delayed_arguments (f x) delayed_arguments in
+                   => ltac:(let v := plug_template_ctx (f x) template_ctx in
                             exact v))
       end
     end.
 
-  Ltac reify_helper var term ctx delayed_arguments :=
-    let reify_rec term := reify_helper var term ctx delayed_arguments in
+  Ltac reify_helper var term value_ctx template_ctx :=
+    let reify_rec term := reify_helper var term value_ctx template_ctx in
     (*let dummy := match goal with _ => idtac "reify_helper: attempting to reify:" term end in*)
-    lazymatch ctx with
+    lazymatch value_ctx with
     | context[@var_context.cons _ ?rT term ?v _]
       => constr:(@Var var rT v)
     | _
@@ -545,16 +551,16 @@ Module Compilers.
              reify_rec (@Let_In A B a b)
         | ?f ?x
           =>
-          let ty := get_first_argument_type f in
+          let ty := type_of_first_argument_of f in
           let x_is_template_parameter := is_template_parameter ty in
           lazymatch x_is_template_parameter with
           | true
             => (* we can't reify things of type [Type], so we save it for later to plug in *)
-            reify_helper var f ctx (x, delayed_arguments)
+            reify_helper var f value_ctx (x, template_ctx)
           | false
             =>
-            let rx := reify_helper var x ctx tt in
-            let rf := reify_helper var f ctx delayed_arguments in
+            let rx := reify_helper var x value_ctx tt in
+            let rf := reify_helper var f value_ctx template_ctx in
             constr:(Op (var:=var) op.App (Pair (var:=var) rf rx))
           end
         | (fun x : ?T => ?f)
@@ -563,10 +569,10 @@ Module Compilers.
           lazymatch x_is_template_parameter with
           | true
             =>
-            lazymatch delayed_arguments with
-            | (?arg, ?delayed_arguments)
+            lazymatch template_ctx with
+            | (?arg, ?template_ctx)
               => (* we pull a trick with [match] to plug in [arg] without running cbv β *)
-              reify_helper var (match arg with x => f end) ctx delayed_arguments
+              reify_helper var (match arg with x => f end) value_ctx template_ctx
             end
           | false
             =>
@@ -581,20 +587,28 @@ Module Compilers.
                        => ltac:(
                             let f := (eval cbv delta [not_x2] in not_x2) in
                             (*idtac "rec call" f "was" term;*)
-                            let rf := reify_helper var f (@var_context.cons var rT x not_x ctx) delayed_arguments in
+                            let rf := reify_helper var f (@var_context.cons var rT x not_x value_ctx) template_ctx in
                             exact rf)
                      end) in
             lazymatch rf0 with
             | (fun _ => ?rf)
               => constr:(@Abs var rT _ rf)
-            | _ => let dummy := match goal with
-                                | _ => fail 1 "Failure to eliminate functional dependencies of" rf0
-                                end in
-                   constr:(I : I)
+            | _
+              => (* This will happen if the reified term still
+              mentions the non-var variable.  By chance, [cbv delta]
+              strips type casts, which are only places that I can
+              think of where such dependency might remain.  However,
+              if this does come up, having a distinctive error message
+              is much more useful for debugging than the generic "no
+              matching clause" *)
+              let dummy := match goal with
+                           | _ => fail 1 "Failure to eliminate functional dependencies of" rf0
+                           end in
+              constr:(I : I)
             end
           end
         | _
-          => let term := plug_delayed_arguments term delayed_arguments in
+          => let term := plug_template_ctx term template_ctx in
              reify_op var term
         end
       end
