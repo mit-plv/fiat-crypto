@@ -94,6 +94,8 @@ Reserved Notation "'slet' x .. y := A 'in' b"
          (at level 200, x binder, y binder, b at level 200, format "'slet'  x .. y  :=  A  'in' '//' b").
 Reserved Notation "'llet' x := A 'in' b"
          (at level 200, b at level 200, format "'llet'  x  :=  A  'in' '//' b").
+Reserved Notation "'expr_let' x := A 'in' b"
+         (at level 200, b at level 200, format "'expr_let'  x  :=  A  'in' '//' b").
 Reserved Notation "'mlet' x := A 'in' b"
          (at level 200, b at level 200, format "'mlet'  x  :=  A  'in' '//' b").
 (* Note that making [Let] a keyword breaks the vernacular [Let] in Coq 8.4 *)
