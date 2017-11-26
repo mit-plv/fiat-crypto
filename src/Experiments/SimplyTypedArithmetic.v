@@ -520,8 +520,7 @@ Module Compilers.
   Ltac reify_helper var term ctx delayed_arguments :=
     let reify_rec term := reify_helper var term ctx delayed_arguments in
     (*let dummy := match goal with _ => idtac "reify_helper: attempting to reify:" term end in*)
-    match constr:(Set) with _ => let ret :=
-                                       lazymatch ctx with
+    lazymatch ctx with
     | context[@var_context.cons _ ?rT term ?v _]
       => constr:(@Var var rT v)
     | _
@@ -577,7 +576,7 @@ Module Compilers.
             let rf0 :=
                 constr:(
                   fun (x : T) (not_x : var rT)
-                  => match f with
+                  => match f return _ with (* c.f. COQBUG(https://github.com/coq/coq/issues/6252#issuecomment-347041995) for [return _] *)
                      | not_x2
                        => ltac:(
                             let f := (eval cbv delta [not_x2] in not_x2) in
@@ -599,13 +598,7 @@ Module Compilers.
              reify_op var term
         end
       end
-    end
-    in
-                                 (*let dummy := match goal with _ => idtac "success reifying" term "as" ret end in*)
-    ret
-  | _ => let dummy := match goal with _ => fail 1000000 "failure to reify" term end in
-         constr:(I : I)
-  end.
+    end.
   Ltac reify var term :=
     reify_helper var term (@var_context.nil var) tt.
   Ltac Reify term :=
