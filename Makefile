@@ -376,7 +376,7 @@ test: $(RUN_TEST_BINARIES)
 selected-test: $(RUN_SELECTED_TEST_BINARIES)
 
 clean::
-	rm -f Makefile.coq remake_curves.log
+	rm -f Makefile.coq remake_curves.log src/Specific/.autgenerated-deps
 
 cleanall:: clean clean-coqprime
 
