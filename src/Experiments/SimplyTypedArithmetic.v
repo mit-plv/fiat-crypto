@@ -5,6 +5,7 @@ Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
 Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
+Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -344,7 +345,7 @@ Module Compilers.
   Notation "( )" := TT : expr_scope.
   Notation "()" := TT : expr_scope.
   Notation "'expr_let' x := A 'in' b" := (Op op.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
-  Notation "f ‘’ x" := (Op op.App (f, x)%expr) (at level 200) : expr_scope.
+  Notation "f x" := (Op op.App (f, x)%expr) (only printing) : expr_scope.
 
   Definition Expr t := forall var, @expr var t.
 
@@ -480,59 +481,41 @@ Module Compilers.
     let n' := fresh n' in
     n'.
 
+  Ltac require_template_parameter parameter_type :=
+    first [ unify parameter_type Prop
+          | unify parameter_type Set
+          | unify parameter_type Type
+          | lazymatch eval hnf in parameter_type with
+            | forall x : ?T, @?P x
+              => let check := constr:(fun x : T
+                                      => ltac:(require_template_parameter (P x);
+                                               exact I)) in
+                 idtac
+            end ].
   Ltac is_template_parameter parameter_type :=
-    lazymatch parameter_type with
-    | Prop => true
-    | Set => true
-    | Type => true
-    | _ -> ?A => is_template_parameter A
-    | _ => false
+    run_tactic_as_bool ltac:(fun _ => require_template_parameter parameter_type).
+  Ltac get_first_argument_type f :=
+    let f_ty := type of f in
+    lazymatch eval hnf in f_ty with
+    | forall x : ?T, _ => T
     end.
 
-  Ltac build_dummy_delayed_arguments_for ty :=
-    lazymatch ty with
-    | forall x : ?T, ?P
-      => let not_x := refresh x in
-         let rest := constr:(
-                       fun x : T
-                       => match P with (* c.f. COQBUG(https://github.com/coq/coq/issues/6243) *)
-                          | not_x
-                            => ltac:(
-                                 let P := (eval cbv delta [not_x] in not_x) in
-                                 let v := build_dummy_delayed_arguments_for P in
-                                 exact v
-                               )
-                          end) in
-         lazymatch rest with
-         | (fun _ => ?rest)
-           => constr:((tt, rest))
-         end
-    | _ => tt
-    end.
-  Ltac check_delayed_arguments_dummy delayed_arguments if_dummy if_not_dummy :=
-    lazymatch delayed_arguments with
-    | tt => if_dummy ()
-    | (tt, ?delayed_arguments) => check_delayed_arguments_dummy delayed_arguments if_dummy if_not_dummy
-    | (_, _) => if_not_dummy ()
-    end.
   Ltac plug_delayed_arguments f delayed_arguments :=
-    check_delayed_arguments_dummy
-      delayed_arguments
-      ltac:(fun _ => f)
-             ltac:(fun _ =>
-                     lazymatch delayed_arguments with
-                     | (tt, ?delayed_arguments)
-                       =>
-                       lazymatch type of f with
-                       | forall x : ?T, _
-                         => let x := refresh x in
-                            constr:(fun x : T
-                                    => ltac:(let v := plug_delayed_arguments (f x) delayed_arguments in
-                                             exact v))
-                       end
-                     | (?arg, ?delayed_arguments)
-                       => plug_delayed_arguments (f arg) delayed_arguments
-                     end).
+    lazymatch delayed_arguments with
+    | tt => f
+    | (?arg, ?delayed_arguments')
+      =>
+      let T := get_first_argument_type f in
+      let x_is_template_parameter := is_template_parameter T in
+      lazymatch x_is_template_parameter with
+      | true
+        => plug_delayed_arguments (f arg) delayed_arguments'
+      | false
+        => constr:(fun x : T
+                   => ltac:(let v := plug_delayed_arguments (f x) delayed_arguments in
+                            exact v))
+      end
+    end.
 
   Ltac reify_helper var term ctx delayed_arguments :=
     let reify_rec term := reify_helper var term ctx delayed_arguments in
@@ -563,26 +546,31 @@ Module Compilers.
              reify_rec (@Let_In A B a b)
         | ?f ?x
           =>
-          let x_ty := type of x in
-          let x_type_arg := is_template_parameter x_ty in
-          lazymatch x_type_arg with
+          let ty := get_first_argument_type f in
+          let x_is_template_parameter := is_template_parameter ty in
+          lazymatch x_is_template_parameter with
           | true
             => (* we can't reify things of type [Type], so we save it for later to plug in *)
             reify_helper var f ctx (x, delayed_arguments)
           | false
             =>
-            let dummy_args := build_dummy_delayed_arguments_for x_ty in
-            let rx := reify_helper var x ctx dummy_args in
-            (* in rf's delayed_arguments, tt stands for "dummy" *)
-            let rf := reify_helper var f ctx (tt, delayed_arguments) in
+            let rx := reify_helper var x ctx tt in
+            let rf := reify_helper var f ctx delayed_arguments in
             constr:(Op (var:=var) op.App (Pair (var:=var) rf rx))
           end
         | (fun x : ?T => ?f)
           =>
-          (*let dummy := match goal with _ => idtac "funcase delaying" delayed_arguments end in*)
-          lazymatch delayed_arguments with
-          | (tt, ?delayed_arguments)
-            => (* dummy, don't plug in *)
+          let x_is_template_parameter := is_template_parameter T in
+          lazymatch x_is_template_parameter with
+          | true
+            =>
+            lazymatch delayed_arguments with
+            | (?arg, ?delayed_arguments)
+              => (* we pull a trick with [match] to plug in [arg] without running cbv β *)
+              reify_helper var (match arg with x => f end) ctx delayed_arguments
+            end
+          | false
+            =>
             let rT := type.reify T in
             let not_x := refresh x in
             let not_x2 := refresh not_x in
@@ -605,11 +593,6 @@ Module Compilers.
                                 end in
                    constr:(I : I)
             end
-          | (?arg, ?delayed_arguments)
-            => (* we pull a trick with [match] to plug in [arg] without running cbv β *)
-            (*let fx := constr:(match arg with x => f end) in
-            let dummy := match goal with _ => idtac "testing beta1" fx end in*)
-            reify_helper var (match arg with x => f end) ctx delayed_arguments
           end
         | _
           => let term := plug_delayed_arguments term delayed_arguments in
@@ -624,9 +607,7 @@ Module Compilers.
          constr:(I : I)
   end.
   Ltac reify var term :=
-    let ty := type of term in
-    let dummy_args := build_dummy_delayed_arguments_for ty in
-    reify_helper var term (@var_context.nil var) dummy_args.
+    reify_helper var term (@var_context.nil var) tt.
   Ltac Reify term :=
     constr:(fun var : type -> Type
             => ltac:(let r := reify var term in
