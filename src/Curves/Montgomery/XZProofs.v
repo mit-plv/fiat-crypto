@@ -29,16 +29,23 @@ Module M.
 
     Context {a b: F} {b_nonzero:b <> 0}.
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
+    Context {ap2d4:F} {ap2d4_correct:(1+1+1+1)*a24 = a+1+1}.
     Local Notation Madd := (M.add(a:=a)(b_nonzero:=b_nonzero)(char_ge_3:=char_ge_3)).
     Local Notation Mopp := (M.opp(a:=a)(b_nonzero:=b_nonzero)).
     Local Notation Mpoint := (@M.point F Feq Fadd Fmul a b).
     Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
     Local Notation donnaladderstep := (M.donnaladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
+    Local Notation boringladderstep := (M.boringladderstep(ap2d4:=ap2d4)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
 
     Lemma donnaladderstep_ok x1 Q Q' :
       let eq := fieldwise (n:=2) (fieldwise (n:=2) Feq) in
       eq (xzladderstep x1 Q Q') (donnaladderstep x1 Q Q').
+    Proof. cbv; break_match; repeat split; fsatz. Qed.
+
+    Lemma boringladderstep_ok x1 Q Q' :
+      let eq := fieldwise (n:=2) (fieldwise (n:=2) Feq) in
+      eq (xzladderstep x1 Q Q') (boringladderstep x1 Q Q').
     Proof. cbv; break_match; repeat split; fsatz. Qed.
 
     Definition projective (P:F*F) :=
