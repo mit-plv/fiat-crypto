@@ -20,7 +20,8 @@ Module Jacobian.
     Local Notation "x ^ 2" := (x*x). Local Notation "x ^ 3" := (x^2*x).
     Local Notation Wpoint := (@W.point F Feq Fadd Fmul a b).
 
-    (* TODO: move non-precomputation-related defintions to a different file *)
+    (* TODO: import Jacobian.Basic here *)
+    (* TODO: factor out common parts of the tactic *)
     Definition point : Type := { P : F*F*F | let '(X,Y,Z) := P in
                                              if dec (Z=0) then True else Y^2 = X^3 + a*X*(Z^2)^2 + b*(Z^3)^2 }.
 
