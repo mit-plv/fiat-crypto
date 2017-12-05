@@ -46,6 +46,8 @@ before_install:
 
 before_script:
   - uname -a
+  - coqc --version
+  - echo | coqtop
   - source ./etc/ci/travis_keep_alive.sh
   - sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
 
