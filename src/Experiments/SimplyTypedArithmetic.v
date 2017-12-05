@@ -594,77 +594,6 @@ Module Compilers.
          | _, Some ls => Some ls
          | None, None => None
          end.
-
-
-    (*Section with_map.
-      (* oh, the horrors of not being able to use non-linear deep
-         pattern matches.  Luckily Coq's guard checker unfolds things,
-         so as long as the thing we need to evaluate at the bottom is
-         generic in what type it's looking at, we're good.  We can
-         even give it data of the right type, which we need, but it
-         costs us a lot *)
-      Context (extra_dataT : type -> Type) {U} (f : forall t (d : extra_dataT t), @expr var t -> U t d).
-      Local Notation list_to_extra_dataT t
-        := (match t%ctype return Type with
-            | type.list t' => extra_dataT t'
-            | _ => True
-            end).
-      Local Notation list_to_forall_data_option_list t
-        := (forall (d : list_to_extra_dataT t),
-               option (match t%ctype as t'
-                             return list_to_extra_dataT t' -> Type
-                       with
-                       | type.list t' => fun d => list (U t' d)
-                       | _ => fun _ => True
-                       end d)).
-      Local Notation prod_list_to_extra_dataT t
-        := (match t%ctype return Type with
-            | type.prod _ (type.list t') => extra_dataT t'
-            | _ => True
-            end).
-      Local Notation prod_list_to_forall_data_option_list t
-        := (forall (d : prod_list_to_extra_dataT t),
-               option (match t%ctype as t'
-                             return prod_list_to_extra_dataT t' -> Type
-                       with
-                       | type.prod A (type.list t') => fun d => (expr A * list (U t' d))%type
-                       | _ => fun _ => True
-                       end d)).
-
-
-
-      Fixpoint invert_map_list_full {t} (e : @expr var (type.list t))
-        : forall d : extra_dataT t, option (list (U t d))
-      := match e in expr t return list_to_forall_data_option_list t
-           with
-           | Op s d idc args
-             => match idc in op s d
-                      return (prod_list_to_forall_data_option_list s
-                              -> list_to_forall_data_option_list d)
-                with
-                | ident.Const (type.list _) v
-                  => fun _ data => Some (List.map (f _ data) (List.map const v))
-                | ident.cons _
-                  => fun xs data
-                     => option_map (fun '(x, xs) => cons (f _ data x) xs) (xs data)
-                | ident.nil _
-                  => fun _ _ => Some nil
-                | _ => fun _ _ => None
-                end
-                  (match args in expr t
-                         return prod_list_to_forall_data_option_list t
-                   with
-                   | Pair _ (type.list _) x xs
-                     => fun data
-                        => match @invert_map_list_full _ xs data with
-                           | Some xs => Some (x, xs)
-                           | None => None
-                           end
-                   | _ => fun _ => None
-                   end)
-           | _ => fun _ => None
-           end.
-    End with_map.*)
   End invert.
 
   Section gallina_reify.
@@ -686,7 +615,6 @@ Module Compilers.
 
   (** TODO: should this even be named [arguments]? *)
   Module arguments.
-    (*Module rec.*)
     (** TODO: pick a better name for this (partial_expr?) *)
     Section interp.
       Context (var : type -> Type).
@@ -758,445 +686,116 @@ Module Compilers.
     Arguments unprestep {var t} _.
     Arguments unprestep2 {var t} _.
 
+    Notation expr_const := const.
 
-      (*Definition invert1 {var} {t : type}
-        : interp var t -> (var t + interp_step (interp var) t)
-        := match t with
-           | type.unit
-           | _
-             => id
-           end.
-
-      Definition generic {var : type -> Type} {t : type} : var t -> interp var t
-        := match t with
-           | type.unit
-           | _
-             => @inl _ _
-           end.*)
-
-      Notation expr_const := const.
-
-      Module expr.
-        Section reify.
-          Context {var : type -> Type}.
-          (** TODO: figure out if these names are good; [eta_expand] is maybe better called [reflect]?  or [expand]? *)
-          Fixpoint reify {t : type} {struct t}
-            : interp var t -> @expr var t
-            := match t return interp var t -> expr t with
-               | type.unit as t => expr_const (t:=t)
-               | type.prod A B as t
-                 => fun x : expr t + interp var A * interp var B
-                    => match x with
-                       | inl v => v
-                       | inr (a, b) => (@reify A a, @reify B b)%expr
-                       end
-               | type.arrow s d
-                 => fun (f : interp var s -> interp var d)
-                    => Abs (fun x
-                            => @reify d (f (@eta_expand s (Var x))))
-               | type.list A as t
-                 => fun x : expr t + list (interp var A)
-                    => match x with
-                       | inl v => v
-                       | inr v => reify_list (List.map (@reify A) v)
-                       end
-               | type.nat as t
-               | type.Z as t
-               | type.bool as t
-                 => fun x : expr t + type.interp t
-                    => match x with
-                       | inl v => v
-                       | inr v => expr_const (t:=t) v
-                       end
-               end
-          with eta_expand {t : type}
-               : @expr var t -> interp var t
-               := match t return expr t -> interp var t with
-                  | type.arrow s d
-                    => fun (f : expr (s -> d)) (x : interp var s)
-                       => @eta_expand d (App f (@reify s x))
-                  | type.unit => fun _ => tt
-                  | type.prod A B as t
-                    => fun v : expr t
-                       => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                          let inl := @inl (expr t) (interp_prestep (interp var) t) in
-                          match Smart_invert_Pair v with
-                          | Some (a, b)
-                            => inr (@eta_expand A a, @eta_expand B b)
-                          | None
-                            => inl v
-                          end
-                  | type.list A as t
-                    => fun v : expr t
-                       => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                          let inl := @inl (expr t) (interp_prestep (interp var) t) in
-                          match Smart_invert_list_full v with
-                          | Some ls
-                            => inr (List.map (@eta_expand A) ls)
-                          | None
-                            => inl v
-                          end
-                  | type.nat as t
-                    => fun v : expr t
-                       => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                          let inl := @inl (expr t) (interp_prestep (interp var) t) in
-                          match invert_nat_full v with
-                          | Some v => inr v
-                          | None => inl v
-                          end
-                  | type.Z as t
-                  | type.bool as t
-                    => fun v : expr t
-                       => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                          let inl := @inl (expr t) (interp_prestep (interp var) t) in
-                          match invert_Const v with
-                          | Some v => inr v
-                          | None => inl v
-                          end
-                  end.
-        End reify.
-
-        Section SmartLetIn.
-          Context {var : type -> Type} {tC : type}.
-          (** TODO: Find a better name for this *)
-          (** N.B. This always inlines functions; not sure if this is the right thing to do *)
-          (** TODO: should we handle let-bound pairs, let-bound lists?  What should we do with them?  Here, I make the decision to always inline them; not sure if this is right *)
-          Fixpoint SmartLetIn {tx : type} : interp var tx -> (interp var tx -> interp var tC) -> interp var tC
-            := match tx return interp var tx -> (interp var tx -> interp var tC) -> interp var tC with
-               | type.unit => fun _ f => f tt
-               | type.arrow _ _
-               | type.prod _ _
-               | type.list _
-                 => fun x f => f x
-               | type.nat as t
-               | type.Z as t
-               | type.bool as t
-                 => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> interp var tC)
-                    => match x with
-                       | inl e
-                         => match invert_Var e, invert_Const e with
-                            | Some v, _ => f (inl (Var v))
-                            | _, Some v => f (inr v)
-                            | None, None => eta_expand (expr_let y := e in reify (f (inl (Var y))))%expr
-                            end
-                       | inr v => f (inr v)
-                       end
-               end.
-        End SmartLetIn.
-      End expr.
-      (*
-      Section const.
-        Context {var : type -> Type} (const_var_arrow : forall s d,
-                                         type.interp (s -> d) -> var (s -> d)%ctype).
-        Fixpoint const {t : type} : type.interp t -> interp var t.
-          refine match t return type.interp t -> interp var t with
+    Module expr.
+      Section reify.
+        Context {var : type -> Type}.
+        (** TODO: figure out if these names are good; [eta_expand] is maybe better called [reflect]?  or [expand]? *)
+        Fixpoint reify {t : type} {struct t}
+          : interp var t -> @expr var t
+          := match t return interp var t -> expr t with
+             | type.unit as t => expr_const (t:=t)
              | type.prod A B as t
-               => fun '((a, b) : type.interp A * type.interp B)
-                  => @inr
-                       (expr t) (interp var A * interp var B)
-                       (@const A a, @const B b)
+               => fun x : expr t + interp var A * interp var B
+                  => match x with
+                     | inl v => v
+                     | inr (a, b) => (@reify A a, @reify B b)%expr
+                     end
              | type.arrow s d
-               => fun (f : type.interp s -> type.interp d) (x : interp var s)
-                  => _ : interp var d
+               => fun (f : interp var s -> interp var d)
+                  => Abs (fun x
+                          => @reify d (f (@eta_expand s (Var x))))
              | type.list A as t
-               => fun ls : list (type.interp A)
-                  => @inr (expr t) (list (interp var A))
-                          (List.map (@const A) ls)
-             | type.unit as t
-               => id
+               => fun x : expr t + list (interp var A)
+                  => match x with
+                     | inl v => v
+                     | inr v => reify_list (List.map (@reify A) v)
+                     end
              | type.nat as t
              | type.Z as t
              | type.bool as t
-               => @inr (expr t) (type.interp t)
-                 end.
-          cbn.
-      End const.
-*)
-  (*End rec.*)
-
-      (*Module ind.
-      Module arguments.
-        Inductive arguments : type -> Set :=
-        | generic {T} : arguments T
-        (*| cps {T} (aT : arguments T) : arguments T*)
-        | arrow {A B} (aB : arguments B) : arguments (A -> B)
-        | unit : arguments type.unit
-        | prod {A B} (aA : arguments A) (aB : arguments B) : arguments (A * B)
-        | list {T} (aT : arguments T) : arguments (type.list T)
-        | nat : arguments type.nat
-        | Z : arguments type.Z
-        | bool : arguments type.bool.
-
-    Definition preinvertT (t : type) :=
-      match t with
-      | type.unit => Datatypes.unit
-      | type.prod A B => arguments A * arguments B
-      | type.arrow s d => arguments d
-      | type.list A => arguments A
-      | type.nat => Datatypes.unit
-      | type.Z => Datatypes.unit
-      | type.bool => Datatypes.unit
-      end%type.
-    Definition invertT (t : type) :=
-      option (* [None] means "generic" *) (preinvertT t).
-
-    Definition invert {t : type} (P : arguments t -> Type)
-               (generic_case : P generic)
-               (non_generic_cases
-                : forall v : preinvertT t,
-                   match t return forall v : preinvertT t, (arguments t -> Type) -> Type with
-                   | type.unit
-                     => fun v P => P unit
-                   | type.prod A B
-                     => fun '((a, b) : arguments A * arguments B) P
-                        => P (prod a b)
-                   | type.arrow s d => fun v P => P (arrow v)
-                   | type.list A => fun v P => P (list v)
-                   | type.nat => fun v P => P nat
-                   | type.Z => fun v P => P Z
-                   | type.bool => fun v P => P bool
-                   end v P)
-               (a : arguments t)
-      : P a.
-    Proof.
-      destruct a;
-        try specialize (fun a b => non_generic_cases (a, b));
-        cbn in *;
-        [ exact generic_case | apply non_generic_cases; apply tt .. ].
-    Defined.
-
-    Definition invert_arrow {s d} (a : arguments (type.arrow s d)) : arguments d
-      := @invert (type.arrow s d) (fun _ => arguments d) generic (fun ad => ad) a.
-
-    Definition invert_prod {A B} (a : arguments (type.prod A B)) : arguments A * arguments B
-      := @invert (type.prod A B) (fun _ => arguments A * arguments B)%type (generic, generic) (fun '(a, b) => (a, b)) a.
-
-
-    Fixpoint ground {t : type} : arguments t
-      := match t with
-         | type.unit => unit
-         | type.prod A B => prod (@ground A) (@ground B)
-         | type.arrow s d => arrow (@ground d)
-         | type.list A => list (@ground A)
-         | type.nat => nat
-         | type.Z => Z
-         | type.bool => bool
-         end.
-
-    Module type.
-      Local Notation interp_type := type.interp.
-      Section interp.
-        Context (var_dom var_cod : type -> Type).
-        Fixpoint interp {t} (a : arguments t) : Type
-          := match a with
-             | generic T => var_cod T
-             (*| cps T aT => forall U, (@interp T aT -> var U) -> var U*)
-             | arrow A B aB => var_dom A -> @interp B aB
-             | unit => Datatypes.unit
-             | prod A B aA aB => @interp A aA * @interp B aB
-             | list T aT => Datatypes.list (@interp T aT)
-             | nat => Datatypes.nat
-             | Z => BinInt.Z
-             | bool => Datatypes.bool
-             end%type.
-      End interp.
-
-      Section ground.
-        Context {var_dom var_cod : type -> Type}.
-        Fixpoint const_of_ground {t}
-          : interp_type t -> option (interp var_dom (@expr var_cod) (@ground t))
-          := match t return interp_type t -> option (interp var_dom expr (@ground t)) with
-             | type.prod A B
-               => fun '((a, b) : interp_type A * interp_type B)
-                  => match @const_of_ground A a, @const_of_ground B b with
-                     | Some a', Some b' => Some (a', b')
-                     | _, _ => None
+               => fun x : expr t + type.interp t
+                  => match x with
+                     | inl v => v
+                     | inr v => expr_const (t:=t) v
                      end
-             | type.arrow s d => fun _ => None
-             | type.list A
-               => fun ls : Datatypes.list (interp_type A)
-                  => lift_option_list
-                       (List.map (@const_of_ground A) ls)
-             | type.unit
-             | type.nat
-             | type.Z
-             | type.bool
-               => fun v => Some v
+             end
+        with eta_expand {t : type}
+             : @expr var t -> interp var t
+             := match t return expr t -> interp var t with
+                | type.arrow s d
+                  => fun (f : expr (s -> d)) (x : interp var s)
+                     => @eta_expand d (App f (@reify s x))
+                | type.unit => fun _ => tt
+                | type.prod A B as t
+                  => fun v : expr t
+                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
+                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                        match Smart_invert_Pair v with
+                        | Some (a, b)
+                          => inr (@eta_expand A a, @eta_expand B b)
+                        | None
+                          => inl v
+                        end
+                | type.list A as t
+                  => fun v : expr t
+                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
+                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                        match Smart_invert_list_full v with
+                        | Some ls
+                          => inr (List.map (@eta_expand A) ls)
+                        | None
+                          => inl v
+                        end
+                | type.nat as t
+                  => fun v : expr t
+                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
+                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                        match invert_nat_full v with
+                        | Some v => inr v
+                        | None => inl v
+                        end
+                | type.Z as t
+                | type.bool as t
+                  => fun v : expr t
+                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
+                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                        match invert_Const v with
+                        | Some v => inr v
+                        | None => inl v
+                        end
+                end.
+      End reify.
+
+      Section SmartLetIn.
+        Context {var : type -> Type} {tC : type}.
+        (** TODO: Find a better name for this *)
+        (** N.B. This always inlines functions; not sure if this is the right thing to do *)
+        (** TODO: should we handle let-bound pairs, let-bound lists?  What should we do with them?  Here, I make the decision to always inline them; not sure if this is right *)
+        Fixpoint SmartLetIn {tx : type} : interp var tx -> (interp var tx -> interp var tC) -> interp var tC
+          := match tx return interp var tx -> (interp var tx -> interp var tC) -> interp var tC with
+             | type.unit => fun _ f => f tt
+             | type.arrow _ _
+             | type.prod _ _
+             | type.list _
+               => fun x f => f x
+             | type.nat as t
+             | type.Z as t
+             | type.bool as t
+               => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> interp var tC)
+                  => match x with
+                     | inl e
+                       => match invert_Var e, invert_Const e with
+                          | Some v, _ => f (inl (Var v))
+                          | _, Some v => f (inr v)
+                          | None, None => eta_expand (expr_let y := e in reify (f (inl (Var y))))%expr
+                          end
+                     | inr v => f (inr v)
+                     end
              end.
-      End ground.
-
-      Module option.
-        Section interp.
-          Context (var_dom var_cod : type -> Type).
-          Fixpoint interp {t} (a : arguments t) : Type
-            := match a with
-               | generic T => var_cod T
-               (*| cps T aT => forall U, (@interp T aT -> var U) -> var U*)
-               | arrow A B aB => var_dom A -> @interp B aB
-               | unit => Datatypes.unit
-               | prod A B aA aB => option (@interp A aA * @interp B aB)
-               | list T aT => option (Datatypes.list (@interp T aT))
-               | nat => option Datatypes.nat
-               | Z => option BinInt.Z
-               | bool => option Datatypes.bool
-               end%type.
-        End interp.
-
-        Section flat_interp.
-          Context (var_generic var_dom : type -> Type) (var_cod : forall t, arguments t -> Type).
-          Fixpoint flat_interp {t} (a : arguments t) : Type
-            := match a with
-               | generic T => var_generic T
-               (*| cps T aT => forall U, (@interp T aT -> var U) -> var U*)
-               | arrow A B aB => var_dom A -> var_cod B aB
-               | unit => Datatypes.unit
-               | prod A B aA aB => @flat_interp A aA * @flat_interp B aB
-               | list T aT => Datatypes.list (@flat_interp T aT)
-               | nat => Datatypes.nat
-               | Z => BinInt.Z
-               | bool => Datatypes.bool
-               end%type.
-        End flat_interp.
-
-        Definition interp_to_arrow_or_generic var_dom var_cod {t} a
-          := @flat_interp var_cod var_dom (@interp var_dom var_cod) t a.
-
-        Section lift_option.
-          Context {var_dom var_cod : type -> Type}.
-          Fixpoint lift_interp {t} {a : arguments t}
-            : interp var_dom var_cod a -> option (interp_to_arrow_or_generic var_dom var_cod a)
-            := match a in arguments t
-                     return interp var_dom var_cod a -> option (interp_to_arrow_or_generic var_dom var_cod a)
-               with
-               | prod A B aA aB
-                 => fun ab : option (interp _ _ aA * interp _ _ aB)
-                    => match ab with
-                       | Some (a, b)
-                         => match @lift_interp A aA a, @lift_interp B aB b with
-                            | Some a, Some b => Some (a, b)
-                            | _, _ => None
-                            end
-                       | None => None
-                       end
-               | list T aT
-                 => fun ls : option (Datatypes.list (interp _ _ aT))
-                    => match ls with
-                       | Some ls
-                         => lift_option_list
-                              (List.map (@lift_interp T aT) ls)
-                       | None => None
-                       end
-               | arrow _ _ _
-               | generic _
-               | unit
-                 => fun v => Some v
-               | nat
-               | Z
-               | bool
-                 => fun x => x
-               end.
-        End lift_option.
-      End option.
-    End type.
-
-     Module expr.
-+      Section reify.
-+        Context {var : type -> Type}.
-+        Fixpoint reify {t : type} (v : interp (@expr var) t) {struct t}
-+          : @expr var t
-+          := match invert1 v with
-+             | inl e => e
-+             | inr e
-+               => match t return interp_step (interp expr) t -> expr t with
-+                  | type.prod A B
-+                    => fun '((a, b) : interp expr A * interp expr B)
-+                       => Pair (@reify A a) (@reify B b)
-+                  | type.arrow s d
-+                    => fun f
-+                       => Abs (fun x => @reify d (f (generic (Var x))))
-+                  | type.list A
-+                    => fun e
-+                       => list_rect
-+                            (fun _ => expr (type.list A))
-+                            (Ident ident.nil)
-+                            (fun x _ xs
-+                             => App (App (Ident ident.cons) x) xs)
-+                            (List.map (@reify A) e)
-+                  | type.unit as t
-+                  | type.nat as t
-+                  | type.Z as t
-+                  | type.bool as t
-+                    => expr_const (t:=t)
-+                  end e
-+             end.
-+      End reify.
-+
-    End ind.*)
-      (*
-      Section interp.
-        Context (var : type -> Type).
-        Fixpoint interp {t} (a : arguments t)
-          : @expr var t -> type.option.interp (@expr var) (@expr var) a
-          := match a in arguments t return expr t -> type.option.interp expr expr a with
-             | generic T => fun e => e
-             (*| cps T aT => fun e*)
-             | arrow A B aB
-               => fun e arg
-                  => @interp
-                       B aB
-                       match invert_Abs e, invert_Var arg with
-                       | Some f, Some arg => f arg
-                       | _, _ => Op ident.App (e, arg)
-                       end
-             | unit => fun _ => tt
-             | prod A B aA aB
-               => fun e
-                  => option_map (fun '(a, b)
-                                 => (@interp A aA a, @interp B aB b))
-                                (invert_Pair e)
-             | list T aT
-               => fun e
-                  => option_map
-                       (List.map (@interp T aT))
-                       (invert_list_full e)
-             | nat => invert_nat_full
-             | Z => invert_Z
-             | bool => invert_bool
-             end.
-      End interp.
-
-      Section reify.
-        Context (var : type -> Type).
-        Fixpoint reify {t} (a : arguments t)
-          : type.interp var (@expr var) a -> @expr var t
-          := match a in arguments t return type.interp var expr a -> expr t with
-             | generic T => fun e => e
-             | arrow A B aB => fun f => Abs (fun x => @reify B aB (f x))
-             | unit => fun _ => TT
-             | prod A B aA aB
-               => fun '((a, b) : type.interp _ _ aA * type.interp _ _ aB)
-                  => (@reify A aA a, @reify B aB b)%expr
-             | list T aT
-               => fun ls
-                  => reify_list (List.map (@reify T aT) ls)
-             | nat => @const var type.nat
-             | Z => @const var type.Z
-             | bool => @const var type.bool
-             end.
-      End reify.*)
-    (*End expr.*)
-    (*
-    Module Export Notations.
-      Delimit Scope arguments_scope with arguments.
-      Bind Scope arguments_scope with interp.
-      Notation "()" := (inr tt) : arguments_scope.
-      Notation "A * B" := (prod A B) : arguments_scope.
-      Notation "A -> B" := (@arrow A _ B) (only printing) : arguments_scope.
-      Notation "A -> B" := (arrow B) (only parsing) : arguments_scope.
-      Global Coercion generic : type.type >-> arguments.
-      Notation arguments := arguments.
-    End Notations.
-     *)
+      End SmartLetIn.
+    End expr.
 
     Definition sum_arrow {A A' B B'} (f : A -> A') (g : B -> B')
                (v : A + B)
@@ -1208,31 +807,8 @@ Module Compilers.
     Infix "+" := sum_arrow : function_scope.
 
     Module ident.
-      (*Local Open Scope arguments_scope.*)
       Section interp.
         Context {var : type -> Type}.
-        (*Notation default_App0 idc
-          := (inr (ident.interp idc))
-               (only parsing).
-        Notation default_App1 idc
-          := (inr (App (Ident idc) + ident.interp idc)%function)
-               (only parsing).
-        Notation default_App2 idc
-          := (inr (App (Ident idc)
-                   + (fun x
-                      => App (App (Ident idc) (expr_const x))
-                         + ident.interp idc x))%function)
-               (only parsing).
-
-        Let default_App1e {A B}
-            (f : interp (@expr var) A -> interp (@expr var) B)
-          : interp (@expr var) (A -> B)
-          := inr f.
-        Let default_App2e {A B C}
-            (f : interp (@expr var) A -> interp (@expr var) B -> interp (@expr var) C)
-          : interp (@expr var) (A -> B -> C)
-          := inr (fun x => inr (f x)).
-         *)
         Let defaulted_App_p_e {A B} (idc : ident (A -> B))
             (F : interp_prestep (interp var) A
                  -> interp var B)
@@ -1550,120 +1126,9 @@ Module Compilers.
              | ident.Nat_sub as idc
                => defaulted_App_pp_p idc (ident.interp idc)
              end.
-      End interp. (*
-
-      Definition lookup {s d} (idc : op s d) : arguments s * arguments d
-        := match idc in op s d return arguments s * arguments d with
-           | ident.Const t v => (generic, ground)
-           | ident.Let_In tx tC => (tx * (tx -> tC), generic)
-           | ident.App s d => ((s -> d) * s, generic)
-           | ident.S => (ground, ground)
-           | ident.nil t => (generic, ground)
-           | ident.cons t => (t * list t, list t)
-           | ident.fst A B => (A * B, generic)
-           | ident.snd A B => (A * B, generic)
-           | ident.bool_rect T => (T * T * bool, generic)
-           | ident.nat_rect P => (P * (nat -> P -> P) * nat, generic)
-           | ident.pred => (nat, ground)
-           | ident.List_seq => (nat * nat, ground)
-           | ident.List_repeat A => (A * nat, list A)
-           | ident.List_combine A B => (list A * list B, list (A * B))
-           | ident.List_map A B => ((A -> B) * list A, list B)
-           | ident.List_flat_map A B => ((A -> list B) * list A, list B)
-           | ident.List_partition A => ((A -> bool) * list A, list A * list A)
-           | ident.List_app A => (list A * list A, list A)
-           | ident.List_fold_right A B => ((B -> A -> A) * A * list B, generic)
-           | ident.List_update_nth T => (nat * (T -> T) * list T, list T)
-           | ident.Z_runtime_mul => (Z * Z, Z)
-           | ident.Z_runtime_add => (Z * Z, Z)
-           | ident.Z_add => (Z * Z, Z)
-           | ident.Z_mul => (Z * Z, Z)
-           | ident.Z_pow => (Z * Z, Z)
-           | ident.Z_opp => (Z, Z)
-           | ident.Z_div => (Z * Z, Z)
-           | ident.Z_modulo => (Z * Z, Z)
-           | ident.Z_eqb => (Z * Z, bool)
-           | ident.Z_of_nat => (nat, Z)
-           end.
-
-      Definition lookup_src {s d} idc := fst (@lookup s d idc).
-      Definition lookup_dst {s d} idc := snd (@lookup s d idc).
-
-      Definition option_map_prod {A B C} (f : A -> B -> C) (v : option (option A * option B))
-        : option C
-        := match v with
-           | Some (Some a, Some b) => Some (f a b)
-           | _ => None
-           end.
-
-
-
-      Definition rewrite
-                 {var : type -> Type}
-                 {s d} (idc : op s d)
-                 (exploded_arguments : type.option.interp (@expr var) (@expr var) (lookup_src idc))
-        : option (type.interp var (@expr var) (lookup_dst idc))
-        := match idc in op s d
-                 return
-                 (forall (exploded_arguments' : option (type.option.interp_to_arrow_or_generic expr expr (lookup_src idc))),
-                     option (type.interp var expr (lookup_dst idc)))
-           with
-           | ident.Const t v => fun _ => arguments.type.const_of_ground v
-           | ident.Let_In tx tC
-             => option_map
-                  (fun '(ex, eC)
-                   => match invert_Var ex, invert_Idconst ex with
-                      | Some v, _ => eC ex
-                      | None, Some v => eC ex
-                      | None, None => Op ident.Let_In (ex, Abs (fun v => eC (Var v)))
-                      end)
-           | ident.App s d => option_map (fun '(f, x) => f x)
-           | ident.S as idc
-           | ident.pred as idc
-           | ident.Z_runtime_mul as idc
-           | ident.Z_runtime_add as idc
-           | ident.Z_add as idc
-           | ident.Z_mul as idc
-           | ident.Z_pow as idc
-           | ident.Z_opp as idc
-           | ident.Z_div as idc
-           | ident.Z_modulo as idc
-           | ident.Z_eqb as idc
-           | ident.Z_of_nat as idc
-             => option_map (ident.interp idc)
-           | ident.nil t => fun _ => Some (@nil (type.interp _ _ ground))
-           | ident.cons t => option_map (ident.curry2 cons)
-           | ident.fst A B => option_map (@fst (expr A) (expr B))
-           | ident.snd A B => option_map (@snd (expr A) (expr B))
-           | ident.bool_rect T => option_map (ident.curry3 (bool_rect (fun _ => _)))
-           | ident.nat_rect P
-             => option_map
-                  (fun '(O_case, S_case, v)
-                   => nat_rect (fun _ => expr P) O_case (fun n (v : expr P) => S_case (@const _ type.nat n) v) v)
-           | ident.List_seq => option_map (ident.curry2 List.seq)
-           | ident.List_repeat A => option_map (ident.curry2 (@List.repeat (expr A)))
-           | ident.List_combine A B => option_map (ident.curry2 (@List.combine (expr A) (expr B)))
-           | ident.List_map A B => option_map (ident.curry2 (@List.map (expr A) (expr B)))
-           | ident.List_flat_map A B
-             => fun args : option ((expr A -> option (Datatypes.list (expr B))) * Datatypes.list (expr A))
-                => match args with
-                   | Some (f, ls) => option_flat_map f ls
-                   | None => None
-                   end
-           | ident.List_partition A
-             => fun args : option ((expr A -> option Datatypes.bool) * Datatypes.list (expr A))
-                => match args with
-                   | Some (f, ls) => option_partition f ls
-                   | None => None
-                   end
-           | ident.List_app A => option_map (ident.curry2 (@List.app (expr A)))
-           | ident.List_fold_right A B => option_map (ident.curry3 (@List.fold_right (expr A) (expr B)))
-           | ident.List_update_nth T => option_map (ident.curry3 (@update_nth (expr T)))
-           end
-             (type.option.lift_interp exploded_arguments).*)
+      End interp.
     End ident.
   End arguments.
-  (*Export arguments.Notations.*)
 
   Section partial_reduce.
     Context {var : type -> Type}.
@@ -1673,11 +1138,8 @@ Module Compilers.
       := match e in expr t return arguments.interp var t with
          | Var t v => v
          | Ident t idc => arguments.ident.interp idc
-         | App s d f x
-           => @partial_reduce' _ f (@partial_reduce' _ x)
-         | Abs s d f
-           => fun x
-              => @partial_reduce' d (f x)
+         | App s d f x => @partial_reduce' _ f (@partial_reduce' _ x)
+         | Abs s d f => fun x => @partial_reduce' d (f x)
          end.
 
     Definition partial_reduce {t} (e : @expr (arguments.interp var) t) : @expr var t
