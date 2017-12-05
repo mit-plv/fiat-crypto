@@ -85,6 +85,31 @@ Module M.
         ((x2, z2), (x3, z3))%core
       end.
 
+    Context {ap2d4:F} {ap2d4_correct:(1+1+1+1)*a24 = a+1+1}.
+    Definition boringladderstep (x1:F) (Q Q':F*F) : (F*F)*(F*F) :=
+      match Q, Q' with
+        pair x2 z2, pair x3 z3 =>
+        dlet tmp0l := x3 - z3 in
+        dlet tmp1l := x2 - z2 in
+        dlet x2l := x2 + z2 in
+        dlet z2l := x3 + z3 in
+        dlet z3 := tmp0l * x2l in
+        dlet z2 := z2l * tmp1l in
+        dlet tmp0 := tmp1l^2 in
+        dlet tmp1 := x2l^2 in
+        dlet x3l := z3 + z2 in
+        dlet z2l := z3 - z2 in
+        dlet x2 := tmp1 * tmp0 in
+        dlet tmp1l := tmp1 - tmp0 in
+        dlet z2 := z2l^2 in
+        dlet z3 := ap2d4 * tmp1l in
+        dlet x3 := x3l^2 in
+        dlet tmp0l := tmp0 + z3 in
+        dlet z3 := x1 * z2 in
+        dlet z2 := tmp1l * tmp0l in
+        ((x2, z2), (x3, z3))%core
+      end.
+ 
     Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
 
     Local Notation xor := Coq.Init.Datatypes.xorb.
