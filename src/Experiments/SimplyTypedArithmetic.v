@@ -704,8 +704,7 @@ Module Compilers.
            ls.
   End gallina_reify.
 
-  (** TODO: should this even be named [arguments]? *)
-  Module arguments.
+  Module partial.
     (** TODO: pick a better name for this (partial_expr?) *)
     Section interp.
       Context (var : type -> Type).
@@ -782,7 +781,6 @@ Module Compilers.
     Module expr.
       Section reify.
         Context {var : type -> Type}.
-        (** TODO: figure out if these names are good; [eta_expand] is maybe better called [reflect]?  or [expand]? *)
         Fixpoint reify {t : type} {struct t}
           : interp var t -> @expr var t
           := match t return interp var t -> expr t with
@@ -796,7 +794,7 @@ Module Compilers.
              | type.arrow s d
                => fun (f : interp var s -> interp var d)
                   => Abs (fun x
-                          => @reify d (f (@eta_expand s (Var x))))
+                          => @reify d (f (@reflect s (Var x))))
              | type.list A as t
                => fun x : expr t + list (interp var A)
                   => match x with
@@ -812,12 +810,12 @@ Module Compilers.
                      | inr v => expr_const (t:=t) v
                      end
              end
-        with eta_expand {t : type}
+        with reflect {t : type}
              : @expr var t -> interp var t
              := match t return expr t -> interp var t with
                 | type.arrow s d
                   => fun (f : expr (s -> d)) (x : interp var s)
-                     => @eta_expand d (App f (@reify s x))
+                     => @reflect d (App f (@reify s x))
                 | type.unit => fun _ => tt
                 | type.prod A B as t
                   => fun v : expr t
@@ -825,7 +823,7 @@ Module Compilers.
                         let inl := @inl (expr t) (interp_prestep (interp var) t) in
                         match Smart_invert_Pair v with
                         | Some (a, b)
-                          => inr (@eta_expand A a, @eta_expand B b)
+                          => inr (@reflect A a, @reflect B b)
                         | None
                           => inl v
                         end
@@ -835,7 +833,7 @@ Module Compilers.
                         let inl := @inl (expr t) (interp_prestep (interp var) t) in
                         match Smart_invert_list_full v with
                         | Some ls
-                          => inr (List.map (@eta_expand A) ls)
+                          => inr (List.map (@reflect A) ls)
                         | None
                           => inl v
                         end
@@ -880,7 +878,7 @@ Module Compilers.
                        => match invert_Var e, invert_Const e with
                           | Some v, _ => f (inl (Var v))
                           | _, Some v => f (inr v)
-                          | None, None => eta_expand (expr_let y := e in reify (f (inl (Var y))))%expr
+                          | None, None => reflect (expr_let y := e in reify (f (inl (Var y))))%expr
                           end
                      | inr v => f (inr v)
                      end
@@ -907,7 +905,7 @@ Module Compilers.
             -> interp var B
           := fun x
              => match x with
-                | inl e => expr.eta_expand (App (Ident idc) e)
+                | inl e => expr.reflect (App (Ident idc) e)
                 | inr x => F x
                 end.
         Let defaulted_App_p_p {A B} (idc : ident (A -> B))
@@ -937,7 +935,7 @@ Module Compilers.
             -> interp var D
           := fun x y z
              => match z with
-                | inl z => expr.eta_expand (App (App (App (Ident idc) (expr.reify x)) (expr.reify y)) z)
+                | inl z => expr.reflect (App (App (App (Ident idc) (expr.reify x)) (expr.reify y)) z)
                 | inr z => F x y z
                 end.
         Let defaulted_App_pe_p {A B C} (idc : ident (A -> B -> C))
@@ -1052,7 +1050,7 @@ Module Compilers.
                        | inr y, inr z => inr (y, z)
                        end in
                 match yz with
-                | inl (y, z) => expr.eta_expand (App (App (App (Ident idc) (expr.reify x)) y) z)
+                | inl (y, z) => expr.reflect (App (App (App (Ident idc) (expr.reify x)) y) z)
                 | inr (y, z) => F x y z
                 end.
         Let defaulted_App_pp_p2 {A B C} (idc : ident (A -> B -> C))
@@ -1112,7 +1110,7 @@ Module Compilers.
         Definition interp {t} (idc : ident t) : interp var t
           := match idc in ident t return interp var t with
              | ident.Const t v as idc
-               => expr.eta_expand (Ident idc)
+               => expr.reflect (Ident idc)
              | ident.Let_In tx tC
                => expr.SmartLetIn
              | ident.nil t
@@ -1219,22 +1217,22 @@ Module Compilers.
              end.
       End interp.
     End ident.
-  End arguments.
+  End partial.
 
   Section partial_reduce.
     Context {var : type -> Type}.
 
-    Fixpoint partial_reduce' {t} (e : @expr (arguments.interp var) t)
-      : arguments.interp var t
-      := match e in expr t return arguments.interp var t with
+    Fixpoint partial_reduce' {t} (e : @expr (partial.interp var) t)
+      : partial.interp var t
+      := match e in expr t return partial.interp var t with
          | Var t v => v
-         | Ident t idc => arguments.ident.interp idc
+         | Ident t idc => partial.ident.interp idc
          | App s d f x => @partial_reduce' _ f (@partial_reduce' _ x)
          | Abs s d f => fun x => @partial_reduce' d (f x)
          end.
 
-    Definition partial_reduce {t} (e : @expr (arguments.interp var) t) : @expr var t
-      := arguments.expr.reify (@partial_reduce' t e).
+    Definition partial_reduce {t} (e : @expr (partial.interp var) t) : @expr var t
+      := partial.expr.reify (@partial_reduce' t e).
   End partial_reduce.
 
   Definition PartialReduce {t} (e : Expr t) : Expr t
@@ -1551,7 +1549,6 @@ Notation "ls _{ n }"
   := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.Const n%nat)))
        (at level 20, format "ls _{ n }")
      : expr_scope.
-Print Grammar constr.
 Notation "x + y"
   := (App (App (Ident ident.Z.runtime_add) x%RT_expr) y%RT_expr)
      : RT_expr_scope.
