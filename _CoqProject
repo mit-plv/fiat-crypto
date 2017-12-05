@@ -227,6 +227,7 @@ src/Curves/Montgomery/XZProofs.v
 src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Projective.v
+src/Curves/Weierstrass/Jacobian/Basic.v
 src/Curves/Weierstrass/Jacobian/Precomputed.v
 src/Experiments/Loops.v
 src/Experiments/SimplyTypedArithmetic.v
