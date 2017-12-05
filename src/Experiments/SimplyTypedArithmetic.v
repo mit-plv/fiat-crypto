@@ -616,7 +616,7 @@ Module Compilers.
            => Some v
          | _ => None
          end.
-    (* oh, the horrors of not being able to use non-linear deep pattern matches *)
+    (* oh, the horrors of not being able to use non-linear deep pattern matches.  c.f. COQBUG(https://github.com/coq/coq/issues/6320) *)
     Fixpoint invert_list_full {t} (e : @expr var (type.list t))
       : option (list (@expr var t))
       := match e in expr t return option match t with
