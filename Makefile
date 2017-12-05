@@ -71,18 +71,24 @@ SPECIFIC_GENERATED_VOFILES := src/Specific/solinas%.vo src/Specific/montgomery%.
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	src/Specific/X2448/Karatsuba/C64/Synthesis.vo \
-	src/Specific/NISTP256/AMD64/Synthesis.vo \
-	src/Specific/NISTP256/AMD128/Synthesis.vo \
+	src/Specific/X2448/Karatsuba/C64/fe%.vo \
+	src/Specific/NISTP256/AMD64/fe%.vo \
+	src/Specific/NISTP256/AMD128/fe%.vo \
 	src/Specific/X25519/C64/ladderstep.vo \
-	src/Specific/X25519/C32/%.vo \
+	src/Specific/X25519/C32/fe%.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
 
-SELECTED_PATTERN := src/Specific/X25519/C64/% src/Specific/NISTP256/AMD64/% src/Specific/NISTP256/FancyMachine256/% third_party/%
+SELECTED_PATTERN := \
+	src/Specific/X25519/C64/% \
+	src/Specific/X25519/C32/Synthesis.vo \
+	src/Specific/NISTP256/AMD64/% \
+	src/Specific/NISTP256/AMD128/Synthesis.vo \
+	src/Specific/NISTP256/FancyMachine256/% \
+	third_party/%
 SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(REGULAR_VOFILES))
 
 COQ_VOFILES := $(filter-out $(SPECIFIC_GENERATED_VOFILES),$(REGULAR_VOFILES))
