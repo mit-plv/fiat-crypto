@@ -2,13 +2,9 @@ Require Import Coq.Lists.List.
 Require Import Lia. 
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.LetIn.
-
-Notation break := (@inl _ _).
-Notation continue := (@inr _ _).
 
 Section Loops.
   Context {continue_state break_state}
@@ -24,8 +20,8 @@ Section Loops.
     funapp
     (body_cps start _) (fun next =>
                       match next with
-                      | break state => Some (ret state)
-                      | continue state =>
+                      | inl state => Some (ret state)
+                      | inr state =>
                         match fuel with
                         | O => None
                         | S fuel' =>
@@ -77,8 +73,8 @@ Section Loops.
       P (loop_default fuel start default) <->
       (exists (inv : continue_state -> Prop),
           inv start
-          /\ (forall s s', body s = continue s' -> inv s -> inv s')
-          /\ (forall s s', body s = break s' -> inv s -> P s')).
+          /\ (forall s s', body s = inr s' -> inv s -> inv s')
+          /\ (forall s s', body s = inl s' -> inv s -> P s')).
   Proof.
     split;
       [ exists (fun st => exists f e, (loop f st = Some e /\ P e ))
@@ -112,11 +108,10 @@ Section Loops.
              | _ => progress cbv [terminates]
              | _ => progress cbn [loop]
              | _ => progress break_match
-             | H : forall _ _, body _ = continue _ -> _ , Heq : body _ = continue _ |- _ => specialize (H _ _ Heq)
+             | H : forall _ _, body _ = inr _ -> _ , Heq : body _ = inr _ |- _ => specialize (H _ _ Heq)
              | _ => eapply IHfuel
     end.
   Qed.
-  
 End Loops.
 
 Definition by_invariant {continue_state break_state body fuel start default}
@@ -139,7 +134,7 @@ Section While.
     else Some s.
 
   Section AsLoop.
-    Local Definition lbody := fun s => if test s then continue (body s) else break s.
+    Local Definition lbody := fun s => if test s then inr (body s) else inl s.
     Definition while_using_loop := loop lbody.
 
     Lemma while_eq_loop : forall n s, while n s = while_using_loop n s.
@@ -174,10 +169,10 @@ Definition for3_default {state} d init test increment body fuel :=
 Section GCD.
   Definition gcd_step :=
     fun '(a, b) => if Nat.ltb a b
-                   then continue (a, b-a)
+                   then inr (a, b-a)
                    else if Nat.ltb b a
                         then inr (a-b, b)
-                        else break a.
+                        else inl a.
 
   Definition gcd fuel a b := loop_default gcd_step fuel (a,b) 0.
 
@@ -192,10 +187,10 @@ Section GCD.
         let a := fst st in
         let b := snd st in
         if Nat.ltb a b
-        then ret (continue (a, b-a))
+        then ret (inr (a, b-a))
         else if Nat.ltb b a
-             then ret (continue (a-b, b))
-             else ret (break a).
+             then ret (inr (a-b, b))
+             else ret (inl a).
 
   Definition gcd_cps fuel a b {T} (ret:nat->T)
     := loop_cps gcd_step_cps fuel (a,b) ret.
@@ -212,8 +207,8 @@ Section ZeroLoop.
   Definition zero_body (state : nat * list nat) :
     list nat + (nat * list nat) :=
     if dec (fst state < length (snd state))
-    then continue (S (fst state), set_nth (fst state) 0 (snd state))
-    else break (snd state).
+    then inr (S (fst state), set_nth (fst state) 0 (snd state))
+    else inl (snd state).
 
   Lemma zero_body_terminates (arr : list nat) :
     terminates zero_body (length arr) (0,arr).
@@ -223,7 +218,9 @@ Section ZeroLoop.
              | _ => progress autorewrite with cancel_pair distr_length
              | _ => progress subst
              | _ => progress break_match; intros
-             | _ => progress inversion_sum
+             | _ => congruence
+             | H: inl _ = inl _ |- _ => injection H; intros; subst; clear H
+             | H: inr _ = inr _ |- _ => injection H; intros; subst ;clear H
              | _ => lia
              end.
   Qed.
@@ -243,8 +240,11 @@ Section ZeroLoop.
        [ cbv [zero_invariant]; autorewrite with cancel_pair; split; intros; lia | ..];
        cbv [zero_invariant zero_body];
        intros until 0;
-       break_match; intros; inversion_sum;
+       break_match; intros;
          repeat match goal with
+                | _ => congruence
+                | H: inl _ = inl _ |- _ => injection H; intros; subst; clear H
+                | H: inr _ = inr _ |- _ => injection H; intros; subst ;clear H
                 | _ => progress split
                 | _ => progress intros
                 | _ => progress subst
@@ -259,6 +259,6 @@ Section ZeroLoop.
                 end.
          destruct (Compare_dec.lt_dec n (fst s)).
          apply H1; lia.
-         apply nth_default_out_of_bounds; lia. }
+         apply nth_default_out_of_bounds; lia.
    Qed.
 End ZeroLoop.
