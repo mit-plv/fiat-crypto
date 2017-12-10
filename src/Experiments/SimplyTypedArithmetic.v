@@ -508,11 +508,16 @@ Module Compilers.
          | _ => None
          end.
 
+    Local Notation if_arrow f
+      := (fun t => match t return Type with
+                   | type.arrow s d => f s d
+                   | _ => True
+                   end) (only parsing).
+    Local Notation if_arrow_s f := (if_arrow (fun s d => f s)) (only parsing).
+    Local Notation if_arrow_d f := (if_arrow (fun s d => f d)) (only parsing).
+
     Definition invert_Abs {s d} (e : @expr var (type.arrow s d)) : option (var s -> @expr var d)
-      := match e in expr t return option match t with
-                                         | type.arrow _ _ => _
-                                         | _ => True
-                                         end with
+      := match e in expr t return option (if_arrow (fun _ _ => _) t) with
          | Abs s d f => Some f
          | _ => None
          end.
@@ -560,27 +565,21 @@ Module Compilers.
          | None => None
          end.
 
+    Local Notation expr_prod
+      := (fun t => match t return Type with
+                   | type.prod A B => prod (expr A) (expr B)
+                   | _ => True
+                   end) (only parsing).
+
     Definition invert_Pair {A B} (e : @expr var (type.prod A B)) : option (@expr var A * @expr var B)
       := match invert_App2 e with
          | Some (existT (s1, s2) (f, x, y))
            => match invert_Ident f with
               | Some idc
                 => match idc in ident t
-                         return match t return Type with
-                                | (A -> B -> _)%ctype
-                                  => expr A
-                                | _ => True
-                                end
-                                -> match t return Type with
-                                   | (A -> B -> _)%ctype
-                                     => expr B
-                                   | _ => True
-                                   end
-                                -> option match t with
-                                          | (_ -> _ -> A * B)%ctype
-                                            => expr A * expr B
-                                          | _ => True
-                                          end
+                         return if_arrow_s expr t
+                                -> if_arrow_d (if_arrow_s expr) t
+                                -> option (if_arrow_d (if_arrow_d expr_prod) t)
                    with
                    | ident.pair A B => fun x y => Some (x, y)
                    | _ => fun _ _ => None
@@ -594,11 +593,7 @@ Module Compilers.
       := match invert_AppIdent e with
          | Some (existT s (idc, x))
            => match idc in ident t
-                    return match t return Type with
-                           | (s -> d)%ctype => expr s
-                           | _ => True
-                           end
-                           -> option (expr type.nat)
+                    return if_arrow_s expr t -> option (expr type.nat)
               with
               | ident.S => fun args => Some args
               | _ => fun _ => None
@@ -616,21 +611,19 @@ Module Compilers.
            => Some v
          | _ => None
          end.
+
+    Local Notation list_expr
+      := (fun t => match t return Type with
+                   | type.list T => list (expr T)
+                   | _ => True
+                   end) (only parsing).
+
     (* oh, the horrors of not being able to use non-linear deep pattern matches.  c.f. COQBUG(https://github.com/coq/coq/issues/6320) *)
     Fixpoint invert_list_full {t} (e : @expr var (type.list t))
       : option (list (@expr var t))
-      := match e in expr t return option match t with
-                                         | type.list t => list (expr t)
-                                         | _ => True
-                                         end
-         with
+      := match e in expr t return option (list_expr t) with
          | Ident t idc
-           => match idc in ident t
-                    return option match t return Type with
-                                  | type.list A => list (expr A)
-                                  | _ => True
-                                  end
-              with
+           => match idc in ident t return option (list_expr t) with
               | ident.Const (type.list _) v => Some (List.map const v)
               | ident.nil _ => Some nil
               | _ => None
@@ -638,26 +631,12 @@ Module Compilers.
          | App (type.list s) d f xs
            => match @invert_list_full s xs return _ with
               | Some xs
-                => match invert_AppIdent f
-                         return option match d return Type with
-                                       | type.list t => list (expr t)
-                                       | _ => True
-                                       end
-                   with
+                => match invert_AppIdent f return option (list_expr d) with
                    | Some (existT s' (idc, x))
                      => match idc in ident t
-                              return match t return Type with
-                                     | (s' -> d')%ctype => expr s'
-                                     | _ => True
-                                     end
-                                     -> match t return Type with
-                                        | (s' -> type.list s -> _)%ctype => list (expr s)
-                                        | _ => list (@expr var s)
-                                        end
-                                     -> option match t return Type with
-                                               | (_ -> _ -> type.list d)%ctype => list (expr d)
-                                               | _ => True
-                                               end
+                              return if_arrow_s expr t
+                                     -> if_arrow_d (if_arrow_s list_expr) t
+                                     -> option (if_arrow_d (if_arrow_d list_expr) t)
                         with
                         | ident.cons A => fun x xs => Some (cons x xs)
                         | _ => fun _ _ => None
