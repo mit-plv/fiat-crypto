@@ -59,13 +59,24 @@ End Exports.
 forall x, Interp _ ?e x = F
 >>
     by reifying [F]. *)
-Ltac do_reify :=
+(** It is split up into three stages, for ease of stubbing out the
+    reification bit. *)
+Ltac do_pre_reify _ :=
   unfold_second_arg Tuple.tuple;
   unfold_second_arg Tuple.tuple';
   cbv beta iota delta [Tuple.tuple Tuple.tuple'] in *;
   cbv beta iota delta [Syntax.interp_flat_type Syntax.interp_base_type];
   reify_context_variables;
-  Reify_rhs; reflexivity.
+  pre_Reify_rhs ().
+Ltac get_reify _ :=
+  get_Reify_rhs ().
+Ltac do_post_reify RHS :=
+  do_Reify_rhs_from_reified RHS;
+  reflexivity.
+Ltac do_reify :=
+  do_pre_reify ();
+  let RHS := get_reify () in
+  do_post_reify RHS.
 (** ** Input Boundedness Side-Conditions *)
 (** The tactic [handle_bounds_from_hyps] handles goals of the form
 <<

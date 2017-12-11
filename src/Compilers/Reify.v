@@ -454,10 +454,15 @@ Ltac transitivity_tt term :=
         | transitivity (term tt)
         | let x := fresh in intro x; transitivity (term x); revert x  ].
 
-Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
-  Tuple.unfold_flat_interp_tuple ();
+Ltac pre_Reify_rhs _ :=
+  Tuple.unfold_flat_interp_tuple ().
+
+Ltac get_Reify_rhs_gen Reify :=
   let rhs := rhs_of_goal in
   let RHS := Reify rhs in
+  RHS.
+
+Ltac do_Reify_rhs_gen_from_reified prove_interp_compile_correct interp_op try_tac RHS :=
   let RHS' := (eval vm_compute in RHS) in
   transitivity_tt (Syntax.Interp interp_op RHS');
   [
@@ -493,6 +498,12 @@ Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
                       end;
                       subst_let;
                       cbv iota beta delta [InputSyntax.Interp interp_type interp_type_gen interp_type_gen_hetero interp_flat_type interp interpf InputSyntax.Fst InputSyntax.Snd]; reflexivity)) ] ] ].
+
+Ltac Reify_rhs_gen Reify prove_interp_compile_correct interp_op try_tac :=
+  pre_Reify_rhs ();
+  let RHS := get_Reify_rhs_gen Reify in
+  do_Reify_rhs_gen_from_reified
+    prove_interp_compile_correct interp_op try_tac RHS.
 
 Ltac prove_compile_correct_using tac :=
   fun _ => intros;
