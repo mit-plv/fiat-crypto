@@ -70,6 +70,7 @@ SPECIFIC_GENERATED_VOFILES := src/Specific/solinas%.vo src/Specific/montgomery%.
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
+	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	src/Specific/X2448/Karatsuba/C64/fe%.vo \
 	src/Specific/NISTP256/AMD64/fe%.vo \
