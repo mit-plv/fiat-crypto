@@ -40,6 +40,7 @@ Module Jacobian.
              | _ => progress cbv [proj1_sig fst snd]
              | _ => progress autounfold with points_as_coordinates in *
              | _ => progress destruct_head' @unit
+             | _ => progress destruct_head' @bool
              | _ => progress destruct_head' @prod
              | _ => progress destruct_head' @sig
              | _ => progress destruct_head' @sum
@@ -118,25 +119,46 @@ Module Jacobian.
         end.
       Next Obligation. Proof. t. Qed.
 
-      Hint Unfold double negb andb : points_as_coordinates.
-      Program Definition add (P Q : point) : point :=
+      Definition z_is_zero_or_one (Q : point) : Prop :=
+        match proj1_sig Q with
+        | (_, _, z) => z = 0 \/ z = 1
+        end.
+
+      Definition add_precondition (Q : point) (mixed : bool) : Prop :=
+        match mixed with
+        | false => True
+        | true => z_is_zero_or_one Q
+        end.
+
+      Hint Unfold double negb andb add_precondition z_is_zero_or_one : points_as_coordinates.
+      Program Definition add_impl (mixed : bool) (P Q : point)
+              (H : add_precondition Q mixed) : point :=
         match proj1_sig P, proj1_sig Q return F*F*F with
         | (x1, y1, z1), (x2, y2, z2) =>
           let z1nz := if dec (z1 = 0) then false else true in
           let z2nz := if dec (z2 = 0) then false else true in
           let z1z1 := z1^2 in
-          let z2z2 := z2^2 in
-          let u1 := x1 * z2z2 in
-          let ftmp5 := z1 + z2 in
-          let ftmp5 := ftmp5^2 in
-          let ftmp5 := ftmp5 - z1z1 in
-          let ftmp5 := ftmp5 - z2z2 in
-          let s1 := z2 * z2z2 in
-          let s1 := s1 * y1 in
+          let '(u1, s1, two_z1z2) := if negb mixed
+          then
+            let z2z2 := z2^2 in
+            let u1 := x1 * z2z2 in
+            let two_z1z2 := z1 + z2 in
+            let two_z1z2 := two_z1z2^2 in
+            let two_z1z2 := two_z1z2 - z1z1 in
+            let two_z1z2 := two_z1z2 - z2z2 in
+            let s1 := z2 * z2z2 in
+            let s1 := s1 * y1 in
+            (u1, s1, two_z1z2)
+          else
+            let u1 := x1 in
+            let two_z1z2 := z1 + z1 in
+            let s1 := y1 in
+            (u1, s1, two_z1z2)
+          in
           let u2 := x2 * z1z1 in
           let h := u2 - u1 in
           let xneq := if dec (h = 0) then false else true in
-          let z_out := h * ftmp5 in
+          let z_out := h * two_z1z2 in
           let z1z1z1 := z1 * z1z1 in
           let s2 := y2 * z1z1z1 in
           let r := s2 - s1 in
@@ -167,11 +189,20 @@ Module Jacobian.
             (x3, y3, z3)
         end.
       Next Obligation. Proof. t. Qed.
+      Definition add (P Q : point) : point :=
+        add_impl false P Q I.
+      Definition add_mixed (P : point) (Q : point) (H : z_is_zero_or_one Q) :=
+        add_impl true P Q H.
 
-      Hint Unfold W.eq W.add to_affine add : points_as_coordinates.
+      Hint Unfold W.eq W.add to_affine add add_mixed add_impl : points_as_coordinates.
+
       Lemma Proper_double : Proper (eq ==> eq) double. Proof. t. Qed.
       Lemma to_affine_double P :
         W.eq (to_affine (double P)) (W.add (to_affine P) (to_affine P)).
+      Proof. t. Qed.
+
+      Lemma add_mixed_eq_add (P : point) (Q : point) (H : z_is_zero_or_one Q) :
+        eq (add P Q) (add_mixed P Q H).
       Proof. t. Qed.
 
       Lemma Proper_add : Proper (eq ==> eq ==> eq) add. Proof. t. Qed.
