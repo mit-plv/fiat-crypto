@@ -38,114 +38,59 @@ Module M.
     Local Notation boringladderstep := (M.boringladderstep(ap2d4:=ap2d4)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
 
+    (* TODO(#152): deduplicate between curves files *)
+    Ltac prept_step :=
+      match goal with
+      | _ => progress intros
+      | _ => progress autounfold with points_as_coordinates in *
+      | _ => progress destruct_head' @unit
+      | _ => progress destruct_head' @bool
+      | _ => progress destruct_head' @prod
+      | _ => progress destruct_head' @sig
+      | _ => progress destruct_head' @sum
+      | _ => progress destruct_head' @and
+      | _ => progress destruct_head' @or
+      | H: context[dec ?P] |- _ => destruct (dec P)
+      | |- context[dec ?P]      => destruct (dec P)
+      | |- ?P => lazymatch type of P with Prop => split end
+      end.
+    Ltac prept := repeat prept_step.
+    Ltac t := prept; trivial; try contradiction; fsatz.
+
+    Create HintDb points_as_coordinates discriminated.
+    Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
+    Hint Unfold Let_In : points_as_coordinates.
+    Hint Unfold fst snd proj1_sig : points_as_coordinates.
+    Hint Unfold fieldwise fieldwise' : points_as_coordinates.
+    Hint Unfold M.add M.opp M.point M.coordinates M.xzladderstep M.donnaladderstep M.boringladderstep M.to_xz : points_as_coordinates.
+
     Lemma donnaladderstep_ok x1 Q Q' :
-      let eq := fieldwise (n:=2) (fieldwise (n:=2) Feq) in
-      eq (xzladderstep x1 Q Q') (donnaladderstep x1 Q Q').
-    Proof. cbv; break_match; repeat split; fsatz. Qed.
+      fieldwise (n:=2) (fieldwise (n:=2) Feq)
+                (xzladderstep x1 Q Q')
+                (donnaladderstep x1 Q Q').
+    Proof. t. Qed.
 
     Lemma boringladderstep_ok x1 Q Q' :
-      let eq := fieldwise (n:=2) (fieldwise (n:=2) Feq) in
-      eq (xzladderstep x1 Q Q') (boringladderstep x1 Q Q').
-    Proof. cbv; break_match; repeat split; fsatz. Qed.
+      fieldwise (n:=2) (fieldwise (n:=2) Feq)
+                (xzladderstep x1 Q Q')
+                (boringladderstep x1 Q Q').
+    Proof. t. Qed.
 
     Definition projective (P:F*F) :=
       if dec (snd P = 0) then fst P <> 0 else True.
     Definition eq (P Q:F*F) := fst P * snd Q = fst Q * snd P.
 
-    Local Ltac do_unfold :=
-      cbv [eq projective fst snd M.coordinates M.add M.zero M.eq M.opp proj1_sig xzladderstep M.to_xz Let_In Proper respectful] in *.
-
-    Ltac t_step _ :=
-      match goal with
-      | _ => solve [ contradiction | trivial ]
-      | _ => progress intros
-      | _ => progress subst
-      | _ => progress specialize_by_assumption
-      | [ H : ?x = ?x |- _ ] => clear H
-      | [ H : ?x <> ?x |- _ ] => specialize (H (reflexivity _))
-      | [ H0 : ?T, H1 : ~?T -> _ |- _ ] => clear H1
-      | _ => progress destruct_head'_prod
-      | _ => progress destruct_head'_and
-      | _ => progress Sum.inversion_sum
-      | _ => progress Prod.inversion_prod
-      | _ => progress cbv [fst snd proj1_sig projective eq] in * |-
-      | _ => progress cbn [to_xz M.coordinates proj1_sig] in * |-
-      | _ => progress destruct_head' @M.point
-      | _ => progress destruct_head'_sum
-      | [ H : context[dec ?T], H' : ~?T -> _ |- _ ]
-        => let H'' := fresh in
-           destruct (dec T) as [H''|H'']; [ clear H' | specialize (H' H'') ]
-      | _ => progress break_match_hyps
-      | _ => progress break_match
-      | |- _ /\ _ => split
-      | _ => progress do_unfold
-      end.
-    Ltac t := repeat t_step ().
+    Hint Unfold projective eq : points_as_coordinates.
 
     (* happens if u=0 in montladder, all denominators remain 0 *)
     Lemma add_0_numerator_r A B C D
       :  snd (fst (xzladderstep 0 (pair C 0) (pair 0 A))) = 0
       /\ snd (snd (xzladderstep 0 (pair D 0) (pair 0 B))) = 0.
-    Proof. t; fsatz. Qed.
+    Proof. t. Qed.
     Lemma add_0_denominators A B C D
       :  snd (fst (xzladderstep 0 (pair A 0) (pair C 0))) = 0
       /\ snd (snd (xzladderstep 0 (pair B 0) (pair D 0))) = 0.
-    Proof. t; fsatz. Qed.
-
-    (** This tactic is to work around deficiencies in the Coq 8.6
-        (released) version of [nsatz]; it has some heuristics for
-        clearing hypotheses and running [exfalso], and then tries to
-        solve the goal with [tac].  If [tac] fails on a goal, this
-        tactic does nothing. *)
-    Local Ltac exfalso_smart_clear_solve_by tac :=
-      try lazymatch goal with
-          | [ fld : Hierarchy.field (T:=?F) (eq:=?Feq), Feq_dec : DecidableRel ?Feq |- _ ]
-            => lazymatch goal with
-               | [ H : ?x * 1 = ?y * ?z, H' : ?x <> 0, H'' : ?z = 0 |- _ ]
-                 => clear -H H' H'' fld Feq_dec; exfalso; tac
-               | [ H : ?x * 0 = 1 * ?y, H' : ?y <> 0 |- _ ]
-                 => clear -H H' fld Feq_dec; exfalso; tac
-               | _
-                 => match goal with
-                    | [ H : ?b * ?lhs = ?rhs, H' : ?b * ?lhs' = ?rhs', Heq : ?x = ?y, Hb : ?b <> 0 |- _ ]
-                      => exfalso;
-                         repeat match goal with H : Ring.char_ge _ |- _ => revert H end;
-                         let rhs := match (eval pattern x in rhs) with ?f _ => f end in
-                         let rhs' := match (eval pattern y in rhs') with ?f _ => f end in
-                         unify rhs rhs';
-                         match goal with
-                         | [ H'' : ?x = ?Fopp ?x, H''' : ?x <> ?Fopp (?Fopp ?y) |- _ ]
-                           => let lhs := match (eval pattern x in lhs) with ?f _ => f end in
-                              let lhs' := match (eval pattern y in lhs') with ?f _ => f end in
-                              unify lhs lhs';
-                              clear -H H' Heq H'' H''' Hb fld Feq_dec; intros
-                         | [ H'' : ?x <> ?Fopp ?y, H''' : ?x <> ?Fopp (?Fopp ?y) |- _ ]
-                           => let lhs := match (eval pattern x in lhs) with ?f _ => f end in
-                              let lhs' := match (eval pattern y in lhs') with ?f _ => f end in
-                              unify lhs lhs';
-                              clear -H H' Heq H'' H''' Hb fld Feq_dec; intros
-                         end;
-                         tac
-                    | [ H : ?x * (?y * ?z) = 0 |- _ ]
-                      => exfalso;
-                         repeat match goal with
-                                | [ H : ?x * 1 = ?y * ?z |- _ ]
-                                  => is_var x; is_var y; is_var z;
-                                     revert H
-                                end;
-                         generalize fld;
-                         let lhs := match type of H with ?lhs = _ => lhs end in
-                         repeat match goal with
-                                | [ x : F |- _ ] => lazymatch type of H with
-                                                    | context[x] => fail
-                                                    | _ => clear dependent x
-                                                    end
-                                end;
-                         intros _; intros;
-                         tac
-                    end
-               end
-          end.
+    Proof. t. Qed.
 
     Lemma to_xz_add (x1:F) (xz x'z':F*F)
           (Hxz:projective xz) (Hz'z':projective x'z')
@@ -158,11 +103,7 @@ Module M.
       :  eq (to_xz (Madd Q Q )) (fst (xzladderstep x1 xz xz))
       /\ eq (to_xz (Madd Q Q')) (snd (xzladderstep x1 xz x'z'))
       /\ projective (snd (xzladderstep x1 xz x'z')).
-    Proof.
-      fsatz_prepare_hyps.
-      Time t.
-      Time par: abstract (exfalso_smart_clear_solve_by fsatz || fsatz).
-    Time Qed.
+    Proof. Time prept. Time par : abstract t. Time Qed.
 
     Context {a2m4_nonsquare:forall r, r*r <> a*a - (1+1+1+1)}.
 
@@ -170,10 +111,10 @@ Module M.
       :  projective (fst (xzladderstep x1 Q Q)).
     Proof.
       specialize (a2m4_nonsquare (fst Q/snd Q  - fst Q/snd Q)).
-      destruct (dec (snd Q = 0)); t; specialize_by assumption; fsatz.
+      destruct (dec (snd Q = 0)); t.
     Qed.
 
-    Let a2m4_nz : a*a - (1+1+1+1) <> 0.
+    Local Definition a2m4_nz : a*a - (1+1+1+1) <> 0.
     Proof. specialize (a2m4_nonsquare 0). fsatz. Qed.
 
     Lemma difference_preserved Q Q' :
@@ -219,7 +160,7 @@ Module M.
       split; [|split; [|split;[|split]]]; eauto.
       {
         pose proof projective_fst_xzladderstep x1 xz Hxz.
-        destruct_head prod.
+        destruct_head prod. 
         cbv [projective fst xzladderstep] in *; eauto. }
       {
         pose proof difference_preserved Q Q' as HQQ;
@@ -233,29 +174,23 @@ Module M.
 
     Definition to_x (xz:F*F) : F :=
       if dec (snd xz = 0) then 0 else fst xz / snd xz.
+    Hint Unfold to_x : points_as_coordinates.
 
     Lemma to_x_to_xz Q : to_x (to_xz Q) = match M.coordinates Q with
                                           | ∞ => 0
                                           | (x,y) => x
                                           end.
-    Proof.
-      cbv [to_x]; t; fsatz.
-    Qed.
+    Proof. t. Qed.
 
     Lemma proper_to_x_projective xz x'z'
            (Hxz:projective xz) (Hx'z':projective x'z')
            (H:eq xz x'z') : Feq (to_x xz) (to_x x'z').
-    Proof.
-      destruct (dec (snd xz = 0)), (dec(snd x'z' = 0));
-        cbv [to_x]; t;
-        specialize_by (assumption||reflexivity);
-        try fsatz.
-    Qed.
+    Proof. destruct (dec (snd xz = 0)), (dec(snd x'z' = 0)); t. Qed.
 
     Lemma to_x_zero x : to_x (pair x 0) = 0.
-    Proof. cbv; t; fsatz. Qed.
+    Proof. t. Qed.
 
     Lemma projective_to_xz Q : projective (to_xz Q).
-    Proof. t; fsatz. Qed.
+    Proof. t. Qed.
   End MontgomeryCurve.
 End M.
