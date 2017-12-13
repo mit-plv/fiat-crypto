@@ -79,9 +79,10 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Specific/X25519/C32/fe%.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
-CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
-NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo
-NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo src/Specific/%.vo
+CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/Weierstrass/Jacobian.vo src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
+NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
+	src/Curves/Weierstrass/Jacobian.vo
+NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := $(NO_CURVES_PROOFS_UNMADE_VOFILES) src/Specific/%.vo
 REAL_SPECIFIC_GENERATED_VOFILES := $(filter $(SPECIFIC_GENERATED_VOFILES),$(VOFILES))
 
 SELECTED_PATTERN := \
