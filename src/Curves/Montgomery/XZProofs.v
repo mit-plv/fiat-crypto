@@ -29,14 +29,11 @@ Module M.
 
     Context {a b: F} {b_nonzero:b <> 0}.
     Context {a24:F} {a24_correct:(1+1+1+1)*a24 = a-(1+1)}.
-    Context {ap2d4:F} {ap2d4_correct:(1+1+1+1)*a24 = a+1+1}.
     Local Notation Madd := (M.add(a:=a)(b_nonzero:=b_nonzero)(char_ge_3:=char_ge_3)).
     Local Notation Mopp := (M.opp(a:=a)(b_nonzero:=b_nonzero)).
     Local Notation Mpoint := (@M.point F Feq Fadd Fmul a b).
-    Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
-    Local Notation donnaladderstep := (M.donnaladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
-    Local Notation boringladderstep := (M.boringladderstep(ap2d4:=ap2d4)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
+    Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
 
     (* TODO(#152): deduplicate between curves files *)
     Ltac prept_step :=
@@ -55,7 +52,8 @@ Module M.
       | |- ?P => lazymatch type of P with Prop => split end
       end.
     Ltac prept := repeat prept_step.
-    Ltac t := prept; trivial; try contradiction; fsatz.
+    Ltac t_fast := prept; trivial; try contradiction.
+    Ltac t := prept; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
     Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
@@ -64,23 +62,27 @@ Module M.
     Hint Unfold fieldwise fieldwise' : points_as_coordinates.
     Hint Unfold M.add M.opp M.point M.coordinates M.xzladderstep M.donnaladderstep M.boringladderstep M.to_xz : points_as_coordinates.
 
-    Lemma donnaladderstep_ok x1 Q Q' :
+    Lemma donnaladderstep_same x1 Q Q' :
       fieldwise (n:=2) (fieldwise (n:=2) Feq)
                 (xzladderstep x1 Q Q')
-                (donnaladderstep x1 Q Q').
+                (M.donnaladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul) x1 Q Q').
     Proof. t. Qed.
 
-    Lemma boringladderstep_ok x1 Q Q' :
+    Lemma boringladderstep_same (ap2d4:F) (ap2d4_correct:(1+1+1+1)*a24 = a+1+1) x1 Q Q' :
       fieldwise (n:=2) (fieldwise (n:=2) Feq)
                 (xzladderstep x1 Q Q')
-                (boringladderstep x1 Q Q').
+                (M.boringladderstep(ap2d4:=ap2d4)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul) x1 Q Q').
     Proof. t. Qed.
 
     Definition projective (P:F*F) :=
       if dec (snd P = 0) then fst P <> 0 else True.
     Definition eq (P Q:F*F) := fst P * snd Q = fst Q * snd P.
-
-    Hint Unfold projective eq : points_as_coordinates.
+    Definition ladder_invariant x1 Q Q' :=
+      match M.coordinates (Madd Q (Mopp Q')) with
+      | ∞ => False                  (* Q <> Q' *)
+      | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
+      end.
+    Hint Unfold projective eq ladder_invariant : points_as_coordinates.
 
     (* happens if u=0 in montladder, all denominators remain 0 *)
     Lemma add_0_numerator_r A B C D
@@ -92,23 +94,20 @@ Module M.
       /\ snd (snd (xzladderstep 0 (pair B 0) (pair D 0))) = 0.
     Proof. t. Qed.
 
-    Lemma to_xz_add (x1:F) (xz x'z':F*F)
+    Lemma to_xz_add_coordinates (x1:F) (xz x'z':F*F)
           (Hxz:projective xz) (Hz'z':projective x'z')
           (Q Q':Mpoint)
           (HQ:eq xz (to_xz Q)) (HQ':eq x'z' (to_xz Q'))
-          (difference_correct:match M.coordinates (Madd Q (Mopp Q')) with
-                              | ∞ => False                  (* Q <> Q' *)
-                              | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
-                              end)
-      :  eq (to_xz (Madd Q Q )) (fst (xzladderstep x1 xz xz))
-      /\ eq (to_xz (Madd Q Q')) (snd (xzladderstep x1 xz x'z'))
-      /\ projective (snd (xzladderstep x1 xz x'z')).
-    Proof. Time prept. Time par : abstract t. Time Qed.
+          (HI:ladder_invariant x1 Q Q')
+      :  projective (snd (xzladderstep x1 xz x'z'))
+      /\ eq (fst (xzladderstep x1 xz xz)) (to_xz (Madd Q Q ))
+      /\ eq (snd (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q')).
+    Proof. Time t_fast. Time par: abstract fsatz. Time Qed.
 
     Context {a2m4_nonsquare:forall r, r*r <> a*a - (1+1+1+1)}.
 
-    Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q)
-      :  projective (fst (xzladderstep x1 Q Q)).
+    Lemma projective_fst_xzladderstep x1 Q (HQ:projective Q) Q'
+      :  projective (fst (xzladderstep x1 Q Q')).
     Proof.
       specialize (a2m4_nonsquare (fst Q/snd Q  - fst Q/snd Q)).
       destruct (dec (snd Q = 0)); t.
@@ -133,43 +132,30 @@ Module M.
       reflexivity.
     Qed.
 
-    Lemma to_xz_add'
-          (x1:F)
-          (xz x'z':F*F)
-          (Q Q':Mpoint)
-
-          (HQ:eq xz (to_xz Q))
-          (HQ':eq x'z' (to_xz Q'))
-          (Hxz:projective xz)
-          (Hx'z':projective x'z')
-          (difference_correct:match M.coordinates (Madd Q (Mopp Q')) with
-                              | ∞ => False                  (* Q <> Q' *)
-                              | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
-                              end)
-      :
-           eq (to_xz (Madd Q Q )) (fst (xzladderstep x1 xz xz))
-        /\ eq (to_xz (Madd Q Q')) (snd (xzladderstep x1 xz x'z'))
-        /\ projective (fst (xzladderstep x1 xz x'z'))
-        /\ projective (snd (xzladderstep x1 xz x'z'))
-        /\ match M.coordinates (Madd (Madd Q Q) (Mopp (Madd Q Q'))) with
-                              | ∞ => False                  (* Q <> Q' *)
-                              | (x,y) => x = x1 /\ x1 <> 0  (* Q-Q' <> (0, 0) *)
-                              end.
+    Lemma ladder_invariant_preserved x1 Q Q' (H:ladder_invariant x1 Q Q')
+      : ladder_invariant x1 (Madd Q Q) (Madd Q Q').
     Proof.
-      destruct (to_xz_add x1 xz x'z' Hxz Hx'z' Q Q' HQ HQ' difference_correct) as [? [? ?]].
-      split; [|split; [|split;[|split]]]; eauto.
-      {
-        pose proof projective_fst_xzladderstep x1 xz Hxz.
-        destruct_head prod. 
-        cbv [projective fst xzladderstep] in *; eauto. }
-      {
-        pose proof difference_preserved Q Q' as HQQ;
-        destruct (Madd (Madd Q Q) (Mopp (Madd Q Q'))) as [[[xQ yQ]|[]]pfQ];
-        destruct (Madd Q (Mopp Q')) as [[[xD yD]|[]]pfD];
-        cbv [M.coordinates proj1_sig M.eq] in *;
-        destruct_head' and; try split;
-          try contradiction; try etransitivity; eauto.
-      }
+      cbv [ladder_invariant] in *.
+      pose proof difference_preserved Q Q' as Hrw.
+      (* TODO: rewrite with in match argument with [sumwise (fieldwise (n:=2) Feq) (fun _ _ => True)] *)
+      match type of Hrw with
+        M.eq ?X ?Y => replace X with Y by admit
+      end.
+      assumption.
+    Admitted.
+
+    Lemma to_xz_add x1 xz x'z' Q Q'
+          (Hxz : projective xz) (Hx'z' : projective x'z')
+          (HQ : eq xz (to_xz Q)) (HQ' : eq x'z' (to_xz Q'))
+          (HI : ladder_invariant x1 Q Q')
+      :    projective (fst (xzladderstep x1 xz x'z'))
+        /\ projective (snd (xzladderstep x1 xz x'z'))
+        /\ eq (fst (xzladderstep x1 xz xz)) (to_xz (Madd Q Q ))
+        /\ eq (snd (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q'))
+        /\ ladder_invariant x1 (Madd Q Q) (Madd Q Q').
+    Proof.
+      destruct (to_xz_add_coordinates x1 xz x'z' Hxz Hx'z' Q Q' HQ HQ' HI) as [? [? ?]].
+      eauto 99 using projective_fst_xzladderstep, ladder_invariant_preserved.
     Qed.
 
     Definition to_x (xz:F*F) : F :=
