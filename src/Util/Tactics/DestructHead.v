@@ -63,3 +63,18 @@ Ltac destruct_one_head'_sum := match goal with H : sum _ _ |- _ => destruct H en
 Ltac destruct_one_head_sum := destruct_one_head'_sum; simpl in *.
 Ltac destruct_head'_sum := repeat destruct_one_head'_sum.
 Ltac destruct_head_sum := repeat destruct_one_head_sum.
+
+Ltac destruct_one_head'_unit := match goal with H : unit |- _ => clear H || destruct H end.
+Ltac destruct_one_head_unit := destruct_one_head'_unit; simpl in *.
+Ltac destruct_head'_unit := repeat destruct_one_head'_unit.
+Ltac destruct_head_unit := repeat destruct_one_head_unit.
+
+Ltac destruct_one_head'_True := match goal with H : True |- _ => clear H || destruct H end.
+Ltac destruct_one_head_True := destruct_one_head'_True; simpl in *.
+Ltac destruct_head'_True := repeat destruct_one_head'_True.
+Ltac destruct_head_True := repeat destruct_one_head_True.
+
+Ltac destruct_one_head'_bool := match goal with H : bool |- _ => clear H || destruct H end.
+Ltac destruct_one_head_bool := destruct_one_head'_bool; simpl in *.
+Ltac destruct_head'_bool := repeat destruct_one_head'_bool.
+Ltac destruct_head_bool := repeat destruct_one_head_bool.
