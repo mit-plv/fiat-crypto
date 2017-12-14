@@ -40,13 +40,14 @@ Module M.
       match goal with
       | _ => progress intros
       | _ => progress autounfold with points_as_coordinates in *
-      | _ => progress destruct_head' @unit
-      | _ => progress destruct_head' @bool
-      | _ => progress destruct_head' @prod
-      | _ => progress destruct_head' @sig
-      | _ => progress destruct_head' @sum
-      | _ => progress destruct_head' @and
-      | _ => progress destruct_head' @or
+      | _ => progress destruct_head'_True
+      | _ => progress destruct_head'_unit
+      | _ => progress destruct_head'_prod
+      | _ => progress destruct_head'_sig
+      | _ => progress destruct_head'_bool
+      | _ => progress destruct_head'_sum
+      | _ => progress destruct_head'_and
+      | _ => progress destruct_head'_or
       | H: context[dec ?P] |- _ => destruct (dec P)
       | |- context[dec ?P]      => destruct (dec P)
       | |- ?P => lazymatch type of P with Prop => split end
