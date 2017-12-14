@@ -39,13 +39,14 @@ Module Jacobian.
              | _ => progress specialize_by trivial
              | _ => progress cbv [proj1_sig fst snd]
              | _ => progress autounfold with points_as_coordinates in *
-             | _ => progress destruct_head' @unit
-             | _ => progress destruct_head' @bool
-             | _ => progress destruct_head' @prod
-             | _ => progress destruct_head' @sig
-             | _ => progress destruct_head' @sum
-             | _ => progress destruct_head' @and
-             | _ => progress destruct_head' @or
+             | _ => progress destruct_head'_True
+             | _ => progress destruct_head'_unit
+             | _ => progress destruct_head'_prod
+             | _ => progress destruct_head'_sig
+             | _ => progress destruct_head'_and
+             | _ => progress destruct_head'_sum
+             | _ => progress destruct_head'_bool
+             | _ => progress destruct_head'_or
              | H: context[dec ?P] |- _ => destruct (dec P)
              | |- context[dec ?P]      => destruct (dec P)
              | |- ?P => lazymatch type of P with Prop => split end
@@ -212,7 +213,7 @@ Module Jacobian.
             P Q
         : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
       Proof. prept; trivial; try contradiction. Time par: abstract t. Time Qed.
-      (* 514.584 secs (69.907u,1.052s) ;; 30.65 secs (30.516u,0.024s*)
+      (* 306.478 secs (43.916u,1.032s) ;; 18.857 secs (18.856u,0.008s) *)
     End AEqMinus3.
   End Jacobian.
 End Jacobian.
