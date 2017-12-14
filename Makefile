@@ -210,9 +210,11 @@ Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' > $@ && rm -f Makefile-old
 
-$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo %Display.v src/Compilers/Z/CNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
-	$(SHOW)"COQC $*Display > $@"
-	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*Display.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
+$(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo src/Compilers/Z/CNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
+
+$(DISPLAY_NON_JAVA_VO:.vo=.log) : %.log : %.v
+	$(SHOW)'COQC $< > $@'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $< | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
@@ -238,9 +240,11 @@ $(DISPLAY_NON_JAVA_C32_VO:Display.vo=.h) : %.h : %Display.log extract-function-h
 $(DISPLAY_GENERATED_VO:Display.vo=.c) : %.c : %Display.log src/Specific/Framework/bench/prettyprint.py
 	./src/Specific/Framework/bench/prettyprint.py $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
 
-$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo %JavaDisplay.v src/Compilers/Z/JavaNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
-	$(SHOW)"COQC $*JavaDisplay > $@"
-	$(HIDE)$(COQC) $(COQDEBUG) $(COQFLAGS) $*JavaDisplay.v | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
+$(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo src/Compilers/Z/JavaNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
+
+$(DISPLAY_JAVA_VO:.vo=.log) : %.log : %.v
+	$(SHOW)'COQC $< > $@'
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $< | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
 
 TEST_BINARIES := \
 	src/Specific/X25519/C64/test \
