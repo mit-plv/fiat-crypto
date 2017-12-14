@@ -82,6 +82,37 @@ Module Associational.
   Proof. cbv [reduce]; push.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
   Hint Rewrite eval_reduce : push_eval.
+  
+  Section Carries.
+    Context {modulo div : Z -> Z -> Z}.
+    Context {div_mod : forall a b:Z, b <> 0 ->
+                                     a = b * (div a b) + modulo a b}.
+    
+    Definition carryterm (w fw:Z) (t:Z * Z) :=
+      if (Z.eqb (fst t) w)
+      then dlet t2 := snd t in
+           dlet d2 := div t2 fw in
+           dlet m2 := modulo t2 fw in
+           [(w * fw, d2);(w,m2)]
+      else [t].
+
+    Lemma eval_carryterm w fw (t:Z * Z) (fw_nonzero:fw<>0):
+      eval (carryterm w fw t) = eval [t].
+    Proof using Type*.
+      cbv [carryterm Let_In]; break_match; push; [|trivial].
+      specialize (div_mod (snd t) fw fw_nonzero).
+      rewrite Z.eqb_eq in *.
+      nsatz.
+    Qed. Hint Rewrite eval_carryterm using auto : push_eval.
+
+    Definition carry (w fw:Z) (p:list (Z * Z)):=
+      flat_map (carryterm w fw) p.
+
+    Lemma eval_carry w fw p (fw_nonzero:fw<>0):
+      eval (carry w fw p) = eval p.
+    Proof using Type*. cbv [carry]; induction p; push; nsatz. Qed.
+    Hint Rewrite eval_carry using auto : push_eval.
+  End Carries.
 End Associational.
 
 Module Positional. Section Positional.
@@ -178,6 +209,29 @@ Module Positional. Section Positional.
     clear; cbv -[Associational.reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
   End mulmod.
+
+  Section Carries.
+    Context {modulo div: Z -> Z -> Z}.
+    Context {div_mod : forall a b:Z, b <> 0 ->
+                                     a = b * (div a b) + modulo a b}.
+
+    Definition carry {n m} (index:nat) (p:list Z) : list Z :=
+      from_associational
+        m (@Associational.carry modulo div (weight index)
+                                (weight (S index) / weight index)
+                                (to_associational n p)).
+
+    Lemma eval_carry {n m} i p: (n <> 0%nat) -> (m <> 0%nat) ->
+                              weight (S i) / weight i <> 0 ->
+      eval m (carry (n:=n) (m:=m) i p) = eval n p.
+    Proof.
+      cbv [carry]; intros; push; [|tauto].
+      rewrite @Associational.eval_carry by eauto.
+      apply eval_to_associational.
+    Qed.
+    Hint Rewrite @eval_carry : push_eval.
+  End Carries.
+
 End Positional. End Positional.
 
 Module Compilers.
