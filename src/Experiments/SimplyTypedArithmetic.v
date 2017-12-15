@@ -1242,75 +1242,34 @@ Module Compilers.
 
   Module partial.
     (** TODO: pick a better name for this (partial_expr?) *)
-    Section interp.
+    Section value.
       Context (var : type -> Type).
-      Definition interp_prestep (interp : type -> Type) (t : type)
+      Definition value_prestep (value : type -> Type) (t : type)
         := match t return Type with
-           | type.prod A B as t => interp A * interp B
-           | type.arrow s d => interp s -> interp d
-           | type.list A => list (interp A)
+           | type.prod A B as t => value A * value B
+           | type.arrow s d => value s -> value d
+           | type.list A => list (value A)
            | type.unit as t
            | type.Z as t
            | type.nat as t
            | type.bool as t
              => type.interp t
            end%type.
-      Definition interp_step (interp : type -> Type) (t : type)
+      Definition value_step (value : type -> Type) (t : type)
         := match t return Type with
            | type.unit as t
            | type.arrow _ _ as t
-             => interp_prestep interp t
+             => value_prestep value t
            | type.prod _ _ as t
            | type.list _ as t
            | type.Z as t
            | type.nat as t
            | type.bool as t
-             => @expr var t + interp_prestep interp t
+             => @expr var t + value_prestep value t
            end%type.
-      Fixpoint interp (t : type)
-        := interp_step interp t.
-
-      Definition unprestep {t : type} : interp_prestep interp t -> interp t
-        := match t return interp_prestep interp t -> interp t with
-           | type.unit as t
-           | type.arrow _ _ as t
-             => id
-           | type.prod _ _ as t
-           | type.list _ as t
-           | type.Z as t
-           | type.nat as t
-           | type.bool as t
-             => @inr _ (interp_prestep interp t)
-           end%type.
-
-      Definition unprestep2 {t : type}
-        : interp_prestep (interp_prestep interp) t
-          -> match t with
-             | type.arrow _ _ => interp_prestep (interp_prestep interp) t
-             | t => interp_prestep interp t
-             end
-        := match t
-                 return (interp_prestep (interp_prestep interp) t
-                         -> match t with
-                            | type.arrow _ _ => interp_prestep (interp_prestep interp) t
-                            | t => interp_prestep interp t
-                            end)
-           with
-           | type.prod A B
-             => fun '((a, b) : interp_prestep interp A * interp_prestep interp B)
-                => (@unprestep A a, @unprestep B b)
-           | type.list A as t
-             => List.map (@unprestep A)
-           | type.arrow _ _ as t
-           | type.unit as t
-           | type.Z as t
-           | type.nat as t
-           | type.bool as t
-             => id
-           end%type.
-    End interp.
-    Arguments unprestep {var t} _.
-    Arguments unprestep2 {var t} _.
+      Fixpoint value (t : type)
+        := value_step value t.
+    End value.
 
     Notation expr_const := const.
 
@@ -1318,21 +1277,21 @@ Module Compilers.
       Section reify.
         Context {var : type -> Type}.
         Fixpoint reify {t : type} {struct t}
-          : interp var t -> @expr var t
-          := match t return interp var t -> expr t with
+          : value var t -> @expr var t
+          := match t return value var t -> expr t with
              | type.unit as t => expr_const (t:=t)
              | type.prod A B as t
-               => fun x : expr t + interp var A * interp var B
+               => fun x : expr t + value var A * value var B
                   => match x with
                      | inl v => v
                      | inr (a, b) => (@reify A a, @reify B b)%expr
                      end
              | type.arrow s d
-               => fun (f : interp var s -> interp var d)
+               => fun (f : value var s -> value var d)
                   => Abs (fun x
                           => @reify d (f (@reflect s (Var x))))
              | type.list A as t
-               => fun x : expr t + list (interp var A)
+               => fun x : expr t + list (value var A)
                   => match x with
                      | inl v => v
                      | inr v => reify_list (List.map (@reify A) v)
@@ -1347,16 +1306,16 @@ Module Compilers.
                      end
              end
         with reflect {t : type}
-             : @expr var t -> interp var t
-             := match t return expr t -> interp var t with
+             : @expr var t -> value var t
+             := match t return expr t -> value var t with
                 | type.arrow s d
-                  => fun (f : expr (s -> d)) (x : interp var s)
+                  => fun (f : expr (s -> d)) (x : value var s)
                      => @reflect d (App f (@reify s x))
                 | type.unit => fun _ => tt
                 | type.prod A B as t
                   => fun v : expr t
-                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                     => let inr := @inr (expr t) (value_prestep (value var) t) in
+                        let inl := @inl (expr t) (value_prestep (value var) t) in
                         match Smart_invert_Pair v with
                         | Some (a, b)
                           => inr (@reflect A a, @reflect B b)
@@ -1365,8 +1324,8 @@ Module Compilers.
                         end
                 | type.list A as t
                   => fun v : expr t
-                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                     => let inr := @inr (expr t) (value_prestep (value var) t) in
+                        let inl := @inl (expr t) (value_prestep (value var) t) in
                         match Smart_invert_list_full v with
                         | Some ls
                           => inr (List.map (@reflect A) ls)
@@ -1375,8 +1334,8 @@ Module Compilers.
                         end
                 | type.nat as t
                   => fun v : expr t
-                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                     => let inr := @inr (expr t) (value_prestep (value var) t) in
+                        let inl := @inl (expr t) (value_prestep (value var) t) in
                         match invert_nat_full v with
                         | Some v => inr v
                         | None => inl v
@@ -1384,8 +1343,8 @@ Module Compilers.
                 | type.Z as t
                 | type.bool as t
                   => fun v : expr t
-                     => let inr := @inr (expr t) (interp_prestep (interp var) t) in
-                        let inl := @inl (expr t) (interp_prestep (interp var) t) in
+                     => let inr := @inr (expr t) (value_prestep (value var) t) in
+                        let inl := @inl (expr t) (value_prestep (value var) t) in
                         match invert_Const v with
                         | Some v => inr v
                         | None => inl v
@@ -1398,8 +1357,8 @@ Module Compilers.
         (** TODO: Find a better name for this *)
         (** N.B. This always inlines functions; not sure if this is the right thing to do *)
         (** TODO: should we handle let-bound pairs, let-bound lists?  What should we do with them?  Here, I make the decision to always inline them; not sure if this is right *)
-        Fixpoint SmartLetIn {tx : type} : interp var tx -> (interp var tx -> interp var tC) -> interp var tC
-          := match tx return interp var tx -> (interp var tx -> interp var tC) -> interp var tC with
+        Fixpoint SmartLetIn {tx : type} : value var tx -> (value var tx -> value var tC) -> value var tC
+          := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
              | type.unit => fun _ f => f tt
              | type.arrow _ _
              | type.prod _ _
@@ -1408,7 +1367,7 @@ Module Compilers.
              | type.nat as t
              | type.Z as t
              | type.bool as t
-               => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> interp var tC)
+               => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> value var tC)
                   => match x with
                      | inl e
                        => match invert_Var e, invert_Const e with
@@ -1434,30 +1393,30 @@ Module Compilers.
     Module ident.
       Section interp.
         Context {var : type -> Type}.
-        Definition interp {t} (idc : ident t) : interp var t
-          := match idc in ident t return interp var t with
+        Definition interp {t} (idc : ident t) : value var t
+          := match idc in ident t return value var t with
              | ident.Const t v as idc
                => expr.reflect (Ident idc)
              | ident.Let_In tx tC
                => expr.SmartLetIn
              | ident.nil t
-               => inr (@nil (interp var t))
+               => inr (@nil (value var t))
              | ident.cons t as idc
-               => fun x (xs : expr (type.list t) + list (interp var t))
-                  => match xs return expr (type.list t) + list (interp var t) with
+               => fun x (xs : expr (type.list t) + list (value var t))
+                  => match xs return expr (type.list t) + list (value var t) with
                      | inr xs => inr (cons x xs)
                      | _ => expr.reflect (Ident idc) x xs
                      end
              | ident.pair A B as idc
-               => fun x y => @inr _ (interp var A * interp var B) (x, y)
+               => fun x y => @inr _ (value var A * value var B) (x, y)
              | ident.fst A B as idc
-               => fun x : expr (A * B) + interp var A * interp var B
+               => fun x : expr (A * B) + value var A * value var B
                   => match x with
                      | inr x => fst x
                      | _ => expr.reflect (Ident idc) x
                      end
              | ident.snd A B as idc
-               => fun x : expr (A * B) + interp var A * interp var B
+               => fun x : expr (A * B) + value var A * value var B
                   => match x with
                      | inr x => snd x
                      | _ => expr.reflect (Ident idc) x
@@ -1465,28 +1424,28 @@ Module Compilers.
              | ident.bool_rect T as idc
                => fun true_case false_case (b : expr type.bool + bool)
                   => match b with
-                     | inr b => @bool_rect (fun _ => interp var T) true_case false_case b
+                     | inr b => @bool_rect (fun _ => value var T) true_case false_case b
                      | _ => expr.reflect (Ident idc) true_case false_case b
                      end
              | ident.nat_rect P as idc
-               => fun (O_case : interp var P)
-                      (S_case : expr type.nat + nat -> interp var P -> interp var P)
+               => fun (O_case : value var P)
+                      (S_case : expr type.nat + nat -> value var P -> value var P)
                       (n : expr type.nat + nat)
                   => match n with
-                     | inr n => @nat_rect (fun _ => interp var P)
+                     | inr n => @nat_rect (fun _ => value var P)
                                           O_case
                                           (fun n' => S_case (inr n'))
                                           n
                      | _ => expr.reflect (Ident idc) O_case S_case n
                      end
              | ident.list_rect A P as idc
-               => fun (nil_case : interp var P)
-                      (cons_case : interp var A -> expr (type.list A) + list (interp var A) -> interp var P -> interp var P)
-                      (ls : expr (type.list A) + list (interp var A))
+               => fun (nil_case : value var P)
+                      (cons_case : value var A -> expr (type.list A) + list (value var A) -> value var P -> value var P)
+                      (ls : expr (type.list A) + list (value var A))
                   => match ls with
                      | inr ls => @list_rect
-                                   (interp var A)
-                                   (fun _ => interp var P)
+                                   (value var A)
+                                   (fun _ => value var P)
                                    nil_case
                                    (fun x xs rec => cons_case x (inr xs) rec)
                                    ls
@@ -1546,16 +1505,16 @@ Module Compilers.
   Section partial_reduce.
     Context {var : type -> Type}.
 
-    Fixpoint partial_reduce' {t} (e : @expr (partial.interp var) t)
-      : partial.interp var t
-      := match e in expr.expr t return partial.interp var t with
+    Fixpoint partial_reduce' {t} (e : @expr (partial.value var) t)
+      : partial.value var t
+      := match e in expr.expr t return partial.value var t with
          | Var t v => v
          | Ident t idc => partial.ident.interp idc
          | App s d f x => @partial_reduce' _ f (@partial_reduce' _ x)
          | Abs s d f => fun x => @partial_reduce' d (f x)
          end.
 
-    Definition partial_reduce {t} (e : @expr (partial.interp var) t) : @expr var t
+    Definition partial_reduce {t} (e : @expr (partial.value var) t) : @expr var t
       := partial.expr.reify (@partial_reduce' t e).
   End partial_reduce.
 
