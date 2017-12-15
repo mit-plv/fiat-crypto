@@ -1,13 +1,29 @@
-*#
+# vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-v][a-z]
+[._]sw[a-p]
+
+# emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# coq
 *.aux
 *.d
 *.glob
 *.vio
 *.vo
-*~
-.#*
+CoqMakefile.conf
 Makefile.bak
 Makefile.coq
+Makefile.coq.conf
 Makefile.coq.bak
 Makefile-old.conf
 csdp.cache
@@ -20,6 +36,7 @@ nra.cache
 .nlia.cache
 .nia.cache
 .nra.cache
+
 /remake_curves.log
 
 # compilation outputs
