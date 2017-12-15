@@ -1326,43 +1326,6 @@ Module Compilers.
     End expr.
   End CPS.
 
-  Section option_partition.
-    Context {A : Type} (f : A -> option Datatypes.bool).
-    Fixpoint option_partition (l : list A) : option (list A * list A)
-      := match l with
-         | nil => Some (nil, nil)
-         | cons x tl
-           => match option_partition tl, f x with
-              | Some (g, d), Some fx
-                => Some (if fx then (x :: g, d) else (g, x :: d))
-              | _, _ => None
-              end
-         end.
-  End option_partition.
-  Section option_flat_map.
-    Context {A B : Type} (f : A -> option (list B)).
-    Fixpoint option_flat_map (l : list A) : option (list B)
-      := match l with
-         | nil => Some nil
-         | cons x t => match f x, option_flat_map t with
-                       | Some fx, Some ft
-                         => Some (fx ++ ft)
-                       | _, _ => None
-                       end
-         end.
-  End option_flat_map.
-
-  Definition lift_option_list {A} (ls : list (option A)) : option (list A)
-    := list_rect
-         (fun _ => _)
-         (Some nil)
-         (fun x _ xs
-          => match x, xs with
-             | Some x, Some xs => Some (cons x xs)
-             | _, _ => None
-             end)
-         ls.
-
   Section invert.
     Context {var : type -> Type}.
 
