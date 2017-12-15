@@ -182,7 +182,9 @@ End Positional. End Positional.
 
 Module Compilers.
   Module type.
-    Inductive type := unit | prod (A B : type) | arrow (s d : type) | list (A : type) | nat | Z | bool.
+    Variant opaque := Z.
+    Inductive type := type_opaque (_:opaque) | unit | prod (A B : type) | arrow (s d : type) | list (A : type) | nat | bool.
+    Global Coercion type_opaque : opaque >-> type.
 
     Fixpoint interp (t : type)
       := match t with
@@ -191,9 +193,14 @@ Module Compilers.
          | arrow A B => interp A -> interp B
          | list A => Datatypes.list (interp A)
          | nat => Datatypes.nat
-         | Z => BinInt.Z
+         | type_opaque Z => BinInt.Z
          | bool => Datatypes.bool
          end%type.
+
+    Ltac reify_opaque ty :=
+      lazymatch eval cbv beta in ty with
+      | BinInt.Z => constr:(Z)
+      end.
 
     Ltac reify ty :=
       lazymatch eval cbv beta in ty with
@@ -211,8 +218,9 @@ Module Compilers.
            constr:(list rT)
       | Datatypes.nat => nat
       | Datatypes.bool => bool
-      | BinInt.Z => Z
       | type.interp ?T => T
+      | _ => let rt := reify_opaque ty in
+             constr:(type_opaque rt)
       end.
 
     Module Export Notations.
@@ -258,13 +266,9 @@ Module Compilers.
       Definition Interp {t} (e : Expr t) := interp (e _).
     End with_ident.
 
-    Ltac is_known_const_cps2 term on_success on_failure :=
-      let recurse term := is_known_const_cps2 term on_success on_failure in
+    Ltac is_opaque_const_cps2 term on_success on_failure :=
+      let recurse term := is_opaque_const_cps2 term on_success on_failure in
       lazymatch term with
-      | tt => on_success ()
-      | @nil _ => on_success ()
-      | S ?term => recurse term
-      | O => on_success ()
       | Z0 => on_success ()
       | Zpos ?p => recurse p
       | Zneg ?p => recurse p
@@ -273,10 +277,10 @@ Module Compilers.
       | xH => on_success ()
       | ?term => on_failure term
       end.
-    Ltac require_known_const term :=
-      is_known_const_cps2 term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
-    Ltac is_known_const term :=
-      is_known_const_cps2 term ltac:(fun _ => true) ltac:(fun _ => false).
+    Ltac require_opaque_const term :=
+      is_opaque_const_cps2 term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
+    Ltac is_opaque_const term :=
+      is_opaque_const_cps2 term ltac:(fun _ => true) ltac:(fun _ => false).
 
     Module var_context.
       Inductive list {var : type -> Type} :=
@@ -344,8 +348,8 @@ Module Compilers.
         => constr:(@Var ident var rT v)
       | _
         =>
-        let term_is_known_const := is_known_const term in
-        lazymatch term_is_known_const with
+        let term_is_opaque_const := is_opaque_const term in
+        lazymatch term_is_opaque_const with
         | true
           => let rv := reify_ident term in
              constr:(Ident (var:=var) rv)
@@ -443,14 +447,18 @@ Module Compilers.
       Module ident.
         Import type.
         Inductive ident : type -> Set :=
-        | Const {t} (v : interp t) : ident t
+        | opaque {t:type.opaque} (v : interp t) : ident t
         | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
+        | tt : ident unit
+        | O : ident nat
         | S : ident (nat -> nat)
         | nil {t} : ident (list t)
         | cons {t} : ident (t -> list t -> list t)
         | pair {A B} : ident (A -> B -> A * B)
         | fst {A B} : ident (A * B -> A)
         | snd {A B} : ident (A * B -> B)
+        | true : ident bool
+        | false : ident bool
         | bool_rect {T} : ident (T -> T -> bool -> T)
         | nat_rect {P} : ident (P -> (nat -> P -> P) -> nat -> P)
         | pred : ident (nat -> nat)
@@ -478,14 +486,18 @@ Module Compilers.
 
         Definition interp {t} (idc : ident t) : type.interp t
           := match idc in ident t return type.interp t with
-             | Const t v => v
+             | opaque _ v => v
              | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
+             | tt => Datatypes.tt
+             | O => Datatypes.O
              | S => Datatypes.S
              | nil t => @Datatypes.nil (type.interp t)
              | cons t => @Datatypes.cons (type.interp t)
              | pair A B => @Datatypes.pair (type.interp A) (type.interp B)
              | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
              | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
+             | true => @Datatypes.true
+             | false => @Datatypes.false
              | bool_rect T => @Datatypes.bool_rect (fun _ => type.interp T)
              | nat_rect P => @Datatypes.nat_rect (fun _ => type.interp P)
              | pred => Nat.pred
@@ -515,7 +527,11 @@ Module Compilers.
         Ltac reify term :=
           (*let dummy := match goal with _ => idtac "attempting to reify_op" term end in*)
           lazymatch term with
+          | Datatypes.tt => ident.tt
+          | Datatypes.O => ident.O
           | Datatypes.S => ident.S
+          | Datatypes.true => ident.true
+          | Datatypes.false => ident.false
           | @Datatypes.nil ?T
             => let rT := type.reify T in
                constr:(@ident.nil rT)
@@ -592,11 +608,11 @@ Module Compilers.
           | Z.of_nat => ident.Z_of_nat
           | _
             => let assert_const := match goal with
-                                   | _ => require_known_const term
+                                   | _ => require_opaque_const term
                                    end in
                let T := type of term in
-               let rT := type.reify T in
-               constr:(@ident.Const rT term)
+               let rT := type.reify_opaque T in
+               constr:(@ident.opaque rT term)
           end.
 
         Module List.
@@ -638,18 +654,13 @@ Module Compilers.
         Notation interp := (@interp ident (@ident.interp)).
         Notation Interp := (@Interp ident (@ident.interp)).
 
-        Notation TT := (Ident (@ident.Const type.unit tt)).
         Notation Pair x y := (App (App (Ident ident.pair) x) y).
 
         Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
-        Notation "( )" := TT : expr_scope.
-        Notation "()" := TT : expr_scope.
         Notation "'expr_let' x := A 'in' b" := (App (App (Ident ident.Let_In) A%expr) (Abs (fun x => b%expr))) : expr_scope.
         Notation "[ ]" := (Ident ident.nil) : expr_scope.
         Notation "x :: xs" := (App (App (Ident ident.cons) x%expr) xs%expr) : expr_scope.
 
-        Definition const {var t} (v : type.interp t) : @expr var t
-          := Ident (ident.Const v).
         Module Reification.
           Ltac reify var term := expr.reify ident ident.reify var term.
           Ltac Reify term := expr.Reify ident ident.reify term.
@@ -665,14 +676,18 @@ Module Compilers.
       Module ident.
         Import type.
         Inductive ident : type -> Set :=
-        | Const {t} (v : interp t) : ident t
+        | opaque {t : type.opaque} (v : interp t) : ident t
         | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
+        | tt : ident unit
+        | O : ident nat
         | S : ident (nat -> nat)
         | nil {t} : ident (list t)
         | cons {t} : ident (t -> list t -> list t)
         | pair {A B} : ident (A -> B -> A * B)
         | fst {A B} : ident (A * B -> A)
         | snd {A B} : ident (A * B -> B)
+        | true : ident bool
+        | false : ident bool
         | bool_rect {T} : ident (T -> T -> bool -> T)
         | nat_rect {P} : ident (P -> (nat -> P -> P) -> nat -> P)
         | pred : ident (nat -> nat)
@@ -690,9 +705,13 @@ Module Compilers.
 
         Definition interp {t} (idc : ident t) : type.interp t
           := match idc in ident t return type.interp t with
-             | Const t v => v
+             | opaque _ v => v
              | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
+             | tt => Datatypes.tt
+             | O => Datatypes.O
              | S => Datatypes.S
+             | true => Datatypes.true
+             | false => Datatypes.false
              | nil t => @Datatypes.nil (type.interp t)
              | cons t => @Datatypes.cons (type.interp t)
              | pair A B => @Datatypes.pair (type.interp A) (type.interp B)
@@ -717,7 +736,11 @@ Module Compilers.
         Ltac reify term :=
           (*let dummy := match goal with _ => idtac "attempting to reify_op" term end in*)
           lazymatch term with
+          | Datatypes.tt => ident.tt
+          | Datatypes.O => ident.O
           | Datatypes.S => ident.S
+          | Datatypes.true => ident.true
+          | Datatypes.false => ident.false
           | @Datatypes.nil ?T
             => let rT := type.reify T in
                constr:(@ident.nil rT)
@@ -763,11 +786,11 @@ Module Compilers.
           | Z.of_nat => ident.Z_of_nat
           | _
             => let assert_const := match goal with
-                                   | _ => require_known_const term
+                                   | _ => require_opaque_const term
                                    end in
                let T := type of term in
-               let rT := type.reify T in
-               constr:(@ident.Const rT term)
+               let rT := type.reify_opaque T in
+               constr:(@ident.opaque rT term)
           end.
 
         Module Z.
@@ -795,18 +818,12 @@ Module Compilers.
         Notation interp := (@interp ident (@ident.interp)).
         Notation Interp := (@Interp ident (@ident.interp)).
 
-        Notation TT := (Ident (@ident.Const type.unit tt)).
         Notation Pair x y := (App (App (Ident ident.pair) x) y).
 
         Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
-        Notation "( )" := TT : expr_scope.
-        Notation "()" := TT : expr_scope.
         Notation "'expr_let' x := A 'in' b" := (App (App (Ident ident.Let_In) A%expr) (Abs (fun x => b%expr))) : expr_scope.
         Notation "[ ]" := (Ident ident.nil) : expr_scope.
         Notation "x :: xs" := (App (App (Ident ident.cons) x%expr) xs%expr) : expr_scope.
-
-        Definition const {var t} (v : type.interp t) : @expr var t
-          := Ident (ident.Const v).
 
         Ltac reify var term := expr.reify ident ident.reify var term.
         Ltac Reify term := expr.Reify ident ident.reify term.
@@ -828,12 +845,18 @@ Module Compilers.
                  (fun m => m)
                  (fun a l1 app_l1 m => a :: app_l1 m) in
            match idc with
-           | for_reification.ident.Const t v
-             => Ident (ident.Const v)
            | for_reification.ident.Let_In tx tC
              => Ident ident.Let_In
+           | for_reification.ident.tt
+             => Ident ident.tt
+           | for_reification.ident.O
+             => Ident ident.O
            | for_reification.ident.S
              => Ident ident.S
+           | for_reification.ident.true
+             => Ident ident.true
+           | for_reification.ident.false
+             => Ident ident.false
            | for_reification.ident.nil t
              => Ident ident.nil
            | for_reification.ident.cons t
@@ -850,6 +873,8 @@ Module Compilers.
              => Ident ident.nat_rect
            | for_reification.ident.pred
              => Ident ident.pred
+           | for_reification.ident.opaque t v
+             => Ident (ident.opaque v)
            | for_reification.ident.Z_runtime_mul
              => Ident ident.Z.runtime_mul
            | for_reification.ident.Z_runtime_add
@@ -1098,16 +1123,6 @@ Module Compilers.
          | _ => None
          end.
 
-    Definition invert_Const {t} (e : @expr var t) : option (type.interp t)
-      := match invert_Ident e with
-         | Some idc
-           => match idc with
-              | ident.Const t v => Some v
-              | _ => None
-              end
-         | None => None
-         end.
-
     Definition invert_AppIdent {d} (e : @expr var d) : option { s : _ & @ident (s -> d) * @expr var s }%type
       := match invert_App e with
          | Some (existT s (f, x))
@@ -1153,26 +1168,39 @@ Module Compilers.
          | None => None
          end.
 
-    Definition invert_S (e : @expr var type.nat) : option (@expr var type.nat)
-      := match invert_AppIdent e with
-         | Some (existT s (idc, x))
-           => match idc in ident t
-                    return if_arrow_s expr t -> option (expr type.nat)
-              with
-              | ident.S => fun args => Some args
-              | _ => fun _ => None
-              end x
+    (* if we want more code for the below, I would suggest [reify_base_type] and [reflect_base_type] *)
+    Definition reflect_opaque {t} (e : @expr var (type.type_opaque t)) : option (type.interp (type.type_opaque t))
+      := match invert_Ident e with
+         | Some idc
+           => match idc in ident t return option (type.interp t) with
+              | ident.opaque _ v => Some v
+              | _ => None
+              end
          | None => None
          end.
 
-    Definition invert_Z (e : @expr var type.Z) : option Z := invert_Const e.
-    Definition invert_bool (e : @expr var type.bool) : option bool := invert_Const e.
-    Fixpoint invert_nat_full (e : @expr var type.nat) : option nat
+    Fixpoint reify_nat (n:nat) : @expr var type.nat
+      := match n with
+         | S n' => App (Ident ident.S) (reify_nat n')
+         | O => Ident ident.O
+         end.
+    Fixpoint reflect_nat (e : @expr var type.nat) : option nat
       := match e return option nat with
          | App type.nat _ (Ident _ ident.S) args
-           => option_map S (invert_nat_full args)
-         | Ident _ (ident.Const type.nat v)
-           => Some v
+           => option_map S (reflect_nat args)
+         | Ident type.nat ident.O
+           => Some O
+         | _ => None
+         end.
+
+    Fixpoint reify_bool (b:bool) : @expr var type.bool
+      := if b then Ident ident.true else Ident ident.false.
+    Fixpoint reflect_bool (e : @expr var type.bool) : option bool
+      := match e return option bool with
+         | Ident type.nat ident.true
+           => Some true
+         | Ident type.nat ident.false
+           => Some false
          | _ => None
          end.
 
@@ -1183,17 +1211,17 @@ Module Compilers.
                    end) (only parsing).
 
     (* oh, the horrors of not being able to use non-linear deep pattern matches.  c.f. COQBUG(https://github.com/coq/coq/issues/6320) *)
-    Fixpoint invert_list_full {t} (e : @expr var (type.list t))
+    Fixpoint reflect_list {t} (e : @expr var (type.list t))
       : option (list (@expr var t))
       := match e in expr.expr t return option (list_expr t) with
          | Ident t idc
            => match idc in ident t return option (list_expr t) with
-              | ident.Const (type.list _) v => Some (List.map const v)
               | ident.nil _ => Some nil
               | _ => None
               end
          | App (type.list s) d f xs
-           => match @invert_list_full s xs return _ with
+               (* WHY reflect xs before x? *)
+           => match @reflect_list s xs return _ with
               | Some xs
                 => match invert_AppIdent f return option (list_expr d) with
                    | Some (existT s' (idc, x))
@@ -1210,23 +1238,6 @@ Module Compilers.
               | None => None
               end
          | _ => None
-         end.
-
-    (** TODO: figure out a better name for this *)
-    Definition Smart_invert_Pair {A B} (e : @expr var (type.prod A B)) : option (@expr var A * @expr var B)
-      := match invert_Pair e, invert_Var e, invert_Const e with
-         | Some ab, _, _ => Some ab
-         | _, Some v, _ => Some (App (Ident ident.fst) (Var v), App (Ident ident.snd) (Var v))
-         | _, _, Some v => Some (@const var A (fst v), @const var B (snd v))
-         | None, None, None => None
-         end.
-
-    (** TODO: figure out a better name for this *)
-    Definition Smart_invert_list_full {A} (e : @expr var (type.list A)) : option (list (@expr var A))
-      := match invert_Const e, invert_list_full e with
-         | Some ls, _ => Some (List.map (@const var A) ls)
-         | _, Some ls => Some ls
-         | None, None => None
          end.
   End invert.
 
@@ -1250,7 +1261,7 @@ Module Compilers.
            | type.arrow s d => value s -> value d
            | type.list A => list (value A)
            | type.unit as t
-           | type.Z as t
+           | type.type_opaque _ as t
            | type.nat as t
            | type.bool as t
              => type.interp t
@@ -1262,7 +1273,7 @@ Module Compilers.
              => value_prestep value t
            | type.prod _ _ as t
            | type.list _ as t
-           | type.Z as t
+           | type.type_opaque _ as t
            | type.nat as t
            | type.bool as t
              => @expr var t + value_prestep value t
@@ -1271,15 +1282,14 @@ Module Compilers.
         := value_step value t.
     End value.
 
-    Notation expr_const := const.
-
     Module expr.
       Section reify.
         Context {var : type -> Type}.
+        Check ident.tt.
         Fixpoint reify {t : type} {struct t}
           : value var t -> @expr var t
           := match t return value var t -> expr t with
-             | type.unit as t => expr_const (t:=t)
+             | type.unit as t => fun _ => expr.Ident ident.tt
              | type.prod A B as t
                => fun x : expr t + value var A * value var B
                   => match x with
@@ -1297,12 +1307,22 @@ Module Compilers.
                      | inr v => reify_list (List.map (@reify A) v)
                      end
              | type.nat as t
-             | type.Z as t
+               => fun x : expr t + type.interp t
+                  => match x with
+                     | inl v => v
+                     | inr v => reify_nat v
+                     end
              | type.bool as t
                => fun x : expr t + type.interp t
                   => match x with
                      | inl v => v
-                     | inr v => expr_const (t:=t) v
+                     | inr v => reify_bool v
+                     end
+             | type.type_opaque _ as t
+               => fun x : expr t + type.interp t
+                  => match x with
+                     | inl v => v
+                     | inr v => Ident (ident.opaque v)
                      end
              end
         with reflect {t : type}
@@ -1316,7 +1336,7 @@ Module Compilers.
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
                         let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match Smart_invert_Pair v with
+                        match invert_Pair v with
                         | Some (a, b)
                           => inr (@reflect A a, @reflect B b)
                         | None
@@ -1326,7 +1346,7 @@ Module Compilers.
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
                         let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match Smart_invert_list_full v with
+                        match reflect_list v with
                         | Some ls
                           => inr (List.map (@reflect A) ls)
                         | None
@@ -1336,49 +1356,28 @@ Module Compilers.
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
                         let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match invert_nat_full v with
+                        match reflect_nat v with
                         | Some v => inr v
                         | None => inl v
                         end
-                | type.Z as t
                 | type.bool as t
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
                         let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match invert_Const v with
+                        match reflect_bool v with
+                        | Some v => inr v
+                        | None => inl v
+                        end
+                | type.type_opaque _ as t
+                  => fun v : expr t
+                     => let inr := @inr (expr t) (value_prestep (value var) t) in
+                        let inl := @inl (expr t) (value_prestep (value var) t) in
+                        match reflect_opaque v with
                         | Some v => inr v
                         | None => inl v
                         end
                 end.
       End reify.
-
-      Section SmartLetIn.
-        Context {var : type -> Type} {tC : type}.
-        (** TODO: Find a better name for this *)
-        (** N.B. This always inlines functions; not sure if this is the right thing to do *)
-        (** TODO: should we handle let-bound pairs, let-bound lists?  What should we do with them?  Here, I make the decision to always inline them; not sure if this is right *)
-        Fixpoint SmartLetIn {tx : type} : value var tx -> (value var tx -> value var tC) -> value var tC
-          := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
-             | type.unit => fun _ f => f tt
-             | type.arrow _ _
-             | type.prod _ _
-             | type.list _
-               => fun x f => f x
-             | type.nat as t
-             | type.Z as t
-             | type.bool as t
-               => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> value var tC)
-                  => match x with
-                     | inl e
-                       => match invert_Var e, invert_Const e with
-                          | Some v, _ => f (inl (Var v))
-                          | _, Some v => f (inr v)
-                          | None, None => reflect (expr_let y := e in reify (f (inl (Var y))))%expr
-                          end
-                     | inr v => f (inr v)
-                     end
-             end.
-      End SmartLetIn.
     End expr.
 
     Definition sum_arrow {A A' B B'} (f : A -> A') (g : B -> B')
@@ -1393,14 +1392,42 @@ Module Compilers.
     Module ident.
       Section interp.
         Context {var : type -> Type}.
+        Definition interp_let_in {tC tx : type} : value var tx -> (value var tx -> value var tC) -> value var tC
+          := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
+             | type.unit => fun _ f => f tt
+             | type.arrow _ _
+             | type.prod _ _
+             | type.list _
+               => fun x f => f x
+             | type.nat as t
+             | type.type_opaque _ as t
+             | type.bool as t
+               => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> value var tC)
+                  => match x with
+                     | inl e
+                       => match invert_Var e with
+                          | Some v => f (inl (Var v))
+                          | None => partial.expr.reflect (expr_let y := e in partial.expr.reify (f (inl (Var y))))%expr
+                          end
+                     | inr v => f (inr v) (* FIXME: do not substitute [S (big stuck term)] *)
+                     end
+             end.
         Definition interp {t} (idc : ident t) : value var t
           := match idc in ident t return value var t with
-             | ident.Const t v as idc
-               => expr.reflect (Ident idc)
              | ident.Let_In tx tC
-               => expr.SmartLetIn
+               => interp_let_in
+             | ident.tt
+               => tt
+             | ident.O
+               => inr O
+             | ident.true
+               => inr true
+             | ident.false
+               => inr false
              | ident.nil t
                => inr (@nil (value var t))
+             | ident.opaque type.Z z
+               => inr z
              | ident.cons t as idc
                => fun x (xs : expr (type.list t) + list (value var t))
                   => match xs return expr (type.list t) + list (value var t) with
@@ -1562,17 +1589,7 @@ Qed.
 Delimit Scope RT_expr_scope with RT_expr.
 Import expr.
 Import for_reification.Notations.Reification.
-Notation "ls _{ n }"
-  := (App (App (App (Ident for_reification.ident.List.nth_default) _) ls%expr) (Ident (ident.Const n%nat)))
-       (at level 20, format "ls _{ n }")
-     : expr_scope.
 
-Notation "'hd' ls" := (App (App (App (Ident ident.list_rect) (Ident (ident.Const (-1)%Z)))
-                                (Abs (fun x1 => Abs (fun _ => Abs (fun _ => Var x1)))))
-                           ls%expr) (at level 10, ls at level 10) : expr_scope.
-Notation "( λₗ xs .. ys , f ) ( 'tl' ls )" := (App (App (App (Ident ident.list_rect) (Ident (ident.Const (-1)%Z)))
-                                      (Abs (fun _ => Abs (fun xs => .. (fun ys => Abs (fun _ => f)) .. ))))
-                                 ls%expr) (at level 10, xs binder, ys binder, ls at level 10) : expr_scope.
 Notation "x + y"
   := (App (App (Ident ident.Z.runtime_add) x%RT_expr) y%RT_expr)
      : RT_expr_scope.
@@ -1585,7 +1602,6 @@ Notation "x + y"
 Notation "x * y"
   := (App (App (Ident ident.Z.runtime_mul) x%RT_expr) y%RT_expr)
      : expr_scope.
-Notation "x" := (Ident (ident.Const x)) (only printing, at level 10) : expr_scope.
 Notation "x" := (Var x) (only printing, at level 10) : expr_scope.
 Open Scope RT_expr_scope.
 
@@ -1633,7 +1649,7 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
       pose (PartialReduce (canonicalize_list_recursion E)) as E'.
       vm_compute in E'.
       lazymatch (eval cbv delta [E'] in E') with
-      | (fun var => Ident (ident.Const ?v)) => idtac
+      | (fun var => Ident (ident.opaque ?v)) => idtac
       end.
       constructor. }
     assert True.
@@ -1649,7 +1665,7 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
       vm_compute in E'.
       lazymatch (eval cbv delta [E'] in E') with
       | (fun var : type -> Type =>
-           (λ x : var type.Z,
+           (λ x : var (type.type_opaque type.Z),
                   expr_let x0 := (Var x * Var x)%RT_expr in
                 expr_let x1 := (Var x0 * Var x0)%RT_expr in
                 (Var x1, Var x1))%expr) => idtac
@@ -1682,1210 +1698,58 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
   (*trivial.*)
 Defined.
 Eval cbv [proj1_sig base_25_5_mul] in (fun f g Hf Hg => proj1_sig (base_25_5_mul f g Hf Hg)).
-
-(*     = fun (f g : list Z) (_ : length f = 10%nat) (_ : length g = 10%nat) =>
-       expr.Interp (@ident.interp)
-         (fun var : type -> Type =>
-          (λ x x0 : var (type.list type.Z),
-           hd x * hd x0 +
-           (2 *
-            (19 *
-             (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-              ( λₗ x2 : var (type.list type.Z),
-              ( λₗ x5 : var (type.list type.Z),
-              ( λₗ x8 : var (type.list type.Z),
-              ( λₗ x11 : var (type.list type.Z),
-              ( λₗ x14 : var (type.list type.Z),
-              ( λₗ x17 : var (type.list type.Z),
-              ( λₗ x20 : var (type.list type.Z),
-              ( λₗ x23 : var (type.list type.Z),
-              ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl x20))( tl
-              x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x0))) +
-            (19 *
-             (( λₗ x2 : var (type.list type.Z), ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))
-              ( tl x) *
-              ( λₗ x2 : var (type.list type.Z),
-              ( λₗ x5 : var (type.list type.Z),
-              ( λₗ x8 : var (type.list type.Z),
-              ( λₗ x11 : var (type.list type.Z),
-              ( λₗ x14 : var (type.list type.Z),
-              ( λₗ x17 : var (type.list type.Z),
-              ( λₗ x20 : var (type.list type.Z),
-              ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl x17))( tl
-              x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-             (2 *
-              (19 *
-               (( λₗ x2 : var (type.list type.Z),
-                ( λₗ x5 : var (type.list type.Z), ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))
-                ( tl x2))( tl x) *
-                ( λₗ x2 : var (type.list type.Z),
-                ( λₗ x5 : var (type.list type.Z),
-                ( λₗ x8 : var (type.list type.Z),
-                ( λₗ x11 : var (type.list type.Z),
-                ( λₗ x14 : var (type.list type.Z),
-                ( λₗ x17 : var (type.list type.Z),
-                ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x0))) +
-              (19 *
-               (( λₗ x2 : var (type.list type.Z),
-                ( λₗ x5 : var (type.list type.Z),
-                ( λₗ x8 : var (type.list type.Z),
-                ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                x5))( tl x2))( tl x) *
-                ( λₗ x2 : var (type.list type.Z),
-                ( λₗ x5 : var (type.list type.Z),
-                ( λₗ x8 : var (type.list type.Z),
-                ( λₗ x11 : var (type.list type.Z),
-                ( λₗ x14 : var (type.list type.Z),
-                ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-               (2 *
-                (19 *
-                 (( λₗ x2 : var (type.list type.Z),
-                  ( λₗ x5 : var (type.list type.Z),
-                  ( λₗ x8 : var (type.list type.Z),
-                  ( λₗ x11 : var (type.list type.Z),
-                  ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                  x8))( tl x5))( tl x2))( tl x) *
-                  ( λₗ x2 : var (type.list type.Z),
-                  ( λₗ x5 : var (type.list type.Z),
-                  ( λₗ x8 : var (type.list type.Z),
-                  ( λₗ x11 : var (type.list type.Z),
-                  ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                  x8))( tl x5))( tl x2))( tl x0))) +
-                (19 *
-                 (( λₗ x2 : var (type.list type.Z),
-                  ( λₗ x5 : var (type.list type.Z),
-                  ( λₗ x8 : var (type.list type.Z),
-                  ( λₗ x11 : var (type.list type.Z),
-                  ( λₗ x14 : var (type.list type.Z),
-                  ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                  x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                  ( λₗ x2 : var (type.list type.Z),
-                  ( λₗ x5 : var (type.list type.Z),
-                  ( λₗ x8 : var (type.list type.Z),
-                  ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                  x5))( tl x2))( tl x0)) +
-                 (2 *
-                  (19 *
-                   (( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z),
-                    ( λₗ x8 : var (type.list type.Z),
-                    ( λₗ x11 : var (type.list type.Z),
-                    ( λₗ x14 : var (type.list type.Z),
-                    ( λₗ x17 : var (type.list type.Z),
-                    ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                    x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                    ( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z),
-                    ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                    x2))( tl x0))) +
-                  (19 *
-                   (( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z),
-                    ( λₗ x8 : var (type.list type.Z),
-                    ( λₗ x11 : var (type.list type.Z),
-                    ( λₗ x14 : var (type.list type.Z),
-                    ( λₗ x17 : var (type.list type.Z),
-                    ( λₗ x20 : var (type.list type.Z),
-                    ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                    x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                    x) *
-                    ( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                    x0)) +
-                   2 *
-                   (19 *
-                    (( λₗ x2 : var (type.list type.Z),
-                     ( λₗ x5 : var (type.list type.Z),
-                     ( λₗ x8 : var (type.list type.Z),
-                     ( λₗ x11 : var (type.list type.Z),
-                     ( λₗ x14 : var (type.list type.Z),
-                     ( λₗ x17 : var (type.list type.Z),
-                     ( λₗ x20 : var (type.list type.Z),
-                     ( λₗ x23 : var (type.list type.Z),
-                     ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                     x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                     x2))( tl x) * ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0)))))))))))
-           :: hd x * ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0) +
-              (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) * hd x0 +
-               (19 *
-                (( λₗ x2 : var (type.list type.Z), ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))
-                 ( tl x) *
-                 ( λₗ x2 : var (type.list type.Z),
-                 ( λₗ x5 : var (type.list type.Z),
-                 ( λₗ x8 : var (type.list type.Z),
-                 ( λₗ x11 : var (type.list type.Z),
-                 ( λₗ x14 : var (type.list type.Z),
-                 ( λₗ x17 : var (type.list type.Z),
-                 ( λₗ x20 : var (type.list type.Z),
-                 ( λₗ x23 : var (type.list type.Z),
-                 ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                 x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                 x2))( tl x0)) +
-                (19 *
-                 (( λₗ x2 : var (type.list type.Z),
-                  ( λₗ x5 : var (type.list type.Z),
-                  ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                  x2))( tl x) *
-                  ( λₗ x2 : var (type.list type.Z),
-                  ( λₗ x5 : var (type.list type.Z),
-                  ( λₗ x8 : var (type.list type.Z),
-                  ( λₗ x11 : var (type.list type.Z),
-                  ( λₗ x14 : var (type.list type.Z),
-                  ( λₗ x17 : var (type.list type.Z),
-                  ( λₗ x20 : var (type.list type.Z),
-                  ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                  x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                  x0)) +
-                 (19 *
-                  (( λₗ x2 : var (type.list type.Z),
-                   ( λₗ x5 : var (type.list type.Z),
-                   ( λₗ x8 : var (type.list type.Z),
-                   ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                   x5))( tl x2))( tl x) *
-                   ( λₗ x2 : var (type.list type.Z),
-                   ( λₗ x5 : var (type.list type.Z),
-                   ( λₗ x8 : var (type.list type.Z),
-                   ( λₗ x11 : var (type.list type.Z),
-                   ( λₗ x14 : var (type.list type.Z),
-                   ( λₗ x17 : var (type.list type.Z),
-                   ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                   x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-                  (19 *
-                   (( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z),
-                    ( λₗ x8 : var (type.list type.Z),
-                    ( λₗ x11 : var (type.list type.Z),
-                    ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                    x8))( tl x5))( tl x2))( tl x) *
-                    ( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z),
-                    ( λₗ x8 : var (type.list type.Z),
-                    ( λₗ x11 : var (type.list type.Z),
-                    ( λₗ x14 : var (type.list type.Z),
-                    ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                    x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-                   (19 *
-                    (( λₗ x2 : var (type.list type.Z),
-                     ( λₗ x5 : var (type.list type.Z),
-                     ( λₗ x8 : var (type.list type.Z),
-                     ( λₗ x11 : var (type.list type.Z),
-                     ( λₗ x14 : var (type.list type.Z),
-                     ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                     x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                     ( λₗ x2 : var (type.list type.Z),
-                     ( λₗ x5 : var (type.list type.Z),
-                     ( λₗ x8 : var (type.list type.Z),
-                     ( λₗ x11 : var (type.list type.Z),
-                     ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                     x8))( tl x5))( tl x2))( tl x0)) +
-                    (19 *
-                     (( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z),
-                      ( λₗ x8 : var (type.list type.Z),
-                      ( λₗ x11 : var (type.list type.Z),
-                      ( λₗ x14 : var (type.list type.Z),
-                      ( λₗ x17 : var (type.list type.Z),
-                      ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                      x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                      ( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z),
-                      ( λₗ x8 : var (type.list type.Z),
-                      ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                      x5))( tl x2))( tl x0)) +
-                     (19 *
-                      (( λₗ x2 : var (type.list type.Z),
-                       ( λₗ x5 : var (type.list type.Z),
-                       ( λₗ x8 : var (type.list type.Z),
-                       ( λₗ x11 : var (type.list type.Z),
-                       ( λₗ x14 : var (type.list type.Z),
-                       ( λₗ x17 : var (type.list type.Z),
-                       ( λₗ x20 : var (type.list type.Z),
-                       ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                       x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                       x) *
-                       ( λₗ x2 : var (type.list type.Z),
-                       ( λₗ x5 : var (type.list type.Z),
-                       ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                       x2))( tl x0)) +
-                      19 *
-                      (( λₗ x2 : var (type.list type.Z),
-                       ( λₗ x5 : var (type.list type.Z),
-                       ( λₗ x8 : var (type.list type.Z),
-                       ( λₗ x11 : var (type.list type.Z),
-                       ( λₗ x14 : var (type.list type.Z),
-                       ( λₗ x17 : var (type.list type.Z),
-                       ( λₗ x20 : var (type.list type.Z),
-                       ( λₗ x23 : var (type.list type.Z),
-                       ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                       x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl
-                       x5))( tl x2))( tl x) *
-                       ( λₗ x2 : var (type.list type.Z),
-                       ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                       x0))))))))))
-              :: hd x *
-                 ( λₗ x2 : var (type.list type.Z), ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))
-                 ( tl x0) +
-                 (2 *
-                  (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                   ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0)) +
-                  (( λₗ x2 : var (type.list type.Z),
-                   ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                   x) * hd x0 +
-                   (2 *
-                    (19 *
-                     (( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z),
-                      ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                      x2))( tl x) *
-                      ( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z),
-                      ( λₗ x8 : var (type.list type.Z),
-                      ( λₗ x11 : var (type.list type.Z),
-                      ( λₗ x14 : var (type.list type.Z),
-                      ( λₗ x17 : var (type.list type.Z),
-                      ( λₗ x20 : var (type.list type.Z),
-                      ( λₗ x23 : var (type.list type.Z),
-                      ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                      x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                      x2))( tl x0))) +
-                    (19 *
-                     (( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z),
-                      ( λₗ x8 : var (type.list type.Z),
-                      ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                      x5))( tl x2))( tl x) *
-                      ( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z),
-                      ( λₗ x8 : var (type.list type.Z),
-                      ( λₗ x11 : var (type.list type.Z),
-                      ( λₗ x14 : var (type.list type.Z),
-                      ( λₗ x17 : var (type.list type.Z),
-                      ( λₗ x20 : var (type.list type.Z),
-                      ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                      x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                      x0)) +
-                     (2 *
-                      (19 *
-                       (( λₗ x2 : var (type.list type.Z),
-                        ( λₗ x5 : var (type.list type.Z),
-                        ( λₗ x8 : var (type.list type.Z),
-                        ( λₗ x11 : var (type.list type.Z),
-                        ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                        x8))( tl x5))( tl x2))( tl x) *
-                        ( λₗ x2 : var (type.list type.Z),
-                        ( λₗ x5 : var (type.list type.Z),
-                        ( λₗ x8 : var (type.list type.Z),
-                        ( λₗ x11 : var (type.list type.Z),
-                        ( λₗ x14 : var (type.list type.Z),
-                        ( λₗ x17 : var (type.list type.Z),
-                        ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                        x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl x0))) +
-                      (19 *
-                       (( λₗ x2 : var (type.list type.Z),
-                        ( λₗ x5 : var (type.list type.Z),
-                        ( λₗ x8 : var (type.list type.Z),
-                        ( λₗ x11 : var (type.list type.Z),
-                        ( λₗ x14 : var (type.list type.Z),
-                        ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                        x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                        ( λₗ x2 : var (type.list type.Z),
-                        ( λₗ x5 : var (type.list type.Z),
-                        ( λₗ x8 : var (type.list type.Z),
-                        ( λₗ x11 : var (type.list type.Z),
-                        ( λₗ x14 : var (type.list type.Z),
-                        ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                        x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-                       (2 *
-                        (19 *
-                         (( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z),
-                          ( λₗ x14 : var (type.list type.Z),
-                          ( λₗ x17 : var (type.list type.Z),
-                          ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                          x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                          x) *
-                          ( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z),
-                          ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                          x8))( tl x5))( tl x2))( tl x0))) +
-                        (19 *
-                         (( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z),
-                          ( λₗ x14 : var (type.list type.Z),
-                          ( λₗ x17 : var (type.list type.Z),
-                          ( λₗ x20 : var (type.list type.Z),
-                          ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                          x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                          x2))( tl x) *
-                          ( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                          x5))( tl x2))( tl x0)) +
-                         2 *
-                         (19 *
-                          (( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z),
-                           ( λₗ x11 : var (type.list type.Z),
-                           ( λₗ x14 : var (type.list type.Z),
-                           ( λₗ x17 : var (type.list type.Z),
-                           ( λₗ x20 : var (type.list type.Z),
-                           ( λₗ x23 : var (type.list type.Z),
-                           ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                           x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl
-                           x5))( tl x2))( tl x) *
-                           ( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                           x2))( tl x0)))))))))))
-                 :: hd x *
-                    ( λₗ x2 : var (type.list type.Z),
-                    ( λₗ x5 : var (type.list type.Z),
-                    ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                    x2))( tl x0) +
-                    (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                     ( λₗ x2 : var (type.list type.Z),
-                     ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                     x0) +
-                     (( λₗ x2 : var (type.list type.Z),
-                      ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                      x) * ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0) +
-                      (( λₗ x2 : var (type.list type.Z),
-                       ( λₗ x5 : var (type.list type.Z),
-                       ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                       x2))( tl x) * hd x0 +
-                       (19 *
-                        (( λₗ x2 : var (type.list type.Z),
-                         ( λₗ x5 : var (type.list type.Z),
-                         ( λₗ x8 : var (type.list type.Z),
-                         ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                         x5))( tl x2))( tl x) *
-                         ( λₗ x2 : var (type.list type.Z),
-                         ( λₗ x5 : var (type.list type.Z),
-                         ( λₗ x8 : var (type.list type.Z),
-                         ( λₗ x11 : var (type.list type.Z),
-                         ( λₗ x14 : var (type.list type.Z),
-                         ( λₗ x17 : var (type.list type.Z),
-                         ( λₗ x20 : var (type.list type.Z),
-                         ( λₗ x23 : var (type.list type.Z),
-                         ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                         x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl
-                         x5))( tl x2))( tl x0)) +
-                        (19 *
-                         (( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z),
-                          ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                          x8))( tl x5))( tl x2))( tl x) *
-                          ( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z),
-                          ( λₗ x14 : var (type.list type.Z),
-                          ( λₗ x17 : var (type.list type.Z),
-                          ( λₗ x20 : var (type.list type.Z),
-                          ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                          x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                          x2))( tl x0)) +
-                         (19 *
-                          (( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z),
-                           ( λₗ x11 : var (type.list type.Z),
-                           ( λₗ x14 : var (type.list type.Z),
-                           ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                           x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                           ( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z),
-                           ( λₗ x11 : var (type.list type.Z),
-                           ( λₗ x14 : var (type.list type.Z),
-                           ( λₗ x17 : var (type.list type.Z),
-                           ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                           x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                           x0)) +
-                          (19 *
-                           (( λₗ x2 : var (type.list type.Z),
-                            ( λₗ x5 : var (type.list type.Z),
-                            ( λₗ x8 : var (type.list type.Z),
-                            ( λₗ x11 : var (type.list type.Z),
-                            ( λₗ x14 : var (type.list type.Z),
-                            ( λₗ x17 : var (type.list type.Z),
-                            ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                            x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                            x) *
-                            ( λₗ x2 : var (type.list type.Z),
-                            ( λₗ x5 : var (type.list type.Z),
-                            ( λₗ x8 : var (type.list type.Z),
-                            ( λₗ x11 : var (type.list type.Z),
-                            ( λₗ x14 : var (type.list type.Z),
-                            ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                            x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-                           (19 *
-                            (( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z),
-                             ( λₗ x8 : var (type.list type.Z),
-                             ( λₗ x11 : var (type.list type.Z),
-                             ( λₗ x14 : var (type.list type.Z),
-                             ( λₗ x17 : var (type.list type.Z),
-                             ( λₗ x20 : var (type.list type.Z),
-                             ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                             x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                             x2))( tl x) *
-                             ( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z),
-                             ( λₗ x8 : var (type.list type.Z),
-                             ( λₗ x11 : var (type.list type.Z),
-                             ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                             x8))( tl x5))( tl x2))( tl x0)) +
-                            19 *
-                            (( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z),
-                             ( λₗ x8 : var (type.list type.Z),
-                             ( λₗ x11 : var (type.list type.Z),
-                             ( λₗ x14 : var (type.list type.Z),
-                             ( λₗ x17 : var (type.list type.Z),
-                             ( λₗ x20 : var (type.list type.Z),
-                             ( λₗ x23 : var (type.list type.Z),
-                             ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                             x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl
-                             x5))( tl x2))( tl x) *
-                             ( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z),
-                             ( λₗ x8 : var (type.list type.Z),
-                             ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                             x5))( tl x2))( tl x0))))))))))
-                    :: hd x *
-                       ( λₗ x2 : var (type.list type.Z),
-                       ( λₗ x5 : var (type.list type.Z),
-                       ( λₗ x8 : var (type.list type.Z),
-                       ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                       x5))( tl x2))( tl x0) +
-                       (2 *
-                        (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                         ( λₗ x2 : var (type.list type.Z),
-                         ( λₗ x5 : var (type.list type.Z),
-                         ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                         x2))( tl x0)) +
-                        (( λₗ x2 : var (type.list type.Z),
-                         ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                         x) *
-                         ( λₗ x2 : var (type.list type.Z),
-                         ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                         x0) +
-                         (2 *
-                          (( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                           x2))( tl x) * ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0)) +
-                          (( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z),
-                           ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                           x5))( tl x2))( tl x) * hd x0 +
-                           (2 *
-                            (19 *
-                             (( λₗ x2 : var (type.list type.Z),
-                              ( λₗ x5 : var (type.list type.Z),
-                              ( λₗ x8 : var (type.list type.Z),
-                              ( λₗ x11 : var (type.list type.Z),
-                              ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                              x8))( tl x5))( tl x2))( tl x) *
-                              ( λₗ x2 : var (type.list type.Z),
-                              ( λₗ x5 : var (type.list type.Z),
-                              ( λₗ x8 : var (type.list type.Z),
-                              ( λₗ x11 : var (type.list type.Z),
-                              ( λₗ x14 : var (type.list type.Z),
-                              ( λₗ x17 : var (type.list type.Z),
-                              ( λₗ x20 : var (type.list type.Z),
-                              ( λₗ x23 : var (type.list type.Z),
-                              ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                              x20))( tl x17))( tl x14))( tl x11))( tl x8))( tl
-                              x5))( tl x2))( tl x0))) +
-                            (19 *
-                             (( λₗ x2 : var (type.list type.Z),
-                              ( λₗ x5 : var (type.list type.Z),
-                              ( λₗ x8 : var (type.list type.Z),
-                              ( λₗ x11 : var (type.list type.Z),
-                              ( λₗ x14 : var (type.list type.Z),
-                              ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                              x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                              ( λₗ x2 : var (type.list type.Z),
-                              ( λₗ x5 : var (type.list type.Z),
-                              ( λₗ x8 : var (type.list type.Z),
-                              ( λₗ x11 : var (type.list type.Z),
-                              ( λₗ x14 : var (type.list type.Z),
-                              ( λₗ x17 : var (type.list type.Z),
-                              ( λₗ x20 : var (type.list type.Z),
-                              ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                              x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                              x2))( tl x0)) +
-                             (2 *
-                              (19 *
-                               (( λₗ x2 : var (type.list type.Z),
-                                ( λₗ x5 : var (type.list type.Z),
-                                ( λₗ x8 : var (type.list type.Z),
-                                ( λₗ x11 : var (type.list type.Z),
-                                ( λₗ x14 : var (type.list type.Z),
-                                ( λₗ x17 : var (type.list type.Z),
-                                ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                                x) *
-                                ( λₗ x2 : var (type.list type.Z),
-                                ( λₗ x5 : var (type.list type.Z),
-                                ( λₗ x8 : var (type.list type.Z),
-                                ( λₗ x11 : var (type.list type.Z),
-                                ( λₗ x14 : var (type.list type.Z),
-                                ( λₗ x17 : var (type.list type.Z),
-                                ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                                x0))) +
-                              (19 *
-                               (( λₗ x2 : var (type.list type.Z),
-                                ( λₗ x5 : var (type.list type.Z),
-                                ( λₗ x8 : var (type.list type.Z),
-                                ( λₗ x11 : var (type.list type.Z),
-                                ( λₗ x14 : var (type.list type.Z),
-                                ( λₗ x17 : var (type.list type.Z),
-                                ( λₗ x20 : var (type.list type.Z),
-                                ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                x17))( tl x14))( tl x11))( tl x8))( tl x5))( tl
-                                x2))( tl x) *
-                                ( λₗ x2 : var (type.list type.Z),
-                                ( λₗ x5 : var (type.list type.Z),
-                                ( λₗ x8 : var (type.list type.Z),
-                                ( λₗ x11 : var (type.list type.Z),
-                                ( λₗ x14 : var (type.list type.Z),
-                                ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                x11))( tl x8))( tl x5))( tl x2))( tl x0)) +
-                               2 *
-                               (19 *
-                                (( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z),
-                                 ( λₗ x11 : var (type.list type.Z),
-                                 ( λₗ x14 : var (type.list type.Z),
-                                 ( λₗ x17 : var (type.list type.Z),
-                                 ( λₗ x20 : var (type.list type.Z),
-                                 ( λₗ x23 : var (type.list type.Z),
-                                 ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                                 x20))( tl x17))( tl x14))( tl x11))( tl
-                                 x8))( tl x5))( tl x2))( tl x) *
-                                 ( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z),
-                                 ( λₗ x11 : var (type.list type.Z),
-                                 ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                                 x8))( tl x5))( tl x2))( tl x0)))))))))))
-                       :: hd x *
-                          ( λₗ x2 : var (type.list type.Z),
-                          ( λₗ x5 : var (type.list type.Z),
-                          ( λₗ x8 : var (type.list type.Z),
-                          ( λₗ x11 : var (type.list type.Z),
-                          ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                          x8))( tl x5))( tl x2))( tl x0) +
-                          (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                           ( λₗ x2 : var (type.list type.Z),
-                           ( λₗ x5 : var (type.list type.Z),
-                           ( λₗ x8 : var (type.list type.Z),
-                           ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                           x5))( tl x2))( tl x0) +
-                           (( λₗ x2 : var (type.list type.Z),
-                            ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                            x) *
-                            ( λₗ x2 : var (type.list type.Z),
-                            ( λₗ x5 : var (type.list type.Z),
-                            ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                            x2))( tl x0) +
-                            (( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z),
-                             ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                             x2))( tl x) *
-                             ( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                             x0) +
-                             (( λₗ x2 : var (type.list type.Z),
-                              ( λₗ x5 : var (type.list type.Z),
-                              ( λₗ x8 : var (type.list type.Z),
-                              ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                              x5))( tl x2))( tl x) *
-                              ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0) +
-                              (( λₗ x2 : var (type.list type.Z),
-                               ( λₗ x5 : var (type.list type.Z),
-                               ( λₗ x8 : var (type.list type.Z),
-                               ( λₗ x11 : var (type.list type.Z),
-                               ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                               x8))( tl x5))( tl x2))( tl x) * hd x0 +
-                               (19 *
-                                (( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z),
-                                 ( λₗ x11 : var (type.list type.Z),
-                                 ( λₗ x14 : var (type.list type.Z),
-                                 ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                 x11))( tl x8))( tl x5))( tl x2))( tl x) *
-                                 ( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z),
-                                 ( λₗ x11 : var (type.list type.Z),
-                                 ( λₗ x14 : var (type.list type.Z),
-                                 ( λₗ x17 : var (type.list type.Z),
-                                 ( λₗ x20 : var (type.list type.Z),
-                                 ( λₗ x23 : var (type.list type.Z),
-                                 ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                                 x20))( tl x17))( tl x14))( tl x11))( tl
-                                 x8))( tl x5))( tl x2))( tl x0)) +
-                                (19 *
-                                 (( λₗ x2 : var (type.list type.Z),
-                                  ( λₗ x5 : var (type.list type.Z),
-                                  ( λₗ x8 : var (type.list type.Z),
-                                  ( λₗ x11 : var (type.list type.Z),
-                                  ( λₗ x14 : var (type.list type.Z),
-                                  ( λₗ x17 : var (type.list type.Z),
-                                  ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                  x14))( tl x11))( tl x8))( tl x5))( tl
-                                  x2))( tl x) *
-                                  ( λₗ x2 : var (type.list type.Z),
-                                  ( λₗ x5 : var (type.list type.Z),
-                                  ( λₗ x8 : var (type.list type.Z),
-                                  ( λₗ x11 : var (type.list type.Z),
-                                  ( λₗ x14 : var (type.list type.Z),
-                                  ( λₗ x17 : var (type.list type.Z),
-                                  ( λₗ x20 : var (type.list type.Z),
-                                  ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                  x17))( tl x14))( tl x11))( tl x8))( tl
-                                  x5))( tl x2))( tl x0)) +
-                                 (19 *
-                                  (( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z),
-                                   ( λₗ x17 : var (type.list type.Z),
-                                   ( λₗ x20 : var (type.list type.Z),
-                                   ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                   x17))( tl x14))( tl x11))( tl x8))( tl
-                                   x5))( tl x2))( tl x) *
-                                   ( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z),
-                                   ( λₗ x17 : var (type.list type.Z),
-                                   ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                   x14))( tl x11))( tl x8))( tl x5))( tl
-                                   x2))( tl x0)) +
-                                  19 *
-                                  (( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z),
-                                   ( λₗ x17 : var (type.list type.Z),
-                                   ( λₗ x20 : var (type.list type.Z),
-                                   ( λₗ x23 : var (type.list type.Z),
-                                   ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                                   x20))( tl x17))( tl x14))( tl x11))( tl
-                                   x8))( tl x5))( tl x2))( tl x) *
-                                   ( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z),
-                                   ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                   x11))( tl x8))( tl x5))( tl x2))( tl
-                                   x0))))))))))
-                          :: hd x *
-                             ( λₗ x2 : var (type.list type.Z),
-                             ( λₗ x5 : var (type.list type.Z),
-                             ( λₗ x8 : var (type.list type.Z),
-                             ( λₗ x11 : var (type.list type.Z),
-                             ( λₗ x14 : var (type.list type.Z),
-                             ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                             x11))( tl x8))( tl x5))( tl x2))( tl x0) +
-                             (2 *
-                              (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                               ( λₗ x2 : var (type.list type.Z),
-                               ( λₗ x5 : var (type.list type.Z),
-                               ( λₗ x8 : var (type.list type.Z),
-                               ( λₗ x11 : var (type.list type.Z),
-                               ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                               x8))( tl x5))( tl x2))( tl x0)) +
-                              (( λₗ x2 : var (type.list type.Z),
-                               ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                               x) *
-                               ( λₗ x2 : var (type.list type.Z),
-                               ( λₗ x5 : var (type.list type.Z),
-                               ( λₗ x8 : var (type.list type.Z),
-                               ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                               x5))( tl x2))( tl x0) +
-                               (2 *
-                                (( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                 x2))( tl x) *
-                                 ( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                 x2))( tl x0)) +
-                                (( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z),
-                                 ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                                 x5))( tl x2))( tl x) *
-                                 ( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                                 x0) +
-                                 (2 *
-                                  (( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                                   x8))( tl x5))( tl x2))( tl x) *
-                                   ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0)) +
-                                  (( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z),
-                                   ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                   x11))( tl x8))( tl x5))( tl x2))( tl
-                                   x) * hd x0 +
-                                   (2 *
-                                    (19 *
-                                     (( λₗ x2 : var (type.list type.Z),
-                                      ( λₗ x5 : var (type.list type.Z),
-                                      ( λₗ x8 : var (type.list type.Z),
-                                      ( λₗ x11 : var (type.list type.Z),
-                                      ( λₗ x14 : var (type.list type.Z),
-                                      ( λₗ x17 : var (type.list type.Z),
-                                      ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                      x14))( tl x11))( tl x8))( tl x5))( tl
-                                      x2))( tl x) *
-                                      ( λₗ x2 : var (type.list type.Z),
-                                      ( λₗ x5 : var (type.list type.Z),
-                                      ( λₗ x8 : var (type.list type.Z),
-                                      ( λₗ x11 : var (type.list type.Z),
-                                      ( λₗ x14 : var (type.list type.Z),
-                                      ( λₗ x17 : var (type.list type.Z),
-                                      ( λₗ x20 : var (type.list type.Z),
-                                      ( λₗ x23 : var (type.list type.Z),
-                                      ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                                      x20))( tl x17))( tl x14))( tl x11))( tl
-                                      x8))( tl x5))( tl x2))( tl x0))) +
-                                    (19 *
-                                     (( λₗ x2 : var (type.list type.Z),
-                                      ( λₗ x5 : var (type.list type.Z),
-                                      ( λₗ x8 : var (type.list type.Z),
-                                      ( λₗ x11 : var (type.list type.Z),
-                                      ( λₗ x14 : var (type.list type.Z),
-                                      ( λₗ x17 : var (type.list type.Z),
-                                      ( λₗ x20 : var (type.list type.Z),
-                                      ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                      x17))( tl x14))( tl x11))( tl x8))( tl
-                                      x5))( tl x2))( tl x) *
-                                      ( λₗ x2 : var (type.list type.Z),
-                                      ( λₗ x5 : var (type.list type.Z),
-                                      ( λₗ x8 : var (type.list type.Z),
-                                      ( λₗ x11 : var (type.list type.Z),
-                                      ( λₗ x14 : var (type.list type.Z),
-                                      ( λₗ x17 : var (type.list type.Z),
-                                      ( λₗ x20 : var (type.list type.Z),
-                                      ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                      x17))( tl x14))( tl x11))( tl x8))( tl
-                                      x5))( tl x2))( tl x0)) +
-                                     2 *
-                                     (19 *
-                                      (( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z),
-                                       ( λₗ x14 : var (type.list type.Z),
-                                       ( λₗ x17 : var (type.list type.Z),
-                                       ( λₗ x20 : var (type.list type.Z),
-                                       ( λₗ x23 : var (type.list type.Z),
-                                       ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                                       x20))( tl x17))( tl x14))( tl x11))( tl
-                                       x8))( tl x5))( tl x2))( tl x) *
-                                       ( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z),
-                                       ( λₗ x14 : var (type.list type.Z),
-                                       ( λₗ x17 : var (type.list type.Z),
-                                       ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                       x14))( tl x11))( tl x8))( tl x5))( tl
-                                       x2))( tl x0)))))))))))
-                             :: hd x *
-                                ( λₗ x2 : var (type.list type.Z),
-                                ( λₗ x5 : var (type.list type.Z),
-                                ( λₗ x8 : var (type.list type.Z),
-                                ( λₗ x11 : var (type.list type.Z),
-                                ( λₗ x14 : var (type.list type.Z),
-                                ( λₗ x17 : var (type.list type.Z),
-                                ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                x14))( tl x11))( tl x8))( tl x5))( tl x2))( tl
-                                x0) +
-                                (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                                 ( λₗ x2 : var (type.list type.Z),
-                                 ( λₗ x5 : var (type.list type.Z),
-                                 ( λₗ x8 : var (type.list type.Z),
-                                 ( λₗ x11 : var (type.list type.Z),
-                                 ( λₗ x14 : var (type.list type.Z),
-                                 ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                 x11))( tl x8))( tl x5))( tl x2))( tl x0) +
-                                 (( λₗ x2 : var (type.list type.Z),
-                                  ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                                  x) *
-                                  ( λₗ x2 : var (type.list type.Z),
-                                  ( λₗ x5 : var (type.list type.Z),
-                                  ( λₗ x8 : var (type.list type.Z),
-                                  ( λₗ x11 : var (type.list type.Z),
-                                  ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                                  x8))( tl x5))( tl x2))( tl x0) +
-                                  (( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                   x2))( tl x) *
-                                   ( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                                   x5))( tl x2))( tl x0) +
-                                   (( λₗ x2 : var (type.list type.Z),
-                                    ( λₗ x5 : var (type.list type.Z),
-                                    ( λₗ x8 : var (type.list type.Z),
-                                    ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                                    x5))( tl x2))( tl x) *
-                                    ( λₗ x2 : var (type.list type.Z),
-                                    ( λₗ x5 : var (type.list type.Z),
-                                    ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                    x2))( tl x0) +
-                                    (( λₗ x2 : var (type.list type.Z),
-                                     ( λₗ x5 : var (type.list type.Z),
-                                     ( λₗ x8 : var (type.list type.Z),
-                                     ( λₗ x11 : var (type.list type.Z),
-                                     ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                                     x8))( tl x5))( tl x2))( tl x) *
-                                     ( λₗ x2 : var (type.list type.Z),
-                                     ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                                     x0) +
-                                     (( λₗ x2 : var (type.list type.Z),
-                                      ( λₗ x5 : var (type.list type.Z),
-                                      ( λₗ x8 : var (type.list type.Z),
-                                      ( λₗ x11 : var (type.list type.Z),
-                                      ( λₗ x14 : var (type.list type.Z),
-                                      ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                      x11))( tl x8))( tl x5))( tl x2))( tl
-                                      x) * ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0) +
-                                      (( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z),
-                                       ( λₗ x14 : var (type.list type.Z),
-                                       ( λₗ x17 : var (type.list type.Z),
-                                       ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                       x14))( tl x11))( tl x8))( tl x5))( tl
-                                       x2))( tl x) * hd x0 +
-                                       (19 *
-                                        (( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z),
-                                         ( λₗ x17 : var (type.list type.Z),
-                                         ( λₗ x20 : var (type.list type.Z),
-                                         ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))
-                                         ( tl x17))( tl x14))( tl x11))( tl
-                                         x8))( tl x5))( tl x2))( tl x) *
-                                         ( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z),
-                                         ( λₗ x17 : var (type.list type.Z),
-                                         ( λₗ x20 : var (type.list type.Z),
-                                         ( λₗ x23 : var (type.list type.Z),
-                                         ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))
-                                         ( tl x20))( tl x17))( tl x14))( tl
-                                         x11))( tl x8))( tl x5))( tl x2))( tl
-                                         x0)) +
-                                        19 *
-                                        (( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z),
-                                         ( λₗ x17 : var (type.list type.Z),
-                                         ( λₗ x20 : var (type.list type.Z),
-                                         ( λₗ x23 : var (type.list type.Z),
-                                         ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))
-                                         ( tl x20))( tl x17))( tl x14))( tl
-                                         x11))( tl x8))( tl x5))( tl x2))( tl
-                                         x) *
-                                         ( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z),
-                                         ( λₗ x17 : var (type.list type.Z),
-                                         ( λₗ x20 : var (type.list type.Z),
-                                         ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))
-                                         ( tl x17))( tl x14))( tl x11))( tl
-                                         x8))( tl x5))( tl x2))( tl x0))))))))))
-                                :: hd x *
-                                   ( λₗ x2 : var (type.list type.Z),
-                                   ( λₗ x5 : var (type.list type.Z),
-                                   ( λₗ x8 : var (type.list type.Z),
-                                   ( λₗ x11 : var (type.list type.Z),
-                                   ( λₗ x14 : var (type.list type.Z),
-                                   ( λₗ x17 : var (type.list type.Z),
-                                   ( λₗ x20 : var (type.list type.Z),
-                                   ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                   x17))( tl x14))( tl x11))( tl x8))( tl
-                                   x5))( tl x2))( tl x0) +
-                                   (2 *
-                                    (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                                     ( λₗ x2 : var (type.list type.Z),
-                                     ( λₗ x5 : var (type.list type.Z),
-                                     ( λₗ x8 : var (type.list type.Z),
-                                     ( λₗ x11 : var (type.list type.Z),
-                                     ( λₗ x14 : var (type.list type.Z),
-                                     ( λₗ x17 : var (type.list type.Z),
-                                     ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))( tl
-                                     x14))( tl x11))( tl x8))( tl x5))( tl
-                                     x2))( tl x0)) +
-                                    (( λₗ x2 : var (type.list type.Z),
-                                     ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                                     x) *
-                                     ( λₗ x2 : var (type.list type.Z),
-                                     ( λₗ x5 : var (type.list type.Z),
-                                     ( λₗ x8 : var (type.list type.Z),
-                                     ( λₗ x11 : var (type.list type.Z),
-                                     ( λₗ x14 : var (type.list type.Z),
-                                     ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))( tl
-                                     x11))( tl x8))( tl x5))( tl x2))( tl
-                                     x0) +
-                                     (2 *
-                                      (( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                       x2))( tl x) *
-                                       ( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z),
-                                       ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))( tl
-                                       x8))( tl x5))( tl x2))( tl x0)) +
-                                      (( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                                       x5))( tl x2))( tl x) *
-                                       ( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))( tl
-                                       x5))( tl x2))( tl x0) +
-                                       (2 *
-                                        (( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))
-                                         ( tl x8))( tl x5))( tl x2))( tl
-                                         x) *
-                                         ( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                         x2))( tl x0)) +
-                                        (( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z),
-                                         ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))
-                                         ( tl x11))( tl x8))( tl x5))( tl
-                                         x2))( tl x) *
-                                         ( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                                         x0) +
-                                         (2 *
-                                          (( λₗ x2 : var (type.list type.Z),
-                                           ( λₗ x5 : var (type.list type.Z),
-                                           ( λₗ x8 : var (type.list type.Z),
-                                           ( λₗ x11 : var (type.list type.Z),
-                                           ( λₗ x14 : var (type.list type.Z),
-                                           ( λₗ x17 : var (type.list type.Z),
-                                           ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))
-                                           ( tl x14))( tl x11))( tl x8))( tl
-                                           x5))( tl x2))( tl x) *
-                                           ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0)) +
-                                          (( λₗ x2 : var (type.list type.Z),
-                                           ( λₗ x5 : var (type.list type.Z),
-                                           ( λₗ x8 : var (type.list type.Z),
-                                           ( λₗ x11 : var (type.list type.Z),
-                                           ( λₗ x14 : var (type.list type.Z),
-                                           ( λₗ x17 : var (type.list type.Z),
-                                           ( λₗ x20 : var (type.list type.Z),
-                                           ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))
-                                           ( tl x17))( tl x14))( tl x11))( tl
-                                           x8))( tl x5))( tl x2))( tl x) *
-                                           hd x0 +
-                                           2 *
-                                           (19 *
-                                            (( λₗ x2 : var (type.list type.Z),
-                                             ( λₗ x5 : var (type.list type.Z),
-                                             ( λₗ x8 : var (type.list type.Z),
-                                             ( λₗ x11 : var (type.list type.Z),
-                                             ( λₗ x14 : var (type.list type.Z),
-                                             ( λₗ x17 : var (type.list type.Z),
-                                             ( λₗ x20 : var (type.list type.Z),
-                                             ( λₗ x23 : var (...),
-                                             ( λₗ x26 : var ..., hd x26)( tl x23))( tl
-                                             x20))( tl x17))( tl x14))( tl
-                                             x11))( tl x8))( tl x5))( tl
-                                             x2))( tl x) *
-                                             ( λₗ x2 : var (type.list type.Z),
-                                             ( λₗ x5 : var (type.list type.Z),
-                                             ( λₗ x8 : var (type.list type.Z),
-                                             ( λₗ x11 : var (type.list type.Z),
-                                             ( λₗ x14 : var (type.list type.Z),
-                                             ( λₗ x17 : var (type.list type.Z),
-                                             ( λₗ x20 : var (type.list type.Z),
-                                             ( λₗ x23 : var (...),
-                                             ( λₗ x26 : var ..., hd x26)( tl x23))( tl
-                                             x20))( tl x17))( tl x14))( tl
-                                             x11))( tl x8))( tl x5))( tl
-                                             x2))( tl x0)))))))))))
-                                   :: hd x *
-                                      ( λₗ x2 : var (type.list type.Z),
-                                      ( λₗ x5 : var (type.list type.Z),
-                                      ( λₗ x8 : var (type.list type.Z),
-                                      ( λₗ x11 : var (type.list type.Z),
-                                      ( λₗ x14 : var (type.list type.Z),
-                                      ( λₗ x17 : var (type.list type.Z),
-                                      ( λₗ x20 : var (type.list type.Z),
-                                      ( λₗ x23 : var (type.list type.Z),
-                                      ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))( tl
-                                      x20))( tl x17))( tl x14))( tl x11))( tl
-                                      x8))( tl x5))( tl x2))( tl x0) +
-                                      (( λₗ x2 : var (type.list type.Z), hd x2)( tl x) *
-                                       ( λₗ x2 : var (type.list type.Z),
-                                       ( λₗ x5 : var (type.list type.Z),
-                                       ( λₗ x8 : var (type.list type.Z),
-                                       ( λₗ x11 : var (type.list type.Z),
-                                       ( λₗ x14 : var (type.list type.Z),
-                                       ( λₗ x17 : var (type.list type.Z),
-                                       ( λₗ x20 : var (type.list type.Z),
-                                       ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))( tl
-                                       x17))( tl x14))( tl x11))( tl x8))( tl
-                                       x5))( tl x2))( tl x0) +
-                                       (( λₗ x2 : var (type.list type.Z),
-                                        ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))( tl
-                                        x) *
-                                        ( λₗ x2 : var (type.list type.Z),
-                                        ( λₗ x5 : var (type.list type.Z),
-                                        ( λₗ x8 : var (type.list type.Z),
-                                        ( λₗ x11 : var (type.list type.Z),
-                                        ( λₗ x14 : var (type.list type.Z),
-                                        ( λₗ x17 : var (type.list type.Z),
-                                        ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))
-                                        ( tl x14))( tl x11))( tl x8))( tl
-                                        x5))( tl x2))( tl x0) +
-                                        (( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))( tl
-                                         x2))( tl x) *
-                                         ( λₗ x2 : var (type.list type.Z),
-                                         ( λₗ x5 : var (type.list type.Z),
-                                         ( λₗ x8 : var (type.list type.Z),
-                                         ( λₗ x11 : var (type.list type.Z),
-                                         ( λₗ x14 : var (type.list type.Z),
-                                         ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))
-                                         ( tl x11))( tl x8))( tl x5))( tl
-                                         x2))( tl x0) +
-                                         (( λₗ x2 : var (type.list type.Z),
-                                          ( λₗ x5 : var (type.list type.Z),
-                                          ( λₗ x8 : var (type.list type.Z),
-                                          ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))
-                                          ( tl x5))( tl x2))( tl x) *
-                                          ( λₗ x2 : var (type.list type.Z),
-                                          ( λₗ x5 : var (type.list type.Z),
-                                          ( λₗ x8 : var (type.list type.Z),
-                                          ( λₗ x11 : var (type.list type.Z),
-                                          ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))
-                                          ( tl x8))( tl x5))( tl x2))( tl
-                                          x0) +
-                                          (( λₗ x2 : var (type.list type.Z),
-                                           ( λₗ x5 : var (type.list type.Z),
-                                           ( λₗ x8 : var (type.list type.Z),
-                                           ( λₗ x11 : var (type.list type.Z),
-                                           ( λₗ x14 : var (type.list type.Z), hd x14)( tl x11))
-                                           ( tl x8))( tl x5))( tl x2))( tl
-                                           x) *
-                                           ( λₗ x2 : var (type.list type.Z),
-                                           ( λₗ x5 : var (type.list type.Z),
-                                           ( λₗ x8 : var (type.list type.Z),
-                                           ( λₗ x11 : var (type.list type.Z), hd x11)( tl x8))
-                                           ( tl x5))( tl x2))( tl x0) +
-                                           (( λₗ x2 : var (type.list type.Z),
-                                            ( λₗ x5 : var (type.list type.Z),
-                                            ( λₗ x8 : var (type.list type.Z),
-                                            ( λₗ x11 : var (type.list type.Z),
-                                            ( λₗ x14 : var (type.list type.Z),
-                                            ( λₗ x17 : var (type.list type.Z), hd x17)( tl x14))
-                                            ( tl x11))( tl x8))( tl x5))( tl
-                                            x2))( tl x) *
-                                            ( λₗ x2 : var (type.list type.Z),
-                                            ( λₗ x5 : var (type.list type.Z),
-                                            ( λₗ x8 : var (type.list type.Z), hd x8)( tl x5))
-                                            ( tl x2))( tl x0) +
-                                            (( λₗ x2 : var (type.list type.Z),
-                                             ( λₗ x5 : var (type.list type.Z),
-                                             ( λₗ x8 : var (type.list type.Z),
-                                             ( λₗ x11 : var (type.list type.Z),
-                                             ( λₗ x14 : var (type.list type.Z),
-                                             ( λₗ x17 : var (type.list type.Z),
-                                             ( λₗ x20 : var (type.list type.Z), hd x20)( tl x17))
-                                             ( tl x14))( tl x11))( tl x8))( tl
-                                             x5))( tl x2))( tl x) *
-                                             ( λₗ x2 : var (type.list type.Z),
-                                             ( λₗ x5 : var (type.list type.Z), hd x5)( tl x2))
-                                             ( tl x0) +
-                                             (( λₗ x2 : var (type.list type.Z),
-                                              ( λₗ x5 : var (type.list type.Z),
-                                              ( λₗ x8 : var (type.list type.Z),
-                                              ( λₗ x11 : var (type.list type.Z),
-                                              ( λₗ x14 : var (type.list type.Z),
-                                              ( λₗ x17 : var (type.list type.Z),
-                                              ( λₗ x20 : var (type.list type.Z),
-                                              ( λₗ x23 : var (type.list type.Z), hd x23)( tl x20))
-                                              ( tl x17))( tl x14))( tl x11))( tl
-                                              x8))( tl x5))( tl x2))( tl
-                                              x) * ( λₗ x2 : var (type.list type.Z), hd x2)( tl x0) +
-                                              ( λₗ x2 : var (type.list type.Z),
-                                              ( λₗ x5 : var (type.list type.Z),
-                                              ( λₗ x8 : var (type.list type.Z),
-                                              ( λₗ x11 : var (type.list type.Z),
-                                              ( λₗ x14 : var (type.list type.Z),
-                                              ( λₗ x17 : var (type.list type.Z),
-                                              ( λₗ x20 : var (type.list type.Z),
-                                              ( λₗ x23 : var (type.list type.Z),
-                                              ( λₗ x26 : var (type.list type.Z), hd x26)( tl x23))
-                                              ( tl x20))( tl x17))( tl x14))( tl
-                                              x11))( tl x8))( tl x5))( tl
-                                              x2))( tl x) * hd x0)))))))) :: [])%expr) f g
-     : forall f g : list Z, length f = 10%nat -> length g = 10%nat -> list Z
-*)
+     (* = fun (f g : list Z) (_ : length f = 10%nat) (_ : length g = 10%nat) => *)
+     (*   expr.Interp (@ident.interp) *)
+     (*     (fun var : type -> Type => *)
+     (*      (λ x x0 : var (type.list (type.type_opaque type.Z)), *)
+     (*       Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*       (λ (x1 : var (type.type_opaque type.Z))(_ : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*        x1) (x) * *)
+     (*       Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*       (λ (x1 : var (type.type_opaque type.Z))(_ : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*        x1) (x0) + *)
+     (*       (Ident (ident.opaque 2) * *)
+     (*        (Ident (ident.opaque 19) * *)
+     (*         (Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*          (λ (_ : var (type.type_opaque type.Z))(x2 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*           Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*           (λ (x4 : var (type.type_opaque type.Z))(_ : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*            x4) (x2)) (x) * *)
+     (*          Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*          (λ (_ : var (type.type_opaque type.Z))(x2 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*           Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*           (λ (_ : var (type.type_opaque type.Z))(x5 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*            Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*            (λ (_ : var (type.type_opaque type.Z))(x8 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*             Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*             (λ (_ : var (type.type_opaque type.Z))(x11 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*              Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*              (λ (_ : var (type.type_opaque type.Z))(x14 : var (type.list (type.type_opaque type.Z)))(_ :  *)
+     (*                                                                                                      var  *)
+     (*                                                                                                        (type.type_opaque type.Z)), *)
+     (*               Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*               (λ (_ : var (type.type_opaque type.Z))(x17 : var (type.list (type.type_opaque type.Z)))(_ :  *)
+     (*                                                                                                       var  *)
+     (*                                                                                                         (type.type_opaque type.Z)), *)
+     (*                Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*                (λ (_ : var (type.type_opaque type.Z))(x20 : var (type.list (type.type_opaque type.Z)))(_ :  *)
+     (*                                                                                                        var  *)
+     (*                                                                                                         (type.type_opaque type.Z)), *)
+     (*                 Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*                 (λ (_ : var (type.type_opaque type.Z))(x23 : var (type.list (type.type_opaque type.Z)))(_ :  *)
+     (*                                                                                                         var  *)
+     (*                                                                                                         (type.type_opaque type.Z)), *)
+     (*                  Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*                  (λ (_ : var (type.type_opaque type.Z))(x26 : var (type.list (type.type_opaque type.Z)))(_ :  *)
+     (*                                                                                                         var  *)
+     (*                                                                                                         (type.type_opaque type.Z)), *)
+     (*                   Ident ident.list_rect (Ident (...)) (λ (x28 : var (...))(_ : var (...))(_ : var (...)), *)
+     (*                                                        x28) (x26)) (x23)) (x20)) (x17)) (x14)) (x11)) (x8))  *)
+     (*            (x5)) (x2)) (x0))) + *)
+     (*        (Ident (ident.opaque 19) * *)
+     (*         (Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*          (λ (_ : var (type.type_opaque type.Z))(x2 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*           Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (*           (λ (_ : var (type.type_opaque type.Z))(x5 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
+     (*            Ident ident.list_rect (Ident (ident.opaque (-1))) *)
+     (* ... *)
