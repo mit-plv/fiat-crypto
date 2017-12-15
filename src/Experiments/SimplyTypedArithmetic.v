@@ -228,8 +228,45 @@ Module Positional. Section Positional.
       cbv [carry]; intros; push; [|tauto].
       rewrite @Associational.eval_carry by eauto.
       apply eval_to_associational.
-    Qed.
-    Hint Rewrite @eval_carry : push_eval.
+    Qed. Hint Rewrite @eval_carry : push_eval.
+
+    Definition carry_reduce {n} (s:Z) (c:list (Z * Z))
+               (index:nat) (p : list Z) :=
+      from_associational
+        n (Associational.reduce
+             s c (to_associational (S n) (@carry n (S n) index p))).
+
+    Lemma eval_carry_reduce {n} s c index p :
+      (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
+      (weight (S index) / weight index <> 0) ->
+      eval n (@carry_reduce n s c index p) mod (s - Associational.eval c)
+      = eval n p mod (s - Associational.eval c).
+    Proof.
+      cbv [carry_reduce]; intros; push; auto.
+      rewrite eval_to_associational; push; auto.
+    Qed. Hint Rewrite @eval_carry_reduce : push_eval.
+
+    (* N.B. It is important to reverse [idxs] here, because fold_right is
+      written such that the first terms in the list are actually used
+      last in the computation. For example, running:
+      
+      `Eval cbv - [Z.add] in (fun a b c d => fold_right Z.add d [a;b;c]).`
+
+      will produce [fun a b c d => (a + (b + (c + d)))].*)
+    Definition chained_carries {n} s c p (idxs : list nat) :=
+      fold_right (@carry_reduce n s c) p (rev idxs).
+
+    Lemma eval_chained_carries {n} s c p idxs :
+      (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
+      (forall i, In i idxs -> weight (S i) / weight i <> 0) ->
+      eval n (@chained_carries n s c p idxs) mod (s - Associational.eval c)
+      = eval n p mod (s - Associational.eval c).
+    Proof using Type*.
+      cbv [chained_carries]; intros; push.
+      apply fold_right_invariant; [|intro; rewrite <-in_rev];
+        destruct n; intros; push; auto.
+    Qed. Hint Rewrite @eval_chained_carries : push_eval.
+
   End Carries.
 
 End Positional. End Positional.
