@@ -279,6 +279,18 @@ Module Compilers.
       Global Coercion type_opaque : opaque >-> type.
     End Coercions.
 
+    Fixpoint final_codomain (t : type) : type
+      := match t with
+         | arrow _ d => final_codomain d
+         | t => t
+         end.
+
+    Fixpoint under_arrows (t : type) (f : type -> type) : type
+      := match t with
+         | arrow s d => arrow s (under_arrows d f)
+         | t => f t
+         end.
+
     Fixpoint interp (t : type)
       := match t with
          | unit => Datatypes.unit
@@ -1297,41 +1309,75 @@ Module Compilers.
 
     Module expr.
       Section with_var.
-        Context {var : type -> Type}
-                {R : type}.
+        Context {var : type -> Type}.
         Notation var' R := (fun t => var (type.translate R t)).
+        Section with_R.
+          Context {R : type}.
 
-        Fixpoint translate {t}
+          Fixpoint translate {t}
+                   (e : @expr (var' R) t)
+                   (k : @expr var (type.translate R t) -> @expr var R)
+                   {struct e}
+            : @expr var R
+            := match e in expr.expr t return (expr (type.translate R t) -> expr R) -> expr R with
+               | Var t v
+                 => fun k => k (Var v)
+               | Ident t idc => ident.translate idc
+               | App s d f x
+                 => fun k
+                    => @translate
+                         _ f
+                         (fun fv
+                          => @translate
+                               _ x
+                               (fun xv
+                                => App (App fv xv) (Abs (fun v => k (Var v)))))
+               | Abs s d f
+                 => fun k
+                    => k (Abs (fun (x : var (type.translate R s))
+                               => Abs (fun (k : var (type.translate _ _ -> _))
+                                       => @translate
+                                            _ (f x)
+                                            (fun v => App (Var k) v))))
+               end k.
+
+          Fixpoint collect_translation_function_types t
+            := match t return Type with
+               | type.arrow s d
+                 => collect_translation_function_types d
+                    * (var s -> var (type.translate R s))
+               | _ => unit
+               end%type.
+        End with_R.
+
+        Fixpoint translate_under_binders {t}
+                 (R:=type.final_codomain t)
                  (e : @expr (var' R) t)
-                 (k : @expr var (type.translate R t) -> @expr var R)
-                 {struct e}
-          : @expr var R
-          := match e in expr.expr t return (expr (type.translate R t) -> expr R) -> expr R with
-             | Var t v
-               => fun k => k (Var v)
-             | Ident t idc => ident.translate idc
-             | App s d f x
-               => fun k
-                  => @translate
-                       _ f
-                       (fun fv
-                        => @translate
-                             _ x
-                             (fun xv
-                              => App (App fv xv) (Abs (fun v => k (Var v)))))
-             | Abs s d f
-               => fun k
-                  => k (Abs (fun (x : var (type.translate R s))
-                             => Abs (fun (k : var (type.translate _ _ -> _))
-                                     => @translate
-                                          _ (f x)
-                                          (fun v => App (Var k) v))))
-             end k.
+                 (k_vars : @collect_translation_function_types (type.final_codomain t) t)
+                 (k : @expr var (type.translate R (type.final_codomain t)) -> @expr var R)
+                 {struct t}
+          : @expr var t
+          := match t return @expr (var' (type.final_codomain t)) t -> (collect_translation_function_types t) -> (expr (type.translate _ (type.final_codomain t)) -> expr (type.final_codomain t)) -> expr t with
+             | type.arrow s d
+               => fun e '((k_vars, ks) : collect_translation_function_types d * _) k
+                  => Abs (fun x : var s
+                          => @translate_under_binders d (e @ Var (ks x))%expr k_vars k)
+             | t
+               => fun e _ k
+                  => @translate (type.final_codomain t) t e k
+             end e k_vars k.
       End with_var.
 
       Definition Translate {R t} (e : Expr t) (k : forall var, @expr var (type.translate R t) -> @expr var R)
         : Expr R
         := fun var => @translate var R t (e _) (k _).
+
+      Definition TranslateUnderBinders {t} (e : Expr t)
+                 (k : forall var,
+                     @collect_translation_function_types var (type.final_codomain t) t
+                     * (@expr var (type.translate (type.final_codomain t) (type.final_codomain t)) -> @expr var (type.final_codomain t)))
+        : Expr t
+        := fun var => @translate_under_binders var t (e _) (fst (k _)) (snd (k _)).
     End expr.
   End CPS.
 
@@ -1782,21 +1828,26 @@ Open Scope RT_expr_scope.
 
 Require Import AdmitAxiom.
 
-Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
+Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
         (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
         (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*) (f g : list Z)
-        (n:=10%nat)
+        (n:=5%nat)
         (Hf : length f = n) (Hg : length g = n)
   : { fg : list Z | (eval w n fg) mod (2^255-19)
                     = (eval w n f * eval w n g) mod (2^255-19) }.
   (* manually assign names to limbs for pretty-printing *)
   eexists ?[fg].
   erewrite <-eval_mulmod with (s:=2^255) (c:=[(1,19)])
-      by (try assumption; try eapply pow_ceil_mul_nat_nonzero; vm_decide).
+    by (try assumption; try eapply pow_ceil_mul_nat_nonzero; vm_decide).
 (*   eval w ?fg mod (2 ^ 255 - 19) = *)
 (*   eval w *)
 (*     (mulmod w (2^255) [(1, 19)] (f9,f8,f7,f6,f5,f4,f3,f2,f1,f0) *)
 (*        (g9,g8,g7,g6,g5,g4,g3,g2,g1,g0)) mod (2^255 - 19) *)
+  etransitivity; (* work around [rewrite] being stupid about evars *)
+    [
+    | rewrite <- eval_chained_carries with (s:=2^255) (c:=[(1,19)]) (idxs:=(seq 0 (pred n) ++ [0; 1])%list%nat) (modulo:=Z.modulo) (div:=Z.div)
+      by (try assumption; auto using Z.div_mod; try (intros; eapply pow_ceil_mul_nat_divide_nonzero); try eapply pow_ceil_mul_nat_nonzero; try vm_decide);
+      reflexivity ].
   eapply f_equal2; [|trivial]. eapply f_equal.
 (*   ?fg = *)
 (*   mulmod w (2 ^ 255) [(1, 19)] (f9, f8, f7, f6, f5, f4, f3, f2, f1, f0) *)
@@ -1815,7 +1866,7 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
       => refine (fun f g => f_equal (fun F => F f g) (_ : _ = RHS))
     end.
     cbv [n expand_list expand_list_helper].
-    cbv delta [mulmod w to_associational mul to_associational reduce from_associational add_to_nth zeros place split].
+    cbv delta [chained_carries carry carry_reduce Associational.carry carryterm mulmod w to_associational mul to_associational reduce from_associational add_to_nth zeros place split].
     Locate Ltac Reify.
     assert True.
     { let v := Reify ((fun x => 2^x) 255)%Z in
@@ -1846,15 +1897,37 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
                 (Var x1, Var x1))%expr) => idtac
       end.
       constructor. }
+    assert True.
+    { let v := Reify (fun y : Z
+                      => let x := let x := (y * y)%RT in
+                                  (x * x)%RT in
+                         let z := let z := (x * x)%RT in
+                                  (z * z)%RT in
+                         (z * z)%RT) in
+      pose v as E.
+      vm_compute in E.
+      pose (PartialReduce (CPS.expr.TranslateUnderBinders (canonicalize_list_recursion E) (fun var => (tt, id, id)))) as E'.
+      vm_compute in E'.
+      lazymatch (eval cbv delta [E'] in E') with
+      | (fun var : type -> Type =>
+           (λ x : var (type.type_opaque type.Z),
+                  expr_let x0 := Var x * Var x in
+                expr_let x1 := Var x0 * Var x0 in
+                expr_let x2 := Var x1 * Var x1 in
+                expr_let x3 := Var x2 * Var x2 in
+                Var x3 * Var x3)%RT_expr%expr)
+        => idtac
+      end.
+      constructor. }
     Reify_rhs ().
     reflexivity.
   } Unfocus.
   cbv beta.
   let e := match goal with |- _ = expr.Interp _ ?e _ _ => e end in
   set (E := e).
-  let E' := constr:(PartialReduce (canonicalize_list_recursion E)) in
-  let E' := (eval vm_compute in E') in
-  pose E' as E''.
+  Time let E' := constr:(PartialReduce (CPS.expr.TranslateUnderBinders (canonicalize_list_recursion E) (fun var => (tt, id, id, id)))) in
+       let E' := (eval lazy in E') in
+       pose E' as E''.
   transitivity (Interp E'' f g); [ clear E | admit ].
   reflexivity.
   (*cbv -[runtime_mul runtime_add]; cbv [runtime_mul runtime_add].
@@ -1872,100 +1945,200 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
   f0*g0+ 38*f1*g9+ 19*f2*g8+ 38*f3*g7+ 19*f4*g6+ 38*f5*g5+ 19*f6*g4+ 38*f7*g3+ 19*f8*g2+ 38*f9*g1) *)
   (*trivial.*)
 Defined.
-Eval cbv [proj1_sig base_25_5_mul] in (fun f g Hf Hg => proj1_sig (base_25_5_mul f g Hf Hg)).
-(*      = fun (f g : list Z) (_ : length f = 10%nat) (_ : length g = 10%nat) =>
+Eval cbv [proj1_sig base_51_carry_mul] in (fun f g Hf Hg => proj1_sig (base_51_carry_mul f g Hf Hg)).
+(*     = fun (f g : list Z) (_ : length f = 5%nat) (_ : length g = 5%nat) =>
        expr.Interp (@ident.interp)
          (fun var : type -> Type =>
           (λ x x0 : var (type.list type.Z),
-           x [[0]] * x0 [[0]] +
-           (2 * (19 * (x [[1]] * x0 [[9]])) +
-            (19 * (x [[2]] * x0 [[8]]) +
-             (2 * (19 * (x [[3]] * x0 [[7]])) +
-              (19 * (x [[4]] * x0 [[6]]) +
-               (2 * (19 * (x [[5]] * x0 [[5]])) +
-                (19 * (x [[6]] * x0 [[4]]) +
-                 (2 * (19 * (x [[7]] * x0 [[3]])) +
-                  (19 * (x [[8]] * x0 [[2]]) + 2 * (19 * (x [[9]] * x0 [[1]]))))))))))
-           :: x [[0]] * x0 [[1]] +
-              (x [[1]] * x0 [[0]] +
-               (19 * (x [[2]] * x0 [[9]]) +
-                (19 * (x [[3]] * x0 [[8]]) +
-                 (19 * (x [[4]] * x0 [[7]]) +
-                  (19 * (x [[5]] * x0 [[6]]) +
-                   (19 * (x [[6]] * x0 [[5]]) +
-                    (19 * (x [[7]] * x0 [[4]]) +
-                     (19 * (x [[8]] * x0 [[3]]) + 19 * (x [[9]] * x0 [[2]])))))))))
-              :: x [[0]] * x0 [[2]] +
-                 (2 * (x [[1]] * x0 [[1]]) +
-                  (x [[2]] * x0 [[0]] +
-                   (2 * (19 * (x [[3]] * x0 [[9]])) +
-                    (19 * (x [[4]] * x0 [[8]]) +
-                     (2 * (19 * (x [[5]] * x0 [[7]])) +
-                      (19 * (x [[6]] * x0 [[6]]) +
-                       (2 * (19 * (x [[7]] * x0 [[5]])) +
-                        (19 * (x [[8]] * x0 [[4]]) + 2 * (19 * (x [[9]] * x0 [[3]]))))))))))
-                 :: x [[0]] * x0 [[3]] +
-                    (x [[1]] * x0 [[2]] +
-                     (x [[2]] * x0 [[1]] +
-                      (x [[3]] * x0 [[0]] +
-                       (19 * (x [[4]] * x0 [[9]]) +
-                        (19 * (x [[5]] * x0 [[8]]) +
-                         (19 * (x [[6]] * x0 [[7]]) +
-                          (19 * (x [[7]] * x0 [[6]]) +
-                           (19 * (x [[8]] * x0 [[5]]) + 19 * (x [[9]] * x0 [[4]])))))))))
-                    :: x [[0]] * x0 [[4]] +
-                       (2 * (x [[1]] * x0 [[3]]) +
-                        (x [[2]] * x0 [[2]] +
-                         (2 * (x [[3]] * x0 [[1]]) +
-                          (x [[4]] * x0 [[0]] +
-                           (2 * (19 * (x [[5]] * x0 [[9]])) +
-                            (19 * (x [[6]] * x0 [[8]]) +
-                             (2 * (19 * (x [[7]] * x0 [[7]])) +
-                              (19 * (x [[8]] * x0 [[6]]) + 2 * (19 * (x [[9]] * x0 [[5]]))))))))))
-                       :: x [[0]] * x0 [[5]] +
-                          (x [[1]] * x0 [[4]] +
-                           (x [[2]] * x0 [[3]] +
-                            (x [[3]] * x0 [[2]] +
-                             (x [[4]] * x0 [[1]] +
-                              (x [[5]] * x0 [[0]] +
-                               (19 * (x [[6]] * x0 [[9]]) +
-                                (19 * (x [[7]] * x0 [[8]]) +
-                                 (19 * (x [[8]] * x0 [[7]]) + 19 * (x [[9]] * x0 [[6]])))))))))
-                          :: x [[0]] * x0 [[6]] +
-                             (2 * (x [[1]] * x0 [[5]]) +
-                              (x [[2]] * x0 [[4]] +
-                               (2 * (x [[3]] * x0 [[3]]) +
-                                (x [[4]] * x0 [[2]] +
-                                 (2 * (x [[5]] * x0 [[1]]) +
-                                  (x [[6]] * x0 [[0]] +
-                                   (2 * (19 * (x [[7]] * x0 [[9]])) +
-                                    (19 * (x [[8]] * x0 [[8]]) + 2 * (19 * (x [[9]] * x0 [[7]]))))))))))
-                             :: x [[0]] * x0 [[7]] +
-                                (x [[1]] * x0 [[6]] +
-                                 (x [[2]] * x0 [[5]] +
-                                  (x [[3]] * x0 [[4]] +
-                                   (x [[4]] * x0 [[3]] +
-                                    (x [[5]] * x0 [[2]] +
-                                     (x [[6]] * x0 [[1]] +
-                                      (x [[7]] * x0 [[0]] +
-                                       (19 * (x [[8]] * x0 [[9]]) + 19 * (x [[9]] * x0 [[8]])))))))))
-                                :: x [[0]] * x0 [[8]] +
-                                   (2 * (x [[1]] * x0 [[7]]) +
-                                    (x [[2]] * x0 [[6]] +
-                                     (2 * (x [[3]] * x0 [[5]]) +
-                                      (x [[4]] * x0 [[4]] +
-                                       (2 * (x [[5]] * x0 [[3]]) +
-                                        (x [[6]] * x0 [[2]] +
-                                         (2 * (x [[7]] * x0 [[1]]) +
-                                          (x [[8]] * x0 [[0]] + 2 * (19 * (x [[9]] * x0 [[9]]))))))))))
-                                   :: x [[0]] * x0 [[9]] +
-                                      (x [[1]] * x0 [[8]] +
-                                       (x [[2]] * x0 [[7]] +
-                                        (x [[3]] * x0 [[6]] +
-                                         (x [[4]] * x0 [[5]] +
-                                          (x [[5]] * x0 [[4]] +
-                                           (x [[6]] * x0 [[3]] +
-                                            (x [[7]] * x0 [[2]] +
-                                             (x [[8]] * x0 [[1]] + x [[9]] * x0 [[0]])))))))) :: [])%expr)
-         f g
+           expr_let y := x [[0]] * x0 [[4]] +
+                         (2 * (x [[1]] * x0 [[3]]) +
+                          (67108864 * (x [[1]] * x0 [[4]]) +
+                           (x [[2]] * x0 [[2]] +
+                            (67108864 * (x [[2]] * x0 [[3]]) +
+                             (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                              (2 * (x [[3]] * x0 [[1]]) +
+                               (67108864 * (x [[3]] * x0 [[2]]) +
+                                (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                 (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                  (x [[4]] * x0 [[0]] +
+                                   (67108864 * (x [[4]] * x0 [[1]]) +
+                                    (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                     (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                      5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
+           expr_let _ := Ident ident.Z.div @ y @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y @ 67108864 in
+           expr_let y2 := x [[0]] * x0 [[3]] +
+                          (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]])) in
+           expr_let _ := Ident ident.Z.div @ y2 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y2 @ 67108864 in
+           expr_let y5 := x [[0]] * x0 [[2]] + (2 * (x [[1]] * x0 [[1]]) + x [[2]] * x0 [[0]]) in
+           expr_let _ := Ident ident.Z.div @ y5 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y5 @ 67108864 in
+           expr_let y8 := x [[0]] * x0 [[1]] + x [[1]] * x0 [[0]] in
+           expr_let _ := Ident ident.Z.div @ y8 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y8 @ 67108864 in
+           expr_let y11 := x [[0]] * x0 [[0]] in
+           expr_let y12 := Ident ident.Z.div @ y11 @ 67108864 in
+           expr_let y13 := Ident ident.Z.modulo @ y11 @ 67108864 in
+           expr_let y14 := x [[0]] * x0 [[4]] +
+                           (2 * (x [[1]] * x0 [[3]]) +
+                            (67108864 * (x [[1]] * x0 [[4]]) +
+                             (x [[2]] * x0 [[2]] +
+                              (67108864 * (x [[2]] * x0 [[3]]) +
+                               (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                                (2 * (x [[3]] * x0 [[1]]) +
+                                 (67108864 * (x [[3]] * x0 [[2]]) +
+                                  (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                   (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                    (x [[4]] * x0 [[0]] +
+                                     (67108864 * (x [[4]] * x0 [[1]]) +
+                                      (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                       (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                        5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
+           expr_let _ := Ident ident.Z.div @ y14 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y14 @ 33554432 in
+           expr_let y17 := x [[0]] * x0 [[3]] +
+                           (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]])) in
+           expr_let _ := Ident ident.Z.div @ y17 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y17 @ 33554432 in
+           expr_let y20 := x [[0]] * x0 [[2]] + (2 * (x [[1]] * x0 [[1]]) + x [[2]] * x0 [[0]]) in
+           expr_let _ := Ident ident.Z.div @ y20 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y20 @ 33554432 in
+           expr_let y23 := y12 + (x [[0]] * x0 [[1]] + x [[1]] * x0 [[0]]) in
+           expr_let y24 := Ident ident.Z.div @ y23 @ 33554432 in
+           expr_let y25 := Ident ident.Z.modulo @ y23 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y13 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y13 @ 33554432 in
+           expr_let y28 := x [[0]] * x0 [[4]] +
+                           (2 * (x [[1]] * x0 [[3]]) +
+                            (67108864 * (x [[1]] * x0 [[4]]) +
+                             (x [[2]] * x0 [[2]] +
+                              (67108864 * (x [[2]] * x0 [[3]]) +
+                               (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                                (2 * (x [[3]] * x0 [[1]]) +
+                                 (67108864 * (x [[3]] * x0 [[2]]) +
+                                  (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                   (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                    (x [[4]] * x0 [[0]] +
+                                     (67108864 * (x [[4]] * x0 [[1]]) +
+                                      (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                       (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                        5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
+           expr_let _ := Ident ident.Z.div @ y28 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y28 @ 67108864 in
+           expr_let y31 := x [[0]] * x0 [[3]] +
+                           (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]])) in
+           expr_let _ := Ident ident.Z.div @ y31 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y31 @ 67108864 in
+           expr_let y34 := y24 +
+                           (x [[0]] * x0 [[2]] + (2 * (x [[1]] * x0 [[1]]) + x [[2]] * x0 [[0]])) in
+           expr_let y35 := Ident ident.Z.div @ y34 @ 67108864 in
+           expr_let y36 := Ident ident.Z.modulo @ y34 @ 67108864 in
+           expr_let _ := Ident ident.Z.div @ y25 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y25 @ 67108864 in
+           expr_let _ := Ident ident.Z.div @ y13 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y13 @ 67108864 in
+           expr_let y41 := x [[0]] * x0 [[4]] +
+                           (2 * (x [[1]] * x0 [[3]]) +
+                            (67108864 * (x [[1]] * x0 [[4]]) +
+                             (x [[2]] * x0 [[2]] +
+                              (67108864 * (x [[2]] * x0 [[3]]) +
+                               (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                                (2 * (x [[3]] * x0 [[1]]) +
+                                 (67108864 * (x [[3]] * x0 [[2]]) +
+                                  (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                   (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                    (x [[4]] * x0 [[0]] +
+                                     (67108864 * (x [[4]] * x0 [[1]]) +
+                                      (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                       (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                        5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
+           expr_let _ := Ident ident.Z.div @ y41 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y41 @ 33554432 in
+           expr_let y44 := y35 +
+                           (x [[0]] * x0 [[3]] +
+                            (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]]))) in
+           expr_let y45 := Ident ident.Z.div @ y44 @ 33554432 in
+           expr_let y46 := Ident ident.Z.modulo @ y44 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y36 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y36 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y25 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y25 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y13 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y13 @ 33554432 in
+           expr_let y53 := y45 +
+                           (x [[0]] * x0 [[4]] +
+                            (2 * (x [[1]] * x0 [[3]]) +
+                             (67108864 * (x [[1]] * x0 [[4]]) +
+                              (x [[2]] * x0 [[2]] +
+                               (67108864 * (x [[2]] * x0 [[3]]) +
+                                (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                                 (2 * (x [[3]] * x0 [[1]]) +
+                                  (67108864 * (x [[3]] * x0 [[2]]) +
+                                   (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                    (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                     (x [[4]] * x0 [[0]] +
+                                      (67108864 * (x [[4]] * x0 [[1]]) +
+                                       (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                        (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                         5070602400912917605986812821504 * (x [[4]] * x0 [[4]]))))))))))))))) in
+           expr_let _ := Ident ident.Z.div @ y53 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y53 @ 67108864 in
+           expr_let _ := Ident ident.Z.div @ y46 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y46 @ 67108864 in
+           expr_let _ := Ident ident.Z.div @ y36 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y36 @ 67108864 in
+           expr_let _ := Ident ident.Z.div @ y25 @ 67108864 in
+           expr_let _ := Ident ident.Z.modulo @ y25 @ 67108864 in
+           expr_let y62 := Ident ident.Z.div @ y13 @ 67108864 in
+           expr_let y63 := Ident ident.Z.modulo @ y13 @ 67108864 in
+           expr_let y64 := y45 +
+                           (x [[0]] * x0 [[4]] +
+                            (2 * (x [[1]] * x0 [[3]]) +
+                             (67108864 * (x [[1]] * x0 [[4]]) +
+                              (x [[2]] * x0 [[2]] +
+                               (67108864 * (x [[2]] * x0 [[3]]) +
+                                (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                                 (2 * (x [[3]] * x0 [[1]]) +
+                                  (67108864 * (x [[3]] * x0 [[2]]) +
+                                   (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                    (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                     (x [[4]] * x0 [[0]] +
+                                      (67108864 * (x [[4]] * x0 [[1]]) +
+                                       (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                        (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                         5070602400912917605986812821504 * (x [[4]] * x0 [[4]]))))))))))))))) in
+           expr_let _ := Ident ident.Z.div @ y64 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y64 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y46 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y46 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y36 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y36 @ 33554432 in
+           expr_let y71 := y62 + y25 in
+           expr_let y72 := Ident ident.Z.div @ y71 @ 33554432 in
+           expr_let y73 := Ident ident.Z.modulo @ y71 @ 33554432 in
+           expr_let _ := Ident ident.Z.div @ y63 @ 33554432 in
+           expr_let _ := Ident ident.Z.modulo @ y63 @ 33554432 in
+           y63
+           :: y73
+              :: y72 + y36
+                 :: y46
+                    :: y45 +
+                       (x [[0]] * x0 [[4]] +
+                        (2 * (x [[1]] * x0 [[3]]) +
+                         (67108864 * (x [[1]] * x0 [[4]]) +
+                          (x [[2]] * x0 [[2]] +
+                           (67108864 * (x [[2]] * x0 [[3]]) +
+                            (2251799813685248 * (x [[2]] * x0 [[4]]) +
+                             (2 * (x [[3]] * x0 [[1]]) +
+                              (67108864 * (x [[3]] * x0 [[2]]) +
+                               (4503599627370496 * (x [[3]] * x0 [[3]]) +
+                                (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
+                                 (x [[4]] * x0 [[0]] +
+                                  (67108864 * (x [[4]] * x0 [[1]]) +
+                                   (2251799813685248 * (x [[4]] * x0 [[2]]) +
+                                    (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
+                                     5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))))
+                       :: [])%expr) f g
+     : forall f g : list Z, length f = 5%nat -> length g = 5%nat -> list Z
 *)
