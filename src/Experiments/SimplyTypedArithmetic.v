@@ -649,8 +649,9 @@ Module Compilers.
           | @List.repeat ?A
             => let rA := type.reify A in
                constr:(@ident.List_repeat rA)
-          | @LetIn.Let_In ?A (fun _ => ?B)
-            => let rA := type.reify A in
+          | @LetIn.Let_In ?A ?B
+            => let B := lazymatch (eval cbv beta in B) with fun _ => ?B => B end in
+               let rA := type.reify A in
                let rB := type.reify B in
                constr:(@ident.Let_In rA rB)
           | @combine ?A ?B
@@ -853,8 +854,9 @@ Module Compilers.
             => let rT := type.reify T in
                constr:(@ident.nat_rect rT)
           | Nat.pred => ident.pred
-          | @LetIn.Let_In ?A (fun _ => ?B)
-            => let rA := type.reify A in
+          | @LetIn.Let_In ?A ?B
+            => let B := lazymatch (eval cbv beta in B) with fun _ => ?B => B end in
+               let rA := type.reify A in
                let rB := type.reify B in
                constr:(@ident.Let_In rA rB)
           | @Datatypes.list_rect ?A (fun _ => ?B)
