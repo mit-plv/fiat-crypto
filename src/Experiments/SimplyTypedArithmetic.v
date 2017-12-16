@@ -273,10 +273,10 @@ End Positional. End Positional.
 
 Module Compilers.
   Module type.
-    Variant opaque := unit | Z | nat | bool.
-    Inductive type := type_opaque (_:opaque) | prod (A B : type) | arrow (s d : type) | list (A : type).
+    Variant primitive := unit | Z | nat | bool.
+    Inductive type := type_primitive (_:primitive) | prod (A B : type) | arrow (s d : type) | list (A : type).
     Module Export Coercions.
-      Global Coercion type_opaque : opaque >-> type.
+      Global Coercion type_primitive : primitive >-> type.
     End Coercions.
 
     Fixpoint final_codomain (t : type) : type
@@ -298,11 +298,11 @@ Module Compilers.
          | arrow A B => interp A -> interp B
          | list A => Datatypes.list (interp A)
          | nat => Datatypes.nat
-         | type_opaque Z => BinInt.Z
+         | type_primitive Z => BinInt.Z
          | bool => Datatypes.bool
          end%type.
 
-    Ltac reify_opaque ty :=
+    Ltac reify_primitive ty :=
       lazymatch eval cbv beta in ty with
       | Datatypes.unit => unit
       | Datatypes.nat => nat
@@ -324,8 +324,8 @@ Module Compilers.
         => let rT := reify T in
            constr:(list rT)
       | type.interp ?T => T
-      | _ => let rt := reify_opaque ty in
-             constr:(type_opaque rt)
+      | _ => let rt := reify_primitive ty in
+             constr:(type_primitive rt)
       end.
 
     Module Export Notations.
@@ -372,8 +372,8 @@ Module Compilers.
       Definition Interp {t} (e : Expr t) := interp (e _).
     End with_ident.
 
-    Ltac is_opaque_const_cps2 term on_success on_failure :=
-      let recurse term := is_opaque_const_cps2 term on_success on_failure in
+    Ltac is_primitive_const_cps2 term on_success on_failure :=
+      let recurse term := is_primitive_const_cps2 term on_success on_failure in
       lazymatch term with
       | S ?n => recurse n
       | O => on_success ()
@@ -388,10 +388,10 @@ Module Compilers.
       | xH => on_success ()
       | ?term => on_failure term
       end.
-    Ltac require_opaque_const term :=
-      is_opaque_const_cps2 term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
-    Ltac is_opaque_const term :=
-      is_opaque_const_cps2 term ltac:(fun _ => true) ltac:(fun _ => false).
+    Ltac require_primitive_const term :=
+      is_primitive_const_cps2 term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
+    Ltac is_primitive_const term :=
+      is_primitive_const_cps2 term ltac:(fun _ => true) ltac:(fun _ => false).
 
     Module var_context.
       Inductive list {var : type -> Type} :=
@@ -459,8 +459,8 @@ Module Compilers.
         => constr:(@Var ident var rT v)
       | _
         =>
-        let term_is_opaque_const := is_opaque_const term in
-        lazymatch term_is_opaque_const with
+        let term_is_primitive_const := is_primitive_const term in
+        lazymatch term_is_primitive_const with
         | true
           => let rv := reify_ident term in
              constr:(Ident (var:=var) rv)
@@ -558,7 +558,7 @@ Module Compilers.
       Module ident.
         Import type.
         Inductive ident : type -> Set :=
-        | opaque {t:type.opaque} (v : interp t) : ident t
+        | primitive {t:type.primitive} (v : interp t) : ident t
         | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
         | Nat_succ : ident (nat -> nat)
         | nil {t} : ident (list t)
@@ -593,7 +593,7 @@ Module Compilers.
 
         Definition interp {t} (idc : ident t) : type.interp t
           := match idc in ident t return type.interp t with
-             | opaque _ v => v
+             | primitive _ v => v
              | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
              | Nat_succ => Nat.succ
              | nil t => @Datatypes.nil (type.interp t)
@@ -709,11 +709,11 @@ Module Compilers.
           | Z.of_nat => ident.Z_of_nat
           | _
             => let assert_const := match goal with
-                                   | _ => require_opaque_const term
+                                   | _ => require_primitive_const term
                                    end in
                let T := type of term in
-               let rT := type.reify_opaque T in
-               constr:(@ident.opaque rT term)
+               let rT := type.reify_primitive T in
+               constr:(@ident.primitive rT term)
           end.
 
         Module List.
@@ -765,9 +765,9 @@ Module Compilers.
         Notation "'expr_let' x := A 'in' b" := (App (App (Ident ident.Let_In) A%expr) (Abs (fun x => b%expr))) : expr_scope.
         Notation "[ ]" := (Ident ident.nil) : expr_scope.
         Notation "x :: xs" := (App (App (Ident ident.cons) x%expr) xs%expr) : expr_scope.
-        Notation "x" := (Ident (ident.opaque x)) (only printing, at level 9) : expr_scope.
+        Notation "x" := (Ident (ident.primitive x)) (only printing, at level 9) : expr_scope.
         Notation "ls [[ n ]]"
-          := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.opaque n%nat)))
+          := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.primitive n%nat)))
              : expr_scope.
 
         Module Reification.
@@ -785,7 +785,7 @@ Module Compilers.
       Module ident.
         Import type.
         Inductive ident : type -> Set :=
-        | opaque {t : type.opaque} (v : interp t) : ident t
+        | primitive {t : type.primitive} (v : interp t) : ident t
         | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
         | Nat_succ : ident (nat -> nat)
         | nil {t} : ident (list t)
@@ -811,7 +811,7 @@ Module Compilers.
 
         Definition interp {t} (idc : ident t) : type.interp t
           := match idc in ident t return type.interp t with
-             | opaque _ v => v
+             | primitive _ v => v
              | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
              | Nat_succ => Nat.succ
              | nil t => @Datatypes.nil (type.interp t)
@@ -890,11 +890,11 @@ Module Compilers.
           | Z.of_nat => ident.Z_of_nat
           | _
             => let assert_const := match goal with
-                                   | _ => require_opaque_const term
+                                   | _ => require_primitive_const term
                                    end in
                let T := type of term in
-               let rT := type.reify_opaque T in
-               constr:(@ident.opaque rT term)
+               let rT := type.reify_primitive T in
+               constr:(@ident.primitive rT term)
           end.
 
         Module List.
@@ -936,9 +936,9 @@ Module Compilers.
         Notation "'expr_let' x := A 'in' b" := (App (App (Ident ident.Let_In) A%expr) (Abs (fun x => b%expr))) : expr_scope.
         Notation "[ ]" := (Ident ident.nil) : expr_scope.
         Notation "x :: xs" := (App (App (Ident ident.cons) x%expr) xs%expr) : expr_scope.
-        Notation "x" := (Ident (ident.opaque x)) (only printing, at level 9) : expr_scope.
+        Notation "x" := (Ident (ident.primitive x)) (only printing, at level 9) : expr_scope.
         Notation "ls [[ n ]]"
-          := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.opaque n%nat)))
+          := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.primitive n%nat)))
              : expr_scope.
 
         Ltac reify var term := expr.reify ident ident.reify var term.
@@ -981,8 +981,8 @@ Module Compilers.
              => Ident ident.nat_rect
            | for_reification.ident.pred
              => Ident ident.pred
-           | for_reification.ident.opaque t v
-             => Ident (ident.opaque v)
+           | for_reification.ident.primitive t v
+             => Ident (ident.primitive v)
            | for_reification.ident.Z_runtime_mul
              => Ident ident.Z.runtime_mul
            | for_reification.ident.Z_runtime_add
@@ -1170,7 +1170,7 @@ Module Compilers.
              | A * B => translate A * translate B
              | s -> d => translate s -> (translate d -> R) -> R
              | list A => list (translate A)
-             | type_opaque _ as t
+             | type_primitive _ as t
                => t
              end%ctype.
       End translate.
@@ -1187,7 +1187,7 @@ Module Compilers.
                  (k : @expr var (type.translate R t) -> @expr var R)
           : @expr var R
           := match idc in ident.ident t return (expr (type.translate R t) -> expr R) -> expr R with
-             | ident.opaque _ _ as idc
+             | ident.primitive _ _ as idc
                => fun k => k idc
              | ident.nil t
                => fun k => k (@ident.nil (type.translate R t))
@@ -1462,13 +1462,13 @@ Module Compilers.
          end.
 
     (* if we want more code for the below, I would suggest [reify_base_type] and [reflect_base_type] *)
-    Definition reify_opaque {t} (v : type.interp (type.type_opaque t)) : @expr var (type.type_opaque t)
-      := Ident (ident.opaque v).
-    Definition reflect_opaque {t} (e : @expr var (type.type_opaque t)) : option (type.interp (type.type_opaque t))
+    Definition reify_primitive {t} (v : type.interp (type.type_primitive t)) : @expr var (type.type_primitive t)
+      := Ident (ident.primitive v).
+    Definition reflect_primitive {t} (e : @expr var (type.type_primitive t)) : option (type.interp (type.type_primitive t))
       := match invert_Ident e with
          | Some idc
            => match idc in ident t return option (type.interp t) with
-              | ident.opaque _ v => Some v
+              | ident.primitive _ v => Some v
               | _ => None
               end
          | None => None
@@ -1529,7 +1529,7 @@ Module Compilers.
            | type.prod A B as t => value A * value B
            | type.arrow s d => value s -> value d
            | type.list A => list (value A)
-           | type.type_opaque _ as t
+           | type.type_primitive _ as t
              => type.interp t
            end%type.
       Definition value_step (value : type -> Type) (t : type)
@@ -1538,7 +1538,7 @@ Module Compilers.
              => value_prestep value t
            | type.prod _ _ as t
            | type.list _ as t
-           | type.type_opaque _ as t
+           | type.type_primitive _ as t
              => @expr var t + value_prestep value t
            end%type.
       Fixpoint value (t : type)
@@ -1567,11 +1567,11 @@ Module Compilers.
                      | inl v => v
                      | inr v => reify_list (List.map (@reify A) v)
                      end
-             | type.type_opaque _ as t
+             | type.type_primitive _ as t
                => fun x : expr t + type.interp t
                   => match x with
                      | inl v => v
-                     | inr v => Ident (ident.opaque v)
+                     | inr v => Ident (ident.primitive v)
                      end
              end
         with reflect {t : type}
@@ -1600,11 +1600,11 @@ Module Compilers.
                         | None
                           => inl v
                         end
-                | type.type_opaque _ as t
+                | type.type_primitive _ as t
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
                         let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match reflect_opaque v with
+                        match reflect_primitive v with
                         | Some v => inr v
                         | None => inl v
                         end
@@ -1621,7 +1621,7 @@ Module Compilers.
              | type.prod _ _
              | type.list _
                => fun x f => f x
-             | type.type_opaque _ as t
+             | type.type_primitive _ as t
                => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> value var tC)
                   => match x with
                      | inl e
@@ -1638,7 +1638,7 @@ Module Compilers.
                => interp_let_in
              | ident.nil t
                => inr (@nil (value var t))
-             | ident.opaque t v
+             | ident.primitive t v
                => inr v
              | ident.cons t as idc
                => fun x (xs : expr (type.list t) + list (value var t))
@@ -1874,7 +1874,7 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
       pose (PartialReduce (canonicalize_list_recursion E)) as E'.
       vm_compute in E'.
       lazymatch (eval cbv delta [E'] in E') with
-      | (fun var => Ident (ident.opaque ?v)) => idtac
+      | (fun var => Ident (ident.primitive ?v)) => idtac
       end.
       constructor. }
     assert True.
@@ -1890,7 +1890,7 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
       vm_compute in E'.
       lazymatch (eval cbv delta [E'] in E') with
       | (fun var : type -> Type =>
-           (λ x : var (type.type_opaque type.Z),
+           (λ x : var (type.type_primitive type.Z),
                   expr_let x0 := (Var x * Var x)%RT_expr in
                 expr_let x1 := (Var x0 * Var x0)%RT_expr in
                 (Var x1, Var x1))%expr) => idtac
@@ -1909,7 +1909,7 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
       vm_compute in E'.
       lazymatch (eval cbv delta [E'] in E') with
       | (fun var : type -> Type =>
-           (λ x : var (type.type_opaque type.Z),
+           (λ x : var (type.type_primitive type.Z),
                   expr_let x0 := Var x * Var x in
                 expr_let x1 := Var x0 * Var x0 in
                 expr_let x2 := Var x1 * Var x1 in
