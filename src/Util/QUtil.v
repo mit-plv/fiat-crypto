@@ -112,6 +112,13 @@ Section pow_ceil_mul_nat2.
     all: trivial; try omega; (eapply (Qle_trans _ 1 _); [vm_decide|assumption]).
   Qed.
 
+  Lemma pow_ceil_mul_nat_divide_nonzero i :
+    wt (S i) / (wt i) <> 0.
+  Proof.
+    pose proof (pow_ceil_mul_nat_divide i).
+    lia.
+  Qed.
+
   Lemma pow_ceil_mul_nat_divide_upperbound i :
     wt (S i) / (wt i) <= b^Qceiling f.
   Proof.
