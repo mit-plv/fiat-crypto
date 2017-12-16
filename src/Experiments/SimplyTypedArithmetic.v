@@ -1522,7 +1522,6 @@ Module Compilers.
   End gallina_reify.
 
   Module partial.
-    (** TODO: pick a better name for this (partial_expr?) *)
     Section value.
       Context (var : type -> Type).
       Definition value_prestep (value : type -> Type) (t : type)
