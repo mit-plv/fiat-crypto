@@ -1776,7 +1776,6 @@ End Compilers.
 Import Associational Positional Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
-Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).
 
 (* TODO: is this the right way to do things? *)
 Definition expand_list_helper {A} (default : A) (ls : list A) (n : nat) (idx : nat) : list A
@@ -1831,6 +1830,8 @@ Open Scope RT_expr_scope.
 
 Require Import AdmitAxiom.
 
+(*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
+Definition w (i:nat) : Z := 2^Qceiling(51*i).
 Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
         (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
         (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*) (f g : list Z)
@@ -1954,194 +1955,148 @@ Eval cbv [proj1_sig base_51_carry_mul] in (fun f g Hf Hg => proj1_sig (base_51_c
          (fun var : type -> Type =>
           (λ x x0 : var (type.list type.Z),
            expr_let y := x [[0]] * x0 [[4]] +
-                         (2 * (x [[1]] * x0 [[3]]) +
-                          (67108864 * (x [[1]] * x0 [[4]]) +
-                           (x [[2]] * x0 [[2]] +
-                            (67108864 * (x [[2]] * x0 [[3]]) +
-                             (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                              (2 * (x [[3]] * x0 [[1]]) +
-                               (67108864 * (x [[3]] * x0 [[2]]) +
-                                (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                 (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                  (x [[4]] * x0 [[0]] +
-                                   (67108864 * (x [[4]] * x0 [[1]]) +
-                                    (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                     (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                      5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
-           expr_let _ := Ident ident.Z.div @ y @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y @ 67108864 in
+                         (x [[1]] * x0 [[3]] +
+                          (x [[2]] * x0 [[2]] +
+                           (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]]))) in
+           expr_let _ := Ident ident.Z.div @ y @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y @ 2251799813685248 in
            expr_let y2 := x [[0]] * x0 [[3]] +
-                          (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]])) in
-           expr_let _ := Ident ident.Z.div @ y2 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y2 @ 67108864 in
-           expr_let y5 := x [[0]] * x0 [[2]] + (2 * (x [[1]] * x0 [[1]]) + x [[2]] * x0 [[0]]) in
-           expr_let _ := Ident ident.Z.div @ y5 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y5 @ 67108864 in
-           expr_let y8 := x [[0]] * x0 [[1]] + x [[1]] * x0 [[0]] in
-           expr_let _ := Ident ident.Z.div @ y8 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y8 @ 67108864 in
-           expr_let y11 := x [[0]] * x0 [[0]] in
-           expr_let y12 := Ident ident.Z.div @ y11 @ 67108864 in
-           expr_let y13 := Ident ident.Z.modulo @ y11 @ 67108864 in
+                          (x [[1]] * x0 [[2]] +
+                           (x [[2]] * x0 [[1]] +
+                            (x [[3]] * x0 [[0]] + 19 * (x [[4]] * x0 [[4]])))) in
+           expr_let _ := Ident ident.Z.div @ y2 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y2 @ 2251799813685248 in
+           expr_let y5 := x [[0]] * x0 [[2]] +
+                          (x [[1]] * x0 [[1]] +
+                           (x [[2]] * x0 [[0]] +
+                            (19 * (x [[3]] * x0 [[4]]) + 19 * (x [[4]] * x0 [[3]])))) in
+           expr_let _ := Ident ident.Z.div @ y5 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y5 @ 2251799813685248 in
+           expr_let y8 := x [[0]] * x0 [[1]] +
+                          (x [[1]] * x0 [[0]] +
+                           (19 * (x [[2]] * x0 [[4]]) +
+                            (19 * (x [[3]] * x0 [[3]]) + 19 * (x [[4]] * x0 [[2]])))) in
+           expr_let _ := Ident ident.Z.div @ y8 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y8 @ 2251799813685248 in
+           expr_let y11 := x [[0]] * x0 [[0]] +
+                           (19 * (x [[1]] * x0 [[4]]) +
+                            (19 * (x [[2]] * x0 [[3]]) +
+                             (19 * (x [[3]] * x0 [[2]]) +
+                              19 * (x [[4]] * x0 [[1]])))) in
+           expr_let y12 := Ident ident.Z.div @ y11 @ 2251799813685248 in
+           expr_let y13 := Ident ident.Z.modulo @ y11 @ 2251799813685248 in
            expr_let y14 := x [[0]] * x0 [[4]] +
-                           (2 * (x [[1]] * x0 [[3]]) +
-                            (67108864 * (x [[1]] * x0 [[4]]) +
-                             (x [[2]] * x0 [[2]] +
-                              (67108864 * (x [[2]] * x0 [[3]]) +
-                               (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                                (2 * (x [[3]] * x0 [[1]]) +
-                                 (67108864 * (x [[3]] * x0 [[2]]) +
-                                  (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                   (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                    (x [[4]] * x0 [[0]] +
-                                     (67108864 * (x [[4]] * x0 [[1]]) +
-                                      (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                       (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                        5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
-           expr_let _ := Ident ident.Z.div @ y14 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y14 @ 33554432 in
+                           (x [[1]] * x0 [[3]] +
+                            (x [[2]] * x0 [[2]] +
+                             (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]]))) in
+           expr_let _ := Ident ident.Z.div @ y14 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y14 @ 2251799813685248 in
            expr_let y17 := x [[0]] * x0 [[3]] +
-                           (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]])) in
-           expr_let _ := Ident ident.Z.div @ y17 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y17 @ 33554432 in
-           expr_let y20 := x [[0]] * x0 [[2]] + (2 * (x [[1]] * x0 [[1]]) + x [[2]] * x0 [[0]]) in
-           expr_let _ := Ident ident.Z.div @ y20 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y20 @ 33554432 in
-           expr_let y23 := y12 + (x [[0]] * x0 [[1]] + x [[1]] * x0 [[0]]) in
-           expr_let y24 := Ident ident.Z.div @ y23 @ 33554432 in
-           expr_let y25 := Ident ident.Z.modulo @ y23 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y13 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y13 @ 33554432 in
+                           (x [[1]] * x0 [[2]] +
+                            (x [[2]] * x0 [[1]] +
+                             (x [[3]] * x0 [[0]] + 19 * (x [[4]] * x0 [[4]])))) in
+           expr_let _ := Ident ident.Z.div @ y17 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y17 @ 2251799813685248 in
+           expr_let y20 := x [[0]] * x0 [[2]] +
+                           (x [[1]] * x0 [[1]] +
+                            (x [[2]] * x0 [[0]] +
+                             (19 * (x [[3]] * x0 [[4]]) +
+                              19 * (x [[4]] * x0 [[3]])))) in
+           expr_let _ := Ident ident.Z.div @ y20 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y20 @ 2251799813685248 in
+           expr_let y23 := y12 +
+                           (x [[0]] * x0 [[1]] +
+                            (x [[1]] * x0 [[0]] +
+                             (19 * (x [[2]] * x0 [[4]]) +
+                              (19 * (x [[3]] * x0 [[3]]) +
+                               19 * (x [[4]] * x0 [[2]]))))) in
+           expr_let y24 := Ident ident.Z.div @ y23 @ 2251799813685248 in
+           expr_let y25 := Ident ident.Z.modulo @ y23 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y13 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y13 @ 2251799813685248 in
            expr_let y28 := x [[0]] * x0 [[4]] +
-                           (2 * (x [[1]] * x0 [[3]]) +
-                            (67108864 * (x [[1]] * x0 [[4]]) +
-                             (x [[2]] * x0 [[2]] +
-                              (67108864 * (x [[2]] * x0 [[3]]) +
-                               (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                                (2 * (x [[3]] * x0 [[1]]) +
-                                 (67108864 * (x [[3]] * x0 [[2]]) +
-                                  (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                   (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                    (x [[4]] * x0 [[0]] +
-                                     (67108864 * (x [[4]] * x0 [[1]]) +
-                                      (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                       (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                        5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
-           expr_let _ := Ident ident.Z.div @ y28 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y28 @ 67108864 in
+                           (x [[1]] * x0 [[3]] +
+                            (x [[2]] * x0 [[2]] +
+                             (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]]))) in
+           expr_let _ := Ident ident.Z.div @ y28 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y28 @ 2251799813685248 in
            expr_let y31 := x [[0]] * x0 [[3]] +
-                           (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]])) in
-           expr_let _ := Ident ident.Z.div @ y31 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y31 @ 67108864 in
+                           (x [[1]] * x0 [[2]] +
+                            (x [[2]] * x0 [[1]] +
+                             (x [[3]] * x0 [[0]] + 19 * (x [[4]] * x0 [[4]])))) in
+           expr_let _ := Ident ident.Z.div @ y31 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y31 @ 2251799813685248 in
            expr_let y34 := y24 +
-                           (x [[0]] * x0 [[2]] + (2 * (x [[1]] * x0 [[1]]) + x [[2]] * x0 [[0]])) in
-           expr_let y35 := Ident ident.Z.div @ y34 @ 67108864 in
-           expr_let y36 := Ident ident.Z.modulo @ y34 @ 67108864 in
-           expr_let _ := Ident ident.Z.div @ y25 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y25 @ 67108864 in
-           expr_let _ := Ident ident.Z.div @ y13 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y13 @ 67108864 in
+                           (x [[0]] * x0 [[2]] +
+                            (x [[1]] * x0 [[1]] +
+                             (x [[2]] * x0 [[0]] +
+                              (19 * (x [[3]] * x0 [[4]]) +
+                               19 * (x [[4]] * x0 [[3]]))))) in
+           expr_let y35 := Ident ident.Z.div @ y34 @ 2251799813685248 in
+           expr_let y36 := Ident ident.Z.modulo @ y34 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y25 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y25 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y13 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y13 @ 2251799813685248 in
            expr_let y41 := x [[0]] * x0 [[4]] +
-                           (2 * (x [[1]] * x0 [[3]]) +
-                            (67108864 * (x [[1]] * x0 [[4]]) +
-                             (x [[2]] * x0 [[2]] +
-                              (67108864 * (x [[2]] * x0 [[3]]) +
-                               (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                                (2 * (x [[3]] * x0 [[1]]) +
-                                 (67108864 * (x [[3]] * x0 [[2]]) +
-                                  (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                   (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                    (x [[4]] * x0 [[0]] +
-                                     (67108864 * (x [[4]] * x0 [[1]]) +
-                                      (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                       (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                        5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))) in
-           expr_let _ := Ident ident.Z.div @ y41 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y41 @ 33554432 in
+                           (x [[1]] * x0 [[3]] +
+                            (x [[2]] * x0 [[2]] +
+                             (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]]))) in
+           expr_let _ := Ident ident.Z.div @ y41 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y41 @ 2251799813685248 in
            expr_let y44 := y35 +
                            (x [[0]] * x0 [[3]] +
-                            (x [[1]] * x0 [[2]] + (x [[2]] * x0 [[1]] + x [[3]] * x0 [[0]]))) in
-           expr_let y45 := Ident ident.Z.div @ y44 @ 33554432 in
-           expr_let y46 := Ident ident.Z.modulo @ y44 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y36 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y36 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y25 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y25 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y13 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y13 @ 33554432 in
+                            (x [[1]] * x0 [[2]] +
+                             (x [[2]] * x0 [[1]] +
+                              (x [[3]] * x0 [[0]] + 19 * (x [[4]] * x0 [[4]]))))) in
+           expr_let y45 := Ident ident.Z.div @ y44 @ 2251799813685248 in
+           expr_let y46 := Ident ident.Z.modulo @ y44 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y36 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y36 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y25 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y25 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y13 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y13 @ 2251799813685248 in
            expr_let y53 := y45 +
                            (x [[0]] * x0 [[4]] +
-                            (2 * (x [[1]] * x0 [[3]]) +
-                             (67108864 * (x [[1]] * x0 [[4]]) +
-                              (x [[2]] * x0 [[2]] +
-                               (67108864 * (x [[2]] * x0 [[3]]) +
-                                (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                                 (2 * (x [[3]] * x0 [[1]]) +
-                                  (67108864 * (x [[3]] * x0 [[2]]) +
-                                   (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                    (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                     (x [[4]] * x0 [[0]] +
-                                      (67108864 * (x [[4]] * x0 [[1]]) +
-                                       (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                        (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                         5070602400912917605986812821504 * (x [[4]] * x0 [[4]]))))))))))))))) in
-           expr_let _ := Ident ident.Z.div @ y53 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y53 @ 67108864 in
-           expr_let _ := Ident ident.Z.div @ y46 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y46 @ 67108864 in
-           expr_let _ := Ident ident.Z.div @ y36 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y36 @ 67108864 in
-           expr_let _ := Ident ident.Z.div @ y25 @ 67108864 in
-           expr_let _ := Ident ident.Z.modulo @ y25 @ 67108864 in
-           expr_let y62 := Ident ident.Z.div @ y13 @ 67108864 in
-           expr_let y63 := Ident ident.Z.modulo @ y13 @ 67108864 in
+                            (x [[1]] * x0 [[3]] +
+                             (x [[2]] * x0 [[2]] +
+                              (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]])))) in
+           expr_let _ := Ident ident.Z.div @ y53 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y53 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y46 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y46 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y36 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y36 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y25 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y25 @ 2251799813685248 in
+           expr_let y62 := Ident ident.Z.div @ y13 @ 2251799813685248 in
+           expr_let y63 := Ident ident.Z.modulo @ y13 @ 2251799813685248 in
            expr_let y64 := y45 +
                            (x [[0]] * x0 [[4]] +
-                            (2 * (x [[1]] * x0 [[3]]) +
-                             (67108864 * (x [[1]] * x0 [[4]]) +
-                              (x [[2]] * x0 [[2]] +
-                               (67108864 * (x [[2]] * x0 [[3]]) +
-                                (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                                 (2 * (x [[3]] * x0 [[1]]) +
-                                  (67108864 * (x [[3]] * x0 [[2]]) +
-                                   (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                    (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                     (x [[4]] * x0 [[0]] +
-                                      (67108864 * (x [[4]] * x0 [[1]]) +
-                                       (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                        (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                         5070602400912917605986812821504 * (x [[4]] * x0 [[4]]))))))))))))))) in
-           expr_let _ := Ident ident.Z.div @ y64 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y64 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y46 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y46 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y36 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y36 @ 33554432 in
+                            (x [[1]] * x0 [[3]] +
+                             (x [[2]] * x0 [[2]] +
+                              (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]])))) in
+           expr_let _ := Ident ident.Z.div @ y64 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y64 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y46 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y46 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y36 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y36 @ 2251799813685248 in
            expr_let y71 := y62 + y25 in
-           expr_let y72 := Ident ident.Z.div @ y71 @ 33554432 in
-           expr_let y73 := Ident ident.Z.modulo @ y71 @ 33554432 in
-           expr_let _ := Ident ident.Z.div @ y63 @ 33554432 in
-           expr_let _ := Ident ident.Z.modulo @ y63 @ 33554432 in
+           expr_let y72 := Ident ident.Z.div @ y71 @ 2251799813685248 in
+           expr_let y73 := Ident ident.Z.modulo @ y71 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.div @ y63 @ 2251799813685248 in
+           expr_let _ := Ident ident.Z.modulo @ y63 @ 2251799813685248 in
            y63
            :: y73
               :: y72 + y36
                  :: y46
                     :: y45 +
                        (x [[0]] * x0 [[4]] +
-                        (2 * (x [[1]] * x0 [[3]]) +
-                         (67108864 * (x [[1]] * x0 [[4]]) +
-                          (x [[2]] * x0 [[2]] +
-                           (67108864 * (x [[2]] * x0 [[3]]) +
-                            (2251799813685248 * (x [[2]] * x0 [[4]]) +
-                             (2 * (x [[3]] * x0 [[1]]) +
-                              (67108864 * (x [[3]] * x0 [[2]]) +
-                               (4503599627370496 * (x [[3]] * x0 [[3]]) +
-                                (151115727451828646838272 * (x [[3]] * x0 [[4]]) +
-                                 (x [[4]] * x0 [[0]] +
-                                  (67108864 * (x [[4]] * x0 [[1]]) +
-                                   (2251799813685248 * (x [[4]] * x0 [[2]]) +
-                                    (151115727451828646838272 * (x [[4]] * x0 [[3]]) +
-                                     5070602400912917605986812821504 * (x [[4]] * x0 [[4]])))))))))))))))
-                       :: [])%expr) f g
+                        (x [[1]] * x0 [[3]] +
+                         (x [[2]] * x0 [[2]] +
+                          (x [[3]] * x0 [[1]] + x [[4]] * x0 [[0]])))) :: [])%expr)
+         f g
      : forall f g : list Z, length f = 5%nat -> length g = 5%nat -> list Z
 *)
