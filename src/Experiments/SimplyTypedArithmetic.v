@@ -273,9 +273,11 @@ End Positional. End Positional.
 
 Module Compilers.
   Module type.
-    Variant opaque := Z.
-    Inductive type := type_opaque (_:opaque) | unit | prod (A B : type) | arrow (s d : type) | list (A : type) | nat | bool.
-    Global Coercion type_opaque : opaque >-> type.
+    Variant opaque := unit | Z | nat | bool.
+    Inductive type := type_opaque (_:opaque) | prod (A B : type) | arrow (s d : type) | list (A : type).
+    Module Export Coercions.
+      Global Coercion type_opaque : opaque >-> type.
+    End Coercions.
 
     Fixpoint interp (t : type)
       := match t with
@@ -290,12 +292,14 @@ Module Compilers.
 
     Ltac reify_opaque ty :=
       lazymatch eval cbv beta in ty with
-      | BinInt.Z => constr:(Z)
+      | Datatypes.unit => unit
+      | Datatypes.nat => nat
+      | Datatypes.bool => bool
+      | BinInt.Z => Z
       end.
 
     Ltac reify ty :=
       lazymatch eval cbv beta in ty with
-      | Datatypes.unit => unit
       | Datatypes.prod ?A ?B
         => let rA := reify A in
            let rB := reify B in
@@ -307,14 +311,13 @@ Module Compilers.
       | Datatypes.list ?T
         => let rT := reify T in
            constr:(list rT)
-      | Datatypes.nat => nat
-      | Datatypes.bool => bool
       | type.interp ?T => T
       | _ => let rt := reify_opaque ty in
              constr:(type_opaque rt)
       end.
 
     Module Export Notations.
+      Export Coercions.
       Delimit Scope ctype_scope with ctype.
       Bind Scope ctype_scope with type.
       Notation "()" := unit : ctype_scope.
@@ -360,6 +363,11 @@ Module Compilers.
     Ltac is_opaque_const_cps2 term on_success on_failure :=
       let recurse term := is_opaque_const_cps2 term on_success on_failure in
       lazymatch term with
+      | S ?n => recurse n
+      | O => on_success ()
+      | true => on_success ()
+      | false => on_success ()
+      | tt => on_success ()
       | Z0 => on_success ()
       | Zpos ?p => recurse p
       | Zneg ?p => recurse p
@@ -540,16 +548,12 @@ Module Compilers.
         Inductive ident : type -> Set :=
         | opaque {t:type.opaque} (v : interp t) : ident t
         | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
-        | tt : ident unit
-        | O : ident nat
-        | S : ident (nat -> nat)
+        | Nat_succ : ident (nat -> nat)
         | nil {t} : ident (list t)
         | cons {t} : ident (t -> list t -> list t)
         | pair {A B} : ident (A -> B -> A * B)
         | fst {A B} : ident (A * B -> A)
         | snd {A B} : ident (A * B -> B)
-        | true : ident bool
-        | false : ident bool
         | bool_rect {T} : ident (T -> T -> bool -> T)
         | nat_rect {P} : ident (P -> (nat -> P -> P) -> nat -> P)
         | pred : ident (nat -> nat)
@@ -579,16 +583,12 @@ Module Compilers.
           := match idc in ident t return type.interp t with
              | opaque _ v => v
              | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
-             | tt => Datatypes.tt
-             | O => Datatypes.O
-             | S => Datatypes.S
+             | Nat_succ => Nat.succ
              | nil t => @Datatypes.nil (type.interp t)
              | cons t => @Datatypes.cons (type.interp t)
              | pair A B => @Datatypes.pair (type.interp A) (type.interp B)
              | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
              | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-             | true => @Datatypes.true
-             | false => @Datatypes.false
              | bool_rect T => @Datatypes.bool_rect (fun _ => type.interp T)
              | nat_rect P => @Datatypes.nat_rect (fun _ => type.interp P)
              | pred => Nat.pred
@@ -618,11 +618,8 @@ Module Compilers.
         Ltac reify term :=
           (*let dummy := match goal with _ => idtac "attempting to reify_op" term end in*)
           lazymatch term with
-          | Datatypes.tt => ident.tt
-          | Datatypes.O => ident.O
-          | Datatypes.S => ident.S
-          | Datatypes.true => ident.true
-          | Datatypes.false => ident.false
+          | Nat.succ => Nat_succ
+          | S => Nat_succ
           | @Datatypes.nil ?T
             => let rT := type.reify T in
                constr:(@ident.nil rT)
@@ -733,6 +730,10 @@ Module Compilers.
           Notation of_nat := Z_of_nat.
         End Z.
 
+        Module Nat.
+          Notation succ := Nat_succ.
+        End Nat.
+
         Module Export Notations.
           Notation ident := ident.
         End Notations.
@@ -751,6 +752,10 @@ Module Compilers.
         Notation "'expr_let' x := A 'in' b" := (App (App (Ident ident.Let_In) A%expr) (Abs (fun x => b%expr))) : expr_scope.
         Notation "[ ]" := (Ident ident.nil) : expr_scope.
         Notation "x :: xs" := (App (App (Ident ident.cons) x%expr) xs%expr) : expr_scope.
+        Notation "x" := (Ident (ident.opaque x)) (only printing, at level 9) : expr_scope.
+        Notation "ls [[ n ]]"
+          := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.opaque n%nat)))
+             : expr_scope.
 
         Module Reification.
           Ltac reify var term := expr.reify ident ident.reify var term.
@@ -769,20 +774,17 @@ Module Compilers.
         Inductive ident : type -> Set :=
         | opaque {t : type.opaque} (v : interp t) : ident t
         | Let_In {tx tC} : ident (tx -> (tx -> tC) -> tC)
-        | tt : ident unit
-        | O : ident nat
-        | S : ident (nat -> nat)
+        | Nat_succ : ident (nat -> nat)
         | nil {t} : ident (list t)
         | cons {t} : ident (t -> list t -> list t)
         | pair {A B} : ident (A -> B -> A * B)
         | fst {A B} : ident (A * B -> A)
         | snd {A B} : ident (A * B -> B)
-        | true : ident bool
-        | false : ident bool
         | bool_rect {T} : ident (T -> T -> bool -> T)
         | nat_rect {P} : ident (P -> (nat -> P -> P) -> nat -> P)
         | pred : ident (nat -> nat)
         | list_rect {A P} : ident (P -> (A -> list A -> P -> P) -> list A -> P)
+        | List_nth_default {T} : ident (T -> list T -> nat -> T)
         | Z_runtime_mul : ident (Z -> Z -> Z)
         | Z_runtime_add : ident (Z -> Z -> Z)
         | Z_add : ident (Z -> Z -> Z)
@@ -798,11 +800,7 @@ Module Compilers.
           := match idc in ident t return type.interp t with
              | opaque _ v => v
              | Let_In tx tC => @LetIn.Let_In (type.interp tx) (fun _ => type.interp tC)
-             | tt => Datatypes.tt
-             | O => Datatypes.O
-             | S => Datatypes.S
-             | true => Datatypes.true
-             | false => Datatypes.false
+             | Nat_succ => Nat.succ
              | nil t => @Datatypes.nil (type.interp t)
              | cons t => @Datatypes.cons (type.interp t)
              | pair A B => @Datatypes.pair (type.interp A) (type.interp B)
@@ -812,6 +810,7 @@ Module Compilers.
              | nat_rect P => @Datatypes.nat_rect (fun _ => type.interp P)
              | pred => Nat.pred
              | list_rect A P => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P)
+             | List_nth_default T => @nth_default (type.interp T)
              | Z_runtime_mul => runtime_mul
              | Z_runtime_add => runtime_add
              | Z_add => Z.add
@@ -827,11 +826,8 @@ Module Compilers.
         Ltac reify term :=
           (*let dummy := match goal with _ => idtac "attempting to reify_op" term end in*)
           lazymatch term with
-          | Datatypes.tt => ident.tt
-          | Datatypes.O => ident.O
-          | Datatypes.S => ident.S
-          | Datatypes.true => ident.true
-          | Datatypes.false => ident.false
+          | Nat.succ => ident.Nat_succ
+          | S => ident.Nat_succ
           | @Datatypes.nil ?T
             => let rT := type.reify T in
                constr:(@ident.nil rT)
@@ -865,6 +861,9 @@ Module Compilers.
             => let rA := type.reify A in
                let rB := type.reify B in
                constr:(@ident.list_rect rA rB)
+          | @nth_default ?T
+            => let rT := type.reify T in
+               constr:(@ident.List_nth_default rT)
           | runtime_mul => ident.Z_runtime_mul
           | runtime_add => ident.Z_runtime_add
           | Z.add => ident.Z_add
@@ -884,6 +883,10 @@ Module Compilers.
                constr:(@ident.opaque rT term)
           end.
 
+        Module List.
+          Notation nth_default := List_nth_default.
+        End List.
+
         Module Z.
           Notation runtime_mul := Z_runtime_mul.
           Notation runtime_add := Z_runtime_add.
@@ -896,6 +899,10 @@ Module Compilers.
           Notation eqb := Z_eqb.
           Notation of_nat := Z_of_nat.
         End Z.
+
+        Module Nat.
+          Notation succ := Nat_succ.
+        End Nat.
 
         Module Export Notations.
           Notation ident := ident.
@@ -915,6 +922,10 @@ Module Compilers.
         Notation "'expr_let' x := A 'in' b" := (App (App (Ident ident.Let_In) A%expr) (Abs (fun x => b%expr))) : expr_scope.
         Notation "[ ]" := (Ident ident.nil) : expr_scope.
         Notation "x :: xs" := (App (App (Ident ident.cons) x%expr) xs%expr) : expr_scope.
+        Notation "x" := (Ident (ident.opaque x)) (only printing, at level 9) : expr_scope.
+        Notation "ls [[ n ]]"
+          := (App (App (App (Ident ident.List.nth_default) _) ls%expr) (Ident (ident.opaque n%nat)))
+             : expr_scope.
 
         Ltac reify var term := expr.reify ident ident.reify var term.
         Ltac Reify term := expr.Reify ident ident.reify term.
@@ -938,16 +949,8 @@ Module Compilers.
            match idc with
            | for_reification.ident.Let_In tx tC
              => Ident ident.Let_In
-           | for_reification.ident.tt
-             => Ident ident.tt
-           | for_reification.ident.O
-             => Ident ident.O
-           | for_reification.ident.S
-             => Ident ident.S
-           | for_reification.ident.true
-             => Ident ident.true
-           | for_reification.ident.false
-             => Ident ident.false
+           | for_reification.ident.Nat_succ
+             => Ident ident.Nat_succ
            | for_reification.ident.nil t
              => Ident ident.nil
            | for_reification.ident.cons t
@@ -1099,7 +1102,8 @@ Module Compilers.
                                    n) in
                   exact v)
            | for_reification.ident.List_nth_default T
-             => ltac:(
+             => Ident ident.List_nth_default
+           (*ltac:(
                   let v := reify
                              var
                              (fun (default : type.interp T) (l : list (type.interp T)) (n : nat)
@@ -1116,7 +1120,7 @@ Module Compilers.
                                          (fun __ l __ => nth_error_n l))
                                    n
                                    l) in
-                  exact v)
+                  exact v)*)
            end%expr.
     End ident.
 
@@ -1153,9 +1157,6 @@ Module Compilers.
              | s -> d => translate s -> (translate d -> R) -> R
              | list A => list (translate A)
              | type_opaque _ as t
-             | unit as t
-             | nat as t
-             | bool as t
                => t
              end%ctype.
       End translate.
@@ -1173,10 +1174,6 @@ Module Compilers.
           : @expr var R
           := match idc in ident.ident t return (expr (type.translate R t) -> expr R) -> expr R with
              | ident.opaque _ _ as idc
-             | ident.tt as idc
-             | ident.O as idc
-             | ident.true as idc
-             | ident.false as idc
                => fun k => k idc
              | ident.nil t
                => fun k => k (@ident.nil (type.translate R t))
@@ -1189,7 +1186,7 @@ Module Compilers.
                                   ident.Let_In
                                     @ Var x
                                     @ (λ x, Var f @ Var x @ Var fk)))
-             | ident.S as idc
+             | ident.Nat_succ as idc
              | ident.pred as idc
              | ident.Z_opp as idc
              | ident.Z_of_nat as idc
@@ -1269,6 +1266,16 @@ Module Compilers.
                                                    @ (λ K, Var K @ Var rec @ Var k))))
                                     @ (Var ls)
                                     @ (Var k))))
+             | ident.List_nth_default A
+               => fun k
+                  => k (λ (default : var (type.translate R A))
+                          (k0 :
+                             (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((type.list (type.translate R A) -> ((type.nat -> (type.translate R A -> R) -> R) -> R) -> R) -> R)),
+                        (Var k0)
+                          @ (λ ls k1,
+                             (Var k1)
+                               @ (λ n k,
+                                  Var k @ (ident.List.nth_default @ Var default @ Var ls @ Var n))))
              | ident.Z_runtime_mul as idc
              | ident.Z_runtime_add as idc
              | ident.Z_add as idc
@@ -1407,6 +1414,8 @@ Module Compilers.
          end.
 
     (* if we want more code for the below, I would suggest [reify_base_type] and [reflect_base_type] *)
+    Definition reify_opaque {t} (v : type.interp (type.type_opaque t)) : @expr var (type.type_opaque t)
+      := Ident (ident.opaque v).
     Definition reflect_opaque {t} (e : @expr var (type.type_opaque t)) : option (type.interp (type.type_opaque t))
       := match invert_Ident e with
          | Some idc
@@ -1415,31 +1424,6 @@ Module Compilers.
               | _ => None
               end
          | None => None
-         end.
-
-    Fixpoint reify_nat (n:nat) : @expr var type.nat
-      := match n with
-         | S n' => App (Ident ident.S) (reify_nat n')
-         | O => Ident ident.O
-         end.
-    Fixpoint reflect_nat (e : @expr var type.nat) : option nat
-      := match e return option nat with
-         | App type.nat _ (Ident _ ident.S) args
-           => option_map S (reflect_nat args)
-         | Ident type.nat ident.O
-           => Some O
-         | _ => None
-         end.
-
-    Fixpoint reify_bool (b:bool) : @expr var type.bool
-      := if b then Ident ident.true else Ident ident.false.
-    Fixpoint reflect_bool (e : @expr var type.bool) : option bool
-      := match e return option bool with
-         | Ident type.nat ident.true
-           => Some true
-         | Ident type.nat ident.false
-           => Some false
-         | _ => None
          end.
 
     Local Notation list_expr
@@ -1498,22 +1482,16 @@ Module Compilers.
            | type.prod A B as t => value A * value B
            | type.arrow s d => value s -> value d
            | type.list A => list (value A)
-           | type.unit as t
            | type.type_opaque _ as t
-           | type.nat as t
-           | type.bool as t
              => type.interp t
            end%type.
       Definition value_step (value : type -> Type) (t : type)
         := match t return Type with
-           | type.unit as t
            | type.arrow _ _ as t
              => value_prestep value t
            | type.prod _ _ as t
            | type.list _ as t
            | type.type_opaque _ as t
-           | type.nat as t
-           | type.bool as t
              => @expr var t + value_prestep value t
            end%type.
       Fixpoint value (t : type)
@@ -1523,11 +1501,9 @@ Module Compilers.
     Module expr.
       Section reify.
         Context {var : type -> Type}.
-        Check ident.tt.
         Fixpoint reify {t : type} {struct t}
           : value var t -> @expr var t
           := match t return value var t -> expr t with
-             | type.unit as t => fun _ => expr.Ident ident.tt
              | type.prod A B as t
                => fun x : expr t + value var A * value var B
                   => match x with
@@ -1544,18 +1520,6 @@ Module Compilers.
                      | inl v => v
                      | inr v => reify_list (List.map (@reify A) v)
                      end
-             | type.nat as t
-               => fun x : expr t + type.interp t
-                  => match x with
-                     | inl v => v
-                     | inr v => reify_nat v
-                     end
-             | type.bool as t
-               => fun x : expr t + type.interp t
-                  => match x with
-                     | inl v => v
-                     | inr v => reify_bool v
-                     end
              | type.type_opaque _ as t
                => fun x : expr t + type.interp t
                   => match x with
@@ -1569,7 +1533,6 @@ Module Compilers.
                 | type.arrow s d
                   => fun (f : expr (s -> d)) (x : value var s)
                      => @reflect d (App f (@reify s x))
-                | type.unit => fun _ => tt
                 | type.prod A B as t
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
@@ -1590,22 +1553,6 @@ Module Compilers.
                         | None
                           => inl v
                         end
-                | type.nat as t
-                  => fun v : expr t
-                     => let inr := @inr (expr t) (value_prestep (value var) t) in
-                        let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match reflect_nat v with
-                        | Some v => inr v
-                        | None => inl v
-                        end
-                | type.bool as t
-                  => fun v : expr t
-                     => let inr := @inr (expr t) (value_prestep (value var) t) in
-                        let inl := @inl (expr t) (value_prestep (value var) t) in
-                        match reflect_bool v with
-                        | Some v => inr v
-                        | None => inl v
-                        end
                 | type.type_opaque _ as t
                   => fun v : expr t
                      => let inr := @inr (expr t) (value_prestep (value var) t) in
@@ -1618,28 +1565,16 @@ Module Compilers.
       End reify.
     End expr.
 
-    Definition sum_arrow {A A' B B'} (f : A -> A') (g : B -> B')
-               (v : A + B)
-      : A' + B'
-      := match v with
-         | inl v => inl (f v)
-         | inr v => inr (g v)
-         end.
-    Infix "+" := sum_arrow : function_scope.
-
     Module ident.
       Section interp.
         Context {var : type -> Type}.
         Definition interp_let_in {tC tx : type} : value var tx -> (value var tx -> value var tC) -> value var tC
           := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
-             | type.unit => fun _ f => f tt
              | type.arrow _ _
              | type.prod _ _
              | type.list _
                => fun x f => f x
-             | type.nat as t
              | type.type_opaque _ as t
-             | type.bool as t
                => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> value var tC)
                   => match x with
                      | inl e
@@ -1654,18 +1589,10 @@ Module Compilers.
           := match idc in ident t return value var t with
              | ident.Let_In tx tC
                => interp_let_in
-             | ident.tt
-               => tt
-             | ident.O
-               => inr O
-             | ident.true
-               => inr true
-             | ident.false
-               => inr false
              | ident.nil t
                => inr (@nil (value var t))
-             | ident.opaque type.Z z
-               => inr z
+             | ident.opaque t v
+               => inr v
              | ident.cons t as idc
                => fun x (xs : expr (type.list t) + list (value var t))
                   => match xs return expr (type.list t) + list (value var t) with
@@ -1716,8 +1643,16 @@ Module Compilers.
                                    ls
                      | _ => expr.reflect (Ident idc) nil_case cons_case ls
                      end
+             | ident.List.nth_default A as idc
+               => fun (default : value var A)
+                      (ls : expr _ + list (value var A))
+                      (idx : expr _ + nat)
+                  => match ls, idx return value var A with
+                     | inr ls, inr idx => List.nth_default default ls idx
+                     | _, _ => expr.reflect (Ident idc) default ls idx
+                     end
              | ident.pred as idc
-             | ident.S as idc
+             | ident.Nat_succ as idc
              | ident.Z_of_nat as idc
              | ident.Z_opp as idc
                => fun x : expr _ + type.interp _
@@ -1762,7 +1697,7 @@ Module Compilers.
                           else default
                      | inl _, inl _ => default
                      end
-             end.
+                 end.
       End interp.
     End ident.
   End partial.
@@ -1840,7 +1775,7 @@ Notation "x + y"
 Notation "x * y"
   := (App (App (Ident ident.Z.runtime_mul) x%RT_expr) y%RT_expr)
      : expr_scope.
-Notation "x" := (Var x) (only printing, at level 10) : expr_scope.
+Notation "x" := (Var x) (only printing, at level 9) : expr_scope.
 Open Scope RT_expr_scope.
 
 Require Import AdmitAxiom.
@@ -1936,58 +1871,99 @@ Example base_25_5_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g
   (*trivial.*)
 Defined.
 Eval cbv [proj1_sig base_25_5_mul] in (fun f g Hf Hg => proj1_sig (base_25_5_mul f g Hf Hg)).
-     (* = fun (f g : list Z) (_ : length f = 10%nat) (_ : length g = 10%nat) => *)
-     (*   expr.Interp (@ident.interp) *)
-     (*     (fun var : type -> Type => *)
-     (*      (λ x x0 : var (type.list (type.type_opaque type.Z)), *)
-     (*       Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*       (λ (x1 : var (type.type_opaque type.Z))(_ : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*        x1) (x) * *)
-     (*       Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*       (λ (x1 : var (type.type_opaque type.Z))(_ : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*        x1) (x0) + *)
-     (*       (Ident (ident.opaque 2) * *)
-     (*        (Ident (ident.opaque 19) * *)
-     (*         (Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*          (λ (_ : var (type.type_opaque type.Z))(x2 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*           Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*           (λ (x4 : var (type.type_opaque type.Z))(_ : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*            x4) (x2)) (x) * *)
-     (*          Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*          (λ (_ : var (type.type_opaque type.Z))(x2 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*           Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*           (λ (_ : var (type.type_opaque type.Z))(x5 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*            Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*            (λ (_ : var (type.type_opaque type.Z))(x8 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*             Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*             (λ (_ : var (type.type_opaque type.Z))(x11 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*              Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*              (λ (_ : var (type.type_opaque type.Z))(x14 : var (type.list (type.type_opaque type.Z)))(_ :  *)
-     (*                                                                                                      var  *)
-     (*                                                                                                        (type.type_opaque type.Z)), *)
-     (*               Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*               (λ (_ : var (type.type_opaque type.Z))(x17 : var (type.list (type.type_opaque type.Z)))(_ :  *)
-     (*                                                                                                       var  *)
-     (*                                                                                                         (type.type_opaque type.Z)), *)
-     (*                Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*                (λ (_ : var (type.type_opaque type.Z))(x20 : var (type.list (type.type_opaque type.Z)))(_ :  *)
-     (*                                                                                                        var  *)
-     (*                                                                                                         (type.type_opaque type.Z)), *)
-     (*                 Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*                 (λ (_ : var (type.type_opaque type.Z))(x23 : var (type.list (type.type_opaque type.Z)))(_ :  *)
-     (*                                                                                                         var  *)
-     (*                                                                                                         (type.type_opaque type.Z)), *)
-     (*                  Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*                  (λ (_ : var (type.type_opaque type.Z))(x26 : var (type.list (type.type_opaque type.Z)))(_ :  *)
-     (*                                                                                                         var  *)
-     (*                                                                                                         (type.type_opaque type.Z)), *)
-     (*                   Ident ident.list_rect (Ident (...)) (λ (x28 : var (...))(_ : var (...))(_ : var (...)), *)
-     (*                                                        x28) (x26)) (x23)) (x20)) (x17)) (x14)) (x11)) (x8))  *)
-     (*            (x5)) (x2)) (x0))) + *)
-     (*        (Ident (ident.opaque 19) * *)
-     (*         (Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*          (λ (_ : var (type.type_opaque type.Z))(x2 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*           Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (*           (λ (_ : var (type.type_opaque type.Z))(x5 : var (type.list (type.type_opaque type.Z)))(_ : var (type.type_opaque type.Z)), *)
-     (*            Ident ident.list_rect (Ident (ident.opaque (-1))) *)
-     (* ... *)
+(*      = fun (f g : list Z) (_ : length f = 10%nat) (_ : length g = 10%nat) =>
+       expr.Interp (@ident.interp)
+         (fun var : type -> Type =>
+          (λ x x0 : var (type.list type.Z),
+           x [[0]] * x0 [[0]] +
+           (2 * (19 * (x [[1]] * x0 [[9]])) +
+            (19 * (x [[2]] * x0 [[8]]) +
+             (2 * (19 * (x [[3]] * x0 [[7]])) +
+              (19 * (x [[4]] * x0 [[6]]) +
+               (2 * (19 * (x [[5]] * x0 [[5]])) +
+                (19 * (x [[6]] * x0 [[4]]) +
+                 (2 * (19 * (x [[7]] * x0 [[3]])) +
+                  (19 * (x [[8]] * x0 [[2]]) + 2 * (19 * (x [[9]] * x0 [[1]]))))))))))
+           :: x [[0]] * x0 [[1]] +
+              (x [[1]] * x0 [[0]] +
+               (19 * (x [[2]] * x0 [[9]]) +
+                (19 * (x [[3]] * x0 [[8]]) +
+                 (19 * (x [[4]] * x0 [[7]]) +
+                  (19 * (x [[5]] * x0 [[6]]) +
+                   (19 * (x [[6]] * x0 [[5]]) +
+                    (19 * (x [[7]] * x0 [[4]]) +
+                     (19 * (x [[8]] * x0 [[3]]) + 19 * (x [[9]] * x0 [[2]])))))))))
+              :: x [[0]] * x0 [[2]] +
+                 (2 * (x [[1]] * x0 [[1]]) +
+                  (x [[2]] * x0 [[0]] +
+                   (2 * (19 * (x [[3]] * x0 [[9]])) +
+                    (19 * (x [[4]] * x0 [[8]]) +
+                     (2 * (19 * (x [[5]] * x0 [[7]])) +
+                      (19 * (x [[6]] * x0 [[6]]) +
+                       (2 * (19 * (x [[7]] * x0 [[5]])) +
+                        (19 * (x [[8]] * x0 [[4]]) + 2 * (19 * (x [[9]] * x0 [[3]]))))))))))
+                 :: x [[0]] * x0 [[3]] +
+                    (x [[1]] * x0 [[2]] +
+                     (x [[2]] * x0 [[1]] +
+                      (x [[3]] * x0 [[0]] +
+                       (19 * (x [[4]] * x0 [[9]]) +
+                        (19 * (x [[5]] * x0 [[8]]) +
+                         (19 * (x [[6]] * x0 [[7]]) +
+                          (19 * (x [[7]] * x0 [[6]]) +
+                           (19 * (x [[8]] * x0 [[5]]) + 19 * (x [[9]] * x0 [[4]])))))))))
+                    :: x [[0]] * x0 [[4]] +
+                       (2 * (x [[1]] * x0 [[3]]) +
+                        (x [[2]] * x0 [[2]] +
+                         (2 * (x [[3]] * x0 [[1]]) +
+                          (x [[4]] * x0 [[0]] +
+                           (2 * (19 * (x [[5]] * x0 [[9]])) +
+                            (19 * (x [[6]] * x0 [[8]]) +
+                             (2 * (19 * (x [[7]] * x0 [[7]])) +
+                              (19 * (x [[8]] * x0 [[6]]) + 2 * (19 * (x [[9]] * x0 [[5]]))))))))))
+                       :: x [[0]] * x0 [[5]] +
+                          (x [[1]] * x0 [[4]] +
+                           (x [[2]] * x0 [[3]] +
+                            (x [[3]] * x0 [[2]] +
+                             (x [[4]] * x0 [[1]] +
+                              (x [[5]] * x0 [[0]] +
+                               (19 * (x [[6]] * x0 [[9]]) +
+                                (19 * (x [[7]] * x0 [[8]]) +
+                                 (19 * (x [[8]] * x0 [[7]]) + 19 * (x [[9]] * x0 [[6]])))))))))
+                          :: x [[0]] * x0 [[6]] +
+                             (2 * (x [[1]] * x0 [[5]]) +
+                              (x [[2]] * x0 [[4]] +
+                               (2 * (x [[3]] * x0 [[3]]) +
+                                (x [[4]] * x0 [[2]] +
+                                 (2 * (x [[5]] * x0 [[1]]) +
+                                  (x [[6]] * x0 [[0]] +
+                                   (2 * (19 * (x [[7]] * x0 [[9]])) +
+                                    (19 * (x [[8]] * x0 [[8]]) + 2 * (19 * (x [[9]] * x0 [[7]]))))))))))
+                             :: x [[0]] * x0 [[7]] +
+                                (x [[1]] * x0 [[6]] +
+                                 (x [[2]] * x0 [[5]] +
+                                  (x [[3]] * x0 [[4]] +
+                                   (x [[4]] * x0 [[3]] +
+                                    (x [[5]] * x0 [[2]] +
+                                     (x [[6]] * x0 [[1]] +
+                                      (x [[7]] * x0 [[0]] +
+                                       (19 * (x [[8]] * x0 [[9]]) + 19 * (x [[9]] * x0 [[8]])))))))))
+                                :: x [[0]] * x0 [[8]] +
+                                   (2 * (x [[1]] * x0 [[7]]) +
+                                    (x [[2]] * x0 [[6]] +
+                                     (2 * (x [[3]] * x0 [[5]]) +
+                                      (x [[4]] * x0 [[4]] +
+                                       (2 * (x [[5]] * x0 [[3]]) +
+                                        (x [[6]] * x0 [[2]] +
+                                         (2 * (x [[7]] * x0 [[1]]) +
+                                          (x [[8]] * x0 [[0]] + 2 * (19 * (x [[9]] * x0 [[9]]))))))))))
+                                   :: x [[0]] * x0 [[9]] +
+                                      (x [[1]] * x0 [[8]] +
+                                       (x [[2]] * x0 [[7]] +
+                                        (x [[3]] * x0 [[6]] +
+                                         (x [[4]] * x0 [[5]] +
+                                          (x [[5]] * x0 [[4]] +
+                                           (x [[6]] * x0 [[3]] +
+                                            (x [[7]] * x0 [[2]] +
+                                             (x [[8]] * x0 [[1]] + x [[9]] * x0 [[0]])))))))) :: [])%expr)
+         f g
+*)
