@@ -2,7 +2,7 @@ Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.ForLoop.
+Require Import Crypto.Experiments.Loops.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 
 Module M.
@@ -110,26 +110,27 @@ Module M.
         ((x2, z2), (x3, z3))%core
       end.
  
-    Context {cswap:bool->F*F->F*F->(F*F)*(F*F)}.
-
+    Context {cswap:bool->F->F->F*F}.
     Local Notation xor := Coq.Init.Datatypes.xorb.
-
-    (* Ideally, we would verify that this corresponds to x coordinate
-       multiplication *)
     Local Open Scope core_scope.
-    Definition montladder (bound : positive) (testbit:Z->bool) (u:F) :=
-      let '(P1, P2, swap) :=
-          for (int i = BinInt.Z.pos bound; i >= 0; i--)
-              updating ('(P1, P2, swap) = ((1%F, 0%F), (u, 1%F), false)) {{
-            dlet s_i := testbit i in
-            dlet swap := xor swap s_i in
-            let '(P1, P2) := cswap swap P1 P2 in
-            dlet swap := s_i in
-            let '(P1, P2) := xzladderstep u P1 P2 in
-            (P1, P2, swap)
-      }} in
-      let '((x, z), _) := cswap swap P1 P2 in
-      x * Finv z.
 
+    (* TODO: make a nice notations for loops like here *)
+    Definition montladder (scalarbits : Z) (testbit:Z->bool) (x1:F) : F :=
+      let '(x2, z2, x3, z3, swap, _) := (* names of variables as used after the loop *)
+          (while (fun '(_, i) => BinInt.Z.geb i 0) (* the test of the loop *)
+          (fun '(x2, z2, x3, z3, swap, i) => (* names of variables as used in the loop; we should reuse the same names as for after the loop *)
+            dlet b := testbit i in (* the body... *)
+            dlet swap := xor swap b in
+            let (x2, x3) := cswap swap x2 x3 in
+            let (z2, z3) := cswap swap z2 z3 in
+            dlet swap := b in
+            let '((x2, z2), (x3, z3)) := xzladderstep x1 (x2, z2) (x3, z3) in
+            let i := BinInt.Z.pred i in (* the third "increment" component of a for loop; either between the test and body or just inlined into the body like here *)
+            (x2, z2, x3, z3, swap, i)) (* the "return value" of the body is always the exact same variable names as in the beginning of the body because we shadow the original binders, but I think for now this will be unavoidable boilerplate. *)
+          (BinInt.Z.to_nat scalarbits) (* bound on number of loop iterations, should come between test and body *)
+          (1%F, 0%F, x1, 1%F, false, BinInt.Z.pred scalarbits)) in (* initial values, these should come before the test and body *)
+      let (x2, x3) := cswap swap x2 x3 in
+      let (z2, z3) := cswap swap z2 z3 in
+      x2 * Finv z2.
   End MontgomeryCurve.
 End M.

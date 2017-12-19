@@ -138,12 +138,17 @@ Module M.
     Proof.
       cbv [ladder_invariant] in *.
       pose proof difference_preserved Q Q' as Hrw.
-      (* TODO: rewrite with in match argument with [sumwise (fieldwise (n:=2) Feq) (fun _ _ => True)] *)
-      match type of Hrw with
-        M.eq ?X ?Y => replace X with Y by admit
-      end.
-      assumption.
-    Admitted.
+      (* FIXME: what we actually want to do here is to rewrite with in
+      match argument with
+      [sumwise (fieldwise (n:=2) Feq) (fun _ _ => True)] *)
+      cbv [M.eq] in *; break_match; break_match_hyps;
+        destruct_head' @and; repeat split; subst;
+          try solve [intuition congruence].
+      congruence (* congruence failed, idk WHY *)
+      || (match goal with
+            [H:?f1 = ?x1, G:?f = ?f1 |- ?f = ?x1] => rewrite G; exact H
+          end).
+    Qed.
 
     Lemma to_xz_add x1 xz x'z' Q Q'
           (Hxz : projective xz) (Hx'z' : projective x'z')
@@ -179,5 +184,27 @@ Module M.
 
     Lemma projective_to_xz Q : projective (to_xz Q).
     Proof. t. Qed.
+
+    Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
+    Import Crypto.Experiments.Loops.
+    Lemma montladder_correct P scalarbits testbit point : P (montladder scalarbits testbit point).
+    Proof.
+      cbv beta delta [M.montladder].
+      lazymatch goal with
+      | |- context [while ?t ?b ?l ?i] => eassert (_ (while t b l i) : Prop)
+      end.
+      lazymatch goal with
+      | |- ?e ?x
+        => eapply (while.by_invariant
+                     (* loop invariant *) _
+                     (* decreasing measure *) (fun s => BinInt.Z.to_nat (snd s))
+                     e)
+      end.
+      { (* invariant start *) admit. }
+      { (* invariant preservation *) admit. }
+      { (* measure start *) admit. }
+      { (* measure decreases *) admit. }
+      { (* invariant implies postcondition *) admit. }
+    Abort.
   End MontgomeryCurve.
 End M.
