@@ -39,6 +39,61 @@ Module M.
     Local Notation to_xz := (M.to_xz(Fzero:=Fzero)(Fone:=Fone)(Feq:=Feq)(Fadd:=Fadd)(Fmul:=Fmul)(a:=a)(b:=b)).
     Local Notation xzladderstep := (M.xzladderstep(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)).
 
+    (** This tactic is to solve goals that fsatz also solves, but to
+        do so faster in some cases common in this file. It may also
+        work around deficiencies in the Coq 8.6 (released) version of
+        [nsatz]; it has some heuristics for clearing hypotheses and
+        running [exfalso], and then tries [fsatz] *)
+    Local Ltac maybefast :=
+      try lazymatch goal with
+          | [ fld : Hierarchy.field (T:=?F) (eq:=?Feq), Feq_dec : DecidableRel ?Feq |- _ ]
+            => lazymatch goal with
+               | [ H : ?x * 1 = ?y * ?z, H' : ?x <> 0, H'' : ?z = 0 |- _ ]
+                 => clear -H H' H'' fld Feq_dec; exfalso; fsatz
+               | [ H : ?x * 0 = 1 * ?y, H' : ?y <> 0 |- _ ]
+                 => clear -H H' fld Feq_dec; exfalso; fsatz
+               | _
+                 => match goal with
+                    | [ H : ?b * ?lhs = ?rhs, H' : ?b * ?lhs' = ?rhs', Heq : ?x = ?y, Hb : ?b <> 0 |- _ ]
+                      => exfalso;
+                         repeat match goal with H : Ring.char_ge _ |- _ => revert H end;
+                         let rhs := match (eval pattern x in rhs) with ?f _ => f end in
+                         let rhs' := match (eval pattern y in rhs') with ?f _ => f end in
+                         unify rhs rhs';
+                         match goal with
+                         | [ H'' : ?x = ?Fopp ?x, H''' : ?x <> ?Fopp (?Fopp ?y) |- _ ]
+                           => let lhs := match (eval pattern x in lhs) with ?f _ => f end in
+                              let lhs' := match (eval pattern y in lhs') with ?f _ => f end in
+                              unify lhs lhs';
+                              clear -H H' Heq H'' H''' Hb fld Feq_dec; intros
+                         | [ H'' : ?x <> ?Fopp ?y, H''' : ?x <> ?Fopp (?Fopp ?y) |- _ ]
+                           => let lhs := match (eval pattern x in lhs) with ?f _ => f end in
+                              let lhs' := match (eval pattern y in lhs') with ?f _ => f end in
+                              unify lhs lhs';
+                              clear -H H' Heq H'' H''' Hb fld Feq_dec; intros
+                         end;
+                         fsatz
+                    | [ H : ?x * (?y * ?z) = 0 |- _ ]
+                      => exfalso;
+                         repeat match goal with
+                                | [ H : ?x * 1 = ?y * ?z |- _ ]
+                                  => is_var x; is_var y; is_var z;
+                                     revert H
+                                end;
+                         generalize fld;
+                         let lhs := match type of H with ?lhs = _ => lhs end in
+                         repeat match goal with
+                                | [ x : F |- _ ] => lazymatch type of H with
+                                                    | context[x] => fail
+                                                    | _ => clear dependent x
+                                                    end
+                                end;
+                         intros _; intros;
+                         fsatz
+                    end
+               end
+          end.
+
     (* TODO(#152): deduplicate between curves files *)
     Ltac prept_step :=
       match goal with
@@ -58,7 +113,7 @@ Module M.
       end.
     Ltac prept := repeat prept_step.
     Ltac t_fast := prept; trivial; try contradiction.
-    Ltac t := prept; fsatz.
+    Ltac t := t_fast; maybefast; fsatz.
 
     Create HintDb points_as_coordinates discriminated.
     Hint Unfold Proper respectful Reflexive Symmetric Transitive : points_as_coordinates.
@@ -107,7 +162,8 @@ Module M.
       :  projective (snd (xzladderstep x1 xz x'z'))
       /\ eq (fst (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q ))
       /\ eq (snd (xzladderstep x1 xz x'z')) (to_xz (Madd Q Q')).
-    Proof. Time t_fast. Time par: abstract fsatz. Time Qed.
+    Proof. Time t_fast. Time par: abstract (maybefast; fsatz). Time Qed.
+    (* 12 ;; 24 ;; 3 *)
 
     Context {a2m4_nonsquare:forall r, r*r <> a*a - (1+1+1+1)}.
 
@@ -156,7 +212,7 @@ Module M.
 
     Lemma ladder_invariant_swap x1 Q Q' (H:ladder_invariant x1 Q Q')
       : ladder_invariant x1 Q' Q.
-    Proof. t_fast; t. Qed.
+    Proof. t. Qed.
 
     Lemma to_xz_add x1 xz x'z' Q Q'
           (Hxz : projective xz) (Hx'z' : projective x'z')
@@ -192,37 +248,37 @@ Module M.
 
     Hint Unfold M.eq : points_as_coordinates.
     Global Instance Proper_to_xz : Proper (M.eq ==> eq) to_xz.
-    Proof. t_fast; t. (* FIXME: make t use t_fast *) Qed.
+    Proof. t. Qed.
 
     Global Instance  Reflexive_eq : Reflexive eq.
-    Proof. t_fast; t. Qed.
+    Proof. t. Qed.
     Global Instance  Symmetric_eq : Symmetric eq.
-    Proof. t_fast; t. Qed.
+    Proof. t. Qed.
     Lemma transitive_eq {p} q {r} : projective q -> eq p q -> eq q r -> eq p r.
-    Proof. t_fast; t. Qed.
+    Proof. t. Qed.
     
     Lemma projective_to_xz Q : projective (to_xz Q).
     Proof. t. Qed.
 
     Global Instance Proper_ladder_invariant : Proper (Feq ==> M.eq ==> M.eq ==> iff) ladder_invariant.
-    Proof. t_fast; t. Qed.
+    Proof. t. Qed.
 
     Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
-    Import Crypto.Experiments.Loops.
-    Import BinInt.
-
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref Mpoint Madd M.zero Mopp).
 
+    Import Crypto.Experiments.Loops.
+    Import Coq.ZArith.BinInt.
+
     Lemma to_x_inv00 (HFinv:Finv 0 = 0) x z : to_x (pair x z) = x * Finv z.
-    Proof. t_fast; setoid_subst_rel Feq; rewrite ?HFinv in *; t. Qed.
+    Proof. t_fast; setoid_subst_rel Feq; rewrite ?HFinv in *; fsatz. Qed.
 
     Lemma Z_shiftr_testbit_1 n i: Logic.eq (n>>i)%Z (Z.div2 (n >> i) + Z.div2 (n >> i) + Z.b2z (Z.testbit n i))%Z.
     Proof. rewrite ?Z.testbit_odd, ?Z.add_diag, <-?Z.div2_odd; reflexivity. Qed.
 
     Lemma montladder_correct_nz
           (HFinv : Finv 0 = 0)
-          n P
-          scalarbits point
+          (n : Z) (P : M.point)
+          (scalarbits : Z) (point : F)
           (Hnz : point <> 0)
           (Hn : (0 <= n < 2^scalarbits)%Z)
           (Hscalarbits : (0 <= scalarbits)%Z)
@@ -245,7 +301,7 @@ Module M.
                    eq q' (to_xz (scalarmult (Z.succ r) P)) /\
                    ladder_invariant point (scalarmult r P) (scalarmult (Z.succ r) P))
                 (fun s => Z.to_nat (Z.succ (snd s))) (* decreasing measure *) ).
-      { cbn. (* invariant holds in the beginning *)
+      { (* invariant holds in the beginning *) cbn.
         rewrite ?Z.succ_pred, ?Z.lt_pow_2_shiftr, <-?Z.one_succ by tauto.
         repeat split; [lia|t..]. }
       { intros [ [ [ [ [x2 z2] x3] z3] swap] i] [Hi [Hx2z2 [Hx3z3 [Hq [Hq' Hladder]]]]].
@@ -272,6 +328,7 @@ Module M.
                    | _ => progress rewrite ?Z.succ_pred, ?Z.shiftr_succ, <-?Z.div2_spec, <-?Z.add_1_r in *
                    | |- context [scalarmult (n>>i) ] => rewrite (Z_shiftr_testbit_1 n i), Hbit; cbn [Z.b2z]
                    | |- context [scalarmult (n>>i+1) ] => rewrite (Z_shiftr_testbit_1 n i), Hbit; cbn [Z.b2z]
+                   | |- ?P => match type of P with Prop => split end
                    | H: eq (?f _) (to_xz ?LHS) |- eq (?f _) (to_xz ?RHS)
                      => eapply (transitive_eq (to_xz LHS) ltac:(auto using projective_to_xz) H); f_equiv; group ()
                    | H: ladder_invariant _ _ _ |- ladder_invariant _ _ _
@@ -287,7 +344,7 @@ Module M.
           destruct swap eqn:Hswap; rewrite <-!to_x_inv00 by assumption;
             eauto using projective_to_xz, proper_to_x_projective. } }
       { (* fuel <= measure *) cbn. rewrite Z.succ_pred. reflexivity. }
-      { intros [? i]. (* measure decreases *)
+      { (* measure decreases *) intros [? i].
         destruct (i >=? 0)%Z eqn:Hbranch;rewrite Z.geb_ge_iff in Hbranch; [|exact I].
         cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
     Qed.
