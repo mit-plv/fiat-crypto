@@ -212,7 +212,7 @@ Module Jacobian.
             {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12} (* TODO: why do we need 12 instead of 3? *)
             P Q
         : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
-      Proof. prept; trivial; try contradiction. Time par: abstract t. Time Qed.
+      Proof. prept; trivial; try contradiction. Time all: abstract t. Time Qed.
       (* 306.478 secs (43.916u,1.032s) ;; 18.857 secs (18.856u,0.008s) *)
     End AEqMinus3.
   End Jacobian.
