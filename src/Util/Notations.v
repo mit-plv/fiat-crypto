@@ -81,6 +81,7 @@ Reserved Notation "$$ v" (at level 40).
 Reserved Notation "& x" (at level 30).
 Reserved Notation "** x" (at level 30).
 Reserved Notation "A <- X ; B" (at level 70, right associativity, format "'[v' A  <-  X ; '/' B ']'").
+Reserved Notation "A <-- X ; B" (at level 70, right associativity, format "'[v' A  <--  X ; '/' B ']'").
 Reserved Notation "u [ i ]" (at level 30).
 Reserved Notation "v [[ i ]]" (at level 30).
 Reserved Notation "u {{ i }}" (at level 30).
@@ -128,5 +129,6 @@ Reserved Notation "++ x" (at level 60, format "++ x").
 Reserved Notation "-- x" (at level 60, format "-- x").
 Reserved Notation "~> R" (at level 70).
 Reserved Notation "A ~> R" (at level 99).
+Reserved Notation "A --->" (left associativity, at level 65).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
 Reserved Notation "f x" (only printing, at level 10, left associativity).
