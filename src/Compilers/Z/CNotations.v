@@ -42,18 +42,26 @@ Reserved Notation "T0 out ; T1 c_out = '_addcarryx_u64' ( c_in , a , b , & out )
 Reserved Notation "'addcarryx_u32' ( c , a , b )" (format "'addcarryx_u32' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64' ( c , a , b )" (format "'addcarryx_u64' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u128' ( c , a , b )" (format "'addcarryx_u128' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u25' ( c , a , b )" (format "'addcarryx_u25' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u26' ( c , a , b )" (format "'addcarryx_u26' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u51' ( c , a , b )" (format "'addcarryx_u51' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u32' ( c , a , b )" (format "'subborrow_u32' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u64' ( c , a , b )" (format "'subborrow_u64' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u128' ( c , a , b )" (format "'subborrow_u128' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u25' ( c , a , b )" (format "'subborrow_u25' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u26' ( c , a , b )" (format "'subborrow_u26' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u51' ( c , a , b )" (format "'subborrow_u51' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u32ℤ' ( c , a , b )" (format "'addcarryx_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u64ℤ' ( c , a , b )" (format "'addcarryx_u64ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u128ℤ' ( c , a , b )" (format "'addcarryx_u128ℤ' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u25ℤ' ( c , a , b )" (format "'addcarryx_u25ℤ' ( c ,  a ,  b )").
+Reserved Notation "'addcarryx_u26ℤ' ( c , a , b )" (format "'addcarryx_u26ℤ' ( c ,  a ,  b )").
 Reserved Notation "'addcarryx_u51ℤ' ( c , a , b )" (format "'addcarryx_u51ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u32ℤ' ( c , a , b )" (format "'subborrow_u32ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u64ℤ' ( c , a , b )" (format "'subborrow_u64ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u128ℤ' ( c , a , b )" (format "'subborrow_u128ℤ' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u25ℤ' ( c , a , b )" (format "'subborrow_u25ℤ' ( c ,  a ,  b )").
+Reserved Notation "'subborrow_u26ℤ' ( c , a , b )" (format "'subborrow_u26ℤ' ( c ,  a ,  b )").
 Reserved Notation "'subborrow_u51ℤ' ( c , a , b )" (format "'subborrow_u51ℤ' ( c ,  a ,  b )").
 
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
@@ -100,7 +108,7 @@ Reserved Notation "'cmovznzℤ' ( v , a , b )" (format "'cmovznzℤ' ( v ,  a , 
 import math
 
 PARENTHESIZED = True
-ADD_CARRY_SUB_BORROW_SIZES = (32, 64, 128, 51)
+ADD_CARRY_SUB_BORROW_SIZES = (32, 64, 128, 25, 26, 51)
 
 print(r"""Require Export Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.
@@ -2902,6 +2910,262 @@ Notation "'addcarryx_u128' ( c , a , b )" := (Op (AddWithGetCarry 128 (TWord 3) 
 (*Notation "T0 out ; T1 c_out = '_addcarryx_u128' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_addcarryx_u128' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 (TWord 3) (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_addcarryx_u128' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 (TWord 3) (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25' ( c , a , b )" := (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26' ( c , a , b )" := (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
 Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
 Notation "'addcarryx_u51' ( c , a , b )" := (Op (AddWithGetCarry 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
@@ -3414,6 +3678,262 @@ Notation "'subborrow_u128' ( c , a , b )" := (Op (SubWithGetBorrow 128 (TWord 3)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u128' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 (TWord 3) (TWord 3) (TWord 7) (TWord 7) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u128' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 (TWord 3) (TWord 7) (TWord 3) (TWord 7) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u128' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 (TWord 3) (TWord 3) (TWord 3) (TWord 7) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25' ( c , a , b )" := (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 0) (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26' ( c , a , b )" := (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 5) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 5) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 (TWord 3) (TWord 3) (TWord 3) (TWord 5) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'subborrow_u51' ( c , a , b )" := (Op (SubWithGetBorrow 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
 Notation "'subborrow_u51' ( c , a , b )" := (Op (SubWithGetBorrow 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
 Notation "'subborrow_u51' ( c , a , b )" := (Op (SubWithGetBorrow 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Pair c a) b)) : expr_scope.
@@ -4694,6 +5214,70 @@ Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ _
 Notation "'addcarryx_u128ℤ' ( c , a , b )" := (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
 (*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_addcarryx_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u25ℤ' ( c , a , b )" := (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c a) b)) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'addcarryx_u26ℤ' ( c , a , b )" := (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_addcarryx_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c a) b)) : expr_scope.
 Notation "'addcarryx_u51ℤ' ( c , a , b )" := (Op (AddWithGetCarry 51 _ _ _ TZ _) (Pair (Pair c a) b)) : expr_scope.
 (*Notation "T0 out ; T1 c_out = '_addcarryx_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (AddWithGetCarry 51 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
@@ -4822,6 +5406,70 @@ Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ 
 Notation "'subborrow_u128ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
 (*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u128ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 128 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u25ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u25ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 25 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c a) b)) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair c (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+Notation "'subborrow_u26ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) : expr_scope.
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ _ TZ) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '_subborrow_u26ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 26 _ _ _ TZ _) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c a) b)) : expr_scope.
 Notation "'subborrow_u51ℤ' ( c , a , b )" := (Op (SubWithGetBorrow 51 _ _ _ TZ _) (Pair (Pair c a) b)) : expr_scope.
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51ℤ' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 _ _ _ _ TZ) (Pair (Pair c a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
