@@ -144,16 +144,6 @@ Module M.
       end.
     Hint Unfold projective eq ladder_invariant : points_as_coordinates.
 
-    (* happens if u=0 in montladder, all denominators remain 0 *)
-    Lemma add_0_numerator_r A B C D
-      :  snd (fst (xzladderstep 0 (pair C 0) (pair 0 A))) = 0
-      /\ snd (snd (xzladderstep 0 (pair D 0) (pair 0 B))) = 0.
-    Proof. t. Qed.
-    Lemma add_0_denominators A B C D
-      :  snd (fst (xzladderstep 0 (pair A 0) (pair C 0))) = 0
-      /\ snd (snd (xzladderstep 0 (pair B 0) (pair D 0))) = 0.
-    Proof. t. Qed.
-
     Lemma to_xz_add_coordinates (x1:F) (xz x'z':F*F)
           (Hxz:projective xz) (Hz'z':projective x'z')
           (Q Q':Mpoint)
@@ -275,6 +265,46 @@ Module M.
     Lemma Z_shiftr_testbit_1 n i: Logic.eq (n>>i)%Z (Z.div2 (n >> i) + Z.div2 (n >> i) + Z.b2z (Z.testbit n i))%Z.
     Proof. rewrite ?Z.testbit_odd, ?Z.add_diag, <-?Z.div2_odd; reflexivity. Qed.
 
+    Lemma montladder_correct_0
+          (HFinv : Finv 0 = 0)
+          (n : Z)
+          (scalarbits : Z)
+          (Hn : (0 <= n < 2^scalarbits)%Z)
+          (Hscalarbits : (0 <= scalarbits)%Z)
+      : montladder scalarbits (Z.testbit n) 0 = 0.
+    Proof.
+      cbv beta delta [M.montladder].
+      (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
+      lazymatch goal with |- context [while ?t ?b ?l ?i] => pattern (while t b l i) end.
+      eapply (while.by_invariant
+                (fun '(x2, z2, x3, z3, swap, i) =>
+                   (i < scalarbits)%Z /\
+                   z2 = 0 /\
+                   if dec (Logic.eq i (Z.pred scalarbits)) then x3 = 0 else z3 = 0)
+                (fun s => Z.to_nat (Z.succ (snd s))) (* decreasing measure *) ).
+      { (* invariant holds in the beginning *) cbn.
+        split; [lia|split;[reflexivity|t]]. }
+      { intros [ [ [ [ [x2 z2] x3] z3] swap] i] [Hi [Hz2 Hx3z3]].
+        destruct (i >=? 0)%Z eqn:Hbranch; (* did the loop continue? *)
+          rewrite Z.geb_ge_iff in Hbranch.
+        { (* if loop continued, invariant is preserved *)
+          destruct (dec (Logic.eq i (Z.pred scalarbits))).
+          { (* first loop iteration *)
+            cbv -[xzladderstep xorb Z.testbit Z.pred dec Z.lt];
+            destruct (xorb swap (Z.testbit n i));
+            split; [lia|t|lia|t]. }
+          { (* subsequent loop iterations *)
+            cbv -[xzladderstep xorb Z.testbit Z.pred dec Z.lt].
+            destruct (xorb swap (Z.testbit n i));
+              (split; [lia| split; [t| break_match;[lia|t]]]). } }
+        { (* if loop exited, invariant implies postcondition *)
+          break_match; break_match_hyps; setoid_subst_rel Feq; fsatz. } }
+      { (* fuel <= measure *) cbn. rewrite Z.succ_pred. reflexivity. }
+      { (* measure decreases *) intros [? i].
+        destruct (i >=? 0)%Z eqn:Hbranch;rewrite Z.geb_ge_iff in Hbranch; [|exact I].
+        cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
+    Qed.
+
     Lemma montladder_correct_nz
           (HFinv : Finv 0 = 0)
           (n : Z) (P : M.point)
@@ -348,5 +378,9 @@ Module M.
         destruct (i >=? 0)%Z eqn:Hbranch;rewrite Z.geb_ge_iff in Hbranch; [|exact I].
         cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
     Qed.
+
+    (* TODO: Combine the above lemmas. We haven't yet proven that montladder
+       preserves Feq, so this is tricky. *)
+
   End MontgomeryCurve.
 End M.
