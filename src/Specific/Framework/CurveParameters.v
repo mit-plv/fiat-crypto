@@ -91,11 +91,15 @@ Module Export CurveParameters.
       => instantiate (1:=square_code)
     end.
 
-  Local Notation list_8_if_not_exists ls :=
-    (if existsb (Nat.eqb 8) ls
+  Local Notation list_n_if_not_exists n ls :=
+    (if existsb (Nat.eqb n) ls
      then nil
-     else [8]%nat)
+     else [n]%nat)
       (only parsing).
+  Local Notation list_8_if_not_exists ls
+    := (list_n_if_not_exists 8%nat ls) (only parsing).
+  Local Notation list_1_if_not_exists ls
+    := (list_n_if_not_exists 1%nat ls) (only parsing).
 
   Definition fill_defaults_CurveParameters (CP : RawCurveParameters.CurveParameters)
     : CurveParameters
@@ -120,7 +124,7 @@ Module Export CurveParameters.
             := defaulted
                  (RawCurveParameters.allowable_bit_widths CP)
                  ((if montgomery
-                   then [8]
+                   then [1; 8]
                    else nil)
                     ++ (Z.to_nat bitwidth :: 2*Z.to_nat bitwidth :: nil))%nat in
         let upper_bound_of_exponent_tight
@@ -159,7 +163,8 @@ Module Export CurveParameters.
           freeze_allowable_bit_widths
           := defaulted
                (RawCurveParameters.freeze_extra_allowable_bit_widths CP)
-               (list_8_if_not_exists allowable_bit_widths)
+               ((list_1_if_not_exists allowable_bit_widths)
+                  ++ (list_8_if_not_exists allowable_bit_widths))
                ++ allowable_bit_widths;
           modinv_fuel := defaulted (RawCurveParameters.modinv_fuel CP) (Z.to_nat (Z.log2_up s))
         |}.
