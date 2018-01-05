@@ -265,7 +265,7 @@ for opn, op, lvl in (('*', 'Mul', 40), ('+', 'Add', 50), ('-', 'Sub', 50)):
             y = ('y' if not v2 else '(Var y)')
             print('''Notation "%s'1&(' %s %s %s ')'%s" := (Op (%s %s) (Pair %s %s)) (at level %d, format "%s'1&(' %s  %s  %s ')'%s").''' %
                   (OPEN, 'x', opn, 'y', CLOSE,
-                   op, ' '.join((TWord(0), TWord(_), TWord(_))), x, y, lvl,
+                   op, ' '.join((TWord(_), TWord(_), TWord(0))), x, y, lvl,
                    OPEN, 'x', opn, 'y', CLOSE))
 for opn, op, lvl in (('&', 'Land', 40), ('|', 'Lor', 45)):
     for v1 in (False, True):
@@ -1312,18 +1312,18 @@ Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair x y)) (for
 Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair x (Var y))) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) y)) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) (Var y))) (format "( x  -  y )") : expr_scope.
-Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair x y)) (at level 40, format "( '1&(' x  *  y ')' )").
-Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair x (Var y))) (at level 40, format "( '1&(' x  *  y ')' )").
-Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair (Var x) y)) (at level 40, format "( '1&(' x  *  y ')' )").
-Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair (Var x) (Var y))) (at level 40, format "( '1&(' x  *  y ')' )").
-Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair x y)) (at level 50, format "( '1&(' x  +  y ')' )").
-Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair x (Var y))) (at level 50, format "( '1&(' x  +  y ')' )").
-Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair (Var x) y)) (at level 50, format "( '1&(' x  +  y ')' )").
-Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair (Var x) (Var y))) (at level 50, format "( '1&(' x  +  y ')' )").
-Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair x y)) (at level 50, format "( '1&(' x  -  y ')' )").
-Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair x (Var y))) (at level 50, format "( '1&(' x  -  y ')' )").
-Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair (Var x) y)) (at level 50, format "( '1&(' x  -  y ')' )").
-Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair (Var x) (Var y))) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, format "( '1&(' x  -  y ')' )").
 Notation "( x & y )" := (Op (Land _ _ _) (Pair x y)) (format "( x  &  y )") : expr_scope.
 Notation "( x &ℤ y )" := (Op (Land _ _ TZ) (Pair x y)) (at level 40, format "( x  &ℤ  y )") : expr_scope.
 Notation "( x & y )" := (Op (Land _ _ _) (Pair x (Var y))) (format "( x  &  y )") : expr_scope.
