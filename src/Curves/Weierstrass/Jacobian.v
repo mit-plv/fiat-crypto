@@ -481,7 +481,7 @@ Module Jacobian.
           let yneq := if dec (r = 0) then false else true in
           if (negb xneq && negb yneq && z1nz && z2nz)%bool
           then proj1_sig (double P)
-          else 
+          else
             let i := h + h in
             let i := i^2 in
             let j := h * i in
@@ -523,9 +523,7 @@ Module Jacobian.
 
       Lemma Proper_add : Proper (eq ==> eq ==> eq) add. Proof. faster_t_noclear. Qed.
       Import BinPos.
-      Lemma to_affine_add
-            {char_ge_12:@Ring.char_ge F Feq Fzero Fone Fopp Fadd Fsub Fmul 12} (* TODO: why do we need 12 instead of 3? *)
-            P Q
+      Lemma to_affine_add P Q
         : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
       Proof.
         Time prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz. (* 28.713 secs (17.591u,0.032s) *)
