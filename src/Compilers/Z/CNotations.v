@@ -67,27 +67,27 @@ Reserved Notation "'subborrow_u51ℤ' ( c , a , b )" (format "'subborrow_u51ℤ'
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u32' ( a , b )" (format "'(bool)' 'mulx_u32' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u64' ( a , b )" (format "'(bool)' 'mulx_u64' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u128' ( a , b )" (format "'(bool)' 'mulx_u128' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u32' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u64' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u128' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u32' ( a , b )" (format "'(uint8_t)' 'mulx_u32' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u64' ( a , b )" (format "'(uint8_t)' 'mulx_u64' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u128' ( a , b )" (format "'(uint8_t)' 'mulx_u128' ( a ,  b )").
 Reserved Notation "'mulx_u32_out_u8' ( a , b )" (format "'mulx_u32_out_u8' ( a ,  b )").
 Reserved Notation "'mulx_u64_out_u8' ( a , b )" (format "'mulx_u64_out_u8' ( a ,  b )").
 Reserved Notation "'mulx_u128_out_u8' ( a , b )" (format "'mulx_u128_out_u8' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u32_out_u8' ( a , b )" (format "'(bool)' 'mulx_u32_out_u8' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u64_out_u8' ( a , b )" (format "'(bool)' 'mulx_u64_out_u8' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u128_out_u8' ( a , b )" (format "'(bool)' 'mulx_u128_out_u8' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u32_out_u8' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u32_out_u8' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u64_out_u8' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u64_out_u8' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u128_out_u8' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u128_out_u8' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u32_out_u8' ( a , b )" (format "'(uint8_t)' 'mulx_u32_out_u8' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u64_out_u8' ( a , b )" (format "'(uint8_t)' 'mulx_u64_out_u8' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u128_out_u8' ( a , b )" (format "'(uint8_t)' 'mulx_u128_out_u8' ( a ,  b )").
 Reserved Notation "'mulx_u32_out_u1' ( a , b )" (format "'mulx_u32_out_u1' ( a ,  b )").
 Reserved Notation "'mulx_u64_out_u1' ( a , b )" (format "'mulx_u64_out_u1' ( a ,  b )").
 Reserved Notation "'mulx_u128_out_u1' ( a , b )" (format "'mulx_u128_out_u1' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" (format "'(bool)' 'mulx_u32_out_u1' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" (format "'(bool)' 'mulx_u64_out_u1' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" (format "'(bool)' 'mulx_u128_out_u1' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u32_out_u1' ( a , b )" (format "'(uint8_t)' 'mulx_u32_out_u1' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u64_out_u1' ( a , b )" (format "'(uint8_t)' 'mulx_u64_out_u1' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u128_out_u1' ( a , b )" (format "'(uint8_t)' 'mulx_u128_out_u1' ( a ,  b )").
@@ -159,27 +159,27 @@ print(r"""
 Reserved Notation "'mulx_u32' ( a , b )" (format "'mulx_u32' ( a ,  b )").
 Reserved Notation "'mulx_u64' ( a , b )" (format "'mulx_u64' ( a ,  b )").
 Reserved Notation "'mulx_u128' ( a , b )" (format "'mulx_u128' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u32' ( a , b )" (format "'(bool)' 'mulx_u32' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u64' ( a , b )" (format "'(bool)' 'mulx_u64' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u128' ( a , b )" (format "'(bool)' 'mulx_u128' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u32' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u64' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u128' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u32' ( a , b )" (format "'(uint8_t)' 'mulx_u32' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u64' ( a , b )" (format "'(uint8_t)' 'mulx_u64' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u128' ( a , b )" (format "'(uint8_t)' 'mulx_u128' ( a ,  b )").
 Reserved Notation "'mulx_u32_out_u8' ( a , b )" (format "'mulx_u32_out_u8' ( a ,  b )").
 Reserved Notation "'mulx_u64_out_u8' ( a , b )" (format "'mulx_u64_out_u8' ( a ,  b )").
 Reserved Notation "'mulx_u128_out_u8' ( a , b )" (format "'mulx_u128_out_u8' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u32_out_u8' ( a , b )" (format "'(bool)' 'mulx_u32_out_u8' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u64_out_u8' ( a , b )" (format "'(bool)' 'mulx_u64_out_u8' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u128_out_u8' ( a , b )" (format "'(bool)' 'mulx_u128_out_u8' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u32_out_u8' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u32_out_u8' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u64_out_u8' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u64_out_u8' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u128_out_u8' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u128_out_u8' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u32_out_u8' ( a , b )" (format "'(uint8_t)' 'mulx_u32_out_u8' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u64_out_u8' ( a , b )" (format "'(uint8_t)' 'mulx_u64_out_u8' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u128_out_u8' ( a , b )" (format "'(uint8_t)' 'mulx_u128_out_u8' ( a ,  b )").
 Reserved Notation "'mulx_u32_out_u1' ( a , b )" (format "'mulx_u32_out_u1' ( a ,  b )").
 Reserved Notation "'mulx_u64_out_u1' ( a , b )" (format "'mulx_u64_out_u1' ( a ,  b )").
 Reserved Notation "'mulx_u128_out_u1' ( a , b )" (format "'mulx_u128_out_u1' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" (format "'(bool)' 'mulx_u32_out_u1' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" (format "'(bool)' 'mulx_u64_out_u1' ( a ,  b )").
-Reserved Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" (format "'(bool)' 'mulx_u128_out_u1' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a ,  b )").
+Reserved Notation "'(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" (format "'(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u32_out_u1' ( a , b )" (format "'(uint8_t)' 'mulx_u32_out_u1' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u64_out_u1' ( a , b )" (format "'(uint8_t)' 'mulx_u64_out_u1' ( a ,  b )").
 Reserved Notation "'(uint8_t)' 'mulx_u128_out_u1' ( a , b )" (format "'(uint8_t)' 'mulx_u128_out_u1' ( a ,  b )").
@@ -205,12 +205,14 @@ CLOSE = (' )' if PARENTHESIZED else '')
 
 def log2_up(x):
     return int(math.ceil(math.log(x, 2)))
-types = ('bool', 'uint8_t', 'uint8_t', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'uint128_t', 'uint256_t')
+types = ('uint8_t/*bool*/', 'uint8_t', 'uint8_t', 'uint8_t', 'uint16_t', 'uint32_t', 'uint64_t', 'uint128_t', 'uint256_t')
 for lgwordsz in range(0, len(types)):
     print('Notation "\'%s\'" := (Tbase (TWord %d)) : expr_scope.' % (types[lgwordsz], lgwordsz))
 print('Notation ℤ := (Tbase TZ).')
 print('')
-cast_pat = "'(%s)' %s"
+cast_pat = "%s %s"
+cast_types = tuple(["'1&(%s)'" % i for i in types[:1]] +
+                   ["'(%s)'" % i for i in types[1:]])
 def at_least_S_pattern(n):
     return '(S ' * n + '_' + ')' * n
 
@@ -221,8 +223,8 @@ def TWord(v): return '(TWord %s)' % str(v)
 def print_notation_string(xisvar, yisvar, opn, op, arg_tuple, lvl=None, xsz=None, ysz=None, xlvl=None, ylvl=None):
     lhs = ('x' if not xisvar else '(Var x)')
     rhs = ('y' if not yisvar else '(Var y)')
-    x = ('x' if xsz is None else (cast_pat % (types[xsz], 'x')))
-    y = ('y' if ysz is None else (cast_pat % (types[ysz], 'y')))
+    x = ('x' if xsz is None else (cast_pat % (cast_types[xsz], 'x')))
+    y = ('y' if ysz is None else (cast_pat % (cast_types[ysz], 'y')))
     ret = 'Notation "%s%s %s %s%s" := (Op (%s %s) (Pair %s %s))' % (OPEN, x, opn, y, CLOSE, op, ' '.join(arg_tuple), lhs, rhs)
     modifiers = []
     for var, l in (('', lvl), ('x ', xlvl), ('y ', ylvl)):
@@ -256,6 +258,15 @@ for opn, op, lvl in (('*', 'Mul', 40), ('+', 'Add', 50), ('-', 'Sub', 50)):
         for v1 in (False, True):
             for v2 in (False, True):
                 print_notation_string(v1, v2, opn, op, (TWord(lgwordsz), TWord(lgwordsz), TWord(lgwordsz)))
+for opn, op, lvl in (('*', 'Mul', 40), ('+', 'Add', 50), ('-', 'Sub', 50)):
+    for v1 in (False, True):
+        for v2 in (False, True):
+            x = ('x' if not v1 else '(Var x)')
+            y = ('y' if not v2 else '(Var y)')
+            print('''Notation "%s'1&(' %s %s %s ')'%s" := (Op (%s %s) (Pair %s %s)) (at level %d, format "%s'1&(' %s  %s  %s ')'%s").''' %
+                  (OPEN, 'x', opn, 'y', CLOSE,
+                   op, ' '.join((TWord(0), TWord(_), TWord(_))), x, y, lvl,
+                   OPEN, 'x', opn, 'y', CLOSE))
 for opn, op, lvl in (('&', 'Land', 40), ('|', 'Lor', 45)):
     for v1 in (False, True):
         for v2 in (False, True):
@@ -363,7 +374,7 @@ for opn, op in (('mulx', 'MulSplit'),):
                             for arg2 in (lgwordsz_small, lgwordsz):
                                 for arg3 in (lgwordsz_small, lgwordsz):
                                     for arg4 in (lgwordsz_small, lgwordsz): # N.B. the final argument, which is the high bits, must be of a compatible pointer type, and cannot be a pointer to a short word, without invoking a separate function
-                                        cast_val = ('' if arg3 == lgwordsz else (cast_pat % (types[lgwordsz_small], '')))
+                                        cast_val = ('' if arg3 == lgwordsz else (cast_pat % (cast_types[lgwordsz_small], '')))
                                         extra_fun = ('' if arg4 == lgwordsz else ('_out_u%d' % (2**arg4)))
                                         print(notation_string % (cast_val, opn, wordsz, extra_fun, op, wordsz, arg1, arg2, arg3, arg4, a, b))
 for opn, op in (('mulx', 'MulSplit'),):
@@ -403,7 +414,7 @@ print('Notation Return x := (Var x).')
 print('Notation C_like := (Expr base_type op _).')
 
 >> *)
-Notation "'bool'" := (Tbase (TWord 0)) : expr_scope.
+Notation "'uint8_t/*bool*/'" := (Tbase (TWord 0)) : expr_scope.
 Notation "'uint8_t'" := (Tbase (TWord 1)) : expr_scope.
 Notation "'uint8_t'" := (Tbase (TWord 2)) : expr_scope.
 Notation "'uint8_t'" := (Tbase (TWord 3)) : expr_scope.
@@ -422,34 +433,34 @@ Notation "( x * y )" := (Op (Mul _ _ _) (Pair (Var x) y)) (format "( x  *  y )")
 Notation "( x *ℤ y )" := (Op (Mul _ _ TZ) (Pair (Var x) y)) (at level 40, format "( x  *ℤ  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul _ _ _) (Pair (Var x) (Var y))) (format "( x  *  y )") : expr_scope.
 Notation "( x *ℤ y )" := (Op (Mul _ _ TZ) (Pair (Var x) (Var y))) (at level 40, format "( x  *ℤ  y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * '(bool)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  *  '(bool)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (format "( x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (format "( x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (format "( x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  *  y )") : expr_scope.
-Notation "( x * '(bool)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, y at level 9, format "( x  *  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, format "( '(bool)' x  *  y )") : expr_scope.
+Notation "( x * '1&(uint8_t/*bool*/)' y )" := (Op (Mul (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, y at level 9, format "( x  *  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x * y )" := (Op (Mul (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  *  y )") : expr_scope.
 Notation "( x * y )" := (Op (Mul (TWord 0) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  *  y )") : expr_scope.
@@ -718,34 +729,34 @@ Notation "( x + y )" := (Op (Add _ _ _) (Pair (Var x) y)) (format "( x  +  y )")
 Notation "( x +ℤ y )" := (Op (Add _ _ TZ) (Pair (Var x) y)) (at level 50, format "( x  +ℤ  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add _ _ _) (Pair (Var x) (Var y))) (format "( x  +  y )") : expr_scope.
 Notation "( x +ℤ y )" := (Op (Add _ _ TZ) (Pair (Var x) (Var y))) (at level 50, format "( x  +ℤ  y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + '(bool)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  +  '(bool)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (format "( x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (format "( x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (format "( x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  +  y )") : expr_scope.
-Notation "( x + '(bool)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  +  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '(bool)' x  +  y )") : expr_scope.
+Notation "( x + '1&(uint8_t/*bool*/)' y )" := (Op (Add (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  +  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x + y )" := (Op (Add (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  +  y )") : expr_scope.
 Notation "( x + y )" := (Op (Add (TWord 0) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  +  y )") : expr_scope.
@@ -1014,34 +1025,34 @@ Notation "( x - y )" := (Op (Sub _ _ _) (Pair (Var x) y)) (format "( x  -  y )")
 Notation "( x -ℤ y )" := (Op (Sub _ _ TZ) (Pair (Var x) y)) (at level 50, format "( x  -ℤ  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub _ _ _) (Pair (Var x) (Var y))) (format "( x  -  y )") : expr_scope.
 Notation "( x -ℤ y )" := (Op (Sub _ _ TZ) (Pair (Var x) (Var y))) (at level 50, format "( x  -ℤ  y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - '(bool)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, y at level 9, format "( '(bool)' x  -  '(bool)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  -  y )") : expr_scope.
-Notation "( x - '(bool)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  -  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '(bool)' x  -  y )") : expr_scope.
+Notation "( x - '1&(uint8_t/*bool*/)' y )" := (Op (Sub (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, y at level 9, format "( x  -  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x - y )" := (Op (Sub (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 50, x at level 9, format "( '1&(uint8_t/*bool*/)' x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 0) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  -  y )") : expr_scope.
@@ -1302,6 +1313,18 @@ Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair x y)) (for
 Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair x (Var y))) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) y)) (format "( x  -  y )") : expr_scope.
 Notation "( x - y )" := (Op (Sub (TWord 8) (TWord 8) (TWord 8)) (Pair (Var x) (Var y))) (format "( x  -  y )") : expr_scope.
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair x y)) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair x (Var y))) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair (Var x) y)) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x * y ')' )" := (Op (Mul (TWord 0) (TWord _) (TWord _)) (Pair (Var x) (Var y))) (at level 40, format "( '1&(' x  *  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair x y)) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair x (Var y))) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair (Var x) y)) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x + y ')' )" := (Op (Add (TWord 0) (TWord _) (TWord _)) (Pair (Var x) (Var y))) (at level 50, format "( '1&(' x  +  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair x y)) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair x (Var y))) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair (Var x) y)) (at level 50, format "( '1&(' x  -  y ')' )").
+Notation "( '1&(' x - y ')' )" := (Op (Sub (TWord 0) (TWord _) (TWord _)) (Pair (Var x) (Var y))) (at level 50, format "( '1&(' x  -  y ')' )").
 Notation "( x & y )" := (Op (Land _ _ _) (Pair x y)) (format "( x  &  y )") : expr_scope.
 Notation "( x &ℤ y )" := (Op (Land _ _ TZ) (Pair x y)) (at level 40, format "( x  &ℤ  y )") : expr_scope.
 Notation "( x & y )" := (Op (Land _ _ _) (Pair x (Var y))) (format "( x  &  y )") : expr_scope.
@@ -1310,18 +1333,18 @@ Notation "( x & y )" := (Op (Land _ _ _) (Pair (Var x) y)) (format "( x  &  y )"
 Notation "( x &ℤ y )" := (Op (Land _ _ TZ) (Pair (Var x) y)) (at level 40, format "( x  &ℤ  y )") : expr_scope.
 Notation "( x & y )" := (Op (Land _ _ _) (Pair (Var x) (Var y))) (format "( x  &  y )") : expr_scope.
 Notation "( x &ℤ y )" := (Op (Land _ _ TZ) (Pair (Var x) (Var y))) (at level 40, format "( x  &ℤ  y )") : expr_scope.
-Notation "( '(bool)' x & '(bool)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & '(bool)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & '(bool)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & '(bool)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, y at level 9, format "( '(bool)' x  &  '(bool)' y )") : expr_scope.
-Notation "( x & '(bool)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9, format "( x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 40, x at level 9, format "( '(bool)' x  &  y )") : expr_scope.
-Notation "( x & '(bool)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, y at level 9, format "( x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, format "( '(bool)' x  &  y )") : expr_scope.
-Notation "( x & '(bool)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, y at level 9, format "( x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, format "( '(bool)' x  &  y )") : expr_scope.
-Notation "( x & '(bool)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, y at level 9, format "( x  &  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, format "( '(bool)' x  &  y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 40, y at level 9, format "( x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  &  y )") : expr_scope.
+Notation "( x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 40, y at level 9, format "( x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  &  y )") : expr_scope.
+Notation "( x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 40, y at level 9, format "( x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  &  y )") : expr_scope.
+Notation "( x & '1&(uint8_t/*bool*/)' y )" := (Op (Land (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, y at level 9, format "( x  &  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x & y )" := (Op (Land (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 40, x at level 9, format "( '1&(uint8_t/*bool*/)' x  &  y )") : expr_scope.
 Notation "( x & y )" := (Op (Land (TWord 0) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  &  y )") : expr_scope.
 Notation "( x & y )" := (Op (Land (TWord 0) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  &  y )") : expr_scope.
 Notation "( x & y )" := (Op (Land (TWord 0) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  &  y )") : expr_scope.
@@ -1462,18 +1485,18 @@ Notation "( x | y )" := (Op (Lor _ _ _) (Pair (Var x) y)) (format "( x  |  y )")
 Notation "( x |ℤ y )" := (Op (Lor _ _ TZ) (Pair (Var x) y)) (at level 45, format "( x  |ℤ  y )") : expr_scope.
 Notation "( x | y )" := (Op (Lor _ _ _) (Pair (Var x) (Var y))) (format "( x  |  y )") : expr_scope.
 Notation "( x |ℤ y )" := (Op (Lor _ _ TZ) (Pair (Var x) (Var y))) (at level 45, format "( x  |ℤ  y )") : expr_scope.
-Notation "( '(bool)' x | '(bool)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 45, x at level 9, y at level 9, format "( '(bool)' x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | '(bool)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 45, x at level 9, y at level 9, format "( '(bool)' x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | '(bool)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 45, x at level 9, y at level 9, format "( '(bool)' x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | '(bool)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 45, x at level 9, y at level 9, format "( '(bool)' x  |  '(bool)' y )") : expr_scope.
-Notation "( x | '(bool)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 45, y at level 9, format "( x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 45, x at level 9, format "( '(bool)' x  |  y )") : expr_scope.
-Notation "( x | '(bool)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 45, y at level 9, format "( x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 45, x at level 9, format "( '(bool)' x  |  y )") : expr_scope.
-Notation "( x | '(bool)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 45, y at level 9, format "( x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 45, x at level 9, format "( '(bool)' x  |  y )") : expr_scope.
-Notation "( x | '(bool)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 45, y at level 9, format "( x  |  '(bool)' y )") : expr_scope.
-Notation "( '(bool)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 45, x at level 9, format "( '(bool)' x  |  y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 45, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 45, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 45, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 45, x at level 9, y at level 9, format "( '1&(uint8_t/*bool*/)' x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (at level 45, y at level 9, format "( x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair x y)) (at level 45, x at level 9, format "( '1&(uint8_t/*bool*/)' x  |  y )") : expr_scope.
+Notation "( x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 45, y at level 9, format "( x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair x (Var y))) (at level 45, x at level 9, format "( '1&(uint8_t/*bool*/)' x  |  y )") : expr_scope.
+Notation "( x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 45, y at level 9, format "( x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) y)) (at level 45, x at level 9, format "( '1&(uint8_t/*bool*/)' x  |  y )") : expr_scope.
+Notation "( x | '1&(uint8_t/*bool*/)' y )" := (Op (Lor (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 45, y at level 9, format "( x  |  '1&(uint8_t/*bool*/)' y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x | y )" := (Op (Lor (TWord _) (TWord 0) (TWord 0)) (Pair (Var x) (Var y))) (at level 45, x at level 9, format "( '1&(uint8_t/*bool*/)' x  |  y )") : expr_scope.
 Notation "( x | y )" := (Op (Lor (TWord 0) (TWord 0) (TWord 0)) (Pair x y)) (format "( x  |  y )") : expr_scope.
 Notation "( x | y )" := (Op (Lor (TWord 0) (TWord 0) (TWord 0)) (Pair x (Var y))) (format "( x  |  y )") : expr_scope.
 Notation "( x | y )" := (Op (Lor (TWord 0) (TWord 0) (TWord 0)) (Pair (Var x) y)) (format "( x  |  y )") : expr_scope.
@@ -1614,13 +1637,13 @@ Notation "( x << y )" := (Op (Shl _ _ _) (Pair (Var x) y)) (format "( x  <<  y )
 Notation "( x <<ℤ y )" := (Op (Shl _ _ TZ) (Pair (Var x) y)) (at level 30, format "( x  <<ℤ  y )") : expr_scope.
 Notation "( x << y )" := (Op (Shl _ _ _) (Pair (Var x) (Var y))) (format "( x  <<  y )") : expr_scope.
 Notation "( x <<ℤ y )" := (Op (Shl _ _ TZ) (Pair (Var x) (Var y))) (at level 30, format "( x  <<ℤ  y )") : expr_scope.
-Notation "( '(bool)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 30, format "( '(bool)' x  <<  y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 30, format "( '1&(uint8_t/*bool*/)' x  <<  y )") : expr_scope.
 Notation "( x << y )" := (Op (Shl (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (format "( x  <<  y )") : expr_scope.
-Notation "( '(bool)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 30, format "( '(bool)' x  <<  y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 30, format "( '1&(uint8_t/*bool*/)' x  <<  y )") : expr_scope.
 Notation "( x << y )" := (Op (Shl (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (format "( x  <<  y )") : expr_scope.
-Notation "( '(bool)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 30, format "( '(bool)' x  <<  y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 30, format "( '1&(uint8_t/*bool*/)' x  <<  y )") : expr_scope.
 Notation "( x << y )" := (Op (Shl (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (format "( x  <<  y )") : expr_scope.
-Notation "( '(bool)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 30, format "( '(bool)' x  <<  y )") : expr_scope.
+Notation "( '1&(uint8_t/*bool*/)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 30, format "( '1&(uint8_t/*bool*/)' x  <<  y )") : expr_scope.
 Notation "( x << y )" := (Op (Shl (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  <<  y )") : expr_scope.
 Notation "( '(uint8_t)' x << y )" := (Op (Shl (TWord _) (TWord _) (TWord 1)) (Pair x y)) (at level 30, format "( '(uint8_t)' x  <<  y )") : expr_scope.
 Notation "( x << y )" := (Op (Shl (TWord 1) (TWord _) (TWord 1)) (Pair x y)) (format "( x  <<  y )") : expr_scope.
@@ -1694,13 +1717,13 @@ Notation "( x >> y )" := (Op (Shr _ _ _) (Pair (Var x) y)) (format "( x  >>  y )
 Notation "( x >>ℤ y )" := (Op (Shr _ _ TZ) (Pair (Var x) y)) (at level 30, format "( x  >>ℤ  y )") : expr_scope.
 Notation "( x >> y )" := (Op (Shr _ _ _) (Pair (Var x) (Var y))) (format "( x  >>  y )") : expr_scope.
 Notation "( x >>ℤ y )" := (Op (Shr _ _ TZ) (Pair (Var x) (Var y))) (at level 30, format "( x  >>ℤ  y )") : expr_scope.
-Notation "'(bool)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 30) : expr_scope.
+Notation "'(uint8_t/*bool*/)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair x y)) (at level 30) : expr_scope.
 Notation "( x >> y )" := (Op (Shr (TWord 0) (TWord _) (TWord 0)) (Pair x y)) (format "( x  >>  y )") : expr_scope.
-Notation "'(bool)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 30) : expr_scope.
+Notation "'(uint8_t/*bool*/)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair x (Var y))) (at level 30) : expr_scope.
 Notation "( x >> y )" := (Op (Shr (TWord 0) (TWord _) (TWord 0)) (Pair x (Var y))) (format "( x  >>  y )") : expr_scope.
-Notation "'(bool)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 30) : expr_scope.
+Notation "'(uint8_t/*bool*/)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair (Var x) y)) (at level 30) : expr_scope.
 Notation "( x >> y )" := (Op (Shr (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) y)) (format "( x  >>  y )") : expr_scope.
-Notation "'(bool)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 30) : expr_scope.
+Notation "'(uint8_t/*bool*/)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (at level 30) : expr_scope.
 Notation "( x >> y )" := (Op (Shr (TWord 0) (TWord _) (TWord 0)) (Pair (Var x) (Var y))) (format "( x  >>  y )") : expr_scope.
 Notation "'(uint8_t)' ( x >> y )" := (Op (Shr (TWord _) (TWord _) (TWord 1)) (Pair x y)) (at level 30) : expr_scope.
 Notation "( x >> y )" := (Op (Shr (TWord 1) (TWord _) (TWord 1)) (Pair x y)) (format "( x  >>  y )") : expr_scope.
@@ -1774,30 +1797,30 @@ Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord 
 Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) : expr_scope.
 Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) : expr_scope.
 Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz32' ( v ,  x ,  y )") : expr_scope.
@@ -1918,30 +1941,30 @@ Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord 
 Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S _)))))) (TWord _) (TWord _) (TWord (S (S (S (S (S _))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
 Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S _)))))) (TWord _) (TWord (S (S (S (S (S _))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
 Notation "'cmovznz32' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S _)))))) (TWord (S (S (S (S (S _))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz64' ( v ,  x ,  y )") : expr_scope.
@@ -2086,30 +2109,30 @@ Notation "'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord 
 Notation "'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord _) (TWord (S (S (S (S (S (S _)))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
 Notation "'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord _) (TWord (S (S (S (S (S (S _)))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
 Notation "'cmovznz64' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S _))))))) (TWord (S (S (S (S (S (S _)))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznz128' ( v ,  x ,  y )") : expr_scope.
@@ -2278,30 +2301,30 @@ Notation "'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord
 Notation "'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _))))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
 Notation "'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord _) (TWord (S (S (S (S (S (S (S _))))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
 Notation "'cmovznz128' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S _)))))))) (TWord (S (S (S (S (S (S (S _))))))))) (Pair (Pair (Var v) (Var x)) (Var y))) : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v x) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
-Notation "'(bool)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(bool)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v x) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair v (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) x) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) x) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) y)) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
+Notation "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _)) (Pair (Pair (Var v) (Var x)) (Var y))) (format "'(uint8_t/*bool*/)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord _) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
 Notation "'(uint8_t)' 'cmovznzℤ' ( v , x , y )" := (Op (Zselect (TWord _) (TWord _) (TWord (S (S (S (S (S (S (S (S _))))))))) (TWord (S _))) (Pair (Pair v x) y)) (format "'(uint8_t)' 'cmovznzℤ' ( v ,  x ,  y )") : expr_scope.
@@ -4062,36 +4085,36 @@ Notation "'subborrow_u51' ( c , a , b )" := (Op (SubWithGetBorrow 51 (TWord 3) (
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 (TWord 3) (TWord 3) (TWord 6) (TWord 6) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 (TWord 3) (TWord 6) (TWord 3) (TWord 6) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_subborrow_u51' ( c , a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (SubWithGetBorrow 51 (TWord 3) (TWord 3) (TWord 3) (TWord 6) (TWord 3)) (Pair (Pair (Var c) (Var a)) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u32_out_u8' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a b)) : expr_scope.
@@ -4126,36 +4149,36 @@ Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 3) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u32_out_u8' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a (Var b))) : expr_scope.
@@ -4190,36 +4213,36 @@ Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 3) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u32_out_u8' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) b)) : expr_scope.
@@ -4254,36 +4277,36 @@ Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 3) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32_out_u1' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 0) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 0) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 0) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u32_out_u8' ( a , b )" := (Op (MulSplit 32 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) (Var b))) : expr_scope.
@@ -4318,36 +4341,36 @@ Notation "'mulx_u32' ( a , b )" := (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 3) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u32' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 32 (TWord 5) (TWord 5) (TWord 5) (TWord 5)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u64_out_u8' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a b)) : expr_scope.
@@ -4382,36 +4405,36 @@ Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u64_out_u8' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a (Var b))) : expr_scope.
@@ -4446,36 +4469,36 @@ Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u64_out_u8' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) b)) : expr_scope.
@@ -4510,36 +4533,36 @@ Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64_out_u1' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u64_out_u8' ( a , b )" := (Op (MulSplit 64 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) (Var b))) : expr_scope.
@@ -4574,36 +4597,36 @@ Notation "'mulx_u64' ( a , b )" := (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u64' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 64 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u128_out_u8' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a b)) : expr_scope.
@@ -4638,36 +4661,36 @@ Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 3) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u128_out_u8' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a (Var b))) : expr_scope.
@@ -4702,36 +4725,36 @@ Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 3) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u128_out_u8' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) b)) : expr_scope.
@@ -4766,36 +4789,36 @@ Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 3) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128_out_u1' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 0) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 0) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 0) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u128_out_u8' ( a , b )" := (Op (MulSplit 128 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) (Var b))) : expr_scope.
@@ -4830,36 +4853,36 @@ Notation "'mulx_u128' ( a , b )" := (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 3) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 3)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u128' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 128 (TWord 7) (TWord 7) (TWord 7) (TWord 7)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u51_out_u8' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a b)) : expr_scope.
@@ -4894,36 +4917,36 @@ Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u51_out_u8' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair a (Var b))) : expr_scope.
@@ -4958,36 +4981,36 @@ Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair a (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u51_out_u8' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) b)) : expr_scope.
@@ -5022,36 +5045,36 @@ Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6
 (*Notation "T0 out ; T1 c_out = '(uint8_t)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 3) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u8' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 3)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) b)) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
-Notation "'(bool)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
+Notation "'1&(uint8_t/*bool*/)' 'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51_out_u1' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) : expr_scope.
 Notation "'mulx_u51' ( a , b )" := (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) : expr_scope.
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 0) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 0) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
-(*Notation "T0 out ; T1 c_out = '(bool)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
+(*Notation "T0 out ; T1 c_out = '1&(uint8_t/*bool*/)' '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 0) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51_out_u1' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 0)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 (*Notation "T0 out ; T1 c_out = '_mulx_u51' ( a , b , & out ) ; REST" := (LetIn (tx:=Prod T0 T1) (Op (MulSplit 51 (TWord 6) (TWord 6) (TWord 6) (TWord 6)) (Pair (Var a) (Var b))) (fun '((out, c_out)%core) => REST)) : expr_scope.*)
 Notation "'(uint8_t)' 'mulx_u51_out_u8' ( a , b )" := (Op (MulSplit 51 (TWord 3) (TWord 3) (TWord 3) (TWord 3)) (Pair (Var a) (Var b))) : expr_scope.
