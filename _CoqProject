@@ -5829,6 +5829,7 @@ src/Util/FixCoqMistakes.v
 src/Util/FixedWordSizes.v
 src/Util/FixedWordSizesEquality.v
 src/Util/ForLoop.v
+src/Util/FsatzAutoLemmas.v
 src/Util/GlobalSettings.v
 src/Util/HList.v
 src/Util/HProp.v
