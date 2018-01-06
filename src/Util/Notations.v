@@ -34,6 +34,7 @@ Reserved Infix "mod" (at level 40, no associativity).
 Reserved Notation "'canonical' 'encoding' 'of' T 'as' B" (at level 50).
 Reserved Notation "@ 'is_eq_dec' T R" (at level 10, T at level 8, R at level 8).
 Reserved Infix "@" (left associativity, at level 11).
+Reserved Infix "@@" (left associativity, at level 11).
 Reserved Infix "<<" (at level 30, no associativity).
 Reserved Infix ">>" (at level 30, no associativity).
 Reserved Infix ">>>" (at level 30, no associativity).
