@@ -8,6 +8,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Notations Crypto.Util.LetIn.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.Sigma.
+Require Import Crypto.Util.FsatzAutoLemmas.
 
 Module Jacobian.
   Section Jacobian.
@@ -191,254 +192,264 @@ Module Jacobian.
         find_and_do_or_prove_by_fsatz ty ltac:(fun H' => apply H' in H0; [ | exact H1 ]).
       Local Ltac find_and_apply_or_prove_by_fsatz' H ty preapp :=
         find_and_do_or_prove_by_fsatz ty ltac:(fun H' => let H' := preapp H' in apply H' in H).
+      Local Ltac speed_up_fsatz_step_on pkg :=
+        let goal_if_var_neq_zero (* we want to keep lazymatch below, so we hack backtracking on is_var *)
+            := match goal with
+               | [ |- ?x <> 0 ] => let test := match goal with _ => is_var x end in
+                                   constr:(x <> 0)
+               | _ => I
+               end in
+        lazymatch goal with
+        | [ H : False |- _ ] => solve [ exfalso; exact H ]
+        | [ H : ?T |- ?T ] => exact H
+        | [ H : ?x <> ?x |- _ ] => solve [ exfalso; apply H; reflexivity ]
+        | [ H : ?x = ?y, H' : ?x <> ?y |- _ ] => solve [ exfalso; apply H', H ]
+        | [ H : ?x = 0 |- ?x * ?y <> 0 ] => exfalso
+        | [ H : ?y = 0 |- ?x * ?y <> 0 ] => exfalso
+        | [ H : ~?T |- ?T ] => exfalso
+        | [ H : ?T |- ~?T ] => exfalso
+        | [ H : ?x - ?x = 0 |- _ ] => clear H
+        | [ H : ?x * ?y = 0, H' : ?x = 0 |- _ ] => clear H
+        | [ H : ?x * ?y = 0, H' : ?y = 0 |- _ ] => clear H
+        | [ |- goal_if_var_neq_zero ] => intro
+        | [ H : ?x = Fopp ?x |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a, a = Fopp a -> a = 0)
+        | [ H : ?x <> Fopp ?x |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a, a <> Fopp a -> a <> 0)
+        | [ H : ?x + ?x = 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall y, y + y = 0 -> y = 0)
+        | [ H : Finv (?x^3) = 0, H' : ?x <> 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a, Finv (a^3) = 0 -> a <> 0 -> False)
+        | [ H : ?x - ?y = 0, H' : ?y <> ?x |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a - b = 0 -> b = a)
+        | [ H : ?x - ?y = 0, H' : ?x <> ?y |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a - b = 0 -> a = b)
+        | [ H : ?x * ?y * ?z <> 0, H' : ?y <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b c, a * b * c <> 0 -> a * c <> 0)
+        | [ H : ?x * ?y^3 <> 0, H' : ?y <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a * b <> 0 -> a <> 0)
+        | [ H : ?x * ?y^2 <> 0, H' : ?y <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a * b <> 0 -> a <> 0)
+        | [ H : ?x^2 - ?y^2 = ?z |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b c, a^2 - b^2 = c -> (a - b) * (a + b) = c)
+        | [ H : ?x + ?y * ?z = 0, H' : ?x <> Fopp (?z * ?y) |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a + b * c = 0 -> a <> Fopp (c * b) -> False)
+        | [ H : ?x + ?x <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a, a + a <> 0 -> a <> 0)
+        | [ H : ?x - ?y <> 0, H' : ?y = ?x |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a - b <> 0 -> b <> a)
+        | [ H : ?x - ?y <> 0, H' : ?x = ?y |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a - b <> 0 -> a <> b)
+        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
+        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, (a + b)^2 - (a^2 + b^2) <> 0 -> a * b <> 0)
+        | [ H : ?x * ?y = 0, H' : ?x <> 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b, a * b = 0 -> a <> 0 -> b = 0)
+        | [ H : ?x * ?y = 0, H' : ?y <> 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b, a * b = 0 -> b <> 0 -> a = 0)
+        | [ H : ?x * ?y <> 0, H' : ?x <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a * b <> 0 -> b <> 0)
+        | [ H : ?x * ?y <> 0, H' : ?y <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a * b <> 0 -> a <> 0)
+        | [ H : ?x * ?y <> 0, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a * b <> 0 -> a <> 0)
+        | [ H : ?x * ?y <> 0, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, a * b <> 0 -> b <> 0)
+        | [ |- (?x + ?y)^2 - (?x^2 + ?y^2) = 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a * b = 0 -> (a + b)^2 - (a^2 + b^2) = 0)
+        | [ |- (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a * b <> 0 -> (a + b)^2 - (a^2 + b^2) <> 0)
+        | [ |- (?x + ?y)^2 - ?x^2 - ?y^2 = 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a * b = 0 -> (a + b)^2 - a^2 - b^2 = 0)
+        | [ |- (?x + ?y)^2 - ?x^2 - ?y^2 <> 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a * b <> 0 -> (a + b)^2 - a^2 - b^2 <> 0)
+        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
+        | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, (a + b)^2 - (a^2 + b^2) <> 0 -> a * b <> 0)
+        | [ H : (?x + ?y)^2 - ?x^2 - ?y^2 = 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, (a + b)^2 - a^2 - b^2 = 0 -> a * b = 0)
+        | [ H : (?x + ?y)^2 - ?x^2 - ?y^2 <> 0 |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b, (a + b)^2 - a^2 - b^2 <> 0 -> a * b <> 0)
+        | [ H : ?x = 0 |- ?x * ?y = 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a = 0 -> a * b = 0)
+        | [ H : ?y = 0 |- ?x * ?y = 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, b = 0 -> a * b = 0)
+        | [ H : ?x <> 0 |- ?x * ?y <> 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a <> 0 -> b <> 0 -> a * b <> 0)
+        | [ H : ?y <> 0 |- ?x * ?y <> 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a <> 0 -> b <> 0 -> a * b <> 0)
+        | [ H : ?x <> 0 |- ?x * ?y = 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, b = 0 -> a * b = 0)
+        | [ H : ?y <> 0 |- ?x * ?y = 0 ]
+          => F.goal_apply_lemma_on pkg (forall a b, a = 0 -> a * b = 0)
+
+        | [ H : ?x - ?y * ?z <> ?w, H' : ?y = 1 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a - b * c <> d -> b = 1 -> a - c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+        | [ H : ?x - ?y * ?z = ?w, H' : ?y = 1 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a - b * c = d -> b = 1 -> a - c = d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+        | [ H : ?x - ?y * ?z * ?w <> ?v, H' : ?y = 1 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d e, a - b * c * d <> e -> b = 1 -> a - c * d <> e) ltac:(fun H'' => constr:(fun Hv => H'' x y z w v Hv H'))
+        | [ H : ?x - ?y * ?z * ?w = ?v, H' : ?y = 1 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d e, a - b * c * d = e -> b = 1 -> a - c * d = e) ltac:(fun H'' => constr:(fun Hv => H'' x y z w v Hv H'))
+        | [ H : ?x - ?y * ?z^2 <> ?w, H' : ?z = 1 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a - b * c^2 <> d -> c = 1 -> a - b <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+        | [ H : ?x - ?y * ?z^2 = ?w, H' : ?z = 1 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a - b * c^2 = d -> c = 1 -> a - b = d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+
+        | [ H : ?x - ?y + ?z <> ?w, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a - b + c <> d -> b = 0 -> a + c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+        | [ H : ?x - ?y <> ?z, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a - b <> c -> b = 0 -> a <> c) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * ?y + ?z <> ?w, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * b + c <> d -> a = 0 -> c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+        | [ H : ?x * ?y + ?z <> ?w, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * b + c <> d -> b = 0 -> c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
+        | [ H : ?x * ?y <> ?z, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a * b <> c -> a = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * ?y <> ?z, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a * b <> c -> b = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : Fopp (?x * ?y) <> ?z, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, Fopp (a * b) <> c -> a = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : Fopp (?x * ?y) <> ?z, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, Fopp (a * b) <> c -> b = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * ?y^3 = ?z, H' : ?y = 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a * b^3 = c -> b = 0 -> c = 0)
+        | [ H : ?x * ?y = ?z, H' : ?x = 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a * b = c -> a = 0 -> c = 0)
+        | [ H : ?x * ?y - ?z <> 0, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a * b - c <> 0 -> a = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * ?y - ?z <> 0, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a * b - c <> 0 -> b = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * ?y - ?z = 0, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a * b - c = 0 -> a = 0 -> c = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * ?y - ?z = 0, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a * b - c = 0 -> b = 0 -> c = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x - ?y * ?z = 0, H' : ?z = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a - b * c = 0 -> c = 0 -> a = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
+        | [ H : ?x * (?y * ?y^2) - ?z <> ?w |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b c d, a * (b * b^2) - c <> d -> a * (b^3) - c <> d)
+        | [ H : ?x * (?y * ?y^2) - ?z = ?w |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b c d, a * (b * b^2) - c = d -> a * (b^3) - c = d)
+        | [ H : ?x - (?y * ?y^2) * ?z <> ?w |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b c d, a - (b * b^2) * c <> d -> a - (b^3) * c <> d)
+        | [ H : ?x - (?y * ?y^2) * ?z = ?w |- _ ]
+          => F.apply_lemma_in_on pkg H (forall a b c d, a - (b * b^2) * c = d -> a - (b^3) * c = d)
+        | [ H : ?x * (?y * ?y^2) = 0, H' : ?y <> 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b, a * (b * b^2) = 0 -> b <> 0 -> a = 0)
+        | [ H : ?x * (?y * ?z) = 0, H' : ?z <> 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, c <> 0 -> a * (b * c) = 0 -> a * b = 0) ltac:(fun lem => constr:(lem x y z H'))
+        | [ H : ?x = ?y * ?z, H' : ?y = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a = b * c -> b = 0 -> a = 0) ltac:(fun lem => constr:(fun H => lem x y z H H'))
+        | [ H : ?x * ?y + ?z = 0, H' : ?x = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c, a = 0 -> a * b + c = 0 -> c = 0) ltac:(fun lem => constr:(lem x y z H'))
+        | [ H : ?x * (?y * ?y^2) - ?z * ?z^2 * ?w = 0, H' : ?x * ?y^3 + ?w * ?z^3 = 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * b^3 + d * c^3 = 0 -> a * (b * b^2) - c * c^2 * d = 0 -> a * b^3 = 0) ltac:(fun lem => constr:(lem x y z w H'))
+        | [ H : ?x * Finv (?y^2) <> ?z * Finv (?w^2), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * Finv (b^2) <> c * Finv (d^2) -> b <> 0 -> d <> 0 -> a * (d^2) <> c * (b^2)) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
+        | [ H : ?x * Finv (?y^2) = ?z * Finv (?w^2), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * Finv (b^2) = c * Finv (d^2) -> b <> 0 -> d <> 0 -> a * (d^2) = c * (b^2)) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
+        | [ H : ?x * Finv (?y^3) = Fopp (?z * Finv (?w^3)), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * Finv (b^3) = Fopp (c * Finv (d^3)) -> b <> 0 -> d <> 0 -> a * (d^3) = Fopp (c * (b^3))) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
+        | [ H : ?x * Finv (?y^3) <> Fopp (?z * Finv (?w^3)), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall a b c d, a * Finv (b^3) <> Fopp (c * Finv (d^3)) -> b <> 0 -> d <> 0 -> a * (d^3) <> Fopp (c * (b^3))) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
+        | [ H : ?x = Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a = Fopp (b * c) -> a - c * b = 0 -> a = 0)
+        | [ H : ?x = Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a = Fopp (b * c) -> a - c * b = 0 -> a = 0)
+        | [ H : ?x <> Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a <> Fopp (b * c) -> a - c * b = 0 -> a * b * c <> 0)
+        | [ H : ?x <> Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
+          => F.apply2_lemma_in_on pkg H H' (forall a b c, a <> Fopp (b * c) -> a - c * b = 0 -> a * b * c <> 0)
+        | [ H : ?y^2 = ?c^3 + ?a * ?c * (?x^2)^2 + ?b * (?x^3)^2,
+                H' : ?y'^2 = ?c'^3 + ?a * ?c' * (?x'^2)^2 + ?b * (?x'^3)^2,
+                     H0 : ?c' * ?x^2 - ?c * ?x'^2 = 0
+            |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall X Y X' Y' A B C C', Y^2 = C^3 + A * C * (X^2)^2 + B * (X^3)^2 -> Y'^2 = C'^3 + A * C' * (X'^2)^2 + B * (X'^3)^2 -> C' * X^2 - C * X'^2 = 0 -> (Y' * (X^3))^2 - ((X'^3) * Y)^2 = 0) ltac:(fun Hv => constr:(fun H => Hv x y x' y' a b c c' H H' H0))
+        | [ H : ?y^2 = ?c^3 + ?a * ?c * (?x^2)^2 + ?b * (?x^3)^2,
+                H' : ?y'^2 = ?c'^3 + ?a * ?c' * (?x'^2)^2 + ?b * (?x'^3)^2,
+                     H0 : ?c' * ?x^2 = ?c * ?x'^2
+            |- _ ]
+          => F.apply_lemma_in_on' pkg H (forall X Y X' Y' A B C C', Y^2 = C^3 + A * C * (X^2)^2 + B * (X^3)^2 -> Y'^2 = C'^3 + A * C' * (X'^2)^2 + B * (X'^3)^2 -> C' * X^2 = C * X'^2 -> (Y' * (X^3))^2 - ((X'^3) * Y)^2 = 0) ltac:(fun Hv => constr:(fun H => Hv x y x' y' a b c c' H H' H0))
+
+        | [ H0 : ?x * ?y^3 = ?A * ?B^3,
+                 H1 : ?x * ?z^3 - ?B^3 * ?D = 0,
+                      H2 : ?D * ?C^3 = ?w * ?z^3,
+                           H3 : ?A * ?C^3 - ?y^3 * ?w <> 0,
+                                Hz : ?z <> 0,
+                                     HB : ?B <> 0
+            |- _ ]
+          => exfalso; revert H0 H1 H2 H3 Hz HB;
+             generalize x, y, z, w, A, B, C, D;
+             F.goal_exact_lemma_on pkg
+        | [ H0 : ?x * ?y^3 = ?A * ?B^3,
+                 H1 : ?x * ?z^3 - ?B^3 * ?D <> 0,
+                      H2 : ?D * ?C^3 = ?w * ?z^3,
+                           H3 : ?A * ?C^3 - ?y^3 * ?w = 0,
+                                Hy : ?y <> 0,
+                                     HC : ?C <> 0
+            |- _ ]
+          => exfalso; revert H0 H1 H2 H3 Hy HC;
+             generalize x, y, z, w, A, B, C, D;
+             F.goal_exact_lemma_on pkg
+        | [ H0 : ?x * ?y^2 = ?A * ?B^2,
+                 H1 : ?x * ?z^2 - ?D * ?B^2 = 0,
+                      H2 : ?D * ?C^2 = ?w * ?z^2,
+                           H3 : ?A * ?C^2 - ?w * ?y^2 <> 0,
+                                Hz : ?z <> 0,
+                                     HB : ?B <> 0
+            |- _ ]
+          => exfalso; revert H0 H1 H2 H3 Hz HB;
+             generalize x, y, z, w, A, B, C, D;
+             F.goal_exact_lemma_on pkg
+        | [ H0 : ?A * ?B^2 = ?x * ?y^2,
+                 H1 : ?x * ?z^2 - ?D * ?B^2 = 0,
+                      H2 : ?w * ?z^2 = ?D * ?C^2,
+                           H3 : ?A * ?C^2 - ?w * ?y^2 <> 0,
+                                Hz : ?z <> 0,
+                                     HB : ?B <> 0
+            |- _ ]
+          => exfalso; revert H0 H1 H2 H3 Hz HB;
+             generalize x, y, z, w, A, B, C, D;
+             F.goal_exact_lemma_on pkg
+        | [ H : ?x <> 0 |- context[Finv (?x^2)] ]
+          => F.with_lemma_on pkg (forall a, a <> 0 -> Finv (a^2) = (Finv a)^2) ltac:(fun H' => rewrite !(H' x H))
+        | [ H : ?x <> 0 |- context[Finv (?x^3)] ]
+          => F.with_lemma_on pkg (forall a, a <> 0 -> Finv (a^3) = (Finv a)^3) ltac:(fun H' => rewrite !(H' x H))
+        | [ H : ?x <> 0 |- context[Finv (Finv ?x)] ]
+          => F.with_lemma_on pkg (forall a, a <> 0 -> Finv (Finv a) = a) ltac:(fun H' => rewrite !(H' x H))
+        | [ |- context[Finv ((?x + ?y)^2 - ?x^2 - ?y^2)] ]
+          => F.with_lemma_on pkg (forall a b, (a + b)^2 - a^2 - b^2 = (1+1) * a * b) ltac:(fun H' => rewrite !(H' x y))
+        | [ |- context[Finv ((?x + ?y)^2 - (?x^2 + ?y^2))] ]
+          => F.with_lemma_on pkg (forall a b, (a + b)^2 - (a^2 + b^2) = (1+1) * a * b) ltac:(fun H' => rewrite !(H' x y))
+        | [ |- context[Finv (?x * ?y)] ]
+          => F.with_lemma_on
+               pkg
+               (forall a b, a * b <> 0 -> Finv (a * b) = Finv a * Finv b)
+               ltac:(fun H' => rewrite !(H' x y) by (clear_eq; fsatz))
+        | _ => idtac
+        end.
       Local Ltac speed_up_fsatz :=
         let fld := guess_field in
+        let pkg := F.get_package_on fld in
         divisions_to_inverses fld;
-        repeat match goal with
-               | [ H : False |- _ ] => solve [ exfalso; exact H ]
-               | [ H : ?T |- ?T ] => exact H
-               | [ H : ?x <> ?x |- _ ] => solve [ exfalso; apply H; reflexivity ]
-               | [ H : ?x = ?y, H' : ?x <> ?y |- _ ] => solve [ exfalso; apply H', H ]
-               | [ H : ?x = 0 |- ?x * ?y <> 0 ] => exfalso
-               | [ H : ?y = 0 |- ?x * ?y <> 0 ] => exfalso
-               | [ H : ~?T |- ?T ] => exfalso
-               | [ H : ?T |- ~?T ] => exfalso
-               | [ H : ?x - ?x = 0 |- _ ] => clear H
-               | [ H : ?x * ?y = 0, H' : ?x = 0 |- _ ] => clear H
-               | [ H : ?x * ?y = 0, H' : ?y = 0 |- _ ] => clear H
-               | [ H : ?x = Fopp ?x |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a, a = Fopp a -> a = 0)
-               | [ H : ?x <> Fopp ?x |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a, a <> Fopp a -> a <> 0)
-               | [ H : ?x + ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall y, y + y = 0 -> y = 0)
-               | [ H : Finv (?x^3) = 0, H' : ?x <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a, Finv (a^3) = 0 -> a <> 0 -> False)
-               | [ H : ?x - ?y = 0, H' : ?y <> ?x |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a - b = 0 -> b = a)
-               | [ H : ?x - ?y = 0, H' : ?x <> ?y |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a - b = 0 -> a = b)
-               | [ H : ?x * ?y * ?z <> 0, H' : ?y <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b c, a * b * c <> 0 -> a * c <> 0)
-               | [ H : ?x * ?y^3 <> 0, H' : ?y <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> a <> 0)
-               | [ H : ?x * ?y^2 <> 0, H' : ?y <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> a <> 0)
-               | [ H : ?x^2 - ?y^2 = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a^2 - b^2 = 0 -> (a - b) * (a + b) = 0)
-               | [ H : ?x + ?y * ?z = 0, H' : ?x <> Fopp (?z * ?y) |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a + b * c = 0 -> a <> Fopp (c * b) -> False)
-               | [ H : ?x + ?x <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a, a + a <> 0 -> a <> 0)
-               | [ H : ?x - ?y <> 0, H' : ?y = ?x |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a - b <> 0 -> b <> a)
-               | [ H : ?x - ?y <> 0, H' : ?x = ?y |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a - b <> 0 -> a <> b)
-               | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
-               | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) <> 0 -> a * b <> 0)
-               | [ H : ?x * ?y = 0, H' : ?x <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b = 0 -> a <> 0 -> b = 0)
-               | [ H : ?x * ?y = 0, H' : ?y <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b = 0 -> b <> 0 -> a = 0)
-               | [ H : ?x * ?y <> 0, H' : ?x <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> b <> 0)
-               | [ H : ?x * ?y <> 0, H' : ?y <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, a * b <> 0 -> a <> 0)
-               | [ H : ?x * ?y <> 0, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b <> 0 -> a = 0 -> False)
-               | [ H : ?x * ?y <> 0, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * b <> 0 -> b = 0 -> False)
-               | [ |- (?x + ?y)^2 - (?x^2 + ?y^2) = 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a * b = 0 -> (a + b)^2 - (a^2 + b^2) = 0)
-               | [ |- (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a * b <> 0 -> (a + b)^2 - (a^2 + b^2) <> 0)
-               | [ |- (?x + ?y)^2 - ?x^2 - ?y^2 = 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a * b = 0 -> (a + b)^2 - a^2 - b^2 = 0)
-               | [ |- (?x + ?y)^2 - ?x^2 - ?y^2 <> 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a * b <> 0 -> (a + b)^2 - a^2 - b^2 <> 0)
-               | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) = 0 -> a * b = 0)
-               | [ H : (?x + ?y)^2 - (?x^2 + ?y^2) <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - (a^2 + b^2) <> 0 -> a * b <> 0)
-               | [ H : (?x + ?y)^2 - ?x^2 - ?y^2 = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - a^2 - b^2 = 0 -> a * b = 0)
-               | [ H : (?x + ?y)^2 - ?x^2 - ?y^2 <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b, (a + b)^2 - a^2 - b^2 <> 0 -> a * b <> 0)
-               | [ H : ?x = 0 |- ?x * ?y = 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a = 0 -> a * b = 0)
-               | [ H : ?y = 0 |- ?x * ?y = 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, b = 0 -> a * b = 0)
-               | [ H : ?x <> 0 |- ?x * ?y <> 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a <> 0 -> b <> 0 -> a * b <> 0)
-               | [ H : ?y <> 0 |- ?x * ?y <> 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a <> 0 -> b <> 0 -> a * b <> 0)
-               | [ H : ?x <> 0 |- ?x * ?y = 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, b = 0 -> a * b = 0)
-               | [ H : ?y <> 0 |- ?x * ?y = 0 ]
-                 => find_and_goal_apply_or_prove_by_fsatz (forall a b, a = 0 -> a * b = 0)
-
-               | [ H : ?x - ?y * ?z <> ?w, H' : ?y = 1 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a - b * c <> d -> b = 1 -> a - c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-               | [ H : ?x - ?y * ?z = ?w, H' : ?y = 1 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a - b * c = d -> b = 1 -> a - c = d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-               | [ H : ?x - ?y * ?z * ?w <> ?v, H' : ?y = 1 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d e, a - b * c * d <> e -> b = 1 -> a - c * d <> e) ltac:(fun H'' => constr:(fun Hv => H'' x y z w v Hv H'))
-               | [ H : ?x - ?y * ?z * ?w = ?v, H' : ?y = 1 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d e, a - b * c * d = e -> b = 1 -> a - c * d = e) ltac:(fun H'' => constr:(fun Hv => H'' x y z w v Hv H'))
-               | [ H : ?x - ?y * ?z^2 <> ?w, H' : ?z = 1 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a - b * c^2 <> d -> c = 1 -> a - b <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-               | [ H : ?x - ?y * ?z^2 = ?w, H' : ?z = 1 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a - b * c^2 = d -> c = 1 -> a - b = d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-
-               | [ H : ?x - ?y + ?z <> ?w, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a - b + c <> d -> b = 0 -> a + c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-               | [ H : ?x - ?y <> ?z, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a - b <> c -> b = 0 -> a <> c) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * ?y + ?z <> ?w, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * b + c <> d -> a = 0 -> c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-               | [ H : ?x * ?y + ?z <> ?w, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * b + c <> d -> b = 0 -> c <> d) ltac:(fun H'' => constr:(fun Hv => H'' x y z w Hv H'))
-               | [ H : ?x * ?y <> ?z, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a * b <> c -> a = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * ?y <> ?z, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a * b <> c -> b = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : Fopp (?x * ?y) <> ?z, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, Fopp (a * b) <> c -> a = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : Fopp (?x * ?y) <> ?z, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, Fopp (a * b) <> c -> b = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * ?y^3 = ?z, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a * b^3 = c -> b = 0 -> c = 0)
-               | [ H : ?x * ?y = ?z, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a * b = c -> a = 0 -> c = 0)
-               | [ H : ?x * ?y - ?z <> 0, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a * b - c <> 0 -> a = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * ?y - ?z <> 0, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a * b - c <> 0 -> b = 0 -> c <> 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * ?y - ?z = 0, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a * b - c = 0 -> a = 0 -> c = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * ?y - ?z = 0, H' : ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a * b - c = 0 -> b = 0 -> c = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x - ?y * ?z = 0, H' : ?z = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a - b * c = 0 -> c = 0 -> a = 0) ltac:(fun H'' => constr:(fun Hv => H'' x y z Hv H'))
-               | [ H : ?x * (?y * ?y^2) - ?z <> ?w |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b c d, a * (b * b^2) - c <> d -> a * (b^3) - c <> d)
-               | [ H : ?x * (?y * ?y^2) - ?z = ?w |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b c d, a * (b * b^2) - c = d -> a * (b^3) - c = d)
-               | [ H : ?x - (?y * ?y^2) * ?z <> ?w |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b c d, a - (b * b^2) * c <> d -> a - (b^3) * c <> d)
-               | [ H : ?x - (?y * ?y^2) * ?z = ?w |- _ ]
-                 => find_and_apply_or_prove_by_fsatz H (forall a b c d, a - (b * b^2) * c = d -> a - (b^3) * c = d)
-               | [ H : ?x * (?y * ?y^2) = 0, H' : ?y <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b, a * (b * b^2) = 0 -> b <> 0 -> a = 0)
-               | [ H : ?x * (?y * ?z) = 0, H' : ?z <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, c <> 0 -> a * (b * c) = 0 -> a * b = 0) ltac:(fun lem => constr:(lem x y z H'))
-               | [ H : ?x * ?y + ?z = 0, H' : ?x = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c, a = 0 -> a * b + c = 0 -> c = 0) ltac:(fun lem => constr:(lem x y z H'))
-               | [ H : ?x / ?y^3 = Fopp (?z / ?w^3), H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^3 = Fopp (b / d^3) -> a * d^3 + b * c^3 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
-               | [ H : ?x / ?y^3 <> Fopp (?z / ?w^3), H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^3 <> Fopp (b / d^3) -> a * d^3 + b * c^3 <> 0) ltac:(fun lem => constr:(lem x z y w H' H''))
-               | [ H : ?x / ?y^2 = ?z / ?w^2, H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^2 = b / d^2 -> a * d^2 - b * c^2 = 0) ltac:(fun lem => constr:(lem x z y w H' H''))
-               | [ H : ?x / ?y^2 <> ?z / ?w^2, H' : ?y <> 0, H'' : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, c <> 0 -> d <> 0 -> a / c^2 <> b / d^2 -> a * d^2 - b * c^2 <> 0) ltac:(fun lem => constr:(lem x z y w H' H''))
-               | [ H : ?x * (?y * ?y^2) - ?z * ?z^2 * ?w = 0, H' : ?x * ?y^3 + ?w * ?z^3 = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * b^3 + d * c^3 = 0 -> a * (b * b^2) - c * c^2 * d = 0 -> a * b^3 = 0) ltac:(fun lem => constr:(lem x y z w H'))
-               | [ H : ?x * Finv (?y^2) <> ?z * Finv (?w^2), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * Finv (b^2) <> c * Finv (d^2) -> b <> 0 -> d <> 0 -> a * (d^2) <> c * (b^2)) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
-               | [ H : ?x * Finv (?y^2) = ?z * Finv (?w^2), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * Finv (b^2) = c * Finv (d^2) -> b <> 0 -> d <> 0 -> a * (d^2) = c * (b^2)) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
-               | [ H : ?x * Finv (?y^3) = Fopp (?z * Finv (?w^3)), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * Finv (b^3) = Fopp (c * Finv (d^3)) -> b <> 0 -> d <> 0 -> a * (d^3) = Fopp (c * (b^3))) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
-               | [ H : ?x * Finv (?y^3) <> Fopp (?z * Finv (?w^3)), Hy : ?y <> 0, Hw : ?w <> 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall a b c d, a * Finv (b^3) <> Fopp (c * Finv (d^3)) -> b <> 0 -> d <> 0 -> a * (d^3) <> Fopp (c * (b^3))) ltac:(fun Hv => constr:(fun H => Hv x y z w H Hy Hw))
-               | [ H : ?x = Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a = Fopp (b * c) -> a - c * b = 0 -> a = 0)
-               | [ H : ?x = Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a = Fopp (b * c) -> a - c * b = 0 -> a = 0)
-               | [ H : ?x <> Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a <> Fopp (b * c) -> a - c * b = 0 -> a * b * c <> 0)
-               | [ H : ?x <> Fopp (?y * ?z), H' : ?x - ?z * ?y = 0 |- _ ]
-                 => find_and_apply_or_prove_by_fsatz2 H H' (forall a b c, a <> Fopp (b * c) -> a - c * b = 0 -> a * b * c <> 0)
-               | [ H : ?y^2 = ?c^3 + ?a * ?c * (?x^2)^2 + ?b * (?x^3)^2,
-                       H' : ?y'^2 = ?c'^3 + ?a * ?c' * (?x'^2)^2 + ?b * (?x'^3)^2,
-                            H0 : ?c' * ?x^2 - ?c * ?x'^2 = 0
-                   |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall X Y X' Y' A B C C', Y^2 = C^3 + A * C * (X^2)^2 + B * (X^3)^2 -> Y'^2 = C'^3 + A * C' * (X'^2)^2 + B * (X'^3)^2 -> C' * X^2 - C * X'^2 = 0 -> (Y' * (X^3))^2 - ((X'^3) * Y)^2 = 0) ltac:(fun Hv => constr:(fun H => Hv x y x' y' a b c c' H H' H0))
-               | [ H : ?y^2 = ?c^3 + ?a * ?c * (?x^2)^2 + ?b * (?x^3)^2,
-                       H' : ?y'^2 = ?c'^3 + ?a * ?c' * (?x'^2)^2 + ?b * (?x'^3)^2,
-                            H0 : ?c' * ?x^2 = ?c * ?x'^2
-                   |- _ ]
-                 => find_and_apply_or_prove_by_fsatz' H (forall X Y X' Y' A B C C', Y^2 = C^3 + A * C * (X^2)^2 + B * (X^3)^2 -> Y'^2 = C'^3 + A * C' * (X'^2)^2 + B * (X'^3)^2 -> C' * X^2 = C * X'^2 -> (Y' * (X^3))^2 - ((X'^3) * Y)^2 = 0) ltac:(fun Hv => constr:(fun H => Hv x y x' y' a b c c' H H' H0))
-
-               | [ H0 : ?n0 = 0, H1 : ?n1 = 0, H2 : ?d0 <> 0, H3 : ?d1 <> 0, H : ?n0 / ?d0^3 <> Fopp (?n1 / ?d1^3) |- _ ]
-                 => revert H0 H1 H2 H3 H; progress clear_eq_and_neq; generalize n0 n1 d0 d1; intros
-               | [ H0 : ?x * ?y^3 = ?A * ?B^3,
-                        H1 : ?x * ?z^3 - ?B^3 * ?D = 0,
-                             H2 : ?D * ?C^3 = ?w * ?z^3,
-                                  H3 : ?A * ?C^3 - ?y^3 * ?w <> 0,
-                                       Hz : ?z <> 0,
-                                            HB : ?B <> 0
-                   |- _ ]
-                 => solve [
-                        exfalso; revert H0 H1 H2 H3 Hz HB; clear_eq_and_neq;
-                        generalize x, y, z, w, A, B, C, D; intros;
-                        fsatz ]
-               | [ H0 : ?x * ?y^3 = ?A * ?B^3,
-                        H1 : ?x * ?z^3 - ?B^3 * ?D <> 0,
-                             H2 : ?D * ?C^3 = ?w * ?z^3,
-                                  H3 : ?A * ?C^3 - ?y^3 * ?w = 0,
-                                       Hy : ?y <> 0,
-                                            HC : ?C <> 0
-                   |- _ ]
-                 => solve [
-                        exfalso; revert H0 H1 H2 H3 Hy HC; clear_eq_and_neq;
-                        generalize x, y, z, w, A, B, C, D; intros;
-                        fsatz ]
-               | [ H0 : ?x * ?y^2 = ?A * ?B^2,
-                        H1 : ?x * ?z^2 - ?D * ?B^2 = 0,
-                             H2 : ?D * ?C^2 = ?w * ?z^2,
-                                  H3 : ?A * ?C^2 - ?w * ?y^2 <> 0,
-                                       Hz : ?z <> 0,
-                                            HB : ?B <> 0
-                   |- _ ]
-                 => solve [
-                        exfalso; revert H0 H1 H2 H3 Hz HB; clear_eq_and_neq;
-                        generalize x, y, z, w, A, B, C, D; intros;
-                        fsatz ]
-               | [ H0 : ?A * ?B^2 = ?x * ?y^2,
-                        H1 : ?x * ?z^2 - ?D * ?B^2 = 0,
-                             H2 : ?w * ?z^2 = ?D * ?C^2,
-                                  H3 : ?A * ?C^2 - ?w * ?y^2 <> 0,
-                                       Hz : ?z <> 0,
-                                            HB : ?B <> 0
-                   |- _ ]
-                 => solve [
-                        exfalso; revert H0 H1 H2 H3 Hz HB; clear_eq_and_neq;
-                        generalize x, y, z, w, A, B, C, D; intros;
-                        fsatz ]
-               | [ H : ?x <> 0 |- context[Finv (?x^2)] ]
-                 => find_and_do_or_prove_by_fsatz (forall a, a <> 0 -> Finv (a^2) = (Finv a)^2) ltac:(fun H' => rewrite !(H' x H))
-               | [ H : ?x <> 0 |- context[Finv (?x^3)] ]
-                 => find_and_do_or_prove_by_fsatz (forall a, a <> 0 -> Finv (a^3) = (Finv a)^3) ltac:(fun H' => rewrite !(H' x H))
-               | [ H : ?x <> 0 |- context[Finv (Finv ?x)] ]
-                 => find_and_do_or_prove_by_fsatz (forall a, a <> 0 -> Finv (Finv a) = a) ltac:(fun H' => rewrite !(H' x H))
-               | [ |- context[Finv ((?x + ?y)^2 - ?x^2 - ?y^2)] ]
-                 => find_and_do_or_prove_by_fsatz (forall a b, (a + b)^2 - a^2 - b^2 = (1+1) * a * b) ltac:(fun H' => rewrite !(H' x y))
-               | [ |- context[Finv (?x * ?y)] ]
-                 => find_and_do_or_prove_by_fsatz
-                      (forall a b, a * b <> 0 -> Finv (a * b) = Finv a * Finv b)
-                      ltac:(fun H' => rewrite !(H' x y) by (clear_eq; fsatz))
-               end.
+        repeat speed_up_fsatz_step_on pkg.
+      (* sanity check to get error messages that would otherwise be gobbled by [repeat] *)
+      Local Ltac speed_up_fsatz_check :=
+        let fld := guess_field in
+        let pkg := F.get_package_on fld in
+        speed_up_fsatz_step_on pkg.
 
       (* Everything this can solve, [t] can also solve, but this does some extra work to go faster *)
+      Local Ltac pre_pre_faster_t :=
+        prept; try contradiction; speed_up_fsatz.
+      Local Ltac pre_faster_t :=
+        pre_pre_faster_t; speed_up_fsatz_check; clean_up_speed_up_fsatz.
       Local Ltac faster_t_noclear :=
-        prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz;
-        fsatz.
+        pre_faster_t; fsatz.
       Local Ltac faster_t :=
-        prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz;
+        pre_faster_t;
         try solve [ lazymatch goal with
                     | [ |- _ = _ ] => clear_neq
                     | _ => idtac
@@ -526,7 +537,7 @@ Module Jacobian.
       Lemma to_affine_add P Q
         : W.eq (to_affine (add P Q)) (W.add (to_affine P) (to_affine Q)).
       Proof.
-        Time prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz. (* 28.713 secs (17.591u,0.032s) *)
+        Time prept; try contradiction; speed_up_fsatz; clean_up_speed_up_fsatz. (* 15.009 secs (14.871u,0.048s) *)
         Time all: fsatz. (* 6.335 secs (6.172u,0.163s) *)
       Time Qed. (* 1.924 secs (1.928u,0.s) *)
     End AEqMinus3.
