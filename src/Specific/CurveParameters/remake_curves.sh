@@ -11,6 +11,8 @@ ${MAKE} "$@" x25519_c32.json ../X25519/C32/
 ${MAKE} "$@" x2448_c64_karatsuba.json ../X2448/Karatsuba/C64/
 ${MAKE} "$@" nistp256_amd128.json ../NISTP256/AMD128/
 ${MAKE} "$@" nistp256_amd64.json ../NISTP256/AMD64/
+${MAKE} "$@" solinas32_2e255m19_10limbs_donna.json ../solinas32_2e255m19_10limbs_donna/
+${MAKE} "$@" solinas64_2e255m19_5limbs_donna.json ../solinas64_2e255m19_5limbs_donna/
 ${MAKE} "$@" montgomery32_2e127m1_4limbs.json ../montgomery32_2e127m1_4limbs/
 ${MAKE} "$@" montgomery64_2e127m1_2limbs.json ../montgomery64_2e127m1_2limbs/
 ${MAKE} "$@" solinas32_2e127m1_5limbs.json ../solinas32_2e127m1_5limbs/
