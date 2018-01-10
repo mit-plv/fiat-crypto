@@ -2301,6 +2301,8 @@ src/Specific/solinas32_2e127m1_5limbs/CurveParameters.v
 src/Specific/solinas32_2e127m1_5limbs/Synthesis.v
 src/Specific/solinas32_2e127m1_5limbs/feadd.v
 src/Specific/solinas32_2e127m1_5limbs/feaddDisplay.v
+src/Specific/solinas32_2e127m1_5limbs/fecarry.v
+src/Specific/solinas32_2e127m1_5limbs/fecarryDisplay.v
 src/Specific/solinas32_2e127m1_5limbs/femul.v
 src/Specific/solinas32_2e127m1_5limbs/femulDisplay.v
 src/Specific/solinas32_2e127m1_5limbs/fesquare.v
@@ -2313,6 +2315,8 @@ src/Specific/solinas32_2e127m1_6limbs/CurveParameters.v
 src/Specific/solinas32_2e127m1_6limbs/Synthesis.v
 src/Specific/solinas32_2e127m1_6limbs/feadd.v
 src/Specific/solinas32_2e127m1_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e127m1_6limbs/fecarry.v
+src/Specific/solinas32_2e127m1_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e127m1_6limbs/femul.v
 src/Specific/solinas32_2e127m1_6limbs/femulDisplay.v
 src/Specific/solinas32_2e127m1_6limbs/fesquare.v
@@ -2325,6 +2329,8 @@ src/Specific/solinas32_2e129m25_5limbs/CurveParameters.v
 src/Specific/solinas32_2e129m25_5limbs/Synthesis.v
 src/Specific/solinas32_2e129m25_5limbs/feadd.v
 src/Specific/solinas32_2e129m25_5limbs/feaddDisplay.v
+src/Specific/solinas32_2e129m25_5limbs/fecarry.v
+src/Specific/solinas32_2e129m25_5limbs/fecarryDisplay.v
 src/Specific/solinas32_2e129m25_5limbs/femul.v
 src/Specific/solinas32_2e129m25_5limbs/femulDisplay.v
 src/Specific/solinas32_2e129m25_5limbs/fesquare.v
@@ -2337,6 +2343,8 @@ src/Specific/solinas32_2e129m25_6limbs/CurveParameters.v
 src/Specific/solinas32_2e129m25_6limbs/Synthesis.v
 src/Specific/solinas32_2e129m25_6limbs/feadd.v
 src/Specific/solinas32_2e129m25_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e129m25_6limbs/fecarry.v
+src/Specific/solinas32_2e129m25_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e129m25_6limbs/femul.v
 src/Specific/solinas32_2e129m25_6limbs/femulDisplay.v
 src/Specific/solinas32_2e129m25_6limbs/fesquare.v
@@ -2349,6 +2357,8 @@ src/Specific/solinas32_2e130m5_5limbs/CurveParameters.v
 src/Specific/solinas32_2e130m5_5limbs/Synthesis.v
 src/Specific/solinas32_2e130m5_5limbs/feadd.v
 src/Specific/solinas32_2e130m5_5limbs/feaddDisplay.v
+src/Specific/solinas32_2e130m5_5limbs/fecarry.v
+src/Specific/solinas32_2e130m5_5limbs/fecarryDisplay.v
 src/Specific/solinas32_2e130m5_5limbs/femul.v
 src/Specific/solinas32_2e130m5_5limbs/femulDisplay.v
 src/Specific/solinas32_2e130m5_5limbs/fesquare.v
@@ -2361,6 +2371,8 @@ src/Specific/solinas32_2e130m5_6limbs/CurveParameters.v
 src/Specific/solinas32_2e130m5_6limbs/Synthesis.v
 src/Specific/solinas32_2e130m5_6limbs/feadd.v
 src/Specific/solinas32_2e130m5_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e130m5_6limbs/fecarry.v
+src/Specific/solinas32_2e130m5_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e130m5_6limbs/femul.v
 src/Specific/solinas32_2e130m5_6limbs/femulDisplay.v
 src/Specific/solinas32_2e130m5_6limbs/fesquare.v
@@ -2373,6 +2385,8 @@ src/Specific/solinas32_2e137m13_5limbs/CurveParameters.v
 src/Specific/solinas32_2e137m13_5limbs/Synthesis.v
 src/Specific/solinas32_2e137m13_5limbs/feadd.v
 src/Specific/solinas32_2e137m13_5limbs/feaddDisplay.v
+src/Specific/solinas32_2e137m13_5limbs/fecarry.v
+src/Specific/solinas32_2e137m13_5limbs/fecarryDisplay.v
 src/Specific/solinas32_2e137m13_5limbs/femul.v
 src/Specific/solinas32_2e137m13_5limbs/femulDisplay.v
 src/Specific/solinas32_2e137m13_5limbs/fesquare.v
@@ -2385,6 +2399,8 @@ src/Specific/solinas32_2e137m13_6limbs/CurveParameters.v
 src/Specific/solinas32_2e137m13_6limbs/Synthesis.v
 src/Specific/solinas32_2e137m13_6limbs/feadd.v
 src/Specific/solinas32_2e137m13_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e137m13_6limbs/fecarry.v
+src/Specific/solinas32_2e137m13_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e137m13_6limbs/femul.v
 src/Specific/solinas32_2e137m13_6limbs/femulDisplay.v
 src/Specific/solinas32_2e137m13_6limbs/fesquare.v
@@ -2397,6 +2413,8 @@ src/Specific/solinas32_2e140m27_6limbs/CurveParameters.v
 src/Specific/solinas32_2e140m27_6limbs/Synthesis.v
 src/Specific/solinas32_2e140m27_6limbs/feadd.v
 src/Specific/solinas32_2e140m27_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e140m27_6limbs/fecarry.v
+src/Specific/solinas32_2e140m27_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e140m27_6limbs/femul.v
 src/Specific/solinas32_2e140m27_6limbs/femulDisplay.v
 src/Specific/solinas32_2e140m27_6limbs/fesquare.v
@@ -2409,6 +2427,8 @@ src/Specific/solinas32_2e140m27_7limbs/CurveParameters.v
 src/Specific/solinas32_2e140m27_7limbs/Synthesis.v
 src/Specific/solinas32_2e140m27_7limbs/feadd.v
 src/Specific/solinas32_2e140m27_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e140m27_7limbs/fecarry.v
+src/Specific/solinas32_2e140m27_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e140m27_7limbs/femul.v
 src/Specific/solinas32_2e140m27_7limbs/femulDisplay.v
 src/Specific/solinas32_2e140m27_7limbs/fesquare.v
@@ -2421,6 +2441,8 @@ src/Specific/solinas32_2e141m9_6limbs/CurveParameters.v
 src/Specific/solinas32_2e141m9_6limbs/Synthesis.v
 src/Specific/solinas32_2e141m9_6limbs/feadd.v
 src/Specific/solinas32_2e141m9_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e141m9_6limbs/fecarry.v
+src/Specific/solinas32_2e141m9_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e141m9_6limbs/femul.v
 src/Specific/solinas32_2e141m9_6limbs/femulDisplay.v
 src/Specific/solinas32_2e141m9_6limbs/fesquare.v
@@ -2433,6 +2455,8 @@ src/Specific/solinas32_2e141m9_7limbs/CurveParameters.v
 src/Specific/solinas32_2e141m9_7limbs/Synthesis.v
 src/Specific/solinas32_2e141m9_7limbs/feadd.v
 src/Specific/solinas32_2e141m9_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e141m9_7limbs/fecarry.v
+src/Specific/solinas32_2e141m9_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e141m9_7limbs/femul.v
 src/Specific/solinas32_2e141m9_7limbs/femulDisplay.v
 src/Specific/solinas32_2e141m9_7limbs/fesquare.v
@@ -2445,6 +2469,8 @@ src/Specific/solinas32_2e150m3_6limbs/CurveParameters.v
 src/Specific/solinas32_2e150m3_6limbs/Synthesis.v
 src/Specific/solinas32_2e150m3_6limbs/feadd.v
 src/Specific/solinas32_2e150m3_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e150m3_6limbs/fecarry.v
+src/Specific/solinas32_2e150m3_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e150m3_6limbs/femul.v
 src/Specific/solinas32_2e150m3_6limbs/femulDisplay.v
 src/Specific/solinas32_2e150m3_6limbs/fesquare.v
@@ -2457,6 +2483,8 @@ src/Specific/solinas32_2e150m3_7limbs/CurveParameters.v
 src/Specific/solinas32_2e150m3_7limbs/Synthesis.v
 src/Specific/solinas32_2e150m3_7limbs/feadd.v
 src/Specific/solinas32_2e150m3_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e150m3_7limbs/fecarry.v
+src/Specific/solinas32_2e150m3_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e150m3_7limbs/femul.v
 src/Specific/solinas32_2e150m3_7limbs/femulDisplay.v
 src/Specific/solinas32_2e150m3_7limbs/fesquare.v
@@ -2469,6 +2497,8 @@ src/Specific/solinas32_2e150m5_6limbs/CurveParameters.v
 src/Specific/solinas32_2e150m5_6limbs/Synthesis.v
 src/Specific/solinas32_2e150m5_6limbs/feadd.v
 src/Specific/solinas32_2e150m5_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e150m5_6limbs/fecarry.v
+src/Specific/solinas32_2e150m5_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e150m5_6limbs/femul.v
 src/Specific/solinas32_2e150m5_6limbs/femulDisplay.v
 src/Specific/solinas32_2e150m5_6limbs/fesquare.v
@@ -2481,6 +2511,8 @@ src/Specific/solinas32_2e150m5_7limbs/CurveParameters.v
 src/Specific/solinas32_2e150m5_7limbs/Synthesis.v
 src/Specific/solinas32_2e150m5_7limbs/feadd.v
 src/Specific/solinas32_2e150m5_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e150m5_7limbs/fecarry.v
+src/Specific/solinas32_2e150m5_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e150m5_7limbs/femul.v
 src/Specific/solinas32_2e150m5_7limbs/femulDisplay.v
 src/Specific/solinas32_2e150m5_7limbs/fesquare.v
@@ -2493,6 +2525,8 @@ src/Specific/solinas32_2e152m17_6limbs/CurveParameters.v
 src/Specific/solinas32_2e152m17_6limbs/Synthesis.v
 src/Specific/solinas32_2e152m17_6limbs/feadd.v
 src/Specific/solinas32_2e152m17_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e152m17_6limbs/fecarry.v
+src/Specific/solinas32_2e152m17_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e152m17_6limbs/femul.v
 src/Specific/solinas32_2e152m17_6limbs/femulDisplay.v
 src/Specific/solinas32_2e152m17_6limbs/fesquare.v
@@ -2505,6 +2539,8 @@ src/Specific/solinas32_2e152m17_7limbs/CurveParameters.v
 src/Specific/solinas32_2e152m17_7limbs/Synthesis.v
 src/Specific/solinas32_2e152m17_7limbs/feadd.v
 src/Specific/solinas32_2e152m17_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e152m17_7limbs/fecarry.v
+src/Specific/solinas32_2e152m17_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e152m17_7limbs/femul.v
 src/Specific/solinas32_2e152m17_7limbs/femulDisplay.v
 src/Specific/solinas32_2e152m17_7limbs/fesquare.v
@@ -2517,6 +2553,8 @@ src/Specific/solinas32_2e158m15_6limbs/CurveParameters.v
 src/Specific/solinas32_2e158m15_6limbs/Synthesis.v
 src/Specific/solinas32_2e158m15_6limbs/feadd.v
 src/Specific/solinas32_2e158m15_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e158m15_6limbs/fecarry.v
+src/Specific/solinas32_2e158m15_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e158m15_6limbs/femul.v
 src/Specific/solinas32_2e158m15_6limbs/femulDisplay.v
 src/Specific/solinas32_2e158m15_6limbs/fesquare.v
@@ -2529,6 +2567,8 @@ src/Specific/solinas32_2e158m15_7limbs/CurveParameters.v
 src/Specific/solinas32_2e158m15_7limbs/Synthesis.v
 src/Specific/solinas32_2e158m15_7limbs/feadd.v
 src/Specific/solinas32_2e158m15_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e158m15_7limbs/fecarry.v
+src/Specific/solinas32_2e158m15_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e158m15_7limbs/femul.v
 src/Specific/solinas32_2e158m15_7limbs/femulDisplay.v
 src/Specific/solinas32_2e158m15_7limbs/fesquare.v
@@ -2541,6 +2581,8 @@ src/Specific/solinas32_2e165m25_7limbs/CurveParameters.v
 src/Specific/solinas32_2e165m25_7limbs/Synthesis.v
 src/Specific/solinas32_2e165m25_7limbs/feadd.v
 src/Specific/solinas32_2e165m25_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e165m25_7limbs/fecarry.v
+src/Specific/solinas32_2e165m25_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e165m25_7limbs/femul.v
 src/Specific/solinas32_2e165m25_7limbs/femulDisplay.v
 src/Specific/solinas32_2e165m25_7limbs/fesquare.v
@@ -2553,6 +2595,8 @@ src/Specific/solinas32_2e165m25_8limbs/CurveParameters.v
 src/Specific/solinas32_2e165m25_8limbs/Synthesis.v
 src/Specific/solinas32_2e165m25_8limbs/feadd.v
 src/Specific/solinas32_2e165m25_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e165m25_8limbs/fecarry.v
+src/Specific/solinas32_2e165m25_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e165m25_8limbs/femul.v
 src/Specific/solinas32_2e165m25_8limbs/femulDisplay.v
 src/Specific/solinas32_2e165m25_8limbs/fesquare.v
@@ -2565,6 +2609,8 @@ src/Specific/solinas32_2e166m5_6limbs/CurveParameters.v
 src/Specific/solinas32_2e166m5_6limbs/Synthesis.v
 src/Specific/solinas32_2e166m5_6limbs/feadd.v
 src/Specific/solinas32_2e166m5_6limbs/feaddDisplay.v
+src/Specific/solinas32_2e166m5_6limbs/fecarry.v
+src/Specific/solinas32_2e166m5_6limbs/fecarryDisplay.v
 src/Specific/solinas32_2e166m5_6limbs/femul.v
 src/Specific/solinas32_2e166m5_6limbs/femulDisplay.v
 src/Specific/solinas32_2e166m5_6limbs/fesquare.v
@@ -2577,6 +2623,8 @@ src/Specific/solinas32_2e166m5_7limbs/CurveParameters.v
 src/Specific/solinas32_2e166m5_7limbs/Synthesis.v
 src/Specific/solinas32_2e166m5_7limbs/feadd.v
 src/Specific/solinas32_2e166m5_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e166m5_7limbs/fecarry.v
+src/Specific/solinas32_2e166m5_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e166m5_7limbs/femul.v
 src/Specific/solinas32_2e166m5_7limbs/femulDisplay.v
 src/Specific/solinas32_2e166m5_7limbs/fesquare.v
@@ -2589,6 +2637,8 @@ src/Specific/solinas32_2e171m19_7limbs/CurveParameters.v
 src/Specific/solinas32_2e171m19_7limbs/Synthesis.v
 src/Specific/solinas32_2e171m19_7limbs/feadd.v
 src/Specific/solinas32_2e171m19_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e171m19_7limbs/fecarry.v
+src/Specific/solinas32_2e171m19_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e171m19_7limbs/femul.v
 src/Specific/solinas32_2e171m19_7limbs/femulDisplay.v
 src/Specific/solinas32_2e171m19_7limbs/fesquare.v
@@ -2601,6 +2651,8 @@ src/Specific/solinas32_2e171m19_8limbs/CurveParameters.v
 src/Specific/solinas32_2e171m19_8limbs/Synthesis.v
 src/Specific/solinas32_2e171m19_8limbs/feadd.v
 src/Specific/solinas32_2e171m19_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e171m19_8limbs/fecarry.v
+src/Specific/solinas32_2e171m19_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e171m19_8limbs/femul.v
 src/Specific/solinas32_2e171m19_8limbs/femulDisplay.v
 src/Specific/solinas32_2e171m19_8limbs/fesquare.v
@@ -2613,6 +2665,8 @@ src/Specific/solinas32_2e174m17_7limbs/CurveParameters.v
 src/Specific/solinas32_2e174m17_7limbs/Synthesis.v
 src/Specific/solinas32_2e174m17_7limbs/feadd.v
 src/Specific/solinas32_2e174m17_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e174m17_7limbs/fecarry.v
+src/Specific/solinas32_2e174m17_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e174m17_7limbs/femul.v
 src/Specific/solinas32_2e174m17_7limbs/femulDisplay.v
 src/Specific/solinas32_2e174m17_7limbs/fesquare.v
@@ -2625,6 +2679,8 @@ src/Specific/solinas32_2e174m17_8limbs/CurveParameters.v
 src/Specific/solinas32_2e174m17_8limbs/Synthesis.v
 src/Specific/solinas32_2e174m17_8limbs/feadd.v
 src/Specific/solinas32_2e174m17_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e174m17_8limbs/fecarry.v
+src/Specific/solinas32_2e174m17_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e174m17_8limbs/femul.v
 src/Specific/solinas32_2e174m17_8limbs/femulDisplay.v
 src/Specific/solinas32_2e174m17_8limbs/fesquare.v
@@ -2637,6 +2693,8 @@ src/Specific/solinas32_2e174m3_7limbs/CurveParameters.v
 src/Specific/solinas32_2e174m3_7limbs/Synthesis.v
 src/Specific/solinas32_2e174m3_7limbs/feadd.v
 src/Specific/solinas32_2e174m3_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e174m3_7limbs/fecarry.v
+src/Specific/solinas32_2e174m3_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e174m3_7limbs/femul.v
 src/Specific/solinas32_2e174m3_7limbs/femulDisplay.v
 src/Specific/solinas32_2e174m3_7limbs/fesquare.v
@@ -2649,6 +2707,8 @@ src/Specific/solinas32_2e174m3_8limbs/CurveParameters.v
 src/Specific/solinas32_2e174m3_8limbs/Synthesis.v
 src/Specific/solinas32_2e174m3_8limbs/feadd.v
 src/Specific/solinas32_2e174m3_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e174m3_8limbs/fecarry.v
+src/Specific/solinas32_2e174m3_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e174m3_8limbs/femul.v
 src/Specific/solinas32_2e174m3_8limbs/femulDisplay.v
 src/Specific/solinas32_2e174m3_8limbs/fesquare.v
@@ -2661,6 +2721,8 @@ src/Specific/solinas32_2e189m25_7limbs/CurveParameters.v
 src/Specific/solinas32_2e189m25_7limbs/Synthesis.v
 src/Specific/solinas32_2e189m25_7limbs/feadd.v
 src/Specific/solinas32_2e189m25_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e189m25_7limbs/fecarry.v
+src/Specific/solinas32_2e189m25_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e189m25_7limbs/femul.v
 src/Specific/solinas32_2e189m25_7limbs/femulDisplay.v
 src/Specific/solinas32_2e189m25_7limbs/fesquare.v
@@ -2673,6 +2735,8 @@ src/Specific/solinas32_2e189m25_8limbs/CurveParameters.v
 src/Specific/solinas32_2e189m25_8limbs/Synthesis.v
 src/Specific/solinas32_2e189m25_8limbs/feadd.v
 src/Specific/solinas32_2e189m25_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e189m25_8limbs/fecarry.v
+src/Specific/solinas32_2e189m25_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e189m25_8limbs/femul.v
 src/Specific/solinas32_2e189m25_8limbs/femulDisplay.v
 src/Specific/solinas32_2e189m25_8limbs/fesquare.v
@@ -2685,6 +2749,8 @@ src/Specific/solinas32_2e190m11_7limbs/CurveParameters.v
 src/Specific/solinas32_2e190m11_7limbs/Synthesis.v
 src/Specific/solinas32_2e190m11_7limbs/feadd.v
 src/Specific/solinas32_2e190m11_7limbs/feaddDisplay.v
+src/Specific/solinas32_2e190m11_7limbs/fecarry.v
+src/Specific/solinas32_2e190m11_7limbs/fecarryDisplay.v
 src/Specific/solinas32_2e190m11_7limbs/femul.v
 src/Specific/solinas32_2e190m11_7limbs/femulDisplay.v
 src/Specific/solinas32_2e190m11_7limbs/fesquare.v
@@ -2697,6 +2763,8 @@ src/Specific/solinas32_2e190m11_8limbs/CurveParameters.v
 src/Specific/solinas32_2e190m11_8limbs/Synthesis.v
 src/Specific/solinas32_2e190m11_8limbs/feadd.v
 src/Specific/solinas32_2e190m11_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e190m11_8limbs/fecarry.v
+src/Specific/solinas32_2e190m11_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e190m11_8limbs/femul.v
 src/Specific/solinas32_2e190m11_8limbs/femulDisplay.v
 src/Specific/solinas32_2e190m11_8limbs/fesquare.v
@@ -2709,6 +2777,8 @@ src/Specific/solinas32_2e191m19_8limbs/CurveParameters.v
 src/Specific/solinas32_2e191m19_8limbs/Synthesis.v
 src/Specific/solinas32_2e191m19_8limbs/feadd.v
 src/Specific/solinas32_2e191m19_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e191m19_8limbs/fecarry.v
+src/Specific/solinas32_2e191m19_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e191m19_8limbs/femul.v
 src/Specific/solinas32_2e191m19_8limbs/femulDisplay.v
 src/Specific/solinas32_2e191m19_8limbs/fesquare.v
@@ -2721,6 +2791,8 @@ src/Specific/solinas32_2e191m19_9limbs/CurveParameters.v
 src/Specific/solinas32_2e191m19_9limbs/Synthesis.v
 src/Specific/solinas32_2e191m19_9limbs/feadd.v
 src/Specific/solinas32_2e191m19_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e191m19_9limbs/fecarry.v
+src/Specific/solinas32_2e191m19_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e191m19_9limbs/femul.v
 src/Specific/solinas32_2e191m19_9limbs/femulDisplay.v
 src/Specific/solinas32_2e191m19_9limbs/fesquare.v
@@ -2733,6 +2805,8 @@ src/Specific/solinas32_2e192m2e64m1_10limbs/CurveParameters.v
 src/Specific/solinas32_2e192m2e64m1_10limbs/Synthesis.v
 src/Specific/solinas32_2e192m2e64m1_10limbs/feadd.v
 src/Specific/solinas32_2e192m2e64m1_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e192m2e64m1_10limbs/fecarry.v
+src/Specific/solinas32_2e192m2e64m1_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e192m2e64m1_10limbs/femul.v
 src/Specific/solinas32_2e192m2e64m1_10limbs/femulDisplay.v
 src/Specific/solinas32_2e192m2e64m1_10limbs/fesquare.v
@@ -2745,6 +2819,8 @@ src/Specific/solinas32_2e192m2e64m1_9limbs/CurveParameters.v
 src/Specific/solinas32_2e192m2e64m1_9limbs/Synthesis.v
 src/Specific/solinas32_2e192m2e64m1_9limbs/feadd.v
 src/Specific/solinas32_2e192m2e64m1_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e192m2e64m1_9limbs/fecarry.v
+src/Specific/solinas32_2e192m2e64m1_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e192m2e64m1_9limbs/femul.v
 src/Specific/solinas32_2e192m2e64m1_9limbs/femulDisplay.v
 src/Specific/solinas32_2e192m2e64m1_9limbs/fesquare.v
@@ -2757,6 +2833,8 @@ src/Specific/solinas32_2e194m33_8limbs/CurveParameters.v
 src/Specific/solinas32_2e194m33_8limbs/Synthesis.v
 src/Specific/solinas32_2e194m33_8limbs/feadd.v
 src/Specific/solinas32_2e194m33_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e194m33_8limbs/fecarry.v
+src/Specific/solinas32_2e194m33_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e194m33_8limbs/femul.v
 src/Specific/solinas32_2e194m33_8limbs/femulDisplay.v
 src/Specific/solinas32_2e194m33_8limbs/fesquare.v
@@ -2769,6 +2847,8 @@ src/Specific/solinas32_2e194m33_9limbs/CurveParameters.v
 src/Specific/solinas32_2e194m33_9limbs/Synthesis.v
 src/Specific/solinas32_2e194m33_9limbs/feadd.v
 src/Specific/solinas32_2e194m33_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e194m33_9limbs/fecarry.v
+src/Specific/solinas32_2e194m33_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e194m33_9limbs/femul.v
 src/Specific/solinas32_2e194m33_9limbs/femulDisplay.v
 src/Specific/solinas32_2e194m33_9limbs/fesquare.v
@@ -2781,6 +2861,8 @@ src/Specific/solinas32_2e196m15_8limbs/CurveParameters.v
 src/Specific/solinas32_2e196m15_8limbs/Synthesis.v
 src/Specific/solinas32_2e196m15_8limbs/feadd.v
 src/Specific/solinas32_2e196m15_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e196m15_8limbs/fecarry.v
+src/Specific/solinas32_2e196m15_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e196m15_8limbs/femul.v
 src/Specific/solinas32_2e196m15_8limbs/femulDisplay.v
 src/Specific/solinas32_2e196m15_8limbs/fesquare.v
@@ -2793,6 +2875,8 @@ src/Specific/solinas32_2e196m15_9limbs/CurveParameters.v
 src/Specific/solinas32_2e196m15_9limbs/Synthesis.v
 src/Specific/solinas32_2e196m15_9limbs/feadd.v
 src/Specific/solinas32_2e196m15_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e196m15_9limbs/fecarry.v
+src/Specific/solinas32_2e196m15_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e196m15_9limbs/femul.v
 src/Specific/solinas32_2e196m15_9limbs/femulDisplay.v
 src/Specific/solinas32_2e196m15_9limbs/fesquare.v
@@ -2805,6 +2889,8 @@ src/Specific/solinas32_2e198m17_8limbs/CurveParameters.v
 src/Specific/solinas32_2e198m17_8limbs/Synthesis.v
 src/Specific/solinas32_2e198m17_8limbs/feadd.v
 src/Specific/solinas32_2e198m17_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e198m17_8limbs/fecarry.v
+src/Specific/solinas32_2e198m17_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e198m17_8limbs/femul.v
 src/Specific/solinas32_2e198m17_8limbs/femulDisplay.v
 src/Specific/solinas32_2e198m17_8limbs/fesquare.v
@@ -2817,6 +2903,8 @@ src/Specific/solinas32_2e198m17_9limbs/CurveParameters.v
 src/Specific/solinas32_2e198m17_9limbs/Synthesis.v
 src/Specific/solinas32_2e198m17_9limbs/feadd.v
 src/Specific/solinas32_2e198m17_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e198m17_9limbs/fecarry.v
+src/Specific/solinas32_2e198m17_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e198m17_9limbs/femul.v
 src/Specific/solinas32_2e198m17_9limbs/femulDisplay.v
 src/Specific/solinas32_2e198m17_9limbs/fesquare.v
@@ -2829,6 +2917,8 @@ src/Specific/solinas32_2e206m5_8limbs/CurveParameters.v
 src/Specific/solinas32_2e206m5_8limbs/Synthesis.v
 src/Specific/solinas32_2e206m5_8limbs/feadd.v
 src/Specific/solinas32_2e206m5_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e206m5_8limbs/fecarry.v
+src/Specific/solinas32_2e206m5_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e206m5_8limbs/femul.v
 src/Specific/solinas32_2e206m5_8limbs/femulDisplay.v
 src/Specific/solinas32_2e206m5_8limbs/fesquare.v
@@ -2841,6 +2931,8 @@ src/Specific/solinas32_2e206m5_9limbs/CurveParameters.v
 src/Specific/solinas32_2e206m5_9limbs/Synthesis.v
 src/Specific/solinas32_2e206m5_9limbs/feadd.v
 src/Specific/solinas32_2e206m5_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e206m5_9limbs/fecarry.v
+src/Specific/solinas32_2e206m5_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e206m5_9limbs/femul.v
 src/Specific/solinas32_2e206m5_9limbs/femulDisplay.v
 src/Specific/solinas32_2e206m5_9limbs/fesquare.v
@@ -2853,6 +2945,8 @@ src/Specific/solinas32_2e212m29_8limbs/CurveParameters.v
 src/Specific/solinas32_2e212m29_8limbs/Synthesis.v
 src/Specific/solinas32_2e212m29_8limbs/feadd.v
 src/Specific/solinas32_2e212m29_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e212m29_8limbs/fecarry.v
+src/Specific/solinas32_2e212m29_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e212m29_8limbs/femul.v
 src/Specific/solinas32_2e212m29_8limbs/femulDisplay.v
 src/Specific/solinas32_2e212m29_8limbs/fesquare.v
@@ -2865,6 +2959,8 @@ src/Specific/solinas32_2e212m29_9limbs/CurveParameters.v
 src/Specific/solinas32_2e212m29_9limbs/Synthesis.v
 src/Specific/solinas32_2e212m29_9limbs/feadd.v
 src/Specific/solinas32_2e212m29_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e212m29_9limbs/fecarry.v
+src/Specific/solinas32_2e212m29_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e212m29_9limbs/femul.v
 src/Specific/solinas32_2e212m29_9limbs/femulDisplay.v
 src/Specific/solinas32_2e212m29_9limbs/fesquare.v
@@ -2877,6 +2973,8 @@ src/Specific/solinas32_2e213m3_8limbs/CurveParameters.v
 src/Specific/solinas32_2e213m3_8limbs/Synthesis.v
 src/Specific/solinas32_2e213m3_8limbs/feadd.v
 src/Specific/solinas32_2e213m3_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e213m3_8limbs/fecarry.v
+src/Specific/solinas32_2e213m3_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e213m3_8limbs/femul.v
 src/Specific/solinas32_2e213m3_8limbs/femulDisplay.v
 src/Specific/solinas32_2e213m3_8limbs/fesquare.v
@@ -2889,6 +2987,8 @@ src/Specific/solinas32_2e213m3_9limbs/CurveParameters.v
 src/Specific/solinas32_2e213m3_9limbs/Synthesis.v
 src/Specific/solinas32_2e213m3_9limbs/feadd.v
 src/Specific/solinas32_2e213m3_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e213m3_9limbs/fecarry.v
+src/Specific/solinas32_2e213m3_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e213m3_9limbs/femul.v
 src/Specific/solinas32_2e213m3_9limbs/femulDisplay.v
 src/Specific/solinas32_2e213m3_9limbs/fesquare.v
@@ -2901,6 +3001,8 @@ src/Specific/solinas32_2e216m2e108m1_10limbs/CurveParameters.v
 src/Specific/solinas32_2e216m2e108m1_10limbs/Synthesis.v
 src/Specific/solinas32_2e216m2e108m1_10limbs/feadd.v
 src/Specific/solinas32_2e216m2e108m1_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e216m2e108m1_10limbs/fecarry.v
+src/Specific/solinas32_2e216m2e108m1_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e216m2e108m1_10limbs/femul.v
 src/Specific/solinas32_2e216m2e108m1_10limbs/femulDisplay.v
 src/Specific/solinas32_2e216m2e108m1_10limbs/fesquare.v
@@ -2913,6 +3015,8 @@ src/Specific/solinas32_2e216m2e108m1_8limbs/CurveParameters.v
 src/Specific/solinas32_2e216m2e108m1_8limbs/Synthesis.v
 src/Specific/solinas32_2e216m2e108m1_8limbs/feadd.v
 src/Specific/solinas32_2e216m2e108m1_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e216m2e108m1_8limbs/fecarry.v
+src/Specific/solinas32_2e216m2e108m1_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e216m2e108m1_8limbs/femul.v
 src/Specific/solinas32_2e216m2e108m1_8limbs/femulDisplay.v
 src/Specific/solinas32_2e216m2e108m1_8limbs/fesquare.v
@@ -2925,6 +3029,8 @@ src/Specific/solinas32_2e221m3_8limbs/CurveParameters.v
 src/Specific/solinas32_2e221m3_8limbs/Synthesis.v
 src/Specific/solinas32_2e221m3_8limbs/feadd.v
 src/Specific/solinas32_2e221m3_8limbs/feaddDisplay.v
+src/Specific/solinas32_2e221m3_8limbs/fecarry.v
+src/Specific/solinas32_2e221m3_8limbs/fecarryDisplay.v
 src/Specific/solinas32_2e221m3_8limbs/femul.v
 src/Specific/solinas32_2e221m3_8limbs/femulDisplay.v
 src/Specific/solinas32_2e221m3_8limbs/fesquare.v
@@ -2937,6 +3043,8 @@ src/Specific/solinas32_2e221m3_9limbs/CurveParameters.v
 src/Specific/solinas32_2e221m3_9limbs/Synthesis.v
 src/Specific/solinas32_2e221m3_9limbs/feadd.v
 src/Specific/solinas32_2e221m3_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e221m3_9limbs/fecarry.v
+src/Specific/solinas32_2e221m3_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e221m3_9limbs/femul.v
 src/Specific/solinas32_2e221m3_9limbs/femulDisplay.v
 src/Specific/solinas32_2e221m3_9limbs/fesquare.v
@@ -2949,6 +3057,8 @@ src/Specific/solinas32_2e222m117_10limbs/CurveParameters.v
 src/Specific/solinas32_2e222m117_10limbs/Synthesis.v
 src/Specific/solinas32_2e222m117_10limbs/feadd.v
 src/Specific/solinas32_2e222m117_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e222m117_10limbs/fecarry.v
+src/Specific/solinas32_2e222m117_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e222m117_10limbs/femul.v
 src/Specific/solinas32_2e222m117_10limbs/femulDisplay.v
 src/Specific/solinas32_2e222m117_10limbs/fesquare.v
@@ -2961,6 +3071,8 @@ src/Specific/solinas32_2e222m117_9limbs/CurveParameters.v
 src/Specific/solinas32_2e222m117_9limbs/Synthesis.v
 src/Specific/solinas32_2e222m117_9limbs/feadd.v
 src/Specific/solinas32_2e222m117_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e222m117_9limbs/fecarry.v
+src/Specific/solinas32_2e222m117_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e222m117_9limbs/femul.v
 src/Specific/solinas32_2e222m117_9limbs/femulDisplay.v
 src/Specific/solinas32_2e222m117_9limbs/fesquare.v
@@ -2973,6 +3085,8 @@ src/Specific/solinas32_2e224m2e96p1_10limbs/CurveParameters.v
 src/Specific/solinas32_2e224m2e96p1_10limbs/Synthesis.v
 src/Specific/solinas32_2e224m2e96p1_10limbs/feadd.v
 src/Specific/solinas32_2e224m2e96p1_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e224m2e96p1_10limbs/fecarry.v
+src/Specific/solinas32_2e224m2e96p1_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e224m2e96p1_10limbs/femul.v
 src/Specific/solinas32_2e224m2e96p1_10limbs/femulDisplay.v
 src/Specific/solinas32_2e224m2e96p1_10limbs/fesquare.v
@@ -2985,6 +3099,8 @@ src/Specific/solinas32_2e224m2e96p1_11limbs/CurveParameters.v
 src/Specific/solinas32_2e224m2e96p1_11limbs/Synthesis.v
 src/Specific/solinas32_2e224m2e96p1_11limbs/feadd.v
 src/Specific/solinas32_2e224m2e96p1_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e224m2e96p1_11limbs/fecarry.v
+src/Specific/solinas32_2e224m2e96p1_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e224m2e96p1_11limbs/femul.v
 src/Specific/solinas32_2e224m2e96p1_11limbs/femulDisplay.v
 src/Specific/solinas32_2e224m2e96p1_11limbs/fesquare.v
@@ -2997,6 +3113,8 @@ src/Specific/solinas32_2e226m5_10limbs/CurveParameters.v
 src/Specific/solinas32_2e226m5_10limbs/Synthesis.v
 src/Specific/solinas32_2e226m5_10limbs/feadd.v
 src/Specific/solinas32_2e226m5_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e226m5_10limbs/fecarry.v
+src/Specific/solinas32_2e226m5_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e226m5_10limbs/femul.v
 src/Specific/solinas32_2e226m5_10limbs/femulDisplay.v
 src/Specific/solinas32_2e226m5_10limbs/fesquare.v
@@ -3009,6 +3127,8 @@ src/Specific/solinas32_2e226m5_9limbs/CurveParameters.v
 src/Specific/solinas32_2e226m5_9limbs/Synthesis.v
 src/Specific/solinas32_2e226m5_9limbs/feadd.v
 src/Specific/solinas32_2e226m5_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e226m5_9limbs/fecarry.v
+src/Specific/solinas32_2e226m5_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e226m5_9limbs/femul.v
 src/Specific/solinas32_2e226m5_9limbs/femulDisplay.v
 src/Specific/solinas32_2e226m5_9limbs/fesquare.v
@@ -3021,6 +3141,8 @@ src/Specific/solinas32_2e230m27_10limbs/CurveParameters.v
 src/Specific/solinas32_2e230m27_10limbs/Synthesis.v
 src/Specific/solinas32_2e230m27_10limbs/feadd.v
 src/Specific/solinas32_2e230m27_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e230m27_10limbs/fecarry.v
+src/Specific/solinas32_2e230m27_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e230m27_10limbs/femul.v
 src/Specific/solinas32_2e230m27_10limbs/femulDisplay.v
 src/Specific/solinas32_2e230m27_10limbs/fesquare.v
@@ -3033,6 +3155,8 @@ src/Specific/solinas32_2e230m27_9limbs/CurveParameters.v
 src/Specific/solinas32_2e230m27_9limbs/Synthesis.v
 src/Specific/solinas32_2e230m27_9limbs/feadd.v
 src/Specific/solinas32_2e230m27_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e230m27_9limbs/fecarry.v
+src/Specific/solinas32_2e230m27_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e230m27_9limbs/femul.v
 src/Specific/solinas32_2e230m27_9limbs/femulDisplay.v
 src/Specific/solinas32_2e230m27_9limbs/fesquare.v
@@ -3045,6 +3169,8 @@ src/Specific/solinas32_2e235m15_10limbs/CurveParameters.v
 src/Specific/solinas32_2e235m15_10limbs/Synthesis.v
 src/Specific/solinas32_2e235m15_10limbs/feadd.v
 src/Specific/solinas32_2e235m15_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e235m15_10limbs/fecarry.v
+src/Specific/solinas32_2e235m15_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e235m15_10limbs/femul.v
 src/Specific/solinas32_2e235m15_10limbs/femulDisplay.v
 src/Specific/solinas32_2e235m15_10limbs/fesquare.v
@@ -3057,6 +3183,8 @@ src/Specific/solinas32_2e235m15_9limbs/CurveParameters.v
 src/Specific/solinas32_2e235m15_9limbs/Synthesis.v
 src/Specific/solinas32_2e235m15_9limbs/feadd.v
 src/Specific/solinas32_2e235m15_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e235m15_9limbs/fecarry.v
+src/Specific/solinas32_2e235m15_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e235m15_9limbs/femul.v
 src/Specific/solinas32_2e235m15_9limbs/femulDisplay.v
 src/Specific/solinas32_2e235m15_9limbs/fesquare.v
@@ -3069,6 +3197,8 @@ src/Specific/solinas32_2e243m9_10limbs/CurveParameters.v
 src/Specific/solinas32_2e243m9_10limbs/Synthesis.v
 src/Specific/solinas32_2e243m9_10limbs/feadd.v
 src/Specific/solinas32_2e243m9_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e243m9_10limbs/fecarry.v
+src/Specific/solinas32_2e243m9_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e243m9_10limbs/femul.v
 src/Specific/solinas32_2e243m9_10limbs/femulDisplay.v
 src/Specific/solinas32_2e243m9_10limbs/fesquare.v
@@ -3081,6 +3211,8 @@ src/Specific/solinas32_2e243m9_9limbs/CurveParameters.v
 src/Specific/solinas32_2e243m9_9limbs/Synthesis.v
 src/Specific/solinas32_2e243m9_9limbs/feadd.v
 src/Specific/solinas32_2e243m9_9limbs/feaddDisplay.v
+src/Specific/solinas32_2e243m9_9limbs/fecarry.v
+src/Specific/solinas32_2e243m9_9limbs/fecarryDisplay.v
 src/Specific/solinas32_2e243m9_9limbs/femul.v
 src/Specific/solinas32_2e243m9_9limbs/femulDisplay.v
 src/Specific/solinas32_2e243m9_9limbs/fesquare.v
@@ -3093,6 +3225,8 @@ src/Specific/solinas32_2e251m9_10limbs/CurveParameters.v
 src/Specific/solinas32_2e251m9_10limbs/Synthesis.v
 src/Specific/solinas32_2e251m9_10limbs/feadd.v
 src/Specific/solinas32_2e251m9_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e251m9_10limbs/fecarry.v
+src/Specific/solinas32_2e251m9_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e251m9_10limbs/femul.v
 src/Specific/solinas32_2e251m9_10limbs/femulDisplay.v
 src/Specific/solinas32_2e251m9_10limbs/fesquare.v
@@ -3105,6 +3239,8 @@ src/Specific/solinas32_2e251m9_11limbs/CurveParameters.v
 src/Specific/solinas32_2e251m9_11limbs/Synthesis.v
 src/Specific/solinas32_2e251m9_11limbs/feadd.v
 src/Specific/solinas32_2e251m9_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e251m9_11limbs/fecarry.v
+src/Specific/solinas32_2e251m9_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e251m9_11limbs/femul.v
 src/Specific/solinas32_2e251m9_11limbs/femulDisplay.v
 src/Specific/solinas32_2e251m9_11limbs/fesquare.v
@@ -3117,6 +3253,8 @@ src/Specific/solinas32_2e255m19_10limbs/CurveParameters.v
 src/Specific/solinas32_2e255m19_10limbs/Synthesis.v
 src/Specific/solinas32_2e255m19_10limbs/feadd.v
 src/Specific/solinas32_2e255m19_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e255m19_10limbs/fecarry.v
+src/Specific/solinas32_2e255m19_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e255m19_10limbs/femul.v
 src/Specific/solinas32_2e255m19_10limbs/femulDisplay.v
 src/Specific/solinas32_2e255m19_10limbs/fesquare.v
@@ -3129,6 +3267,8 @@ src/Specific/solinas32_2e255m19_11limbs/CurveParameters.v
 src/Specific/solinas32_2e255m19_11limbs/Synthesis.v
 src/Specific/solinas32_2e255m19_11limbs/feadd.v
 src/Specific/solinas32_2e255m19_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e255m19_11limbs/fecarry.v
+src/Specific/solinas32_2e255m19_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e255m19_11limbs/femul.v
 src/Specific/solinas32_2e255m19_11limbs/femulDisplay.v
 src/Specific/solinas32_2e255m19_11limbs/fesquare.v
@@ -3141,6 +3281,8 @@ src/Specific/solinas32_2e255m765_12limbs/CurveParameters.v
 src/Specific/solinas32_2e255m765_12limbs/Synthesis.v
 src/Specific/solinas32_2e255m765_12limbs/feadd.v
 src/Specific/solinas32_2e255m765_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e255m765_12limbs/fecarry.v
+src/Specific/solinas32_2e255m765_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e255m765_12limbs/femul.v
 src/Specific/solinas32_2e255m765_12limbs/femulDisplay.v
 src/Specific/solinas32_2e255m765_12limbs/fesquare.v
@@ -3153,6 +3295,8 @@ src/Specific/solinas32_2e255m765_13limbs/CurveParameters.v
 src/Specific/solinas32_2e255m765_13limbs/Synthesis.v
 src/Specific/solinas32_2e255m765_13limbs/feadd.v
 src/Specific/solinas32_2e255m765_13limbs/feaddDisplay.v
+src/Specific/solinas32_2e255m765_13limbs/fecarry.v
+src/Specific/solinas32_2e255m765_13limbs/fecarryDisplay.v
 src/Specific/solinas32_2e255m765_13limbs/femul.v
 src/Specific/solinas32_2e255m765_13limbs/femulDisplay.v
 src/Specific/solinas32_2e255m765_13limbs/fesquare.v
@@ -3165,6 +3309,8 @@ src/Specific/solinas32_2e256m189_11limbs/CurveParameters.v
 src/Specific/solinas32_2e256m189_11limbs/Synthesis.v
 src/Specific/solinas32_2e256m189_11limbs/feadd.v
 src/Specific/solinas32_2e256m189_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e256m189_11limbs/fecarry.v
+src/Specific/solinas32_2e256m189_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e256m189_11limbs/femul.v
 src/Specific/solinas32_2e256m189_11limbs/femulDisplay.v
 src/Specific/solinas32_2e256m189_11limbs/fesquare.v
@@ -3177,6 +3323,8 @@ src/Specific/solinas32_2e256m189_12limbs/CurveParameters.v
 src/Specific/solinas32_2e256m189_12limbs/Synthesis.v
 src/Specific/solinas32_2e256m189_12limbs/feadd.v
 src/Specific/solinas32_2e256m189_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e256m189_12limbs/fecarry.v
+src/Specific/solinas32_2e256m189_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e256m189_12limbs/femul.v
 src/Specific/solinas32_2e256m189_12limbs/femulDisplay.v
 src/Specific/solinas32_2e256m189_12limbs/fesquare.v
@@ -3189,6 +3337,8 @@ src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/CurveParameters.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/Synthesis.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/feadd.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/fecarry.v
+src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/femul.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/femulDisplay.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_11limbs/fesquare.v
@@ -3201,6 +3351,8 @@ src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/CurveParameters.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/Synthesis.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/feadd.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/fecarry.v
+src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/femul.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/femulDisplay.v
 src/Specific/solinas32_2e256m2e224p2e192p2e96m1_12limbs/fesquare.v
@@ -3213,6 +3365,8 @@ src/Specific/solinas32_2e256m2e32m977_12limbs/CurveParameters.v
 src/Specific/solinas32_2e256m2e32m977_12limbs/Synthesis.v
 src/Specific/solinas32_2e256m2e32m977_12limbs/feadd.v
 src/Specific/solinas32_2e256m2e32m977_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e256m2e32m977_12limbs/fecarry.v
+src/Specific/solinas32_2e256m2e32m977_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e256m2e32m977_12limbs/femul.v
 src/Specific/solinas32_2e256m2e32m977_12limbs/femulDisplay.v
 src/Specific/solinas32_2e256m2e32m977_12limbs/fesquare.v
@@ -3225,6 +3379,8 @@ src/Specific/solinas32_2e256m2e32m977_13limbs/CurveParameters.v
 src/Specific/solinas32_2e256m2e32m977_13limbs/Synthesis.v
 src/Specific/solinas32_2e256m2e32m977_13limbs/feadd.v
 src/Specific/solinas32_2e256m2e32m977_13limbs/feaddDisplay.v
+src/Specific/solinas32_2e256m2e32m977_13limbs/fecarry.v
+src/Specific/solinas32_2e256m2e32m977_13limbs/fecarryDisplay.v
 src/Specific/solinas32_2e256m2e32m977_13limbs/femul.v
 src/Specific/solinas32_2e256m2e32m977_13limbs/femulDisplay.v
 src/Specific/solinas32_2e256m2e32m977_13limbs/fesquare.v
@@ -3237,6 +3393,8 @@ src/Specific/solinas32_2e266m3_10limbs/CurveParameters.v
 src/Specific/solinas32_2e266m3_10limbs/Synthesis.v
 src/Specific/solinas32_2e266m3_10limbs/feadd.v
 src/Specific/solinas32_2e266m3_10limbs/feaddDisplay.v
+src/Specific/solinas32_2e266m3_10limbs/fecarry.v
+src/Specific/solinas32_2e266m3_10limbs/fecarryDisplay.v
 src/Specific/solinas32_2e266m3_10limbs/femul.v
 src/Specific/solinas32_2e266m3_10limbs/femulDisplay.v
 src/Specific/solinas32_2e266m3_10limbs/fesquare.v
@@ -3249,6 +3407,8 @@ src/Specific/solinas32_2e266m3_11limbs/CurveParameters.v
 src/Specific/solinas32_2e266m3_11limbs/Synthesis.v
 src/Specific/solinas32_2e266m3_11limbs/feadd.v
 src/Specific/solinas32_2e266m3_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e266m3_11limbs/fecarry.v
+src/Specific/solinas32_2e266m3_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e266m3_11limbs/femul.v
 src/Specific/solinas32_2e266m3_11limbs/femulDisplay.v
 src/Specific/solinas32_2e266m3_11limbs/fesquare.v
@@ -3261,6 +3421,8 @@ src/Specific/solinas32_2e285m9_11limbs/CurveParameters.v
 src/Specific/solinas32_2e285m9_11limbs/Synthesis.v
 src/Specific/solinas32_2e285m9_11limbs/feadd.v
 src/Specific/solinas32_2e285m9_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e285m9_11limbs/fecarry.v
+src/Specific/solinas32_2e285m9_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e285m9_11limbs/femul.v
 src/Specific/solinas32_2e285m9_11limbs/femulDisplay.v
 src/Specific/solinas32_2e285m9_11limbs/fesquare.v
@@ -3273,6 +3435,8 @@ src/Specific/solinas32_2e285m9_12limbs/CurveParameters.v
 src/Specific/solinas32_2e285m9_12limbs/Synthesis.v
 src/Specific/solinas32_2e285m9_12limbs/feadd.v
 src/Specific/solinas32_2e285m9_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e285m9_12limbs/fecarry.v
+src/Specific/solinas32_2e285m9_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e285m9_12limbs/femul.v
 src/Specific/solinas32_2e285m9_12limbs/femulDisplay.v
 src/Specific/solinas32_2e285m9_12limbs/fesquare.v
@@ -3285,6 +3449,8 @@ src/Specific/solinas32_2e291m19_11limbs/CurveParameters.v
 src/Specific/solinas32_2e291m19_11limbs/Synthesis.v
 src/Specific/solinas32_2e291m19_11limbs/feadd.v
 src/Specific/solinas32_2e291m19_11limbs/feaddDisplay.v
+src/Specific/solinas32_2e291m19_11limbs/fecarry.v
+src/Specific/solinas32_2e291m19_11limbs/fecarryDisplay.v
 src/Specific/solinas32_2e291m19_11limbs/femul.v
 src/Specific/solinas32_2e291m19_11limbs/femulDisplay.v
 src/Specific/solinas32_2e291m19_11limbs/fesquare.v
@@ -3297,6 +3463,8 @@ src/Specific/solinas32_2e291m19_12limbs/CurveParameters.v
 src/Specific/solinas32_2e291m19_12limbs/Synthesis.v
 src/Specific/solinas32_2e291m19_12limbs/feadd.v
 src/Specific/solinas32_2e291m19_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e291m19_12limbs/fecarry.v
+src/Specific/solinas32_2e291m19_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e291m19_12limbs/femul.v
 src/Specific/solinas32_2e291m19_12limbs/femulDisplay.v
 src/Specific/solinas32_2e291m19_12limbs/fesquare.v
@@ -3309,6 +3477,8 @@ src/Specific/solinas32_2e321m9_12limbs/CurveParameters.v
 src/Specific/solinas32_2e321m9_12limbs/Synthesis.v
 src/Specific/solinas32_2e321m9_12limbs/feadd.v
 src/Specific/solinas32_2e321m9_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e321m9_12limbs/fecarry.v
+src/Specific/solinas32_2e321m9_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e321m9_12limbs/femul.v
 src/Specific/solinas32_2e321m9_12limbs/femulDisplay.v
 src/Specific/solinas32_2e321m9_12limbs/fesquare.v
@@ -3321,6 +3491,8 @@ src/Specific/solinas32_2e321m9_13limbs/CurveParameters.v
 src/Specific/solinas32_2e321m9_13limbs/Synthesis.v
 src/Specific/solinas32_2e321m9_13limbs/feadd.v
 src/Specific/solinas32_2e321m9_13limbs/feaddDisplay.v
+src/Specific/solinas32_2e321m9_13limbs/fecarry.v
+src/Specific/solinas32_2e321m9_13limbs/fecarryDisplay.v
 src/Specific/solinas32_2e321m9_13limbs/femul.v
 src/Specific/solinas32_2e321m9_13limbs/femulDisplay.v
 src/Specific/solinas32_2e321m9_13limbs/fesquare.v
@@ -3333,6 +3505,8 @@ src/Specific/solinas32_2e322m2e161m1_12limbs/CurveParameters.v
 src/Specific/solinas32_2e322m2e161m1_12limbs/Synthesis.v
 src/Specific/solinas32_2e322m2e161m1_12limbs/feadd.v
 src/Specific/solinas32_2e322m2e161m1_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e322m2e161m1_12limbs/fecarry.v
+src/Specific/solinas32_2e322m2e161m1_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e322m2e161m1_12limbs/femul.v
 src/Specific/solinas32_2e322m2e161m1_12limbs/femulDisplay.v
 src/Specific/solinas32_2e322m2e161m1_12limbs/fesquare.v
@@ -3345,6 +3519,8 @@ src/Specific/solinas32_2e322m2e161m1_14limbs/CurveParameters.v
 src/Specific/solinas32_2e322m2e161m1_14limbs/Synthesis.v
 src/Specific/solinas32_2e322m2e161m1_14limbs/feadd.v
 src/Specific/solinas32_2e322m2e161m1_14limbs/feaddDisplay.v
+src/Specific/solinas32_2e322m2e161m1_14limbs/fecarry.v
+src/Specific/solinas32_2e322m2e161m1_14limbs/fecarryDisplay.v
 src/Specific/solinas32_2e322m2e161m1_14limbs/femul.v
 src/Specific/solinas32_2e322m2e161m1_14limbs/femulDisplay.v
 src/Specific/solinas32_2e322m2e161m1_14limbs/fesquare.v
@@ -3357,6 +3533,8 @@ src/Specific/solinas32_2e336m17_13limbs/CurveParameters.v
 src/Specific/solinas32_2e336m17_13limbs/Synthesis.v
 src/Specific/solinas32_2e336m17_13limbs/feadd.v
 src/Specific/solinas32_2e336m17_13limbs/feaddDisplay.v
+src/Specific/solinas32_2e336m17_13limbs/fecarry.v
+src/Specific/solinas32_2e336m17_13limbs/fecarryDisplay.v
 src/Specific/solinas32_2e336m17_13limbs/femul.v
 src/Specific/solinas32_2e336m17_13limbs/femulDisplay.v
 src/Specific/solinas32_2e336m17_13limbs/fesquare.v
@@ -3369,6 +3547,8 @@ src/Specific/solinas32_2e336m17_14limbs/CurveParameters.v
 src/Specific/solinas32_2e336m17_14limbs/Synthesis.v
 src/Specific/solinas32_2e336m17_14limbs/feadd.v
 src/Specific/solinas32_2e336m17_14limbs/feaddDisplay.v
+src/Specific/solinas32_2e336m17_14limbs/fecarry.v
+src/Specific/solinas32_2e336m17_14limbs/fecarryDisplay.v
 src/Specific/solinas32_2e336m17_14limbs/femul.v
 src/Specific/solinas32_2e336m17_14limbs/femulDisplay.v
 src/Specific/solinas32_2e336m17_14limbs/fesquare.v
@@ -3381,6 +3561,8 @@ src/Specific/solinas32_2e336m3_12limbs/CurveParameters.v
 src/Specific/solinas32_2e336m3_12limbs/Synthesis.v
 src/Specific/solinas32_2e336m3_12limbs/feadd.v
 src/Specific/solinas32_2e336m3_12limbs/feaddDisplay.v
+src/Specific/solinas32_2e336m3_12limbs/fecarry.v
+src/Specific/solinas32_2e336m3_12limbs/fecarryDisplay.v
 src/Specific/solinas32_2e336m3_12limbs/femul.v
 src/Specific/solinas32_2e336m3_12limbs/femulDisplay.v
 src/Specific/solinas32_2e336m3_12limbs/fesquare.v
@@ -3393,6 +3575,8 @@ src/Specific/solinas32_2e336m3_13limbs/CurveParameters.v
 src/Specific/solinas32_2e336m3_13limbs/Synthesis.v
 src/Specific/solinas32_2e336m3_13limbs/feadd.v
 src/Specific/solinas32_2e336m3_13limbs/feaddDisplay.v
+src/Specific/solinas32_2e336m3_13limbs/fecarry.v
+src/Specific/solinas32_2e336m3_13limbs/fecarryDisplay.v
 src/Specific/solinas32_2e336m3_13limbs/femul.v
 src/Specific/solinas32_2e336m3_13limbs/femulDisplay.v
 src/Specific/solinas32_2e336m3_13limbs/fesquare.v
@@ -3405,6 +3589,8 @@ src/Specific/solinas32_2e338m15_13limbs/CurveParameters.v
 src/Specific/solinas32_2e338m15_13limbs/Synthesis.v
 src/Specific/solinas32_2e338m15_13limbs/feadd.v
 src/Specific/solinas32_2e338m15_13limbs/feaddDisplay.v
+src/Specific/solinas32_2e338m15_13limbs/fecarry.v
+src/Specific/solinas32_2e338m15_13limbs/fecarryDisplay.v
 src/Specific/solinas32_2e338m15_13limbs/femul.v
 src/Specific/solinas32_2e338m15_13limbs/femulDisplay.v
 src/Specific/solinas32_2e338m15_13limbs/fesquare.v
@@ -3417,6 +3603,8 @@ src/Specific/solinas32_2e338m15_14limbs/CurveParameters.v
 src/Specific/solinas32_2e338m15_14limbs/Synthesis.v
 src/Specific/solinas32_2e338m15_14limbs/feadd.v
 src/Specific/solinas32_2e338m15_14limbs/feaddDisplay.v
+src/Specific/solinas32_2e338m15_14limbs/fecarry.v
+src/Specific/solinas32_2e338m15_14limbs/fecarryDisplay.v
 src/Specific/solinas32_2e338m15_14limbs/femul.v
 src/Specific/solinas32_2e338m15_14limbs/femulDisplay.v
 src/Specific/solinas32_2e338m15_14limbs/fesquare.v
@@ -3429,6 +3617,8 @@ src/Specific/solinas32_2e369m25_15limbs/CurveParameters.v
 src/Specific/solinas32_2e369m25_15limbs/Synthesis.v
 src/Specific/solinas32_2e369m25_15limbs/feadd.v
 src/Specific/solinas32_2e369m25_15limbs/feaddDisplay.v
+src/Specific/solinas32_2e369m25_15limbs/fecarry.v
+src/Specific/solinas32_2e369m25_15limbs/fecarryDisplay.v
 src/Specific/solinas32_2e369m25_15limbs/femul.v
 src/Specific/solinas32_2e369m25_15limbs/femulDisplay.v
 src/Specific/solinas32_2e369m25_15limbs/fesquare.v
@@ -3441,6 +3631,8 @@ src/Specific/solinas32_2e369m25_16limbs/CurveParameters.v
 src/Specific/solinas32_2e369m25_16limbs/Synthesis.v
 src/Specific/solinas32_2e369m25_16limbs/feadd.v
 src/Specific/solinas32_2e369m25_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e369m25_16limbs/fecarry.v
+src/Specific/solinas32_2e369m25_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e369m25_16limbs/femul.v
 src/Specific/solinas32_2e369m25_16limbs/femulDisplay.v
 src/Specific/solinas32_2e369m25_16limbs/fesquare.v
@@ -3453,6 +3645,8 @@ src/Specific/solinas32_2e379m19_15limbs/CurveParameters.v
 src/Specific/solinas32_2e379m19_15limbs/Synthesis.v
 src/Specific/solinas32_2e379m19_15limbs/feadd.v
 src/Specific/solinas32_2e379m19_15limbs/feaddDisplay.v
+src/Specific/solinas32_2e379m19_15limbs/fecarry.v
+src/Specific/solinas32_2e379m19_15limbs/fecarryDisplay.v
 src/Specific/solinas32_2e379m19_15limbs/femul.v
 src/Specific/solinas32_2e379m19_15limbs/femulDisplay.v
 src/Specific/solinas32_2e379m19_15limbs/fesquare.v
@@ -3465,6 +3659,8 @@ src/Specific/solinas32_2e379m19_16limbs/CurveParameters.v
 src/Specific/solinas32_2e379m19_16limbs/Synthesis.v
 src/Specific/solinas32_2e379m19_16limbs/feadd.v
 src/Specific/solinas32_2e379m19_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e379m19_16limbs/fecarry.v
+src/Specific/solinas32_2e379m19_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e379m19_16limbs/femul.v
 src/Specific/solinas32_2e379m19_16limbs/femulDisplay.v
 src/Specific/solinas32_2e379m19_16limbs/fesquare.v
@@ -3477,6 +3673,8 @@ src/Specific/solinas32_2e382m105_16limbs/CurveParameters.v
 src/Specific/solinas32_2e382m105_16limbs/Synthesis.v
 src/Specific/solinas32_2e382m105_16limbs/feadd.v
 src/Specific/solinas32_2e382m105_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e382m105_16limbs/fecarry.v
+src/Specific/solinas32_2e382m105_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e382m105_16limbs/femul.v
 src/Specific/solinas32_2e382m105_16limbs/femulDisplay.v
 src/Specific/solinas32_2e382m105_16limbs/fesquare.v
@@ -3489,6 +3687,8 @@ src/Specific/solinas32_2e382m105_17limbs/CurveParameters.v
 src/Specific/solinas32_2e382m105_17limbs/Synthesis.v
 src/Specific/solinas32_2e382m105_17limbs/feadd.v
 src/Specific/solinas32_2e382m105_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e382m105_17limbs/fecarry.v
+src/Specific/solinas32_2e382m105_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e382m105_17limbs/femul.v
 src/Specific/solinas32_2e382m105_17limbs/femulDisplay.v
 src/Specific/solinas32_2e382m105_17limbs/fesquare.v
@@ -3501,6 +3701,8 @@ src/Specific/solinas32_2e383m187_16limbs/CurveParameters.v
 src/Specific/solinas32_2e383m187_16limbs/Synthesis.v
 src/Specific/solinas32_2e383m187_16limbs/feadd.v
 src/Specific/solinas32_2e383m187_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e383m187_16limbs/fecarry.v
+src/Specific/solinas32_2e383m187_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e383m187_16limbs/femul.v
 src/Specific/solinas32_2e383m187_16limbs/femulDisplay.v
 src/Specific/solinas32_2e383m187_16limbs/fesquare.v
@@ -3513,6 +3715,8 @@ src/Specific/solinas32_2e383m187_17limbs/CurveParameters.v
 src/Specific/solinas32_2e383m187_17limbs/Synthesis.v
 src/Specific/solinas32_2e383m187_17limbs/feadd.v
 src/Specific/solinas32_2e383m187_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e383m187_17limbs/fecarry.v
+src/Specific/solinas32_2e383m187_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e383m187_17limbs/femul.v
 src/Specific/solinas32_2e383m187_17limbs/femulDisplay.v
 src/Specific/solinas32_2e383m187_17limbs/fesquare.v
@@ -3525,6 +3729,8 @@ src/Specific/solinas32_2e383m31_15limbs/CurveParameters.v
 src/Specific/solinas32_2e383m31_15limbs/Synthesis.v
 src/Specific/solinas32_2e383m31_15limbs/feadd.v
 src/Specific/solinas32_2e383m31_15limbs/feaddDisplay.v
+src/Specific/solinas32_2e383m31_15limbs/fecarry.v
+src/Specific/solinas32_2e383m31_15limbs/fecarryDisplay.v
 src/Specific/solinas32_2e383m31_15limbs/femul.v
 src/Specific/solinas32_2e383m31_15limbs/femulDisplay.v
 src/Specific/solinas32_2e383m31_15limbs/fesquare.v
@@ -3537,6 +3743,8 @@ src/Specific/solinas32_2e383m31_16limbs/CurveParameters.v
 src/Specific/solinas32_2e383m31_16limbs/Synthesis.v
 src/Specific/solinas32_2e383m31_16limbs/feadd.v
 src/Specific/solinas32_2e383m31_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e383m31_16limbs/fecarry.v
+src/Specific/solinas32_2e383m31_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e383m31_16limbs/femul.v
 src/Specific/solinas32_2e383m31_16limbs/femulDisplay.v
 src/Specific/solinas32_2e383m31_16limbs/fesquare.v
@@ -3549,6 +3757,8 @@ src/Specific/solinas32_2e383m421_17limbs/CurveParameters.v
 src/Specific/solinas32_2e383m421_17limbs/Synthesis.v
 src/Specific/solinas32_2e383m421_17limbs/feadd.v
 src/Specific/solinas32_2e383m421_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e383m421_17limbs/fecarry.v
+src/Specific/solinas32_2e383m421_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e383m421_17limbs/femul.v
 src/Specific/solinas32_2e383m421_17limbs/femulDisplay.v
 src/Specific/solinas32_2e383m421_17limbs/fesquare.v
@@ -3561,6 +3771,8 @@ src/Specific/solinas32_2e383m421_18limbs/CurveParameters.v
 src/Specific/solinas32_2e383m421_18limbs/Synthesis.v
 src/Specific/solinas32_2e383m421_18limbs/feadd.v
 src/Specific/solinas32_2e383m421_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e383m421_18limbs/fecarry.v
+src/Specific/solinas32_2e383m421_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e383m421_18limbs/femul.v
 src/Specific/solinas32_2e383m421_18limbs/femulDisplay.v
 src/Specific/solinas32_2e383m421_18limbs/fesquare.v
@@ -3573,6 +3785,8 @@ src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/CurveParameters.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/Synthesis.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/feadd.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/fecarry.v
+src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/femul.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/femulDisplay.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_18limbs/fesquare.v
@@ -3585,6 +3799,8 @@ src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/CurveParameters.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/Synthesis.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/feadd.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/feaddDisplay.v
+src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/fecarry.v
+src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/fecarryDisplay.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/femul.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/femulDisplay.v
 src/Specific/solinas32_2e384m2e128m2e96p2e32m1_19limbs/fesquare.v
@@ -3597,6 +3813,8 @@ src/Specific/solinas32_2e384m317_17limbs/CurveParameters.v
 src/Specific/solinas32_2e384m317_17limbs/Synthesis.v
 src/Specific/solinas32_2e384m317_17limbs/feadd.v
 src/Specific/solinas32_2e384m317_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e384m317_17limbs/fecarry.v
+src/Specific/solinas32_2e384m317_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e384m317_17limbs/femul.v
 src/Specific/solinas32_2e384m317_17limbs/femulDisplay.v
 src/Specific/solinas32_2e384m317_17limbs/fesquare.v
@@ -3609,6 +3827,8 @@ src/Specific/solinas32_2e384m317_18limbs/CurveParameters.v
 src/Specific/solinas32_2e384m317_18limbs/Synthesis.v
 src/Specific/solinas32_2e384m317_18limbs/feadd.v
 src/Specific/solinas32_2e384m317_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e384m317_18limbs/fecarry.v
+src/Specific/solinas32_2e384m317_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e384m317_18limbs/femul.v
 src/Specific/solinas32_2e384m317_18limbs/femulDisplay.v
 src/Specific/solinas32_2e384m317_18limbs/fesquare.v
@@ -3621,6 +3841,8 @@ src/Specific/solinas32_2e389m21_15limbs/CurveParameters.v
 src/Specific/solinas32_2e389m21_15limbs/Synthesis.v
 src/Specific/solinas32_2e389m21_15limbs/feadd.v
 src/Specific/solinas32_2e389m21_15limbs/feaddDisplay.v
+src/Specific/solinas32_2e389m21_15limbs/fecarry.v
+src/Specific/solinas32_2e389m21_15limbs/fecarryDisplay.v
 src/Specific/solinas32_2e389m21_15limbs/femul.v
 src/Specific/solinas32_2e389m21_15limbs/femulDisplay.v
 src/Specific/solinas32_2e389m21_15limbs/fesquare.v
@@ -3633,6 +3855,8 @@ src/Specific/solinas32_2e389m21_16limbs/CurveParameters.v
 src/Specific/solinas32_2e389m21_16limbs/Synthesis.v
 src/Specific/solinas32_2e389m21_16limbs/feadd.v
 src/Specific/solinas32_2e389m21_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e389m21_16limbs/fecarry.v
+src/Specific/solinas32_2e389m21_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e389m21_16limbs/femul.v
 src/Specific/solinas32_2e389m21_16limbs/femulDisplay.v
 src/Specific/solinas32_2e389m21_16limbs/fesquare.v
@@ -3645,6 +3869,8 @@ src/Specific/solinas32_2e401m31_16limbs/CurveParameters.v
 src/Specific/solinas32_2e401m31_16limbs/Synthesis.v
 src/Specific/solinas32_2e401m31_16limbs/feadd.v
 src/Specific/solinas32_2e401m31_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e401m31_16limbs/fecarry.v
+src/Specific/solinas32_2e401m31_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e401m31_16limbs/femul.v
 src/Specific/solinas32_2e401m31_16limbs/femulDisplay.v
 src/Specific/solinas32_2e401m31_16limbs/fesquare.v
@@ -3657,6 +3883,8 @@ src/Specific/solinas32_2e401m31_17limbs/CurveParameters.v
 src/Specific/solinas32_2e401m31_17limbs/Synthesis.v
 src/Specific/solinas32_2e401m31_17limbs/feadd.v
 src/Specific/solinas32_2e401m31_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e401m31_17limbs/fecarry.v
+src/Specific/solinas32_2e401m31_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e401m31_17limbs/femul.v
 src/Specific/solinas32_2e401m31_17limbs/femulDisplay.v
 src/Specific/solinas32_2e401m31_17limbs/fesquare.v
@@ -3669,6 +3897,8 @@ src/Specific/solinas32_2e413m21_16limbs/CurveParameters.v
 src/Specific/solinas32_2e413m21_16limbs/Synthesis.v
 src/Specific/solinas32_2e413m21_16limbs/feadd.v
 src/Specific/solinas32_2e413m21_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e413m21_16limbs/fecarry.v
+src/Specific/solinas32_2e413m21_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e413m21_16limbs/femul.v
 src/Specific/solinas32_2e413m21_16limbs/femulDisplay.v
 src/Specific/solinas32_2e413m21_16limbs/fesquare.v
@@ -3681,6 +3911,8 @@ src/Specific/solinas32_2e413m21_17limbs/CurveParameters.v
 src/Specific/solinas32_2e413m21_17limbs/Synthesis.v
 src/Specific/solinas32_2e413m21_17limbs/feadd.v
 src/Specific/solinas32_2e413m21_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e413m21_17limbs/fecarry.v
+src/Specific/solinas32_2e413m21_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e413m21_17limbs/femul.v
 src/Specific/solinas32_2e413m21_17limbs/femulDisplay.v
 src/Specific/solinas32_2e413m21_17limbs/fesquare.v
@@ -3693,6 +3925,8 @@ src/Specific/solinas32_2e414m17_16limbs/CurveParameters.v
 src/Specific/solinas32_2e414m17_16limbs/Synthesis.v
 src/Specific/solinas32_2e414m17_16limbs/feadd.v
 src/Specific/solinas32_2e414m17_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e414m17_16limbs/fecarry.v
+src/Specific/solinas32_2e414m17_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e414m17_16limbs/femul.v
 src/Specific/solinas32_2e414m17_16limbs/femulDisplay.v
 src/Specific/solinas32_2e414m17_16limbs/fesquare.v
@@ -3705,6 +3939,8 @@ src/Specific/solinas32_2e414m17_17limbs/CurveParameters.v
 src/Specific/solinas32_2e414m17_17limbs/Synthesis.v
 src/Specific/solinas32_2e414m17_17limbs/feadd.v
 src/Specific/solinas32_2e414m17_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e414m17_17limbs/fecarry.v
+src/Specific/solinas32_2e414m17_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e414m17_17limbs/femul.v
 src/Specific/solinas32_2e414m17_17limbs/femulDisplay.v
 src/Specific/solinas32_2e414m17_17limbs/fesquare.v
@@ -3717,6 +3953,8 @@ src/Specific/solinas32_2e416m2e208m1_16limbs/CurveParameters.v
 src/Specific/solinas32_2e416m2e208m1_16limbs/Synthesis.v
 src/Specific/solinas32_2e416m2e208m1_16limbs/feadd.v
 src/Specific/solinas32_2e416m2e208m1_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e416m2e208m1_16limbs/fecarry.v
+src/Specific/solinas32_2e416m2e208m1_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e416m2e208m1_16limbs/femul.v
 src/Specific/solinas32_2e416m2e208m1_16limbs/femulDisplay.v
 src/Specific/solinas32_2e416m2e208m1_16limbs/fesquare.v
@@ -3729,6 +3967,8 @@ src/Specific/solinas32_2e416m2e208m1_18limbs/CurveParameters.v
 src/Specific/solinas32_2e416m2e208m1_18limbs/Synthesis.v
 src/Specific/solinas32_2e416m2e208m1_18limbs/feadd.v
 src/Specific/solinas32_2e416m2e208m1_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e416m2e208m1_18limbs/fecarry.v
+src/Specific/solinas32_2e416m2e208m1_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e416m2e208m1_18limbs/femul.v
 src/Specific/solinas32_2e416m2e208m1_18limbs/femulDisplay.v
 src/Specific/solinas32_2e416m2e208m1_18limbs/fesquare.v
@@ -3741,6 +3981,8 @@ src/Specific/solinas32_2e444m17_17limbs/CurveParameters.v
 src/Specific/solinas32_2e444m17_17limbs/Synthesis.v
 src/Specific/solinas32_2e444m17_17limbs/feadd.v
 src/Specific/solinas32_2e444m17_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e444m17_17limbs/fecarry.v
+src/Specific/solinas32_2e444m17_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e444m17_17limbs/femul.v
 src/Specific/solinas32_2e444m17_17limbs/femulDisplay.v
 src/Specific/solinas32_2e444m17_17limbs/fesquare.v
@@ -3753,6 +3995,8 @@ src/Specific/solinas32_2e444m17_18limbs/CurveParameters.v
 src/Specific/solinas32_2e444m17_18limbs/Synthesis.v
 src/Specific/solinas32_2e444m17_18limbs/feadd.v
 src/Specific/solinas32_2e444m17_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e444m17_18limbs/fecarry.v
+src/Specific/solinas32_2e444m17_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e444m17_18limbs/femul.v
 src/Specific/solinas32_2e444m17_18limbs/femulDisplay.v
 src/Specific/solinas32_2e444m17_18limbs/fesquare.v
@@ -3765,6 +4009,8 @@ src/Specific/solinas32_2e448m2e224m1_16limbs/CurveParameters.v
 src/Specific/solinas32_2e448m2e224m1_16limbs/Synthesis.v
 src/Specific/solinas32_2e448m2e224m1_16limbs/feadd.v
 src/Specific/solinas32_2e448m2e224m1_16limbs/feaddDisplay.v
+src/Specific/solinas32_2e448m2e224m1_16limbs/fecarry.v
+src/Specific/solinas32_2e448m2e224m1_16limbs/fecarryDisplay.v
 src/Specific/solinas32_2e448m2e224m1_16limbs/femul.v
 src/Specific/solinas32_2e448m2e224m1_16limbs/femulDisplay.v
 src/Specific/solinas32_2e448m2e224m1_16limbs/fesquare.v
@@ -3777,6 +4023,8 @@ src/Specific/solinas32_2e448m2e224m1_18limbs/CurveParameters.v
 src/Specific/solinas32_2e448m2e224m1_18limbs/Synthesis.v
 src/Specific/solinas32_2e448m2e224m1_18limbs/feadd.v
 src/Specific/solinas32_2e448m2e224m1_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e448m2e224m1_18limbs/fecarry.v
+src/Specific/solinas32_2e448m2e224m1_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e448m2e224m1_18limbs/femul.v
 src/Specific/solinas32_2e448m2e224m1_18limbs/femulDisplay.v
 src/Specific/solinas32_2e448m2e224m1_18limbs/fesquare.v
@@ -3789,6 +4037,8 @@ src/Specific/solinas32_2e450m2e225m1_18limbs/CurveParameters.v
 src/Specific/solinas32_2e450m2e225m1_18limbs/Synthesis.v
 src/Specific/solinas32_2e450m2e225m1_18limbs/feadd.v
 src/Specific/solinas32_2e450m2e225m1_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e450m2e225m1_18limbs/fecarry.v
+src/Specific/solinas32_2e450m2e225m1_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e450m2e225m1_18limbs/femul.v
 src/Specific/solinas32_2e450m2e225m1_18limbs/femulDisplay.v
 src/Specific/solinas32_2e450m2e225m1_18limbs/fesquare.v
@@ -3801,6 +4051,8 @@ src/Specific/solinas32_2e450m2e225m1_20limbs/CurveParameters.v
 src/Specific/solinas32_2e450m2e225m1_20limbs/Synthesis.v
 src/Specific/solinas32_2e450m2e225m1_20limbs/feadd.v
 src/Specific/solinas32_2e450m2e225m1_20limbs/feaddDisplay.v
+src/Specific/solinas32_2e450m2e225m1_20limbs/fecarry.v
+src/Specific/solinas32_2e450m2e225m1_20limbs/fecarryDisplay.v
 src/Specific/solinas32_2e450m2e225m1_20limbs/femul.v
 src/Specific/solinas32_2e450m2e225m1_20limbs/femulDisplay.v
 src/Specific/solinas32_2e450m2e225m1_20limbs/fesquare.v
@@ -3813,6 +4065,8 @@ src/Specific/solinas32_2e452m3_17limbs/CurveParameters.v
 src/Specific/solinas32_2e452m3_17limbs/Synthesis.v
 src/Specific/solinas32_2e452m3_17limbs/feadd.v
 src/Specific/solinas32_2e452m3_17limbs/feaddDisplay.v
+src/Specific/solinas32_2e452m3_17limbs/fecarry.v
+src/Specific/solinas32_2e452m3_17limbs/fecarryDisplay.v
 src/Specific/solinas32_2e452m3_17limbs/femul.v
 src/Specific/solinas32_2e452m3_17limbs/femulDisplay.v
 src/Specific/solinas32_2e452m3_17limbs/fesquare.v
@@ -3825,6 +4079,8 @@ src/Specific/solinas32_2e452m3_18limbs/CurveParameters.v
 src/Specific/solinas32_2e452m3_18limbs/Synthesis.v
 src/Specific/solinas32_2e452m3_18limbs/feadd.v
 src/Specific/solinas32_2e452m3_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e452m3_18limbs/fecarry.v
+src/Specific/solinas32_2e452m3_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e452m3_18limbs/femul.v
 src/Specific/solinas32_2e452m3_18limbs/femulDisplay.v
 src/Specific/solinas32_2e452m3_18limbs/fesquare.v
@@ -3837,6 +4093,8 @@ src/Specific/solinas32_2e468m17_18limbs/CurveParameters.v
 src/Specific/solinas32_2e468m17_18limbs/Synthesis.v
 src/Specific/solinas32_2e468m17_18limbs/feadd.v
 src/Specific/solinas32_2e468m17_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e468m17_18limbs/fecarry.v
+src/Specific/solinas32_2e468m17_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e468m17_18limbs/femul.v
 src/Specific/solinas32_2e468m17_18limbs/femulDisplay.v
 src/Specific/solinas32_2e468m17_18limbs/fesquare.v
@@ -3849,6 +4107,8 @@ src/Specific/solinas32_2e468m17_19limbs/CurveParameters.v
 src/Specific/solinas32_2e468m17_19limbs/Synthesis.v
 src/Specific/solinas32_2e468m17_19limbs/feadd.v
 src/Specific/solinas32_2e468m17_19limbs/feaddDisplay.v
+src/Specific/solinas32_2e468m17_19limbs/fecarry.v
+src/Specific/solinas32_2e468m17_19limbs/fecarryDisplay.v
 src/Specific/solinas32_2e468m17_19limbs/femul.v
 src/Specific/solinas32_2e468m17_19limbs/femulDisplay.v
 src/Specific/solinas32_2e468m17_19limbs/fesquare.v
@@ -3861,6 +4121,8 @@ src/Specific/solinas32_2e480m2e240m1_18limbs/CurveParameters.v
 src/Specific/solinas32_2e480m2e240m1_18limbs/Synthesis.v
 src/Specific/solinas32_2e480m2e240m1_18limbs/feadd.v
 src/Specific/solinas32_2e480m2e240m1_18limbs/feaddDisplay.v
+src/Specific/solinas32_2e480m2e240m1_18limbs/fecarry.v
+src/Specific/solinas32_2e480m2e240m1_18limbs/fecarryDisplay.v
 src/Specific/solinas32_2e480m2e240m1_18limbs/femul.v
 src/Specific/solinas32_2e480m2e240m1_18limbs/femulDisplay.v
 src/Specific/solinas32_2e480m2e240m1_18limbs/fesquare.v
@@ -3873,6 +4135,8 @@ src/Specific/solinas32_2e480m2e240m1_20limbs/CurveParameters.v
 src/Specific/solinas32_2e480m2e240m1_20limbs/Synthesis.v
 src/Specific/solinas32_2e480m2e240m1_20limbs/feadd.v
 src/Specific/solinas32_2e480m2e240m1_20limbs/feaddDisplay.v
+src/Specific/solinas32_2e480m2e240m1_20limbs/fecarry.v
+src/Specific/solinas32_2e480m2e240m1_20limbs/fecarryDisplay.v
 src/Specific/solinas32_2e480m2e240m1_20limbs/femul.v
 src/Specific/solinas32_2e480m2e240m1_20limbs/femulDisplay.v
 src/Specific/solinas32_2e480m2e240m1_20limbs/fesquare.v
@@ -3885,6 +4149,8 @@ src/Specific/solinas32_2e488m17_19limbs/CurveParameters.v
 src/Specific/solinas32_2e488m17_19limbs/Synthesis.v
 src/Specific/solinas32_2e488m17_19limbs/feadd.v
 src/Specific/solinas32_2e488m17_19limbs/feaddDisplay.v
+src/Specific/solinas32_2e488m17_19limbs/fecarry.v
+src/Specific/solinas32_2e488m17_19limbs/fecarryDisplay.v
 src/Specific/solinas32_2e488m17_19limbs/femul.v
 src/Specific/solinas32_2e488m17_19limbs/femulDisplay.v
 src/Specific/solinas32_2e488m17_19limbs/fesquare.v
@@ -3897,6 +4163,8 @@ src/Specific/solinas32_2e488m17_20limbs/CurveParameters.v
 src/Specific/solinas32_2e488m17_20limbs/Synthesis.v
 src/Specific/solinas32_2e488m17_20limbs/feadd.v
 src/Specific/solinas32_2e488m17_20limbs/feaddDisplay.v
+src/Specific/solinas32_2e488m17_20limbs/fecarry.v
+src/Specific/solinas32_2e488m17_20limbs/fecarryDisplay.v
 src/Specific/solinas32_2e488m17_20limbs/femul.v
 src/Specific/solinas32_2e488m17_20limbs/femulDisplay.v
 src/Specific/solinas32_2e488m17_20limbs/fesquare.v
@@ -3909,6 +4177,8 @@ src/Specific/solinas32_2e489m21_19limbs/CurveParameters.v
 src/Specific/solinas32_2e489m21_19limbs/Synthesis.v
 src/Specific/solinas32_2e489m21_19limbs/feadd.v
 src/Specific/solinas32_2e489m21_19limbs/feaddDisplay.v
+src/Specific/solinas32_2e489m21_19limbs/fecarry.v
+src/Specific/solinas32_2e489m21_19limbs/fecarryDisplay.v
 src/Specific/solinas32_2e489m21_19limbs/femul.v
 src/Specific/solinas32_2e489m21_19limbs/femulDisplay.v
 src/Specific/solinas32_2e489m21_19limbs/fesquare.v
@@ -3921,6 +4191,8 @@ src/Specific/solinas32_2e489m21_20limbs/CurveParameters.v
 src/Specific/solinas32_2e489m21_20limbs/Synthesis.v
 src/Specific/solinas32_2e489m21_20limbs/feadd.v
 src/Specific/solinas32_2e489m21_20limbs/feaddDisplay.v
+src/Specific/solinas32_2e489m21_20limbs/fecarry.v
+src/Specific/solinas32_2e489m21_20limbs/fecarryDisplay.v
 src/Specific/solinas32_2e489m21_20limbs/femul.v
 src/Specific/solinas32_2e489m21_20limbs/femulDisplay.v
 src/Specific/solinas32_2e489m21_20limbs/fesquare.v
@@ -3933,6 +4205,8 @@ src/Specific/solinas32_2e495m31_20limbs/CurveParameters.v
 src/Specific/solinas32_2e495m31_20limbs/Synthesis.v
 src/Specific/solinas32_2e495m31_20limbs/feadd.v
 src/Specific/solinas32_2e495m31_20limbs/feaddDisplay.v
+src/Specific/solinas32_2e495m31_20limbs/fecarry.v
+src/Specific/solinas32_2e495m31_20limbs/fecarryDisplay.v
 src/Specific/solinas32_2e495m31_20limbs/femul.v
 src/Specific/solinas32_2e495m31_20limbs/femulDisplay.v
 src/Specific/solinas32_2e495m31_20limbs/fesquare.v
@@ -3945,6 +4219,8 @@ src/Specific/solinas32_2e495m31_21limbs/CurveParameters.v
 src/Specific/solinas32_2e495m31_21limbs/Synthesis.v
 src/Specific/solinas32_2e495m31_21limbs/feadd.v
 src/Specific/solinas32_2e495m31_21limbs/feaddDisplay.v
+src/Specific/solinas32_2e495m31_21limbs/fecarry.v
+src/Specific/solinas32_2e495m31_21limbs/fecarryDisplay.v
 src/Specific/solinas32_2e495m31_21limbs/femul.v
 src/Specific/solinas32_2e495m31_21limbs/femulDisplay.v
 src/Specific/solinas32_2e495m31_21limbs/fesquare.v
@@ -3957,6 +4233,8 @@ src/Specific/solinas32_2e511m187_22limbs/CurveParameters.v
 src/Specific/solinas32_2e511m187_22limbs/Synthesis.v
 src/Specific/solinas32_2e511m187_22limbs/feadd.v
 src/Specific/solinas32_2e511m187_22limbs/feaddDisplay.v
+src/Specific/solinas32_2e511m187_22limbs/fecarry.v
+src/Specific/solinas32_2e511m187_22limbs/fecarryDisplay.v
 src/Specific/solinas32_2e511m187_22limbs/femul.v
 src/Specific/solinas32_2e511m187_22limbs/femulDisplay.v
 src/Specific/solinas32_2e511m187_22limbs/fesquare.v
@@ -3969,6 +4247,8 @@ src/Specific/solinas32_2e511m187_23limbs/CurveParameters.v
 src/Specific/solinas32_2e511m187_23limbs/Synthesis.v
 src/Specific/solinas32_2e511m187_23limbs/feadd.v
 src/Specific/solinas32_2e511m187_23limbs/feaddDisplay.v
+src/Specific/solinas32_2e511m187_23limbs/fecarry.v
+src/Specific/solinas32_2e511m187_23limbs/fecarryDisplay.v
 src/Specific/solinas32_2e511m187_23limbs/femul.v
 src/Specific/solinas32_2e511m187_23limbs/femulDisplay.v
 src/Specific/solinas32_2e511m187_23limbs/fesquare.v
@@ -3981,6 +4261,8 @@ src/Specific/solinas32_2e511m481_23limbs/CurveParameters.v
 src/Specific/solinas32_2e511m481_23limbs/Synthesis.v
 src/Specific/solinas32_2e511m481_23limbs/feadd.v
 src/Specific/solinas32_2e511m481_23limbs/feaddDisplay.v
+src/Specific/solinas32_2e511m481_23limbs/fecarry.v
+src/Specific/solinas32_2e511m481_23limbs/fecarryDisplay.v
 src/Specific/solinas32_2e511m481_23limbs/femul.v
 src/Specific/solinas32_2e511m481_23limbs/femulDisplay.v
 src/Specific/solinas32_2e511m481_23limbs/fesquare.v
@@ -3993,6 +4275,8 @@ src/Specific/solinas32_2e511m481_24limbs/CurveParameters.v
 src/Specific/solinas32_2e511m481_24limbs/Synthesis.v
 src/Specific/solinas32_2e511m481_24limbs/feadd.v
 src/Specific/solinas32_2e511m481_24limbs/feaddDisplay.v
+src/Specific/solinas32_2e511m481_24limbs/fecarry.v
+src/Specific/solinas32_2e511m481_24limbs/fecarryDisplay.v
 src/Specific/solinas32_2e511m481_24limbs/femul.v
 src/Specific/solinas32_2e511m481_24limbs/femulDisplay.v
 src/Specific/solinas32_2e511m481_24limbs/fesquare.v
@@ -4005,6 +4289,8 @@ src/Specific/solinas32_2e512m569_24limbs/CurveParameters.v
 src/Specific/solinas32_2e512m569_24limbs/Synthesis.v
 src/Specific/solinas32_2e512m569_24limbs/feadd.v
 src/Specific/solinas32_2e512m569_24limbs/feaddDisplay.v
+src/Specific/solinas32_2e512m569_24limbs/fecarry.v
+src/Specific/solinas32_2e512m569_24limbs/fecarryDisplay.v
 src/Specific/solinas32_2e512m569_24limbs/femul.v
 src/Specific/solinas32_2e512m569_24limbs/femulDisplay.v
 src/Specific/solinas32_2e512m569_24limbs/fesquare.v
@@ -4017,6 +4303,8 @@ src/Specific/solinas32_2e512m569_25limbs/CurveParameters.v
 src/Specific/solinas32_2e512m569_25limbs/Synthesis.v
 src/Specific/solinas32_2e512m569_25limbs/feadd.v
 src/Specific/solinas32_2e512m569_25limbs/feaddDisplay.v
+src/Specific/solinas32_2e512m569_25limbs/fecarry.v
+src/Specific/solinas32_2e512m569_25limbs/fecarryDisplay.v
 src/Specific/solinas32_2e512m569_25limbs/femul.v
 src/Specific/solinas32_2e512m569_25limbs/femulDisplay.v
 src/Specific/solinas32_2e512m569_25limbs/fesquare.v
@@ -4029,6 +4317,8 @@ src/Specific/solinas32_2e521m1_19limbs/CurveParameters.v
 src/Specific/solinas32_2e521m1_19limbs/Synthesis.v
 src/Specific/solinas32_2e521m1_19limbs/feadd.v
 src/Specific/solinas32_2e521m1_19limbs/feaddDisplay.v
+src/Specific/solinas32_2e521m1_19limbs/fecarry.v
+src/Specific/solinas32_2e521m1_19limbs/fecarryDisplay.v
 src/Specific/solinas32_2e521m1_19limbs/femul.v
 src/Specific/solinas32_2e521m1_19limbs/femulDisplay.v
 src/Specific/solinas32_2e521m1_19limbs/fesquare.v
@@ -4041,6 +4331,8 @@ src/Specific/solinas32_2e521m1_20limbs/CurveParameters.v
 src/Specific/solinas32_2e521m1_20limbs/Synthesis.v
 src/Specific/solinas32_2e521m1_20limbs/feadd.v
 src/Specific/solinas32_2e521m1_20limbs/feaddDisplay.v
+src/Specific/solinas32_2e521m1_20limbs/fecarry.v
+src/Specific/solinas32_2e521m1_20limbs/fecarryDisplay.v
 src/Specific/solinas32_2e521m1_20limbs/femul.v
 src/Specific/solinas32_2e521m1_20limbs/femulDisplay.v
 src/Specific/solinas32_2e521m1_20limbs/fesquare.v
@@ -4053,6 +4345,8 @@ src/Specific/solinas64_2e127m1_3limbs/CurveParameters.v
 src/Specific/solinas64_2e127m1_3limbs/Synthesis.v
 src/Specific/solinas64_2e127m1_3limbs/feadd.v
 src/Specific/solinas64_2e127m1_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e127m1_3limbs/fecarry.v
+src/Specific/solinas64_2e127m1_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e127m1_3limbs/femul.v
 src/Specific/solinas64_2e127m1_3limbs/femulDisplay.v
 src/Specific/solinas64_2e127m1_3limbs/fesquare.v
@@ -4065,6 +4359,8 @@ src/Specific/solinas64_2e129m25_3limbs/CurveParameters.v
 src/Specific/solinas64_2e129m25_3limbs/Synthesis.v
 src/Specific/solinas64_2e129m25_3limbs/feadd.v
 src/Specific/solinas64_2e129m25_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e129m25_3limbs/fecarry.v
+src/Specific/solinas64_2e129m25_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e129m25_3limbs/femul.v
 src/Specific/solinas64_2e129m25_3limbs/femulDisplay.v
 src/Specific/solinas64_2e129m25_3limbs/fesquare.v
@@ -4077,6 +4373,8 @@ src/Specific/solinas64_2e129m25_4limbs/CurveParameters.v
 src/Specific/solinas64_2e129m25_4limbs/Synthesis.v
 src/Specific/solinas64_2e129m25_4limbs/feadd.v
 src/Specific/solinas64_2e129m25_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e129m25_4limbs/fecarry.v
+src/Specific/solinas64_2e129m25_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e129m25_4limbs/femul.v
 src/Specific/solinas64_2e129m25_4limbs/femulDisplay.v
 src/Specific/solinas64_2e129m25_4limbs/fesquare.v
@@ -4089,6 +4387,8 @@ src/Specific/solinas64_2e130m5_3limbs/CurveParameters.v
 src/Specific/solinas64_2e130m5_3limbs/Synthesis.v
 src/Specific/solinas64_2e130m5_3limbs/feadd.v
 src/Specific/solinas64_2e130m5_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e130m5_3limbs/fecarry.v
+src/Specific/solinas64_2e130m5_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e130m5_3limbs/femul.v
 src/Specific/solinas64_2e130m5_3limbs/femulDisplay.v
 src/Specific/solinas64_2e130m5_3limbs/fesquare.v
@@ -4101,6 +4401,8 @@ src/Specific/solinas64_2e130m5_4limbs/CurveParameters.v
 src/Specific/solinas64_2e130m5_4limbs/Synthesis.v
 src/Specific/solinas64_2e130m5_4limbs/feadd.v
 src/Specific/solinas64_2e130m5_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e130m5_4limbs/fecarry.v
+src/Specific/solinas64_2e130m5_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e130m5_4limbs/femul.v
 src/Specific/solinas64_2e130m5_4limbs/femulDisplay.v
 src/Specific/solinas64_2e130m5_4limbs/fesquare.v
@@ -4113,6 +4415,8 @@ src/Specific/solinas64_2e137m13_3limbs/CurveParameters.v
 src/Specific/solinas64_2e137m13_3limbs/Synthesis.v
 src/Specific/solinas64_2e137m13_3limbs/feadd.v
 src/Specific/solinas64_2e137m13_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e137m13_3limbs/fecarry.v
+src/Specific/solinas64_2e137m13_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e137m13_3limbs/femul.v
 src/Specific/solinas64_2e137m13_3limbs/femulDisplay.v
 src/Specific/solinas64_2e137m13_3limbs/fesquare.v
@@ -4125,6 +4429,8 @@ src/Specific/solinas64_2e137m13_4limbs/CurveParameters.v
 src/Specific/solinas64_2e137m13_4limbs/Synthesis.v
 src/Specific/solinas64_2e137m13_4limbs/feadd.v
 src/Specific/solinas64_2e137m13_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e137m13_4limbs/fecarry.v
+src/Specific/solinas64_2e137m13_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e137m13_4limbs/femul.v
 src/Specific/solinas64_2e137m13_4limbs/femulDisplay.v
 src/Specific/solinas64_2e137m13_4limbs/fesquare.v
@@ -4137,6 +4443,8 @@ src/Specific/solinas64_2e140m27_3limbs/CurveParameters.v
 src/Specific/solinas64_2e140m27_3limbs/Synthesis.v
 src/Specific/solinas64_2e140m27_3limbs/feadd.v
 src/Specific/solinas64_2e140m27_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e140m27_3limbs/fecarry.v
+src/Specific/solinas64_2e140m27_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e140m27_3limbs/femul.v
 src/Specific/solinas64_2e140m27_3limbs/femulDisplay.v
 src/Specific/solinas64_2e140m27_3limbs/fesquare.v
@@ -4149,6 +4457,8 @@ src/Specific/solinas64_2e140m27_4limbs/CurveParameters.v
 src/Specific/solinas64_2e140m27_4limbs/Synthesis.v
 src/Specific/solinas64_2e140m27_4limbs/feadd.v
 src/Specific/solinas64_2e140m27_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e140m27_4limbs/fecarry.v
+src/Specific/solinas64_2e140m27_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e140m27_4limbs/femul.v
 src/Specific/solinas64_2e140m27_4limbs/femulDisplay.v
 src/Specific/solinas64_2e140m27_4limbs/fesquare.v
@@ -4161,6 +4471,8 @@ src/Specific/solinas64_2e141m9_3limbs/CurveParameters.v
 src/Specific/solinas64_2e141m9_3limbs/Synthesis.v
 src/Specific/solinas64_2e141m9_3limbs/feadd.v
 src/Specific/solinas64_2e141m9_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e141m9_3limbs/fecarry.v
+src/Specific/solinas64_2e141m9_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e141m9_3limbs/femul.v
 src/Specific/solinas64_2e141m9_3limbs/femulDisplay.v
 src/Specific/solinas64_2e141m9_3limbs/fesquare.v
@@ -4173,6 +4485,8 @@ src/Specific/solinas64_2e141m9_4limbs/CurveParameters.v
 src/Specific/solinas64_2e141m9_4limbs/Synthesis.v
 src/Specific/solinas64_2e141m9_4limbs/feadd.v
 src/Specific/solinas64_2e141m9_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e141m9_4limbs/fecarry.v
+src/Specific/solinas64_2e141m9_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e141m9_4limbs/femul.v
 src/Specific/solinas64_2e141m9_4limbs/femulDisplay.v
 src/Specific/solinas64_2e141m9_4limbs/fesquare.v
@@ -4185,6 +4499,8 @@ src/Specific/solinas64_2e150m3_3limbs/CurveParameters.v
 src/Specific/solinas64_2e150m3_3limbs/Synthesis.v
 src/Specific/solinas64_2e150m3_3limbs/feadd.v
 src/Specific/solinas64_2e150m3_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e150m3_3limbs/fecarry.v
+src/Specific/solinas64_2e150m3_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e150m3_3limbs/femul.v
 src/Specific/solinas64_2e150m3_3limbs/femulDisplay.v
 src/Specific/solinas64_2e150m3_3limbs/fesquare.v
@@ -4197,6 +4513,8 @@ src/Specific/solinas64_2e150m3_4limbs/CurveParameters.v
 src/Specific/solinas64_2e150m3_4limbs/Synthesis.v
 src/Specific/solinas64_2e150m3_4limbs/feadd.v
 src/Specific/solinas64_2e150m3_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e150m3_4limbs/fecarry.v
+src/Specific/solinas64_2e150m3_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e150m3_4limbs/femul.v
 src/Specific/solinas64_2e150m3_4limbs/femulDisplay.v
 src/Specific/solinas64_2e150m3_4limbs/fesquare.v
@@ -4209,6 +4527,8 @@ src/Specific/solinas64_2e150m5_3limbs/CurveParameters.v
 src/Specific/solinas64_2e150m5_3limbs/Synthesis.v
 src/Specific/solinas64_2e150m5_3limbs/feadd.v
 src/Specific/solinas64_2e150m5_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e150m5_3limbs/fecarry.v
+src/Specific/solinas64_2e150m5_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e150m5_3limbs/femul.v
 src/Specific/solinas64_2e150m5_3limbs/femulDisplay.v
 src/Specific/solinas64_2e150m5_3limbs/fesquare.v
@@ -4221,6 +4541,8 @@ src/Specific/solinas64_2e150m5_4limbs/CurveParameters.v
 src/Specific/solinas64_2e150m5_4limbs/Synthesis.v
 src/Specific/solinas64_2e150m5_4limbs/feadd.v
 src/Specific/solinas64_2e150m5_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e150m5_4limbs/fecarry.v
+src/Specific/solinas64_2e150m5_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e150m5_4limbs/femul.v
 src/Specific/solinas64_2e150m5_4limbs/femulDisplay.v
 src/Specific/solinas64_2e150m5_4limbs/fesquare.v
@@ -4233,6 +4555,8 @@ src/Specific/solinas64_2e152m17_3limbs/CurveParameters.v
 src/Specific/solinas64_2e152m17_3limbs/Synthesis.v
 src/Specific/solinas64_2e152m17_3limbs/feadd.v
 src/Specific/solinas64_2e152m17_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e152m17_3limbs/fecarry.v
+src/Specific/solinas64_2e152m17_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e152m17_3limbs/femul.v
 src/Specific/solinas64_2e152m17_3limbs/femulDisplay.v
 src/Specific/solinas64_2e152m17_3limbs/fesquare.v
@@ -4245,6 +4569,8 @@ src/Specific/solinas64_2e152m17_4limbs/CurveParameters.v
 src/Specific/solinas64_2e152m17_4limbs/Synthesis.v
 src/Specific/solinas64_2e152m17_4limbs/feadd.v
 src/Specific/solinas64_2e152m17_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e152m17_4limbs/fecarry.v
+src/Specific/solinas64_2e152m17_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e152m17_4limbs/femul.v
 src/Specific/solinas64_2e152m17_4limbs/femulDisplay.v
 src/Specific/solinas64_2e152m17_4limbs/fesquare.v
@@ -4257,6 +4583,8 @@ src/Specific/solinas64_2e158m15_3limbs/CurveParameters.v
 src/Specific/solinas64_2e158m15_3limbs/Synthesis.v
 src/Specific/solinas64_2e158m15_3limbs/feadd.v
 src/Specific/solinas64_2e158m15_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e158m15_3limbs/fecarry.v
+src/Specific/solinas64_2e158m15_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e158m15_3limbs/femul.v
 src/Specific/solinas64_2e158m15_3limbs/femulDisplay.v
 src/Specific/solinas64_2e158m15_3limbs/fesquare.v
@@ -4269,6 +4597,8 @@ src/Specific/solinas64_2e158m15_4limbs/CurveParameters.v
 src/Specific/solinas64_2e158m15_4limbs/Synthesis.v
 src/Specific/solinas64_2e158m15_4limbs/feadd.v
 src/Specific/solinas64_2e158m15_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e158m15_4limbs/fecarry.v
+src/Specific/solinas64_2e158m15_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e158m15_4limbs/femul.v
 src/Specific/solinas64_2e158m15_4limbs/femulDisplay.v
 src/Specific/solinas64_2e158m15_4limbs/fesquare.v
@@ -4281,6 +4611,8 @@ src/Specific/solinas64_2e165m25_3limbs/CurveParameters.v
 src/Specific/solinas64_2e165m25_3limbs/Synthesis.v
 src/Specific/solinas64_2e165m25_3limbs/feadd.v
 src/Specific/solinas64_2e165m25_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e165m25_3limbs/fecarry.v
+src/Specific/solinas64_2e165m25_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e165m25_3limbs/femul.v
 src/Specific/solinas64_2e165m25_3limbs/femulDisplay.v
 src/Specific/solinas64_2e165m25_3limbs/fesquare.v
@@ -4293,6 +4625,8 @@ src/Specific/solinas64_2e165m25_4limbs/CurveParameters.v
 src/Specific/solinas64_2e165m25_4limbs/Synthesis.v
 src/Specific/solinas64_2e165m25_4limbs/feadd.v
 src/Specific/solinas64_2e165m25_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e165m25_4limbs/fecarry.v
+src/Specific/solinas64_2e165m25_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e165m25_4limbs/femul.v
 src/Specific/solinas64_2e165m25_4limbs/femulDisplay.v
 src/Specific/solinas64_2e165m25_4limbs/fesquare.v
@@ -4305,6 +4639,8 @@ src/Specific/solinas64_2e166m5_3limbs/CurveParameters.v
 src/Specific/solinas64_2e166m5_3limbs/Synthesis.v
 src/Specific/solinas64_2e166m5_3limbs/feadd.v
 src/Specific/solinas64_2e166m5_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e166m5_3limbs/fecarry.v
+src/Specific/solinas64_2e166m5_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e166m5_3limbs/femul.v
 src/Specific/solinas64_2e166m5_3limbs/femulDisplay.v
 src/Specific/solinas64_2e166m5_3limbs/fesquare.v
@@ -4317,6 +4653,8 @@ src/Specific/solinas64_2e166m5_4limbs/CurveParameters.v
 src/Specific/solinas64_2e166m5_4limbs/Synthesis.v
 src/Specific/solinas64_2e166m5_4limbs/feadd.v
 src/Specific/solinas64_2e166m5_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e166m5_4limbs/fecarry.v
+src/Specific/solinas64_2e166m5_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e166m5_4limbs/femul.v
 src/Specific/solinas64_2e166m5_4limbs/femulDisplay.v
 src/Specific/solinas64_2e166m5_4limbs/fesquare.v
@@ -4329,6 +4667,8 @@ src/Specific/solinas64_2e171m19_3limbs/CurveParameters.v
 src/Specific/solinas64_2e171m19_3limbs/Synthesis.v
 src/Specific/solinas64_2e171m19_3limbs/feadd.v
 src/Specific/solinas64_2e171m19_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e171m19_3limbs/fecarry.v
+src/Specific/solinas64_2e171m19_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e171m19_3limbs/femul.v
 src/Specific/solinas64_2e171m19_3limbs/femulDisplay.v
 src/Specific/solinas64_2e171m19_3limbs/fesquare.v
@@ -4341,6 +4681,8 @@ src/Specific/solinas64_2e171m19_4limbs/CurveParameters.v
 src/Specific/solinas64_2e171m19_4limbs/Synthesis.v
 src/Specific/solinas64_2e171m19_4limbs/feadd.v
 src/Specific/solinas64_2e171m19_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e171m19_4limbs/fecarry.v
+src/Specific/solinas64_2e171m19_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e171m19_4limbs/femul.v
 src/Specific/solinas64_2e171m19_4limbs/femulDisplay.v
 src/Specific/solinas64_2e171m19_4limbs/fesquare.v
@@ -4353,6 +4695,8 @@ src/Specific/solinas64_2e174m17_3limbs/CurveParameters.v
 src/Specific/solinas64_2e174m17_3limbs/Synthesis.v
 src/Specific/solinas64_2e174m17_3limbs/feadd.v
 src/Specific/solinas64_2e174m17_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e174m17_3limbs/fecarry.v
+src/Specific/solinas64_2e174m17_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e174m17_3limbs/femul.v
 src/Specific/solinas64_2e174m17_3limbs/femulDisplay.v
 src/Specific/solinas64_2e174m17_3limbs/fesquare.v
@@ -4365,6 +4709,8 @@ src/Specific/solinas64_2e174m17_4limbs/CurveParameters.v
 src/Specific/solinas64_2e174m17_4limbs/Synthesis.v
 src/Specific/solinas64_2e174m17_4limbs/feadd.v
 src/Specific/solinas64_2e174m17_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e174m17_4limbs/fecarry.v
+src/Specific/solinas64_2e174m17_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e174m17_4limbs/femul.v
 src/Specific/solinas64_2e174m17_4limbs/femulDisplay.v
 src/Specific/solinas64_2e174m17_4limbs/fesquare.v
@@ -4377,6 +4723,8 @@ src/Specific/solinas64_2e174m3_3limbs/CurveParameters.v
 src/Specific/solinas64_2e174m3_3limbs/Synthesis.v
 src/Specific/solinas64_2e174m3_3limbs/feadd.v
 src/Specific/solinas64_2e174m3_3limbs/feaddDisplay.v
+src/Specific/solinas64_2e174m3_3limbs/fecarry.v
+src/Specific/solinas64_2e174m3_3limbs/fecarryDisplay.v
 src/Specific/solinas64_2e174m3_3limbs/femul.v
 src/Specific/solinas64_2e174m3_3limbs/femulDisplay.v
 src/Specific/solinas64_2e174m3_3limbs/fesquare.v
@@ -4389,6 +4737,8 @@ src/Specific/solinas64_2e174m3_4limbs/CurveParameters.v
 src/Specific/solinas64_2e174m3_4limbs/Synthesis.v
 src/Specific/solinas64_2e174m3_4limbs/feadd.v
 src/Specific/solinas64_2e174m3_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e174m3_4limbs/fecarry.v
+src/Specific/solinas64_2e174m3_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e174m3_4limbs/femul.v
 src/Specific/solinas64_2e174m3_4limbs/femulDisplay.v
 src/Specific/solinas64_2e174m3_4limbs/fesquare.v
@@ -4401,6 +4751,8 @@ src/Specific/solinas64_2e189m25_4limbs/CurveParameters.v
 src/Specific/solinas64_2e189m25_4limbs/Synthesis.v
 src/Specific/solinas64_2e189m25_4limbs/feadd.v
 src/Specific/solinas64_2e189m25_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e189m25_4limbs/fecarry.v
+src/Specific/solinas64_2e189m25_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e189m25_4limbs/femul.v
 src/Specific/solinas64_2e189m25_4limbs/femulDisplay.v
 src/Specific/solinas64_2e189m25_4limbs/fesquare.v
@@ -4413,6 +4765,8 @@ src/Specific/solinas64_2e189m25_5limbs/CurveParameters.v
 src/Specific/solinas64_2e189m25_5limbs/Synthesis.v
 src/Specific/solinas64_2e189m25_5limbs/feadd.v
 src/Specific/solinas64_2e189m25_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e189m25_5limbs/fecarry.v
+src/Specific/solinas64_2e189m25_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e189m25_5limbs/femul.v
 src/Specific/solinas64_2e189m25_5limbs/femulDisplay.v
 src/Specific/solinas64_2e189m25_5limbs/fesquare.v
@@ -4425,6 +4779,8 @@ src/Specific/solinas64_2e190m11_4limbs/CurveParameters.v
 src/Specific/solinas64_2e190m11_4limbs/Synthesis.v
 src/Specific/solinas64_2e190m11_4limbs/feadd.v
 src/Specific/solinas64_2e190m11_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e190m11_4limbs/fecarry.v
+src/Specific/solinas64_2e190m11_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e190m11_4limbs/femul.v
 src/Specific/solinas64_2e190m11_4limbs/femulDisplay.v
 src/Specific/solinas64_2e190m11_4limbs/fesquare.v
@@ -4437,6 +4793,8 @@ src/Specific/solinas64_2e190m11_5limbs/CurveParameters.v
 src/Specific/solinas64_2e190m11_5limbs/Synthesis.v
 src/Specific/solinas64_2e190m11_5limbs/feadd.v
 src/Specific/solinas64_2e190m11_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e190m11_5limbs/fecarry.v
+src/Specific/solinas64_2e190m11_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e190m11_5limbs/femul.v
 src/Specific/solinas64_2e190m11_5limbs/femulDisplay.v
 src/Specific/solinas64_2e190m11_5limbs/fesquare.v
@@ -4449,6 +4807,8 @@ src/Specific/solinas64_2e191m19_4limbs/CurveParameters.v
 src/Specific/solinas64_2e191m19_4limbs/Synthesis.v
 src/Specific/solinas64_2e191m19_4limbs/feadd.v
 src/Specific/solinas64_2e191m19_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e191m19_4limbs/fecarry.v
+src/Specific/solinas64_2e191m19_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e191m19_4limbs/femul.v
 src/Specific/solinas64_2e191m19_4limbs/femulDisplay.v
 src/Specific/solinas64_2e191m19_4limbs/fesquare.v
@@ -4461,6 +4821,8 @@ src/Specific/solinas64_2e191m19_5limbs/CurveParameters.v
 src/Specific/solinas64_2e191m19_5limbs/Synthesis.v
 src/Specific/solinas64_2e191m19_5limbs/feadd.v
 src/Specific/solinas64_2e191m19_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e191m19_5limbs/fecarry.v
+src/Specific/solinas64_2e191m19_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e191m19_5limbs/femul.v
 src/Specific/solinas64_2e191m19_5limbs/femulDisplay.v
 src/Specific/solinas64_2e191m19_5limbs/fesquare.v
@@ -4473,6 +4835,8 @@ src/Specific/solinas64_2e192m2e64m1_4limbs/CurveParameters.v
 src/Specific/solinas64_2e192m2e64m1_4limbs/Synthesis.v
 src/Specific/solinas64_2e192m2e64m1_4limbs/feadd.v
 src/Specific/solinas64_2e192m2e64m1_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e192m2e64m1_4limbs/fecarry.v
+src/Specific/solinas64_2e192m2e64m1_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e192m2e64m1_4limbs/femul.v
 src/Specific/solinas64_2e192m2e64m1_4limbs/femulDisplay.v
 src/Specific/solinas64_2e192m2e64m1_4limbs/fesquare.v
@@ -4485,6 +4849,8 @@ src/Specific/solinas64_2e192m2e64m1_5limbs/CurveParameters.v
 src/Specific/solinas64_2e192m2e64m1_5limbs/Synthesis.v
 src/Specific/solinas64_2e192m2e64m1_5limbs/feadd.v
 src/Specific/solinas64_2e192m2e64m1_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e192m2e64m1_5limbs/fecarry.v
+src/Specific/solinas64_2e192m2e64m1_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e192m2e64m1_5limbs/femul.v
 src/Specific/solinas64_2e192m2e64m1_5limbs/femulDisplay.v
 src/Specific/solinas64_2e192m2e64m1_5limbs/fesquare.v
@@ -4497,6 +4863,8 @@ src/Specific/solinas64_2e194m33_4limbs/CurveParameters.v
 src/Specific/solinas64_2e194m33_4limbs/Synthesis.v
 src/Specific/solinas64_2e194m33_4limbs/feadd.v
 src/Specific/solinas64_2e194m33_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e194m33_4limbs/fecarry.v
+src/Specific/solinas64_2e194m33_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e194m33_4limbs/femul.v
 src/Specific/solinas64_2e194m33_4limbs/femulDisplay.v
 src/Specific/solinas64_2e194m33_4limbs/fesquare.v
@@ -4509,6 +4877,8 @@ src/Specific/solinas64_2e194m33_5limbs/CurveParameters.v
 src/Specific/solinas64_2e194m33_5limbs/Synthesis.v
 src/Specific/solinas64_2e194m33_5limbs/feadd.v
 src/Specific/solinas64_2e194m33_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e194m33_5limbs/fecarry.v
+src/Specific/solinas64_2e194m33_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e194m33_5limbs/femul.v
 src/Specific/solinas64_2e194m33_5limbs/femulDisplay.v
 src/Specific/solinas64_2e194m33_5limbs/fesquare.v
@@ -4521,6 +4891,8 @@ src/Specific/solinas64_2e196m15_4limbs/CurveParameters.v
 src/Specific/solinas64_2e196m15_4limbs/Synthesis.v
 src/Specific/solinas64_2e196m15_4limbs/feadd.v
 src/Specific/solinas64_2e196m15_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e196m15_4limbs/fecarry.v
+src/Specific/solinas64_2e196m15_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e196m15_4limbs/femul.v
 src/Specific/solinas64_2e196m15_4limbs/femulDisplay.v
 src/Specific/solinas64_2e196m15_4limbs/fesquare.v
@@ -4533,6 +4905,8 @@ src/Specific/solinas64_2e196m15_5limbs/CurveParameters.v
 src/Specific/solinas64_2e196m15_5limbs/Synthesis.v
 src/Specific/solinas64_2e196m15_5limbs/feadd.v
 src/Specific/solinas64_2e196m15_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e196m15_5limbs/fecarry.v
+src/Specific/solinas64_2e196m15_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e196m15_5limbs/femul.v
 src/Specific/solinas64_2e196m15_5limbs/femulDisplay.v
 src/Specific/solinas64_2e196m15_5limbs/fesquare.v
@@ -4545,6 +4919,8 @@ src/Specific/solinas64_2e198m17_4limbs/CurveParameters.v
 src/Specific/solinas64_2e198m17_4limbs/Synthesis.v
 src/Specific/solinas64_2e198m17_4limbs/feadd.v
 src/Specific/solinas64_2e198m17_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e198m17_4limbs/fecarry.v
+src/Specific/solinas64_2e198m17_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e198m17_4limbs/femul.v
 src/Specific/solinas64_2e198m17_4limbs/femulDisplay.v
 src/Specific/solinas64_2e198m17_4limbs/fesquare.v
@@ -4557,6 +4933,8 @@ src/Specific/solinas64_2e198m17_5limbs/CurveParameters.v
 src/Specific/solinas64_2e198m17_5limbs/Synthesis.v
 src/Specific/solinas64_2e198m17_5limbs/feadd.v
 src/Specific/solinas64_2e198m17_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e198m17_5limbs/fecarry.v
+src/Specific/solinas64_2e198m17_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e198m17_5limbs/femul.v
 src/Specific/solinas64_2e198m17_5limbs/femulDisplay.v
 src/Specific/solinas64_2e198m17_5limbs/fesquare.v
@@ -4569,6 +4947,8 @@ src/Specific/solinas64_2e206m5_4limbs/CurveParameters.v
 src/Specific/solinas64_2e206m5_4limbs/Synthesis.v
 src/Specific/solinas64_2e206m5_4limbs/feadd.v
 src/Specific/solinas64_2e206m5_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e206m5_4limbs/fecarry.v
+src/Specific/solinas64_2e206m5_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e206m5_4limbs/femul.v
 src/Specific/solinas64_2e206m5_4limbs/femulDisplay.v
 src/Specific/solinas64_2e206m5_4limbs/fesquare.v
@@ -4581,6 +4961,8 @@ src/Specific/solinas64_2e206m5_5limbs/CurveParameters.v
 src/Specific/solinas64_2e206m5_5limbs/Synthesis.v
 src/Specific/solinas64_2e206m5_5limbs/feadd.v
 src/Specific/solinas64_2e206m5_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e206m5_5limbs/fecarry.v
+src/Specific/solinas64_2e206m5_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e206m5_5limbs/femul.v
 src/Specific/solinas64_2e206m5_5limbs/femulDisplay.v
 src/Specific/solinas64_2e206m5_5limbs/fesquare.v
@@ -4593,6 +4975,8 @@ src/Specific/solinas64_2e212m29_4limbs/CurveParameters.v
 src/Specific/solinas64_2e212m29_4limbs/Synthesis.v
 src/Specific/solinas64_2e212m29_4limbs/feadd.v
 src/Specific/solinas64_2e212m29_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e212m29_4limbs/fecarry.v
+src/Specific/solinas64_2e212m29_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e212m29_4limbs/femul.v
 src/Specific/solinas64_2e212m29_4limbs/femulDisplay.v
 src/Specific/solinas64_2e212m29_4limbs/fesquare.v
@@ -4605,6 +4989,8 @@ src/Specific/solinas64_2e212m29_5limbs/CurveParameters.v
 src/Specific/solinas64_2e212m29_5limbs/Synthesis.v
 src/Specific/solinas64_2e212m29_5limbs/feadd.v
 src/Specific/solinas64_2e212m29_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e212m29_5limbs/fecarry.v
+src/Specific/solinas64_2e212m29_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e212m29_5limbs/femul.v
 src/Specific/solinas64_2e212m29_5limbs/femulDisplay.v
 src/Specific/solinas64_2e212m29_5limbs/fesquare.v
@@ -4617,6 +5003,8 @@ src/Specific/solinas64_2e213m3_4limbs/CurveParameters.v
 src/Specific/solinas64_2e213m3_4limbs/Synthesis.v
 src/Specific/solinas64_2e213m3_4limbs/feadd.v
 src/Specific/solinas64_2e213m3_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e213m3_4limbs/fecarry.v
+src/Specific/solinas64_2e213m3_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e213m3_4limbs/femul.v
 src/Specific/solinas64_2e213m3_4limbs/femulDisplay.v
 src/Specific/solinas64_2e213m3_4limbs/fesquare.v
@@ -4629,6 +5017,8 @@ src/Specific/solinas64_2e213m3_5limbs/CurveParameters.v
 src/Specific/solinas64_2e213m3_5limbs/Synthesis.v
 src/Specific/solinas64_2e213m3_5limbs/feadd.v
 src/Specific/solinas64_2e213m3_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e213m3_5limbs/fecarry.v
+src/Specific/solinas64_2e213m3_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e213m3_5limbs/femul.v
 src/Specific/solinas64_2e213m3_5limbs/femulDisplay.v
 src/Specific/solinas64_2e213m3_5limbs/fesquare.v
@@ -4641,6 +5031,8 @@ src/Specific/solinas64_2e216m2e108m1_4limbs/CurveParameters.v
 src/Specific/solinas64_2e216m2e108m1_4limbs/Synthesis.v
 src/Specific/solinas64_2e216m2e108m1_4limbs/feadd.v
 src/Specific/solinas64_2e216m2e108m1_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e216m2e108m1_4limbs/fecarry.v
+src/Specific/solinas64_2e216m2e108m1_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e216m2e108m1_4limbs/femul.v
 src/Specific/solinas64_2e216m2e108m1_4limbs/femulDisplay.v
 src/Specific/solinas64_2e216m2e108m1_4limbs/fesquare.v
@@ -4653,6 +5045,8 @@ src/Specific/solinas64_2e216m2e108m1_5limbs/CurveParameters.v
 src/Specific/solinas64_2e216m2e108m1_5limbs/Synthesis.v
 src/Specific/solinas64_2e216m2e108m1_5limbs/feadd.v
 src/Specific/solinas64_2e216m2e108m1_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e216m2e108m1_5limbs/fecarry.v
+src/Specific/solinas64_2e216m2e108m1_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e216m2e108m1_5limbs/femul.v
 src/Specific/solinas64_2e216m2e108m1_5limbs/femulDisplay.v
 src/Specific/solinas64_2e216m2e108m1_5limbs/fesquare.v
@@ -4665,6 +5059,8 @@ src/Specific/solinas64_2e221m3_4limbs/CurveParameters.v
 src/Specific/solinas64_2e221m3_4limbs/Synthesis.v
 src/Specific/solinas64_2e221m3_4limbs/feadd.v
 src/Specific/solinas64_2e221m3_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e221m3_4limbs/fecarry.v
+src/Specific/solinas64_2e221m3_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e221m3_4limbs/femul.v
 src/Specific/solinas64_2e221m3_4limbs/femulDisplay.v
 src/Specific/solinas64_2e221m3_4limbs/fesquare.v
@@ -4677,6 +5073,8 @@ src/Specific/solinas64_2e221m3_5limbs/CurveParameters.v
 src/Specific/solinas64_2e221m3_5limbs/Synthesis.v
 src/Specific/solinas64_2e221m3_5limbs/feadd.v
 src/Specific/solinas64_2e221m3_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e221m3_5limbs/fecarry.v
+src/Specific/solinas64_2e221m3_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e221m3_5limbs/femul.v
 src/Specific/solinas64_2e221m3_5limbs/femulDisplay.v
 src/Specific/solinas64_2e221m3_5limbs/fesquare.v
@@ -4689,6 +5087,8 @@ src/Specific/solinas64_2e222m117_4limbs/CurveParameters.v
 src/Specific/solinas64_2e222m117_4limbs/Synthesis.v
 src/Specific/solinas64_2e222m117_4limbs/feadd.v
 src/Specific/solinas64_2e222m117_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e222m117_4limbs/fecarry.v
+src/Specific/solinas64_2e222m117_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e222m117_4limbs/femul.v
 src/Specific/solinas64_2e222m117_4limbs/femulDisplay.v
 src/Specific/solinas64_2e222m117_4limbs/fesquare.v
@@ -4701,6 +5101,8 @@ src/Specific/solinas64_2e222m117_5limbs/CurveParameters.v
 src/Specific/solinas64_2e222m117_5limbs/Synthesis.v
 src/Specific/solinas64_2e222m117_5limbs/feadd.v
 src/Specific/solinas64_2e222m117_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e222m117_5limbs/fecarry.v
+src/Specific/solinas64_2e222m117_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e222m117_5limbs/femul.v
 src/Specific/solinas64_2e222m117_5limbs/femulDisplay.v
 src/Specific/solinas64_2e222m117_5limbs/fesquare.v
@@ -4713,6 +5115,8 @@ src/Specific/solinas64_2e224m2e96p1_5limbs/CurveParameters.v
 src/Specific/solinas64_2e224m2e96p1_5limbs/Synthesis.v
 src/Specific/solinas64_2e224m2e96p1_5limbs/feadd.v
 src/Specific/solinas64_2e224m2e96p1_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e224m2e96p1_5limbs/fecarry.v
+src/Specific/solinas64_2e224m2e96p1_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e224m2e96p1_5limbs/femul.v
 src/Specific/solinas64_2e224m2e96p1_5limbs/femulDisplay.v
 src/Specific/solinas64_2e224m2e96p1_5limbs/fesquare.v
@@ -4725,6 +5129,8 @@ src/Specific/solinas64_2e224m2e96p1_6limbs/CurveParameters.v
 src/Specific/solinas64_2e224m2e96p1_6limbs/Synthesis.v
 src/Specific/solinas64_2e224m2e96p1_6limbs/feadd.v
 src/Specific/solinas64_2e224m2e96p1_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e224m2e96p1_6limbs/fecarry.v
+src/Specific/solinas64_2e224m2e96p1_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e224m2e96p1_6limbs/femul.v
 src/Specific/solinas64_2e224m2e96p1_6limbs/femulDisplay.v
 src/Specific/solinas64_2e224m2e96p1_6limbs/fesquare.v
@@ -4737,6 +5143,8 @@ src/Specific/solinas64_2e226m5_4limbs/CurveParameters.v
 src/Specific/solinas64_2e226m5_4limbs/Synthesis.v
 src/Specific/solinas64_2e226m5_4limbs/feadd.v
 src/Specific/solinas64_2e226m5_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e226m5_4limbs/fecarry.v
+src/Specific/solinas64_2e226m5_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e226m5_4limbs/femul.v
 src/Specific/solinas64_2e226m5_4limbs/femulDisplay.v
 src/Specific/solinas64_2e226m5_4limbs/fesquare.v
@@ -4749,6 +5157,8 @@ src/Specific/solinas64_2e226m5_5limbs/CurveParameters.v
 src/Specific/solinas64_2e226m5_5limbs/Synthesis.v
 src/Specific/solinas64_2e226m5_5limbs/feadd.v
 src/Specific/solinas64_2e226m5_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e226m5_5limbs/fecarry.v
+src/Specific/solinas64_2e226m5_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e226m5_5limbs/femul.v
 src/Specific/solinas64_2e226m5_5limbs/femulDisplay.v
 src/Specific/solinas64_2e226m5_5limbs/fesquare.v
@@ -4761,6 +5171,8 @@ src/Specific/solinas64_2e230m27_4limbs/CurveParameters.v
 src/Specific/solinas64_2e230m27_4limbs/Synthesis.v
 src/Specific/solinas64_2e230m27_4limbs/feadd.v
 src/Specific/solinas64_2e230m27_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e230m27_4limbs/fecarry.v
+src/Specific/solinas64_2e230m27_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e230m27_4limbs/femul.v
 src/Specific/solinas64_2e230m27_4limbs/femulDisplay.v
 src/Specific/solinas64_2e230m27_4limbs/fesquare.v
@@ -4773,6 +5185,8 @@ src/Specific/solinas64_2e230m27_5limbs/CurveParameters.v
 src/Specific/solinas64_2e230m27_5limbs/Synthesis.v
 src/Specific/solinas64_2e230m27_5limbs/feadd.v
 src/Specific/solinas64_2e230m27_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e230m27_5limbs/fecarry.v
+src/Specific/solinas64_2e230m27_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e230m27_5limbs/femul.v
 src/Specific/solinas64_2e230m27_5limbs/femulDisplay.v
 src/Specific/solinas64_2e230m27_5limbs/fesquare.v
@@ -4785,6 +5199,8 @@ src/Specific/solinas64_2e235m15_4limbs/CurveParameters.v
 src/Specific/solinas64_2e235m15_4limbs/Synthesis.v
 src/Specific/solinas64_2e235m15_4limbs/feadd.v
 src/Specific/solinas64_2e235m15_4limbs/feaddDisplay.v
+src/Specific/solinas64_2e235m15_4limbs/fecarry.v
+src/Specific/solinas64_2e235m15_4limbs/fecarryDisplay.v
 src/Specific/solinas64_2e235m15_4limbs/femul.v
 src/Specific/solinas64_2e235m15_4limbs/femulDisplay.v
 src/Specific/solinas64_2e235m15_4limbs/fesquare.v
@@ -4797,6 +5213,8 @@ src/Specific/solinas64_2e235m15_5limbs/CurveParameters.v
 src/Specific/solinas64_2e235m15_5limbs/Synthesis.v
 src/Specific/solinas64_2e235m15_5limbs/feadd.v
 src/Specific/solinas64_2e235m15_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e235m15_5limbs/fecarry.v
+src/Specific/solinas64_2e235m15_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e235m15_5limbs/femul.v
 src/Specific/solinas64_2e235m15_5limbs/femulDisplay.v
 src/Specific/solinas64_2e235m15_5limbs/fesquare.v
@@ -4809,6 +5227,8 @@ src/Specific/solinas64_2e243m9_5limbs/CurveParameters.v
 src/Specific/solinas64_2e243m9_5limbs/Synthesis.v
 src/Specific/solinas64_2e243m9_5limbs/feadd.v
 src/Specific/solinas64_2e243m9_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e243m9_5limbs/fecarry.v
+src/Specific/solinas64_2e243m9_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e243m9_5limbs/femul.v
 src/Specific/solinas64_2e243m9_5limbs/femulDisplay.v
 src/Specific/solinas64_2e243m9_5limbs/fesquare.v
@@ -4821,6 +5241,8 @@ src/Specific/solinas64_2e243m9_6limbs/CurveParameters.v
 src/Specific/solinas64_2e243m9_6limbs/Synthesis.v
 src/Specific/solinas64_2e243m9_6limbs/feadd.v
 src/Specific/solinas64_2e243m9_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e243m9_6limbs/fecarry.v
+src/Specific/solinas64_2e243m9_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e243m9_6limbs/femul.v
 src/Specific/solinas64_2e243m9_6limbs/femulDisplay.v
 src/Specific/solinas64_2e243m9_6limbs/fesquare.v
@@ -4833,6 +5255,8 @@ src/Specific/solinas64_2e251m9_5limbs/CurveParameters.v
 src/Specific/solinas64_2e251m9_5limbs/Synthesis.v
 src/Specific/solinas64_2e251m9_5limbs/feadd.v
 src/Specific/solinas64_2e251m9_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e251m9_5limbs/fecarry.v
+src/Specific/solinas64_2e251m9_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e251m9_5limbs/femul.v
 src/Specific/solinas64_2e251m9_5limbs/femulDisplay.v
 src/Specific/solinas64_2e251m9_5limbs/fesquare.v
@@ -4845,6 +5269,8 @@ src/Specific/solinas64_2e251m9_6limbs/CurveParameters.v
 src/Specific/solinas64_2e251m9_6limbs/Synthesis.v
 src/Specific/solinas64_2e251m9_6limbs/feadd.v
 src/Specific/solinas64_2e251m9_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e251m9_6limbs/fecarry.v
+src/Specific/solinas64_2e251m9_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e251m9_6limbs/femul.v
 src/Specific/solinas64_2e251m9_6limbs/femulDisplay.v
 src/Specific/solinas64_2e251m9_6limbs/fesquare.v
@@ -4857,6 +5283,8 @@ src/Specific/solinas64_2e255m19_5limbs/CurveParameters.v
 src/Specific/solinas64_2e255m19_5limbs/Synthesis.v
 src/Specific/solinas64_2e255m19_5limbs/feadd.v
 src/Specific/solinas64_2e255m19_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e255m19_5limbs/fecarry.v
+src/Specific/solinas64_2e255m19_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e255m19_5limbs/femul.v
 src/Specific/solinas64_2e255m19_5limbs/femulDisplay.v
 src/Specific/solinas64_2e255m19_5limbs/fesquare.v
@@ -4869,6 +5297,8 @@ src/Specific/solinas64_2e255m19_6limbs/CurveParameters.v
 src/Specific/solinas64_2e255m19_6limbs/Synthesis.v
 src/Specific/solinas64_2e255m19_6limbs/feadd.v
 src/Specific/solinas64_2e255m19_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e255m19_6limbs/fecarry.v
+src/Specific/solinas64_2e255m19_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e255m19_6limbs/femul.v
 src/Specific/solinas64_2e255m19_6limbs/femulDisplay.v
 src/Specific/solinas64_2e255m19_6limbs/fesquare.v
@@ -4881,6 +5311,8 @@ src/Specific/solinas64_2e255m765_5limbs/CurveParameters.v
 src/Specific/solinas64_2e255m765_5limbs/Synthesis.v
 src/Specific/solinas64_2e255m765_5limbs/feadd.v
 src/Specific/solinas64_2e255m765_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e255m765_5limbs/fecarry.v
+src/Specific/solinas64_2e255m765_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e255m765_5limbs/femul.v
 src/Specific/solinas64_2e255m765_5limbs/femulDisplay.v
 src/Specific/solinas64_2e255m765_5limbs/fesquare.v
@@ -4893,6 +5325,8 @@ src/Specific/solinas64_2e255m765_6limbs/CurveParameters.v
 src/Specific/solinas64_2e255m765_6limbs/Synthesis.v
 src/Specific/solinas64_2e255m765_6limbs/feadd.v
 src/Specific/solinas64_2e255m765_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e255m765_6limbs/fecarry.v
+src/Specific/solinas64_2e255m765_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e255m765_6limbs/femul.v
 src/Specific/solinas64_2e255m765_6limbs/femulDisplay.v
 src/Specific/solinas64_2e255m765_6limbs/fesquare.v
@@ -4905,6 +5339,8 @@ src/Specific/solinas64_2e256m189_5limbs/CurveParameters.v
 src/Specific/solinas64_2e256m189_5limbs/Synthesis.v
 src/Specific/solinas64_2e256m189_5limbs/feadd.v
 src/Specific/solinas64_2e256m189_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m189_5limbs/fecarry.v
+src/Specific/solinas64_2e256m189_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m189_5limbs/femul.v
 src/Specific/solinas64_2e256m189_5limbs/femulDisplay.v
 src/Specific/solinas64_2e256m189_5limbs/fesquare.v
@@ -4917,6 +5353,8 @@ src/Specific/solinas64_2e256m189_6limbs/CurveParameters.v
 src/Specific/solinas64_2e256m189_6limbs/Synthesis.v
 src/Specific/solinas64_2e256m189_6limbs/feadd.v
 src/Specific/solinas64_2e256m189_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m189_6limbs/fecarry.v
+src/Specific/solinas64_2e256m189_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m189_6limbs/femul.v
 src/Specific/solinas64_2e256m189_6limbs/femulDisplay.v
 src/Specific/solinas64_2e256m189_6limbs/fesquare.v
@@ -4929,6 +5367,8 @@ src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/CurveParameters.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/Synthesis.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/feadd.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/fecarry.v
+src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/femul.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/femulDisplay.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_5limbs/fesquare.v
@@ -4941,6 +5381,8 @@ src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/CurveParameters.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/Synthesis.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/feadd.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/fecarry.v
+src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/femul.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/femulDisplay.v
 src/Specific/solinas64_2e256m2e224p2e192p2e96m1_6limbs/fesquare.v
@@ -4953,6 +5395,8 @@ src/Specific/solinas64_2e256m2e32m977_6limbs/CurveParameters.v
 src/Specific/solinas64_2e256m2e32m977_6limbs/Synthesis.v
 src/Specific/solinas64_2e256m2e32m977_6limbs/feadd.v
 src/Specific/solinas64_2e256m2e32m977_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m2e32m977_6limbs/fecarry.v
+src/Specific/solinas64_2e256m2e32m977_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m2e32m977_6limbs/femul.v
 src/Specific/solinas64_2e256m2e32m977_6limbs/femulDisplay.v
 src/Specific/solinas64_2e256m2e32m977_6limbs/fesquare.v
@@ -4965,6 +5409,8 @@ src/Specific/solinas64_2e256m2e32m977_7limbs/CurveParameters.v
 src/Specific/solinas64_2e256m2e32m977_7limbs/Synthesis.v
 src/Specific/solinas64_2e256m2e32m977_7limbs/feadd.v
 src/Specific/solinas64_2e256m2e32m977_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m2e32m977_7limbs/fecarry.v
+src/Specific/solinas64_2e256m2e32m977_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m2e32m977_7limbs/femul.v
 src/Specific/solinas64_2e256m2e32m977_7limbs/femulDisplay.v
 src/Specific/solinas64_2e256m2e32m977_7limbs/fesquare.v
@@ -4977,6 +5423,8 @@ src/Specific/solinas64_2e256m4294968273_10limbs/CurveParameters.v
 src/Specific/solinas64_2e256m4294968273_10limbs/Synthesis.v
 src/Specific/solinas64_2e256m4294968273_10limbs/feadd.v
 src/Specific/solinas64_2e256m4294968273_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m4294968273_10limbs/fecarry.v
+src/Specific/solinas64_2e256m4294968273_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m4294968273_10limbs/femul.v
 src/Specific/solinas64_2e256m4294968273_10limbs/femulDisplay.v
 src/Specific/solinas64_2e256m4294968273_10limbs/fesquare.v
@@ -4989,6 +5437,8 @@ src/Specific/solinas64_2e256m4294968273_9limbs/CurveParameters.v
 src/Specific/solinas64_2e256m4294968273_9limbs/Synthesis.v
 src/Specific/solinas64_2e256m4294968273_9limbs/feadd.v
 src/Specific/solinas64_2e256m4294968273_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e256m4294968273_9limbs/fecarry.v
+src/Specific/solinas64_2e256m4294968273_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e256m4294968273_9limbs/femul.v
 src/Specific/solinas64_2e256m4294968273_9limbs/femulDisplay.v
 src/Specific/solinas64_2e256m4294968273_9limbs/fesquare.v
@@ -5001,6 +5451,8 @@ src/Specific/solinas64_2e266m3_5limbs/CurveParameters.v
 src/Specific/solinas64_2e266m3_5limbs/Synthesis.v
 src/Specific/solinas64_2e266m3_5limbs/feadd.v
 src/Specific/solinas64_2e266m3_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e266m3_5limbs/fecarry.v
+src/Specific/solinas64_2e266m3_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e266m3_5limbs/femul.v
 src/Specific/solinas64_2e266m3_5limbs/femulDisplay.v
 src/Specific/solinas64_2e266m3_5limbs/fesquare.v
@@ -5013,6 +5465,8 @@ src/Specific/solinas64_2e266m3_6limbs/CurveParameters.v
 src/Specific/solinas64_2e266m3_6limbs/Synthesis.v
 src/Specific/solinas64_2e266m3_6limbs/feadd.v
 src/Specific/solinas64_2e266m3_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e266m3_6limbs/fecarry.v
+src/Specific/solinas64_2e266m3_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e266m3_6limbs/femul.v
 src/Specific/solinas64_2e266m3_6limbs/femulDisplay.v
 src/Specific/solinas64_2e266m3_6limbs/fesquare.v
@@ -5025,6 +5479,8 @@ src/Specific/solinas64_2e285m9_5limbs/CurveParameters.v
 src/Specific/solinas64_2e285m9_5limbs/Synthesis.v
 src/Specific/solinas64_2e285m9_5limbs/feadd.v
 src/Specific/solinas64_2e285m9_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e285m9_5limbs/fecarry.v
+src/Specific/solinas64_2e285m9_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e285m9_5limbs/femul.v
 src/Specific/solinas64_2e285m9_5limbs/femulDisplay.v
 src/Specific/solinas64_2e285m9_5limbs/fesquare.v
@@ -5037,6 +5493,8 @@ src/Specific/solinas64_2e285m9_6limbs/CurveParameters.v
 src/Specific/solinas64_2e285m9_6limbs/Synthesis.v
 src/Specific/solinas64_2e285m9_6limbs/feadd.v
 src/Specific/solinas64_2e285m9_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e285m9_6limbs/fecarry.v
+src/Specific/solinas64_2e285m9_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e285m9_6limbs/femul.v
 src/Specific/solinas64_2e285m9_6limbs/femulDisplay.v
 src/Specific/solinas64_2e285m9_6limbs/fesquare.v
@@ -5049,6 +5507,8 @@ src/Specific/solinas64_2e291m19_5limbs/CurveParameters.v
 src/Specific/solinas64_2e291m19_5limbs/Synthesis.v
 src/Specific/solinas64_2e291m19_5limbs/feadd.v
 src/Specific/solinas64_2e291m19_5limbs/feaddDisplay.v
+src/Specific/solinas64_2e291m19_5limbs/fecarry.v
+src/Specific/solinas64_2e291m19_5limbs/fecarryDisplay.v
 src/Specific/solinas64_2e291m19_5limbs/femul.v
 src/Specific/solinas64_2e291m19_5limbs/femulDisplay.v
 src/Specific/solinas64_2e291m19_5limbs/fesquare.v
@@ -5061,6 +5521,8 @@ src/Specific/solinas64_2e291m19_6limbs/CurveParameters.v
 src/Specific/solinas64_2e291m19_6limbs/Synthesis.v
 src/Specific/solinas64_2e291m19_6limbs/feadd.v
 src/Specific/solinas64_2e291m19_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e291m19_6limbs/fecarry.v
+src/Specific/solinas64_2e291m19_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e291m19_6limbs/femul.v
 src/Specific/solinas64_2e291m19_6limbs/femulDisplay.v
 src/Specific/solinas64_2e291m19_6limbs/fesquare.v
@@ -5073,6 +5535,8 @@ src/Specific/solinas64_2e321m9_6limbs/CurveParameters.v
 src/Specific/solinas64_2e321m9_6limbs/Synthesis.v
 src/Specific/solinas64_2e321m9_6limbs/feadd.v
 src/Specific/solinas64_2e321m9_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e321m9_6limbs/fecarry.v
+src/Specific/solinas64_2e321m9_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e321m9_6limbs/femul.v
 src/Specific/solinas64_2e321m9_6limbs/femulDisplay.v
 src/Specific/solinas64_2e321m9_6limbs/fesquare.v
@@ -5085,6 +5549,8 @@ src/Specific/solinas64_2e321m9_7limbs/CurveParameters.v
 src/Specific/solinas64_2e321m9_7limbs/Synthesis.v
 src/Specific/solinas64_2e321m9_7limbs/feadd.v
 src/Specific/solinas64_2e321m9_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e321m9_7limbs/fecarry.v
+src/Specific/solinas64_2e321m9_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e321m9_7limbs/femul.v
 src/Specific/solinas64_2e321m9_7limbs/femulDisplay.v
 src/Specific/solinas64_2e321m9_7limbs/fesquare.v
@@ -5097,6 +5563,8 @@ src/Specific/solinas64_2e322m2e161m1_6limbs/CurveParameters.v
 src/Specific/solinas64_2e322m2e161m1_6limbs/Synthesis.v
 src/Specific/solinas64_2e322m2e161m1_6limbs/feadd.v
 src/Specific/solinas64_2e322m2e161m1_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e322m2e161m1_6limbs/fecarry.v
+src/Specific/solinas64_2e322m2e161m1_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e322m2e161m1_6limbs/femul.v
 src/Specific/solinas64_2e322m2e161m1_6limbs/femulDisplay.v
 src/Specific/solinas64_2e322m2e161m1_6limbs/fesquare.v
@@ -5109,6 +5577,8 @@ src/Specific/solinas64_2e322m2e161m1_7limbs/CurveParameters.v
 src/Specific/solinas64_2e322m2e161m1_7limbs/Synthesis.v
 src/Specific/solinas64_2e322m2e161m1_7limbs/feadd.v
 src/Specific/solinas64_2e322m2e161m1_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e322m2e161m1_7limbs/fecarry.v
+src/Specific/solinas64_2e322m2e161m1_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e322m2e161m1_7limbs/femul.v
 src/Specific/solinas64_2e322m2e161m1_7limbs/femulDisplay.v
 src/Specific/solinas64_2e322m2e161m1_7limbs/fesquare.v
@@ -5121,6 +5591,8 @@ src/Specific/solinas64_2e336m17_6limbs/CurveParameters.v
 src/Specific/solinas64_2e336m17_6limbs/Synthesis.v
 src/Specific/solinas64_2e336m17_6limbs/feadd.v
 src/Specific/solinas64_2e336m17_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e336m17_6limbs/fecarry.v
+src/Specific/solinas64_2e336m17_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e336m17_6limbs/femul.v
 src/Specific/solinas64_2e336m17_6limbs/femulDisplay.v
 src/Specific/solinas64_2e336m17_6limbs/fesquare.v
@@ -5133,6 +5605,8 @@ src/Specific/solinas64_2e336m17_7limbs/CurveParameters.v
 src/Specific/solinas64_2e336m17_7limbs/Synthesis.v
 src/Specific/solinas64_2e336m17_7limbs/feadd.v
 src/Specific/solinas64_2e336m17_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e336m17_7limbs/fecarry.v
+src/Specific/solinas64_2e336m17_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e336m17_7limbs/femul.v
 src/Specific/solinas64_2e336m17_7limbs/femulDisplay.v
 src/Specific/solinas64_2e336m17_7limbs/fesquare.v
@@ -5145,6 +5619,8 @@ src/Specific/solinas64_2e336m3_6limbs/CurveParameters.v
 src/Specific/solinas64_2e336m3_6limbs/Synthesis.v
 src/Specific/solinas64_2e336m3_6limbs/feadd.v
 src/Specific/solinas64_2e336m3_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e336m3_6limbs/fecarry.v
+src/Specific/solinas64_2e336m3_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e336m3_6limbs/femul.v
 src/Specific/solinas64_2e336m3_6limbs/femulDisplay.v
 src/Specific/solinas64_2e336m3_6limbs/fesquare.v
@@ -5157,6 +5633,8 @@ src/Specific/solinas64_2e336m3_7limbs/CurveParameters.v
 src/Specific/solinas64_2e336m3_7limbs/Synthesis.v
 src/Specific/solinas64_2e336m3_7limbs/feadd.v
 src/Specific/solinas64_2e336m3_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e336m3_7limbs/fecarry.v
+src/Specific/solinas64_2e336m3_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e336m3_7limbs/femul.v
 src/Specific/solinas64_2e336m3_7limbs/femulDisplay.v
 src/Specific/solinas64_2e336m3_7limbs/fesquare.v
@@ -5169,6 +5647,8 @@ src/Specific/solinas64_2e338m15_6limbs/CurveParameters.v
 src/Specific/solinas64_2e338m15_6limbs/Synthesis.v
 src/Specific/solinas64_2e338m15_6limbs/feadd.v
 src/Specific/solinas64_2e338m15_6limbs/feaddDisplay.v
+src/Specific/solinas64_2e338m15_6limbs/fecarry.v
+src/Specific/solinas64_2e338m15_6limbs/fecarryDisplay.v
 src/Specific/solinas64_2e338m15_6limbs/femul.v
 src/Specific/solinas64_2e338m15_6limbs/femulDisplay.v
 src/Specific/solinas64_2e338m15_6limbs/fesquare.v
@@ -5181,6 +5661,8 @@ src/Specific/solinas64_2e338m15_7limbs/CurveParameters.v
 src/Specific/solinas64_2e338m15_7limbs/Synthesis.v
 src/Specific/solinas64_2e338m15_7limbs/feadd.v
 src/Specific/solinas64_2e338m15_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e338m15_7limbs/fecarry.v
+src/Specific/solinas64_2e338m15_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e338m15_7limbs/femul.v
 src/Specific/solinas64_2e338m15_7limbs/femulDisplay.v
 src/Specific/solinas64_2e338m15_7limbs/fesquare.v
@@ -5193,6 +5675,8 @@ src/Specific/solinas64_2e369m25_7limbs/CurveParameters.v
 src/Specific/solinas64_2e369m25_7limbs/Synthesis.v
 src/Specific/solinas64_2e369m25_7limbs/feadd.v
 src/Specific/solinas64_2e369m25_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e369m25_7limbs/fecarry.v
+src/Specific/solinas64_2e369m25_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e369m25_7limbs/femul.v
 src/Specific/solinas64_2e369m25_7limbs/femulDisplay.v
 src/Specific/solinas64_2e369m25_7limbs/fesquare.v
@@ -5205,6 +5689,8 @@ src/Specific/solinas64_2e369m25_8limbs/CurveParameters.v
 src/Specific/solinas64_2e369m25_8limbs/Synthesis.v
 src/Specific/solinas64_2e369m25_8limbs/feadd.v
 src/Specific/solinas64_2e369m25_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e369m25_8limbs/fecarry.v
+src/Specific/solinas64_2e369m25_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e369m25_8limbs/femul.v
 src/Specific/solinas64_2e369m25_8limbs/femulDisplay.v
 src/Specific/solinas64_2e369m25_8limbs/fesquare.v
@@ -5217,6 +5703,8 @@ src/Specific/solinas64_2e379m19_7limbs/CurveParameters.v
 src/Specific/solinas64_2e379m19_7limbs/Synthesis.v
 src/Specific/solinas64_2e379m19_7limbs/feadd.v
 src/Specific/solinas64_2e379m19_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e379m19_7limbs/fecarry.v
+src/Specific/solinas64_2e379m19_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e379m19_7limbs/femul.v
 src/Specific/solinas64_2e379m19_7limbs/femulDisplay.v
 src/Specific/solinas64_2e379m19_7limbs/fesquare.v
@@ -5229,6 +5717,8 @@ src/Specific/solinas64_2e379m19_8limbs/CurveParameters.v
 src/Specific/solinas64_2e379m19_8limbs/Synthesis.v
 src/Specific/solinas64_2e379m19_8limbs/feadd.v
 src/Specific/solinas64_2e379m19_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e379m19_8limbs/fecarry.v
+src/Specific/solinas64_2e379m19_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e379m19_8limbs/femul.v
 src/Specific/solinas64_2e379m19_8limbs/femulDisplay.v
 src/Specific/solinas64_2e379m19_8limbs/fesquare.v
@@ -5241,6 +5731,8 @@ src/Specific/solinas64_2e382m105_7limbs/CurveParameters.v
 src/Specific/solinas64_2e382m105_7limbs/Synthesis.v
 src/Specific/solinas64_2e382m105_7limbs/feadd.v
 src/Specific/solinas64_2e382m105_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e382m105_7limbs/fecarry.v
+src/Specific/solinas64_2e382m105_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e382m105_7limbs/femul.v
 src/Specific/solinas64_2e382m105_7limbs/femulDisplay.v
 src/Specific/solinas64_2e382m105_7limbs/fesquare.v
@@ -5253,6 +5745,8 @@ src/Specific/solinas64_2e382m105_8limbs/CurveParameters.v
 src/Specific/solinas64_2e382m105_8limbs/Synthesis.v
 src/Specific/solinas64_2e382m105_8limbs/feadd.v
 src/Specific/solinas64_2e382m105_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e382m105_8limbs/fecarry.v
+src/Specific/solinas64_2e382m105_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e382m105_8limbs/femul.v
 src/Specific/solinas64_2e382m105_8limbs/femulDisplay.v
 src/Specific/solinas64_2e382m105_8limbs/fesquare.v
@@ -5265,6 +5759,8 @@ src/Specific/solinas64_2e383m187_7limbs/CurveParameters.v
 src/Specific/solinas64_2e383m187_7limbs/Synthesis.v
 src/Specific/solinas64_2e383m187_7limbs/feadd.v
 src/Specific/solinas64_2e383m187_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e383m187_7limbs/fecarry.v
+src/Specific/solinas64_2e383m187_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e383m187_7limbs/femul.v
 src/Specific/solinas64_2e383m187_7limbs/femulDisplay.v
 src/Specific/solinas64_2e383m187_7limbs/fesquare.v
@@ -5277,6 +5773,8 @@ src/Specific/solinas64_2e383m187_8limbs/CurveParameters.v
 src/Specific/solinas64_2e383m187_8limbs/Synthesis.v
 src/Specific/solinas64_2e383m187_8limbs/feadd.v
 src/Specific/solinas64_2e383m187_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e383m187_8limbs/fecarry.v
+src/Specific/solinas64_2e383m187_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e383m187_8limbs/femul.v
 src/Specific/solinas64_2e383m187_8limbs/femulDisplay.v
 src/Specific/solinas64_2e383m187_8limbs/fesquare.v
@@ -5289,6 +5787,8 @@ src/Specific/solinas64_2e383m31_7limbs/CurveParameters.v
 src/Specific/solinas64_2e383m31_7limbs/Synthesis.v
 src/Specific/solinas64_2e383m31_7limbs/feadd.v
 src/Specific/solinas64_2e383m31_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e383m31_7limbs/fecarry.v
+src/Specific/solinas64_2e383m31_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e383m31_7limbs/femul.v
 src/Specific/solinas64_2e383m31_7limbs/femulDisplay.v
 src/Specific/solinas64_2e383m31_7limbs/fesquare.v
@@ -5301,6 +5801,8 @@ src/Specific/solinas64_2e383m31_8limbs/CurveParameters.v
 src/Specific/solinas64_2e383m31_8limbs/Synthesis.v
 src/Specific/solinas64_2e383m31_8limbs/feadd.v
 src/Specific/solinas64_2e383m31_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e383m31_8limbs/fecarry.v
+src/Specific/solinas64_2e383m31_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e383m31_8limbs/femul.v
 src/Specific/solinas64_2e383m31_8limbs/femulDisplay.v
 src/Specific/solinas64_2e383m31_8limbs/fesquare.v
@@ -5313,6 +5815,8 @@ src/Specific/solinas64_2e383m421_7limbs/CurveParameters.v
 src/Specific/solinas64_2e383m421_7limbs/Synthesis.v
 src/Specific/solinas64_2e383m421_7limbs/feadd.v
 src/Specific/solinas64_2e383m421_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e383m421_7limbs/fecarry.v
+src/Specific/solinas64_2e383m421_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e383m421_7limbs/femul.v
 src/Specific/solinas64_2e383m421_7limbs/femulDisplay.v
 src/Specific/solinas64_2e383m421_7limbs/fesquare.v
@@ -5325,6 +5829,8 @@ src/Specific/solinas64_2e383m421_8limbs/CurveParameters.v
 src/Specific/solinas64_2e383m421_8limbs/Synthesis.v
 src/Specific/solinas64_2e383m421_8limbs/feadd.v
 src/Specific/solinas64_2e383m421_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e383m421_8limbs/fecarry.v
+src/Specific/solinas64_2e383m421_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e383m421_8limbs/femul.v
 src/Specific/solinas64_2e383m421_8limbs/femulDisplay.v
 src/Specific/solinas64_2e383m421_8limbs/fesquare.v
@@ -5337,6 +5843,8 @@ src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/CurveParameters.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/Synthesis.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/feadd.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/fecarry.v
+src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/femul.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/femulDisplay.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_10limbs/fesquare.v
@@ -5349,6 +5857,8 @@ src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/CurveParameters.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/Synthesis.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/feadd.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/fecarry.v
+src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/femul.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/femulDisplay.v
 src/Specific/solinas64_2e384m2e128m2e96p2e32m1_9limbs/fesquare.v
@@ -5361,6 +5871,8 @@ src/Specific/solinas64_2e384m317_7limbs/CurveParameters.v
 src/Specific/solinas64_2e384m317_7limbs/Synthesis.v
 src/Specific/solinas64_2e384m317_7limbs/feadd.v
 src/Specific/solinas64_2e384m317_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e384m317_7limbs/fecarry.v
+src/Specific/solinas64_2e384m317_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e384m317_7limbs/femul.v
 src/Specific/solinas64_2e384m317_7limbs/femulDisplay.v
 src/Specific/solinas64_2e384m317_7limbs/fesquare.v
@@ -5373,6 +5885,8 @@ src/Specific/solinas64_2e384m317_8limbs/CurveParameters.v
 src/Specific/solinas64_2e384m317_8limbs/Synthesis.v
 src/Specific/solinas64_2e384m317_8limbs/feadd.v
 src/Specific/solinas64_2e384m317_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e384m317_8limbs/fecarry.v
+src/Specific/solinas64_2e384m317_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e384m317_8limbs/femul.v
 src/Specific/solinas64_2e384m317_8limbs/femulDisplay.v
 src/Specific/solinas64_2e384m317_8limbs/fesquare.v
@@ -5385,6 +5899,8 @@ src/Specific/solinas64_2e389m21_7limbs/CurveParameters.v
 src/Specific/solinas64_2e389m21_7limbs/Synthesis.v
 src/Specific/solinas64_2e389m21_7limbs/feadd.v
 src/Specific/solinas64_2e389m21_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e389m21_7limbs/fecarry.v
+src/Specific/solinas64_2e389m21_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e389m21_7limbs/femul.v
 src/Specific/solinas64_2e389m21_7limbs/femulDisplay.v
 src/Specific/solinas64_2e389m21_7limbs/fesquare.v
@@ -5397,6 +5913,8 @@ src/Specific/solinas64_2e389m21_8limbs/CurveParameters.v
 src/Specific/solinas64_2e389m21_8limbs/Synthesis.v
 src/Specific/solinas64_2e389m21_8limbs/feadd.v
 src/Specific/solinas64_2e389m21_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e389m21_8limbs/fecarry.v
+src/Specific/solinas64_2e389m21_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e389m21_8limbs/femul.v
 src/Specific/solinas64_2e389m21_8limbs/femulDisplay.v
 src/Specific/solinas64_2e389m21_8limbs/fesquare.v
@@ -5409,6 +5927,8 @@ src/Specific/solinas64_2e401m31_7limbs/CurveParameters.v
 src/Specific/solinas64_2e401m31_7limbs/Synthesis.v
 src/Specific/solinas64_2e401m31_7limbs/feadd.v
 src/Specific/solinas64_2e401m31_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e401m31_7limbs/fecarry.v
+src/Specific/solinas64_2e401m31_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e401m31_7limbs/femul.v
 src/Specific/solinas64_2e401m31_7limbs/femulDisplay.v
 src/Specific/solinas64_2e401m31_7limbs/fesquare.v
@@ -5421,6 +5941,8 @@ src/Specific/solinas64_2e401m31_8limbs/CurveParameters.v
 src/Specific/solinas64_2e401m31_8limbs/Synthesis.v
 src/Specific/solinas64_2e401m31_8limbs/feadd.v
 src/Specific/solinas64_2e401m31_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e401m31_8limbs/fecarry.v
+src/Specific/solinas64_2e401m31_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e401m31_8limbs/femul.v
 src/Specific/solinas64_2e401m31_8limbs/femulDisplay.v
 src/Specific/solinas64_2e401m31_8limbs/fesquare.v
@@ -5433,6 +5955,8 @@ src/Specific/solinas64_2e413m21_7limbs/CurveParameters.v
 src/Specific/solinas64_2e413m21_7limbs/Synthesis.v
 src/Specific/solinas64_2e413m21_7limbs/feadd.v
 src/Specific/solinas64_2e413m21_7limbs/feaddDisplay.v
+src/Specific/solinas64_2e413m21_7limbs/fecarry.v
+src/Specific/solinas64_2e413m21_7limbs/fecarryDisplay.v
 src/Specific/solinas64_2e413m21_7limbs/femul.v
 src/Specific/solinas64_2e413m21_7limbs/femulDisplay.v
 src/Specific/solinas64_2e413m21_7limbs/fesquare.v
@@ -5445,6 +5969,8 @@ src/Specific/solinas64_2e413m21_8limbs/CurveParameters.v
 src/Specific/solinas64_2e413m21_8limbs/Synthesis.v
 src/Specific/solinas64_2e413m21_8limbs/feadd.v
 src/Specific/solinas64_2e413m21_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e413m21_8limbs/fecarry.v
+src/Specific/solinas64_2e413m21_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e413m21_8limbs/femul.v
 src/Specific/solinas64_2e413m21_8limbs/femulDisplay.v
 src/Specific/solinas64_2e413m21_8limbs/fesquare.v
@@ -5457,6 +5983,8 @@ src/Specific/solinas64_2e414m17_8limbs/CurveParameters.v
 src/Specific/solinas64_2e414m17_8limbs/Synthesis.v
 src/Specific/solinas64_2e414m17_8limbs/feadd.v
 src/Specific/solinas64_2e414m17_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e414m17_8limbs/fecarry.v
+src/Specific/solinas64_2e414m17_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e414m17_8limbs/femul.v
 src/Specific/solinas64_2e414m17_8limbs/femulDisplay.v
 src/Specific/solinas64_2e414m17_8limbs/fesquare.v
@@ -5469,6 +5997,8 @@ src/Specific/solinas64_2e414m17_9limbs/CurveParameters.v
 src/Specific/solinas64_2e414m17_9limbs/Synthesis.v
 src/Specific/solinas64_2e414m17_9limbs/feadd.v
 src/Specific/solinas64_2e414m17_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e414m17_9limbs/fecarry.v
+src/Specific/solinas64_2e414m17_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e414m17_9limbs/femul.v
 src/Specific/solinas64_2e414m17_9limbs/femulDisplay.v
 src/Specific/solinas64_2e414m17_9limbs/fesquare.v
@@ -5481,6 +6011,8 @@ src/Specific/solinas64_2e416m2e208m1_8limbs/CurveParameters.v
 src/Specific/solinas64_2e416m2e208m1_8limbs/Synthesis.v
 src/Specific/solinas64_2e416m2e208m1_8limbs/feadd.v
 src/Specific/solinas64_2e416m2e208m1_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e416m2e208m1_8limbs/fecarry.v
+src/Specific/solinas64_2e416m2e208m1_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e416m2e208m1_8limbs/femul.v
 src/Specific/solinas64_2e416m2e208m1_8limbs/femulDisplay.v
 src/Specific/solinas64_2e416m2e208m1_8limbs/fesquare.v
@@ -5493,6 +6025,8 @@ src/Specific/solinas64_2e416m2e208m1_9limbs/CurveParameters.v
 src/Specific/solinas64_2e416m2e208m1_9limbs/Synthesis.v
 src/Specific/solinas64_2e416m2e208m1_9limbs/feadd.v
 src/Specific/solinas64_2e416m2e208m1_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e416m2e208m1_9limbs/fecarry.v
+src/Specific/solinas64_2e416m2e208m1_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e416m2e208m1_9limbs/femul.v
 src/Specific/solinas64_2e416m2e208m1_9limbs/femulDisplay.v
 src/Specific/solinas64_2e416m2e208m1_9limbs/fesquare.v
@@ -5505,6 +6039,8 @@ src/Specific/solinas64_2e444m17_8limbs/CurveParameters.v
 src/Specific/solinas64_2e444m17_8limbs/Synthesis.v
 src/Specific/solinas64_2e444m17_8limbs/feadd.v
 src/Specific/solinas64_2e444m17_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e444m17_8limbs/fecarry.v
+src/Specific/solinas64_2e444m17_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e444m17_8limbs/femul.v
 src/Specific/solinas64_2e444m17_8limbs/femulDisplay.v
 src/Specific/solinas64_2e444m17_8limbs/fesquare.v
@@ -5517,6 +6053,8 @@ src/Specific/solinas64_2e444m17_9limbs/CurveParameters.v
 src/Specific/solinas64_2e444m17_9limbs/Synthesis.v
 src/Specific/solinas64_2e444m17_9limbs/feadd.v
 src/Specific/solinas64_2e444m17_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e444m17_9limbs/fecarry.v
+src/Specific/solinas64_2e444m17_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e444m17_9limbs/femul.v
 src/Specific/solinas64_2e444m17_9limbs/femulDisplay.v
 src/Specific/solinas64_2e444m17_9limbs/fesquare.v
@@ -5529,6 +6067,8 @@ src/Specific/solinas64_2e448m2e224m1_10limbs/CurveParameters.v
 src/Specific/solinas64_2e448m2e224m1_10limbs/Synthesis.v
 src/Specific/solinas64_2e448m2e224m1_10limbs/feadd.v
 src/Specific/solinas64_2e448m2e224m1_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e448m2e224m1_10limbs/fecarry.v
+src/Specific/solinas64_2e448m2e224m1_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e448m2e224m1_10limbs/femul.v
 src/Specific/solinas64_2e448m2e224m1_10limbs/femulDisplay.v
 src/Specific/solinas64_2e448m2e224m1_10limbs/fesquare.v
@@ -5541,6 +6081,8 @@ src/Specific/solinas64_2e448m2e224m1_8limbs/CurveParameters.v
 src/Specific/solinas64_2e448m2e224m1_8limbs/Synthesis.v
 src/Specific/solinas64_2e448m2e224m1_8limbs/feadd.v
 src/Specific/solinas64_2e448m2e224m1_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e448m2e224m1_8limbs/fecarry.v
+src/Specific/solinas64_2e448m2e224m1_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e448m2e224m1_8limbs/femul.v
 src/Specific/solinas64_2e448m2e224m1_8limbs/femulDisplay.v
 src/Specific/solinas64_2e448m2e224m1_8limbs/fesquare.v
@@ -5553,6 +6095,8 @@ src/Specific/solinas64_2e450m2e225m1_10limbs/CurveParameters.v
 src/Specific/solinas64_2e450m2e225m1_10limbs/Synthesis.v
 src/Specific/solinas64_2e450m2e225m1_10limbs/feadd.v
 src/Specific/solinas64_2e450m2e225m1_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e450m2e225m1_10limbs/fecarry.v
+src/Specific/solinas64_2e450m2e225m1_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e450m2e225m1_10limbs/femul.v
 src/Specific/solinas64_2e450m2e225m1_10limbs/femulDisplay.v
 src/Specific/solinas64_2e450m2e225m1_10limbs/fesquare.v
@@ -5565,6 +6109,8 @@ src/Specific/solinas64_2e450m2e225m1_8limbs/CurveParameters.v
 src/Specific/solinas64_2e450m2e225m1_8limbs/Synthesis.v
 src/Specific/solinas64_2e450m2e225m1_8limbs/feadd.v
 src/Specific/solinas64_2e450m2e225m1_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e450m2e225m1_8limbs/fecarry.v
+src/Specific/solinas64_2e450m2e225m1_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e450m2e225m1_8limbs/femul.v
 src/Specific/solinas64_2e450m2e225m1_8limbs/femulDisplay.v
 src/Specific/solinas64_2e450m2e225m1_8limbs/fesquare.v
@@ -5577,6 +6123,8 @@ src/Specific/solinas64_2e452m3_8limbs/CurveParameters.v
 src/Specific/solinas64_2e452m3_8limbs/Synthesis.v
 src/Specific/solinas64_2e452m3_8limbs/feadd.v
 src/Specific/solinas64_2e452m3_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e452m3_8limbs/fecarry.v
+src/Specific/solinas64_2e452m3_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e452m3_8limbs/femul.v
 src/Specific/solinas64_2e452m3_8limbs/femulDisplay.v
 src/Specific/solinas64_2e452m3_8limbs/fesquare.v
@@ -5589,6 +6137,8 @@ src/Specific/solinas64_2e452m3_9limbs/CurveParameters.v
 src/Specific/solinas64_2e452m3_9limbs/Synthesis.v
 src/Specific/solinas64_2e452m3_9limbs/feadd.v
 src/Specific/solinas64_2e452m3_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e452m3_9limbs/fecarry.v
+src/Specific/solinas64_2e452m3_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e452m3_9limbs/femul.v
 src/Specific/solinas64_2e452m3_9limbs/femulDisplay.v
 src/Specific/solinas64_2e452m3_9limbs/fesquare.v
@@ -5601,6 +6151,8 @@ src/Specific/solinas64_2e468m17_8limbs/CurveParameters.v
 src/Specific/solinas64_2e468m17_8limbs/Synthesis.v
 src/Specific/solinas64_2e468m17_8limbs/feadd.v
 src/Specific/solinas64_2e468m17_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e468m17_8limbs/fecarry.v
+src/Specific/solinas64_2e468m17_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e468m17_8limbs/femul.v
 src/Specific/solinas64_2e468m17_8limbs/femulDisplay.v
 src/Specific/solinas64_2e468m17_8limbs/fesquare.v
@@ -5613,6 +6165,8 @@ src/Specific/solinas64_2e468m17_9limbs/CurveParameters.v
 src/Specific/solinas64_2e468m17_9limbs/Synthesis.v
 src/Specific/solinas64_2e468m17_9limbs/feadd.v
 src/Specific/solinas64_2e468m17_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e468m17_9limbs/fecarry.v
+src/Specific/solinas64_2e468m17_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e468m17_9limbs/femul.v
 src/Specific/solinas64_2e468m17_9limbs/femulDisplay.v
 src/Specific/solinas64_2e468m17_9limbs/fesquare.v
@@ -5625,6 +6179,8 @@ src/Specific/solinas64_2e480m2e240m1_10limbs/CurveParameters.v
 src/Specific/solinas64_2e480m2e240m1_10limbs/Synthesis.v
 src/Specific/solinas64_2e480m2e240m1_10limbs/feadd.v
 src/Specific/solinas64_2e480m2e240m1_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e480m2e240m1_10limbs/fecarry.v
+src/Specific/solinas64_2e480m2e240m1_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e480m2e240m1_10limbs/femul.v
 src/Specific/solinas64_2e480m2e240m1_10limbs/femulDisplay.v
 src/Specific/solinas64_2e480m2e240m1_10limbs/fesquare.v
@@ -5637,6 +6193,8 @@ src/Specific/solinas64_2e480m2e240m1_8limbs/CurveParameters.v
 src/Specific/solinas64_2e480m2e240m1_8limbs/Synthesis.v
 src/Specific/solinas64_2e480m2e240m1_8limbs/feadd.v
 src/Specific/solinas64_2e480m2e240m1_8limbs/feaddDisplay.v
+src/Specific/solinas64_2e480m2e240m1_8limbs/fecarry.v
+src/Specific/solinas64_2e480m2e240m1_8limbs/fecarryDisplay.v
 src/Specific/solinas64_2e480m2e240m1_8limbs/femul.v
 src/Specific/solinas64_2e480m2e240m1_8limbs/femulDisplay.v
 src/Specific/solinas64_2e480m2e240m1_8limbs/fesquare.v
@@ -5649,6 +6207,8 @@ src/Specific/solinas64_2e488m17_10limbs/CurveParameters.v
 src/Specific/solinas64_2e488m17_10limbs/Synthesis.v
 src/Specific/solinas64_2e488m17_10limbs/feadd.v
 src/Specific/solinas64_2e488m17_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e488m17_10limbs/fecarry.v
+src/Specific/solinas64_2e488m17_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e488m17_10limbs/femul.v
 src/Specific/solinas64_2e488m17_10limbs/femulDisplay.v
 src/Specific/solinas64_2e488m17_10limbs/fesquare.v
@@ -5661,6 +6221,8 @@ src/Specific/solinas64_2e488m17_9limbs/CurveParameters.v
 src/Specific/solinas64_2e488m17_9limbs/Synthesis.v
 src/Specific/solinas64_2e488m17_9limbs/feadd.v
 src/Specific/solinas64_2e488m17_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e488m17_9limbs/fecarry.v
+src/Specific/solinas64_2e488m17_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e488m17_9limbs/femul.v
 src/Specific/solinas64_2e488m17_9limbs/femulDisplay.v
 src/Specific/solinas64_2e488m17_9limbs/fesquare.v
@@ -5673,6 +6235,8 @@ src/Specific/solinas64_2e489m21_10limbs/CurveParameters.v
 src/Specific/solinas64_2e489m21_10limbs/Synthesis.v
 src/Specific/solinas64_2e489m21_10limbs/feadd.v
 src/Specific/solinas64_2e489m21_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e489m21_10limbs/fecarry.v
+src/Specific/solinas64_2e489m21_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e489m21_10limbs/femul.v
 src/Specific/solinas64_2e489m21_10limbs/femulDisplay.v
 src/Specific/solinas64_2e489m21_10limbs/fesquare.v
@@ -5685,6 +6249,8 @@ src/Specific/solinas64_2e489m21_9limbs/CurveParameters.v
 src/Specific/solinas64_2e489m21_9limbs/Synthesis.v
 src/Specific/solinas64_2e489m21_9limbs/feadd.v
 src/Specific/solinas64_2e489m21_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e489m21_9limbs/fecarry.v
+src/Specific/solinas64_2e489m21_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e489m21_9limbs/femul.v
 src/Specific/solinas64_2e489m21_9limbs/femulDisplay.v
 src/Specific/solinas64_2e489m21_9limbs/fesquare.v
@@ -5697,6 +6263,8 @@ src/Specific/solinas64_2e495m31_10limbs/CurveParameters.v
 src/Specific/solinas64_2e495m31_10limbs/Synthesis.v
 src/Specific/solinas64_2e495m31_10limbs/feadd.v
 src/Specific/solinas64_2e495m31_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e495m31_10limbs/fecarry.v
+src/Specific/solinas64_2e495m31_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e495m31_10limbs/femul.v
 src/Specific/solinas64_2e495m31_10limbs/femulDisplay.v
 src/Specific/solinas64_2e495m31_10limbs/fesquare.v
@@ -5709,6 +6277,8 @@ src/Specific/solinas64_2e495m31_9limbs/CurveParameters.v
 src/Specific/solinas64_2e495m31_9limbs/Synthesis.v
 src/Specific/solinas64_2e495m31_9limbs/feadd.v
 src/Specific/solinas64_2e495m31_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e495m31_9limbs/fecarry.v
+src/Specific/solinas64_2e495m31_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e495m31_9limbs/femul.v
 src/Specific/solinas64_2e495m31_9limbs/femulDisplay.v
 src/Specific/solinas64_2e495m31_9limbs/fesquare.v
@@ -5721,6 +6291,8 @@ src/Specific/solinas64_2e511m187_10limbs/CurveParameters.v
 src/Specific/solinas64_2e511m187_10limbs/Synthesis.v
 src/Specific/solinas64_2e511m187_10limbs/feadd.v
 src/Specific/solinas64_2e511m187_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e511m187_10limbs/fecarry.v
+src/Specific/solinas64_2e511m187_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e511m187_10limbs/femul.v
 src/Specific/solinas64_2e511m187_10limbs/femulDisplay.v
 src/Specific/solinas64_2e511m187_10limbs/fesquare.v
@@ -5733,6 +6305,8 @@ src/Specific/solinas64_2e511m187_11limbs/CurveParameters.v
 src/Specific/solinas64_2e511m187_11limbs/Synthesis.v
 src/Specific/solinas64_2e511m187_11limbs/feadd.v
 src/Specific/solinas64_2e511m187_11limbs/feaddDisplay.v
+src/Specific/solinas64_2e511m187_11limbs/fecarry.v
+src/Specific/solinas64_2e511m187_11limbs/fecarryDisplay.v
 src/Specific/solinas64_2e511m187_11limbs/femul.v
 src/Specific/solinas64_2e511m187_11limbs/femulDisplay.v
 src/Specific/solinas64_2e511m187_11limbs/fesquare.v
@@ -5745,6 +6319,8 @@ src/Specific/solinas64_2e511m481_10limbs/CurveParameters.v
 src/Specific/solinas64_2e511m481_10limbs/Synthesis.v
 src/Specific/solinas64_2e511m481_10limbs/feadd.v
 src/Specific/solinas64_2e511m481_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e511m481_10limbs/fecarry.v
+src/Specific/solinas64_2e511m481_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e511m481_10limbs/femul.v
 src/Specific/solinas64_2e511m481_10limbs/femulDisplay.v
 src/Specific/solinas64_2e511m481_10limbs/fesquare.v
@@ -5757,6 +6333,8 @@ src/Specific/solinas64_2e511m481_11limbs/CurveParameters.v
 src/Specific/solinas64_2e511m481_11limbs/Synthesis.v
 src/Specific/solinas64_2e511m481_11limbs/feadd.v
 src/Specific/solinas64_2e511m481_11limbs/feaddDisplay.v
+src/Specific/solinas64_2e511m481_11limbs/fecarry.v
+src/Specific/solinas64_2e511m481_11limbs/fecarryDisplay.v
 src/Specific/solinas64_2e511m481_11limbs/femul.v
 src/Specific/solinas64_2e511m481_11limbs/femulDisplay.v
 src/Specific/solinas64_2e511m481_11limbs/fesquare.v
@@ -5769,6 +6347,8 @@ src/Specific/solinas64_2e512m569_10limbs/CurveParameters.v
 src/Specific/solinas64_2e512m569_10limbs/Synthesis.v
 src/Specific/solinas64_2e512m569_10limbs/feadd.v
 src/Specific/solinas64_2e512m569_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e512m569_10limbs/fecarry.v
+src/Specific/solinas64_2e512m569_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e512m569_10limbs/femul.v
 src/Specific/solinas64_2e512m569_10limbs/femulDisplay.v
 src/Specific/solinas64_2e512m569_10limbs/fesquare.v
@@ -5781,6 +6361,8 @@ src/Specific/solinas64_2e512m569_11limbs/CurveParameters.v
 src/Specific/solinas64_2e512m569_11limbs/Synthesis.v
 src/Specific/solinas64_2e512m569_11limbs/feadd.v
 src/Specific/solinas64_2e512m569_11limbs/feaddDisplay.v
+src/Specific/solinas64_2e512m569_11limbs/fecarry.v
+src/Specific/solinas64_2e512m569_11limbs/fecarryDisplay.v
 src/Specific/solinas64_2e512m569_11limbs/femul.v
 src/Specific/solinas64_2e512m569_11limbs/femulDisplay.v
 src/Specific/solinas64_2e512m569_11limbs/fesquare.v
@@ -5793,6 +6375,8 @@ src/Specific/solinas64_2e521m1_10limbs/CurveParameters.v
 src/Specific/solinas64_2e521m1_10limbs/Synthesis.v
 src/Specific/solinas64_2e521m1_10limbs/feadd.v
 src/Specific/solinas64_2e521m1_10limbs/feaddDisplay.v
+src/Specific/solinas64_2e521m1_10limbs/fecarry.v
+src/Specific/solinas64_2e521m1_10limbs/fecarryDisplay.v
 src/Specific/solinas64_2e521m1_10limbs/femul.v
 src/Specific/solinas64_2e521m1_10limbs/femulDisplay.v
 src/Specific/solinas64_2e521m1_10limbs/fesquare.v
@@ -5805,6 +6389,8 @@ src/Specific/solinas64_2e521m1_9limbs/CurveParameters.v
 src/Specific/solinas64_2e521m1_9limbs/Synthesis.v
 src/Specific/solinas64_2e521m1_9limbs/feadd.v
 src/Specific/solinas64_2e521m1_9limbs/feaddDisplay.v
+src/Specific/solinas64_2e521m1_9limbs/fecarry.v
+src/Specific/solinas64_2e521m1_9limbs/fecarryDisplay.v
 src/Specific/solinas64_2e521m1_9limbs/femul.v
 src/Specific/solinas64_2e521m1_9limbs/femulDisplay.v
 src/Specific/solinas64_2e521m1_9limbs/fesquare.v

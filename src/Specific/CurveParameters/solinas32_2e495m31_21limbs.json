@@ -11,6 +11,7 @@
         "feadd",
         "fesub",
         "fesquare",
+        "fecarry",
         "freeze"
     ],
     "sz": "21"

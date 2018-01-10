@@ -202,7 +202,7 @@ def solinas_reduce(p, pprods):
 # check if the suggested number of limbs will overflow when adding partial
 # products after a multiplication and then doing solinas reduction
 def overflow_free(p, bitwidth, nlimbs):
-    # weight (exponent only) 
+    # weight (exponent only)
     weight = lambda n : math.ceil(n * (num_bits(p) / nlimbs))
     # bit widths in canonical form
     width = lambda i : weight(i + 1) - weight(i)
@@ -212,9 +212,9 @@ def overflow_free(p, bitwidth, nlimbs):
 
     # get partial products in (weight, # bits) pairs
     pp = [(weight(i) + weight(j), start[i] * start[j]) for i in range(nlimbs) for j in range(nlimbs)]
-    
+
     # reduction step
-    ppr = pp 
+    ppr = pp
     while max(ppr, key=lambda t:t[0])[0] >= num_bits(p):
         ppr = solinas_reduce(p, ppr)
 
@@ -240,11 +240,11 @@ def get_possible_limbs(p, bitwidth):
     # the negative coefficients of p (other than the most significant digit)
     unused_bits = sum(map(lambda t: math.ceil(math.log(-t[0], 2)) if t[0] < 0 else 0, p[1:]))
     min_limbs = int(math.ceil(num_bits(p) / (bitwidth - unused_bits)))
-    
+
     # don't search past 2x as many limbs as saturated representation; that's just wasteful
     result = list(filter(lambda n : overflow_free(p, bitwidth, n), range(min_limbs, 2*min_limbs)))
     # print("for prime %s, %s / %s limb choices were successful" %(p, len(result), min_limbs))
-    return result 
+    return result
 
 def is_goldilocks(p):
     return p[0][1] == 2 * p[1][1]
@@ -302,7 +302,7 @@ def get_params_solinas(prime, bitwidth):
                 "bitwidth" : bitwidth,
                 "carry_chains" : carry_chains,
                 "coef_div_modulus" : str(2),
-                "operations"       : ["femul", "feadd", "fesub", "fesquare", "freeze"],
+                "operations"       : ["femul", "feadd", "fesub", "fesquare", "fecarry", "freeze"],
                 "compiler"         : COMPILER_SOLI + get_extra_compiler_params(prime, base, bitwidth, sz),
                 "compilerxx"       : COMPILERXX_SOLI + get_extra_compiler_params(prime, base, bitwidth, sz)
                 }

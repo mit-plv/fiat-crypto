@@ -36,6 +36,7 @@
         "feadd",
         "fesub",
         "fesquare",
+        "fecarry",
         "freeze"
     ],
     "sz": "10"
