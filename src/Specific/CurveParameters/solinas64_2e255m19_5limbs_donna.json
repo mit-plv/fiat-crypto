@@ -1,0 +1,80 @@
+{
+    "base": "51",
+    "bitwidth": 64,
+    "carry_chains": "default",
+    "coef_div_modulus": "2",
+    "compiler": "clang -fbracket-depth=999999 -march=native -mtune=native -std=gnu11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing -Da24_hex='0x3039' -Da24_val='12345' -Da_minus_two_over_four_array='{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x30,0x39}' -Dbitwidth='64' -Dlimb_weight_gaps_array='{51,51,51,51,51}' -Dmodulus_array='{0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xed}' -Dmodulus_bytes_val='32' -Dmodulus_limbs='5' -Dq_mpz='(1_mpz<<255) - 19'",
+    "compilerxx": "clang++ -fbracket-depth=999999 -march=native -mtune=native -std=gnu++11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing -Da24_hex='0x3039' -Da24_val='12345' -Da_minus_two_over_four_array='{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x30,0x39}' -Dbitwidth='64' -Dlimb_weight_gaps_array='{51,51,51,51,51}' -Dmodulus_array='{0x7f,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xed}' -Dmodulus_bytes_val='32' -Dmodulus_limbs='5' -Dq_mpz='(1_mpz<<255) - 19'",
+    "modulus": "2^255 - 19",
+    "operations": [
+        "femul",
+        "feadd",
+        "fesub",
+        "fesquare",
+        "fecarry",
+        "freeze"
+    ],
+    "sz": "5",
+    "mul_header"       : "(* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)",
+    "mul_code"
+    :
+    "
+  uint128_t t[5];
+  limb r0,r1,r2,r3,r4,s0,s1,s2,s3,s4,c;
+
+  r0 = in[0];
+  r1 = in[1];
+  r2 = in[2];
+  r3 = in[3];
+  r4 = in[4];
+
+  s0 = in2[0];
+  s1 = in2[1];
+  s2 = in2[2];
+  s3 = in2[3];
+  s4 = in2[4];
+
+  t[0]  =  ((uint128_t) r0) * s0;
+  t[1]  =  ((uint128_t) r0) * s1 + ((uint128_t) r1) * s0;
+  t[2]  =  ((uint128_t) r0) * s2 + ((uint128_t) r2) * s0 + ((uint128_t) r1) * s1;
+  t[3]  =  ((uint128_t) r0) * s3 + ((uint128_t) r3) * s0 + ((uint128_t) r1) * s2 + ((uint128_t) r2) * s1;
+  t[4]  =  ((uint128_t) r0) * s4 + ((uint128_t) r4) * s0 + ((uint128_t) r3) * s1 + ((uint128_t) r1) * s3 + ((uint128_t) r2) * s2;
+
+  r4 *= 19;
+  r1 *= 19;
+  r2 *= 19;
+  r3 *= 19;
+
+  t[0] += ((uint128_t) r4) * s1 + ((uint128_t) r1) * s4 + ((uint128_t) r2) * s3 + ((uint128_t) r3) * s2;
+  t[1] += ((uint128_t) r4) * s2 + ((uint128_t) r2) * s4 + ((uint128_t) r3) * s3;
+  t[2] += ((uint128_t) r4) * s3 + ((uint128_t) r3) * s4;
+  t[3] += ((uint128_t) r4) * s4;
+",
+    "square_header"    : "(* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)",
+    "square_code"
+    :
+    "
+  uint128_t t[5];
+  limb r0,r1,r2,r3,r4,c;
+  limb d0,d1,d2,d4,d419;
+
+  r0 = in[0];
+  r1 = in[1];
+  r2 = in[2];
+  r3 = in[3];
+  r4 = in[4];
+
+  do {
+    d0 = r0 * 2;
+    d1 = r1 * 2;
+    d2 = r2 * 2 * 19;
+    d419 = r4 * 19;
+    d4 = d419 * 2;
+
+    t[0] = ((uint128_t) r0) * r0 + ((uint128_t) d4) * r1 + (((uint128_t) d2) * (r3     ));
+    t[1] = ((uint128_t) d0) * r1 + ((uint128_t) d4) * r2 + (((uint128_t) r3) * (r3 * 19));
+    t[2] = ((uint128_t) d0) * r2 + ((uint128_t) r1) * r1 + (((uint128_t) d4) * (r3     ));
+    t[3] = ((uint128_t) d0) * r3 + ((uint128_t) d1) * r2 + (((uint128_t) r4) * (d419   ));
+    t[4] = ((uint128_t) d0) * r4 + ((uint128_t) d1) * r3 + (((uint128_t) r2) * (r2     ));
+"
+}
