@@ -34,6 +34,9 @@ Module Z.
     rewrite Pos.add_1_r; reflexivity.
   Qed.
 
+  (** [Z.peano_rect] does not provide the [0 <= z] and [z <= 0] hypotheses in
+      [Psucc] and [Ppred]. Define an alternate version for proofs which require
+      that. *)
   Section rect_strong.
     Context (P : Z -> Type)
             (P0 : P 0)
