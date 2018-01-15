@@ -8,3 +8,6 @@ uint64_t cmovznz(uint64_t t, uint64_t z, uint64_t nz) {
       );
   return z;
 }
+uint64_t cmovznz64(uint64_t t, uint64_t z, uint64_t nz) {
+  return cmovznz(t, z, nz);
+}
