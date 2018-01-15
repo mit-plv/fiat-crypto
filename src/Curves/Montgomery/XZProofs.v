@@ -4,6 +4,7 @@ Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Peano.
 Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -13,6 +14,7 @@ Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 
 Module M.
@@ -265,13 +267,17 @@ Module M.
     Lemma Z_shiftr_testbit_1 n i: Logic.eq (n>>i)%Z (Z.div2 (n >> i) + Z.div2 (n >> i) + Z.b2z (Z.testbit n i))%Z.
     Proof. rewrite ?Z.testbit_odd, ?Z.add_diag, <-?Z.div2_odd; reflexivity. Qed.
 
+    (* We prove montladder correct by considering the zero and non-zero case
+       separately. *)
+
     Lemma montladder_correct_0
           (HFinv : Finv 0 = 0)
           (n : Z)
-          (scalarbits : Z)
+          (scalarbits : Z) (point : F)
+          (Hz : point = 0)
           (Hn : (0 <= n < 2^scalarbits)%Z)
           (Hscalarbits : (0 <= scalarbits)%Z)
-      : montladder scalarbits (Z.testbit n) 0 = 0.
+      : montladder scalarbits (Z.testbit n) point = 0.
     Proof.
       cbv beta delta [M.montladder].
       (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
@@ -379,8 +385,63 @@ Module M.
         cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
     Qed.
 
-    (* TODO: Combine the above lemmas. We haven't yet proven that montladder
-       preserves Feq, so this is tricky. *)
+    (* Using montladder_correct_0 in the combined correctness theorem requires
+       additionally showing that the right-hand-side is 0. This comes from there
+       being two points such that to_x gives 0: infinity and (0, 0). *)
+
+    Lemma opp_to_x_to_xz_0
+          (P : M.point)
+          (H : 0 = to_x (to_xz P))
+      : 0 = to_x (to_xz (Mopp P)).
+    Proof. t. Qed.
+
+    Lemma add_to_x_to_xz_0
+          (P Q : M.point)
+          (HP : 0 = to_x (to_xz P))
+          (HQ : 0 = to_x (to_xz Q))
+      : 0 = to_x (to_xz (Madd P Q)).
+    Proof. t. Qed.
+
+    Lemma scalarmult_to_x_to_xz_0
+          (n : Z) (P : M.point)
+          (H : 0 = to_x (to_xz P))
+      : 0 = to_x (to_xz (scalarmult n P)).
+    Proof.
+      induction n using Z.peano_rect_strong.
+      { cbn. t. }
+      { (* Induction case from n to Z.succ n. *)
+        unfold scalarmult_ref.
+        rewrite Z.peano_rect_succ by omega.
+        fold (scalarmult n P).
+        apply add_to_x_to_xz_0; trivial. }
+      { (* Induction case from n to Z.pred n. *)
+        unfold scalarmult_ref.
+        rewrite Z.peano_rect_pred by omega.
+        fold (scalarmult n P).
+        apply add_to_x_to_xz_0.
+        { apply opp_to_x_to_xz_0; trivial. }
+        { trivial. } }
+    Qed.
+
+    (* Combine the two cases together. *)
+
+    Lemma montladder_correct
+          (HFinv : Finv 0 = 0)
+          (n : Z) (P : M.point)
+          (scalarbits : Z) (point : F)
+          (Hn : (0 <= n < 2^scalarbits)%Z)
+          (Hscalarbits : (0 <= scalarbits)%Z)
+          (Hpoint : point = to_x (to_xz P))
+      : montladder scalarbits (Z.testbit n) point = to_x (to_xz (scalarmult n P)).
+    Proof.
+      destruct (dec (point = 0)) as [Hz|Hnz].
+      { rewrite (montladder_correct_0 HFinv _ _ _ Hz Hn Hscalarbits).
+        setoid_subst_rel Feq.
+        apply scalarmult_to_x_to_xz_0.
+        trivial. }
+      { apply (montladder_correct_nz HFinv _ _ _ _ Hnz Hn Hscalarbits).
+        trivial. }
+    Qed.
 
   End MontgomeryCurve.
 End M.
