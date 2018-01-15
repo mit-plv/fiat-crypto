@@ -27,6 +27,7 @@ matrix:
     - env: COQ_VERSION="8.7.1"  TARGETS="no-curves-proofs-non-specific"               COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
     - env: COQ_VERSION="8.7.1"  TARGETS="curves-proofs"                               COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
     - env: COQ_VERSION="8.7.1"  TARGETS="selected-specific selected-specific-display" COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+    - env: TARGETS="build-selected-test build-selected-bench" COQ_VERSION="8.7.1"     COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
     - env: TARGETS="selected-test selected-bench" COQ_VERSION="8.7.1"                 COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
     - env: TARGETS="printlite lite" COQ_VERSION="8.7.1"                               COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
   allow_failures:
