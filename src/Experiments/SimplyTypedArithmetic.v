@@ -525,7 +525,7 @@ Module Compilers.
           | let x := ?a in @?b x
             => let A := type of a in
                let B := lazymatch type of b with forall x, @?B x => B end in
-               reify_rec (@Let_In A B a b)
+               reify_rec (b a) (*(@Let_In A B a b)*)
           | Datatypes.pair ?x ?y
             => let rx := reify_rec x in
                let ry := reify_rec y in
@@ -2356,8 +2356,8 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
     assert True.
     { let v := Reify (fun y : Z
                       => (fun k : Z * Z -> Z * Z
-                          => let x := (y * y)%RT in
-                             let z := (x * x)%RT in
+                          => dlet_nd x := (y * y)%RT in
+                             dlet_nd z := (x * x)%RT in
                              k (z, z))
                            (fun v => v)) in
       pose v as E.
@@ -2374,10 +2374,10 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
       constructor. }
     assert True.
     { let v := Reify (fun y : Z
-                      => let x := let x := (y * y)%RT in
-                                  (x * x)%RT in
-                         let z := let z := (x * x)%RT in
-                                  (z * z)%RT in
+                      => dlet_nd x := dlet_nd x := (y * y)%RT in
+                                      (x * x)%RT in
+                         dlet_nd z := dlet_nd z := (x * x)%RT in
+                                      (z * z)%RT in
                          (z * z)%RT) in
       pose v as E.
       vm_compute in E.
