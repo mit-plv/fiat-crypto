@@ -11,7 +11,7 @@ EXAMPLES (handwritten):
     "bitwidth"             : "128",
     "montgomery"           : "true",
     "operations"           : ["fenz", "feadd", "femul", "feopp", "fesub"],
-    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mbmi2 -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
 }
 
 # p256 - amd64
@@ -22,7 +22,7 @@ EXAMPLES (handwritten):
     "bitwidth"             : "64",
     "montgomery"           : "true",
     "operations"           : ["fenz", "feadd", "femul", "feopp", "fesub"],
-    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
+    "compiler"             : "gcc -fno-peephole2 `#GCC BUG 81300` -march=native -mbmi2 -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes -Wno-incompatible-pointer-types -fno-strict-aliasing"
 }
 
 
@@ -49,7 +49,7 @@ EXAMPLES (handwritten):
     "carry_chains"     : "default",
     "coef_div_modulus" : "2",
     "operations"       : ["femul", "fesquare", "freeze"],
-    "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "compiler"         : "gcc -march=native -mbmi2 -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
 }
 
 # curve25519 - c32
@@ -61,7 +61,7 @@ EXAMPLES (handwritten):
     "carry_chains"     : "default",
     "coef_div_modulus" : "2",
     "operations"       : ["femul", "fesquare", "freeze"],
-    "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "compiler"         : "gcc -march=native -mbmi2 -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
 }
 
 '''
@@ -69,8 +69,8 @@ EXAMPLES (handwritten):
 import math,json,sys,os,traceback,re,textwrap
 from fractions import Fraction
 
-CC = "clang -fbracket-depth=999999 -march=native -mtune=native -std=gnu11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
-CCX = "clang++ -fbracket-depth=999999 -march=native -mtune=native -std=gnu++11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+CC = "clang -fbracket-depth=999999 -march=native -mbmi2 -mtune=native -std=gnu11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
+CCX = "clang++ -fbracket-depth=999999 -march=native -mbmi2 -mtune=native -std=gnu++11 -O3 -flto -fuse-ld=lld -fomit-frame-pointer -fwrapv -Wno-attributes -fno-strict-aliasing"
 
 # for montgomery
 COMPILER_MONT = CC

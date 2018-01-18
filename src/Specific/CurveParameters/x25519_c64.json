@@ -8,7 +8,7 @@
     "coef_div_modulus" : "2",
     "operations"       : ["femul", "feadd", "fesub", "fecarry", "fesquare", "freeze", "ladderstep"],
     "extra_files"      : ["X25519_C64/scalarmult.c"],
-    "compiler"         : "gcc -march=native -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
+    "compiler"         : "gcc -march=native -mbmi2 -mtune=native -std=gnu11 -O3 -flto -fomit-frame-pointer -fwrapv -Wno-attributes",
     "mul_header"       : "(* Micro-optimized form from curve25519-donna-c64 by Adam Langley (Google) and Daniel Bernstein. See <https://github.com/agl/curve25519-donna/blob/master/LICENSE.md>. *)",
     "mul_code"
     :
