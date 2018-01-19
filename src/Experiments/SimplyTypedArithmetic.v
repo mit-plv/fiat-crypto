@@ -279,18 +279,6 @@ Module Compilers.
       Global Coercion type_primitive : primitive >-> type.
     End Coercions.
 
-    Fixpoint final_codomain (t : type) : type
-      := match t with
-         | arrow _ d => final_codomain d
-         | t => t
-         end.
-
-    Fixpoint under_arrows (t : type) (f : type -> type) : type
-      := match t with
-         | arrow s d => arrow s (under_arrows d f)
-         | t => f t
-         end.
-
     Fixpoint interp (t : type)
       := match t with
          | unit => Datatypes.unit
@@ -396,26 +384,29 @@ Module Compilers.
         Definition Interp {t} (e : Expr t) := interp (e _).
       End with_ident.
 
-      Ltac is_primitive_const_cps2 term on_success on_failure :=
-        let recurse term := is_primitive_const_cps2 term on_success on_failure in
-        lazymatch term with
-        | S ?n => recurse n
-        | O => on_success ()
-        | true => on_success ()
-        | false => on_success ()
-        | tt => on_success ()
-        | Z0 => on_success ()
-        | Zpos ?p => recurse p
-        | Zneg ?p => recurse p
-        | xI ?p => recurse p
-        | xO ?p => recurse p
-        | xH => on_success ()
-        | ?term => on_failure term
-        end.
       Ltac require_primitive_const term :=
-        is_primitive_const_cps2 term ltac:(fun _ => idtac) ltac:(fun term => fail 0 "Not a known const:" term).
+        lazymatch term with
+        | S ?n => require_primitive_const n
+        | O => idtac
+        | true => idtac
+        | false => idtac
+        | tt => idtac
+        | Z0 => idtac
+        | Zpos ?p => require_primitive_const p
+        | Zneg ?p => require_primitive_const p
+        | xI ?p => require_primitive_const p
+        | xO ?p => require_primitive_const p
+        | xH => idtac
+        | ?term => fail 0 "Not a known const:" term
+        end.
       Ltac is_primitive_const term :=
-        is_primitive_const_cps2 term ltac:(fun _ => true) ltac:(fun _ => false).
+        match constr:(Set) with
+        | _ => let check := match goal with
+                            | _ => require_primitive_const term
+                            end in
+               true
+        | _ => false
+        end.
 
       Module var_context.
         Inductive list {var : type -> Type} :=
@@ -494,8 +485,8 @@ Module Compilers.
           end
         end.
 
-      Ltac reify_helper ident reify_ident var term value_ctx template_ctx :=
-        let reify_rec_gen term value_ctx template_ctx := reify_helper ident reify_ident var term value_ctx template_ctx in
+      Ltac reify_in_context ident reify_ident var term value_ctx template_ctx :=
+        let reify_rec_gen term value_ctx template_ctx := reify_in_context ident reify_ident var term value_ctx template_ctx in
         let reify_rec term := reify_rec_gen term value_ctx template_ctx in
         let reify_rec_not_head term := reify_rec_gen term value_ctx tt in
         let mkAppIdent idc args
@@ -508,7 +499,7 @@ Module Compilers.
                  term_is_primitive_const
                  term
                  else_tac in
-        (*let dummy := match goal with _ => idtac "reify_helper: attempting to reify:" term end in*)
+        (*let dummy := match goal with _ => idtac "reify_in_context: attempting to reify:" term end in*)
         lazymatch value_ctx with
         | context[@var_context.cons _ ?rT term ?v _]
           => constr:(@Var ident var rT v)
@@ -549,7 +540,7 @@ Module Compilers.
               let not_x := refresh x ltac:(fun n => fresh n) in
               let not_x2 := refresh not_x ltac:(fun n => fresh n) in
               let not_x3 := refresh not_x2 ltac:(fun n => fresh n) in
-              (*let dummy := match goal with _ => idtac "reify_helper: λ case:" term "using vars:" not_x not_x2 not_x3 end in*)
+              (*let dummy := match goal with _ => idtac "reify_in_context: λ case:" term "using vars:" not_x not_x2 not_x3 end in*)
               let rf0 :=
                   constr:(
                     fun (x : T) (not_x : var rT)
@@ -613,7 +604,7 @@ Module Compilers.
           end
         end.
       Ltac reify ident reify_ident var term :=
-        reify_helper ident reify_ident var term (@var_context.nil var) tt.
+        reify_in_context ident reify_ident var term (@var_context.nil var) tt.
       Ltac Reify ident reify_ident term :=
         constr:(fun var : type -> Type
                 => ltac:(let r := reify ident reify_ident var term in
