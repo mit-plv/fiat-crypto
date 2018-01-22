@@ -59,7 +59,7 @@ Module Associational.
     trivial.                                              Defined.
 
   Definition split (s:Z) (p:list (Z*Z)) : list (Z*Z) * list (Z*Z)
-    := dlet_nd hi_lo := partition (fun t => fst t mod s =? 0) p in
+    := let hi_lo := partition (fun t => fst t mod s =? 0) p in
        (snd hi_lo, map (fun t => (fst t / s, snd t)) (fst hi_lo)).
   Lemma eval_split s p (s_nz:s<>0) :
     eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
