@@ -2413,118 +2413,119 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
   f0*g0+ 38*f1*g9+ 19*f2*g8+ 38*f3*g7+ 19*f4*g6+ 38*f5*g5+ 19*f6*g4+ 38*f7*g3+ 19*f8*g2+ 38*f9*g1) *)
   (*trivial.*)
 Defined.
+
 Import ident.
 Eval cbv [proj1_sig base_51_carry_mul] in (fun fg Hf Hg => proj1_sig (base_51_carry_mul fg Hf Hg)).
-(*     = fun (fg : list Z * list Z) (_ : length (Datatypes.fst fg) = 5%nat)
+(*   = fun (fg : list Z * list Z) (_ : length (Datatypes.fst fg) = 5%nat)
          (_ : length (Datatypes.snd fg) = 5%nat) =>
        expr.Interp (@interp)
          (fun var : type -> Type =>
           (λ x : var (type.list type.Z * type.list type.Z)%ctype,
-           expr_let y := fst @@ x [[0]] * snd @@ x [[4]] +
-                         (fst @@ x [[1]] * snd @@ x [[3]] +
-                          (fst @@ x [[2]] * snd @@ x [[2]] +
-                           (fst @@ x [[3]] * snd @@ x [[1]] +
-                            fst @@ x [[4]] * snd @@ x [[0]]))) in
+           expr_let y := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
+                         ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
+                          ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
+                           ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
+                            (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y, 2251799813685248) in
-           expr_let y2 := fst @@ x [[0]] * snd @@ x [[3]] +
-                          (fst @@ x [[1]] * snd @@ x [[2]] +
-                           (fst @@ x [[2]] * snd @@ x [[1]] +
-                            (fst @@ x [[3]] * snd @@ x [[0]] +
-                             19 * (fst @@ x [[4]] * snd @@ x [[4]])))) in
+           expr_let y2 := (fst @@ x [[0]] * snd @@ x [[3]])%expr +
+                          ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
+                           ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
+                            ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
+                             (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y2, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y2, 2251799813685248) in
-           expr_let y5 := fst @@ x [[0]] * snd @@ x [[2]] +
-                          (fst @@ x [[1]] * snd @@ x [[1]] +
-                           (fst @@ x [[2]] * snd @@ x [[0]] +
-                            (19 * (fst @@ x [[3]] * snd @@ x [[4]]) +
-                             19 * (fst @@ x [[4]] * snd @@ x [[3]])))) in
+           expr_let y5 := (fst @@ x [[0]] * snd @@ x [[2]])%expr +
+                          ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
+                           ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
+                            ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
+                             (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y5, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y5, 2251799813685248) in
-           expr_let y8 := fst @@ x [[0]] * snd @@ x [[1]] +
-                          (fst @@ x [[1]] * snd @@ x [[0]] +
-                           (19 * (fst @@ x [[2]] * snd @@ x [[4]]) +
-                            (19 * (fst @@ x [[3]] * snd @@ x [[3]]) +
-                             19 * (fst @@ x [[4]] * snd @@ x [[2]])))) in
+           expr_let y8 := (fst @@ x [[0]] * snd @@ x [[1]])%expr +
+                          ((fst @@ x [[1]] * snd @@ x [[0]])%expr +
+                           ((19 * (fst @@ x [[2]] * snd @@ x [[4]])%expr)%expr +
+                            ((19 * (fst @@ x [[3]] * snd @@ x [[3]])%expr)%expr +
+                             (19 * (fst @@ x [[4]] * snd @@ x [[2]])%expr)%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y8, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y8, 2251799813685248) in
-           expr_let y11 := fst @@ x [[0]] * snd @@ x [[0]] +
-                           (19 * (fst @@ x [[1]] * snd @@ x [[4]]) +
-                            (19 * (fst @@ x [[2]] * snd @@ x [[3]]) +
-                             (19 * (fst @@ x [[3]] * snd @@ x [[2]]) +
-                              19 * (fst @@ x [[4]] * snd @@ x [[1]])))) in
+           expr_let y11 := (fst @@ x [[0]] * snd @@ x [[0]])%expr +
+                           ((19 * (fst @@ x [[1]] * snd @@ x [[4]])%expr)%expr +
+                            ((19 * (fst @@ x [[2]] * snd @@ x [[3]])%expr)%expr +
+                             ((19 * (fst @@ x [[3]] * snd @@ x [[2]])%expr)%expr +
+                              (19 * (fst @@ x [[4]] * snd @@ x [[1]])%expr)%expr)%expr)%expr)%expr in
            expr_let y12 := Z.div @@ (y11, 2251799813685248) in
            expr_let y13 := Z.modulo @@ (y11, 2251799813685248) in
-           expr_let y14 := fst @@ x [[0]] * snd @@ x [[4]] +
-                           (fst @@ x [[1]] * snd @@ x [[3]] +
-                            (fst @@ x [[2]] * snd @@ x [[2]] +
-                             (fst @@ x [[3]] * snd @@ x [[1]] +
-                              fst @@ x [[4]] * snd @@ x [[0]]))) in
+           expr_let y14 := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
+                           ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
+                            ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
+                             ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
+                              (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y14, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y14, 2251799813685248) in
-           expr_let y17 := fst @@ x [[0]] * snd @@ x [[3]] +
-                           (fst @@ x [[1]] * snd @@ x [[2]] +
-                            (fst @@ x [[2]] * snd @@ x [[1]] +
-                             (fst @@ x [[3]] * snd @@ x [[0]] +
-                              19 * (fst @@ x [[4]] * snd @@ x [[4]])))) in
+           expr_let y17 := (fst @@ x [[0]] * snd @@ x [[3]])%expr +
+                           ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
+                            ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
+                             ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
+                              (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y17, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y17, 2251799813685248) in
-           expr_let y20 := fst @@ x [[0]] * snd @@ x [[2]] +
-                           (fst @@ x [[1]] * snd @@ x [[1]] +
-                            (fst @@ x [[2]] * snd @@ x [[0]] +
-                             (19 * (fst @@ x [[3]] * snd @@ x [[4]]) +
-                              19 * (fst @@ x [[4]] * snd @@ x [[3]])))) in
+           expr_let y20 := (fst @@ x [[0]] * snd @@ x [[2]])%expr +
+                           ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
+                            ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
+                             ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
+                              (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y20, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y20, 2251799813685248) in
            expr_let y23 := y12 +
-                           (fst @@ x [[0]] * snd @@ x [[1]] +
-                            (fst @@ x [[1]] * snd @@ x [[0]] +
-                             (19 * (fst @@ x [[2]] * snd @@ x [[4]]) +
-                              (19 * (fst @@ x [[3]] * snd @@ x [[3]]) +
-                               19 * (fst @@ x [[4]] * snd @@ x [[2]]))))) in
+                           ((fst @@ x [[0]] * snd @@ x [[1]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[0]])%expr +
+                             ((19 * (fst @@ x [[2]] * snd @@ x [[4]])%expr)%expr +
+                              ((19 * (fst @@ x [[3]] * snd @@ x [[3]])%expr)%expr +
+                               (19 * (fst @@ x [[4]] * snd @@ x [[2]])%expr)%expr)%expr)%expr)%expr)%expr in
            expr_let y24 := Z.div @@ (y23, 2251799813685248) in
            expr_let y25 := Z.modulo @@ (y23, 2251799813685248) in
            expr_let _ := Z.div @@ (y13, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let y28 := fst @@ x [[0]] * snd @@ x [[4]] +
-                           (fst @@ x [[1]] * snd @@ x [[3]] +
-                            (fst @@ x [[2]] * snd @@ x [[2]] +
-                             (fst @@ x [[3]] * snd @@ x [[1]] +
-                              fst @@ x [[4]] * snd @@ x [[0]]))) in
+           expr_let y28 := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
+                           ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
+                            ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
+                             ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
+                              (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y28, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y28, 2251799813685248) in
-           expr_let y31 := fst @@ x [[0]] * snd @@ x [[3]] +
-                           (fst @@ x [[1]] * snd @@ x [[2]] +
-                            (fst @@ x [[2]] * snd @@ x [[1]] +
-                             (fst @@ x [[3]] * snd @@ x [[0]] +
-                              19 * (fst @@ x [[4]] * snd @@ x [[4]])))) in
+           expr_let y31 := (fst @@ x [[0]] * snd @@ x [[3]])%expr +
+                           ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
+                            ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
+                             ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
+                              (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y31, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y31, 2251799813685248) in
            expr_let y34 := y24 +
-                           (fst @@ x [[0]] * snd @@ x [[2]] +
-                            (fst @@ x [[1]] * snd @@ x [[1]] +
-                             (fst @@ x [[2]] * snd @@ x [[0]] +
-                              (19 * (fst @@ x [[3]] * snd @@ x [[4]]) +
-                               19 * (fst @@ x [[4]] * snd @@ x [[3]]))))) in
+                           ((fst @@ x [[0]] * snd @@ x [[2]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
+                             ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
+                              ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
+                               (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr)%expr in
            expr_let y35 := Z.div @@ (y34, 2251799813685248) in
            expr_let y36 := Z.modulo @@ (y34, 2251799813685248) in
            expr_let _ := Z.div @@ (y25, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
            expr_let _ := Z.div @@ (y13, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let y41 := fst @@ x [[0]] * snd @@ x [[4]] +
-                           (fst @@ x [[1]] * snd @@ x [[3]] +
-                            (fst @@ x [[2]] * snd @@ x [[2]] +
-                             (fst @@ x [[3]] * snd @@ x [[1]] +
-                              fst @@ x [[4]] * snd @@ x [[0]]))) in
+           expr_let y41 := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
+                           ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
+                            ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
+                             ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
+                              (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
            expr_let _ := Z.div @@ (y41, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y41, 2251799813685248) in
            expr_let y44 := y35 +
-                           (fst @@ x [[0]] * snd @@ x [[3]] +
-                            (fst @@ x [[1]] * snd @@ x [[2]] +
-                             (fst @@ x [[2]] * snd @@ x [[1]] +
-                              (fst @@ x [[3]] * snd @@ x [[0]] +
-                               19 * (fst @@ x [[4]] * snd @@ x [[4]]))))) in
+                           ((fst @@ x [[0]] * snd @@ x [[3]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
+                             ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
+                              ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
+                               (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr)%expr in
            expr_let y45 := Z.div @@ (y44, 2251799813685248) in
            expr_let y46 := Z.modulo @@ (y44, 2251799813685248) in
            expr_let _ := Z.div @@ (y36, 2251799813685248) in
@@ -2534,48 +2535,99 @@ Eval cbv [proj1_sig base_51_carry_mul] in (fun fg Hf Hg => proj1_sig (base_51_ca
            expr_let _ := Z.div @@ (y13, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
            expr_let y53 := y45 +
-                           (fst @@ x [[0]] * snd @@ x [[4]] +
-                            (fst @@ x [[1]] * snd @@ x [[3]] +
-                             (fst @@ x [[2]] * snd @@ x [[2]] +
-                              (fst @@ x [[3]] * snd @@ x [[1]] +
-                               fst @@ x [[4]] * snd @@ x [[0]])))) in
-           expr_let _ := Z.div @@ (y53, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y53, 2251799813685248) in
+                           ((fst @@ x [[0]] * snd @@ x [[4]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
+                             ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
+                              ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
+                               (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr)%expr in
+           expr_let y54 := Z.div @@ (y53, 2251799813685248) in
+           expr_let y55 := Z.modulo @@ (y53, 2251799813685248) in
            expr_let _ := Z.div @@ (y46, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y46, 2251799813685248) in
            expr_let _ := Z.div @@ (y36, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
            expr_let _ := Z.div @@ (y25, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
-           expr_let y62 := Z.div @@ (y13, 2251799813685248) in
-           expr_let y63 := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let y64 := y45 +
-                           (fst @@ x [[0]] * snd @@ x [[4]] +
-                            (fst @@ x [[1]] * snd @@ x [[3]] +
-                             (fst @@ x [[2]] * snd @@ x [[2]] +
-                              (fst @@ x [[3]] * snd @@ x [[1]] +
-                               fst @@ x [[4]] * snd @@ x [[0]])))) in
-           expr_let _ := Z.div @@ (y64, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y64, 2251799813685248) in
+           expr_let _ := Z.div @@ (y13, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
+           expr_let _ := Z.div @@ (y55, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y55, 2251799813685248) in
            expr_let _ := Z.div @@ (y46, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y46, 2251799813685248) in
            expr_let _ := Z.div @@ (y36, 2251799813685248) in
            expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
-           expr_let y71 := y62 + y25 in
-           expr_let y72 := Z.div @@ (y71, 2251799813685248) in
-           expr_let y73 := Z.modulo @@ (y71, 2251799813685248) in
-           expr_let _ := Z.div @@ (y63, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y63, 2251799813685248) in
-           y63
-           :: y73
-              :: y72 + y36
-                 :: y46
-                    :: y45 +
-                       (fst @@ x [[0]] * snd @@ x [[4]] +
-                        (fst @@ x [[1]] * snd @@ x [[3]] +
-                         (fst @@ x [[2]] * snd @@ x [[2]] +
-                          (fst @@ x [[3]] * snd @@ x [[1]] +
-                           fst @@ x [[4]] * snd @@ x [[0]])))) :: [])%expr) fg
+           expr_let _ := Z.div @@ (y25, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
+           expr_let y72 := y13 + (19 * y54)%expr in
+           expr_let y73 := Z.div @@ (y72, 2251799813685248) in
+           expr_let y74 := Z.modulo @@ (y72, 2251799813685248) in
+           expr_let _ := Z.div @@ (y55, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y55, 2251799813685248) in
+           expr_let _ := Z.div @@ (y46, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y46, 2251799813685248) in
+           expr_let _ := Z.div @@ (y36, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
+           expr_let y81 := y73 + y25 in
+           expr_let y82 := Z.div @@ (y81, 2251799813685248) in
+           expr_let y83 := Z.modulo @@ (y81, 2251799813685248) in
+           expr_let _ := Z.div @@ (y74, 2251799813685248) in
+           expr_let _ := Z.modulo @@ (y74, 2251799813685248) in
+           y74 :: y83 :: y82 + y36 :: y46 :: y55 :: [])%expr) fg
      : forall fg : list Z * list Z,
        length (Datatypes.fst fg) = 5%nat ->
-       length (Datatypes.snd fg) = 5%nat -> list Z *)
+       length (Datatypes.snd fg) = 5%nat -> list Z
+*)
+
+(* after manual dead code elimination: *)
+(*    = fun (fg : list Z * list Z) (_ : length (Datatypes.fst fg) = 5%nat)
+         (_ : length (Datatypes.snd fg) = 5%nat) =>
+       expr.Interp (@interp)
+         (fun var : type -> Type =>
+          (λ x : var (type.list type.Z * type.list type.Z)%ctype,
+           expr_let y11 := (fst @@ x [[0]] * snd @@ x [[0]])%expr +
+                           ((19 * (fst @@ x [[1]] * snd @@ x [[4]])%expr)%expr +
+                            ((19 * (fst @@ x [[2]] * snd @@ x [[3]])%expr)%expr +
+                             ((19 * (fst @@ x [[3]] * snd @@ x [[2]])%expr)%expr +
+                              (19 * (fst @@ x [[4]] * snd @@ x [[1]])%expr)%expr)%expr)%expr)%expr in
+           expr_let y12 := Z.div @@ (y11, 2251799813685248) in
+           expr_let y13 := Z.modulo @@ (y11, 2251799813685248) in
+           expr_let y23 := y12 +
+                           ((fst @@ x [[0]] * snd @@ x [[1]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[0]])%expr +
+                             ((19 * (fst @@ x [[2]] * snd @@ x [[4]])%expr)%expr +
+                              ((19 * (fst @@ x [[3]] * snd @@ x [[3]])%expr)%expr +
+                               (19 * (fst @@ x [[4]] * snd @@ x [[2]])%expr)%expr)%expr)%expr)%expr)%expr in
+           expr_let y24 := Z.div @@ (y23, 2251799813685248) in
+           expr_let y25 := Z.modulo @@ (y23, 2251799813685248) in
+           expr_let y34 := y24 +
+                           ((fst @@ x [[0]] * snd @@ x [[2]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
+                             ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
+                              ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
+                               (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr)%expr in
+           expr_let y35 := Z.div @@ (y34, 2251799813685248) in
+           expr_let y36 := Z.modulo @@ (y34, 2251799813685248) in
+           expr_let y44 := y35 +
+                           ((fst @@ x [[0]] * snd @@ x [[3]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
+                             ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
+                              ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
+                               (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr)%expr in
+           expr_let y45 := Z.div @@ (y44, 2251799813685248) in
+           expr_let y46 := Z.modulo @@ (y44, 2251799813685248) in
+           expr_let y53 := y45 +
+                           ((fst @@ x [[0]] * snd @@ x [[4]])%expr +
+                            ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
+                             ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
+                              ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
+                               (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr)%expr in
+           expr_let y54 := Z.div @@ (y53, 2251799813685248) in
+           expr_let y55 := Z.modulo @@ (y53, 2251799813685248) in
+           expr_let y72 := y13 + (19 * y54)%expr in
+           expr_let y73 := Z.div @@ (y72, 2251799813685248) in
+           expr_let y74 := Z.modulo @@ (y72, 2251799813685248) in
+           expr_let y81 := y73 + y25 in
+           expr_let y82 := Z.div @@ (y81, 2251799813685248) in
+           expr_let y83 := Z.modulo @@ (y81, 2251799813685248) in
+           y74 :: y83 :: y82 + y36 :: y46 :: y55 :: [])%expr) fg
+*)
