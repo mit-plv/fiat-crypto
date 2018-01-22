@@ -298,6 +298,10 @@ Module Compilers.
       | Datatypes.nat => nat
       | Datatypes.bool => bool
       | BinInt.Z => Z
+      | ?ty => let dummy := match goal with
+                            | _ => fail 1 "Unrecognized type:" ty
+                            end in
+               constr:(I : I)
       end.
 
     Ltac reify ty :=
@@ -534,7 +538,10 @@ Module Compilers.
               lazymatch template_ctx with
               | (?arg, ?template_ctx)
                 => (* we pull a trick with [match] to plug in [arg] without running cbv β *)
-                reify_rec_gen (match arg with x => f end) value_ctx template_ctx
+                lazymatch type of term with
+                | forall y, ?P
+                  => reify_rec_gen (match arg as y return P with x => f end) value_ctx template_ctx
+                end
               end
             | false
               =>
@@ -594,14 +601,20 @@ Module Compilers.
                        constr:(App (ident:=ident) (var:=var) rf rx)
                   end
                 | _
-                  => let term := plug_template_ctx term template_ctx in
+                  => let term' := plug_template_ctx term template_ctx in
                      do_reify_ident
-                       term
+                       term'
                        ltac:(fun _
-                             => let dummy := match goal with
-                                             | _ => fail 1 "Unrecognized term:" term
-                                             end in
-                                constr:(I : I))
+                             => let term
+                                    := match constr:(Set) with
+                                       | _ => (eval cbv delta [term] in term) (* might fail, so we wrap it in a match to give better error messages *)
+                                       | _
+                                         => let dummy := match goal with
+                                                         | _ => fail 2 "Unrecognized term:" term'
+                                                         end in
+                                            constr:(I : I)
+                                       end in
+                                reify_rec term)
                 end)
           end
         end.
@@ -2439,8 +2452,6 @@ Proof.
     | [ |- forall args, ?ev = @?RHS args ]
       => refine (fun args => f_equal (fun F => F args) (_ : _ = RHS))
     end.
-    cbv [expand_list expand_list_helper].
-    cbv delta [chained_carries carry carry_reduce Associational.carry carryterm mulmod to_associational mul to_associational reduce from_associational add_to_nth zeros place split].
     Reify_rhs ().
     reflexivity.
   } Unfocus.
@@ -2478,10 +2489,8 @@ Proof.
         try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
         try eapply pow_ceil_mul_nat_nonzero;
         (apply dec_bool; vm_compute; reflexivity)).
-  cbn [length seq n List.app].
-  cbv [w Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul].
-  cbv [Associational.eval fold_right map fst snd].
   apply f_equal2; [ | reflexivity ]; apply f_equal.
+  cbv [w Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul].
   cbv [carry_mul_gen n].
   lazymatch goal with
   | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, fg) ]
