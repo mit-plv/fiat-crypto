@@ -59,11 +59,11 @@ Module Associational.
     trivial.                                              Defined.
 
   Definition split (s:Z) (p:list (Z*Z)) : list (Z*Z) * list (Z*Z)
-    := let hi_lo := partition (fun t => fst t mod s =? 0) p in
+    := dlet_nd hi_lo := partition (fun t => fst t mod s =? 0) p in
        (snd hi_lo, map (fun t => (fst t / s, snd t)) (fst hi_lo)).
   Lemma eval_split s p (s_nz:s<>0) :
     eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
-  Proof. cbv [split]; induction p;
+  Proof. cbv [Let_In split]; induction p;
     repeat match goal with
     | |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(trivial) ltac:(trivial))
@@ -2079,12 +2079,37 @@ Module Compilers.
     Module ident.
       Section interp.
         Context {var : type -> Type}.
-        Definition interp_let_in {tC tx : type} : value var tx -> (value var tx -> value var tC) -> value var tC
+        Fixpoint interp_let_in {tC tx : type} {struct tx} : value var tx -> (value var tx -> value var tC) -> value var tC
           := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
              | type.arrow _ _
-             | type.prod _ _
-             | type.list _
                => fun x f => f x
+             | type.list T as t
+               => fun (x : expr t + list (value var T)) (f : expr t + list (value var T) -> value var tC)
+                  => match x with
+                     | inr ls
+                       => list_rect
+                            (fun _ => (list (value var T) -> value var tC) -> value var tC)
+                            (fun f => f nil)
+                            (fun x _ rec f
+                             => rec (fun ls => @interp_let_in
+                                                 _ T x
+                                                 (fun x => f (cons x ls))))
+                            ls
+                            (fun ls => f (inr ls))
+                     | inl e => f (inl e)
+                     end
+             | type.prod A B as t
+               => fun (x : expr t + value var A * value var B) (f : expr t + value var A * value var B -> value var tC)
+                  => match x with
+                     | inr (a, b)
+                       => @interp_let_in
+                            _ A a
+                            (fun a
+                             => @interp_let_in
+                                  _ B b
+                                  (fun b => f (inr (a, b))))
+                     | inl e => f (inl e)
+                     end
              | type.type_primitive _ as t
                => fun (x : expr t + type.interp t) (f : expr t + type.interp t -> value var tC)
                   => match x with
