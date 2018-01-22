@@ -2311,7 +2311,7 @@ Example base_51_carry_mul (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 
 (*        (g9,g8,g7,g6,g5,g4,g3,g2,g1,g0)) mod (2^255 - 19) *)
   etransitivity; (* work around [rewrite] being stupid about evars *)
     [
-    | rewrite <- eval_chained_carries with (s:=2^255) (c:=[(1,19)]) (idxs:=(seq 0 (pred n) ++ [0; 1])%list%nat) (modulo:=fun x y => Z.modulo x y) (div:=fun x y => Z.div x y)
+    | rewrite <- eval_chained_carries with (s:=2^255) (c:=[(1,19)]) (idxs:=(seq 0 n ++ [0; 1])%list%nat) (modulo:=fun x y => Z.modulo x y) (div:=fun x y => Z.div x y)
       by (try assumption; auto using Z.div_mod; try (intros; eapply pow_ceil_mul_nat_divide_nonzero); try eapply pow_ceil_mul_nat_nonzero; try vm_decide);
       reflexivity ].
   eapply f_equal2; [|trivial]. eapply f_equal.
