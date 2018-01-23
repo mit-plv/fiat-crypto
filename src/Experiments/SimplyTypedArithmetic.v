@@ -1,5 +1,6 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
+Require Import Coq.MSets.MSetPositive.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
@@ -2272,6 +2273,103 @@ Module Compilers.
   Definition PartialReduce {t} (e : Expr t) : Expr t
     := fun var => @partial_reduce var t (e _).
 
+  Module DeadCodeElimination.
+    Fixpoint compute_live' {t} (e : @expr (fun _ => PositiveSet.t) t) (cur_idx : positive)
+    : positive * PositiveSet.t
+      := match e with
+         | Var t v => (cur_idx, v)
+         | TT => (cur_idx, PositiveSet.empty)
+         | AppIdent s d idc args
+           => let default := @compute_live' _ args cur_idx in
+              match args in expr.expr t return ident.ident t d -> _ with
+              | Pair A B x (Abs s d f)
+                => fun idc
+                   => match idc with
+                      | ident.Let_In _ _
+                        => let '(idx, live) := @compute_live' A x cur_idx in
+                           let '(_, live) := @compute_live' _ (f (PositiveSet.add idx live)) (Pos.succ idx) in
+                           (Pos.succ idx, live)
+                      | _ => default
+                      end
+              | _ => fun _ => default
+              end idc
+         | App s d f x
+           => let '(idx, live1) := @compute_live' _ f cur_idx in
+              let '(idx, live2) := @compute_live' _ x idx in
+              (idx, PositiveSet.union live1 live2)
+         | Pair A B a b
+           => let '(idx, live1) := @compute_live' A a cur_idx in
+              let '(idx, live2) := @compute_live' B b idx in
+              (idx, PositiveSet.union live1 live2)
+         | Abs s d f
+           => let '(_, live) := @compute_live' _ (f PositiveSet.empty) cur_idx in
+              (cur_idx, live)
+         end.
+    Definition compute_live {t} e : PositiveSet.t := snd (@compute_live' t e 1).
+    Definition ComputeLive {t} (e : Expr t) := compute_live (e _).
+
+    Section with_var.
+      Context {var : type -> Type}
+              (live : PositiveSet.t).
+      Definition OUGHT_TO_BE_UNUSED {T1 T2} (v : T1) (v' : T2) := v.
+      Global Opaque OUGHT_TO_BE_UNUSED.
+      Fixpoint eliminate_dead' {t} (e : @expr (@expr var) t) (cur_idx : positive)
+        : positive * @expr var t
+        := match e with
+           | Var t v => (cur_idx, v)
+           | TT => (cur_idx, TT)
+           | AppIdent s d idc args
+             => let default := @eliminate_dead' _ args cur_idx in
+                let default := (fst default, AppIdent idc (snd default)) in
+                match args in expr.expr t return ident.ident t d -> positive * expr d -> positive * expr d with
+                | Pair A B x y
+                  => match y in expr.expr Y return ident.ident (A * Y) d -> positive * expr d -> positive * expr d with
+                     | Abs s' d' f
+                       => fun idc
+                          => let '(idx, x') := @eliminate_dead' A x cur_idx in
+                             let f' := fun v => snd (@eliminate_dead' _ (f v) (Pos.succ idx)) in
+                             match idc in ident.ident s d
+                                   return (match s return Type with
+                                           | A * _ => expr A
+                                           | _ => unit
+                                           end%ctype
+                                           -> match s return Type with
+                                              | _ * (s -> d) => (expr s -> expr d)%type
+                                              | _ => unit
+                                              end%ctype
+                                           -> positive * expr d
+                                           -> positive * expr d)
+                             with
+                             | ident.Let_In _ _
+                               => fun x' f' _
+                                  => if PositiveSet.mem idx live
+                                     then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
+                                     else (Pos.succ idx, f' (OUGHT_TO_BE_UNUSED x' (Pos.succ idx, PositiveSet.elements live)))
+                             | _ => fun _ _ default => default
+                             end x' f'
+                     | _ => fun _ default => default
+                     end
+                | _ => fun _ default => default
+                end idc default
+           | App s d f x
+             => let '(idx, f') := @eliminate_dead' _ f cur_idx in
+                let '(idx, x') := @eliminate_dead' _ x idx in
+                (idx, App f' x')
+           | Pair A B a b
+             => let '(idx, a') := @eliminate_dead' A a cur_idx in
+                let '(idx, b') := @eliminate_dead' B b idx in
+                (idx, Pair a' b')
+           | Abs s d f
+             => (cur_idx, Abs (fun v => snd (@eliminate_dead' _ (f (Var v)) cur_idx)))
+           end.
+
+      Definition eliminate_dead {t} e : expr t
+        := snd (@eliminate_dead' t e 1).
+    End with_var.
+
+    Definition EliminateDead {t} (e : Expr t) : Expr t
+      := fun var => eliminate_dead (ComputeLive e) (e _).
+  End DeadCodeElimination.
 End Compilers.
 Import Associational Positional Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
@@ -2490,244 +2588,77 @@ Proof.
         try eapply pow_ceil_mul_nat_nonzero;
         (apply dec_bool; vm_compute; reflexivity)).
   apply f_equal2; [ | reflexivity ]; apply f_equal.
-  cbv [w Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul].
-  cbv [carry_mul_gen n].
-  lazymatch goal with
-  | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, fg) ]
-    => let rargs := Reify args in
-       let rargs := constr:(canonicalize_list_recursion rargs) in
-       transitivity (expr.Interp
-                       (@ident.interp)
-                       (fun var
-                        => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
-                           (e var @ (rargs var, Var FG)))%expr fg)
-  end.
-  2:cbv [expr.interp expr.Interp ident.interp]; exact admit.
-  let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-  set (E := e).
-  cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-  Time let E' := constr:(PartialReduce E) in
+  cbv [w Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
+    cbv [carry_mul_gen n];
+    lazymatch goal with
+    | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, fg) ]
+      => let rargs := Reify args in
+         let rargs := constr:(canonicalize_list_recursion rargs) in
+         transitivity (expr.Interp
+                         (@ident.interp)
+                         (fun var
+                          => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
+                             (e var @ (rargs var, Var FG)))%expr fg)
+    end;
+    [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
+    let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+    set (E := e);
+      cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
+  Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
        let E' := (eval lazy in E') in
        pose E' as E''.
-  transitivity (Interp E'' fg); [ clear E | exact admit ].
-  subst base_51_carry_mul.
-  reflexivity.
+  transitivity (Interp E'' fg); [ clear E | exact admit ];
+    subst base_51_carry_mul;
+    reflexivity.
 Qed.
 
 Import ident.
 Print base_51_carry_mul.
-(*   = fun (fg : list Z * list Z) (_ : length (Datatypes.fst fg) = 5%nat)
-         (_ : length (Datatypes.snd fg) = 5%nat) =>
-       expr.Interp (@interp)
-         (fun var : type -> Type =>
-          (λ x : var (type.list type.Z * type.list type.Z)%ctype,
-           expr_let y := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
-                         ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
-                          ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
-                           ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
-                            (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y, 2251799813685248) in
-           expr_let y2 := (fst @@ x [[0]] * snd @@ x [[3]])%expr +
-                          ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
-                           ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
-                            ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
-                             (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y2, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y2, 2251799813685248) in
-           expr_let y5 := (fst @@ x [[0]] * snd @@ x [[2]])%expr +
-                          ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
-                           ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
-                            ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
-                             (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y5, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y5, 2251799813685248) in
-           expr_let y8 := (fst @@ x [[0]] * snd @@ x [[1]])%expr +
-                          ((fst @@ x [[1]] * snd @@ x [[0]])%expr +
-                           ((19 * (fst @@ x [[2]] * snd @@ x [[4]])%expr)%expr +
-                            ((19 * (fst @@ x [[3]] * snd @@ x [[3]])%expr)%expr +
-                             (19 * (fst @@ x [[4]] * snd @@ x [[2]])%expr)%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y8, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y8, 2251799813685248) in
-           expr_let y11 := (fst @@ x [[0]] * snd @@ x [[0]])%expr +
-                           ((19 * (fst @@ x [[1]] * snd @@ x [[4]])%expr)%expr +
-                            ((19 * (fst @@ x [[2]] * snd @@ x [[3]])%expr)%expr +
-                             ((19 * (fst @@ x [[3]] * snd @@ x [[2]])%expr)%expr +
-                              (19 * (fst @@ x [[4]] * snd @@ x [[1]])%expr)%expr)%expr)%expr)%expr in
-           expr_let y12 := Z.div @@ (y11, 2251799813685248) in
-           expr_let y13 := Z.modulo @@ (y11, 2251799813685248) in
-           expr_let y14 := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
-                           ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
-                            ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
-                             ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
-                              (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y14, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y14, 2251799813685248) in
-           expr_let y17 := (fst @@ x [[0]] * snd @@ x [[3]])%expr +
-                           ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
-                            ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
-                             ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
-                              (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y17, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y17, 2251799813685248) in
-           expr_let y20 := (fst @@ x [[0]] * snd @@ x [[2]])%expr +
-                           ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
-                            ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
-                             ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
-                              (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y20, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y20, 2251799813685248) in
-           expr_let y23 := y12 +
-                           ((fst @@ x [[0]] * snd @@ x [[1]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[0]])%expr +
-                             ((19 * (fst @@ x [[2]] * snd @@ x [[4]])%expr)%expr +
-                              ((19 * (fst @@ x [[3]] * snd @@ x [[3]])%expr)%expr +
-                               (19 * (fst @@ x [[4]] * snd @@ x [[2]])%expr)%expr)%expr)%expr)%expr)%expr in
-           expr_let y24 := Z.div @@ (y23, 2251799813685248) in
-           expr_let y25 := Z.modulo @@ (y23, 2251799813685248) in
-           expr_let _ := Z.div @@ (y13, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let y28 := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
-                           ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
-                            ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
-                             ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
-                              (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y28, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y28, 2251799813685248) in
-           expr_let y31 := (fst @@ x [[0]] * snd @@ x [[3]])%expr +
-                           ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
-                            ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
-                             ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
-                              (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y31, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y31, 2251799813685248) in
-           expr_let y34 := y24 +
-                           ((fst @@ x [[0]] * snd @@ x [[2]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
-                             ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
-                              ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
-                               (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr)%expr in
-           expr_let y35 := Z.div @@ (y34, 2251799813685248) in
-           expr_let y36 := Z.modulo @@ (y34, 2251799813685248) in
-           expr_let _ := Z.div @@ (y25, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
-           expr_let _ := Z.div @@ (y13, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let y41 := (fst @@ x [[0]] * snd @@ x [[4]])%expr +
-                           ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
-                            ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
-                             ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
-                              (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr in
-           expr_let _ := Z.div @@ (y41, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y41, 2251799813685248) in
-           expr_let y44 := y35 +
-                           ((fst @@ x [[0]] * snd @@ x [[3]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
-                             ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
-                              ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
-                               (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr)%expr in
-           expr_let y45 := Z.div @@ (y44, 2251799813685248) in
-           expr_let y46 := Z.modulo @@ (y44, 2251799813685248) in
-           expr_let _ := Z.div @@ (y36, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
-           expr_let _ := Z.div @@ (y25, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
-           expr_let _ := Z.div @@ (y13, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let y53 := y45 +
-                           ((fst @@ x [[0]] * snd @@ x [[4]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
-                             ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
-                              ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
-                               (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr)%expr in
-           expr_let y54 := Z.div @@ (y53, 2251799813685248) in
-           expr_let y55 := Z.modulo @@ (y53, 2251799813685248) in
-           expr_let _ := Z.div @@ (y46, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y46, 2251799813685248) in
-           expr_let _ := Z.div @@ (y36, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
-           expr_let _ := Z.div @@ (y25, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
-           expr_let _ := Z.div @@ (y13, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y13, 2251799813685248) in
-           expr_let _ := Z.div @@ (y55, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y55, 2251799813685248) in
-           expr_let _ := Z.div @@ (y46, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y46, 2251799813685248) in
-           expr_let _ := Z.div @@ (y36, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
-           expr_let _ := Z.div @@ (y25, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y25, 2251799813685248) in
-           expr_let y72 := y13 + (19 * y54)%expr in
-           expr_let y73 := Z.div @@ (y72, 2251799813685248) in
-           expr_let y74 := Z.modulo @@ (y72, 2251799813685248) in
-           expr_let _ := Z.div @@ (y55, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y55, 2251799813685248) in
-           expr_let _ := Z.div @@ (y46, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y46, 2251799813685248) in
-           expr_let _ := Z.div @@ (y36, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y36, 2251799813685248) in
-           expr_let y81 := y73 + y25 in
-           expr_let y82 := Z.div @@ (y81, 2251799813685248) in
-           expr_let y83 := Z.modulo @@ (y81, 2251799813685248) in
-           expr_let _ := Z.div @@ (y74, 2251799813685248) in
-           expr_let _ := Z.modulo @@ (y74, 2251799813685248) in
-           y74 :: y83 :: y82 + y36 :: y46 :: y55 :: [])%expr) fg
-     : forall fg : list Z * list Z,
-       length (Datatypes.fst fg) = 5%nat ->
-       length (Datatypes.snd fg) = 5%nat -> list Z
-*)
-
-(* after manual dead code elimination: *)
-(*    = fun (fg : list Z * list Z) (_ : length (Datatypes.fst fg) = 5%nat)
-         (_ : length (Datatypes.snd fg) = 5%nat) =>
-       expr.Interp (@interp)
-         (fun var : type -> Type =>
-          (λ x : var (type.list type.Z * type.list type.Z)%ctype,
-           expr_let y11 := (fst @@ x [[0]] * snd @@ x [[0]])%expr +
-                           ((19 * (fst @@ x [[1]] * snd @@ x [[4]])%expr)%expr +
-                            ((19 * (fst @@ x [[2]] * snd @@ x [[3]])%expr)%expr +
-                             ((19 * (fst @@ x [[3]] * snd @@ x [[2]])%expr)%expr +
-                              (19 * (fst @@ x [[4]] * snd @@ x [[1]])%expr)%expr)%expr)%expr)%expr in
-           expr_let y12 := Z.div @@ (y11, 2251799813685248) in
-           expr_let y13 := Z.modulo @@ (y11, 2251799813685248) in
-           expr_let y23 := y12 +
-                           ((fst @@ x [[0]] * snd @@ x [[1]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[0]])%expr +
-                             ((19 * (fst @@ x [[2]] * snd @@ x [[4]])%expr)%expr +
-                              ((19 * (fst @@ x [[3]] * snd @@ x [[3]])%expr)%expr +
-                               (19 * (fst @@ x [[4]] * snd @@ x [[2]])%expr)%expr)%expr)%expr)%expr)%expr in
-           expr_let y24 := Z.div @@ (y23, 2251799813685248) in
-           expr_let y25 := Z.modulo @@ (y23, 2251799813685248) in
-           expr_let y34 := y24 +
-                           ((fst @@ x [[0]] * snd @@ x [[2]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[1]])%expr +
-                             ((fst @@ x [[2]] * snd @@ x [[0]])%expr +
-                              ((19 * (fst @@ x [[3]] * snd @@ x [[4]])%expr)%expr +
-                               (19 * (fst @@ x [[4]] * snd @@ x [[3]])%expr)%expr)%expr)%expr)%expr)%expr in
-           expr_let y35 := Z.div @@ (y34, 2251799813685248) in
-           expr_let y36 := Z.modulo @@ (y34, 2251799813685248) in
-           expr_let y44 := y35 +
-                           ((fst @@ x [[0]] * snd @@ x [[3]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[2]])%expr +
-                             ((fst @@ x [[2]] * snd @@ x [[1]])%expr +
-                              ((fst @@ x [[3]] * snd @@ x [[0]])%expr +
-                               (19 * (fst @@ x [[4]] * snd @@ x [[4]])%expr)%expr)%expr)%expr)%expr)%expr in
-           expr_let y45 := Z.div @@ (y44, 2251799813685248) in
-           expr_let y46 := Z.modulo @@ (y44, 2251799813685248) in
-           expr_let y53 := y45 +
-                           ((fst @@ x [[0]] * snd @@ x [[4]])%expr +
-                            ((fst @@ x [[1]] * snd @@ x [[3]])%expr +
-                             ((fst @@ x [[2]] * snd @@ x [[2]])%expr +
-                              ((fst @@ x [[3]] * snd @@ x [[1]])%expr +
-                               (fst @@ x [[4]] * snd @@ x [[0]])%expr)%expr)%expr)%expr)%expr in
-           expr_let y54 := Z.div @@ (y53, 2251799813685248) in
-           expr_let y55 := Z.modulo @@ (y53, 2251799813685248) in
-           expr_let y72 := y13 + (19 * y54)%expr in
-           expr_let y73 := Z.div @@ (y72, 2251799813685248) in
-           expr_let y74 := Z.modulo @@ (y72, 2251799813685248) in
-           expr_let y81 := y73 + y25 in
-           expr_let y82 := Z.div @@ (y81, 2251799813685248) in
-           expr_let y83 := Z.modulo @@ (y81, 2251799813685248) in
-           y74 :: y83 :: y82 + y36 :: y46 :: y55 :: [])%expr) fg
-*)
+(* expr.Interp (@interp)
+  (fun var : type -> Type =>
+   (λ v : var (type.list type.Z * type.list type.Z)%ctype,
+    expr_let v0 := fst @@ v [[0]] * snd @@ v [[0]] +
+                   (19 * (fst @@ v [[1]] * snd @@ v [[4]]) +
+                    (19 * (fst @@ v [[2]] * snd @@ v [[3]]) +
+                     (19 * (fst @@ v [[3]] * snd @@ v [[2]]) +
+                      19 * (fst @@ v [[4]] * snd @@ v [[1]])))) in
+    expr_let v1 := Z.div @@ (v0, 2251799813685248) in
+    expr_let v2 := Z.modulo @@ (v0, 2251799813685248) in
+    expr_let v3 := v1 +
+                   (fst @@ v [[0]] * snd @@ v [[1]] +
+                    (fst @@ v [[1]] * snd @@ v [[0]] +
+                     (19 * (fst @@ v [[2]] * snd @@ v [[4]]) +
+                      (19 * (fst @@ v [[3]] * snd @@ v [[3]]) +
+                       19 * (fst @@ v [[4]] * snd @@ v [[2]]))))) in
+    expr_let v4 := Z.div @@ (v3, 2251799813685248) in
+    expr_let v5 := Z.modulo @@ (v3, 2251799813685248) in
+    expr_let v6 := v4 +
+                   (fst @@ v [[0]] * snd @@ v [[2]] +
+                    (fst @@ v [[1]] * snd @@ v [[1]] +
+                     (fst @@ v [[2]] * snd @@ v [[0]] +
+                      (19 * (fst @@ v [[3]] * snd @@ v [[4]]) +
+                       19 * (fst @@ v [[4]] * snd @@ v [[3]]))))) in
+    expr_let v7 := Z.div @@ (v6, 2251799813685248) in
+    expr_let v8 := Z.modulo @@ (v6, 2251799813685248) in
+    expr_let v9 := v7 +
+                   (fst @@ v [[0]] * snd @@ v [[3]] +
+                    (fst @@ v [[1]] * snd @@ v [[2]] +
+                     (fst @@ v [[2]] * snd @@ v [[1]] +
+                      (fst @@ v [[3]] * snd @@ v [[0]] + 19 * (fst @@ v [[4]] * snd @@ v [[4]]))))) in
+    expr_let v10 := Z.div @@ (v9, 2251799813685248) in
+    expr_let v11 := Z.modulo @@ (v9, 2251799813685248) in
+    expr_let v12 := v10 +
+                    (fst @@ v [[0]] * snd @@ v [[4]] +
+                     (fst @@ v [[1]] * snd @@ v [[3]] +
+                      (fst @@ v [[2]] * snd @@ v [[2]] +
+                       (fst @@ v [[3]] * snd @@ v [[1]] + fst @@ v [[4]] * snd @@ v [[0]])))) in
+    expr_let v13 := Z.div @@ (v12, 2251799813685248) in
+    expr_let v14 := Z.modulo @@ (v12, 2251799813685248) in
+    expr_let v15 := v2 + 19 * v13 in
+    expr_let v16 := Z.div @@ (v15, 2251799813685248) in
+    expr_let v17 := Z.modulo @@ (v15, 2251799813685248) in
+    expr_let v18 := v16 + v5 in
+    expr_let v19 := Z.div @@ (v18, 2251799813685248) in
+    expr_let v20 := Z.modulo @@ (v18, 2251799813685248) in
+    v17 :: v20 :: v19 + v8 :: v11 :: v14 :: [])%expr)
+     : list Z * list Z -> list Z *)
