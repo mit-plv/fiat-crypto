@@ -1,6 +1,7 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
 Require Import Coq.MSets.MSetPositive.
+Require Import Coq.FSets.FMapPositive.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
@@ -902,8 +903,11 @@ Module Compilers.
           | pred : ident nat nat
           | list_rect {A P} : ident (P * (A * list A * P -> P) * list A) P
           | List_nth_default {T} : ident (T * list T * nat) T
+          | List_nth_default_concrete {T : type.primitive} (d : interp T) (n : Datatypes.nat) : ident (list T) T
           | Z_runtime_mul : ident (Z * Z) Z
           | Z_runtime_add : ident (Z * Z) Z
+          | Z_runtime_shiftr (offset : BinInt.Z) : ident Z Z
+          | Z_runtime_land (mask : BinInt.Z) : ident Z Z
           | Z_add : ident (Z * Z) Z
           | Z_mul : ident (Z * Z) Z
           | Z_pow : ident (Z * Z) Z
@@ -942,8 +946,11 @@ Module Compilers.
                | pred => Nat.pred
                | list_rect A P => curry3_23 (@Datatypes.list_rect (type.interp A) (fun _ => type.interp P))
                | List_nth_default T => curry3 (@List.nth_default (type.interp T))
+               | List_nth_default_concrete T d n => fun ls => @List.nth_default (type.interp T) d ls n
                | Z_runtime_mul => curry2 runtime_mul
                | Z_runtime_add => curry2 runtime_add
+               | Z_runtime_shiftr n => fun v => Z.shiftr v n
+               | Z_runtime_land mask => fun v => Z.land v mask
                | Z_add => curry2 Z.add
                | Z_mul => curry2 Z.mul
                | Z_pow => curry2 Z.pow
@@ -1042,11 +1049,14 @@ Module Compilers.
 
           Module List.
             Notation nth_default := List_nth_default.
+            Notation nth_default_concrete := List_nth_default_concrete.
           End List.
 
           Module Z.
             Notation runtime_mul := Z_runtime_mul.
             Notation runtime_add := Z_runtime_add.
+            Notation runtime_shiftr := Z_runtime_shiftr.
+            Notation runtime_land := Z_runtime_land.
             Notation add := Z_add.
             Notation mul := Z_mul.
             Notation pow := Z_pow.
@@ -1080,6 +1090,9 @@ Module Compilers.
           Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : expr_scope.
           Notation "ls [[ n ]]"
             := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%expr)
+               : expr_scope.
+          Notation "ls [[ n ]]"
+            := (AppIdent (ident.List.nth_default_concrete n) ls%expr)
                : expr_scope.
 
           Ltac reify var term := expr.reify ident ident.reify var term.
@@ -1634,6 +1647,8 @@ Module Compilers.
                   | ident.pred as idc
                   | ident.Z_runtime_mul as idc
                   | ident.Z_runtime_add as idc
+                  | ident.Z_runtime_shiftr _ as idc
+                  | ident.Z_runtime_land _ as idc
                   | ident.Z_add as idc
                   | ident.Z_mul as idc
                   | ident.Z_pow as idc
@@ -1693,6 +1708,8 @@ Module Compilers.
                             k
                   | ident.List_nth_default T
                     => cps_of (curry3 (@List.nth_default (interp R (type.translate T))))
+                  | ident.List_nth_default_concrete T d n
+                    => cps_of (fun ls => @List.nth_default (interp R (type.translate T)) d ls n)
                   end x k
            end.
 
@@ -1753,6 +1770,11 @@ Module Compilers.
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate T) * Compilers.type.list (type.untranslate _ (type.translate T)) * type.nat * (type.untranslate _ (type.translate T) -> R))%ctype) ,
                      (ident.snd @@ Var xyzk)
                        @ (ident.List_nth_default @@ (ident.fst @@ Var xyzk))
+                | ident.List_nth_default_concrete T d n
+                  => λ (xk :
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (Compilers.type.list (type.untranslate R (type.translate T)) * (type.untranslate R (type.translate T) -> R))%ctype) ,
+                     (ident.snd @@ Var xk)
+                       @ (ident.List_nth_default_concrete d n @@ (ident.fst @@ Var xk))
                 | ident.bool_rect T
                   => λ (xyzk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate T) * type.untranslate _ (type.translate T) * type.bool * (type.untranslate _ (type.translate T) -> R))%ctype) ,
@@ -1792,6 +1814,8 @@ Module Compilers.
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ type.nat)
                             @@ (ident.fst @@ (Var xyk)))
+                | ident.Z_runtime_shiftr _ as idc
+                | ident.Z_runtime_land _ as idc
                 | ident.Z_opp as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * (type.Z -> R))%ctype) ,
@@ -2194,6 +2218,15 @@ Module Compilers.
                             ls
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=P * (A * type.list A * P -> P) * type.list A) nil_case_cons_case_ls))
                      end
+             | ident.List.nth_default (type.type_primitive A) as idc
+               => fun (default_ls_idx : expr (A * type.list A * type.nat) + (expr (A * type.list A) + (expr A + type.interp A) * (expr (type.list A) + list (value var A))) * (expr type.nat + nat))
+                  => match default_ls_idx with
+                     | inr (inr (default, inr ls), inr idx)
+                       => List.nth_default default ls idx
+                     | inr (inr (inr default, ls), inr idx)
+                       => expr.reflect (AppIdent (ident.List.nth_default_concrete default idx) (expr.reify (t:=type.list A) ls))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=A * type.list A * type.nat) default_ls_idx))
+                     end
              | ident.List.nth_default A as idc
                => fun (default_ls_idx : expr (A * type.list A * type.nat) + (expr (A * type.list A) + value var A * (expr (type.list A) + list (value var A))) * (expr type.nat + nat))
                   => match default_ls_idx with
@@ -2201,10 +2234,19 @@ Module Compilers.
                        => List.nth_default default ls idx
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=A * type.list A * type.nat) default_ls_idx))
                      end
+             | ident.List.nth_default_concrete A default idx as idc
+               => fun (ls : expr (type.list A) + list (value var A))
+                  => match ls with
+                     | inr ls
+                       => List.nth_default (expr.reflect (t:=A) (AppIdent (ident.primitive default) TT)) ls idx
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=type.list A) ls))
+                     end
              | ident.pred as idc
              | ident.Nat_succ as idc
              | ident.Z_of_nat as idc
              | ident.Z_opp as idc
+             | ident.Z_runtime_shiftr _ as idc
+             | ident.Z_runtime_land _ as idc
                => fun x : expr _ + type.interp _
                   => match x return expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
@@ -2213,13 +2255,33 @@ Module Compilers.
              | ident.Z_add as idc
              | ident.Z_mul as idc
              | ident.Z_pow as idc
-             | ident.Z_div as idc
-             | ident.Z_modulo as idc
              | ident.Z_eqb as idc
                => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
                   => match x_y return expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     end
+             | ident.Z_div as idc
+               => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
+                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
+                     match x_y return expr _ + type.interp _ with
+                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
+                     | inr (x, inr y)
+                       => if Z.eqb y (2^Z.log2 y)
+                          then expr.reflect (AppIdent (ident.Z.runtime_shiftr (Z.log2 y)) (expr.reify (t:=type.Z) x))
+                          else default
+                     | _ => default
+                     end
+             | ident.Z_modulo as idc
+               => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
+                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
+                     match x_y return expr _ + type.interp _ with
+                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
+                     | inr (x, inr y)
+                       => if Z.eqb y (2^Z.log2 y)
+                          then expr.reflect (AppIdent (ident.Z.runtime_land (y-1)) (expr.reify (t:=type.Z) x))
+                          else default
+                     | _ => default
                      end
              | ident.Z_runtime_mul as idc
                => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
@@ -2370,6 +2432,553 @@ Module Compilers.
     Definition EliminateDead {t} (e : Expr t) : Expr t
       := fun var => eliminate_dead (ComputeLive e) (e _).
   End DeadCodeElimination.
+
+  Module BoundsAnalysis.
+    Module type.
+      Local Set Boolean Equality Schemes.
+      Local Set Decidable Equality Schemes.
+      Variant primitive := unit | Z | ZBounded (lower : Z) (upper : Z).
+      Inductive type := type_primitive (_:primitive) | prod (A B : type) | list (A : type).
+
+      Module Export Coercions.
+        Global Coercion type_primitive : primitive >-> type.
+      End Coercions.
+
+      Fixpoint transport_positive (P : positive -> Type)
+               (A B : positive)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | xI x, xI y => transport_positive (fun p => P (xI p)) x y
+           | xI _, _ => fun _ => None
+           | xO x, xO y => transport_positive (fun p => P (xO p)) x y
+           | xO _, _ => fun _ => None
+           | xH, xH => fun x => Some x
+           | xH, _ => fun _ => None
+           end.
+      Definition transport_Z (P : BinInt.Z -> Type)
+                 (A B : BinInt.Z)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | Z0, Z0 => fun x => Some x
+           | Z0, _ => fun _ => None
+           | Zpos x, Zpos y => transport_positive (fun p => P (Zpos p)) x y
+           | Zpos _, _ => fun _ => None
+           | Zneg x, Zneg y => transport_positive (fun p => P (Zneg p)) x y
+           | Zneg _, _ => fun _ => None
+           end.
+
+      Definition transport_primitive (P : primitive -> Type)
+                 (A B : primitive)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | unit, unit => fun x => Some x
+           | unit, _ => fun _ => None
+           | Z, Z => fun x => Some x
+           | Z, _ => fun _ => None
+           | ZBounded l u, ZBounded l' u'
+             => fun x
+                => match transport_Z (fun u => P (ZBounded l u)) u u' x with
+                   | Some x => transport_Z (fun l => P (ZBounded l u')) l l' x
+                   | None => None
+                   end
+           | ZBounded _ _, _ => fun _ => None
+           end.
+
+      Fixpoint transport (P : type -> Type) (A B : type)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | type_primitive x, type_primitive y => transport_primitive P x y
+           | type_primitive _, _ => fun _ => None
+           | list A, list B => transport (fun A => P (list A)) A B
+           | list _, _ => fun _ => None
+           | prod A B, prod A' B'
+             => fun x
+                => match transport (fun B => P (prod A B)) B B' x with
+                   | Some x => transport (fun A => P (prod A B')) A A' x
+                   | None => None
+                   end
+           | prod _ _, _ => fun _ => None
+           end.
+
+      (** TODO: MOVE ME *)
+      Record BoundedZ (lower upper : BinInt.Z)
+        := { value :> BinInt.Z ; value_bounded : andb (lower <=? value) (value <=? upper) = true }.
+      Global Arguments value {_ _} _.
+      Global Arguments value_bounded [_ _] _, _ _ _.
+
+      Fixpoint interp (t : type)
+        := match t with
+           | unit => Datatypes.unit
+           | prod A B => interp A * interp B
+           | list A => Datatypes.list (interp A)
+           | type_primitive Z => BinInt.Z
+           | ZBounded lower upper => BoundedZ lower upper
+           end%type.
+
+      Module Export Notations.
+        Export Coercions.
+        Delimit Scope btype_scope with btype.
+        Bind Scope btype_scope with type.
+        Notation "()" := unit : btype_scope.
+        Notation "A * B" := (prod A B) : btype_scope.
+        Notation "r[ l ~> u ]" := (ZBounded l u) : btype_scope.
+        Notation type := type.
+      End Notations.
+    End type.
+    Export type.Notations.
+
+    Module ident.
+      Import type.
+      Inductive ident : type -> type -> Set :=
+      | primitive {t : type.primitive} (v : interp t) : ident () t
+      | nil {t} : ident () (list t)
+      | cons {t} : ident (t * list t) (list t)
+      | fst {A B} : ident (A * B) A
+      | snd {A B} : ident (A * B) B
+      | List_nth {T : type.primitive} (n : nat) : ident (list T) T
+      | mul (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
+      | add (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
+      | shiftr (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
+      | land (T1 Tout : type.primitive) (mask : BinInt.Z) : ident T1 Tout
+      | cast (T1 Tout : type.primitive) : ident T1 Tout.
+
+      Notation curry0 f
+        := (fun 'tt => f).
+      Notation curry2 f
+        := (fun '(a, b) => f a b).
+
+      Axiom admit : forall {T}, T.
+
+      Definition resize {T1 Tout : type.primitive} : type.interp T1 -> type.interp Tout
+        := match T1, Tout return type.interp T1 -> type.interp Tout with
+           | _, unit => fun _ => tt
+           | unit, Z => fun _ => 0
+           | unit, ZBounded lower upper
+             => fun _ => {| value := lower ; value_bounded := admit |}
+           | Z, Z => id
+           | Z, ZBounded lower upper
+             => fun v => {| value := lower + Z.modulo (v - lower) (1 + upper - lower) ; value_bounded := admit |}
+           | ZBounded lower upper, Z => fun v => v.(value)
+           | ZBounded l u, ZBounded l' u'
+             => fun v
+                => {| value := l + Z.modulo (value v - l) (1 + u - l) ; value_bounded := admit |}
+           end.
+      Definition resize1 {T1 T2 T1' T2' : type.primitive}
+        : (type.interp T1 -> type.interp T2) -> (type.interp T1' -> type.interp T2')
+        := fun f x => resize (f (resize x)).
+      Definition resize2uc {T1 T2 T3 T1' T2' T3' : type.primitive}
+        : (type.interp (T1 * T2) -> type.interp T3) -> (type.interp (T1' * T2') -> type.interp T3')
+        := fun f '((x, y) : type.interp T1' * type.interp T2')
+           => resize (f (resize x, resize y)).
+
+      Fixpoint default {t : type} : type.interp t
+        := match t with
+           | unit => tt
+           | Z => -1
+           | ZBounded lower upper => {| value := lower ; value_bounded := admit |}
+           | prod A B => (default, default)
+           | list A => Datatypes.nil
+           end.
+
+      Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
+        := match idc with
+           | primitive t v => curry0 v
+           | nil t => curry0 (@Datatypes.nil (type.interp t))
+           | cons t => curry2 (@Datatypes.cons (type.interp t))
+           | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
+           | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
+           | List_nth T n => fun ls => @List.nth_default (type.interp T) default ls n
+           | add T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.add)
+           | mul T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.mul)
+           | shiftr _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftr v n)
+           | land _ _ mask => @resize1 type.Z type.Z _ _ (fun v => Z.land v mask)
+           | cast _ _ => resize
+           end.
+
+      Module Z.
+        Notation mul := (@mul type.Z type.Z type.Z).
+        Notation add := (@add type.Z type.Z type.Z).
+        Notation shiftr := (@shiftr type.Z type.Z).
+        Notation land := (@land type.Z type.Z).
+      End Z.
+
+      Module List.
+        Notation nth := List_nth.
+      End List.
+
+      Module Notations.
+        Notation ident := ident.
+      End Notations.
+    End ident.
+    Export ident.Notations.
+
+    Module Indexed.
+      Module expr.
+        Inductive expr {ident : type -> type -> Type} : type -> Type :=
+        | Var (t : type) (p : positive) : expr t
+        | TT : expr type.unit
+        | AppIdent {s d} (idc : ident s d) (args : expr s) : expr d
+        | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
+        | Let_In {s d} (n : positive) (x : expr s) (body : expr d) : expr d.
+
+        Module Export Notations.
+          Bind Scope nexpr_scope with expr.
+          Delimit Scope nexpr_scope with nexpr.
+
+          Infix "@@" := AppIdent : nexpr_scope.
+          Notation "( x , y , .. , z )" := (Pair .. (Pair x%nexpr y%nexpr) .. z%nexpr) : nexpr_scope.
+          Notation "( )" := TT : nexpr_scope.
+          Notation "()" := TT : nexpr_scope.
+          Notation "'expr_let' x := A 'in' b" := (Let_In x A b) : nexpr_scope.
+          Notation expr := expr.
+        End Notations.
+
+        Section with_ident.
+          Context {ident : type -> type -> Type}
+                  (interp_ident : forall s d, ident s d -> type.interp s -> type.interp d).
+
+          Fixpoint interp {t} (e : @expr ident t)
+                   (ctx : PositiveMap.t { t : type & type.interp t })
+            : option (type.interp t)
+            := match e with
+               | Var t n
+                 => match PositiveMap.find n ctx with
+                    | Some (existT t' v) => type.transport type.interp t' t v
+                    | None => None
+                    end
+               | TT => Some tt
+               | AppIdent s d idc args
+                 => option_map (interp_ident s d idc) (@interp s args ctx)
+               | Pair A B a b
+                 => match @interp A a ctx, @interp B b ctx with
+                    | Some a, Some b => Some (a, b)
+                    | Some _, None | None, Some _ | None, None => None
+                    end
+               | Let_In s d n x f
+                 => match @interp s x ctx with
+                    | Some v
+                      => let v' := v in
+                         @interp d f (PositiveMap.add n (existT type.interp s v') ctx)
+                    | None => None
+                    end
+               end.
+        End with_ident.
+      End expr.
+      Export expr.Notations.
+
+      Module OfPHOAS.
+        Module type.
+          Module primitive.
+            Definition compile (t : Compilers.type.primitive) : type.primitive
+              := match t with
+                 | Compilers.type.unit => type.unit
+                 | Compilers.type.Z => type.Z
+                 | type.nat => type.unit
+                 | type.bool => type.unit
+                 end.
+          End primitive.
+          Fixpoint compile (t : Compilers.type.type) : type
+            := match t with
+               | Compilers.type.prod A B
+                 => type.prod (compile A) (compile B)
+               | type.arrow s d => compile d
+               | Compilers.type.list A => type.list (compile A)
+               | Compilers.type.type_primitive t
+                 => primitive.compile t
+               end.
+        End type.
+
+        Module ident.
+          Import BoundsAnalysis.ident.
+          Definition is_let_in {s d} (idc : Compilers.Uncurried.expr.default.ident.ident s d)
+          : bool
+            := match idc with
+               | ident.Let_In tx tC => true
+               | _ => false
+               end.
+
+          Definition compile {s d} (idc : Compilers.Uncurried.expr.default.ident.ident s d)
+            : option (ident (type.compile s) (type.compile d))
+            := match idc in Compilers.Uncurried.expr.default.ident.ident s d
+                     return option (ident (type.compile s) (type.compile d))
+               with
+               | default.ident.primitive Compilers.type.Z v => Some (primitive (t:=type.Z) v)
+               | default.ident.primitive _ _ => None
+               | ident.Let_In tx tC => None
+               | ident.Nat_succ => None
+               | default.ident.nil t
+                 => Some (@nil (type.compile t))
+               | default.ident.cons t
+                 => Some (@cons (type.compile t))
+               | default.ident.fst A B
+                 => Some (@fst (type.compile A) (type.compile B))
+               | default.ident.snd A B
+                 => Some (@snd (type.compile A) (type.compile B))
+               | ident.bool_rect T => None
+               | ident.nat_rect P => None
+               | ident.pred => None
+               | ident.list_rect A P => None
+               | default.ident.List_nth_default T => None
+               | ident.List_nth_default_concrete T d n
+                 => Some (@List_nth (type.primitive.compile T) n)
+               | ident.Z_runtime_mul
+               | default.ident.Z_mul
+                 => Some Z.mul
+               | ident.Z_runtime_add
+               | default.ident.Z_add
+                 => Some Z.add
+               | ident.Z_runtime_shiftr n
+                 => Some (Z.shiftr n)
+               | ident.Z_runtime_land mask
+                 => Some (Z.land mask)
+               | ident.Z_pow
+               | ident.Z_opp
+               | ident.Z_div
+               | ident.Z_modulo
+               | ident.Z_eqb
+               | ident.Z_of_nat
+                 => None
+               end.
+        End ident.
+
+        Module expr.
+          Import Indexed.expr.
+          Section with_ident.
+            Context {ident ident'}
+                    (compile_ident : forall s d : Compilers.type.type,
+                        ident s d
+                        -> option (ident' (type.compile s) (type.compile d)))
+                    (is_let_in
+                     : forall s d,
+                        ident s d
+                        -> bool).
+
+            Fixpoint compile' {t}
+                     (e : @Compilers.Uncurried.expr.expr ident (fun _ => positive) t)
+                     (base : positive)
+              : positive * option (@expr ident' (type.compile t))
+              := match e with
+                 | Uncurried.expr.Var t v
+                   => (base, Some (Var (type.compile t) v))
+                 | Uncurried.expr.TT
+                   => (base, Some TT)
+                 | Uncurried.expr.AppIdent s d idc args
+                   => if is_let_in _ _ idc
+                      then
+                        match args with
+                        | Uncurried.expr.Pair A B a b
+                          => let '(base, a) := @compile' A a base in
+                             let '(base', b) := @compile' B b base in
+                             (base',
+                              match a, b with
+                              | Some a, Some b
+                                => type.transport _ _ _ (Let_In base a b)
+                              | _, _ => None
+                              end)
+                        | _ => (base, None)
+                        end
+                      else
+                        let '(base, args) := @compile' _ args base in
+                        (base,
+                         match compile_ident _ _ idc, args with
+                         | Some idc, Some args
+                           => Some (AppIdent idc args)
+                         | Some _, None | None, None | None, Some _ => None
+                         end)
+                 | App s d f x => (base, None)
+                 | Uncurried.expr.Pair A B a b
+                   => let '(base, a) := @compile' A a base in
+                      let '(base, b) := @compile' B b base in
+                      (base,
+                       match a, b with
+                       | Some a, Some b => Some (Pair a b)
+                       | _, _ => None
+                       end)
+                 | Abs s d f
+                   => @compile' _ (f base) (Pos.succ base)
+                 end.
+          End with_ident.
+
+          Definition compile {t}
+                     (e : @Compilers.Uncurried.expr.expr default.ident (fun _ => positive) t)
+            : option (@expr ident (type.compile t))
+            := snd (@compile' _ _ (@ident.compile) (@ident.is_let_in) t e 1).
+
+          Definition Compile {t}
+                     (e : @default.Expr t)
+            : option (@expr ident (type.compile t))
+            := compile (e _).
+        End expr.
+      End OfPHOAS.
+    End Indexed.
+    Module Export Notations.
+      Export BoundsAnalysis.type.Notations.
+      Export BoundsAnalysis.Indexed.expr.Notations.
+      Export BoundsAnalysis.ident.Notations.
+      Import BoundsAnalysis.type.
+      Import BoundsAnalysis.Indexed.expr.
+      Import BoundsAnalysis.ident.
+      Notation "[ ]" := (AppIdent ident.nil _) : nexpr_scope.
+      Notation "x :: xs" := (AppIdent ident.cons (Pair x%nexpr xs%nexpr)) : nexpr_scope.
+      Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : nexpr_scope.
+      Notation "ls [[ n ]]"
+        := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%nexpr)
+           : nexpr_scope.
+      Notation "'x_' n" := (Var _ n) (at level 10, format "'x_' n") : nexpr_scope.
+    End Notations.
+
+    Module AdjustBounds.
+      Import Indexed.
+      Import type expr ident.
+      Module ident.
+        Definition union (x y : type.primitive) : type.primitive
+          := match x, y with
+             | Z, _
+             | _, Z
+               => Z
+             | unit, t
+             | t, unit
+               => t
+             | ZBounded l u, ZBounded l' u'
+               => ZBounded (Z.min l l') (Z.max u u')
+             end.
+        Definition intersection (x y : type.primitive) : type.primitive
+          := match x, y with
+             | Z, t
+             | t, Z
+               => t
+             | unit, _
+             | _, unit
+               => unit
+             | ZBounded l u, ZBounded l' u'
+               => let '(l'', u'') := (Z.max l l', Z.min u u') in
+                  if Z.leb l'' u''
+                  then ZBounded (Z.max l l') (Z.min u u')
+                  else unit
+             end.
+        Definition two_corners_f (f : BinInt.Z -> BinInt.Z) (x : type.primitive) : type.primitive
+          := match x with
+             | unit => unit
+             | Z => Z
+             | ZBounded l u => ZBounded (Z.min (f l) (f u)) (Z.max (f l) (f u))
+             end.
+        Definition four_corners_f (f : BinInt.Z -> BinInt.Z -> BinInt.Z) (x y : type.primitive) : type.primitive
+          := match x with
+             | unit => unit
+             | Z => Z
+             | ZBounded l u
+               => union
+                    (two_corners_f (f l) y)
+                    (two_corners_f (f u) y)
+             end.
+
+        Notation uncurry2 f
+          := (fun a b => f (a, b)).
+
+        Definition adjust_bounds {s d} (idc : ident s d) {s'}
+        : @expr ident s' -> option { t' : type & @expr ident t' }.
+          refine match idc, s' return @expr ident s' -> option { t' : type & @expr ident t' } with
+                 | primitive type.Z v, _
+                   => fun _ => Some (existT _ _ (AppIdent (primitive (t:=type.ZBounded v v) {| value := v ; value_bounded := admit |}) TT))
+                 | primitive _ _ as idc, _
+                 | nil _ as idc, _
+                   => fun args => Some (existT _ _ (AppIdent idc TT))
+                 | cons t, type.prod (type_primitive A) (type.list (type_primitive B))
+                   => _
+                 | cons _, _ => fun _ => None
+                 | fst _ _, type.prod A B
+                   => fun args => Some (existT _ _ (AppIdent fst args))
+                 | fst _ _, _ => fun _ => None
+                 | snd _ _, type.prod A B
+                   => fun args => Some (existT _ _ (AppIdent snd args))
+                 | snd _ _, _ => fun _ => None
+                 | List_nth T n, type.list (type_primitive A)
+                   => fun args
+                      => Some (existT
+                                 _ _
+                                 (AppIdent (List_nth n) args))
+                 | List_nth _ _, _ => fun _ => None
+                 | mul type.Z type.Z type.Z as idc, type.prod (type_primitive A) (type_primitive B)
+                   => fun args
+                      => Some (existT
+                                 _ _
+                                 (AppIdent (mul _ _ (four_corners_f (uncurry2 (ident.interp idc)) A B))
+                                           args))
+                 | mul _ _ _, _ => fun _ => None
+                 | add type.Z type.Z type.Z as idc, type.prod (type_primitive A) (type_primitive B)
+                   => fun args
+                      => Some (existT
+                                 _ _
+                                 (AppIdent (add _ _ (four_corners_f (uncurry2 (ident.interp idc)) A B))
+                                           args))
+                 | add _ _ _, _ => fun _ => None
+                 | shiftr type.Z type.Z offset as idc, type_primitive A
+                   => fun args
+                      => Some (existT
+                                 _ _
+                                 (AppIdent (shiftr _ (two_corners_f (ident.interp idc) A) offset)
+                                           args))
+                 | shiftr _ _ _, _ => fun _ => None
+                 | land type.Z type.Z mask as idc, type_primitive A
+                   => fun args
+                      => Some (existT
+                                 _ _
+                                 (AppIdent (land _ (ZBounded admit admit) mask) args))
+                 | land _ _ _, _ => fun _ => None
+                 | cast T1 Tout, type_primitive A
+                   => fun args
+                      => Some (existT
+                                 _ _
+                                 (AppIdent (cast A (intersection T1 Tout)) args))
+                 | cast _ _, _ => fun _ => None
+                 end.
+        Admitted.
+      End ident.
+
+      Module expr.
+        Fixpoint adjust_bounds {t} (e : @expr ident t)
+                 (ctx : PositiveMap.t type)
+        : option { t' : type & @expr ident t' }
+          := match e with
+             | Var t p
+               => option_map (fun t => existT (@expr ident) t (Var t p))
+                             (PositiveMap.find p ctx)
+             | TT => Some (existT _ _ TT)
+             | AppIdent s d idc args
+               => match @adjust_bounds s args ctx with
+                  | Some (existT s args)
+                    => ident.adjust_bounds idc args
+                  | None => None
+                  end
+             | Pair A B a b
+               => match @adjust_bounds A a ctx, @adjust_bounds B b ctx with
+                  | Some (existT A a), Some (existT B b)
+                    => Some (existT _ (type.prod A B) (Pair a b))
+                  | _, _ => None
+                  end
+             | Let_In s d n x body
+               => match @adjust_bounds s x ctx with
+                  | Some (existT s x)
+                    => match @adjust_bounds d body (PositiveMap.add n s ctx) with
+                       | Some (existT d body)
+                         => Some (existT _ d (Let_In n x body))
+                       | None => None
+                       end
+                  | None => None
+                  end
+             end.
+
+      Module expr.
+        Inductive expr {ident : type -> type -> Type} : type -> Type :=
+        | Var (t : type) (p : positive) : expr t
+        | TT : expr type.unit
+        | AppIdent {s d} (idc : ident s d) (args : expr s) : expr d
+        | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
+        | Let_In {s d} (n : positive) (x : expr s) (body : expr d) : expr d.
+
+
+
+  End BoundsAnalysis.
 End Compilers.
 Import Associational Positional Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
@@ -2487,6 +3096,9 @@ Proof.
             Var x3 * Var x3)%RT_expr%expr)
     => idtac
   end.
+  pose (BoundsAnalysis.Indexed.OfPHOAS.expr.Compile E'') as E'''.
+  Import BoundsAnalysis.Notations.
+  lazy in E'''.
   constructor.
 Qed.
 
