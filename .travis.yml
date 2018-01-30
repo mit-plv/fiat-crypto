@@ -15,14 +15,11 @@ addons:
   apt:
     sources:
       - ubuntu-toolchain-r-test
-    packages:
-      - g++-7
-      - libssl-dev
 
 before_install:
   - if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
-  - travis_retry sudo apt-get update -q
-  - travis_retry sudo apt-get install $COQ_PACKAGE -y
+  - travis_retry ./etc/ci/sudo-apt-get-update.sh -q
+  - travis_retry sudo apt-get install g++-7 libssl-dev $COQ_PACKAGE -y
 
 
 before_script:
