@@ -1,3 +1,6 @@
 [submodule "etc/coq-scripts"]
 	path = etc/coq-scripts
 	url = https://github.com/JasonGross/coq-scripts.git
+[submodule "bbv"]
+	path = bbv
+	url = git@github.mit.edu:plv/bbv.git

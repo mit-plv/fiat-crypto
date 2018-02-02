@@ -1,7 +1,10 @@
 -R src Crypto
--R Bedrock Bedrock
-Bedrock/Nomega.v
-Bedrock/Word.v
+-R bbv bbv
+bbv/DepEq.v
+bbv/DepEqNat.v
+bbv/NatLib.v
+bbv/Nomega.v
+bbv/Word.v
 src/Demo.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v

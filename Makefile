@@ -53,7 +53,7 @@ endif
 
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R Bedrock Bedrock'; (git ls-files 'src/*.v' 'Bedrock/*.v' | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R bbv bbv'; (git ls-files --recurse-submodules 'src/*.v' 'bbv/*.v' | $(SORT_COQPROJECT))) > _CoqProject
 
 $(VOFILES): | coqprime
 
