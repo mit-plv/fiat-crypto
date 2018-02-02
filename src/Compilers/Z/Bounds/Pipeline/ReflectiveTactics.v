@@ -32,7 +32,7 @@ Require Import Crypto.Util.Tactics.UnfoldArg.
 Require Import Crypto.Util.Tactics.UnifyAbstractReflexivity.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.Option.
-Require Import Bedrock.Word.
+Require Import bbv.WordScope.
 
 (** The final tactic in this file, [do_reflective_pipeline], takes a
     goal of the form

@@ -245,7 +245,7 @@ End with_round_up_list.
     specified here. *)
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.FixedWordSizes.
-Require Import Bedrock.Word.
+Require Import bbv.WordScope.
 
 Module Export Exports. (* export unfolding strategy *)
   (* iota is probably (hopefully?) the cheapest reduction.

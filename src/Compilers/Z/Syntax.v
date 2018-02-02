@@ -1,6 +1,6 @@
 (** * PHOAS Syntax for expression trees on ℤ *)
 Require Import Coq.ZArith.ZArith.
-Require Import Bedrock.Word.
+Require Import bbv.WordScope.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.TypeUtil.

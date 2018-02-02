@@ -1,4 +1,4 @@
-Require Bedrock.Word Crypto.Util.WordUtil.
+Require bbv.WordScope Crypto.Util.WordUtil.
 Require Crypto.Algebra.Hierarchy Algebra.ScalarMult.
 Require Coq.ZArith.Znumtheory Coq.ZArith.BinInt.
 Require Coq.Numbers.Natural.Peano.NPeano.

@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Export Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.
-Require Export Bedrock.Word.
+Require Export bbv.WordScope.
 Require Export Crypto.Util.Notations.
 
 Notation Const x := (Op (OpConst x) TT).
@@ -731,7 +731,7 @@ def header():
     return (r"""Require Import Coq.ZArith.ZArith.
 Require Export Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Z.Syntax.
-Require Export Bedrock.Word.
+Require Export bbv.WordScope.
 Require Export Crypto.Util.Notations.
 
 Notation Const x := (Op (OpConst x) TT).
