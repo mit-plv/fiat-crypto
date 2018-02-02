@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.BinNat.
 Require Import Coq.Arith.Arith.
-Require Import Bedrock.Word.
+Require Import bbv.WordScope.
 
 Definition word32 := word 32. (* 2^5 *)
 Definition word64 := word 64. (* 2^6 *)

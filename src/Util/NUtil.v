@@ -1,7 +1,8 @@
 Require Import Coq.NArith.NArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.
-Require Bedrock.Word.
+Require bbv.WordScope.
+Require Import bbv.NatLib.
 Require Crypto.Util.WordUtil.
 
 Module N.
@@ -107,7 +108,7 @@ Module N.
   Section ZN.
     Import Coq.ZArith.ZArith.
     Lemma ZToN_NPow2_lt : forall z n, (0 <= z < 2 ^ Z.of_nat n)%Z ->
-                                      (Z.to_N z < Word.Npow2 n)%N.
+                                      (Z.to_N z < Npow2 n)%N.
     Proof.
       intros.
       apply WordUtil.bound_check_nat_N.

@@ -15,8 +15,8 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Sigma.
 
-Require Import Bedrock.Word.
-Require Import Bedrock.Nomega.
+Require Import bbv.WordScope.
+Require Import bbv.Nomega.
 
 Require Import Crypto.Util.FixCoqMistakes.
 
@@ -369,8 +369,6 @@ Section WordToN.
 
       + clear IHk'.
         shatter x; simpl.
-
-        rewrite N.succ_double_spec; simpl.
 
         rewrite kill_match.
         replace (N.pos (Pos.of_succ_nat k'))
@@ -825,11 +823,6 @@ Definition setbit {b} n {H:n < b} (w:word b) : word b :=
 
 Definition clearbit {b} n {H:n < b} (w:word b) : word b :=
   wand (cast_word( wones n ++ wzero 1 ++ wones (b-n-1) )) w.
-
-Lemma wordToNat_wzero {n} : wordToNat (wzero n) = 0.
-Proof.
-  unfold wzero; induction n as [|n IHn]; simpl; try rewrite_hyp!*; omega.
-Qed.
 
 Lemma wordToNat_combine : forall {a} (wa:word a) {b} (wb:word b),
   wordToNat (wa ++ wb) = wordToNat wa + 2^a * wordToNat wb.

@@ -5,6 +5,7 @@ bbv/DepEqNat.v
 bbv/NatLib.v
 bbv/Nomega.v
 bbv/Word.v
+bbv/WordScope.v
 src/Demo.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v

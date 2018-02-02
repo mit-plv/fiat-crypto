@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.BinNat.
 Require Import Coq.Arith.Arith.
-Require Import Bedrock.Word.
+Require Import bbv.WordScope.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.WordUtil.
 Require Import Crypto.Util.ZUtil.
