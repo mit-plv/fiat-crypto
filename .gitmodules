@@ -3,4 +3,4 @@
 	url = https://github.com/JasonGross/coq-scripts.git
 [submodule "bbv"]
 	path = bbv
-	url = git@github.com:mit-plv/bbv.git
+	url = ../../mit-plv/bbv.git
