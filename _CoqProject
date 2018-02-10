@@ -6543,6 +6543,7 @@ src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/ZRange/Operations.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/CPS.v
 src/Util/ZUtil/Definitions.v
