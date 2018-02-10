@@ -9,6 +9,7 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
 Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Notations.
@@ -2503,9 +2504,17 @@ Module Compilers.
 
       (** TODO: MOVE ME *)
       Record BoundedZ (lower upper : BinInt.Z)
-        := { value :> BinInt.Z ; value_bounded : andb (lower <=? value) (value <=? upper) = true }.
+        := { value :> BinInt.Z;
+             value_bounded : andb (Z.min lower upper <=? value)
+                                  (value <=? Z.max upper lower)
+                             = true }.
       Global Arguments value {_ _} _.
       Global Arguments value_bounded [_ _] _, _ _ _.
+
+      Definition fix_bool {b} : b = true -> b = true
+        := if b as b return b = true -> b = true
+           then fun _ => eq_refl
+           else fun x => x.
 
       Module primitive.
         Definition interp (t : primitive)
@@ -2548,8 +2557,7 @@ Module Compilers.
       | add (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
       | shiftr (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
       | land (T1 Tout : type.primitive) (mask : BinInt.Z) : ident T1 Tout
-      | cast (T1 Tout : type.primitive) : ident T1 Tout
-      | cast_list (T1 Tout : type.primitive) : ident (list T1) (list Tout).
+      | cast (T1 Tout : type.primitive) : ident T1 Tout.
 
       Notation curry0 f
         := (fun 'tt => f).
@@ -2563,14 +2571,14 @@ Module Compilers.
            | _, unit => fun _ => tt
            | unit, Z => fun _ => 0
            | unit, ZBounded lower upper
-             => fun _ => {| value := lower ; value_bounded := admit |}
+             => fun _ => {| value := lower ; value_bounded := fix_bool admit |}
            | Z, Z => id
            | Z, ZBounded lower upper
-             => fun v => {| value := lower + Z.modulo (v - lower) (1 + upper - lower) ; value_bounded := admit |}
+             => fun v => {| value := lower + Z.modulo (v - lower) (1 + upper - lower) ; value_bounded := fix_bool admit |}
            | ZBounded lower upper, Z => fun v => v.(value)
            | ZBounded l u, ZBounded l' u'
              => fun v
-                => {| value := l + Z.modulo (value v - l) (1 + u - l) ; value_bounded := admit |}
+                => {| value := l + Z.modulo (value v - l) (1 + u - l) ; value_bounded := fix_bool admit |}
            end.
       Definition resize1 {T1 T2 T1' T2' : type.primitive}
         : (type.interp T1 -> type.interp T2) -> (type.interp T1' -> type.interp T2')
@@ -2602,7 +2610,6 @@ Module Compilers.
            | shiftr _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftr v n)
            | land _ _ mask => @resize1 type.Z type.Z _ _ (fun v => Z.land v mask)
            | cast _ _ => resize
-           | cast_list _ _ => List.map resize
            end.
 
       Module Z.
@@ -2851,52 +2858,38 @@ Module Compilers.
         Section with_relax.
           Context (relax_zrange : zrange -> option zrange).
 
-          Definition primitive_of_option_zrange (v : option zrange) : type.primitive
+          Definition primitive_for_option_zrange (v : option zrange) : type.primitive
             := match v with
                | Some v => ZBounded (lower v) (upper v)
                | None => Z
                end.
-          Definition primitive_of_zrange (v : zrange) : type.primitive
-            := primitive_of_option_zrange (relax_zrange v).
+          Definition primitive_for_zrange (v : zrange) : type.primitive
+            := primitive_for_option_zrange (relax_zrange v).
 
-          Fixpoint zrange_interp (t : type) : Set
+          Fixpoint range (t : type) : Set
             := match t with
                | type_primitive _ => zrange
-               | prod A B => zrange_interp A * zrange_interp B
+               | prod A B => range A * range B
                | list A => Datatypes.list zrange
                end%type.
 
-          Definition union (x y : zrange) : zrange
-            := r[ Z.min (lower x) (lower y) ~> Z.max (upper x) (upper y) ].
-
-          Fixpoint type_of_zrange_interp {t} : zrange_interp t -> type
-            := match t return zrange_interp t -> type with
-               | type_primitive _ => primitive_of_zrange
-               | prod A B => fun (ab : zrange_interp A * zrange_interp B)
-                             => prod (@type_of_zrange_interp A (Datatypes.fst ab))
-                                     (@type_of_zrange_interp B (Datatypes.snd ab))
+          Fixpoint type_for_range {t} : range t -> type
+            := match t return range t -> type with
+               | type_primitive _ => primitive_for_zrange
+               | prod A B => fun (ab : range A * range B)
+                             => prod (@type_for_range A (Datatypes.fst ab))
+                                     (@type_for_range B (Datatypes.snd ab))
                | list A
                  => fun ls : Datatypes.list zrange
                     => type.list
-                         (primitive_of_zrange (List.fold_right union r[0 ~> 0]%zrange ls))
+                         (primitive_for_zrange (List.fold_right ZRange.union r[0 ~> 0]%zrange ls))
                end.
 
-          Definition two_corners_f (f : BinInt.Z -> BinInt.Z) (x : zrange) : zrange
-            := let '(l, u) := (lower x, upper x) in
-               r[ Z.min (f l) (f u) ~> Z.max (f l) (f u) ].
-          Definition four_corners_f (f : BinInt.Z -> BinInt.Z -> BinInt.Z) (x y : zrange) : zrange
-            := let '(l, u) := (lower x, upper x) in
-               union
-                 (two_corners_f (f l) y)
-                 (two_corners_f (f u) y).
-
-          Definition max_abs_bound (x : zrange) : BinInt.Z
-            := Z.max (Z.abs (lower x)) (Z.abs (upper x)).
           Definition upper_lor_and_bounds (x y : BinInt.Z) : BinInt.Z
             := 2^(1 + Z.log2_up (Z.max x y)).
           Definition extreme_lor_land_bounds (x y : zrange) : zrange
-            := let mx := max_abs_bound x in
-               let my := max_abs_bound y in
+            := let mx := ZRange.upper (ZRange.abs x) in
+               let my := ZRange.upper (ZRange.abs y) in
                {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
           Definition extremization_bounds (f : zrange -> zrange -> zrange) (x y : zrange) : zrange
             := let (lx, ux) := x in
@@ -2914,21 +2907,103 @@ Module Compilers.
           Notation uncurry2 f
             := (fun a b => f (a, b)).
 
+          (** TODO: Move me *)
+          Definition smart_fst {A B} (e : @expr ident (A * B)) : @expr ident A
+            := match e in @expr _ t
+                     return @expr ident match t with
+                                        | type.prod A B => A
+                                        | _ => A
+                                        end
+                            -> @expr ident match t with
+                                           | type.prod A B => A
+                                           | _ => A
+                                           end
+               with
+               | Pair A B a b => fun _ => a
+               | _ => fun x => x
+               end (AppIdent fst e).
+          Definition smart_snd {A B} (e : @expr ident (A * B)) : @expr ident B
+            := match e in @expr _ t
+                     return @expr ident match t with
+                                        | type.prod A B => B
+                                        | _ => B
+                                        end
+                            -> @expr ident match t with
+                                           | type.prod A B => B
+                                           | _ => B
+                                           end
+               with
+               | Pair A B a b => fun _ => b
+               | _ => fun x => x
+               end (AppIdent snd e).
+
+          Fixpoint list_map {A B : type.primitive}
+                   (f : @expr ident A -> @expr ident B)
+                   (e : @expr ident (type.list A))
+            : option (@expr ident (type.list B))
+            := match e in @expr _ T
+                     return (@expr ident match T with
+                                         | type.list A => A
+                                         | _ => A
+                                         end
+                             -> @expr ident B)
+                            -> option (@expr ident (type.list B))
+               with
+               | AppIdent s (type.list d) idc args
+                 => match args in expr s
+                          return ident s (type.list d)
+                                 -> (@expr ident d -> @expr ident B)
+                                 -> option (expr (type.list B))
+                    with
+                    | Pair A' (type.list B') a' b'
+                      => fun idc f
+                         => match idc in ident s d
+                                  return (match s return Type with
+                                          | type.prod A _ => expr A
+                                          | _ => Datatypes.unit
+                                          end
+                                          -> match s return Type with
+                                             | type.prod _ (type.list A)
+                                               => (expr A -> expr B)
+                                                  -> option (expr (type.list B))
+                                             | _ => Datatypes.unit
+                                             end
+                                          -> match d return Type with
+                                             | type.list d
+                                               => expr d -> expr B
+                                             | _ => Datatypes.unit
+                                             end
+                                          -> option (expr (type.list B)))
+                            with
+                            | ident.nil t
+                              => fun _ _ _ => Some (AppIdent ident.nil TT)
+                            | ident.cons t
+                              => fun x rec_xs f
+                                 => option_map
+                                      (fun f_xs => AppIdent ident.cons (f x, f_xs))
+                                      (rec_xs f)
+                            | _ => fun _ _ _ => None
+                            end a' (fun f => @list_map _ _ f b') f
+                    | _ => fun _ _ => None
+                    end idc
+               | _ => fun _ => None
+               end f.
+
           Definition adjust_bounds {s d} (idc : ident s d)
-            : option { bs : zrange_interp s & @expr ident (type_of_zrange_interp bs) }
-              -> option { bs : zrange_interp d & @expr ident (type_of_zrange_interp bs) }
+            : option { r : range s & @expr ident (type_for_range r) }
+              -> option { r : range d & @expr ident (type_for_range r) }
             := match idc in ident s d
-                     return option { bs : zrange_interp s & @expr ident (type_of_zrange_interp bs) }
-                            -> option { bs : zrange_interp d & @expr ident (type_of_zrange_interp bs) }
+                     return option { r : range s & @expr ident (type_for_range r) }
+                            -> option { r : range d & @expr ident (type_for_range r) }
                with
                | primitive type.Z v
                | primitive (type.ZBounded _ _) v
                  => fun _ => Some (existT
-                                     (fun bs : zrange_interp type.Z => @expr ident (type_of_zrange_interp bs))
+                                     (fun r : range type.Z => @expr ident (type_for_range r))
                                      r[v~>v]%zrange
-                                     (AppIdent (primitive (t:=primitive_of_zrange r[v~>v])
+                                     (AppIdent (primitive (t:=primitive_for_zrange r[v~>v])
                                                           match relax_zrange r[v ~> v] as t
-                                                                return type.interp (primitive_of_option_zrange t)
+                                                                return type.interp (primitive_for_option_zrange t)
                                                           with
                                                           | Some _ => {| value := v ; value_bounded := admit (* XXX needs proof about relax *) |}
                                                           | None => v
@@ -2939,86 +3014,105 @@ Module Compilers.
                | nil _ as idc
                  => fun _ => Some (existT _ Datatypes.nil (AppIdent nil TT))
                | cons t
-                 => option_map
-                      (fun '(existT bs args)
-                       => existT _ (Datatypes.fst bs :: Datatypes.snd bs)
-                                 (AppIdent
-                                    cons
-                                    (cast _ _ @@ (fst @@ args),
-                                     cast_list _ _ @@ (snd @@ args))))
+                 => fun args
+                    => match args with
+                       | Some (existT r args)
+                         => option_map
+                              (fun snd_args
+                               => existT _ (Datatypes.fst r :: Datatypes.snd r)
+                                         (AppIdent
+                                            cons
+                                            (cast _ _ @@ (smart_fst args),
+                                             snd_args)))
+                              (list_map
+                                 (AppIdent (cast _ _))
+                                 (smart_snd args))
+                       | None => None
+                       end
                | fst A B
                  => option_map
-                      (fun '(existT bs args)
-                       => existT _ (Datatypes.fst bs) (AppIdent fst args))
+                      (fun '(existT r args)
+                       => existT _ (Datatypes.fst r) (AppIdent fst args))
                | snd A B
                  => option_map
-                      (fun '(existT bs args)
-                       => existT _ (Datatypes.snd bs) (AppIdent snd args))
+                      (fun '(existT r args)
+                       => existT _ (Datatypes.snd r) (AppIdent snd args))
                | List_nth T n
                  => option_map
-                      (fun '(existT bs args)
+                      (fun '(existT r args)
 		       => existT _ _ (AppIdent (List_nth n) args))
                | mul _ _ _
                  => option_map
-                      (fun '(existT bs args)
-		       => existT _ (four_corners_f BinInt.Z.mul (Datatypes.fst bs) (Datatypes.snd bs))
+                      (fun '(existT r args)
+		       => existT _ (ZRange.four_corners BinInt.Z.mul (Datatypes.fst r) (Datatypes.snd r))
                                  (AppIdent (mul _ _ _) args))
                | add _ _ _
                  => option_map
-                      (fun '(existT bs args)
-		       => existT _ (four_corners_f BinInt.Z.add (Datatypes.fst bs) (Datatypes.snd bs))
+                      (fun '(existT r args)
+		       => existT _ (ZRange.four_corners BinInt.Z.add (Datatypes.fst r) (Datatypes.snd r))
                                  (AppIdent (add _ _ _) args))
                | shiftr _ _ offset
                  => option_map
-                      (fun '(existT bs args)
-		       => existT _ (two_corners_f (fun v => BinInt.Z.shiftr v offset) bs)
+                      (fun '(existT r args)
+		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
                                  (AppIdent (shiftr _ _ offset) args))
                | land _ _ mask
                  => option_map
-                      (fun '(existT bs args)
-		       => existT _ (land_bounds bs r[mask~>mask]%zrange)
+                      (fun '(existT r args)
+		       => existT _ (land_bounds r r[mask~>mask]%zrange)
                                  (AppIdent (land _ _ mask) args))
-           | cast _ _
-             => option_map
-                  (fun '(existT bs args)
-		   => existT _ admit (AppIdent (cast _ _) args))
-           | cast_list _ _
-             => option_map
-                  (fun '(existT bs args)
-		   => existT _ admit (AppIdent (cast_list _ _) args))
-           end.
-           End with_relax.
-           End ident.
+               | cast _ _
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ admit (AppIdent (cast _ _) args))
+               end.
+        End with_relax.
+      End ident.
 
-           Module expr.
-             Section with_relax.
-               Context (relax_zrange : zrange -> option zrange).
+      Module expr.
+        Import ident.
+        Section with_relax.
+          Context (relax_zrange : zrange -> option zrange).
 
-               Fixpoint adjust_bounds {t} (e : @expr ident t)
-                        (ctx : PositiveMap.t { t : type & ident.zrange_interp t })
-                 : option { bs : ident.zrange_interp t & @expr ident (ident.type_of_zrange_interp relax_zrange bs) }
-                 := match e in expr.expr t return option { bs : ident.zrange_interp t & @expr ident (ident.type_of_zrange_interp relax_zrange bs) } with
-                    | Var t p
-                      => match PositiveMap.find p ctx with
-                         | Some (existT t' bs)
-                           => type.transport
-                                (fun t => { bs : ident.zrange_interp t & @expr ident (ident.type_of_zrange_interp relax_zrange bs) })
-                                t'
-                                t
-                                (existT _ bs (Var _ p))
-                         | _ => None
-                         end
-                    | TT => None
-                    | AppIdent s d idc args
-                      => ident.adjust_bounds relax_zrange idc (@adjust_bounds s args ctx)
-                    | Pair A B a b
-                      => match @adjust_bounds A a ctx, @adjust_bounds B b ctx with
-                         | Some (existT A a), Some (existT B b)
-                           => Some (existT _ (A, B) (Pair a b))
-                         | _, _ => None
-                         end
-                    | Let_In s d n x body
-                      => match @adjust_bounds s x ctx with
+          Local Notation RangeCtx := (PositiveMap.t { t : type & ident.range t }).
+          Local Notation expr := (@expr ident).
+          Local Notation type_for_range := (type_for_range relax_zrange).
+          Local Notation "( a , b )" := (existT _ a b).
+
+          Definition lookupb (ctx : RangeCtx) {t} (p : positive) : option (range t)
+            := match PositiveMap.find p ctx with
+               | Some (existT t' r)
+                 => type.transport range t' t r
+               | None => None
+               end.
+
+
+          Definition option_bind
+
+          Fixpoint adjust_bounds (ctx : RangeCtx) {t} (e : expr t)
+            : option { r : range t & expr (type_for_range r) }.
+            refine match e with
+                   | TT => None
+                   | AppIdent s d idc args
+                     => ident.adjust_bounds relax_zrange idc (@adjust_bounds ctx s args)
+                   | Var t p
+                     => match PositiveMap.find p ctx with
+                        | Some (existT t' bs)
+                          => type.transport
+                               (fun t => { bs : ident.range t & @expr ident (ident.type_for_range relax_zrange bs) })
+                               t'
+                           t
+                           (existT _ bs (Var _ p))
+                    | _ => None
+                    end
+               | Pair A B a b
+                 => match @adjust_bounds A a ctx, @adjust_bounds B b ctx with
+                    | Some (existT A a), Some (existT B b)
+                      => Some (existT _ (A, B) (Pair a b))
+                    | _, _ => None
+                    end
+               | Let_In s d n x body
+                 => match @adjust_bounds s x ctx with
                     | Some (existT bx x)
                       => match @adjust_bounds d body (PositiveMap.add n (existT _ _ bx) ctx) with
                          | Some (existT bb body)
@@ -3037,10 +3131,10 @@ Module Compilers.
                  {s d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
                  (e : Expr (s -> d))
-                 (s_bounds : AdjustBounds.ident.zrange_interp (Indexed.OfPHOAS.type.compile s))
+                 (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
       : option
-          { bs : AdjustBounds.ident.zrange_interp (Indexed.OfPHOAS.type.compile d) &
-                 @expr ident (AdjustBounds.ident.type_of_zrange_interp relax_zrange bs) }
+          { bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d) &
+                 @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs) }
         := let e := Indexed.OfPHOAS.expr.Compile e in
            match e with
            | Some e
@@ -3054,31 +3148,31 @@ Module Compilers.
       Definition cast
                  {s : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
-                 (s_bounds : AdjustBounds.ident.zrange_interp (Indexed.OfPHOAS.type.compile s))
+                 (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
                  (v : Compilers.type.interp s)
-        : type.interp (AdjustBounds.ident.type_of_zrange_interp relax_zrange s_bounds).
+        : type.interp (AdjustBounds.ident.type_for_range relax_zrange s_bounds).
       Admitted.
 
       Definition cast_back
                  {d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
-                 {bs : AdjustBounds.ident.zrange_interp (Indexed.OfPHOAS.type.compile d)}
-                 (v : type.interp (AdjustBounds.ident.type_of_zrange_interp relax_zrange bs))
+                 {bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d)}
+                 (v : type.interp (AdjustBounds.ident.type_for_range relax_zrange bs))
         : Compilers.type.interp d.
       Admitted.
 
       Definition Interp
                  {s d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
-                 (s_bounds : AdjustBounds.ident.zrange_interp (Indexed.OfPHOAS.type.compile s))
-                 {bs : AdjustBounds.ident.zrange_interp (Indexed.OfPHOAS.type.compile d)}
+                 (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
+                 {bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d)}
                  (args : Compilers.type.interp s)
                  (* XXX FIXME NEEDS BOUNDEDNESS *)
-                 (e : @expr ident (AdjustBounds.ident.type_of_zrange_interp relax_zrange bs))
+                 (e : @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs))
         : option (Compilers.type.interp d)
         := let ctx := PositiveMap.add
                         1%positive
-                        (existT _ (AdjustBounds.ident.type_of_zrange_interp
+                        (existT _ (AdjustBounds.ident.type_for_range
                                      relax_zrange
                                      s_bounds)
                                 (cast relax_zrange s_bounds args (* XXX FIXME NEEDS PROOF *)))
