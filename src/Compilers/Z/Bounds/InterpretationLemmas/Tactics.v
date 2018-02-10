@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Psatz.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.Option.
@@ -10,6 +11,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 
 Local Open Scope Z_scope.
 
@@ -53,44 +55,6 @@ Ltac word_arith_t :=
   | [ |- (0 <= FixedWordSizes.wordToZ ?w <= 2^2^Z.of_nat ?logsz - 1)%Z ]
     => clear; pose proof (@wordToZ_range logsz w); autorewrite with push_Zof_nat zsimplify_const in *; try omega
   end.
-
-Ltac revert_min_max :=
-  repeat match goal with
-         | [ H : context[Z.min _ _] |- _ ] => revert H
-         | [ H : context[Z.max _ _] |- _ ] => revert H
-         end.
-Ltac rewrite_min_max_step_fast :=
-  match goal with
-  | [ H : (?a <= ?b)%Z |- context[Z.max ?a ?b] ]
-    => rewrite (Z.max_r a b) by assumption
-  | [ H : (?b <= ?a)%Z |- context[Z.max ?a ?b] ]
-    => rewrite (Z.max_l a b) by assumption
-  | [ H : (?a <= ?b)%Z |- context[Z.min ?a ?b] ]
-    => rewrite (Z.min_l a b) by assumption
-  | [ H : (?b <= ?a)%Z |- context[Z.min ?a ?b] ]
-    => rewrite (Z.min_r a b) by assumption
-  end.
-Ltac rewrite_min_max_step :=
-  match goal with
-  | _ => rewrite_min_max_step_fast
-  | [ |- context[Z.max ?a ?b] ]
-    => first [ rewrite (Z.max_l a b) by omega
-             | rewrite (Z.max_r a b) by omega ]
-  | [ |- context[Z.min ?a ?b] ]
-    => first [ rewrite (Z.min_l a b) by omega
-             | rewrite (Z.min_r a b) by omega ]
-  end.
-Ltac only_split_min_max_step :=
-  match goal with
-  | _ => revert_min_max; progress repeat apply Z.min_case_strong; intros
-  | _ => revert_min_max; progress repeat apply Z.max_case_strong; intros
-  end.
-Ltac split_min_max_step :=
-  match goal with
-  | _ => rewrite_min_max_step
-  | _ => only_split_min_max_step
-  end.
-Ltac split_min_max := repeat split_min_max_step.
 
 Ltac case_Zvar_nonneg_on x :=
   is_var x;
@@ -191,7 +155,7 @@ Ltac handle_shift_neg :=
 
 Ltac handle_four_corners_step_fast :=
   first [ progress destruct_head Bounds.t
-        | progress cbv [Bounds.four_corners] in *
+        | progress cbv [ZRange.four_corners] in *
         | progress subst
         | Zarith_t_step
         | progress split_min_max
@@ -202,7 +166,7 @@ Ltac handle_four_corners_step :=
         | remove_binary_operation_le_hyps_step ].
 Ltac handle_four_corners :=
   lazymatch goal with
-  | [ |- (ZRange.lower (Bounds.four_corners _ _ _) <= _ <= _)%Z ]
+  | [ |- (ZRange.lower (ZRange.four_corners _ _ _) <= _ <= _)%Z ]
     => idtac
   end;
   repeat handle_four_corners_step.

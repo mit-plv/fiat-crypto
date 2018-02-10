@@ -6543,6 +6543,8 @@ src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/ZRange/BasicLemmas.v
+src/Util/ZRange/CornersMonotoneBounds.v
 src/Util/ZRange/Operations.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/CPS.v
@@ -6583,6 +6585,7 @@ src/Util/ZUtil/Tactics/PullPush.v
 src/Util/ZUtil/Tactics/ReplaceNegWithPos.v
 src/Util/ZUtil/Tactics/RewriteModSmall.v
 src/Util/ZUtil/Tactics/SimplifyFractionsLe.v
+src/Util/ZUtil/Tactics/SplitMinMax.v
 src/Util/ZUtil/Tactics/ZeroBounds.v
 src/Util/ZUtil/Tactics/Ztestbit.v
 src/Util/ZUtil/Tactics/PullPush/Modulo.v

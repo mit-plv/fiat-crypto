@@ -6,6 +6,7 @@ Require Import Crypto.Compilers.Relations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.Tactics.DestructHead.
 Export Compilers.Syntax.Notations.
@@ -26,31 +27,12 @@ Module Import Bounds.
 
   Section ops.
     (** Generic helper definitions *)
-    Definition two_corners (f : Z -> Z) : t -> t
-      := fun x
-         => let (lx, ux) := x in
-            {| lower := Z.min (f lx) (f ux);
-               upper := Z.max (f lx) (f ux) |}.
-    Definition four_corners (f : Z -> Z -> Z) : t -> t -> t
-      := fun x y
-         => let (lx, ux) := x in
-            let (lfl, ufl) := two_corners (f lx) y in
-            let (lfu, ufu) := two_corners (f ux) y in
-            {| lower := Z.min lfl lfu;
-               upper := Z.max ufl ufu |}.
-    Definition eight_corners (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
-      := fun x y z
-         => let (lx, ux) := x in
-            let (lfl, ufl) := four_corners (f lx) y z in
-            let (lfu, ufu) := four_corners (f ux) y z in
-            {| lower := Z.min lfl lfu;
-               upper := Z.max ufl ufu |}.
     Definition t_map1 (f : Z -> Z) : t -> t
-      := fun x => two_corners f x.
+      := fun x => ZRange.two_corners f x.
     Definition t_map2 (f : Z -> Z -> Z) : t -> t -> t
-      := fun x y => four_corners f x y.
+      := fun x y => ZRange.four_corners f x y.
     Definition t_map3 (f : Z -> Z -> Z -> Z) : t -> t -> t -> t
-      := fun x y z => eight_corners f x y z.
+      := fun x y z => ZRange.eight_corners f x y z.
     (** Definitions of the actual bounds propogation *)
     (** Rules for adding new operations:
 
@@ -64,7 +46,7 @@ Module Import Bounds.
     Definition shl : t -> t -> t := t_map2 Z.shiftl.
     Definition shr : t -> t -> t := t_map2 Z.shiftr.
     Definition max_abs_bound (x : t) : Z
-      := Z.max (Z.abs (lower x)) (Z.abs (upper x)).
+      := upper (ZRange.abs x).
     Definition upper_lor_and_bounds (x y : Z) : Z
       := 2^(1 + Z.log2_up (Z.max x y)).
     Definition extreme_lor_land_bounds (x y : t) : t
