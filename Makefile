@@ -53,7 +53,7 @@ endif
 
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R bbv bbv'; (git ls-files --recurse-submodules 'src/*.v' 'bbv/*.v' | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R bbv bbv'; ((git ls-files 'src/*.v'; (git submodule foreach 'git ls-files "*.v" 2>/dev/null | sed "s|^|$$path/|"' | grep 'bbv/')) | $(SORT_COQPROJECT))) > _CoqProject
 
 $(VOFILES): | coqprime
 
