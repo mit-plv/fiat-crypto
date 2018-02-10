@@ -12,6 +12,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -2936,6 +2937,11 @@ Module Compilers.
                | Pair A B a b => fun _ => b
                | _ => fun x => x
                end (AppIdent snd e).
+          Definition smart_cast {A B : type.primitive} (e : @expr ident A) : @expr ident B
+            := match transport (@expr ident) A B e with
+               | Some e' => e'
+               | None => AppIdent (cast A B) e
+               end.
 
           Fixpoint list_map {A B : type.primitive}
                    (f : @expr ident A -> @expr ident B)
@@ -2984,6 +2990,12 @@ Module Compilers.
                                       (rec_xs f)
                             | _ => fun _ _ _ => None
                             end a' (fun f => @list_map _ _ f b') f
+                    | TT
+                      => match idc with
+                         | ident.nil _
+                           => fun _ _ => Some (AppIdent ident.nil TT)
+                         | _ => fun _ _ => None
+                         end
                     | _ => fun _ _ => None
                     end idc
                | _ => fun _ => None
@@ -3022,10 +3034,10 @@ Module Compilers.
                                => existT _ (Datatypes.fst r :: Datatypes.snd r)
                                          (AppIdent
                                             cons
-                                            (cast _ _ @@ (smart_fst args),
+                                            (smart_cast (smart_fst args),
                                              snd_args)))
                               (list_map
-                                 (AppIdent (cast _ _))
+                                 smart_cast
                                  (smart_snd args))
                        | None => None
                        end
@@ -3061,11 +3073,14 @@ Module Compilers.
                       (fun '(existT r args)
 		       => existT _ (land_bounds r r[mask~>mask]%zrange)
                                  (AppIdent (land _ _ mask) args))
-               | cast _ _
+               | cast _ (type.ZBounded l u)
                  => option_map
-                      (fun '(existT r args)
-		       => existT _ admit (AppIdent (cast _ _) args))
-               end.
+                      (fun '(existT r[l'~>u'] args)
+		       => existT _ r[Z.max l l' ~> Z.min u u']
+                                 (AppIdent (cast _ _) args))
+               | cast _ _
+                 => fun _ => None
+               end%zrange.
         End with_relax.
       End ident.
 
@@ -3077,7 +3092,7 @@ Module Compilers.
           Local Notation RangeCtx := (PositiveMap.t { t : type & ident.range t }).
           Local Notation expr := (@expr ident).
           Local Notation type_for_range := (type_for_range relax_zrange).
-          Local Notation "( a , b )" := (existT _ a b).
+          Local Notation "( a ; b )" := (existT _ a b) : core_scope.
 
           Definition lookupb (ctx : RangeCtx) {t} (p : positive) : option (range t)
             := match PositiveMap.find p ctx with
@@ -3085,42 +3100,34 @@ Module Compilers.
                  => type.transport range t' t r
                | None => None
                end.
+          Definition extendb (ctx : RangeCtx) {t} (p : positive) (r : range t)
+            : RangeCtx
+            := PositiveMap.add p (t; r) ctx.
 
-
-          Definition option_bind
+          Local Open Scope option_scope.
 
           Fixpoint adjust_bounds (ctx : RangeCtx) {t} (e : expr t)
-            : option { r : range t & expr (type_for_range r) }.
-            refine match e with
-                   | TT => None
-                   | AppIdent s d idc args
-                     => ident.adjust_bounds relax_zrange idc (@adjust_bounds ctx s args)
-                   | Var t p
-                     => match PositiveMap.find p ctx with
-                        | Some (existT t' bs)
-                          => type.transport
-                               (fun t => { bs : ident.range t & @expr ident (ident.type_for_range relax_zrange bs) })
-                               t'
-                           t
-                           (existT _ bs (Var _ p))
-                    | _ => None
-                    end
+            : option { r : range t & expr (type_for_range r) }
+            := match e with
+               | TT => None
+               | AppIdent s d idc args
+                 => ident.adjust_bounds relax_zrange idc (@adjust_bounds ctx s args)
+               | Var t x
+                 => range <- lookupb ctx x;
+                      Some (range; (Var _ x))
                | Pair A B a b
-                 => match @adjust_bounds A a ctx, @adjust_bounds B b ctx with
-                    | Some (existT A a), Some (existT B b)
-                      => Some (existT _ (A, B) (Pair a b))
-                    | _, _ => None
-                    end
-               | Let_In s d n x body
-                 => match @adjust_bounds s x ctx with
-                    | Some (existT bx x)
-                      => match @adjust_bounds d body (PositiveMap.add n (existT _ _ bx) ctx) with
-                         | Some (existT bb body)
-                           => Some (existT _ bb (Let_In n x body))
-                         | None => None
-                         end
-                    | None => None
-                    end
+                 => b1 <- @adjust_bounds ctx A a;
+                      b2 <- @adjust_bounds ctx B b;
+                      let '(range1; arg1) := b1 in
+                      let '(range2; arg2) := b2 in
+                      Some ((range1, range2); Pair arg1 arg2)
+               | Let_In tx tC x ex eC
+                 => bx <- @adjust_bounds ctx tx ex;
+                      let '(range_x; ex') := bx in
+                      let ctx' := extendb ctx x range_x in
+                      bC <- @adjust_bounds ctx' tC eC;
+                        let '(range_C; eC') := bC in
+                        Some (range_C; Let_In x ex' eC')
                end.
         End with_relax.
       End expr.
@@ -3139,43 +3146,68 @@ Module Compilers.
            match e with
            | Some e
              => let e := AdjustBounds.expr.adjust_bounds
-                           relax_zrange e
-                           (PositiveMap.add 1%positive (existT _ _ s_bounds) (PositiveMap.empty _)) in
+                           relax_zrange
+                           (PositiveMap.add 1%positive (existT _ _ s_bounds) (PositiveMap.empty _))
+                           e in
                 e
            | None => None
            end.
 
-      Definition cast
-                 {s : Compilers.type.Notations.type}
+      Definition cast_back_primitive
+                 {d : Compilers.type.primitive}
                  (relax_zrange : zrange -> option zrange)
-                 (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
-                 (v : Compilers.type.interp s)
-        : type.interp (AdjustBounds.ident.type_for_range relax_zrange s_bounds).
-      Admitted.
+                 {bs : zrange}
+        : type.primitive.interp (AdjustBounds.ident.primitive_for_zrange relax_zrange bs)
+          -> Compilers.type.interp d
+        := match d, relax_zrange bs as rbs
+                 return type.primitive.interp (AdjustBounds.ident.primitive_for_option_zrange rbs)
+                        -> Compilers.type.interp d
+           with
+           | Compilers.type.unit, _ => fun _ => tt
+           | Compilers.type.Z, Some r => fun x => type.value x
+           | Compilers.type.Z, None => fun x => x
+           | type.nat, _ => fun _ => 0%nat
+           | type.bool, _ => fun _ => true
+           end.
 
-      Definition cast_back
+      Fixpoint cast_back
                  {d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
                  {bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d)}
                  (v : type.interp (AdjustBounds.ident.type_for_range relax_zrange bs))
-        : Compilers.type.interp d.
-      Admitted.
+                 {struct d}
+        : Compilers.type.interp d
+        := match d
+                 return (forall bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d),
+                            type.interp (AdjustBounds.ident.type_for_range relax_zrange bs)
+                            -> Compilers.type.interp d)
+           with
+           | Compilers.type.type_primitive x => @cast_back_primitive _ _
+           | Compilers.type.prod A B
+             => fun (bs :
+                       (* ignore this line, for type inference badness *) AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile A) * AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile B))
+                    (v :
+                       (* ignore this line, for type inference badness *) type.interp (AdjustBounds.ident.type_for_range relax_zrange (fst bs)) * type.interp (AdjustBounds.ident.type_for_range relax_zrange (snd bs)))
+                => (@cast_back A relax_zrange (fst bs) (fst v),
+                    @cast_back B relax_zrange (snd bs) (snd v))
+           | type.arrow s d => fun bs v _ => @cast_back d relax_zrange bs v
+           | Compilers.type.list (Compilers.type.type_primitive A)
+             => fun bs
+                => List.map (@cast_back_primitive A relax_zrange _)
+           | Compilers.type.list A => fun _ _ => nil
+           end bs v.
 
       Definition Interp
                  {s d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
                  (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
                  {bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d)}
-                 (args : Compilers.type.interp s)
-                 (* XXX FIXME NEEDS BOUNDEDNESS *)
+                 (args : type.interp (AdjustBounds.ident.type_for_range relax_zrange s_bounds))
                  (e : @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs))
         : option (Compilers.type.interp d)
         := let ctx := PositiveMap.add
                         1%positive
-                        (existT _ (AdjustBounds.ident.type_for_range
-                                     relax_zrange
-                                     s_bounds)
-                                (cast relax_zrange s_bounds args (* XXX FIXME NEEDS PROOF *)))
+                        (existT _ _ args)
                         (PositiveMap.empty _) in
            let v := Indexed.expr.interp (@ident.interp) e ctx in
            option_map (cast_back relax_zrange) v.
@@ -3335,6 +3367,39 @@ Module test3.
   Qed.
 End test3.
 
+Module test4.
+  Example test4 : True.
+  Proof.
+    let v := Reify (fun y : (list Z * list Z)
+                    => dlet_nd x := List.nth_default (-1) (fst y) 0 in
+                        dlet_nd z := List.nth_default (-1) (snd y) 0 in
+                        dlet_nd xz := (x * z)%RT in
+                        (xz :: xz :: nil)%RT) in
+    pose v as E.
+    vm_compute in E.
+    pose (PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
+    lazy in E'.
+    clear E.
+    Import BoundsAnalysis.ident.
+    Import BoundsAnalysis.Notations.
+    pose (projT2 (Option.invert_Some
+                    (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                       (fun x => Some x) E' ([r[0~>10]%zrange],[r[0~>10]%zrange])))) as E''.
+    lazy in E''.
+    lazymatch (eval cbv delta [E''] in E'') with
+    | (expr_let 2 := List.nth 0 @@ (fst @@ x_ 1) in
+          expr_let 3 := List.nth 0 @@ (snd @@ x_ 1) in
+          expr_let 4 := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@
+                        (x_ 2, x_ 3) in
+           x_ 4
+              ::
+             x_ 4 :: [])%nexpr
+      => idtac
+    end.
+    constructor.
+  Qed.
+End test4.
+
 Axiom admit : forall {T}, T.
 
 Derive carry_mul_gen
@@ -3418,470 +3483,183 @@ Definition c := [(1, 19)].
 Definition n := 5%nat.
 Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
 Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
+Definition round_up_bitwidth (bitwidth : Z) : option Z
+  := (if bitwidth <=? 32
+      then Some 32
+      else if bitwidth <=? 64
+           then Some 64
+           else if bitwidth <=? 128
+                then Some 128
+                else None)%Z.
 Definition relax_zrange : zrange -> option zrange
-  := fun x => Some x.
+  := (fun '(r[ l ~> u ])
+      => if (0 <=? l)%Z
+         then option_map (fun u => r[0~>2^u-1])
+                         (round_up_bitwidth (Z.log2_up (u+1)))
+         else None)%zrange.
+
 Derive base_51_carry_mul
        SuchThat (forall
                     (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
         (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
         (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*)
-                    (fg : list Z * list Z)
+                    (fg : list (BoundsAnalysis.type.BoundedZ _ _)
+                          * list (BoundsAnalysis.type.BoundedZ _ _))
                     (f := fst fg) (g := snd fg)
-                    (Hf : length f = n) (Hg : length g = n)
                     (fg_bounds := (f_bounds, f_bounds))
-                    (fg' := base_51_carry_mul fg),
-                    (eval w n fg') mod (s - Associational.eval c)
-                    = (eval w n f * eval w n g) mod (s - Associational.eval c))
+                    (fg' := @BoundsAnalysis.OfPHOAS.cast_back
+                              ((type.list (type.Z) * type.list (type.Z))%ctype)
+                              relax_zrange
+                              fg_bounds
+                              fg)
+                    (f' := fst fg') (g' := snd fg')
+                    (Hf' : length f' = n) (Hg' : length g' = n),
+                    exists mul_fg',
+                      (BoundsAnalysis.OfPHOAS.Interp
+                         (s:=(type.list type.Z * type.list type.Z)%ctype)
+                         (d:=type.list type.Z)
+                         relax_zrange
+                         fg_bounds
+                         (bs:=f_bounds)
+                         fg
+                         base_51_carry_mul
+                       = Some mul_fg')
+                      /\
+                      (eval w n mul_fg') mod (s - Associational.eval c)
+                      = (eval w n f' * eval w n g') mod (s - Associational.eval c))
        As base_51_carry_mul_correct.
 Proof.
-  intros; subst f g fg'.
+  intros; subst f g fg' f' g'.
   erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
     by (cbv [n idxs s c];
         cbn [length seq n List.app]; try reflexivity; try assumption;
         try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
         try eapply pow_ceil_mul_nat_nonzero;
         (apply dec_bool; vm_compute; reflexivity)).
-  apply f_equal2; [ | reflexivity ]; apply f_equal.
-  cbv [f_bounds w n idxs s c fg_bounds];
-    cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
-    cbv [carry_mul_gen];
-    lazymatch goal with
-    | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, fg) ]
-      => let rargs := Reify args in
-         let rargs := constr:(canonicalize_list_recursion rargs) in
-         transitivity (expr.Interp
-                         (@ident.interp)
-                         (fun var
-                          => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
-                             (e var @ (rargs var, Var FG)))%expr fg)
-    end;
-    [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
-    let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-    set (E := e);
-      cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-  Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
-       let E' := (eval lazy in E') in
-       pose E' as E''.
-  Time let E' := constr:(Option.invert_Some
-                           (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                              relax_zrange E'' fg_bounds)) in
-       let E' := (eval lazy in E') in
-       clear E'';
+  match goal with
+  | [ |- exists _, ?x = Some _ /\ _ ]
+    => let v := fresh "v" in
+       destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
+  end.
+  { apply f_equal2; [ | reflexivity ]; apply f_equal.
+    cbv [f_bounds w n idxs s c fg_bounds];
+      cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
+      cbv [carry_mul_gen];
+      lazymatch goal with
+      | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
+        => let rargs := Reify args in
+           let rargs := constr:(canonicalize_list_recursion rargs) in
+           transitivity (expr.Interp
+                           (@ident.interp)
+                           (fun var
+                            => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
+                               (e var @ (rargs var, Var FG)))%expr fg)
+      end;
+      [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
+      let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+      set (E := e);
+        cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
+    Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+         let E' := (eval lazy in E') in
          pose E' as E''.
-  let E''' := (eval lazy in (projT2 E'')) in
-  transitivity
-    (Option.invert_Some
-       (BoundsAnalysis.OfPHOAS.Interp
-          (s:=(type.list type.Z * type.list type.Z)%ctype)
-          (d:=type.list type.Z)
-          (bs:=projT1 E'')
-          relax_zrange
-          fg_bounds
-          fg
-          E'''));
-    [ clear E | exact admit ];
-    subst base_51_carry_mul;
-    reflexivity.
+    Time let E' := constr:(Option.invert_Some
+                             (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                relax_zrange E'' fg_bounds)) in
+         let E' := (eval lazy in E') in
+         let E' := (eval lazy in (projT2 E')) in
+         let unif := constr:(eq_refl : base_51_carry_mul = E') in
+         idtac.
+    exact admit. }
+  { clear -Hv.
+    pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
+    clear Hv.
+    lazy in Hv'; clear -Hv'.
+    exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
 Qed.
 
 Import ident.
 Import BoundsAnalysis.ident.
 Import BoundsAnalysis.Notations.
+Local Open Scope btype_scope.
+Local Notation "'uint128'"
+  := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
+Local Notation "'uint64'"
+  := (r[0 ~> 18446744073709551615]) : btype_scope.
+Local Notation "'uint32'"
+  := (r[0 ~> 4294967295]) : btype_scope.
+Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
+  := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+  := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+Local Notation "x *₃₂₋₆₄₋₆₄ y"
+  := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+Local Notation "x +₁₂₈ y"
+  := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+  := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+Local Notation "x +₃₂₋₆₄₋₆₄ y"
+  := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+Local Notation "x +₆₄₋₆₄₋₆₄ y"
+  := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+Local Notation "( out_t )( v >> count )"
+  := ((shiftr _ out_t count @@ v)%nexpr)
+       (format "( out_t )( v  >>  count )")
+     : nexpr_scope.
+Local Notation "( ( out_t ) v & mask )"
+  := ((land _ out_t mask @@ v)%nexpr)
+       (format "( ( out_t ) v  &  mask )")
+     : nexpr_scope.
 Print base_51_carry_mul.
-(* fun fg : list Z * list Z =>
-Option.invert_Some
-  (BoundsAnalysis.OfPHOAS.Interp relax_zrange (f_bounds, f_bounds) fg
-     (expr_let 2 := add r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 487728568437811262225856558268416]%btype
-                      r[0 ~> 494146049601466673570933618245632]%btype @@
-                    (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 0 @@ (fst @@ x_1), List.nth 0 @@ (snd @@ x_1)),
-                    add r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 365796426328358446669392418701312]%btype
-                      r[0 ~> 487728568437811262225856558268416]%btype @@
-                    (mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 1 @@ (fst @@ x_1), List.nth 4 @@ (snd @@ x_1))),
-                    add r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 243864284218905631112928279134208]%btype
-                      r[0 ~> 365796426328358446669392418701312]%btype @@
-                    (mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 2 @@ (fst @@ x_1), List.nth 3 @@ (snd @@ x_1))),
-                    add r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 243864284218905631112928279134208]%btype @@
-                    (mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 3 @@ (fst @@ x_1), List.nth 2 @@ (snd @@ x_1))),
-                    mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 121932142109452815556464139567104]%btype @@
-                    ({|
-                     BoundsAnalysis.type.value := 19;
-                     BoundsAnalysis.type.value_bounded := admit |},
-                    mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                      r[0 ~> 6417481163655411345077059977216]%btype @@
-                    (List.nth 4 @@ (fst @@ x_1), List.nth 1 @@ (snd @@ x_1))))))) in
-      expr_let 3 := shiftr r[0 ~> 494146049601466673570933618245632]%btype
-                      r[0 ~> 219444928718045184]%btype 51 @@ x_2 in
-      expr_let 4 := land r[0 ~> 494146049601466673570933618245632]%btype
-                      r[0 ~> 2251799813685247]%btype 2251799813685247 @@ x_2 in
-      expr_let 5 := add r[0 ~> 219444928718045184]%btype
-                      r[0 ~> 378631388655669269359546538655744]%btype
-                      r[0 ~> 378631388655669488804475256700928]%btype @@
-                    (x_3,
-                    add r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 372213907492013858014469478678528]%btype
-                      r[0 ~> 378631388655669269359546538655744]%btype @@
-                    (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 0 @@ (fst @@ x_1), List.nth 1 @@ (snd @@ x_1)),
-                    add r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 365796426328358446669392418701312]%btype
-                      r[0 ~> 372213907492013858014469478678528]%btype @@
-                    (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 1 @@ (fst @@ x_1), List.nth 0 @@ (snd @@ x_1)),
-                    add r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 243864284218905631112928279134208]%btype
-                      r[0 ~> 365796426328358446669392418701312]%btype @@
-                    (mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 2 @@ (fst @@ x_1), List.nth 4 @@ (snd @@ x_1))),
-                    add r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 243864284218905631112928279134208]%btype @@
-                    (mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 3 @@ (fst @@ x_1), List.nth 3 @@ (snd @@ x_1))),
-                    mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 121932142109452815556464139567104]%btype @@
-                    ({|
-                     BoundsAnalysis.type.value := 19;
-                     BoundsAnalysis.type.value_bounded := admit |},
-                    mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                      r[0 ~> 6417481163655411345077059977216]%btype @@
-                    (List.nth 4 @@ (fst @@ x_1), List.nth 2 @@ (snd @@ x_1)))))))) in
-      expr_let 6 := shiftr r[0 ~> 378631388655669488804475256700928]%btype
-                      r[0 ~> 168146114212528225]%btype 51 @@ x_5 in
-      expr_let 7 := land r[0 ~> 378631388655669488804475256700928]%btype
-                      r[0 ~> 2251799813685247]%btype 2251799813685247 @@ x_5 in
-      expr_let 8 := add r[0 ~> 168146114212528225]%btype
-                      r[0 ~> 263116727709871865148159459065856]%btype
-                      r[0 ~> 263116727709872033294273671594081]%btype @@
-                    (x_6,
-                    add r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 256699246546216453803082399088640]%btype
-                      r[0 ~> 263116727709871865148159459065856]%btype @@
-                    (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 0 @@ (fst @@ x_1), List.nth 2 @@ (snd @@ x_1)),
-                    add r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 250281765382561042458005339111424]%btype
-                      r[0 ~> 256699246546216453803082399088640]%btype @@
-                    (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 1 @@ (fst @@ x_1), List.nth 1 @@ (snd @@ x_1)),
-                    add r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 243864284218905631112928279134208]%btype
-                      r[0 ~> 250281765382561042458005339111424]%btype @@
-                    (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 2 @@ (fst @@ x_1), List.nth 0 @@ (snd @@ x_1)),
-                    add r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 121932142109452815556464139567104]%btype
-                      r[0 ~> 243864284218905631112928279134208]%btype @@
-                    (mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 3 @@ (fst @@ x_1), List.nth 4 @@ (snd @@ x_1))),
-                    mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                      r[0 ~> 121932142109452815556464139567104]%btype @@
-                    ({|
-                     BoundsAnalysis.type.value := 19;
-                     BoundsAnalysis.type.value_bounded := admit |},
-                    mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                      r[0 ~> 6417481163655411345077059977216]%btype @@
-                    (List.nth 4 @@ (fst @@ x_1), List.nth 3 @@ (snd @@ x_1)))))))) in
-      expr_let 9 := shiftr r[0 ~> 263116727709872033294273671594081]%btype
-                      r[0 ~> 116847299707011146]%btype 51 @@ x_8 in
-      expr_let 10 := land r[0 ~> 263116727709872033294273671594081]%btype
-                       r[0 ~> 2251799813685247]%btype 2251799813685247 @@ x_8 in
-      expr_let 11 := add r[0 ~> 116847299707011146]%btype
-                       r[0 ~> 147602066764074460936772379475968]%btype
-                       r[0 ~> 147602066764074577784072086487114]%btype @@
-                     (x_9,
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 141184585600419049591695319498752]%btype
-                       r[0 ~> 147602066764074460936772379475968]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 0 @@ (fst @@ x_1), List.nth 3 @@ (snd @@ x_1)),
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 134767104436763638246618259521536]%btype
-                       r[0 ~> 141184585600419049591695319498752]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 1 @@ (fst @@ x_1), List.nth 2 @@ (snd @@ x_1)),
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 128349623273108226901541199544320]%btype
-                       r[0 ~> 134767104436763638246618259521536]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 2 @@ (fst @@ x_1), List.nth 1 @@ (snd @@ x_1)),
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype
-                       r[0 ~> 128349623273108226901541199544320]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 3 @@ (fst @@ x_1), List.nth 0 @@ (snd @@ x_1)),
-                     mul r[19 ~> 19]%btype r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 121932142109452815556464139567104]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |},
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 4 @@ (fst @@ x_1), List.nth 4 @@ (snd @@ x_1)))))))) in
-      expr_let 12 := shiftr r[0 ~> 147602066764074577784072086487114]%btype
-                       r[0 ~> 65548485201494067]%btype 51 @@ x_11 in
-      expr_let 13 := land r[0 ~> 147602066764074577784072086487114]%btype
-                       r[0 ~> 2251799813685247]%btype 2251799813685247 @@ x_11 in
-      expr_let 14 := add r[0 ~> 65548485201494067]%btype
-                       r[0 ~> 32087405818277056725385299886080]%btype
-                       r[0 ~> 32087405818277122273870501380147]%btype @@
-                     (x_12,
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 25669924654621645380308239908864]%btype
-                       r[0 ~> 32087405818277056725385299886080]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 0 @@ (fst @@ x_1), List.nth 4 @@ (snd @@ x_1)),
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 19252443490966234035231179931648]%btype
-                       r[0 ~> 25669924654621645380308239908864]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 1 @@ (fst @@ x_1), List.nth 3 @@ (snd @@ x_1)),
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 12834962327310822690154119954432]%btype
-                       r[0 ~> 19252443490966234035231179931648]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 2 @@ (fst @@ x_1), List.nth 2 @@ (snd @@ x_1)),
-                     add r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype
-                       r[0 ~> 12834962327310822690154119954432]%btype @@
-                     (mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                        r[0 ~> 6417481163655411345077059977216]%btype @@
-                      (List.nth 3 @@ (fst @@ x_1), List.nth 1 @@ (snd @@ x_1)),
-                     mul r[0 ~> 2533274790395904]%btype r[0 ~> 2533274790395904]%btype
-                       r[0 ~> 6417481163655411345077059977216]%btype @@
-                     (List.nth 4 @@ (fst @@ x_1), List.nth 0 @@ (snd @@ x_1))))))) in
-      expr_let 15 := shiftr r[0 ~> 32087405818277122273870501380147]%btype
-                       r[0 ~> 14249670695976989]%btype 51 @@ x_14 in
-      expr_let 16 := land r[0 ~> 32087405818277122273870501380147]%btype
-                       r[0 ~> 2251799813685247]%btype 2251799813685247 @@ x_14 in
-      expr_let 17 := add r[0 ~> 2251799813685247]%btype r[0 ~> 270743743223562791]%btype
-                       r[0 ~> 272995543037248038]%btype @@
-                     (x_4,
-                     mul r[19 ~> 19]%btype r[0 ~> 14249670695976989]%btype
-                       r[0 ~> 270743743223562791]%btype @@
-                     ({|
-                      BoundsAnalysis.type.value := 19;
-                      BoundsAnalysis.type.value_bounded := admit |}, x_15)) in
-      expr_let 18 := shiftr r[0 ~> 272995543037248038]%btype r[0 ~> 121]%btype 51 @@ x_17 in
-      expr_let 19 := land r[0 ~> 272995543037248038]%btype r[0 ~> 2251799813685247]%btype
-                       2251799813685247 @@ x_17 in
-      expr_let 20 := add r[0 ~> 121]%btype r[0 ~> 2251799813685247]%btype
-                       r[0 ~> 2251799813685368]%btype @@ (x_18, x_7) in
-      expr_let 21 := shiftr r[0 ~> 2251799813685368]%btype r[0 ~> 1]%btype 51 @@ x_20 in
-      expr_let 22 := land r[0 ~> 2251799813685368]%btype r[0 ~> 2251799813685247]%btype
-                       2251799813685247 @@ x_20 in
-      cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-      (fst @@
-       (x_19,
-       cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-       (fst @@
-        (x_22,
-        cast r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-        (fst @@
-         (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-          (x_21, x_10),
-         cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-         (fst @@
-          (x_13,
-          cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-          (fst @@ (x_16, []))
-          :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@ (snd @@ (x_16, []))))
-         :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-            (snd @@
-             (x_13,
-             cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-             (fst @@ (x_16, []))
-             :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@ (snd @@ (x_16, []))))))
-        :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-           (snd @@
-            (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-             (x_21, x_10),
-            cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-            (fst @@
-             (x_13,
-             cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-             (fst @@ (x_16, []))
-             :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@ (snd @@ (x_16, []))))
-            :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-               (snd @@
-                (x_13,
-                cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                (fst @@ (x_16, []))
-                :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                   (snd @@ (x_16, []))))))))
-       :: cast_list r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-          (snd @@
-           (x_22,
-           cast r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-           (fst @@
-            (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-             (x_21, x_10),
-            cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-            (fst @@
-             (x_13,
-             cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-             (fst @@ (x_16, []))
-             :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@ (snd @@ (x_16, []))))
-            :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-               (snd @@
-                (x_13,
-                cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                (fst @@ (x_16, []))
-                :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                   (snd @@ (x_16, []))))))
-           :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-              (snd @@
-               (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-                (x_21, x_10),
-               cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-               (fst @@
-                (x_13,
-                cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                (fst @@ (x_16, []))
-                :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                   (snd @@ (x_16, []))))
-               :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                  (snd @@
-                   (x_13,
-                   cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                   (fst @@ (x_16, []))
-                   :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                      (snd @@ (x_16, []))))))))))
-      :: cast_list r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-         (snd @@
-          (x_19,
-          cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-          (fst @@
-           (x_22,
-           cast r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-           (fst @@
-            (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-             (x_21, x_10),
-            cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-            (fst @@
-             (x_13,
-             cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-             (fst @@ (x_16, []))
-             :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@ (snd @@ (x_16, []))))
-            :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-               (snd @@
-                (x_13,
-                cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                (fst @@ (x_16, []))
-                :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                   (snd @@ (x_16, []))))))
-           :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-              (snd @@
-               (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-                (x_21, x_10),
-               cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-               (fst @@
-                (x_13,
-                cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                (fst @@ (x_16, []))
-                :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                   (snd @@ (x_16, []))))
-               :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                  (snd @@
-                   (x_13,
-                   cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                   (fst @@ (x_16, []))
-                   :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                      (snd @@ (x_16, []))))))))
-          :: cast_list r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-             (snd @@
-              (x_22,
-              cast r[0 ~> 2251799813685248]%btype r[0 ~> 2251799813685248]%btype @@
-              (fst @@
-               (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-                (x_21, x_10),
-               cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-               (fst @@
-                (x_13,
-                cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                (fst @@ (x_16, []))
-                :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                   (snd @@ (x_16, []))))
-               :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                  (snd @@
-                   (x_13,
-                   cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                   (fst @@ (x_16, []))
-                   :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                      (snd @@ (x_16, []))))))
-              :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685248]%btype @@
-                 (snd @@
-                  (add r[0 ~> 1]%btype r[0 ~> 2251799813685247]%btype
-                     r[0 ~> 2251799813685248]%btype @@ (x_21, x_10),
-                  cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                  (fst @@
-                   (x_13,
-                   cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                   (fst @@ (x_16, []))
-                   :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                      (snd @@ (x_16, []))))
-                  :: cast_list r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                     (snd @@
-                      (x_13,
-                      cast r[0 ~> 2251799813685247]%btype r[0 ~> 2251799813685247]%btype @@
-                      (fst @@ (x_16, []))
-                      :: cast_list r[0 ~> 0]%btype r[0 ~> 2251799813685247]%btype @@
-                         (snd @@ (x_16, [])))))))))))) *)
+(* base_51_carry_mul =
+(expr_let 2 := fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+               ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
+                ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]) +₁₂₈
+                 ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]]) +₁₂₈
+                  (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]])))) in
+ expr_let 3 := (uint64)(x_2 >> 51) in
+ expr_let 4 := ((uint64)x_2 & 2251799813685247) in
+ expr_let 5 := x_3 +₆₄₋₁₂₈₋₁₂₈
+               (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+                 ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
+                  ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]) +₁₂₈
+                   (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]]))))) in
+ expr_let 6 := (uint64)(x_5 >> 51) in
+ expr_let 7 := ((uint64)x_5 & 2251799813685247) in
+ expr_let 8 := x_6 +₆₄₋₁₂₈₋₁₂₈
+               (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
+                (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                 (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+                  ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
+                   (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]))))) in
+ expr_let 9 := (uint64)(x_8 >> 51) in
+ expr_let 10 := ((uint64)x_8 & 2251799813685247) in
+ expr_let 11 := x_9 +₆₄₋₁₂₈₋₁₂₈
+                (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]] +₁₂₈
+                 (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
+                  (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                   (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+                    (19) *₃₂₋₁₂₈₋₁₂₈
+                    (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]))))) in
+ expr_let 12 := (uint64)(x_11 >> 51) in
+ expr_let 13 := ((uint64)x_11 & 2251799813685247) in
+ expr_let 14 := x_12 +₆₄₋₁₂₈₋₁₂₈
+                (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]] +₁₂₈
+                 (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]] +₁₂₈
+                  (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
+                   (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                    fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]])))) in
+ expr_let 15 := (uint64)(x_14 >> 51) in
+ expr_let 16 := ((uint64)x_14 & 2251799813685247) in
+ expr_let 17 := x_4 +₆₄₋₆₄₋₆₄ (19) *₃₂₋₆₄₋₆₄ x_15 in
+ expr_let 18 := (uint32)(x_17 >> 51) in
+ expr_let 19 := ((uint64)x_17 & 2251799813685247) in
+ expr_let 20 := x_18 +₃₂₋₆₄₋₆₄ x_7 in
+ expr_let 21 := (uint32)(x_20 >> 51) in
+ expr_let 22 := ((uint64)x_20 & 2251799813685247) in
+ x_19 :: x_22 :: x_21 +₃₂₋₆₄₋₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+*)
