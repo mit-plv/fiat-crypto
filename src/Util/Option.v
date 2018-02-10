@@ -2,6 +2,20 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Notations.
+
+Definition bind {A B} (v : option A) (f : A -> option B) : option B
+  := match v with
+     | Some v => f v
+     | None => None
+     end.
+
+Module Export Notations.
+  Delimit Scope option_scope with option.
+  Bind Scope option_scope with option.
+
+  Notation "A <- X ; B" := (bind X (fun A => B%option)) : option_scope.
+End Notations.
 
 Section Relations.
   Definition option_eq {A} eq (x y : option A) :=
