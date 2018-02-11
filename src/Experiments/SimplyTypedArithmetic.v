@@ -3506,143 +3506,150 @@ Proof.
   reflexivity.
 Qed.
 
-(*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
-Definition limbwidth := 51%Q.
-Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
-Definition s := 2^255.
-Definition c := [(1, 19)].
-Definition n := 5%nat.
-Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
-Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
-Definition round_up_bitwidth (bitwidth : Z) : option Z
-  := (if bitwidth <=? 32
-      then Some 32
-      else if bitwidth <=? 64
-           then Some 64
-           else if bitwidth <=? 128
-                then Some 128
-                else None)%Z.
-Definition relax_zrange : zrange -> option zrange
+Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
+  := List.fold_right
+       (fun allowed cur
+        => if bitwidth <=? allowed
+           then Some allowed
+           else cur)
+       None
+       possible_values.
+
+Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
   := (fun '(r[ l ~> u ])
       => if (0 <=? l)%Z
          then option_map (fun u => r[0~>2^u-1])
-                         (round_up_bitwidth (Z.log2_up (u+1)))
+                         (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
          else None)%zrange.
 
-Derive base_51_carry_mul
-       SuchThat (forall
-                    (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
+Module X25519_64.
+  (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
+  Definition limbwidth := 51%Q.
+  Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
+  Definition s := 2^255.
+  Definition c := [(1, 19)].
+  Definition n := 5%nat.
+  Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
+  Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
+  Definition relax_zrange : zrange -> option zrange
+    := relax_zrange_gen [64; 128].
+
+  Derive base_51_carry_mul
+         SuchThat (forall
+                      (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
         (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
         (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*)
-                    (fg : list (BoundsAnalysis.type.BoundedZ _ _)
-                          * list (BoundsAnalysis.type.BoundedZ _ _))
-                    (f := fst fg) (g := snd fg)
-                    (fg_bounds := (f_bounds, f_bounds))
-                    (fg' := @BoundsAnalysis.OfPHOAS.cast_back
-                              ((type.list (type.Z) * type.list (type.Z))%ctype)
-                              relax_zrange
-                              fg_bounds
-                              fg)
-                    (f' := fst fg') (g' := snd fg')
-                    (Hf' : length f' = n) (Hg' : length g' = n),
-                    exists mul_fg',
-                      (BoundsAnalysis.OfPHOAS.Interp
-                         (s:=(type.list type.Z * type.list type.Z)%ctype)
-                         (d:=type.list type.Z)
-                         relax_zrange
-                         fg_bounds
-                         (bs:=f_bounds)
-                         fg
-                         base_51_carry_mul
-                       = Some mul_fg')
-                      /\
-                      (eval w n mul_fg') mod (s - Associational.eval c)
-                      = (eval w n f' * eval w n g') mod (s - Associational.eval c))
-       As base_51_carry_mul_correct.
-Proof.
-  intros; subst f g fg' f' g'.
-  erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
-    by (cbv [n idxs s c];
-        cbn [length seq n List.app]; try reflexivity; try assumption;
-        try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
-        try eapply pow_ceil_mul_nat_nonzero;
-        (apply dec_bool; vm_compute; reflexivity)).
-  match goal with
-  | [ |- exists _, ?x = Some _ /\ _ ]
-    => let v := fresh "v" in
-       destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
-  end.
-  { apply f_equal2; [ | reflexivity ]; apply f_equal.
-    cbv [f_bounds w n idxs s c fg_bounds];
-      cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
-      cbv [carry_mul_gen];
-      lazymatch goal with
-      | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
-        => let rargs := Reify args in
-           let rargs := constr:(canonicalize_list_recursion rargs) in
-           transitivity (expr.Interp
-                           (@ident.interp)
-                           (fun var
-                            => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
-                               (e var @ (rargs var, Var FG)))%expr fg)
-      end;
-      [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
-      let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-      set (E := e);
-        cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-    Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
-         let E' := (eval lazy in E') in
-         pose E' as E''.
-    Time let E' := constr:(Option.invert_Some
-                             (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                                relax_zrange E'' fg_bounds)) in
-         let E' := (eval lazy in E') in
-         let E' := (eval lazy in (projT2 E')) in
-         let unif := constr:(eq_refl : base_51_carry_mul = E') in
-         idtac.
-    exact admit. }
-  { clear -Hv.
-    pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
-    clear Hv.
-    lazy in Hv'; clear -Hv'.
-    exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
-Qed.
+                      (fg : list (BoundsAnalysis.type.BoundedZ _ _)
+                            * list (BoundsAnalysis.type.BoundedZ _ _))
+                      (f := fst fg) (g := snd fg)
+                      (fg_bounds := (f_bounds, f_bounds))
+                      (fg' := @BoundsAnalysis.OfPHOAS.cast_back
+                                ((type.list (type.Z) * type.list (type.Z))%ctype)
+                                relax_zrange
+                                fg_bounds
+                                fg)
+                      (f' := fst fg') (g' := snd fg')
+                      (Hf' : length f' = n) (Hg' : length g' = n),
+                      exists mul_fg',
+                        (BoundsAnalysis.OfPHOAS.Interp
+                           (s:=(type.list type.Z * type.list type.Z)%ctype)
+                           (d:=type.list type.Z)
+                           relax_zrange
+                           fg_bounds
+                           (bs:=f_bounds)
+                           fg
+                           base_51_carry_mul
+                         = Some mul_fg')
+                        /\
+                        (eval w n mul_fg') mod (s - Associational.eval c)
+                        = (eval w n f' * eval w n g') mod (s - Associational.eval c))
+         As base_51_carry_mul_correct.
+  Proof.
+    intros; subst f g fg' f' g'.
+    erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
+      by (cbv [n idxs s c];
+          cbn [length seq n List.app]; try reflexivity; try assumption;
+          try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
+          try eapply pow_ceil_mul_nat_nonzero;
+          (apply dec_bool; vm_compute; reflexivity)).
+    match goal with
+    | [ |- exists _, ?x = Some _ /\ _ ]
+      => let v := fresh "v" in
+         destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
+    end.
+    { apply f_equal2; [ | reflexivity ]; apply f_equal.
+      cbv [f_bounds w n idxs s c fg_bounds limbwidth];
+        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
+        cbv [carry_mul_gen];
+        lazymatch goal with
+        | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
+          => let rargs := Reify args in
+             let rargs := constr:(canonicalize_list_recursion rargs) in
+             transitivity (expr.Interp
+                             (@ident.interp)
+                             (fun var
+                              => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
+                                 (e var @ (rargs var, Var FG)))%expr fg)
+        end;
+        [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
+        let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+        set (E := e);
+          cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
+      Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+           let E' := (eval lazy in E') in
+           pose E' as E''.
+      Time let E' := constr:(Option.invert_Some
+                               (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                  relax_zrange E'' fg_bounds)) in
+           let E' := (eval lazy in E') in
+           let E' := (eval lazy in (projT2 E')) in
+           let unif := constr:(eq_refl : base_51_carry_mul = E') in
+           idtac.
+      exact admit. }
+    { clear -Hv.
+      pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
+      clear Hv.
+      lazy in Hv'; clear -Hv'.
+      exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
+  Qed.
 
-Import ident.
-Import BoundsAnalysis.ident.
-Import BoundsAnalysis.Notations.
-Local Open Scope btype_scope.
-Local Notation "'uint128'"
-  := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
-Local Notation "'uint64'"
-  := (r[0 ~> 18446744073709551615]) : btype_scope.
-Local Notation "'uint32'"
-  := (r[0 ~> 4294967295]) : btype_scope.
-Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
-Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
-  := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
-  := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-Local Notation "x *₃₂₋₆₄₋₆₄ y"
-  := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-Local Notation "x +₁₂₈ y"
-  := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
-  := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-Local Notation "x +₃₂₋₆₄₋₆₄ y"
-  := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-Local Notation "x +₆₄₋₆₄₋₆₄ y"
-  := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
-Local Notation "( out_t )( v >> count )"
-  := ((shiftr _ out_t count @@ v)%nexpr)
-       (format "( out_t )( v  >>  count )")
-     : nexpr_scope.
-Local Notation "( ( out_t ) v & mask )"
-  := ((land _ out_t mask @@ v)%nexpr)
-       (format "( ( out_t ) v  &  mask )")
-     : nexpr_scope.
-Print base_51_carry_mul.
+  Import ident.
+  Import BoundsAnalysis.ident.
+  Import BoundsAnalysis.Notations.
+  Local Open Scope btype_scope.
+  Local Notation "'uint128'"
+    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
+  Local Notation "'uint64'"
+    := (r[0 ~> 18446744073709551615]) : btype_scope.
+  Local Notation "'uint32'"
+    := (r[0 ~> 4294967295]) : btype_scope.
+  Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+  Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
+    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₆₄₋₆₄ y"
+    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x +₁₂₈ y"
+    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₆₄₋₆₄ y"
+    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₆₄₋₆₄ y"
+    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₃₂₋₃₂ y"
+    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  Local Notation "( out_t )( v >> count )"
+    := ((shiftr _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  >>  count )")
+       : nexpr_scope.
+  Local Notation "( ( out_t ) v & mask )"
+    := ((land _ out_t mask @@ v)%nexpr)
+         (format "( ( out_t ) v  &  mask )")
+       : nexpr_scope.
+  Print base_51_carry_mul.
 (* base_51_carry_mul =
 (expr_let 2 := fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
                ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
@@ -3693,4 +3700,336 @@ Print base_51_carry_mul.
  x_19 :: x_22 :: x_21 +₃₂₋₆₄₋₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
      : expr
          (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+*)
+End X25519_64.
+
+(*
+Module X25519_32.
+  (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
+  Definition limbwidth := (25 + 1/2)%Q.
+  Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
+  Definition s := 2^255.
+  Definition c := [(1, 19)].
+  Definition n := 10%nat.
+  Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
+  Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
+  Definition round_up_bitwidth (bitwidth : Z) : option Z
+    := (if bitwidth <=? 32
+        then Some 32
+        else if bitwidth <=? 64
+             then Some 64
+             else None)%Z.
+  Definition relax_zrange : zrange -> option zrange
+    := (fun '(r[ l ~> u ])
+        => if (0 <=? l)%Z
+           then option_map (fun u => r[0~>2^u-1])
+                           (round_up_bitwidth (Z.log2_up (u+1)))
+           else None)%zrange.
+
+  Derive base_25p5_carry_mul
+         SuchThat (forall
+                      (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
+        (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
+        (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*)
+                      (fg : list (BoundsAnalysis.type.BoundedZ _ _)
+                            * list (BoundsAnalysis.type.BoundedZ _ _))
+                      (f := fst fg) (g := snd fg)
+                      (fg_bounds := (f_bounds, f_bounds))
+                      (fg' := @BoundsAnalysis.OfPHOAS.cast_back
+                                ((type.list (type.Z) * type.list (type.Z))%ctype)
+                                relax_zrange
+                                fg_bounds
+                                fg)
+                      (f' := fst fg') (g' := snd fg')
+                      (Hf' : length f' = n) (Hg' : length g' = n),
+                      exists mul_fg',
+                        (BoundsAnalysis.OfPHOAS.Interp
+                           (s:=(type.list type.Z * type.list type.Z)%ctype)
+                           (d:=type.list type.Z)
+                           relax_zrange
+                           fg_bounds
+                           (bs:=f_bounds)
+                           fg
+                           base_25p5_carry_mul
+                         = Some mul_fg')
+                        /\
+                        (eval w n mul_fg') mod (s - Associational.eval c)
+                        = (eval w n f' * eval w n g') mod (s - Associational.eval c))
+         As base_25p5_carry_mul_correct.
+  Proof.
+    intros; subst f g fg' f' g'.
+    erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
+      by (cbv [n idxs s c];
+          cbn [length seq n List.app]; try reflexivity; try assumption;
+          try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
+          try eapply pow_ceil_mul_nat_nonzero;
+          (apply dec_bool; vm_compute; reflexivity)).
+    match goal with
+    | [ |- exists _, ?x = Some _ /\ _ ]
+      => let v := fresh "v" in
+         destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
+    end.
+    { apply f_equal2; [ | reflexivity ]; apply f_equal.
+      cbv [f_bounds w n idxs s c fg_bounds limbwidth];
+        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
+        cbv [carry_mul_gen];
+        lazymatch goal with
+        | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
+          => let rargs := Reify args in
+             let rargs := constr:(canonicalize_list_recursion rargs) in
+             transitivity (expr.Interp
+                             (@ident.interp)
+                             (fun var
+                              => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
+                                 (e var @ (rargs var, Var FG)))%expr fg)
+        end;
+        [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
+        let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+        set (E := e);
+          cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
+      Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+           let E' := (eval lazy in E') in
+           pose E' as E''. (* about 90 s *)
+      Time let E' := constr:(Option.invert_Some
+                               (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                  relax_zrange E'' fg_bounds)) in
+           let E' := (eval lazy in E') in
+           let E' := (eval lazy in (projT2 E')) in
+           let unif := constr:(eq_refl : base_25p5_carry_mul = E') in
+           idtac.
+      exact admit. }
+    { clear -Hv.
+      pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
+      clear Hv.
+      lazy in Hv'; clear -Hv'.
+      exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
+  Qed.
+
+  Import ident.
+  Import BoundsAnalysis.ident.
+  Import BoundsAnalysis.Notations.
+  Local Open Scope btype_scope.
+  Local Notation "'uint128'"
+    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
+  Local Notation "'uint64'"
+    := (r[0 ~> 18446744073709551615]) : btype_scope.
+  Local Notation "'uint32'"
+    := (r[0 ~> 4294967295]) : btype_scope.
+  Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+  Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
+    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₆₄₋₆₄ y"
+    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₃₂₋₆₄ y"
+    := (mul uint32 uint32 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x +₁₂₈ y"
+    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₆₄₋₆₄ y"
+    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₆₄₋₆₄ y"
+    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₃₂₋₃₂ y"
+    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  Local Notation "( out_t )( v >> count )"
+    := ((shiftr _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  >>  count )")
+       : nexpr_scope.
+  Local Notation "( ( out_t ) v & mask )"
+    := ((land _ out_t mask @@ v)%nexpr)
+         (format "( ( out_t ) v  &  mask )")
+       : nexpr_scope.
+  Print base_25p5_carry_mul.
+(* base_25p5_carry_mul =
+(expr_let 2 := fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+               ((2) *₃₂₋₆₄₋₆₄
+                ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄
+                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
+                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]])) +₆₄₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]])) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]]) +₆₄₋₆₄₋₆₄
+                       (2) *₃₂₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]])))))))))) in
+ expr_let 3 := (uint64)(x_2 >> 26) in
+ expr_let 4 := ((uint32)x_2 & 67108863) in
+ expr_let 5 := x_3 +₆₄₋₆₄₋₆₄
+               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                 ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                        (19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]])))))))))) in
+ expr_let 6 := (uint64)(x_5 >> 25) in
+ expr_let 7 := ((uint32)x_5 & 33554431) in
+ expr_let 8 := x_6 +₆₄₋₆₄₋₆₄
+               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                  ((2) *₃₂₋₆₄₋₆₄
+                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                    ((2) *₃₂₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                      ((2) *₃₂₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]])) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
+                        (2) *₃₂₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]))))))))))) in
+ expr_let 9 := (uint64)(x_8 >> 26) in
+ expr_let 10 := ((uint32)x_8 & 67108863) in
+ expr_let 11 := x_9 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                         (19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]])))))))))) in
+ expr_let 12 := (uint64)(x_11 >> 25) in
+ expr_let 13 := ((uint32)x_11 & 33554431) in
+ expr_let 14 := x_12 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                       ((2) *₃₂₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                         (2) *₃₂₋₆₄₋₆₄
+                         ((19) *₃₂₋₆₄₋₆₄
+                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]))))))))))) in
+ expr_let 15 := (uint64)(x_14 >> 26) in
+ expr_let 16 := ((uint32)x_14 & 67108863) in
+ expr_let 17 := x_15 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                         (19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]])))))))))) in
+ expr_let 18 := (uint64)(x_17 >> 25) in
+ expr_let 19 := ((uint32)x_17 & 33554431) in
+ expr_let 20 := x_18 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                       ((2) *₃₂₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                         (2) *₃₂₋₆₄₋₆₄
+                         ((19) *₃₂₋₆₄₋₆₄
+                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]))))))))))) in
+ expr_let 21 := (uint64)(x_20 >> 26) in
+ expr_let 22 := ((uint32)x_20 & 67108863) in
+ expr_let 23 := x_21 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                         (19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]])))))))))) in
+ expr_let 24 := (uint64)(x_23 >> 25) in
+ expr_let 25 := ((uint32)x_23 & 33554431) in
+ expr_let 26 := x_24 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                       ((2) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                         (2) *₃₂₋₆₄₋₆₄
+                         ((19) *₃₂₋₆₄₋₆₄
+                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]))))))))))) in
+ expr_let 27 := (uint64)(x_26 >> 26) in
+ expr_let 28 := ((uint32)x_26 & 67108863) in
+ expr_let 29 := x_27 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]]))))))))) in
+ expr_let 30 := (uint32)(x_29 >> 25) in
+ expr_let 31 := ((uint32)x_29 & 33554431) in
+ expr_let 32 := x_4 +₃₂₋₆₄₋₆₄ (19) *₃₂₋₃₂₋₆₄ x_30 in
+ expr_let 33 := (uint32)(x_32 >> 26) in
+ expr_let 34 := ((uint32)x_32 & 67108863) in
+ expr_let 35 := x_33 +₃₂₋₃₂₋₃₂ x_7 in
+ expr_let 36 := (uint32)(x_35 >> 25) in
+ expr_let 37 := ((uint32)x_35 & 33554431) in
+ x_34
+ :: x_37
+    :: x_36 +₃₂₋₃₂₋₃₂ x_10
+       :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+ *)
+End X25519_32.
 *)
