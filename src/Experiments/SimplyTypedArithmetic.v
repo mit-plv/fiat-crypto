@@ -3498,7 +3498,7 @@ Proof.
   let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
   set (E := e).
   Time let E' := constr:(PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
-       let E' := (eval lazy in E') in
+       let E' := (eval vm_compute in E') in (* 0.131 for vm, about 0.6 for lazy, slower for native and cbv *)
        pose E' as E''.
   transitivity (Interp E'' (fst (fst args'), (fun '((i, k) : nat * (Z -> list Z)) => k (w i)), snd args')); [ clear E | exact admit ].
   subst args' args; cbn [fst snd].
