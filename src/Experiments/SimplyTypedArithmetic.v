@@ -3576,7 +3576,7 @@ Module X25519_64.
     end.
     { apply f_equal2; [ | reflexivity ]; apply f_equal.
       cbv [f_bounds w n idxs s c fg_bounds limbwidth];
-        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
+        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul Pos.add];
         cbv [carry_mul_gen];
         lazymatch goal with
         | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
@@ -3765,7 +3765,7 @@ Module X25519_32.
     end.
     { apply f_equal2; [ | reflexivity ]; apply f_equal.
       cbv [f_bounds w n idxs s c fg_bounds limbwidth];
-        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
+        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul Pos.add];
         cbv [carry_mul_gen];
         lazymatch goal with
         | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
