@@ -1,14 +1,18 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
 Require Import Coq.MSets.MSetPositive.
+Require Import Coq.FSets.FMapPositive.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
 Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -902,8 +906,11 @@ Module Compilers.
           | pred : ident nat nat
           | list_rect {A P} : ident (P * (A * list A * P -> P) * list A) P
           | List_nth_default {T} : ident (T * list T * nat) T
+          | List_nth_default_concrete {T : type.primitive} (d : interp T) (n : Datatypes.nat) : ident (list T) T
           | Z_runtime_mul : ident (Z * Z) Z
           | Z_runtime_add : ident (Z * Z) Z
+          | Z_runtime_shiftr (offset : BinInt.Z) : ident Z Z
+          | Z_runtime_land (mask : BinInt.Z) : ident Z Z
           | Z_add : ident (Z * Z) Z
           | Z_mul : ident (Z * Z) Z
           | Z_pow : ident (Z * Z) Z
@@ -942,8 +949,11 @@ Module Compilers.
                | pred => Nat.pred
                | list_rect A P => curry3_23 (@Datatypes.list_rect (type.interp A) (fun _ => type.interp P))
                | List_nth_default T => curry3 (@List.nth_default (type.interp T))
+               | List_nth_default_concrete T d n => fun ls => @List.nth_default (type.interp T) d ls n
                | Z_runtime_mul => curry2 runtime_mul
                | Z_runtime_add => curry2 runtime_add
+               | Z_runtime_shiftr n => fun v => Z.shiftr v n
+               | Z_runtime_land mask => fun v => Z.land v mask
                | Z_add => curry2 Z.add
                | Z_mul => curry2 Z.mul
                | Z_pow => curry2 Z.pow
@@ -1042,11 +1052,14 @@ Module Compilers.
 
           Module List.
             Notation nth_default := List_nth_default.
+            Notation nth_default_concrete := List_nth_default_concrete.
           End List.
 
           Module Z.
             Notation runtime_mul := Z_runtime_mul.
             Notation runtime_add := Z_runtime_add.
+            Notation runtime_shiftr := Z_runtime_shiftr.
+            Notation runtime_land := Z_runtime_land.
             Notation add := Z_add.
             Notation mul := Z_mul.
             Notation pow := Z_pow.
@@ -1080,6 +1093,9 @@ Module Compilers.
           Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : expr_scope.
           Notation "ls [[ n ]]"
             := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%expr)
+               : expr_scope.
+          Notation "ls [[ n ]]"
+            := (AppIdent (ident.List.nth_default_concrete n) ls%expr)
                : expr_scope.
 
           Ltac reify var term := expr.reify ident ident.reify var term.
@@ -1634,6 +1650,8 @@ Module Compilers.
                   | ident.pred as idc
                   | ident.Z_runtime_mul as idc
                   | ident.Z_runtime_add as idc
+                  | ident.Z_runtime_shiftr _ as idc
+                  | ident.Z_runtime_land _ as idc
                   | ident.Z_add as idc
                   | ident.Z_mul as idc
                   | ident.Z_pow as idc
@@ -1693,6 +1711,8 @@ Module Compilers.
                             k
                   | ident.List_nth_default T
                     => cps_of (curry3 (@List.nth_default (interp R (type.translate T))))
+                  | ident.List_nth_default_concrete T d n
+                    => cps_of (fun ls => @List.nth_default (interp R (type.translate T)) d ls n)
                   end x k
            end.
 
@@ -1753,6 +1773,11 @@ Module Compilers.
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate T) * Compilers.type.list (type.untranslate _ (type.translate T)) * type.nat * (type.untranslate _ (type.translate T) -> R))%ctype) ,
                      (ident.snd @@ Var xyzk)
                        @ (ident.List_nth_default @@ (ident.fst @@ Var xyzk))
+                | ident.List_nth_default_concrete T d n
+                  => λ (xk :
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (Compilers.type.list (type.untranslate R (type.translate T)) * (type.untranslate R (type.translate T) -> R))%ctype) ,
+                     (ident.snd @@ Var xk)
+                       @ (ident.List_nth_default_concrete d n @@ (ident.fst @@ Var xk))
                 | ident.bool_rect T
                   => λ (xyzk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate T) * type.untranslate _ (type.translate T) * type.bool * (type.untranslate _ (type.translate T) -> R))%ctype) ,
@@ -1792,6 +1817,8 @@ Module Compilers.
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ type.nat)
                             @@ (ident.fst @@ (Var xyk)))
+                | ident.Z_runtime_shiftr _ as idc
+                | ident.Z_runtime_land _ as idc
                 | ident.Z_opp as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * (type.Z -> R))%ctype) ,
@@ -2194,6 +2221,15 @@ Module Compilers.
                             ls
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=P * (A * type.list A * P -> P) * type.list A) nil_case_cons_case_ls))
                      end
+             | ident.List.nth_default (type.type_primitive A) as idc
+               => fun (default_ls_idx : expr (A * type.list A * type.nat) + (expr (A * type.list A) + (expr A + type.interp A) * (expr (type.list A) + list (value var A))) * (expr type.nat + nat))
+                  => match default_ls_idx with
+                     | inr (inr (default, inr ls), inr idx)
+                       => List.nth_default default ls idx
+                     | inr (inr (inr default, ls), inr idx)
+                       => expr.reflect (AppIdent (ident.List.nth_default_concrete default idx) (expr.reify (t:=type.list A) ls))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=A * type.list A * type.nat) default_ls_idx))
+                     end
              | ident.List.nth_default A as idc
                => fun (default_ls_idx : expr (A * type.list A * type.nat) + (expr (A * type.list A) + value var A * (expr (type.list A) + list (value var A))) * (expr type.nat + nat))
                   => match default_ls_idx with
@@ -2201,10 +2237,19 @@ Module Compilers.
                        => List.nth_default default ls idx
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=A * type.list A * type.nat) default_ls_idx))
                      end
+             | ident.List.nth_default_concrete A default idx as idc
+               => fun (ls : expr (type.list A) + list (value var A))
+                  => match ls with
+                     | inr ls
+                       => List.nth_default (expr.reflect (t:=A) (AppIdent (ident.primitive default) TT)) ls idx
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=type.list A) ls))
+                     end
              | ident.pred as idc
              | ident.Nat_succ as idc
              | ident.Z_of_nat as idc
              | ident.Z_opp as idc
+             | ident.Z_runtime_shiftr _ as idc
+             | ident.Z_runtime_land _ as idc
                => fun x : expr _ + type.interp _
                   => match x return expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
@@ -2213,13 +2258,33 @@ Module Compilers.
              | ident.Z_add as idc
              | ident.Z_mul as idc
              | ident.Z_pow as idc
-             | ident.Z_div as idc
-             | ident.Z_modulo as idc
              | ident.Z_eqb as idc
                => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
                   => match x_y return expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     end
+             | ident.Z_div as idc
+               => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
+                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
+                     match x_y return expr _ + type.interp _ with
+                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
+                     | inr (x, inr y)
+                       => if Z.eqb y (2^Z.log2 y)
+                          then expr.reflect (AppIdent (ident.Z.runtime_shiftr (Z.log2 y)) (expr.reify (t:=type.Z) x))
+                          else default
+                     | _ => default
+                     end
+             | ident.Z_modulo as idc
+               => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
+                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
+                     match x_y return expr _ + type.interp _ with
+                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
+                     | inr (x, inr y)
+                       => if Z.eqb y (2^Z.log2 y)
+                          then expr.reflect (AppIdent (ident.Z.runtime_land (y-1)) (expr.reify (t:=type.Z) x))
+                          else default
+                     | _ => default
                      end
              | ident.Z_runtime_mul as idc
                => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
@@ -2370,6 +2435,815 @@ Module Compilers.
     Definition EliminateDead {t} (e : Expr t) : Expr t
       := fun var => eliminate_dead (ComputeLive e) (e _).
   End DeadCodeElimination.
+
+  Module BoundsAnalysis.
+    Module type.
+      Local Set Boolean Equality Schemes.
+      Local Set Decidable Equality Schemes.
+      Variant primitive := unit | Z | ZBounded (lower : Z) (upper : Z).
+      Inductive type := type_primitive (_:primitive) | prod (A B : type) | list (A : primitive).
+
+      Module Export Coercions.
+        Global Coercion type_primitive : primitive >-> type.
+      End Coercions.
+
+      Fixpoint transport_positive (P : positive -> Type)
+               (A B : positive)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | xI x, xI y => transport_positive (fun p => P (xI p)) x y
+           | xI _, _ => fun _ => None
+           | xO x, xO y => transport_positive (fun p => P (xO p)) x y
+           | xO _, _ => fun _ => None
+           | xH, xH => fun x => Some x
+           | xH, _ => fun _ => None
+           end.
+      Definition transport_Z (P : BinInt.Z -> Type)
+                 (A B : BinInt.Z)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | Z0, Z0 => fun x => Some x
+           | Z0, _ => fun _ => None
+           | Zpos x, Zpos y => transport_positive (fun p => P (Zpos p)) x y
+           | Zpos _, _ => fun _ => None
+           | Zneg x, Zneg y => transport_positive (fun p => P (Zneg p)) x y
+           | Zneg _, _ => fun _ => None
+           end.
+
+      Definition transport_primitive (P : primitive -> Type)
+                 (A B : primitive)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | unit, unit => fun x => Some x
+           | unit, _ => fun _ => None
+           | Z, Z => fun x => Some x
+           | Z, _ => fun _ => None
+           | ZBounded l u, ZBounded l' u'
+             => fun x
+                => match transport_Z (fun u => P (ZBounded l u)) u u' x with
+                   | Some x => transport_Z (fun l => P (ZBounded l u')) l l' x
+                   | None => None
+                   end
+           | ZBounded _ _, _ => fun _ => None
+           end.
+
+      Fixpoint transport (P : type -> Type) (A B : type)
+        : P A -> option (P B)
+        := match A, B return P A -> option (P B) with
+           | type_primitive x, type_primitive y => transport_primitive P x y
+           | type_primitive _, _ => fun _ => None
+           | list A, list B => transport_primitive (fun A => P (list A)) A B
+           | list _, _ => fun _ => None
+           | prod A B, prod A' B'
+             => fun x
+                => match transport (fun B => P (prod A B)) B B' x with
+                   | Some x => transport (fun A => P (prod A B')) A A' x
+                   | None => None
+                   end
+           | prod _ _, _ => fun _ => None
+           end.
+
+      (** TODO: MOVE ME *)
+      Record BoundedZ (lower upper : BinInt.Z)
+        := { value :> BinInt.Z;
+             value_bounded : andb (Z.min lower upper <=? value)
+                                  (value <=? Z.max upper lower)
+                             = true }.
+      Global Arguments value {_ _} _.
+      Global Arguments value_bounded [_ _] _, _ _ _.
+
+      Definition fix_bool {b} : b = true -> b = true
+        := if b as b return b = true -> b = true
+           then fun _ => eq_refl
+           else fun x => x.
+
+      Module primitive.
+        Definition interp (t : primitive)
+          := match t with
+             | unit => Datatypes.unit
+             | Z => BinInt.Z
+             | ZBounded lower upper => BoundedZ lower upper
+             end%type.
+      End primitive.
+
+      Fixpoint interp (t : type)
+        := match t with
+           | prod A B => interp A * interp B
+           | list A => Datatypes.list (primitive.interp A)
+           | type_primitive t => primitive.interp t
+           end%type.
+
+      Module Export Notations.
+        Export Coercions.
+        Delimit Scope btype_scope with btype.
+        Bind Scope btype_scope with type.
+        Notation "()" := unit : btype_scope.
+        Notation "A * B" := (prod A B) : btype_scope.
+        Notation "r[ l ~> u ]" := (ZBounded l u) : btype_scope.
+        Notation type := type.
+      End Notations.
+    End type.
+    Export type.Notations.
+
+    Module ident.
+      Import type.
+      Inductive ident : type -> type -> Set :=
+      | primitive {t : type.primitive} (v : interp t) : ident () t
+      | nil {t} : ident () (list t)
+      | cons {t : type.primitive} : ident (t * list t) (list t)
+      | fst {A B} : ident (A * B) A
+      | snd {A B} : ident (A * B) B
+      | List_nth {T : type.primitive} (n : nat) : ident (list T) T
+      | mul (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
+      | add (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
+      | shiftr (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
+      | land (T1 Tout : type.primitive) (mask : BinInt.Z) : ident T1 Tout
+      | cast (T1 Tout : type.primitive) : ident T1 Tout.
+
+      Notation curry0 f
+        := (fun 'tt => f).
+      Notation curry2 f
+        := (fun '(a, b) => f a b).
+
+      Axiom admit : forall {T}, T.
+
+      Definition resize {T1 Tout : type.primitive} : type.interp T1 -> type.interp Tout
+        := match T1, Tout return type.interp T1 -> type.interp Tout with
+           | _, unit => fun _ => tt
+           | unit, Z => fun _ => 0
+           | unit, ZBounded lower upper
+             => fun _ => {| value := lower ; value_bounded := fix_bool admit |}
+           | Z, Z => id
+           | Z, ZBounded lower upper
+             => fun v => {| value := lower + Z.modulo (v - lower) (1 + upper - lower) ; value_bounded := fix_bool admit |}
+           | ZBounded lower upper, Z => fun v => v.(value)
+           | ZBounded l u, ZBounded l' u'
+             => fun v
+                => {| value := l + Z.modulo (value v - l) (1 + u - l) ; value_bounded := fix_bool admit |}
+           end.
+      Definition resize1 {T1 T2 T1' T2' : type.primitive}
+        : (type.interp T1 -> type.interp T2) -> (type.interp T1' -> type.interp T2')
+        := fun f x => resize (f (resize x)).
+      Definition resize2uc {T1 T2 T3 T1' T2' T3' : type.primitive}
+        : (type.interp (T1 * T2) -> type.interp T3) -> (type.interp (T1' * T2') -> type.interp T3')
+        := fun f '((x, y) : type.interp T1' * type.interp T2')
+           => resize (f (resize x, resize y)).
+
+      Fixpoint default {t : type} : type.interp t
+        := match t with
+           | unit => tt
+           | Z => -1
+           | ZBounded lower upper => {| value := lower ; value_bounded := admit |}
+           | prod A B => (default, default)
+           | list A => Datatypes.nil
+           end.
+
+      Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
+        := match idc with
+           | primitive t v => curry0 v
+           | nil t => curry0 (@Datatypes.nil (type.interp t))
+           | cons t => curry2 (@Datatypes.cons (type.interp t))
+           | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
+           | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
+           | List_nth T n => fun ls => @List.nth_default (type.interp T) default ls n
+           | add T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.add)
+           | mul T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.mul)
+           | shiftr _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftr v n)
+           | land _ _ mask => @resize1 type.Z type.Z _ _ (fun v => Z.land v mask)
+           | cast _ _ => resize
+           end.
+
+      Module Z.
+        Notation mul := (@mul type.Z type.Z type.Z).
+        Notation add := (@add type.Z type.Z type.Z).
+        Notation shiftr := (@shiftr type.Z type.Z).
+        Notation land := (@land type.Z type.Z).
+      End Z.
+
+      Module List.
+        Notation nth := List_nth.
+      End List.
+
+      Module Notations.
+        Notation ident := ident.
+      End Notations.
+    End ident.
+    Export ident.Notations.
+
+    Module Indexed.
+      Module Export Range.
+        Import type.
+
+        Section with_relax.
+          Context (relax_zrange : zrange -> option zrange).
+
+          Definition primitive_for_option_zrange (v : option zrange) : type.primitive
+            := match v with
+               | Some v => ZBounded (lower v) (upper v)
+               | None => Z
+               end.
+          Definition primitive_for_zrange (v : zrange) : type.primitive
+            := primitive_for_option_zrange (relax_zrange v).
+
+          Fixpoint range (t : type) : Set
+            := match t with
+               | type_primitive _ => zrange
+               | prod A B => range A * range B
+               | list A => Datatypes.list zrange
+               end%type.
+
+          Fixpoint type_for_range {t} : range t -> type
+            := match t return range t -> type with
+               | type_primitive _ => primitive_for_zrange
+               | prod A B => fun (ab : range A * range B)
+                             => prod (@type_for_range A (Datatypes.fst ab))
+                                     (@type_for_range B (Datatypes.snd ab))
+               | list A
+                 => fun ls : Datatypes.list zrange
+                    => type.list
+                         (primitive_for_zrange (List.fold_right ZRange.union r[0 ~> 0]%zrange ls))
+               end.
+        End with_relax.
+      End Range.
+
+      Module Context.
+        Notation t val := (PositiveMap.t { t : type & val t }).
+
+        Definition find_at_type {val} (ctx : t val) {T} (p : positive) : option (val T)
+          := match PositiveMap.find p ctx with
+             | Some (existT t' r)
+               => type.transport val t' T r
+             | None => None
+             end.
+        Definition extendb {val} (ctx : t val) {T} (p : positive) (r : val T)
+          : t val
+          := PositiveMap.add p (existT _ T r) ctx.
+      End Context.
+
+      Module expr.
+        Inductive expr {ident : type -> type -> Type} : type -> Type :=
+        | Var (t : type) (p : positive) : expr t
+        | TT : expr type.unit
+        | AppIdent {s d} (idc : ident s d) (args : expr s) : expr d
+        | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
+        | Let_In {s d} (n : positive) (x : expr s) (body : expr d) : expr d.
+
+        Module Export Notations.
+          Bind Scope nexpr_scope with expr.
+          Delimit Scope nexpr_scope with nexpr.
+
+          Infix "@@" := AppIdent : nexpr_scope.
+          Notation "( x , y , .. , z )" := (Pair .. (Pair x%nexpr y%nexpr) .. z%nexpr) : nexpr_scope.
+          Notation "( )" := TT : nexpr_scope.
+          Notation "()" := TT : nexpr_scope.
+          Notation "'expr_let' x := A 'in' b" := (Let_In x A b) : nexpr_scope.
+          Notation expr := expr.
+        End Notations.
+
+        Section with_ident.
+          Import Context.
+          Context {ident : type -> type -> Type}
+                  (interp_ident : forall s d, ident s d -> type.interp s -> type.interp d).
+
+          Fixpoint interp {t} (e : @expr ident t)
+                   (ctx : Context.t type.interp)
+            : option (type.interp t)
+            := match e with
+               | Var t n
+                 => find_at_type ctx n
+               | TT => Some tt
+               | AppIdent s d idc args
+                 => args <- @interp s args ctx;
+                      Some (interp_ident s d idc args)
+               | Pair A B a b
+                 => a <- @interp A a ctx;
+                      b <- @interp B b ctx;
+                      Some (a, b)
+               | Let_In s d n x f
+                 => v <- @interp s x ctx;
+                      let v' := v in
+                      @interp d f (extendb ctx n v')
+               end.
+        End with_ident.
+      End expr.
+      Export expr.Notations.
+
+      Module OfPHOAS.
+        Module type.
+          Module primitive.
+            Definition compile (t : Compilers.type.primitive) : type.primitive
+              := match t with
+                 | Compilers.type.unit => type.unit
+                 | Compilers.type.Z => type.Z
+                 | type.nat => type.unit
+                 | type.bool => type.unit
+                 end.
+          End primitive.
+          Fixpoint compile (t : Compilers.type.type) : type
+            := match t with
+               | Compilers.type.prod A B
+                 => type.prod (compile A) (compile B)
+               | type.arrow s d => compile d
+               | Compilers.type.list (Compilers.type.type_primitive A)
+                 => type.list (primitive.compile A)
+               | Compilers.type.list A
+                 => type.list type.unit
+               | Compilers.type.type_primitive t
+                 => primitive.compile t
+               end.
+        End type.
+
+        Module ident.
+          Import BoundsAnalysis.ident.
+          Definition is_let_in {s d} (idc : Compilers.Uncurried.expr.default.ident.ident s d)
+          : bool
+            := match idc with
+               | ident.Let_In tx tC => true
+               | _ => false
+               end.
+
+          Definition compile {s d} (idc : Compilers.Uncurried.expr.default.ident.ident s d)
+            : option (ident (type.compile s) (type.compile d))
+            := match idc in Compilers.Uncurried.expr.default.ident.ident s d
+                     return option (ident (type.compile s) (type.compile d))
+               with
+               | default.ident.primitive Compilers.type.Z v => Some (primitive (t:=type.Z) v)
+               | default.ident.primitive _ _ => None
+               | ident.Let_In tx tC => None
+               | ident.Nat_succ => None
+               | default.ident.nil (Compilers.type.type_primitive t)
+                 => Some (@nil (type.primitive.compile t))
+               | default.ident.nil _
+                 => None
+               | default.ident.cons (Compilers.type.type_primitive t)
+                 => Some (@cons (type.primitive.compile t))
+               | default.ident.cons _
+                 => None
+               | default.ident.fst A B
+                 => Some (@fst (type.compile A) (type.compile B))
+               | default.ident.snd A B
+                 => Some (@snd (type.compile A) (type.compile B))
+               | ident.bool_rect T => None
+               | ident.nat_rect P => None
+               | ident.pred => None
+               | ident.list_rect A P => None
+               | default.ident.List_nth_default T => None
+               | ident.List_nth_default_concrete T d n
+                 => Some (@List_nth (type.primitive.compile T) n)
+               | ident.Z_runtime_mul
+               | default.ident.Z_mul
+                 => Some Z.mul
+               | ident.Z_runtime_add
+               | default.ident.Z_add
+                 => Some Z.add
+               | ident.Z_runtime_shiftr n
+                 => Some (Z.shiftr n)
+               | ident.Z_runtime_land mask
+                 => Some (Z.land mask)
+               | ident.Z_pow
+               | ident.Z_opp
+               | ident.Z_div
+               | ident.Z_modulo
+               | ident.Z_eqb
+               | ident.Z_of_nat
+                 => None
+               end.
+        End ident.
+
+        Module expr.
+          Import Indexed.expr.
+          Section with_ident.
+            Context {ident ident'}
+                    (compile_ident : forall s d : Compilers.type.type,
+                        ident s d
+                        -> option (ident' (type.compile s) (type.compile d)))
+                    (is_let_in
+                     : forall s d,
+                        ident s d
+                        -> bool).
+
+            Fixpoint compile' {t}
+                     (e : @Compilers.Uncurried.expr.expr ident (fun _ => positive) t)
+                     (base : positive)
+              : positive * option (@expr ident' (type.compile t))
+              := match e with
+                 | Uncurried.expr.Var t v
+                   => (base, Some (Var (type.compile t) v))
+                 | Uncurried.expr.TT
+                   => (base, Some TT)
+                 | Uncurried.expr.AppIdent s d idc args
+                   => if is_let_in _ _ idc
+                      then
+                        match args with
+                        | Uncurried.expr.Pair A B a b
+                          => let '(base, a) := @compile' A a base in
+                             let '(base', b) := @compile' B b base in
+                             (base',
+                              match a, b with
+                              | Some a, Some b
+                                => type.transport _ _ _ (Let_In base a b)
+                              | _, _ => None
+                              end)
+                        | _ => (base, None)
+                        end
+                      else
+                        let '(base, args) := @compile' _ args base in
+                        (base,
+                         match compile_ident _ _ idc, args with
+                         | Some idc, Some args
+                           => Some (AppIdent idc args)
+                         | Some _, None | None, None | None, Some _ => None
+                         end)
+                 | App s d f x => (base, None)
+                 | Uncurried.expr.Pair A B a b
+                   => let '(base, a) := @compile' A a base in
+                      let '(base, b) := @compile' B b base in
+                      (base,
+                       match a, b with
+                       | Some a, Some b => Some (Pair a b)
+                       | _, _ => None
+                       end)
+                 | Abs s d f
+                   => @compile' _ (f base) (Pos.succ base)
+                 end.
+          End with_ident.
+
+          Definition compile {t}
+                     (e : @Compilers.Uncurried.expr.expr default.ident (fun _ => positive) t)
+            : option (@expr ident (type.compile t))
+            := snd (@compile' _ _ (@ident.compile) (@ident.is_let_in) t e 1).
+
+          Definition Compile {t}
+                     (e : @default.Expr t)
+            : option (@expr ident (type.compile t))
+            := compile (e _).
+        End expr.
+      End OfPHOAS.
+    End Indexed.
+    Module Export Notations.
+      Export BoundsAnalysis.type.Notations.
+      Export BoundsAnalysis.Indexed.expr.Notations.
+      Export BoundsAnalysis.ident.Notations.
+      Import BoundsAnalysis.type.
+      Import BoundsAnalysis.Indexed.expr.
+      Import BoundsAnalysis.ident.
+      Notation "[ ]" := (AppIdent ident.nil _) : nexpr_scope.
+      Notation "x :: xs" := (AppIdent ident.cons (Pair x%nexpr xs%nexpr)) : nexpr_scope.
+      Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : nexpr_scope.
+      Notation "ls [[ n ]]"
+        := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%nexpr)
+           : nexpr_scope.
+      Notation "'x_' n" := (Var _ n) (at level 10, format "'x_' n") : nexpr_scope.
+    End Notations.
+
+    Module AdjustBounds.
+      Local Notation "( a ; b )" := (existT _ a b) : core_scope.
+      Import Indexed.
+      Import type expr ident.
+      Module ident.
+        Section with_relax.
+          Context (relax_zrange : zrange -> option zrange).
+
+          Local Notation primitive_for_zrange := (primitive_for_zrange relax_zrange).
+
+          Fixpoint type_for_range {t} : range t -> type
+            := match t return range t -> type with
+               | type_primitive _ => primitive_for_zrange
+               | prod A B => fun (ab : range A * range B)
+                             => prod (@type_for_range A (Datatypes.fst ab))
+                                     (@type_for_range B (Datatypes.snd ab))
+               | list A
+                 => fun ls : Datatypes.list zrange
+                    => type.list
+                         (primitive_for_zrange (List.fold_right ZRange.union r[0 ~> 0]%zrange ls))
+               end.
+
+          Definition upper_lor_and_bounds (x y : BinInt.Z) : BinInt.Z
+            := 2^(1 + Z.log2_up (Z.max x y)).
+          Definition extreme_lor_land_bounds (x y : zrange) : zrange
+            := let mx := ZRange.upper (ZRange.abs x) in
+               let my := ZRange.upper (ZRange.abs y) in
+               {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
+          Definition extremization_bounds (f : zrange -> zrange -> zrange) (x y : zrange) : zrange
+            := let (lx, ux) := x in
+               let (ly, uy) := y in
+               if ((lx <? 0) || (ly <? 0))%Z%bool
+               then extreme_lor_land_bounds x y
+               else f x y.
+          Definition land_bounds : zrange -> zrange -> zrange
+            := extremization_bounds
+                 (fun x y
+                  => let (lx, ux) := x in
+                     let (ly, uy) := y in
+                     {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
+
+          (** TODO: Move me *)
+          Definition smart_fst {A B} (e : @expr ident (A * B)) : @expr ident A
+            := match e in @expr _ t
+                     return @expr ident match t with
+                                        | type.prod A B => A
+                                        | _ => A
+                                        end
+                            -> @expr ident match t with
+                                           | type.prod A B => A
+                                           | _ => A
+                                           end
+               with
+               | Pair A B a b => fun _ => a
+               | _ => fun x => x
+               end (AppIdent fst e).
+          Definition smart_snd {A B} (e : @expr ident (A * B)) : @expr ident B
+            := match e in @expr _ t
+                     return @expr ident match t with
+                                        | type.prod A B => B
+                                        | _ => B
+                                        end
+                            -> @expr ident match t with
+                                           | type.prod A B => B
+                                           | _ => B
+                                           end
+               with
+               | Pair A B a b => fun _ => b
+               | _ => fun x => x
+               end (AppIdent snd e).
+          Definition smart_cast {A B : type.primitive} (e : @expr ident A) : @expr ident B
+            := match transport (@expr ident) A B e with
+               | Some e' => e'
+               | None => AppIdent (cast A B) e
+               end.
+
+          (** We would like to just write the following.  Alas, we must await a solution to COQBUG(https://github.com/coq/coq/issues/6320) *)
+          (**
+<<
+          Fixpoint list_map {A B : type.primitive}
+                   (f : @expr ident A -> @expr ident B)
+                   (e : @expr ident (type.list A))
+            : option (@expr ident (type.list B))
+            := match e with
+               | AppIdent _ _ (ident.nil _) _
+                 => Some (AppIdent ident.nil TT)
+               | AppIdent _ _ (ident.cons _) (Pair _ _ x xs)
+                 => option_map
+                      (fun f_xs => AppIdent ident.cons (f x, f_xs))
+                      (@list_map _ _ f xs)
+               | _ => None
+               end.
+>> *)
+          Fixpoint list_map {A B : type.primitive}
+                   (f : @expr ident A -> @expr ident B)
+                   (e : @expr ident (type.list A))
+            : option (@expr ident (type.list B))
+            := match e in @expr _ T
+                     return (@expr ident match T with
+                                         | type.list A => A
+                                         | _ => A
+                                         end
+                             -> @expr ident B)
+                            -> option (@expr ident (type.list B))
+               with
+               | AppIdent s (type.list d) idc args
+                 => match args in expr s
+                          return ident s (type.list d)
+                                 -> (@expr ident d -> @expr ident B)
+                                 -> option (expr (type.list B))
+                    with
+                    | Pair A' (type.list B') a' b'
+                      => fun idc f
+                         => match idc in ident s d
+                                  return (match s return Type with
+                                          | type.prod A _ => expr A
+                                          | _ => Datatypes.unit
+                                          end
+                                          -> match s return Type with
+                                             | type.prod _ (type.list A)
+                                               => (expr A -> expr B)
+                                                  -> option (expr (type.list B))
+                                             | _ => Datatypes.unit
+                                             end
+                                          -> match d return Type with
+                                             | type.list d
+                                               => expr d -> expr B
+                                             | _ => Datatypes.unit
+                                             end
+                                          -> option (expr (type.list B)))
+                            with
+                            | ident.nil t
+                              => fun _ _ _ => Some (AppIdent ident.nil TT)
+                            | ident.cons t
+                              => fun x rec_xs f
+                                 => option_map
+                                      (fun f_xs => AppIdent ident.cons (f x, f_xs))
+                                      (rec_xs f)
+                            | _ => fun _ _ _ => None
+                            end a' (fun f => @list_map _ _ f b') f
+                    | TT
+                      => match idc with
+                         | ident.nil _
+                           => fun _ _ => Some (AppIdent ident.nil TT)
+                         | _ => fun _ _ => None
+                         end
+                    | _ => fun _ _ => None
+                    end idc
+               | _ => fun _ => None
+               end f.
+
+          Definition adjust_bounds {s d} (idc : ident s d)
+            : option { r : range s & @expr ident (type_for_range r) }
+              -> option { r : range d & @expr ident (type_for_range r) }
+            := match idc in ident s d
+                     return option { r : range s & @expr ident (type_for_range r) }
+                            -> option { r : range d & @expr ident (type_for_range r) }
+               with
+               | primitive type.Z v
+               | primitive (type.ZBounded _ _) v
+                 => fun _ => Some (existT
+                                     (fun r : range type.Z => @expr ident (type_for_range r))
+                                     r[v~>v]%zrange
+                                     (AppIdent (primitive (t:=primitive_for_zrange r[v~>v])
+                                                          match relax_zrange r[v ~> v] as t
+                                                                return type.interp (primitive_for_option_zrange t)
+                                                          with
+                                                          | Some _ => {| value := v ; value_bounded := admit (* XXX needs proof about relax *) |}
+                                                          | None => v
+                                                          end)
+                                               TT))
+               | primitive type.unit _ as idc
+                 => fun _ => None
+               | nil _ as idc
+                 => fun _ => Some (existT _ Datatypes.nil (AppIdent nil TT))
+               | cons t
+                 => fun args
+                    => args' <- args;
+                         let '(r; args) := args' in
+                         snd_args <- (list_map
+                                        smart_cast
+                                        (smart_snd args));
+                           Some ((Datatypes.fst r :: Datatypes.snd r);
+                                   (AppIdent
+                                      cons
+                                      (smart_cast (smart_fst args),
+                                       snd_args)))
+               | fst A B
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (Datatypes.fst r) (AppIdent fst args))
+               | snd A B
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (Datatypes.snd r) (AppIdent snd args))
+               | List_nth T n
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ _ (AppIdent (List_nth n) args))
+               | mul _ _ _
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ (ZRange.four_corners BinInt.Z.mul (Datatypes.fst r) (Datatypes.snd r))
+                                 (AppIdent (mul _ _ _) args))
+               | add _ _ _
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ (ZRange.four_corners BinInt.Z.add (Datatypes.fst r) (Datatypes.snd r))
+                                 (AppIdent (add _ _ _) args))
+               | shiftr _ _ offset
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
+                                 (AppIdent (shiftr _ _ offset) args))
+               | land _ _ mask
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ (land_bounds r r[mask~>mask]%zrange)
+                                 (AppIdent (land _ _ mask) args))
+               | cast _ (type.ZBounded l u)
+                 => option_map
+                      (fun '(existT r[l'~>u'] args)
+		       => existT _ r[Z.max l l' ~> Z.min u u']
+                                 (AppIdent (cast _ _) args))
+               | cast _ _
+                 => fun _ => None
+               end%zrange%option.
+        End with_relax.
+      End ident.
+
+      Module expr.
+        Import ident.
+        Section with_relax.
+          Import Context.
+          Context (relax_zrange : zrange -> option zrange).
+
+          Local Notation RangeCtx := (Context.t range).
+          Local Notation expr := (@expr ident).
+          Local Notation type_for_range := (type_for_range relax_zrange).
+
+          Local Open Scope option_scope.
+
+          Fixpoint adjust_bounds (ctx : RangeCtx) {t} (e : expr t)
+            : option { r : range t & expr (type_for_range r) }
+            := match e with
+               | TT => None
+               | AppIdent s d idc args
+                 => ident.adjust_bounds relax_zrange idc (@adjust_bounds ctx s args)
+               | Var t x
+                 => range <- find_at_type ctx x;
+                      Some (range; (Var _ x))
+               | Pair A B a b
+                 => b1 <- @adjust_bounds ctx A a;
+                      b2 <- @adjust_bounds ctx B b;
+                      let '(range1; arg1) := b1 in
+                      let '(range2; arg2) := b2 in
+                      Some ((range1, range2); Pair arg1 arg2)
+               | Let_In tx tC x ex eC
+                 => bx <- @adjust_bounds ctx tx ex;
+                      let '(range_x; ex') := bx in
+                      let ctx' := extendb ctx x range_x in
+                      bC <- @adjust_bounds ctx' tC eC;
+                        let '(range_C; eC') := bC in
+                        Some (range_C; Let_In x ex' eC')
+               end.
+        End with_relax.
+      End expr.
+    End AdjustBounds.
+
+    Module OfPHOAS.
+      Import Indexed.Range.
+      Import Indexed.Context.
+      Definition AnalyzeBounds
+                 {s d : Compilers.type.Notations.type}
+                 (relax_zrange : zrange -> option zrange)
+                 (e : Expr (s -> d))
+                 (s_bounds : range (Indexed.OfPHOAS.type.compile s))
+      : option
+          { bs : range (Indexed.OfPHOAS.type.compile d) &
+                 @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs) }
+        := let e := Indexed.OfPHOAS.expr.Compile e in
+           match e with
+           | Some e
+             => let e := AdjustBounds.expr.adjust_bounds
+                           relax_zrange
+                           (PositiveMap.add 1%positive (existT _ _ s_bounds) (PositiveMap.empty _))
+                           e in
+                e
+           | None => None
+           end.
+
+      Definition cast_back_primitive
+                 {d : Compilers.type.primitive}
+                 (relax_zrange : zrange -> option zrange)
+                 {bs : zrange}
+        : type.primitive.interp (primitive_for_zrange relax_zrange bs)
+          -> Compilers.type.interp d
+        := match d, relax_zrange bs as rbs
+                 return type.primitive.interp (primitive_for_option_zrange rbs)
+                        -> Compilers.type.interp d
+           with
+           | Compilers.type.unit, _ => fun _ => tt
+           | Compilers.type.Z, Some r => fun x => type.value x
+           | Compilers.type.Z, None => fun x => x
+           | type.nat, _ => fun _ => 0%nat
+           | type.bool, _ => fun _ => true
+           end.
+
+      Fixpoint cast_back
+                 {d : Compilers.type.Notations.type}
+                 (relax_zrange : zrange -> option zrange)
+                 {bs : range (Indexed.OfPHOAS.type.compile d)}
+                 (v : type.interp (AdjustBounds.ident.type_for_range relax_zrange bs))
+                 {struct d}
+        : Compilers.type.interp d
+        := match d
+                 return (forall bs : range (Indexed.OfPHOAS.type.compile d),
+                            type.interp (AdjustBounds.ident.type_for_range relax_zrange bs)
+                            -> Compilers.type.interp d)
+           with
+           | Compilers.type.type_primitive x => @cast_back_primitive _ _
+           | Compilers.type.prod A B
+             => fun (bs :
+                       (* ignore this line, for type inference badness *) range (Indexed.OfPHOAS.type.compile A) * range (Indexed.OfPHOAS.type.compile B))
+                    (v :
+                       (* ignore this line, for type inference badness *) type.interp (AdjustBounds.ident.type_for_range relax_zrange (fst bs)) * type.interp (AdjustBounds.ident.type_for_range relax_zrange (snd bs)))
+                => (@cast_back A relax_zrange (fst bs) (fst v),
+                    @cast_back B relax_zrange (snd bs) (snd v))
+           | type.arrow s d => fun bs v _ => @cast_back d relax_zrange bs v
+           | Compilers.type.list (Compilers.type.type_primitive A)
+             => fun bs
+                => List.map (@cast_back_primitive A relax_zrange _)
+           | Compilers.type.list A => fun _ _ => nil
+           end bs v.
+
+      Definition Interp
+                 {s d : Compilers.type.Notations.type}
+                 (relax_zrange : zrange -> option zrange)
+                 (s_bounds : range (Indexed.OfPHOAS.type.compile s))
+                 {bs : range (Indexed.OfPHOAS.type.compile d)}
+                 (args : type.interp (AdjustBounds.ident.type_for_range relax_zrange s_bounds))
+                 (e : @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs))
+        : option (Compilers.type.interp d)
+        := let ctx := extendb (PositiveMap.empty _) 1 args in
+           let v := Indexed.expr.interp (@ident.interp) e ctx in
+           option_map (cast_back relax_zrange) v.
+    End OfPHOAS.
+  End BoundsAnalysis.
 End Compilers.
 Import Associational Positional Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
@@ -2442,53 +3316,120 @@ Proof.
   end.
   constructor.
 Qed.
-Example test2 : True.
-Proof.
-  let v := Reify (fun y : Z
-                  => (fun k : Z * Z -> Z * Z
-                      => dlet_nd x := (y * y)%RT in
-                          dlet_nd z := (x * x)%RT in
-                          k (z, z))
-                       (fun v => v)) in
-  pose v as E.
-  vm_compute in E.
-  pose (PartialReduce (canonicalize_list_recursion E)) as E'.
-  vm_compute in E'.
-  lazymatch (eval cbv delta [E'] in E') with
-  | (fun var : type -> Type =>
-       (λ x : var (type.type_primitive type.Z),
-              expr_let x0 := (Var x * Var x)%RT_expr in
-            expr_let x1 := (Var x0 * Var x0)%RT_expr in
-            (Var x1, Var x1))%expr) => idtac
-  end.
-  constructor.
-Qed.
-Example test3 : True.
-Proof.
-  let v := Reify (fun y : Z
-                  => dlet_nd x := dlet_nd x := (y * y)%RT in
-                      (x * x)%RT in
-                      dlet_nd z := dlet_nd z := (x * x)%RT in
-                      (z * z)%RT in
-                      (z * z)%RT) in
-  pose v as E.
-  vm_compute in E.
-  pose (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))) as E'.
-  vm_compute in E'.
-  pose (PartialReduce E') as E''.
-  lazy in E''.
-  lazymatch (eval cbv delta [E''] in E'') with
-  | (fun var : type -> Type =>
-       (λ x : var (type.type_primitive type.Z),
-              expr_let x0 := Var x * Var x in
-            expr_let x1 := Var x0 * Var x0 in
-            expr_let x2 := Var x1 * Var x1 in
-            expr_let x3 := Var x2 * Var x2 in
-            Var x3 * Var x3)%RT_expr%expr)
-    => idtac
-  end.
-  constructor.
-Qed.
+Module test2.
+  Example test2 : True.
+  Proof.
+    let v := Reify (fun y : Z
+                    => (fun k : Z * Z -> Z * Z
+                        => dlet_nd x := (y * y)%RT in
+                            dlet_nd z := (x * x)%RT in
+                            k (z, z))
+                         (fun v => v)) in
+    pose v as E.
+    vm_compute in E.
+    pose (PartialReduce (canonicalize_list_recursion E)) as E'.
+    vm_compute in E'.
+    lazymatch (eval cbv delta [E'] in E') with
+    | (fun var : type -> Type =>
+         (λ x : var (type.type_primitive type.Z),
+                expr_let x0 := (Var x * Var x)%RT_expr in
+              expr_let x1 := (Var x0 * Var x0)%RT_expr in
+              (Var x1, Var x1))%expr) => idtac
+    end.
+    Import BoundsAnalysis.ident.
+    Import BoundsAnalysis.Notations.
+    pose (projT2 (Option.invert_Some (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                        (fun x => Some x) E' r[0~>10]%zrange))) as E''.
+    lazy in E''.
+    lazymatch (eval cbv delta [E''] in E'') with
+    | (expr_let 2%positive := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@
+                                  (x_ 1, x_ 1) in
+           expr_let 3%positive := mul r[0 ~> 100]%btype r[0 ~> 100]%btype r[0 ~> 10000]%btype @@
+                                      (x_ 2, x_ 2) in
+           (x_ 3, x_ 3))%nexpr
+      => idtac
+    end.
+    constructor.
+  Qed.
+End test2.
+Module test3.
+  Example test3 : True.
+  Proof.
+    let v := Reify (fun y : Z
+                    => dlet_nd x := dlet_nd x := (y * y)%RT in
+                        (x * x)%RT in
+                        dlet_nd z := dlet_nd z := (x * x)%RT in
+                        (z * z)%RT in
+                        (z * z)%RT) in
+    pose v as E.
+    vm_compute in E.
+    pose (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))) as E'.
+    vm_compute in E'.
+    pose (PartialReduce E') as E''.
+    lazy in E''.
+    lazymatch (eval cbv delta [E''] in E'') with
+    | (fun var : type -> Type =>
+         (λ x : var (type.type_primitive type.Z),
+                expr_let x0 := Var x * Var x in
+              expr_let x1 := Var x0 * Var x0 in
+              expr_let x2 := Var x1 * Var x1 in
+              expr_let x3 := Var x2 * Var x2 in
+              Var x3 * Var x3)%RT_expr%expr)
+      => idtac
+    end.
+    Import BoundsAnalysis.ident.
+    Import BoundsAnalysis.Notations.
+    pose (projT2 (Option.invert_Some (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                        (fun x => Some x) E'' r[0~>10]%zrange))) as E'''.
+    lazy in E'''.
+    lazymatch (eval cbv delta [E'''] in E''') with
+    | (expr_let 2 := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@ (x_ 1, x_ 1) in
+           expr_let 3 := mul r[0 ~> 100]%btype r[0 ~> 100]%btype r[0 ~> 10000]%btype @@
+                             (x_ 2, x_ 2) in
+           expr_let 4 := mul r[0 ~> 10000]%btype r[0 ~> 10000]%btype r[0 ~> 100000000]%btype @@
+                             (x_ 3, x_ 3) in
+           expr_let 5 := mul r[0 ~> 100000000]%btype r[0 ~> 100000000]%btype
+                             r[0 ~> 10000000000000000]%btype @@ (x_ 4, x_ 4) in
+           mul r[0 ~> 10000000000000000]%btype r[0 ~> 10000000000000000]%btype
+               r[0 ~> 100000000000000000000000000000000]%btype @@ (x_ 5, x_ 5))%nexpr
+      => idtac
+    end.
+    constructor.
+  Qed.
+End test3.
+
+Module test4.
+  Example test4 : True.
+  Proof.
+    let v := Reify (fun y : (list Z * list Z)
+                    => dlet_nd x := List.nth_default (-1) (fst y) 0 in
+                        dlet_nd z := List.nth_default (-1) (snd y) 0 in
+                        dlet_nd xz := (x * z)%RT in
+                        (xz :: xz :: nil)%RT) in
+    pose v as E.
+    vm_compute in E.
+    pose (PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
+    lazy in E'.
+    clear E.
+    Import BoundsAnalysis.ident.
+    Import BoundsAnalysis.Notations.
+    pose (projT2 (Option.invert_Some
+                    (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                       (fun x => Some x) E' ([r[0~>10]%zrange],[r[0~>10]%zrange])))) as E''.
+    lazy in E''.
+    lazymatch (eval cbv delta [E''] in E'') with
+    | (expr_let 2 := List.nth 0 @@ (fst @@ x_ 1) in
+          expr_let 3 := List.nth 0 @@ (snd @@ x_ 1) in
+          expr_let 4 := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@
+                        (x_ 2, x_ 3) in
+           x_ 4
+              ::
+             x_ 4 :: [])%nexpr
+      => idtac
+    end.
+    constructor.
+  Qed.
+End test4.
 
 Axiom admit : forall {T}, T.
 
@@ -2557,7 +3498,7 @@ Proof.
   let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
   set (E := e).
   Time let E' := constr:(PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
-       let E' := (eval lazy in E') in
+       let E' := (eval vm_compute in E') in (* 0.131 for vm, about 0.6 for lazy, slower for native and cbv *)
        pose E' as E''.
   transitivity (Interp E'' (fst (fst args'), (fun '((i, k) : nat * (Z -> list Z)) => k (w i)), snd args')); [ clear E | exact admit ].
   subst args' args; cbn [fst snd].
@@ -2565,100 +3506,524 @@ Proof.
   reflexivity.
 Qed.
 
-(*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
-Definition w (i:nat) : Z := 2^Qceiling(51*i).
-Derive base_51_carry_mul
-       SuchThat (forall
-                    (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
-        (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
-        (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*)
-                    (fg : list Z * list Z)
-                    (f := fst fg) (g := snd fg)
-                    (n:=5%nat)
-                    (Hf : length f = n) (Hg : length g = n)
-                    (fg' := base_51_carry_mul fg),
-                    (eval w n fg') mod (2^255-19)
-                    = (eval w n f * eval w n g) mod (2^255-19))
-       As base_51_carry_mul_correct.
-Proof.
-  intros; subst f g fg'.
-  erewrite <- carry_mul_gen_correct with (s:=2^255) (c:=[(1, 19)]) (idxs:=(seq 0 n ++ [0; 1])%list%nat)
-    by (cbn [length seq n List.app]; try reflexivity; try assumption;
-        try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
-        try eapply pow_ceil_mul_nat_nonzero;
-        (apply dec_bool; vm_compute; reflexivity)).
-  apply f_equal2; [ | reflexivity ]; apply f_equal.
-  cbv [w Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul];
-    cbv [carry_mul_gen n];
-    lazymatch goal with
-    | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, fg) ]
-      => let rargs := Reify args in
-         let rargs := constr:(canonicalize_list_recursion rargs) in
-         transitivity (expr.Interp
-                         (@ident.interp)
-                         (fun var
-                          => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
-                             (e var @ (rargs var, Var FG)))%expr fg)
-    end;
-    [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
-    let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-    set (E := e);
-      cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-  Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
-       let E' := (eval lazy in E') in
-       pose E' as E''.
-  transitivity (Interp E'' fg); [ clear E | exact admit ];
-    subst base_51_carry_mul;
-    reflexivity.
-Qed.
+Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
+  := List.fold_right
+       (fun allowed cur
+        => if bitwidth <=? allowed
+           then Some allowed
+           else cur)
+       None
+       possible_values.
 
-Import ident.
-Print base_51_carry_mul.
-(* expr.Interp (@interp)
-  (fun var : type -> Type =>
-   (λ v : var (type.list type.Z * type.list type.Z)%ctype,
-    expr_let v0 := fst @@ v [[0]] * snd @@ v [[0]] +
-                   (19 * (fst @@ v [[1]] * snd @@ v [[4]]) +
-                    (19 * (fst @@ v [[2]] * snd @@ v [[3]]) +
-                     (19 * (fst @@ v [[3]] * snd @@ v [[2]]) +
-                      19 * (fst @@ v [[4]] * snd @@ v [[1]])))) in
-    expr_let v1 := Z.div @@ (v0, 2251799813685248) in
-    expr_let v2 := Z.modulo @@ (v0, 2251799813685248) in
-    expr_let v3 := v1 +
-                   (fst @@ v [[0]] * snd @@ v [[1]] +
-                    (fst @@ v [[1]] * snd @@ v [[0]] +
-                     (19 * (fst @@ v [[2]] * snd @@ v [[4]]) +
-                      (19 * (fst @@ v [[3]] * snd @@ v [[3]]) +
-                       19 * (fst @@ v [[4]] * snd @@ v [[2]]))))) in
-    expr_let v4 := Z.div @@ (v3, 2251799813685248) in
-    expr_let v5 := Z.modulo @@ (v3, 2251799813685248) in
-    expr_let v6 := v4 +
-                   (fst @@ v [[0]] * snd @@ v [[2]] +
-                    (fst @@ v [[1]] * snd @@ v [[1]] +
-                     (fst @@ v [[2]] * snd @@ v [[0]] +
-                      (19 * (fst @@ v [[3]] * snd @@ v [[4]]) +
-                       19 * (fst @@ v [[4]] * snd @@ v [[3]]))))) in
-    expr_let v7 := Z.div @@ (v6, 2251799813685248) in
-    expr_let v8 := Z.modulo @@ (v6, 2251799813685248) in
-    expr_let v9 := v7 +
-                   (fst @@ v [[0]] * snd @@ v [[3]] +
-                    (fst @@ v [[1]] * snd @@ v [[2]] +
-                     (fst @@ v [[2]] * snd @@ v [[1]] +
-                      (fst @@ v [[3]] * snd @@ v [[0]] + 19 * (fst @@ v [[4]] * snd @@ v [[4]]))))) in
-    expr_let v10 := Z.div @@ (v9, 2251799813685248) in
-    expr_let v11 := Z.modulo @@ (v9, 2251799813685248) in
-    expr_let v12 := v10 +
-                    (fst @@ v [[0]] * snd @@ v [[4]] +
-                     (fst @@ v [[1]] * snd @@ v [[3]] +
-                      (fst @@ v [[2]] * snd @@ v [[2]] +
-                       (fst @@ v [[3]] * snd @@ v [[1]] + fst @@ v [[4]] * snd @@ v [[0]])))) in
-    expr_let v13 := Z.div @@ (v12, 2251799813685248) in
-    expr_let v14 := Z.modulo @@ (v12, 2251799813685248) in
-    expr_let v15 := v2 + 19 * v13 in
-    expr_let v16 := Z.div @@ (v15, 2251799813685248) in
-    expr_let v17 := Z.modulo @@ (v15, 2251799813685248) in
-    expr_let v18 := v16 + v5 in
-    expr_let v19 := Z.div @@ (v18, 2251799813685248) in
-    expr_let v20 := Z.modulo @@ (v18, 2251799813685248) in
-    v17 :: v20 :: v19 + v8 :: v11 :: v14 :: [])%expr)
-     : list Z * list Z -> list Z *)
+Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
+  := (fun '(r[ l ~> u ])
+      => if (0 <=? l)%Z
+         then option_map (fun u => r[0~>2^u-1])
+                         (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
+         else None)%zrange.
+
+Module X25519_64.
+  (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
+  Definition limbwidth := 51%Q.
+  Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
+  Definition s := 2^255.
+  Definition c := [(1, 19)].
+  Definition n := 5%nat.
+  Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
+  Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
+  Definition relax_zrange : zrange -> option zrange
+    := relax_zrange_gen [64; 128].
+
+  Derive base_51_carry_mul
+         SuchThat (forall
+                      (fg : list (BoundsAnalysis.type.BoundedZ _ _)
+                            * list (BoundsAnalysis.type.BoundedZ _ _))
+                      (f := fst fg) (g := snd fg)
+                      (fg_bounds := (f_bounds, f_bounds))
+                      (fg' := @BoundsAnalysis.OfPHOAS.cast_back
+                                ((type.list (type.Z) * type.list (type.Z))%ctype)
+                                relax_zrange
+                                fg_bounds
+                                fg)
+                      (f' := fst fg') (g' := snd fg')
+                      (Hf' : length f' = n) (Hg' : length g' = n),
+                      exists mul_fg',
+                        (BoundsAnalysis.OfPHOAS.Interp
+                           (s:=(type.list type.Z * type.list type.Z)%ctype)
+                           (d:=type.list type.Z)
+                           relax_zrange
+                           fg_bounds
+                           (bs:=f_bounds)
+                           fg
+                           base_51_carry_mul
+                         = Some mul_fg')
+                        /\
+                        (eval w n mul_fg') mod (s - Associational.eval c)
+                        = (eval w n f' * eval w n g') mod (s - Associational.eval c))
+         As base_51_carry_mul_correct.
+  Proof.
+    intros; subst f g fg' f' g'.
+    erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
+      by (cbv [n idxs s c];
+          cbn [length seq n List.app]; try reflexivity; try assumption;
+          try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
+          try eapply pow_ceil_mul_nat_nonzero;
+          (apply dec_bool; vm_compute; reflexivity)).
+    match goal with
+    | [ |- exists _, ?x = Some _ /\ _ ]
+      => let v := fresh "v" in
+         destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
+    end.
+    { apply f_equal2; [ | reflexivity ]; apply f_equal.
+      cbv [f_bounds w n idxs s c fg_bounds limbwidth];
+        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul Pos.add];
+        cbv [carry_mul_gen];
+        lazymatch goal with
+        | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
+          => let rargs := Reify args in
+             let rargs := constr:(canonicalize_list_recursion rargs) in
+             transitivity (expr.Interp
+                             (@ident.interp)
+                             (fun var
+                              => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
+                                 (e var @ (rargs var, Var FG)))%expr fg)
+        end;
+        [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
+        let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+        set (E := e);
+          cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
+      Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+           let E' := (eval lazy in E') in
+           pose E' as E''.
+      Time let E' := constr:(Option.invert_Some
+                               (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                  relax_zrange E'' fg_bounds)) in
+           let E' := (eval lazy in E') in
+           let E' := (eval lazy in (projT2 E')) in
+           let unif := constr:(eq_refl : base_51_carry_mul = E') in
+           idtac.
+      exact admit. }
+    { clear -Hv.
+      pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
+      clear Hv.
+      lazy in Hv'; clear -Hv'.
+      exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
+  Qed.
+
+  Import ident.
+  Import BoundsAnalysis.ident.
+  Import BoundsAnalysis.Notations.
+  Local Open Scope btype_scope.
+  Local Notation "'uint128'"
+    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
+  Local Notation "'uint64'"
+    := (r[0 ~> 18446744073709551615]) : btype_scope.
+  Local Notation "'uint32'"
+    := (r[0 ~> 4294967295]) : btype_scope.
+  Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+  Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
+    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₆₄₋₆₄ y"
+    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x +₁₂₈ y"
+    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₆₄₋₆₄ y"
+    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₆₄₋₆₄ y"
+    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₃₂₋₃₂ y"
+    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  Local Notation "( out_t )( v >> count )"
+    := ((shiftr _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  >>  count )")
+       : nexpr_scope.
+  Local Notation "( ( out_t ) v & mask )"
+    := ((land _ out_t mask @@ v)%nexpr)
+         (format "( ( out_t ) v  &  mask )")
+       : nexpr_scope.
+  Print base_51_carry_mul.
+(* base_51_carry_mul =
+(expr_let 2 := fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+               ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
+                ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]) +₁₂₈
+                 ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]]) +₁₂₈
+                  (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]])))) in
+ expr_let 3 := (uint64)(x_2 >> 51) in
+ expr_let 4 := ((uint64)x_2 & 2251799813685247) in
+ expr_let 5 := x_3 +₆₄₋₁₂₈₋₁₂₈
+               (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+                 ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
+                  ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]) +₁₂₈
+                   (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]]))))) in
+ expr_let 6 := (uint64)(x_5 >> 51) in
+ expr_let 7 := ((uint64)x_5 & 2251799813685247) in
+ expr_let 8 := x_6 +₆₄₋₁₂₈₋₁₂₈
+               (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
+                (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                 (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+                  ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
+                   (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]))))) in
+ expr_let 9 := (uint64)(x_8 >> 51) in
+ expr_let 10 := ((uint64)x_8 & 2251799813685247) in
+ expr_let 11 := x_9 +₆₄₋₁₂₈₋₁₂₈
+                (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]] +₁₂₈
+                 (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
+                  (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                   (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
+                    (19) *₃₂₋₁₂₈₋₁₂₈
+                    (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]))))) in
+ expr_let 12 := (uint64)(x_11 >> 51) in
+ expr_let 13 := ((uint64)x_11 & 2251799813685247) in
+ expr_let 14 := x_12 +₆₄₋₁₂₈₋₁₂₈
+                (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]] +₁₂₈
+                 (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]] +₁₂₈
+                  (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
+                   (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
+                    fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]])))) in
+ expr_let 15 := (uint64)(x_14 >> 51) in
+ expr_let 16 := ((uint64)x_14 & 2251799813685247) in
+ expr_let 17 := x_4 +₆₄₋₆₄₋₆₄ (19) *₃₂₋₆₄₋₆₄ x_15 in
+ expr_let 18 := (uint32)(x_17 >> 51) in
+ expr_let 19 := ((uint64)x_17 & 2251799813685247) in
+ expr_let 20 := x_18 +₃₂₋₆₄₋₆₄ x_7 in
+ expr_let 21 := (uint32)(x_20 >> 51) in
+ expr_let 22 := ((uint64)x_20 & 2251799813685247) in
+ x_19 :: x_22 :: x_21 +₃₂₋₆₄₋₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+*)
+End X25519_64.
+
+(*
+Module X25519_32.
+  (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
+  Definition limbwidth := (25 + 1/2)%Q.
+  Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
+  Definition s := 2^255.
+  Definition c := [(1, 19)].
+  Definition n := 10%nat.
+  Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
+  Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
+  Definition round_up_bitwidth (bitwidth : Z) : option Z
+    := (if bitwidth <=? 32
+        then Some 32
+        else if bitwidth <=? 64
+             then Some 64
+             else None)%Z.
+  Definition relax_zrange : zrange -> option zrange
+    := (fun '(r[ l ~> u ])
+        => if (0 <=? l)%Z
+           then option_map (fun u => r[0~>2^u-1])
+                           (round_up_bitwidth (Z.log2_up (u+1)))
+           else None)%zrange.
+
+  Derive base_25p5_carry_mul
+         SuchThat (forall
+                      (fg : list (BoundsAnalysis.type.BoundedZ _ _)
+                            * list (BoundsAnalysis.type.BoundedZ _ _))
+                      (f := fst fg) (g := snd fg)
+                      (fg_bounds := (f_bounds, f_bounds))
+                      (fg' := @BoundsAnalysis.OfPHOAS.cast_back
+                                ((type.list (type.Z) * type.list (type.Z))%ctype)
+                                relax_zrange
+                                fg_bounds
+                                fg)
+                      (f' := fst fg') (g' := snd fg')
+                      (Hf' : length f' = n) (Hg' : length g' = n),
+                      exists mul_fg',
+                        (BoundsAnalysis.OfPHOAS.Interp
+                           (s:=(type.list type.Z * type.list type.Z)%ctype)
+                           (d:=type.list type.Z)
+                           relax_zrange
+                           fg_bounds
+                           (bs:=f_bounds)
+                           fg
+                           base_25p5_carry_mul
+                         = Some mul_fg')
+                        /\
+                        (eval w n mul_fg') mod (s - Associational.eval c)
+                        = (eval w n f' * eval w n g') mod (s - Associational.eval c))
+         As base_25p5_carry_mul_correct.
+  Proof.
+    intros; subst f g fg' f' g'.
+    erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
+      by (cbv [n idxs s c];
+          cbn [length seq n List.app]; try reflexivity; try assumption;
+          try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
+          try eapply pow_ceil_mul_nat_nonzero;
+          (apply dec_bool; vm_compute; reflexivity)).
+    match goal with
+    | [ |- exists _, ?x = Some _ /\ _ ]
+      => let v := fresh "v" in
+         destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
+    end.
+    { apply f_equal2; [ | reflexivity ]; apply f_equal.
+      cbv [f_bounds w n idxs s c fg_bounds limbwidth];
+        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul Pos.add];
+        cbv [carry_mul_gen];
+        lazymatch goal with
+        | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
+          => let rargs := Reify args in
+             let rargs := constr:(canonicalize_list_recursion rargs) in
+             transitivity (expr.Interp
+                             (@ident.interp)
+                             (fun var
+                              => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
+                                 (e var @ (rargs var, Var FG)))%expr fg)
+        end;
+        [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
+        let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+        set (E := e);
+          cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
+      Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+           let E' := (eval lazy in E') in
+           pose E' as E''. (* about 90 s *)
+      Time let E' := constr:(Option.invert_Some
+                               (BoundsAnalysis.OfPHOAS.AnalyzeBounds
+                                  relax_zrange E'' fg_bounds)) in
+           let E' := (eval lazy in E') in
+           let E' := (eval lazy in (projT2 E')) in
+           let unif := constr:(eq_refl : base_25p5_carry_mul = E') in
+           idtac.
+      exact admit. }
+    { clear -Hv.
+      pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
+      clear Hv.
+      lazy in Hv'; clear -Hv'.
+      exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
+  Qed.
+
+  Import ident.
+  Import BoundsAnalysis.ident.
+  Import BoundsAnalysis.Notations.
+  Local Open Scope btype_scope.
+  Local Notation "'uint128'"
+    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
+  Local Notation "'uint64'"
+    := (r[0 ~> 18446744073709551615]) : btype_scope.
+  Local Notation "'uint32'"
+    := (r[0 ~> 4294967295]) : btype_scope.
+  Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+  Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
+    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₆₄₋₆₄ y"
+    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x *₃₂₋₃₂₋₆₄ y"
+    := (mul uint32 uint32 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Local Notation "x +₁₂₈ y"
+    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₆₄₋₆₄ y"
+    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₆₄₋₆₄₋₆₄ y"
+    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x +₃₂₋₃₂₋₃₂ y"
+    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  Local Notation "( out_t )( v >> count )"
+    := ((shiftr _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  >>  count )")
+       : nexpr_scope.
+  Local Notation "( ( out_t ) v & mask )"
+    := ((land _ out_t mask @@ v)%nexpr)
+         (format "( ( out_t ) v  &  mask )")
+       : nexpr_scope.
+  Print base_25p5_carry_mul.
+(* base_25p5_carry_mul =
+(expr_let 2 := fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+               ((2) *₃₂₋₆₄₋₆₄
+                ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄
+                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
+                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]])) +₆₄₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]])) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]]) +₆₄₋₆₄₋₆₄
+                       (2) *₃₂₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]])))))))))) in
+ expr_let 3 := (uint64)(x_2 >> 26) in
+ expr_let 4 := ((uint32)x_2 & 67108863) in
+ expr_let 5 := x_3 +₆₄₋₆₄₋₆₄
+               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                 ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                        (19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]])))))))))) in
+ expr_let 6 := (uint64)(x_5 >> 25) in
+ expr_let 7 := ((uint32)x_5 & 33554431) in
+ expr_let 8 := x_6 +₆₄₋₆₄₋₆₄
+               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                  ((2) *₃₂₋₆₄₋₆₄
+                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                    ((2) *₃₂₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                      ((2) *₃₂₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]])) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
+                        (2) *₃₂₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]))))))))))) in
+ expr_let 9 := (uint64)(x_8 >> 26) in
+ expr_let 10 := ((uint32)x_8 & 67108863) in
+ expr_let 11 := x_9 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                         (19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]])))))))))) in
+ expr_let 12 := (uint64)(x_11 >> 25) in
+ expr_let 13 := ((uint32)x_11 & 33554431) in
+ expr_let 14 := x_12 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                       ((2) *₃₂₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
+                         (2) *₃₂₋₆₄₋₆₄
+                         ((19) *₃₂₋₆₄₋₆₄
+                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]))))))))))) in
+ expr_let 15 := (uint64)(x_14 >> 26) in
+ expr_let 16 := ((uint32)x_14 & 67108863) in
+ expr_let 17 := x_15 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                      ((19) *₃₂₋₆₄₋₆₄
+                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                       ((19) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                         (19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]])))))))))) in
+ expr_let 18 := (uint64)(x_17 >> 25) in
+ expr_let 19 := ((uint32)x_17 & 33554431) in
+ expr_let 20 := x_18 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                       ((2) *₃₂₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
+                         (2) *₃₂₋₆₄₋₆₄
+                         ((19) *₃₂₋₆₄₋₆₄
+                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]))))))))))) in
+ expr_let 21 := (uint64)(x_20 >> 26) in
+ expr_let 22 := ((uint32)x_20 & 67108863) in
+ expr_let 23 := x_21 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                        ((19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
+                         (19) *₃₂₋₆₄₋₆₄
+                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]])))))))))) in
+ expr_let 24 := (uint64)(x_23 >> 25) in
+ expr_let 25 := ((uint32)x_23 & 33554431) in
+ expr_let 26 := x_24 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄₋₆₄₋₆₄
+                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                     ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                       ((2) *₃₂₋₆₄₋₆₄
+                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
+                         (2) *₃₂₋₆₄₋₆₄
+                         ((19) *₃₂₋₆₄₋₆₄
+                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]))))))))))) in
+ expr_let 27 := (uint64)(x_26 >> 26) in
+ expr_let 28 := ((uint32)x_26 & 67108863) in
+ expr_let 29 := x_27 +₆₄₋₆₄₋₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]] +₆₄₋₆₄₋₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄₋₆₄₋₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄₋₆₄₋₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]]))))))))) in
+ expr_let 30 := (uint32)(x_29 >> 25) in
+ expr_let 31 := ((uint32)x_29 & 33554431) in
+ expr_let 32 := x_4 +₃₂₋₆₄₋₆₄ (19) *₃₂₋₃₂₋₆₄ x_30 in
+ expr_let 33 := (uint32)(x_32 >> 26) in
+ expr_let 34 := ((uint32)x_32 & 67108863) in
+ expr_let 35 := x_33 +₃₂₋₃₂₋₃₂ x_7 in
+ expr_let 36 := (uint32)(x_35 >> 25) in
+ expr_let 37 := ((uint32)x_35 & 33554431) in
+ x_34
+ :: x_37
+    :: x_36 +₃₂₋₃₂₋₃₂ x_10
+       :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+ *)
+End X25519_32.
+*)
