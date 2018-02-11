@@ -3536,9 +3536,6 @@ Module X25519_64.
 
   Derive base_51_carry_mul
          SuchThat (forall
-                      (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
-        (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
-        (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*)
                       (fg : list (BoundsAnalysis.type.BoundedZ _ _)
                             * list (BoundsAnalysis.type.BoundedZ _ _))
                       (f := fst fg) (g := snd fg)
@@ -3728,9 +3725,6 @@ Module X25519_32.
 
   Derive base_25p5_carry_mul
          SuchThat (forall
-                      (*(f0 f1 f2 f3 f4 f5 f6 f7 f8 f9 g0 g1 g2 g3 g4 g5 g6 g7 g8 g9 : Z)
-        (f:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)
-        (g:=(f0 :: f1 :: f2 :: f3 :: f4 :: f5 :: f6 :: f7 :: f8 :: f9 :: nil)%list)*)
                       (fg : list (BoundsAnalysis.type.BoundedZ _ _)
                             * list (BoundsAnalysis.type.BoundedZ _ _))
                       (f := fst fg) (g := snd fg)
