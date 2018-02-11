@@ -2631,6 +2631,55 @@ Module Compilers.
     Export ident.Notations.
 
     Module Indexed.
+      Module Export Range.
+        Import type.
+
+        Section with_relax.
+          Context (relax_zrange : zrange -> option zrange).
+
+          Definition primitive_for_option_zrange (v : option zrange) : type.primitive
+            := match v with
+               | Some v => ZBounded (lower v) (upper v)
+               | None => Z
+               end.
+          Definition primitive_for_zrange (v : zrange) : type.primitive
+            := primitive_for_option_zrange (relax_zrange v).
+
+          Fixpoint range (t : type) : Set
+            := match t with
+               | type_primitive _ => zrange
+               | prod A B => range A * range B
+               | list A => Datatypes.list zrange
+               end%type.
+
+          Fixpoint type_for_range {t} : range t -> type
+            := match t return range t -> type with
+               | type_primitive _ => primitive_for_zrange
+               | prod A B => fun (ab : range A * range B)
+                             => prod (@type_for_range A (Datatypes.fst ab))
+                                     (@type_for_range B (Datatypes.snd ab))
+               | list A
+                 => fun ls : Datatypes.list zrange
+                    => type.list
+                         (primitive_for_zrange (List.fold_right ZRange.union r[0 ~> 0]%zrange ls))
+               end.
+        End with_relax.
+      End Range.
+
+      Module Context.
+        Notation t val := (PositiveMap.t { t : type & val t }).
+
+        Definition find_at_type {val} (ctx : t val) {T} (p : positive) : option (val T)
+          := match PositiveMap.find p ctx with
+             | Some (existT t' r)
+               => type.transport val t' T r
+             | None => None
+             end.
+        Definition extendb {val} (ctx : t val) {T} (p : positive) (r : val T)
+          : t val
+          := PositiveMap.add p (existT _ T r) ctx.
+      End Context.
+
       Module expr.
         Inductive expr {ident : type -> type -> Type} : type -> Type :=
         | Var (t : type) (p : positive) : expr t
@@ -2652,33 +2701,28 @@ Module Compilers.
         End Notations.
 
         Section with_ident.
+          Import Context.
           Context {ident : type -> type -> Type}
                   (interp_ident : forall s d, ident s d -> type.interp s -> type.interp d).
 
           Fixpoint interp {t} (e : @expr ident t)
-                   (ctx : PositiveMap.t { t : type & type.interp t })
+                   (ctx : Context.t type.interp)
             : option (type.interp t)
             := match e with
                | Var t n
-                 => match PositiveMap.find n ctx with
-                    | Some (existT t' v) => type.transport type.interp t' t v
-                    | None => None
-                    end
+                 => find_at_type ctx n
                | TT => Some tt
                | AppIdent s d idc args
-                 => option_map (interp_ident s d idc) (@interp s args ctx)
+                 => args <- @interp s args ctx;
+                      Some (interp_ident s d idc args)
                | Pair A B a b
-                 => match @interp A a ctx, @interp B b ctx with
-                    | Some a, Some b => Some (a, b)
-                    | Some _, None | None, Some _ | None, None => None
-                    end
+                 => a <- @interp A a ctx;
+                      b <- @interp B b ctx;
+                      Some (a, b)
                | Let_In s d n x f
-                 => match @interp s x ctx with
-                    | Some v
-                      => let v' := v in
-                         @interp d f (PositiveMap.add n (existT type.interp s v') ctx)
-                    | None => None
-                    end
+                 => v <- @interp s x ctx;
+                      let v' := v in
+                      @interp d f (extendb ctx n v')
                end.
         End with_ident.
       End expr.
@@ -2853,26 +2897,14 @@ Module Compilers.
     End Notations.
 
     Module AdjustBounds.
+      Local Notation "( a ; b )" := (existT _ a b) : core_scope.
       Import Indexed.
       Import type expr ident.
       Module ident.
         Section with_relax.
           Context (relax_zrange : zrange -> option zrange).
 
-          Definition primitive_for_option_zrange (v : option zrange) : type.primitive
-            := match v with
-               | Some v => ZBounded (lower v) (upper v)
-               | None => Z
-               end.
-          Definition primitive_for_zrange (v : zrange) : type.primitive
-            := primitive_for_option_zrange (relax_zrange v).
-
-          Fixpoint range (t : type) : Set
-            := match t with
-               | type_primitive _ => zrange
-               | prod A B => range A * range B
-               | list A => Datatypes.list zrange
-               end%type.
+          Local Notation primitive_for_zrange := (primitive_for_zrange relax_zrange).
 
           Fixpoint type_for_range {t} : range t -> type
             := match t return range t -> type with
@@ -2904,9 +2936,6 @@ Module Compilers.
                   => let (lx, ux) := x in
                      let (ly, uy) := y in
                      {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
-
-          Notation uncurry2 f
-            := (fun a b => f (a, b)).
 
           (** TODO: Move me *)
           Definition smart_fst {A B} (e : @expr ident (A * B)) : @expr ident A
@@ -2943,6 +2972,23 @@ Module Compilers.
                | None => AppIdent (cast A B) e
                end.
 
+          (** We would like to just write the following.  Alas, we must await a solution to COQBUG(https://github.com/coq/coq/issues/6320) *)
+          (**
+<<
+          Fixpoint list_map {A B : type.primitive}
+                   (f : @expr ident A -> @expr ident B)
+                   (e : @expr ident (type.list A))
+            : option (@expr ident (type.list B))
+            := match e with
+               | AppIdent _ _ (ident.nil _) _
+                 => Some (AppIdent ident.nil TT)
+               | AppIdent _ _ (ident.cons _) (Pair _ _ x xs)
+                 => option_map
+                      (fun f_xs => AppIdent ident.cons (f x, f_xs))
+                      (@list_map _ _ f xs)
+               | _ => None
+               end.
+>> *)
           Fixpoint list_map {A B : type.primitive}
                    (f : @expr ident A -> @expr ident B)
                    (e : @expr ident (type.list A))
@@ -3027,20 +3073,16 @@ Module Compilers.
                  => fun _ => Some (existT _ Datatypes.nil (AppIdent nil TT))
                | cons t
                  => fun args
-                    => match args with
-                       | Some (existT r args)
-                         => option_map
-                              (fun snd_args
-                               => existT _ (Datatypes.fst r :: Datatypes.snd r)
-                                         (AppIdent
-                                            cons
-                                            (smart_cast (smart_fst args),
-                                             snd_args)))
-                              (list_map
-                                 smart_cast
-                                 (smart_snd args))
-                       | None => None
-                       end
+                    => args' <- args;
+                         let '(r; args) := args' in
+                         snd_args <- (list_map
+                                        smart_cast
+                                        (smart_snd args));
+                           Some ((Datatypes.fst r :: Datatypes.snd r);
+                                   (AppIdent
+                                      cons
+                                      (smart_cast (smart_fst args),
+                                       snd_args)))
                | fst A B
                  => option_map
                       (fun '(existT r args)
@@ -3080,29 +3122,19 @@ Module Compilers.
                                  (AppIdent (cast _ _) args))
                | cast _ _
                  => fun _ => None
-               end%zrange.
+               end%zrange%option.
         End with_relax.
       End ident.
 
       Module expr.
         Import ident.
         Section with_relax.
+          Import Context.
           Context (relax_zrange : zrange -> option zrange).
 
-          Local Notation RangeCtx := (PositiveMap.t { t : type & ident.range t }).
+          Local Notation RangeCtx := (Context.t range).
           Local Notation expr := (@expr ident).
           Local Notation type_for_range := (type_for_range relax_zrange).
-          Local Notation "( a ; b )" := (existT _ a b) : core_scope.
-
-          Definition lookupb (ctx : RangeCtx) {t} (p : positive) : option (range t)
-            := match PositiveMap.find p ctx with
-               | Some (existT t' r)
-                 => type.transport range t' t r
-               | None => None
-               end.
-          Definition extendb (ctx : RangeCtx) {t} (p : positive) (r : range t)
-            : RangeCtx
-            := PositiveMap.add p (t; r) ctx.
 
           Local Open Scope option_scope.
 
@@ -3113,7 +3145,7 @@ Module Compilers.
                | AppIdent s d idc args
                  => ident.adjust_bounds relax_zrange idc (@adjust_bounds ctx s args)
                | Var t x
-                 => range <- lookupb ctx x;
+                 => range <- find_at_type ctx x;
                       Some (range; (Var _ x))
                | Pair A B a b
                  => b1 <- @adjust_bounds ctx A a;
@@ -3134,13 +3166,15 @@ Module Compilers.
     End AdjustBounds.
 
     Module OfPHOAS.
+      Import Indexed.Range.
+      Import Indexed.Context.
       Definition AnalyzeBounds
                  {s d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
                  (e : Expr (s -> d))
-                 (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
+                 (s_bounds : range (Indexed.OfPHOAS.type.compile s))
       : option
-          { bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d) &
+          { bs : range (Indexed.OfPHOAS.type.compile d) &
                  @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs) }
         := let e := Indexed.OfPHOAS.expr.Compile e in
            match e with
@@ -3157,10 +3191,10 @@ Module Compilers.
                  {d : Compilers.type.primitive}
                  (relax_zrange : zrange -> option zrange)
                  {bs : zrange}
-        : type.primitive.interp (AdjustBounds.ident.primitive_for_zrange relax_zrange bs)
+        : type.primitive.interp (primitive_for_zrange relax_zrange bs)
           -> Compilers.type.interp d
         := match d, relax_zrange bs as rbs
-                 return type.primitive.interp (AdjustBounds.ident.primitive_for_option_zrange rbs)
+                 return type.primitive.interp (primitive_for_option_zrange rbs)
                         -> Compilers.type.interp d
            with
            | Compilers.type.unit, _ => fun _ => tt
@@ -3173,19 +3207,19 @@ Module Compilers.
       Fixpoint cast_back
                  {d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
-                 {bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d)}
+                 {bs : range (Indexed.OfPHOAS.type.compile d)}
                  (v : type.interp (AdjustBounds.ident.type_for_range relax_zrange bs))
                  {struct d}
         : Compilers.type.interp d
         := match d
-                 return (forall bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d),
+                 return (forall bs : range (Indexed.OfPHOAS.type.compile d),
                             type.interp (AdjustBounds.ident.type_for_range relax_zrange bs)
                             -> Compilers.type.interp d)
            with
            | Compilers.type.type_primitive x => @cast_back_primitive _ _
            | Compilers.type.prod A B
              => fun (bs :
-                       (* ignore this line, for type inference badness *) AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile A) * AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile B))
+                       (* ignore this line, for type inference badness *) range (Indexed.OfPHOAS.type.compile A) * range (Indexed.OfPHOAS.type.compile B))
                     (v :
                        (* ignore this line, for type inference badness *) type.interp (AdjustBounds.ident.type_for_range relax_zrange (fst bs)) * type.interp (AdjustBounds.ident.type_for_range relax_zrange (snd bs)))
                 => (@cast_back A relax_zrange (fst bs) (fst v),
@@ -3200,15 +3234,12 @@ Module Compilers.
       Definition Interp
                  {s d : Compilers.type.Notations.type}
                  (relax_zrange : zrange -> option zrange)
-                 (s_bounds : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile s))
-                 {bs : AdjustBounds.ident.range (Indexed.OfPHOAS.type.compile d)}
+                 (s_bounds : range (Indexed.OfPHOAS.type.compile s))
+                 {bs : range (Indexed.OfPHOAS.type.compile d)}
                  (args : type.interp (AdjustBounds.ident.type_for_range relax_zrange s_bounds))
                  (e : @expr ident (AdjustBounds.ident.type_for_range relax_zrange bs))
         : option (Compilers.type.interp d)
-        := let ctx := PositiveMap.add
-                        1%positive
-                        (existT _ _ args)
-                        (PositiveMap.empty _) in
+        := let ctx := extendb (PositiveMap.empty _) 1 args in
            let v := Indexed.expr.interp (@ident.interp) e ctx in
            option_map (cast_back relax_zrange) v.
     End OfPHOAS.
