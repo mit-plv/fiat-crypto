@@ -3341,6 +3341,14 @@ Import Associational Positional Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 
+(** TODO: FILES:
+- Uncurried expr + reification + list canonicalization
+- cps
+- partial reduction + DCE
+- reassociation
+- indexed + bounds analysis + of phoas *)
+
+
 (* TODO: is this the right way to do things? *)
 Definition expand_list_helper {A} (default : A) (ls : list A) (n : nat) (idx : nat) : list A
   := nat_rect
@@ -3547,6 +3555,7 @@ End test5.
 
 Axiom admit : forall {T}, T.
 
+(** TODO: split this into [carry_mul_gen] which does not use PHOAS stuff, and version that synthesizes a reified thing *)
 Derive carry_mul_gen
        SuchThat (forall (w : nat -> Z)
                         (fg : list Z * list Z)
@@ -3619,6 +3628,15 @@ Proof.
   subst fg'.
   reflexivity.
 Qed.
+
+(** TODO: factor out bounds analysis pipeline as a single definition / proof *)
+(** TODO: factor out apply one argument in the fst of a pair *)
+(** TODO: write a definition that specializes the PHOAS thing and composes with bounds analysis, + proof *)
+(** TODO: write wrappers for (string) prime -> reified arguments *)
+(** TODO: write indexed AST interp that returns default value, prove that given correctness for specialized thing, the defaulting interp is totally equal to the original operation *)
+(** TODO: write a lemma that for things equal to all operations using defaulting interp, we get a ring isomorphic to F m *)
+(** TODO: compose with stringification + wrappers for prime, extract to OCaml/Haskell *)
+(** TODO: proofs *)
 
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
   := List.fold_right
