@@ -1779,3 +1779,33 @@ Proof.
   revert ys; induction xs as [|a xs IHxs]; destruct ys; intros; try reflexivity; [].
   simpl. rewrite IHxs. reflexivity.
 Qed.
+
+Definition expand_list_helper {A} (default : A) (ls : list A) (n : nat) (idx : nat) : list A
+  := nat_rect
+       (fun _ => nat -> list A)
+       (fun _ => nil)
+       (fun n' rec_call idx
+        => cons (List.nth_default default ls idx) (rec_call (S idx)))
+       n
+       idx.
+Definition expand_list {A} (default : A) (ls : list A) (n : nat) : list A
+  := expand_list_helper default ls n 0.
+
+Lemma expand_list_helper_correct {A} (default : A) (ls : list A) (n idx : nat) (H : (idx + n <= length ls)%nat)
+  : expand_list_helper default ls n idx
+    = List.firstn n (List.skipn idx ls).
+Proof.
+  cbv [expand_list_helper]; revert idx H.
+  induction n as [|n IHn]; cbn; intros.
+  { reflexivity. }
+  { rewrite IHn by omega.
+    erewrite (@skipn_nth_default _ idx ls) by omega.
+    reflexivity. }
+Qed.
+
+Lemma expand_list_correct (n : nat) {A} (default : A) (ls : list A) (H : List.length ls = n)
+  : expand_list default ls n = ls.
+Proof.
+  subst; cbv [expand_list]; rewrite expand_list_helper_correct by reflexivity.
+  rewrite skipn_0, firstn_all; reflexivity.
+Qed.
