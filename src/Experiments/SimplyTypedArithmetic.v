@@ -2436,6 +2436,98 @@ Module Compilers.
       := fun var => eliminate_dead (ComputeLive e) (e _).
   End DeadCodeElimination.
 
+  Module ReassociateSmallConstants.
+    Import Compilers.Uncurried.expr.default.
+
+    Section with_var.
+      Context (max_const_val : Z)
+              {var : type -> Type}.
+
+      Fixpoint to_mul_list (e : @expr var type.Z) : list (@expr var type.Z)
+        := match e in expr.expr t return list (@expr var t) with
+           | AppIdent s type.Z ident.Z_runtime_mul (Pair type.Z type.Z x y)
+           | AppIdent s type.Z ident.Z_mul (Pair type.Z type.Z x y)
+             => to_mul_list x ++ to_mul_list y
+           | Var _ _ as e
+           | TT as e
+           | App _ _ _ _ as e
+           | Abs _ _ _ as e
+           | Pair _ _ _ _ as e
+           | AppIdent _ _ _ _ as e
+             => [e]
+           end.
+
+      Fixpoint to_add_mul_list (e : @expr var type.Z) : list (list (@expr var type.Z))
+        := match e in expr.expr t return list (list (@expr var t)) with
+           | AppIdent s type.Z ident.Z_runtime_add (Pair type.Z type.Z x y)
+           | AppIdent s type.Z ident.Z_add (Pair type.Z type.Z x y)
+             => to_add_mul_list x ++ to_add_mul_list y
+           | AppIdent s type.Z ident.Z_runtime_mul (Pair type.Z type.Z x y)
+           | AppIdent s type.Z ident.Z_mul (Pair type.Z type.Z x y)
+             => [to_mul_list x ++ to_mul_list y]
+           | Var _ _ as e
+           | TT as e
+           | App _ _ _ _ as e
+           | Abs _ _ _ as e
+           | Pair _ _ _ _ as e
+           | AppIdent _ _ _ _ as e
+             => [ [ e ] ]
+           end.
+
+      Definition is_small_prim (e : @expr var type.Z) : bool
+        := match e with
+           | AppIdent _ _ (ident.primitive type.Z v) _
+             => Z.abs v <=? Z.abs max_const_val
+           | _ => false
+           end.
+      Definition is_not_small_prim (e : @expr var type.Z) : bool
+        := negb (is_small_prim e).
+
+      Definition reorder_add_mul_list (ls : list (list (@expr var type.Z)))
+        : list (list (@expr var type.Z))
+        := List.map
+             (fun ls
+              => filter is_not_small_prim ls ++ filter is_small_prim ls)
+             ls.
+
+      Fixpoint of_mul_list (ls : list (@expr var type.Z)) : @expr var type.Z
+        := match ls with
+           | nil => AppIdent (ident.primitive (t:=type.Z) 1) TT
+           | cons x nil
+             => x
+           | cons x xs
+             => AppIdent ident.Z_mul (x, of_mul_list xs)
+           end.
+
+      Fixpoint of_add_mul_list (ls : list (list (@expr var type.Z))) : @expr var type.Z
+        := match ls with
+           | nil => AppIdent (ident.primitive (t:=type.Z) 0) TT
+           | cons x nil
+             => of_mul_list x
+           | cons x xs
+             => AppIdent ident.Z_add (of_mul_list x, of_add_mul_list xs)
+           end.
+
+      Fixpoint reassociate {t} (e : @expr var t) : @expr var t
+        := match e in expr.expr t return expr t with
+           | Var _ _ as e
+           | TT as e
+             => e
+           | Pair A B a b
+             => Pair (@reassociate A a) (@reassociate B b)
+           | App s d f x => App (@reassociate _ f) (@reassociate _ x)
+           | Abs s d f => Abs (fun v => @reassociate _ (f v))
+           | AppIdent s type.Z idc args
+             => of_add_mul_list (reorder_add_mul_list (to_add_mul_list (AppIdent idc (@reassociate s args))))
+           | AppIdent s d idc args
+             => AppIdent idc (@reassociate s args)
+           end.
+    End with_var.
+
+    Definition Reassociate (max_const_val : Z) {t} (e : Expr t) : Expr t
+      := fun var => reassociate max_const_val (e _).
+  End ReassociateSmallConstants.
+
   Module BoundsAnalysis.
     Module type.
       Local Set Boolean Equality Schemes.
@@ -3431,6 +3523,28 @@ Module test4.
   Qed.
 End test4.
 
+Module test5.
+  Example test5 : True.
+  Proof.
+    let v := Reify (fun y : (Z * Z)
+                    => dlet_nd x := (13 * (fst y * snd y))%RT in
+                        x) in
+    pose v as E.
+    vm_compute in E.
+    pose (ReassociateSmallConstants.Reassociate (2^8) (PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))))) as E'.
+    lazy in E'.
+    clear E.
+    lazymatch (eval cbv delta [E'] in E') with
+    | (fun var =>
+         Abs (fun v
+              => (expr_let v0 := ident.Z.mul @@ (ident.fst @@ Var v, ident.Z.mul @@ (ident.snd @@ Var v, ident.primitive 13 @@ TT)) in
+                      Var v0)%expr))
+      => idtac
+    end.
+    constructor.
+  Qed.
+End test5.
+
 Axiom admit : forall {T}, T.
 
 Derive carry_mul_gen
@@ -3522,6 +3636,51 @@ Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
                          (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
          else None)%zrange.
 
+Module PrintingNotations.
+  Export ident.
+  Export BoundsAnalysis.ident.
+  Export BoundsAnalysis.Notations.
+  Open Scope btype_scope.
+  Notation "'uint128'"
+    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
+  Notation "'uint64'"
+    := (r[0 ~> 18446744073709551615]) : btype_scope.
+  Notation "'uint32'"
+    := (r[0 ~> 4294967295]) : btype_scope.
+  Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+  Notation "x *₆₄₋₆₄₋₁₂₈ y"
+    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₆₄₋₆₄₋₆₄ y"
+    := (mul uint64 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₃₂₋₃₂ y"
+    := (mul uint32 uint32 uint32 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₆₄₋₆₄ y"
+    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₃₂₋₆₄ y"
+    := (mul uint32 uint32 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x +₁₂₈ y"
+    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₃₂₋₆₄₋₆₄ y"
+    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₆₄ y"
+    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₃₂ y"
+    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  Notation "( out_t )( v >> count )"
+    := ((shiftr _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  >>  count )")
+       : nexpr_scope.
+  Notation "( ( out_t ) v & mask )"
+    := ((land _ out_t mask @@ v)%nexpr)
+         (format "( ( out_t ) v  &  mask )")
+       : nexpr_scope.
+End PrintingNotations.
+
 Module X25519_64.
   (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
   Definition limbwidth := 51%Q.
@@ -3592,7 +3751,7 @@ Module X25519_64.
         let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
         set (E := e);
           cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-      Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (DeadCodeElimination.EliminateDead (PartialReduce E))) in
            let E' := (eval lazy in E') in
            pose E' as E''.
       Time let E' := constr:(Option.invert_Some
@@ -3610,65 +3769,30 @@ Module X25519_64.
       exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
   Qed.
 
-  Import ident.
-  Import BoundsAnalysis.ident.
-  Import BoundsAnalysis.Notations.
-  Local Open Scope btype_scope.
-  Local Notation "'uint128'"
-    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
-  Local Notation "'uint64'"
-    := (r[0 ~> 18446744073709551615]) : btype_scope.
-  Local Notation "'uint32'"
-    := (r[0 ~> 4294967295]) : btype_scope.
-  Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
-  Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
-    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
-    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x *₃₂₋₆₄₋₆₄ y"
-    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x +₁₂₈ y"
-    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
-    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₃₂₋₆₄₋₆₄ y"
-    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₆₄₋₆₄₋₆₄ y"
-    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₃₂₋₃₂₋₃₂ y"
-    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
-  Local Notation "( out_t )( v >> count )"
-    := ((shiftr _ out_t count @@ v)%nexpr)
-         (format "( out_t )( v  >>  count )")
-       : nexpr_scope.
-  Local Notation "( ( out_t ) v & mask )"
-    := ((land _ out_t mask @@ v)%nexpr)
-         (format "( ( out_t ) v  &  mask )")
-       : nexpr_scope.
+  Import PrintingNotations.
   Print base_51_carry_mul.
 (* base_51_carry_mul =
 (expr_let 2 := fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
-               ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
-                ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]) +₁₂₈
-                 ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]]) +₁₂₈
-                  (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]])))) in
+               (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[4]] *₆₄₋₆₄₋₆₄ (19)) +₁₂₈
+                (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[3]] *₆₄₋₆₄₋₆₄ (19)) +₁₂₈
+                 (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[2]] *₆₄₋₆₄₋₆₄ (19)) +₁₂₈
+                  fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[1]] *₆₄₋₆₄₋₆₄ (19))))) in
  expr_let 3 := (uint64)(x_2 >> 51) in
  expr_let 4 := ((uint64)x_2 & 2251799813685247) in
  expr_let 5 := x_3 +₆₄₋₁₂₈₋₁₂₈
                (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
                 (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
-                 ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
-                  ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]) +₁₂₈
-                   (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]]))))) in
+                 (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[4]] *₆₄₋₆₄₋₆₄ (19)) +₁₂₈
+                  (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[3]] *₆₄₋₆₄₋₆₄ (19)) +₁₂₈
+                   fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[2]] *₆₄₋₆₄₋₆₄ (19)))))) in
  expr_let 6 := (uint64)(x_5 >> 51) in
  expr_let 7 := ((uint64)x_5 & 2251799813685247) in
  expr_let 8 := x_6 +₆₄₋₁₂₈₋₁₂₈
                (fst @@ x_1 [[0]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
                 (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
                  (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
-                  ((19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]) +₁₂₈
-                   (19) *₃₂₋₁₂₈₋₁₂₈ (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[3]]))))) in
+                  (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[4]] *₆₄₋₆₄₋₆₄ (19)) +₁₂₈
+                   fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[3]] *₆₄₋₆₄₋₆₄ (19)))))) in
  expr_let 9 := (uint64)(x_8 >> 51) in
  expr_let 10 := ((uint64)x_8 & 2251799813685247) in
  expr_let 11 := x_9 +₆₄₋₁₂₈₋₁₂₈
@@ -3676,8 +3800,7 @@ Module X25519_64.
                  (fst @@ x_1 [[1]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[2]] +₁₂₈
                   (fst @@ x_1 [[2]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[1]] +₁₂₈
                    (fst @@ x_1 [[3]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]] +₁₂₈
-                    (19) *₃₂₋₁₂₈₋₁₂₈
-                    (fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[4]]))))) in
+                    fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ (snd @@ x_1 [[4]] *₆₄₋₆₄₋₆₄ (19)))))) in
  expr_let 12 := (uint64)(x_11 >> 51) in
  expr_let 13 := ((uint64)x_11 & 2251799813685247) in
  expr_let 14 := x_12 +₆₄₋₁₂₈₋₁₂₈
@@ -3688,13 +3811,13 @@ Module X25519_64.
                     fst @@ x_1 [[4]] *₆₄₋₆₄₋₁₂₈ snd @@ x_1 [[0]])))) in
  expr_let 15 := (uint64)(x_14 >> 51) in
  expr_let 16 := ((uint64)x_14 & 2251799813685247) in
- expr_let 17 := x_4 +₆₄₋₆₄₋₆₄ (19) *₃₂₋₆₄₋₆₄ x_15 in
- expr_let 18 := (uint32)(x_17 >> 51) in
+ expr_let 17 := x_4 +₆₄ x_15 *₆₄₋₆₄₋₆₄ (19) in
+ expr_let 18 := (uint64)(x_17 >> 51) in
  expr_let 19 := ((uint64)x_17 & 2251799813685247) in
- expr_let 20 := x_18 +₃₂₋₆₄₋₆₄ x_7 in
- expr_let 21 := (uint32)(x_20 >> 51) in
+ expr_let 20 := x_18 +₆₄ x_7 in
+ expr_let 21 := (uint64)(x_20 >> 51) in
  expr_let 22 := ((uint64)x_20 & 2251799813685247) in
- x_19 :: x_22 :: x_21 +₃₂₋₆₄₋₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
+ x_19 :: x_22 :: x_21 +₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
      : expr
          (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
 *)
@@ -3781,7 +3904,7 @@ Module X25519_32.
         let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
         set (E := e);
           cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-      Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
+      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (DeadCodeElimination.EliminateDead (PartialReduce E))) in
            let E' := (eval lazy in E') in
            pose E' as E''. (* about 90 s *)
       Time let E' := constr:(Option.invert_Some
@@ -3799,231 +3922,183 @@ Module X25519_32.
       exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
   Qed.
 
-  Import ident.
-  Import BoundsAnalysis.ident.
-  Import BoundsAnalysis.Notations.
-  Local Open Scope btype_scope.
-  Local Notation "'uint128'"
-    := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
-  Local Notation "'uint64'"
-    := (r[0 ~> 18446744073709551615]) : btype_scope.
-  Local Notation "'uint32'"
-    := (r[0 ~> 4294967295]) : btype_scope.
-  Local Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
-  Local Notation "x *₆₄₋₆₄₋₁₂₈ y"
-    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
-    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x *₃₂₋₆₄₋₆₄ y"
-    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x *₃₂₋₃₂₋₆₄ y"
-    := (mul uint32 uint32 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
-  Local Notation "x +₁₂₈ y"
-    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
-    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₃₂₋₆₄₋₆₄ y"
-    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₆₄₋₆₄₋₆₄ y"
-    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x +₃₂₋₃₂₋₃₂ y"
-    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
-  Local Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
-  Local Notation "( out_t )( v >> count )"
-    := ((shiftr _ out_t count @@ v)%nexpr)
-         (format "( out_t )( v  >>  count )")
-       : nexpr_scope.
-  Local Notation "( ( out_t ) v & mask )"
-    := ((land _ out_t mask @@ v)%nexpr)
-         (format "( ( out_t ) v  &  mask )")
-       : nexpr_scope.
+  Import PrintingNotations.
   Print base_25p5_carry_mul.
 (* base_25p5_carry_mul =
-(expr_let 2 := fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-               ((2) *₃₂₋₆₄₋₆₄
-                ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
-                ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                 ((2) *₃₂₋₆₄₋₆₄
-                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
-                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
-                   ((2) *₃₂₋₆₄₋₆₄
-                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]])) +₆₄₋₆₄₋₆₄
-                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
-                     ((2) *₃₂₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]])) +₆₄₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]]) +₆₄₋₆₄₋₆₄
-                       (2) *₃₂₋₆₄₋₆₄
-                       ((19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]])))))))))) in
+(expr_let 2 := fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+               (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄
+                (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                 (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄
+                  (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                  (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                   (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄
+                    (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                    (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                     (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                      (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                      (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[2]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 3 := (uint64)(x_2 >> 26) in
  expr_let 4 := ((uint32)x_2 & 67108863) in
- expr_let 5 := x_3 +₆₄₋₆₄₋₆₄
-               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                 ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
-                  ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
-                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
-                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
-                       ((19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
-                        (19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]])))))))))) in
+ expr_let 5 := x_3 +₆₄
+               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
+                (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                 (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                  (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                   (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                    (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                     (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                      (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[2]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 6 := (uint64)(x_5 >> 25) in
  expr_let 7 := ((uint32)x_5 & 33554431) in
- expr_let 8 := x_6 +₆₄₋₆₄₋₆₄
-               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
-                 (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                  ((2) *₃₂₋₆₄₋₆₄
-                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
-                   ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                    ((2) *₃₂₋₆₄₋₆₄
-                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
-                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
-                      ((2) *₃₂₋₆₄₋₆₄
-                       ((19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]])) +₆₄₋₆₄₋₆₄
-                       ((19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]]) +₆₄₋₆₄₋₆₄
-                        (2) *₃₂₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]))))))))))) in
+ expr_let 8 := x_6 +₆₄
+               (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                 (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                  (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄
+                   (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                   (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                    (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄
+                     (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                     (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                      (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 9 := (uint64)(x_8 >> 26) in
  expr_let 10 := ((uint32)x_8 & 67108863) in
- expr_let 11 := x_9 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
-                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
-                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                    ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
-                     ((19) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
-                       ((19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
-                         (19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]])))))))))) in
+ expr_let 11 := x_9 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 12 := (uint64)(x_11 >> 25) in
  expr_let 13 := ((uint32)x_11 & 33554431) in
- expr_let 14 := x_12 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
-                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
-                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                     ((2) *₃₂₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                       ((2) *₃₂₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]])) +₆₄₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]]) +₆₄₋₆₄₋₆₄
-                         (2) *₃₂₋₆₄₋₆₄
-                         ((19) *₃₂₋₆₄₋₆₄
-                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]))))))))))) in
+ expr_let 14 := x_12 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄
+                      (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 15 := (uint64)(x_14 >> 26) in
  expr_let 16 := ((uint32)x_14 & 67108863) in
- expr_let 17 := x_15 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
-                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
-                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
-                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                      ((19) *₃₂₋₆₄₋₆₄
-                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
-                       ((19) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
-                         (19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]])))))))))) in
+ expr_let 17 := x_15 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄
+                       (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 18 := (uint64)(x_17 >> 25) in
  expr_let 19 := ((uint32)x_17 & 33554431) in
- expr_let 20 := x_18 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
-                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
-                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
-                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                     ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                       ((2) *₃₂₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]])) +₆₄₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]]) +₆₄₋₆₄₋₆₄
-                         (2) *₃₂₋₆₄₋₆₄
-                         ((19) *₃₂₋₆₄₋₆₄
-                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]))))))))))) in
+ expr_let 20 := x_18 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 21 := (uint64)(x_20 >> 26) in
  expr_let 22 := ((uint32)x_20 & 67108863) in
- expr_let 23 := x_21 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄₋₆₄₋₆₄
-                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
-                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
-                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
-                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                        ((19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]) +₆₄₋₆₄₋₆₄
-                         (19) *₃₂₋₆₄₋₆₄
-                         (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]])))))))))) in
+ expr_let 23 := x_21 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 24 := (uint64)(x_23 >> 25) in
  expr_let 25 := ((uint32)x_23 & 33554431) in
- expr_let 26 := x_24 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄₋₆₄₋₆₄
-                 ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]]) +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
-                   ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]]) +₆₄₋₆₄₋₆₄
-                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
-                     ((2) *₃₂₋₆₄₋₆₄ (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]]) +₆₄₋₆₄₋₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                       ((2) *₃₂₋₆₄₋₆₄
-                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]]) +₆₄₋₆₄₋₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄₋₆₄₋₆₄
-                         (2) *₃₂₋₆₄₋₆₄
-                         ((19) *₃₂₋₆₄₋₆₄
-                          (fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]]))))))))))) in
+ expr_let 26 := x_24 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
+                        (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
+                         (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 27 := (uint64)(x_26 >> 26) in
  expr_let 28 := ((uint32)x_26 & 67108863) in
- expr_let 29 := x_27 +₆₄₋₆₄₋₆₄
-                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]] +₆₄₋₆₄₋₆₄
-                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄₋₆₄₋₆₄
-                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄₋₆₄₋₆₄
-                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄₋₆₄₋₆₄
-                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄₋₆₄₋₆₄
-                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄₋₆₄₋₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄₋₆₄₋₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄₋₆₄₋₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄₋₆₄₋₆₄
+ expr_let 29 := x_27 +₆₄
+                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[9]] +₆₄
+                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[8]] +₆₄
+                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[7]] +₆₄
+                   (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[6]] +₆₄
+                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[5]] +₆₄
+                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[3]] +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
                          fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]]))))))))) in
  expr_let 30 := (uint32)(x_29 >> 25) in
  expr_let 31 := ((uint32)x_29 & 33554431) in
- expr_let 32 := x_4 +₃₂₋₆₄₋₆₄ (19) *₃₂₋₃₂₋₆₄ x_30 in
+ expr_let 32 := x_4 +₃₂₋₆₄₋₆₄ x_30 *₃₂₋₃₂₋₆₄ (19) in
  expr_let 33 := (uint32)(x_32 >> 26) in
  expr_let 34 := ((uint32)x_32 & 67108863) in
- expr_let 35 := x_33 +₃₂₋₃₂₋₃₂ x_7 in
+ expr_let 35 := x_33 +₃₂ x_7 in
  expr_let 36 := (uint32)(x_35 >> 25) in
  expr_let 37 := ((uint32)x_35 & 33554431) in
  x_34
  :: x_37
-    :: x_36 +₃₂₋₃₂₋₃₂ x_10
-       :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
+    :: x_36 +₃₂ x_10 :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
      : expr
          (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
- *)
+*)
 End X25519_32.
 *)
