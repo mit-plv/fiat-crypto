@@ -6502,11 +6502,13 @@ src/Util/SideConditions/RingPackage.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
+src/Util/Strings/Ascii.v
 src/Util/Strings/Binary.v
 src/Util/Strings/Decimal.v
 src/Util/Strings/Equality.v
 src/Util/Strings/Hex.v
 src/Util/Strings/Octal.v
+src/Util/Strings/String.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CacheTerm.v
 src/Util/Tactics/ChangeInAll.v
