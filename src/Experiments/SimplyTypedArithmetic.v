@@ -1552,6 +1552,52 @@ Module Compilers.
            ls.
   End gallina_reify.
 
+  Lemma interp_reify_list {t} ls
+    : interp (@reify_list _ t ls) = List.map interp ls.
+  Proof.
+    unfold reify_list.
+    induction ls as [|x xs IHxs]; cbn in *; [ reflexivity | ].
+    rewrite IHxs; reflexivity.
+  Qed.
+
+  Module GallinaReify.
+    Section value.
+      Context (var : type -> Type).
+      Fixpoint value (t : type)
+        := match t return Type with
+           | type.prod A B as t => value A * value B
+           | type.arrow s d => var s -> value d
+           | type.list A => list (value A)
+           | type.type_primitive _ as t
+             => type.interp t
+           end%type.
+    End value.
+
+    Section reify.
+      Context {var : type -> Type}.
+      Fixpoint reify {t : type} {struct t}
+        : value var t -> @expr var t
+        := match t return value var t -> expr t with
+           | type.prod A B as t
+             => fun '((a, b) : value var A * value var B)
+                => (@reify A a, @reify B b)%expr
+           | type.arrow s d
+             => fun (f : var s -> value var d)
+                => Abs (fun x
+                        => @reify d (f x))
+           | type.list A as t
+             => fun x : list (value var A)
+                => reify_list (List.map (@reify A) x)
+           | type.type_primitive _ as t
+             => fun x : type.interp t
+                => (ident.primitive x @@ TT)%expr
+           end.
+    End reify.
+
+    Definition Reify {t : type} (v : forall var, value var t) : Expr t
+      := fun var => reify (v _).
+  End GallinaReify.
+
   Module CPS.
     Import Uncurried.
     Module Import Output.
@@ -3162,6 +3208,22 @@ Module Compilers.
                | list A => Datatypes.list zrange
                end%type.
 
+          Fixpoint range_is_tighter_than {t}
+            : forall (tight_range loose_range : range t), bool
+            := match t return range t -> range t -> bool with
+               | type_primitive x => is_tighter_than_bool
+               | prod A B
+                 => fun '((r1, r2) : range _ * range _)
+                        '((r1', r2') : range _ * range _)
+                    => @range_is_tighter_than _ r1 r1' && @range_is_tighter_than _ r2 r2'
+               | list A
+                 => fun ls1 ls2
+                    => if (List.length ls1 =? List.length ls2)%nat
+                       then List.forallb (fun '(r1, r2) => is_tighter_than_bool r1 r2)
+                                         (combine ls1 ls2)
+                       else false
+               end.
+
           Fixpoint type_for_range {t} : range t -> type
             := match t return range t -> type with
                | type_primitive _ => primitive_for_zrange
@@ -3788,7 +3850,6 @@ Open Scope RT_expr_scope.
 
 Require Import AdmitAxiom.
 
-
 Example test1 : True.
 Proof.
   let v := Reify ((fun x => 2^x) 255)%Z in
@@ -3982,56 +4043,139 @@ Derive carry_mul_gen
                         (Hsc_nz : s - Associational.eval c <> 0)
                         (Hs_nz : s <> 0)
                         (Hn_nz : n <> 0%nat),
-                    (* N.B. type must be a tuple for CPS.CallFunWithIdContinuation to work *)
-                    Interp (t:=((type.nat*type.Z*type.list (type.Z * type.Z)*type.nat*type.list type.nat*type.nat*(type.nat->type.Z))*(type.list type.Z * type.list type.Z)->type.list type.Z)%ctype)
-                           carry_mul_gen ((n, s, c, len_c, idxs, len_idxs, w), fg)
+                    Interp (t:=type.reify_type_of carry_mulmod)
+                           carry_mul_gen w s c n len_c idxs len_idxs fg
                     = carry_mulmod w s c n len_c idxs len_idxs fg)
        As carry_mul_gen_correct.
 Proof.
-  intros; subst carry_mul_gen; cbv [carry_mulmod].
+  intros; cbv [carry_mulmod].
   clear.
-  repeat match goal with
-         | [ |- context[(?x, ?y)] ]
-           => is_var x; is_var y;
-                let args := fresh "args" in
-                let args' := fresh "args'" in
-                let Hargs := fresh "Hargs" in
-                set (args := (x, y));
-                  change x with (fst args);
-                  change y with (snd args);
-                  remember args as args' eqn:Hargs; subst args;
-                    try subst x; try subst y
-         end.
+  let LHS := lazymatch goal with |- ?LHS = _ => LHS end in
+  pose (ordering := LHS).
   etransitivity.
   Focus 2.
-  { repeat match goal with H : _ |- _ => clear H end.
-    repeat match goal with H : _ |- _ => revert H end.
-    lazymatch goal with
-    | [ |- forall args, ?ev = @?RHS args ]
-      => refine (fun args => f_equal (fun F => F args) (_ : _ = RHS))
-    end.
+  { repeat match goal with
+           | [ H : _ |- _ ] => first [ constr_eq H ordering; fail 1 | clear H ]
+           | [ |- _ = _ ]
+             => lazymatch (eval cbv delta [ordering] in ordering) with
+                | ?f ?H
+                  => clear ordering; pose f as ordering;
+                       revert H;
+                       lazymatch goal with
+                       | [ |- forall args, ?ev = @?RHS args ]
+                         => refine (fun args => f_equal (fun F => F args) (_ : _ = RHS));
+                              clear args
+                       end
+                end
+           end.
+    repeat match goal with H : _ |- _ => clear H end.
     Reify_rhs ().
     reflexivity.
   } Unfocus.
   cbv beta.
-  let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+  let RHS := match goal with |- _ = ?RHS => RHS end in
+  let e := match RHS with context[expr.Interp _ ?e] => e end in
   set (E := e).
   Time let E' := constr:(PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
        let E' := (eval vm_compute in E') in (* 0.131 for vm, about 0.6 for lazy, slower for native and cbv *)
        pose E' as E''.
-  transitivity (Interp E'' (fst (fst args'), (fun '((i, k) : nat * (Z -> list Z)) => k (w i)), snd args')); [ clear E | exact admit ].
-  subst args'; cbn [fst snd].
+  let LHS := match goal with |- ?LHS = _ => LHS end in
+  lazymatch LHS with
+  | context LHS[expr.Interp _ _]
+    => let LHS := context LHS[Interp E''] in
+       transitivity LHS
+  end;
+    [ clear E | exact admit ].
+  subst carry_mul_gen ordering.
   reflexivity.
 Qed.
 
-(** TODO: factor out bounds analysis pipeline as a single definition / proof *)
-(** TODO: factor out apply one argument in the fst of a pair *)
-(** TODO: write a definition that specializes the PHOAS thing and composes with bounds analysis, + proof *)
-(** TODO: write wrappers for (string) prime -> reified arguments *)
-(** TODO: write indexed AST interp that returns default value, prove that given correctness for specialized thing, the defaulting interp is totally equal to the original operation *)
-(** TODO: write a lemma that for things equal to all operations using defaulting interp, we get a ring isomorphic to F m *)
-(** TODO: compose with stringification + wrappers for prime, extract to OCaml/Haskell *)
-(** TODO: proofs *)
+Module Pipeline.
+  Inductive ErrorMessage :=
+  | Computed_bounds_are_not_tight_enough
+      {t} (computed_bounds expected_bounds : BoundsAnalysis.Indexed.Range.range t)
+  | Bounds_analysis_failed
+  | Return_type_mismatch {T'} (found expected : T')
+  | Value_not_le (descr : string) {T'} (lhs rhs : T')
+  | Values_not_provably_distinct (descr : string) {T'} (lhs rhs : T')
+  | Values_not_provably_equal (descr : string) {T'} (lhs rhs : T').
+
+  Inductive ErrorT {T} :=
+  | Success (v : T)
+  | Error (msg : ErrorMessage).
+  Global Arguments ErrorT : clear implicits.
+
+  Definition invert_result {T} (v : ErrorT T)
+    := match v return match v with Success _ => T | _ => ErrorMessage end with
+       | Success v => v
+       | Error msg => msg
+       end.
+
+  Definition transport_or_error P {A B} (v : P A) : ErrorT (P B)
+    := match BoundsAnalysis.type.transport P A B v with
+       | Some v => Success v
+       | None => Error (Return_type_mismatch A B)
+       end.
+
+  Definition BoundsPipeline
+             relax_zrange
+             {s d}
+             arg_bounds
+             out_bounds
+             (E : Expr (s -> d))
+  : ErrorT (BoundsAnalysis.Indexed.expr.Notations.expr (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange (t:=BoundsAnalysis.Indexed.OfPHOAS.type.compile d) out_bounds))
+    := let E := PartialReduce E in
+       let E := ReassociateSmallConstants.Reassociate (2^8) E in
+       let E := BoundsAnalysis.OfPHOAS.AnalyzeBounds relax_zrange E arg_bounds in
+       let E := match E with
+                | Some (existT b v)
+                  => if BoundsAnalysis.Indexed.Range.range_is_tighter_than b out_bounds
+                     then transport_or_error BoundsAnalysis.Indexed.expr.Notations.expr v
+                     else Error (Computed_bounds_are_not_tight_enough b out_bounds)
+                | None => Error Bounds_analysis_failed
+                end in
+       E.
+
+  Lemma BoundsPipeline_correct
+             relax_zrange
+             {s d}
+             arg_bounds
+             out_bounds
+             (E : Expr (s -> d))
+             rv
+             (Hrv : BoundsPipeline relax_zrange arg_bounds out_bounds E = Success rv)
+    : forall arg
+             (arg' := @BoundsAnalysis.OfPHOAS.cast_back
+                        s
+                        relax_zrange
+                        arg_bounds
+                        arg),
+      exists res,
+        (BoundsAnalysis.OfPHOAS.Interp
+           (s:=s)
+           (d:=d)
+           relax_zrange
+           arg_bounds
+           (bs:=out_bounds)
+           arg
+           rv
+         = Some res)
+        /\ res = Interp E arg'.
+  Proof.
+  Admitted.
+End Pipeline.
+
+Record mul_rargs :=
+  { rw : Expr (type.nat -> type.Z);
+    rs : Expr type.Z;
+    rc : Expr (type.list (type.Z * type.Z));
+    rn : Expr type.nat;
+    rlen_c : Expr type.nat;
+    ridxs : Expr (type.list type.nat);
+    rlen_idxs : Expr type.nat;
+    relax_zrange : zrange -> option zrange;
+    arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z * type.list type.Z));
+    out_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z)) }.
 
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
   := List.fold_right
@@ -4048,6 +4192,183 @@ Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
          then option_map (fun u => r[0~>2^u-1])
                          (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
          else None)%zrange.
+
+(** TODO: Move me? *)
+Definition SmartApp {s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
+  := (fun var
+      => let f' := (match f _ in expr.expr t return option match t with
+                                                           | (s -> d)%ctype => expr s -> expr d
+                                                           | _ => unit
+                                                           end with
+                    | Abs s d f => Some f
+                    | _ => None
+                    end) in
+         match f' with
+         | Some f => unexpr (f (x _))
+         | None => f var @ x var
+         end%expr).
+
+Derive rweight
+       SuchThat (forall (limbwidth : Q)
+                        (i : nat),
+                    Interp (t:=(type.nat -> type.Z)%ctype) (rweight limbwidth) i
+                    = 2^Qceiling(limbwidth*i))
+       As Interp_rweight.
+Proof.
+  intros; destruct limbwidth as [n d].
+  cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden].
+  rewrite Pos.mul_1_r.
+  remember (Z.pos d) as dz.
+  etransitivity.
+  Focus 2.
+  { repeat match goal with H : _ |- _ => clear H end.
+    revert n dz i.
+    lazymatch goal with
+    | [ |- forall a b c, ?ev = @?RHS a b c ]
+      => refine (fun a b c => f_equal (fun F => F a b c) (_ : _ = RHS));
+           clear a b c
+    end.
+    Reify_rhs ().
+    reflexivity. }
+  Unfocus.
+  cbv beta.
+  let E := lazymatch goal with | [ |- _ = expr.Interp _ ?E ?n ?dz ?i ] => E end in
+  let E := constr:(SmartApp
+                     (SmartApp
+                        (canonicalize_list_recursion E)
+                        (GallinaReify.Reify (t:=type.Z) (fun _ => n)))
+                     (GallinaReify.Reify (t:=type.Z) (fun _ => dz))) in
+  let E := (eval vm_compute in E) in
+  transitivity (Interp E i);
+    [
+    | lazy [expr.Interp expr.interp for_reification.ident.interp ident.interp]; reflexivity ].
+  subst dz rweight.
+  set (q := n # d).
+  change n with (Qnum q); change d with (Qden q); clearbody q; clear.
+  reflexivity.
+Qed.
+
+(** XXX TODO: Translate Jade's python script *)
+Section rcarry_mul.
+  Context (limbwidth : Q)
+          (s : Z)
+          (c : list (Z * Z))
+          (machine_wordsize : Z).
+
+  Let n := Z.to_nat (Qceiling (Z.log2_up (s - Associational.eval c) / limbwidth)).
+  Let idxs := (seq 0 n ++ [0; 1])%list%nat.
+  Let f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
+
+  Definition make_carry_mul_rargs
+    : mul_rargs
+    := {| rw := rweight limbwidth;
+          rs var := GallinaReify.reify (t:=type.Z) s;
+          rc var := GallinaReify.reify (t:=type.list (type.Z * type.Z)) c;
+          rn var := GallinaReify.reify (t:=type.nat) n;
+          ridxs var := GallinaReify.reify (t:=type.list type.nat) idxs;
+          rlen_c var := GallinaReify.reify (t:=type.nat) (List.length c);
+          rlen_idxs var := GallinaReify.reify (t:=type.nat) (List.length idxs);
+          relax_zrange := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z;
+          arg_bounds := (f_bounds, f_bounds);
+          out_bounds := f_bounds;
+       |}.
+
+  Definition rcarry_mul
+    := let opts := make_carry_mul_rargs in
+       let res := Pipeline.BoundsPipeline
+                    (opts.(relax_zrange))
+                    (s:=(type.list type.Z * type.list type.Z)%ctype)
+                    (d:=(type.list type.Z)%ctype)
+                    (opts.(arg_bounds))
+                    (opts.(out_bounds))
+                    (fun var
+                     => (carry_mul_gen _)
+                          @ (opts.(rw) _)
+                          @ (opts.(rs) _)
+                          @ (opts.(rc) _)
+                          @ (opts.(rn) _)
+                          @ (opts.(rlen_c) _)
+                          @ (opts.(ridxs) _)
+                          @ (opts.(rlen_idxs) _)
+                    )%expr in
+       if negb (Qle_bool 1 limbwidth)%Q
+       then Pipeline.Error (Pipeline.Value_not_le "1 ≤ limbwidth" 1%Q limbwidth)
+       else if (s - Associational.eval c =? 0)%Z
+            then Pipeline.Error (Pipeline.Values_not_provably_distinct "s - Associational.eval c ≠ 0" (s - Associational.eval c) 0)
+            else if (s =? 0)%Z
+                 then Pipeline.Error (Pipeline.Values_not_provably_distinct "s ≠ 0" s 0)
+                 else if (n =? 0)%nat
+                      then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" n 0%nat)
+                      else res.
+
+  Definition rcarry_mul_correctT
+             (opts := make_carry_mul_rargs)
+             rv
+    := forall arg
+              (arg' := @BoundsAnalysis.OfPHOAS.cast_back
+                         _
+                         (opts.(relax_zrange))
+                         (opts.(arg_bounds))
+                         arg)
+              (Hf : List.length (fst arg) = n)
+              (Hg : List.length (snd arg) = n),
+      exists res,
+        (BoundsAnalysis.OfPHOAS.Interp
+           (opts.(relax_zrange))
+           (opts.(arg_bounds))
+           (bs:=opts.(out_bounds))
+           arg
+           rv
+         = Some res)
+        /\ res = carry_mulmod (Interp opts.(rw)) s c n (Interp opts.(rlen_c)) idxs (Interp opts.(rlen_idxs)) arg'.
+
+  Lemma rcarry_mul_correct
+        (opts := make_carry_mul_rargs)
+        rv
+        (Hrv : rcarry_mul = Pipeline.Success rv)
+    : rcarry_mul_correctT rv.
+  Proof.
+    hnf; intros.
+    cbv [rcarry_mul] in Hrv.
+    break_innermost_match_hyps; try solve [ exfalso; clear -Hrv; discriminate ]; [].
+    Z.ltb_to_lt.
+    rewrite negb_false_iff in *.
+    rewrite Qle_bool_iff in *.
+    rewrite NPeano.Nat.eqb_neq in *.
+    erewrite <- carry_mul_gen_correct
+      by (clear Hrv rv; try clear arg arg';
+          generalize (@pow_ceil_mul_nat_divide_nonzero 2 limbwidth);
+          generalize (@pow_ceil_mul_nat_nonzero 2 limbwidth);
+          cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden];
+          cbv [Qle] in *;
+          cbn; rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r;
+          repeat match goal with H := _ |- _ => subst H || clear H end;
+          try destruct limbwidth; cbn in *;
+          do 2 try match goal with
+                   | [ |- forall _, _ ]
+                     => (let H := fresh in intro H; apply H) || intro
+                   end;
+          intros;
+          repeat match goal with
+                 | [ H : _ |- _ <> _ ] => eapply H
+                 end;
+          try reflexivity;
+          try lia).
+    eapply Pipeline.BoundsPipeline_correct in Hrv.
+    destruct Hrv as [res [Hrv1 Hrv2] ]; exists res; split; [ exact Hrv1 | subst res ].
+    subst opts.
+    cbv [expr.Interp].
+    cbn [expr.interp].
+    f_equal; cbn;
+      rewrite interp_reify_list, map_map; cbn;
+        erewrite map_ext with (g:=id), map_id; try reflexivity.
+    intros []; reflexivity.
+  Qed.
+End rcarry_mul.
+
+Ltac solve_rcarry_mul _ :=
+  eapply rcarry_mul_correct;
+  lazy; reflexivity.
 
 Module PrintingNotations.
   Export ident.
@@ -4094,93 +4415,17 @@ Module PrintingNotations.
        : nexpr_scope.
 End PrintingNotations.
 
+
 Module X25519_64.
-  (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
   Definition limbwidth := 51%Q.
-  Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
   Definition s := 2^255.
   Definition c := [(1, 19)].
-  Definition n := 5%nat.
-  Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
-  Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
-  Definition relax_zrange : zrange -> option zrange
-    := relax_zrange_gen [64; 128].
+  Definition machine_wordsize := 64.
 
   Derive base_51_carry_mul
-         SuchThat (forall
-                      (fg : list (BoundsAnalysis.type.BoundedZ _ _)
-                            * list (BoundsAnalysis.type.BoundedZ _ _))
-                      (f := fst fg) (g := snd fg)
-                      (fg_bounds := (f_bounds, f_bounds))
-                      (fg' := @BoundsAnalysis.OfPHOAS.cast_back
-                                ((type.list (type.Z) * type.list (type.Z))%ctype)
-                                relax_zrange
-                                fg_bounds
-                                fg)
-                      (f' := fst fg') (g' := snd fg')
-                      (Hf' : length f' = n) (Hg' : length g' = n),
-                      exists mul_fg',
-                        (BoundsAnalysis.OfPHOAS.Interp
-                           (s:=(type.list type.Z * type.list type.Z)%ctype)
-                           (d:=type.list type.Z)
-                           relax_zrange
-                           fg_bounds
-                           (bs:=f_bounds)
-                           fg
-                           base_51_carry_mul
-                         = Some mul_fg')
-                        /\
-                        (eval w n mul_fg') mod (s - Associational.eval c)
-                        = (eval w n f' * eval w n g') mod (s - Associational.eval c))
+         SuchThat (rcarry_mul_correctT limbwidth s c machine_wordsize base_51_carry_mul)
          As base_51_carry_mul_correct.
-  Proof.
-    intros; subst f g fg' f' g'.
-    erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
-      by (cbv [n idxs s c];
-          cbn [length seq n List.app]; try reflexivity; try assumption;
-          try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
-          try eapply pow_ceil_mul_nat_nonzero;
-          (apply dec_bool; vm_compute; reflexivity)).
-    match goal with
-    | [ |- exists _, ?x = Some _ /\ _ ]
-      => let v := fresh "v" in
-         destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
-    end.
-    { apply f_equal2; [ | reflexivity ]; apply f_equal.
-      cbv [f_bounds w n idxs s c fg_bounds limbwidth];
-        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul Pos.add];
-        cbv [carry_mul_gen];
-        lazymatch goal with
-        | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
-          => let rargs := Reify args in
-             let rargs := constr:(canonicalize_list_recursion rargs) in
-             transitivity (expr.Interp
-                             (@ident.interp)
-                             (fun var
-                              => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
-                                 (e var @ (rargs var, Var FG)))%expr fg)
-        end;
-        [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
-        let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-        set (E := e);
-          cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (PartialReduce E)) in
-           let E' := (eval lazy in E') in
-           pose E' as E''.
-      Time let E' := constr:(Option.invert_Some
-                               (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                                  relax_zrange E'' fg_bounds)) in
-           let E' := (eval lazy in E') in
-           let E' := (eval lazy in (projT2 E')) in
-           let unif := constr:(eq_refl : base_51_carry_mul = E') in
-           idtac.
-      exact admit. }
-    { clear -Hv.
-      pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
-      clear Hv.
-      lazy in Hv'; clear -Hv'.
-      exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
-  Qed.
+  Proof. Time solve_rcarry_mul (). Time Qed.
 
   Import PrintingNotations.
   Print base_51_carry_mul.
@@ -4231,108 +4476,34 @@ Module X25519_64.
  expr_let 21 := (uint64)(x_20 >> 51) in
  expr_let 22 := ((uint64)x_20 & 2251799813685247) in
  x_19 :: x_22 :: x_21 +₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
-     : expr (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range
+            (relax_zrange (make_carry_mul_rargs limbwidth s c machine_wordsize))
+            (out_bounds (make_carry_mul_rargs limbwidth s c machine_wordsize)))
 *)
 End X25519_64.
 
+
+(** TODO: factor out bounds analysis pipeline as a single definition / proof *)
+(** TODO: factor out apply one argument in the fst of a pair *)
+(** TODO: write a definition that specializes the PHOAS thing and composes with bounds analysis, + proof *)
+(** TODO: write wrappers for (string) prime -> reified arguments *)
+(** TODO: write indexed AST interp that returns default value, prove that given correctness for specialized thing, the defaulting interp is totally equal to the original operation *)
+(** TODO: write a lemma that for things equal to all operations using defaulting interp, we get a ring isomorphic to F m *)
+(** TODO: compose with stringification + wrappers for prime, extract to OCaml/Haskell *)
+(** TODO: proofs *)
+
 (*
 Module X25519_32.
-  (*Definition w (i:nat) : Z := 2^Qceiling((25+1/2)*i).*)
   Definition limbwidth := (25 + 1/2)%Q.
-  Definition w (i:nat) : Z := 2^Qceiling(limbwidth*i).
   Definition s := 2^255.
   Definition c := [(1, 19)].
-  Definition n := 10%nat.
-  Definition idxs := (seq 0 n ++ [0; 1])%list%nat.
-  Definition f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
-  Definition round_up_bitwidth (bitwidth : Z) : option Z
-    := (if bitwidth <=? 32
-        then Some 32
-        else if bitwidth <=? 64
-             then Some 64
-             else None)%Z.
-  Definition relax_zrange : zrange -> option zrange
-    := (fun '(r[ l ~> u ])
-        => if (0 <=? l)%Z
-           then option_map (fun u => r[0~>2^u-1])
-                           (round_up_bitwidth (Z.log2_up (u+1)))
-           else None)%zrange.
+  Definition machine_wordsize := 32.
 
   Derive base_25p5_carry_mul
-         SuchThat (forall
-                      (fg : list (BoundsAnalysis.type.BoundedZ _ _)
-                            * list (BoundsAnalysis.type.BoundedZ _ _))
-                      (f := fst fg) (g := snd fg)
-                      (fg_bounds := (f_bounds, f_bounds))
-                      (fg' := @BoundsAnalysis.OfPHOAS.cast_back
-                                ((type.list (type.Z) * type.list (type.Z))%ctype)
-                                relax_zrange
-                                fg_bounds
-                                fg)
-                      (f' := fst fg') (g' := snd fg')
-                      (Hf' : length f' = n) (Hg' : length g' = n),
-                      exists mul_fg',
-                        (BoundsAnalysis.OfPHOAS.Interp
-                           (s:=(type.list type.Z * type.list type.Z)%ctype)
-                           (d:=type.list type.Z)
-                           relax_zrange
-                           fg_bounds
-                           (bs:=f_bounds)
-                           fg
-                           base_25p5_carry_mul
-                         = Some mul_fg')
-                        /\
-                        (eval w n mul_fg') mod (s - Associational.eval c)
-                        = (eval w n f' * eval w n g') mod (s - Associational.eval c))
+         SuchThat (rcarry_mul_correctT limbwidth s c machine_wordsize base_25p5_carry_mul)
          As base_25p5_carry_mul_correct.
-  Proof.
-    intros; subst f g fg' f' g'.
-    erewrite <- carry_mul_gen_correct with (s:=s) (c:=c) (idxs:=idxs)
-      by (cbv [n idxs s c];
-          cbn [length seq n List.app]; try reflexivity; try assumption;
-          try (intros; eapply pow_ceil_mul_nat_divide_nonzero);
-          try eapply pow_ceil_mul_nat_nonzero;
-          (apply dec_bool; vm_compute; reflexivity)).
-    match goal with
-    | [ |- exists _, ?x = Some _ /\ _ ]
-      => let v := fresh "v" in
-         destruct x as [v|] eqn:Hv; [ exists v; split; [ reflexivity | ] | exfalso ]
-    end.
-    { apply f_equal2; [ | reflexivity ]; apply f_equal.
-      cbv [f_bounds w n idxs s c fg_bounds limbwidth];
-        cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden Pos.mul Pos.add];
-        cbv [carry_mul_gen];
-        lazymatch goal with
-        | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, ?fg) ]
-          => let rargs := Reify args in
-             let rargs := constr:(canonicalize_list_recursion rargs) in
-             transitivity (expr.Interp
-                             (@ident.interp)
-                             (fun var
-                              => λ (FG : var (type.list type.Z * type.list type.Z)%ctype),
-                                 (e var @ (rargs var, Var FG)))%expr fg)
-        end;
-        [ | cbv [expr.interp expr.Interp ident.interp]; exact admit ];
-        let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-        set (E := e);
-          cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (PartialReduce E)) in
-           let E' := (eval lazy in E') in
-           pose E' as E''. (* about 46 s *)
-      Time let E' := constr:(Option.invert_Some
-                               (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                                  relax_zrange E'' fg_bounds)) in
-           let E' := (eval lazy in E') in
-           let E' := (eval lazy in (projT2 E')) in
-           let unif := constr:(eq_refl : base_25p5_carry_mul = E') in
-           idtac.
-      exact admit. }
-    { clear -Hv.
-      pose proof (f_equal (fun v => match v with Some _ => true | None => false end) Hv) as Hv'.
-      clear Hv.
-      lazy in Hv'; clear -Hv'.
-      exact ltac:(inversion Hv'). (* work around COQBUG(https://github.com/coq/coq/issues/6732) *) }
-  Qed.
+  Proof. Time solve_rcarry_mul (). Time Qed.
 
   Import PrintingNotations.
   Print base_25p5_carry_mul.
@@ -4483,7 +4654,10 @@ Module X25519_32.
  expr_let 36 := (uint32)(x_35 >> 25) in
  expr_let 37 := ((uint32)x_35 & 33554431) in
  x_34 :: x_37 :: x_36 +₃₂ x_10 :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
-     : expr (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range
+            (relax_zrange (make_carry_mul_rargs limbwidth s c machine_wordsize))
+            (out_bounds (make_carry_mul_rargs limbwidth s c machine_wordsize)))
 *)
 End X25519_32.
 *)
