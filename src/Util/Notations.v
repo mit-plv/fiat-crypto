@@ -30,6 +30,7 @@ Reserved Infix ".+" (at level 50).
 Reserved Infix ".*" (at level 50).
 Reserved Notation "x ^ 2" (at level 30, format "x ^ 2").
 Reserved Notation "x ^ 3" (at level 30, format "x ^ 3").
+Reserved Notation "2 ^ e" (at level 30, format "2 ^ e", only printing).
 Reserved Infix "mod" (at level 40, no associativity).
 Reserved Notation "'canonical' 'encoding' 'of' T 'as' B" (at level 50).
 Reserved Notation "@ 'is_eq_dec' T R" (at level 10, T at level 8, R at level 8).
