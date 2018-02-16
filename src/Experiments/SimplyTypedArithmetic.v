@@ -3969,49 +3969,21 @@ Axiom admit : forall {T}, T.
 Derive carry_mul_gen
        SuchThat (forall (w : nat -> Z)
                         (fg : list Z * list Z)
-                        (f := fst fg) (g := snd fg)
                         (n : nat)
-                        (Hf : length f = n)
-                        (Hg : length g = n)
                         (s : Z)
                         (c : list (Z * Z))
                         (len_c : nat)
-                        (Hc : length c = len_c)
                         (idxs : list nat)
-                        (len_idxs : nat)
-                        (Hidxs : length idxs = len_idxs)
-                        (Hw0_1 : w 0%nat = 1)
-                        (Hw_nz : forall i : nat, w i <> 0)
-                        (Hw_div_nz : forall i : nat, w (S i) / w i <> 0)
-                        (Hsc_nz : s - Associational.eval c <> 0)
-                        (Hs_nz : s <> 0)
-                        (Hn_nz : n <> 0%nat),
+                        (len_idxs : nat),
                     Interp (t:=type.reify_type_of carry_mulmod)
                            carry_mul_gen w s c n len_c idxs len_idxs fg
                     = carry_mulmod w s c n len_c idxs len_idxs fg)
        As carry_mul_gen_correct.
 Proof.
-  intros; cbv [carry_mulmod].
-  clear.
-  let LHS := lazymatch goal with |- ?LHS = _ => LHS end in
-  pose (ordering := LHS).
+  intros.
   etransitivity.
   Focus 2.
-  { repeat match goal with
-           | [ H : _ |- _ ] => first [ constr_eq H ordering; fail 1 | clear H ]
-           | [ |- _ = _ ]
-             => lazymatch (eval cbv delta [ordering] in ordering) with
-                | ?f ?H
-                  => clear ordering; pose f as ordering;
-                       revert H;
-                       lazymatch goal with
-                       | [ |- forall args, ?ev = @?RHS args ]
-                         => refine (fun args => f_equal (fun F => F args) (_ : _ = RHS));
-                              clear args
-                       end
-                end
-           end.
-    repeat match goal with H : _ |- _ => clear H end.
+  { repeat apply (f_equal (fun f => f _)).
     Reify_rhs ().
     reflexivity.
   } Unfocus.
@@ -4029,7 +4001,7 @@ Proof.
        transitivity LHS
   end;
     [ clear E | exact admit ].
-  subst carry_mul_gen ordering.
+  subst carry_mul_gen.
   reflexivity.
 Qed.
 
@@ -4214,6 +4186,25 @@ Section rcarry_mul.
           out_bounds := f_bounds;
        |}.
 
+  Definition check_args {T} (args : mul_rargs) (res : Pipeline.ErrorT T)
+    : Pipeline.ErrorT T
+    := if negb (Qle_bool 1 limbwidth)%Q
+       then Pipeline.Error (Pipeline.Value_not_le "1 ≤ limbwidth" 1%Q limbwidth)
+       else if (s - Associational.eval c =? 0)%Z
+            then Pipeline.Error (Pipeline.Values_not_provably_distinct "s - Associational.eval c ≠ 0" (s - Associational.eval c) 0)
+            else if (s =? 0)%Z
+                 then Pipeline.Error (Pipeline.Values_not_provably_distinct "s ≠ 0" s 0)
+                 else if (n =? 0)%nat
+                      then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" n 0%nat)
+                      else res.
+
+  Lemma check_args_success_id {T} {rv : T} {res args}
+    : check_args args res = Pipeline.Success rv
+      -> res = Pipeline.Success rv.
+  Proof.
+    cbv [check_args]; break_innermost_match; congruence.
+  Qed.
+
   Definition rcarry_mul
     := let opts := make_carry_mul_rargs in
        let res := Pipeline.BoundsPipeline
@@ -4232,15 +4223,7 @@ Section rcarry_mul.
                           @ (opts.(ridxs) _)
                           @ (opts.(rlen_idxs) _)
                     )%expr in
-       if negb (Qle_bool 1 limbwidth)%Q
-       then Pipeline.Error (Pipeline.Value_not_le "1 ≤ limbwidth" 1%Q limbwidth)
-       else if (s - Associational.eval c =? 0)%Z
-            then Pipeline.Error (Pipeline.Values_not_provably_distinct "s - Associational.eval c ≠ 0" (s - Associational.eval c) 0)
-            else if (s =? 0)%Z
-                 then Pipeline.Error (Pipeline.Values_not_provably_distinct "s ≠ 0" s 0)
-                 else if (n =? 0)%nat
-                      then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" n 0%nat)
-                      else res.
+       check_args opts res.
 
   Definition rcarry_mul_correctT
              (opts := make_carry_mul_rargs)
@@ -4269,6 +4252,28 @@ Section rcarry_mul.
   Proof.
     hnf; intros.
     cbv [rcarry_mul] in Hrv.
+    edestruct (Pipeline.BoundsPipeline _ _ _ _) as [rv'|] eqn:Hrv';
+      [ | clear -Hrv; cbv [check_args] in Hrv; break_innermost_match_hyps; discriminate ].
+    erewrite <- carry_mul_gen_correct.
+    eapply Pipeline.BoundsPipeline_correct in Hrv'.
+    apply check_args_success_id in Hrv; inversion Hrv; subst.
+    rewrite Hrv'.
+    subst opts.
+    cbv [expr.Interp].
+    cbn [expr.interp].
+    apply f_equal; f_equal;
+      cbn;
+      rewrite interp_reify_list, map_map; cbn;
+        erewrite map_ext with (g:=id), map_id; try reflexivity.
+    intros []; reflexivity.
+  Qed.
+
+
+  (** This code may eventually be useful; it proves that [check_args]
+      is sufficient to satisfy the preconditions of
+      [carry_mulmod_correct] *)
+  (*
+<<
     break_innermost_match_hyps; try solve [ exfalso; clear -Hrv; discriminate ]; [].
     Z.ltb_to_lt.
     rewrite negb_false_iff in *.
@@ -4293,17 +4298,7 @@ Section rcarry_mul.
                  end;
           try reflexivity;
           try lia).
-    eapply Pipeline.BoundsPipeline_correct in Hrv.
-    etransitivity; [ eexact Hrv | ].
-    subst opts.
-    cbv [expr.Interp].
-    cbn [expr.interp].
-    apply f_equal; f_equal;
-      cbn;
-      rewrite interp_reify_list, map_map; cbn;
-        erewrite map_ext with (g:=id), map_id; try reflexivity.
-    intros []; reflexivity.
-  Qed.
+>> *)
 End rcarry_mul.
 
 Ltac solve_rcarry_mul _ :=
