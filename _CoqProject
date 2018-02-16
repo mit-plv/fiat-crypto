@@ -6558,6 +6558,7 @@ src/Util/ZRange/BasicLemmas.v
 src/Util/ZRange/CornersMonotoneBounds.v
 src/Util/ZRange/Operations.v
 src/Util/ZUtil/AddGetCarry.v
+src/Util/ZUtil/AddModulo.v
 src/Util/ZUtil/CPS.v
 src/Util/ZUtil/Definitions.v
 src/Util/ZUtil/Div.v

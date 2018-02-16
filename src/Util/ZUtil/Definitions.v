@@ -10,6 +10,9 @@ Module Z.
   Definition zselect (cond zero_case nonzero_case : Z) :=
     if cond =? 0 then zero_case else nonzero_case.
 
+  Definition add_modulo x y modulus :=
+    if (modulus <=? x + y) then (x + y) - modulus else (x + y).
+
   Definition get_carry (bitwidth : Z) (v : Z) : Z * Z
     := (v mod 2^bitwidth, v / 2^bitwidth).
   Definition add_with_carry (c : Z) (x y : Z) : Z
