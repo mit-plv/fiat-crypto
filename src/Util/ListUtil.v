@@ -81,8 +81,10 @@ Module Export List.
     Proof using Type.
       reflexivity.
     Qed.
+    Lemma map_repeat x n : map f (List.repeat x n) = List.repeat (f x) n.
+    Proof. induction n; simpl List.repeat; simpl map; congruence. Qed.
   End Map.
-  Hint Rewrite @map_cons @map_nil : push_map.
+  Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
 
   Section FlatMap.
     Lemma flat_map_nil {A B} (f:A->list B) : List.flat_map f (@nil A) = nil.
@@ -1149,6 +1151,15 @@ Hint Rewrite @map_nth_default_always : push_nth_default.
 Lemma map_S_seq {A} (f:nat->A) len : forall start,
   List.map (fun i => f (S i)) (seq start len) = List.map f (seq (S start) len).
 Proof. induction len as [|len IHlen]; intros; simpl; rewrite ?IHlen; reflexivity. Qed.
+
+Lemma seq_snoc len : forall start, seq start (S len) = seq start len ++ ((start + len)%nat :: nil).
+Proof.
+  induction len; intros.
+  { cbv [seq app]. autorewrite with natsimplify; reflexivity. }
+  { remember (S len); simpl seq.
+      rewrite (IHlen (S start)); subst; simpl seq.
+      rewrite Nat.add_succ_r; reflexivity. }
+Qed.
 
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
