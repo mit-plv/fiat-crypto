@@ -299,7 +299,7 @@ Module Positional. Section Positional.
                             (Hw_div_nz : forall i : nat, weight (S i) / weight i <> 0),
                         (eval n carry_mulmod) mod (s - Associational.eval c)
                         = (eval n f * eval n g) mod (s - Associational.eval c))
-           As carry_mulmod_correct.
+           As eval_carry_mulmod.
     Proof.
       intros.
       erewrite <-eval_mulmod with (s:=s) (c:=c)
@@ -4275,7 +4275,7 @@ Section rcarry_mul.
 
   (** This code may eventually be useful; it proves that [check_args]
       is sufficient to satisfy the preconditions of
-      [carry_mulmod_correct] *)
+      [eval_carry_mulmod] *)
   (*
 <<
     break_innermost_match_hyps; try solve [ exfalso; clear -Hrv; discriminate ]; [].
