@@ -53,6 +53,9 @@ Module Z.
       rewrite Z.mul_div_eq by assumption.
       reflexivity.
     Qed.
+
+    Lemma equiv_modulo_mod_small x y : x  == y -> 0 <= x < N -> x = y mod N.
+    Proof. transitivity (x mod N); [rewrite Z.mod_small|]; auto. Qed.
   End equiv_modulo.
   Hint Rewrite div_to_inv_modulo using solve [ eassumption | lia ] : zstrip_div.
 
