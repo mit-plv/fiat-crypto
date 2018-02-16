@@ -414,6 +414,54 @@ Module Positional. Section Positional.
   End carry_mulmod.
 End Positional. End Positional.
 
+(* Non-CPS version of Arithmetic/Saturated/MulSplit.v *)
+Module MulSplit.
+  Module Associational.
+    Section Associational.
+      Context {mul_split : Z -> Z -> Z -> (Z * Z)}
+              {mul_split_mod : forall s x y,
+                  fst (mul_split s x y)  = (x * y) mod s}
+              {mul_split_div : forall s x y,
+                  snd (mul_split s x y)  = (x * y) / s}.
+
+      Definition sat_multerm s (t t' : (Z * Z)) : list (Z * Z) :=
+        dlet xy := mul_split s (snd t) (snd t') in
+        [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
+
+      Definition sat_mul s (p q : list (Z * Z)) : list (Z * Z) :=
+        flat_map (fun t => flat_map (sat_multerm s t) q) p.
+
+      Lemma eval_map_sat_multerm s a q (s_nonzero:s<>0):
+        Associational.eval (flat_map (sat_multerm s a) q) = fst a * snd a * Associational.eval q.
+      Proof.
+        cbv [sat_multerm Let_In]; induction q;
+          repeat match goal with
+                 | _ => progress autorewrite with cancel_pair push_eval in *
+                 | _ => progress simpl flat_map
+                 | _ => progress rewrite ?IHq, ?mul_split_mod, ?mul_split_div
+                 | _ => rewrite Z.mod_eq by assumption
+                 | _ => rewrite Associational.eval_nil
+                 | _ => ring_simplify; omega
+                 end.
+      Qed.
+      Hint Rewrite eval_map_sat_multerm using (omega || assumption) : push_eval.
+
+      Lemma eval_sat_mul s p q (s_nonzero:s<>0):
+        Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
+      Proof.
+      cbv [sat_mul]; induction p; [reflexivity|].
+      repeat match goal with
+              | _ => progress (autorewrite with push_eval in * )
+              | _ => progress simpl flat_map
+              | _ => rewrite IHp
+              | _ => ring_simplify; omega
+              end.
+      Qed.
+      Hint Rewrite eval_sat_mul : push_eval.
+    End Associational.
+  End Associational.
+End MulSplit.
+
 Module Compilers.
   Module type.
     Variant primitive := unit | Z | nat | bool.
