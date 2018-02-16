@@ -1722,42 +1722,6 @@ Module Compilers.
                => (untranslate R t -> R)%ctype
              | type.list A => Compilers.type.list (untranslate R A)
              end%cpstype.
-
-        Fixpoint try_transport_untranslate (P : type -> Type) (t : type)
-          : P t -> option { t : _ & P (translate t) }
-          := match t with
-             | type.type_primitive t
-               => fun v => Some (existT _ (t : Compilers.type.type) v)
-             | type.list A
-               => fun v => option_map
-                             (fun '(existT A v) => existT (fun t => P (translate t))
-                                                          (Compilers.type.list A)
-                                                          v)
-                             (@try_transport_untranslate (fun t => P (type.list t)) A v)
-             | A * B
-               => fun v : P (A * B)
-                  => match @try_transport_untranslate (fun a => P (a * _)) A v with
-                     | Some (existT A v)
-                       => match @try_transport_untranslate (fun b => P (_ * b)) B v with
-                          | Some (existT B v)
-                            => Some (existT _ (A * B)%ctype v)
-                          | None => None
-                          end
-                     | None => None
-                     end
-             | (s * (d --->) --->)
-               => fun v
-                  => match @try_transport_untranslate (fun s => P ((s * _) --->)) s v with
-                     | Some (existT s v)
-                       => match @try_transport_untranslate (fun d => P (_ * (d --->) --->)) d v with
-                          | Some (existT d v)
-                            => Some (existT _ (s -> d)%ctype v)
-                          | None => None
-                          end
-                     | None => None
-                     end
-             | (_ --->) => fun _ => None
-             end%cpstype.
       End translate.
     End type.
 
@@ -2555,16 +2519,12 @@ Module Compilers.
 
       Definition CallFunWithIdContinuation
                  {t}
-                 (e : Expr t)
-        := match type.try_transport_untranslate Expr _ e as o return match o with None => _ | _ => _ end with
-           | Some v
-             => match type_descr.try_transport_of_type (fun t => Expr (type.translate t)) _
-                                                       (projT2 v)
-                      as o return match o with None => _ | _ => _ end
-                with
-                | Some v => CallFunWithIdContinuation' (projT2 v)
-                | None => I
-                end
+                 (e : Expr (type.translate t))
+        := match type_descr.try_transport_of_type (fun t => Expr (type.translate t)) _
+                                                  e
+                 as o return match o with None => _ | _ => _ end
+           with
+           | Some v => CallFunWithIdContinuation' (projT2 v)
            | None => I
            end.
     End default.
