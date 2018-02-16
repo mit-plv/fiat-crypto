@@ -1172,7 +1172,7 @@ Module Compilers.
       Import expr.
       Import expr.default.
       Module ident.
-        Local Ltac SmartApp term :=
+        Local Ltac app_and_maybe_cancel term :=
           lazymatch term with
           | Abs (fun x : @expr ?var ?T => ?f)
             => eval cbv [unexpr] in (fun x : @expr var T => @unexpr ident.ident var _ f)
@@ -1240,7 +1240,7 @@ Module Compilers.
                                 (fun _ => nil)
                                 (fun len seq_len start => cons start (seq_len (S start)))
                                 (snd start_len) (fst start_len)) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_repeat A
                => ltac:(
                     let v := reify
@@ -1251,7 +1251,7 @@ Module Compilers.
                                      nil
                                      (fun k repeat_k => cons (fst xn) repeat_k)
                                      (snd xn)) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_combine A B
                => ltac:(
                     let v := reify
@@ -1269,7 +1269,7 @@ Module Compilers.
                                            rest)
                                      ls1
                                      ls2) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_map A B
                => ltac:(
                     let v := reify
@@ -1280,7 +1280,7 @@ Module Compilers.
                                      nil
                                      (fun a t map_t => f a :: map_t)
                                      ls) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_flat_map A B
                => ltac:(
                     let List_app := (eval cbv [List_app] in (List_app B)) in
@@ -1292,7 +1292,7 @@ Module Compilers.
                                      nil
                                      (fun x t flat_map_t => List_app (f x) flat_map_t)
                                      ls) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_partition A
                => ltac:(
                     let v := reify
@@ -1306,12 +1306,12 @@ Module Compilers.
                                          let d := snd partition_tl in
                                          if f x then (x :: g, d) else (g, x :: d))
                                      ls) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_app A
                => ltac:(
                     let List_app := (eval cbv [List_app] in (List_app A)) in
                     let v := reify (@expr var) (fun '(ls1, ls2) => List_app ls1 ls2) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_rev A
                => ltac:(
                     let List_app := (eval cbv [List_app] in (List_app A)) in
@@ -1323,7 +1323,7 @@ Module Compilers.
                                      nil
                                      (fun x l' rev_l' => List_app rev_l' [x])
                                      ls) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_fold_right A B
                => ltac:(
                     let v := reify
@@ -1335,7 +1335,7 @@ Module Compilers.
                                      a0
                                      (fun b t fold_right_t => f (b, fold_right_t))
                                      ls) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_update_nth T
                => ltac:(
                     let v := reify
@@ -1357,7 +1357,7 @@ Module Compilers.
                                            ls)
                                      n
                                      ls) in
-                    let v := SmartApp v in exact v)
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_nth_default T
                => AppIdent ident.List_nth_default
              (*ltac:(
@@ -1721,23 +1721,6 @@ Module Compilers.
              | (t --->)
                => (untranslate R t -> R)%ctype
              | type.list A => Compilers.type.list (untranslate R A)
-             end%cpstype.
-        Fixpoint try_untranslate (t : type)
-          : option Compilers.type.type
-          := match t with
-             | type.type_primitive t => @Some Compilers.type.type t
-             | type.list A => option_map Compilers.type.list (try_untranslate A)
-             | A * B
-               => match try_untranslate A, try_untranslate B with
-                  | Some A, Some B => Some (A * B)%ctype
-                  | _, _ => None
-                  end
-             | (s * (d --->) --->)
-               => match try_untranslate s, try_untranslate d with
-                  | Some s, Some d => Some (s -> d)%ctype
-                  | _, _ => None
-                  end
-             | (_ --->) => None
              end%cpstype.
 
         Fixpoint try_transport_untranslate (P : type -> Type) (t : type)
@@ -4150,17 +4133,15 @@ Module Pipeline.
                         relax_zrange
                         arg_bounds
                         arg),
-      exists res,
-        (BoundsAnalysis.OfPHOAS.Interp
-           (s:=s)
-           (d:=d)
-           relax_zrange
-           arg_bounds
-           (bs:=out_bounds)
-           arg
-           rv
-         = Some res)
-        /\ res = Interp E arg'.
+      BoundsAnalysis.OfPHOAS.Interp
+        (s:=s)
+        (d:=d)
+        relax_zrange
+        arg_bounds
+        (bs:=out_bounds)
+        arg
+        rv
+      = Some (Interp E arg').
   Proof.
   Admitted.
 End Pipeline.
@@ -4194,7 +4175,7 @@ Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
          else None)%zrange.
 
 (** TODO: Move me? *)
-Definition SmartApp {s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
+Definition app_and_maybe_cancel {s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
   := (fun var
       => let f' := (match f _ in expr.expr t return option match t with
                                                            | (s -> d)%ctype => expr s -> expr d
@@ -4233,8 +4214,8 @@ Proof.
   Unfocus.
   cbv beta.
   let E := lazymatch goal with | [ |- _ = expr.Interp _ ?E ?n ?dz ?i ] => E end in
-  let E := constr:(SmartApp
-                     (SmartApp
+  let E := constr:(app_and_maybe_cancel
+                     (app_and_maybe_cancel
                         (canonicalize_list_recursion E)
                         (GallinaReify.Reify (t:=type.Z) (fun _ => n)))
                      (GallinaReify.Reify (t:=type.Z) (fun _ => dz))) in
@@ -4312,15 +4293,13 @@ Section rcarry_mul.
                          arg)
               (Hf : List.length (fst arg) = n)
               (Hg : List.length (snd arg) = n),
-      exists res,
-        (BoundsAnalysis.OfPHOAS.Interp
-           (opts.(relax_zrange))
-           (opts.(arg_bounds))
-           (bs:=opts.(out_bounds))
-           arg
-           rv
-         = Some res)
-        /\ res = carry_mulmod (Interp opts.(rw)) s c n (Interp opts.(rlen_c)) idxs (Interp opts.(rlen_idxs)) arg'.
+      BoundsAnalysis.OfPHOAS.Interp
+        (opts.(relax_zrange))
+        (opts.(arg_bounds))
+        (bs:=opts.(out_bounds))
+        arg
+        rv
+      = Some (carry_mulmod (Interp opts.(rw)) s c n (Interp opts.(rlen_c)) idxs (Interp opts.(rlen_idxs)) arg').
 
   Lemma rcarry_mul_correct
         (opts := make_carry_mul_rargs)
@@ -4355,11 +4334,12 @@ Section rcarry_mul.
           try reflexivity;
           try lia).
     eapply Pipeline.BoundsPipeline_correct in Hrv.
-    destruct Hrv as [res [Hrv1 Hrv2] ]; exists res; split; [ exact Hrv1 | subst res ].
+    etransitivity; [ eexact Hrv | ].
     subst opts.
     cbv [expr.Interp].
     cbn [expr.interp].
-    f_equal; cbn;
+    apply f_equal; f_equal;
+      cbn;
       rewrite interp_reify_list, map_map; cbn;
         erewrite map_ext with (g:=id), map_id; try reflexivity.
     intros []; reflexivity.
