@@ -1596,6 +1596,10 @@ Module Compilers.
 
     Definition Reify {t : type} (v : forall var, value var t) : Expr t
       := fun var => reify (v _).
+
+    (** [AutoReify] does Ltac type inference to get the type *)
+    Notation AutoReify v
+      := (Reify (t:=type.reify_type_of v) (fun _ => v)) (only parsing).
   End GallinaReify.
 
   Module CPS.
@@ -4149,8 +4153,8 @@ Proof.
   let E := constr:(app_and_maybe_cancel
                      (app_and_maybe_cancel
                         (canonicalize_list_recursion E)
-                        (GallinaReify.Reify (t:=type.Z) (fun _ => n)))
-                     (GallinaReify.Reify (t:=type.Z) (fun _ => dz))) in
+                        (GallinaReify.AutoReify n))
+                     (GallinaReify.AutoReify dz)) in
   let E := (eval vm_compute in E) in
   transitivity (Interp E i);
     [
@@ -4175,12 +4179,12 @@ Section rcarry_mul.
   Definition make_carry_mul_rargs
     : mul_rargs
     := {| rw := rweight limbwidth;
-          rs var := GallinaReify.reify (t:=type.Z) s;
-          rc var := GallinaReify.reify (t:=type.list (type.Z * type.Z)) c;
-          rn var := GallinaReify.reify (t:=type.nat) n;
-          ridxs var := GallinaReify.reify (t:=type.list type.nat) idxs;
-          rlen_c var := GallinaReify.reify (t:=type.nat) (List.length c);
-          rlen_idxs var := GallinaReify.reify (t:=type.nat) (List.length idxs);
+          rs := GallinaReify.AutoReify s;
+          rc := GallinaReify.AutoReify c;
+          rn := GallinaReify.AutoReify n;
+          ridxs := GallinaReify.AutoReify idxs;
+          rlen_c := GallinaReify.AutoReify (List.length c);
+          rlen_idxs := GallinaReify.AutoReify (List.length idxs);
           relax_zrange := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z;
           arg_bounds := (f_bounds, f_bounds);
           out_bounds := f_bounds;
@@ -4262,7 +4266,7 @@ Section rcarry_mul.
     cbv [expr.Interp].
     cbn [expr.interp].
     apply f_equal; f_equal;
-      cbn;
+      cbn -[reify_list];
       rewrite interp_reify_list, map_map; cbn;
         erewrite map_ext with (g:=id), map_id; try reflexivity.
     intros []; reflexivity.
