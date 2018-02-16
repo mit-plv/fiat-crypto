@@ -692,6 +692,14 @@ Module Columns.
             end; auto; try omega.
         rewrite IHp by tauto. ring. }
     Qed.
+
+    Section mul.
+      Definition mul s n m (p q : list Z) : list Z :=
+        let p_a := Positional.to_associational weight n p in
+        let q_a := Positional.to_associational weight n q in
+        let pq_a := MulSplit.Associational.sat_mul s p_a q_a in
+        fst (compact (from_associational m pq_a)).
+    End mul.
   End Columns.
 End Columns.
 
@@ -3817,7 +3825,14 @@ Module Compilers.
                | ident.Z_div
                | ident.Z_modulo
                | ident.Z_eqb
+               | ident.Z_leb
                | ident.Z_of_nat
+               | ident.Z.mul_split (* TODO: is this the right thing? *)
+               | ident.Z.add_get_carry (* TODO: is this the right thing? *)
+               | ident.Z.add_with_get_carry (* TODO: is this the right thing? *)
+               | ident.Z.sub_get_borrow (* TODO: is this the right thing? *)
+               | ident.Z.zselect (* TODO: is this the right thing? *)
+               | ident.Z.add_modulo (* TODO: is this the right thing? *)
                  => None
                end.
         End ident.
@@ -5282,6 +5297,7 @@ Print Montgomery256.montred256.
                       115792089210356248762697446949407573530086143415290314195533631308867097853951)))), v1)) in
     Z.add_modulo @@ (v2, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951))%expr)
      : Z * Z -> Z
+
 *)
 
 (* with named constants *)
