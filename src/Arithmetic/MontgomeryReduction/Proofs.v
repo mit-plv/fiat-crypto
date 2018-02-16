@@ -242,6 +242,12 @@ Section montgomery.
           autorewrite with zsimplify; push_Zmod; autorewrite with zsimplify; pull_Zmod.
           break_match; Z.ltb_to_lt; autorewrite with zsimplify; try reflexivity; lia.
         Qed.
+
+        Lemma reduce_via_partial_alt_eq : reduce_via_partial_alt N R N' T = reduce_via_partial N R N' T.
+        Proof.
+            cbv [reduce_via_partial_alt reduce_via_partial].
+            rewrite partial_reduce_alt_eq by omega. reflexivity.
+        Qed.
       End alt.
     End redc.
 
