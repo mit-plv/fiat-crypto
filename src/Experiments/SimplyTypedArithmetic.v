@@ -134,6 +134,18 @@ Module Positional. Section Positional.
     Associational.eval (@to_associational n x) = eval n x.
   Proof. trivial.                                             Qed.
   Hint Rewrite @eval_to_associational : push_eval.
+  Lemma eval_nil n : eval n [] = 0.
+  Proof. cbv [eval to_associational]. rewrite combine_nil_r. reflexivity. Qed.
+  Hint Rewrite eval_nil : push_eval.
+
+  Lemma eval_snoc n m x y : n = length x -> m = S n -> eval m (x ++ [y]) = eval n x + weight n * y.
+  Proof.
+    cbv [eval to_associational]; intros; subst n m.
+    rewrite seq_snoc, map_app.
+    rewrite combine_app_samelength by distr_length.
+    autorewrite with push_eval. simpl.
+    autorewrite with push_eval cancel_pair; ring.
+  Qed.
 
   (* SKIP over this: zeros, add_to_nth *)
   Local Ltac push := autorewrite with push_eval push_map distr_length
@@ -414,18 +426,15 @@ Module Positional. Section Positional.
   End carry_mulmod.
 End Positional. End Positional.
 
+Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
+
 (* Non-CPS version of Arithmetic/Saturated/MulSplit.v *)
 Module MulSplit.
   Module Associational.
     Section Associational.
-      Context {mul_split : Z -> Z -> Z -> (Z * Z)}
-              {mul_split_mod : forall s x y,
-                  fst (mul_split s x y)  = (x * y) mod s}
-              {mul_split_div : forall s x y,
-                  snd (mul_split s x y)  = (x * y) / s}.
 
       Definition sat_multerm s (t t' : (Z * Z)) : list (Z * Z) :=
-        dlet xy := mul_split s (snd t) (snd t') in
+        dlet xy := Z.mul_split s (snd t) (snd t') in
         [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
 
       Definition sat_mul s (p q : list (Z * Z)) : list (Z * Z) :=
@@ -436,11 +445,10 @@ Module MulSplit.
       Proof.
         cbv [sat_multerm Let_In]; induction q;
           repeat match goal with
-                 | _ => progress autorewrite with cancel_pair push_eval in *
+                 | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
                  | _ => progress simpl flat_map
-                 | _ => progress rewrite ?IHq, ?mul_split_mod, ?mul_split_div
+                 | _ => rewrite IHq
                  | _ => rewrite Z.mod_eq by assumption
-                 | _ => rewrite Associational.eval_nil
                  | _ => ring_simplify; omega
                  end.
       Qed.
@@ -461,6 +469,231 @@ Module MulSplit.
     End Associational.
   End Associational.
 End MulSplit.
+
+Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Hints.PullPush.
+
+Module Columns.
+  Section Columns.
+    Context (weight : nat->Z)
+            {weight_0 : weight 0%nat = 1}
+            {weight_nonzero : forall i, weight i <> 0}
+            {weight_positive : forall i, weight i > 0}
+            {weight_multiples : forall i, weight (S i) mod weight i = 0}
+            {weight_divides : forall i : nat, weight (S i) / weight i > 0}.
+    (* This div and modulo will be instantiated with versions that use bitshifts if the denominator/modulus is a power of 2 *)
+    Context {div modulo : Z -> Z -> Z}
+            {div_correct : forall x y, div x y = x / y}
+            {modulo_correct : forall x y, modulo x y = x mod y}.
+
+    Hint Rewrite div_correct modulo_correct : to_div_mod.
+
+    Definition eval n (x : list (list Z)) : Z := Positional.eval weight n (map sum x).
+
+    Lemma eval_nil n : eval n [] = 0.
+    Proof. cbv [eval]; simpl. apply Positional.eval_nil. Qed.
+    Hint Rewrite eval_nil : push_eval.
+    Lemma eval_snoc n x y : n = length x -> eval (S n) (x ++ [y]) = eval n x + weight n * sum y.
+    Proof.
+      cbv [eval]; intros; subst. rewrite map_app. simpl map.
+      apply Positional.eval_snoc; distr_length.
+    Qed.
+
+    Section compact_digit.
+      Context (n : nat).
+
+      (* Outputs (sum, carry) *)
+      Fixpoint compact_digit (digit : list Z) : (Z * Z) :=
+        match digit with
+        | nil => (0, 0)
+        | x :: nil =>
+          (modulo x (weight (S n) / weight n), div x (weight (S n) / weight n))
+        | x :: y :: nil => Z.add_get_carry_full (weight (S n) / weight n) x y
+        | x :: tl =>
+          dlet rec := compact_digit tl in (* recursively get the sum and carry *)
+          dlet sum_carry := Z.add_get_carry_full (weight (S n) / weight n) x (fst rec) in (* add the new value to the sum *)
+          dlet carry' := (snd sum_carry + snd rec)%RT in (* add the two carries together *)
+          (fst sum_carry, carry')
+        end.
+    End compact_digit.
+
+    Definition compact_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
+      dlet sum_carry := compact_digit (length (fst acc_carry)) (snd acc_carry::digit) in
+      (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
+
+    Definition compact (xs : list (list Z)) : list Z * Z :=
+      fold_right compact_step (nil,0) (rev xs).
+
+    Lemma compact_digit_mod i (xs : list Z) :
+      fst (compact_digit i xs)  = sum xs mod (weight (S i) / weight i).
+    Proof.
+      induction xs; simpl compact_digit; cbv [Let_In];
+        repeat match goal with
+               | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
+               | _ => rewrite IHxs
+               | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
+               | _ => progress break_match; try discriminate
+               | _ => reflexivity
+               | _ => f_equal; ring
+               end.
+    Qed. Hint Rewrite compact_digit_mod : to_div_mod.
+
+    Lemma compact_digit_div i (xs : list Z) :
+      snd (compact_digit i xs)  = sum xs / (weight (S i) / weight i).
+    Proof.
+      induction xs; simpl compact_digit; cbv [Let_In];
+        repeat match goal with
+               | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
+               | _ => rewrite IHxs
+               | _ => rewrite <-Z.div_add_mod_cond_r by auto using Z.positive_is_nonzero
+               | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
+               | _ => progress break_match; try discriminate
+               | _ => reflexivity
+               | _ => f_equal; ring
+               end.
+    Qed. Hint Rewrite compact_digit_div : to_div_mod.
+
+    (* helper for some of the modular logic in compact *)
+    Lemma compact_mod_step a b c d: 0 < a -> 0 < b ->
+      c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
+    Proof.
+      clear. rewrite Z.add_comm.
+      intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; omega).
+      pose proof (Z.mod_pos_bound c a Ha).
+      pose proof (Z.mod_pos_bound (c/a+d) b Hb).
+      apply Z.small_mod_eq.
+      { rewrite <-(Z.mod_small (c mod a) (a * b)) by omega.
+        rewrite <-Z.mul_mod_distr_l with (c:=a) by omega.
+        rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by omega.
+        f_equal; ring. }
+      { split; [zero_bounds|].
+        apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; omega].
+        apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
+    Qed.
+
+    Lemma compact_div_step a b c d : 0 < a -> 0 < b ->
+      (c / a + d) / b = (a * d + c) / (a * b).
+    Proof.
+      clear. intros Ha Hb.
+      rewrite <-Z.div_div by omega.
+      rewrite Z.div_add_l' by omega.
+      f_equal; ring.
+    Qed.
+
+    Hint Rewrite Positional.eval_nil : push_eval.
+
+    Lemma compact_length inp : length (fst (compact inp)) = length inp.
+    Proof.
+      cbv [compact].
+      induction inp using rev_ind; [reflexivity|].
+      repeat match goal with
+             | _ => progress autorewrite with list cancel_pair push_fold_right
+             | _ => progress (unfold compact_step; fold compact_step)
+             | _ => progress cbv [Let_In]
+             | _ => solve [distr_length]
+             end.
+    Qed.
+    Hint Rewrite compact_length : distr_length.
+
+    SearchAbout fold_right.
+    (* fold_right_invariant is not strong enough--does not enforce that new input is next in sequence *)
+
+    Lemma compact_div_mod n inp :
+      length inp = n ->
+      (Positional.eval weight n (fst (compact inp))
+       = (eval n inp) mod (weight n))
+        /\ (snd (compact inp) = eval n inp / weight n).
+    Proof.
+      (* to make the invariant take the right form, we make everything depend on output length, not input length *)
+      intro. subst n. rewrite <-(compact_length inp). cbv [compact].
+      induction inp using rev_ind;
+        repeat match goal with
+               | _ => progress intros
+               | H: _ = ?x mod ?y /\ _ = ?x / ?y |- _ => destruct H as [IHmod IHdiv]
+               | _ => split
+               | _ => rewrite Nat.add_1_r
+               | _ => erewrite Positional.eval_snoc by reflexivity
+               | _ => rewrite IHmod
+               | _ => rewrite IHdiv
+               | _ => rewrite sum_cons
+               | _ => rewrite eval_snoc by (rewrite <-(compact_length inp); reflexivity)
+               | _ => rewrite compact_mod_step by auto using Z.gt_lt
+               | _ => rewrite compact_div_step by auto using Z.gt_lt
+               | _ => rewrite Z.mul_div_eq_full by auto
+               | _ => rewrite weight_multiples
+               | _ => progress (unfold compact_step; fold compact_step)
+               | _ => progress cbv [Let_In]
+               | _ => progress autorewrite with list cancel_pair distr_length to_div_mod push_fold_right
+               | _ => f_equal; ring
+               end.
+    Qed.
+
+    Lemma compact_mod {n} inp :
+      length inp = n ->
+      (Positional.eval weight n (fst (compact inp)) = (eval n inp) mod (weight n)).
+    Proof. intro. apply (proj1 (compact_div_mod n inp ltac:(assumption))). Qed.
+    Hint Rewrite @compact_mod : push_eval.
+
+    Lemma compact_div {n} inp :
+      length inp = n -> snd (compact inp) = eval n inp / weight n.
+    Proof. intro. apply (proj2 (compact_div_mod n inp ltac:(assumption))). Qed.
+    Hint Rewrite @compact_div : push_eval.
+
+    (* nils *)
+    Definition nils n : list (list Z) := List.repeat nil n.
+    Lemma length_nils n : length (nils n) = n. Proof. cbv [nils]. distr_length. Qed.
+    Hint Rewrite length_nils : distr_length.
+    Lemma eval_nils n : eval n (nils n) = 0.
+    Proof.
+      erewrite <-Positional.eval_zeros by eauto.
+      cbv [eval nils]; rewrite List.map_repeat; reflexivity.
+    Qed. Hint Rewrite eval_nils : push_eval.
+
+    (* cons_to_nth *)
+    Definition cons_to_nth i x (xs : list (list Z)) : list (list Z) :=
+      ListUtil.update_nth i (fun y => cons x y) xs.
+    Lemma length_cons_to_nth i x xs : length (cons_to_nth i x xs) = length xs.
+    Proof. cbv [cons_to_nth]. distr_length. Qed.
+    Hint Rewrite length_cons_to_nth : distr_length.
+    Lemma cons_to_nth_add_to_nth xs : forall i x,
+      map sum (cons_to_nth i x xs) = Positional.add_to_nth i x (map sum xs).
+    Proof.
+      cbv [cons_to_nth]; induction xs as [|? ? IHxs];
+        intros i x; destruct i; simpl; rewrite ?IHxs; reflexivity.
+    Qed.
+    Lemma eval_cons_to_nth n i x xs : (i < length xs)%nat -> length xs = n ->
+      eval n (cons_to_nth i x xs) = weight i * x + eval n xs.
+    Proof using Type.
+      cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
+      apply Positional.eval_add_to_nth; distr_length.
+    Qed. Hint Rewrite eval_cons_to_nth using omega : push_eval.
+
+    (* from_associational *)
+    Definition from_associational n (p:list (Z*Z)) : list (list Z) :=
+      List.fold_right (fun t ls =>
+        let p := Positional.place weight t (pred n) in
+        cons_to_nth (fst p) (snd p) ls ) (nils n) p.
+    Lemma length_from_associational n p : length (from_associational n p) = n.
+    Proof. cbv [from_associational]. apply fold_right_invariant; intros; distr_length. Qed.
+    Hint Rewrite length_from_associational: distr_length.
+    Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil):
+      eval n (from_associational n p) = Associational.eval p.
+    Proof.
+      erewrite <-Positional.eval_from_associational by eauto. induction p.
+      { simpl. autorewrite with push_eval. rewrite Positional.eval_zeros; auto. }
+      { pose proof (length_from_associational n p).
+        cbv [from_associational] in *. destruct n_nonzero; try congruence; [ ].
+        simpl. rewrite eval_cons_to_nth, Positional.eval_add_to_nth;
+                 rewrite ?Positional.length_from_associational;
+        try match goal with |- context [Positional.place _ ?x ?n] =>
+                        pose proof (Positional.weight_place weight ltac:(assumption) ltac:(assumption) x n);
+                          pose proof (Positional.place_in_range weight x n); rewrite Nat.succ_pred in * by auto
+            end; auto; try omega.
+        rewrite IHp by tauto. ring. }
+    Qed.
+  End Columns.
+End Columns.
 
 Module Compilers.
   Module type.
@@ -4844,7 +5077,7 @@ Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Tactics.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.MulSplit Crypto.Util.ZUtil.AddModulo.
+Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
 
 Module Montgomery256.
 
