@@ -1460,6 +1460,25 @@ Module Compilers.
               end idc
          | _ => None
          end.
+
+    Definition invert_bool_rect P Q v1 v2 d (idc : ident (v1 * v2 * type.bool)%ctype d)
+      : P v1
+        -> Q v2
+        -> option (P d * Q d)
+      := match idc in ident.ident s d
+               return (match s return Type with
+                       | (v1 * v2 * type.bool)%ctype => P v1
+                       | _ => unit
+                       end
+                       -> match s return Type with
+                          | (v1 * v2 * type.bool)%ctype => Q v2
+                          | _ => unit
+                          end
+                       -> option (P d * Q d))
+         with
+         | ident.bool_rect T => fun p q => Some (p, q)
+         | _ => fun _ _ => None
+         end.
   End invert.
 
   Section gallina_reify.
@@ -1512,6 +1531,7 @@ Module Compilers.
           Inductive expr :=
           | Halt (v : var R)
           | App {A} (f : var (A --->)) (x : var A)
+          | App_bool_rect (Ptrue : expr) (Pfalse : expr) (b : var type.bool)
           | Bind {A} (x : primop A) (f : var A -> expr)
           with
           primop : type -> Type :=
@@ -1541,6 +1561,7 @@ Module Compilers.
             := match e with
                | Halt v => k v
                | App A f x => f x
+               | App_bool_rect Ptrue Pfalse b => bool_rect _ (interp Ptrue k) (interp Pfalse k) b
                | Bind A x f => interp (f (@interp_primop _ x k)) k
                end
           with interp_primop {t} (e : @primop ident (type.interp R) r t) (k : type.interp R r -> R)
@@ -1606,6 +1627,12 @@ Module Compilers.
         Context {ident : Output.type.type -> Type}
                 {ident' : type -> type -> Type}
                 {var : Output.type.type -> Type}
+                (invert_bool_rect
+                 : forall P Q v1 v2 d,
+                    ident' (v1 * v2 * type.bool)%ctype d
+                    -> P v1
+                    -> Q v2
+                    -> option (P d * Q d))
                 (translate_ident : forall s d, ident' s d -> ident (type.translate (s -> d))).
         Notation var' := (fun t => var (type.translate t)).
         Local Notation oexpr := (@Output.expr.expr ident var).
@@ -1618,6 +1645,8 @@ Module Compilers.
             := match e1 with
                | Halt v => e2 v
                | f @ x => f @ x
+               | App_bool_rect Ptrue Pfalse b
+                 => App_bool_rect (@splice Ptrue e2) (@splice Pfalse e2) b
                | Bind A x f => v <- @splice_primop _ x e2; @splice (f v) e2
                end%cpsexpr
           with
@@ -1645,11 +1674,38 @@ Module Compilers.
              | Var t v => Halt v
              | TT => x <- () ; Halt x
              | AppIdent s d idc args
-               => (args' <-- @translate _ args;
-                     k <- Output.expr.Abs (fun r => Halt r);
-                     p <- (args', k);
-                     f <- Output.expr.Ident (translate_ident s d idc);
-                     f @ p)
+               => let default
+                      := (args' <-- @translate _ args;
+                            k <- Output.expr.Abs (fun r => Halt r);
+                            p <- (args', k);
+                            f <- Output.expr.Ident (translate_ident s d idc);
+                            f @ p) in
+                  match args in Compilers.Uncurried.expr.expr t
+                        return ident' t d
+                               -> Output.expr.expr _
+                               -> Output.expr.expr _
+                  with
+                  | Pair AB type.bool ab c
+                    => match ab in Compilers.Uncurried.expr.expr t
+                             return ident' (t * type.bool)%ctype d
+                                    -> Output.expr.expr _
+                                    -> Output.expr.expr _
+                       with
+                       | Pair A B a b
+                         => fun idc default
+                            => match invert_bool_rect
+                                       (fun t => @Output.expr.expr ident var (type.translate t))
+                                       (fun t => @Output.expr.expr ident var (type.translate t))
+                                       A B d idc (@translate _ a) (@translate _ b) with
+                               | Some (Ptrue, Pfalse)%core
+                                 => (b' <-- @translate _ c;
+                                       App_bool_rect Ptrue Pfalse b')
+                               | None => default
+                               end
+                       | _ => fun _ default => default
+                       end
+                  | _ => fun _ default => default
+                  end idc default
              | Pair A B a b
                => (a' <-- @translate _ a;
                      b' <-- @translate _ b;
@@ -1675,10 +1731,16 @@ Module Compilers.
       Definition Translate
                  {ident : Output.type.type -> Type}
                  {ident' : type -> type -> Type}
+                 (invert_bool_rect
+                  : forall P Q v1 v2 d,
+                     ident' (v1 * v2 * type.bool)%ctype d
+                     -> P v1
+                     -> Q v2
+                     -> option (P d * Q d))
                  (translate_ident : forall s d, ident' s d -> ident (type.translate (s -> d)))
                  {t} (e : @Compilers.Uncurried.expr.Expr ident' t)
         : @Output.expr.Expr ident (type.translate t)
-        := fun var => translate translate_ident (e _).
+        := fun var => translate invert_bool_rect translate_ident (e _).
 
       Section call_with_cont.
         Context {ident' : Output.type.type -> Type}
@@ -1691,7 +1753,8 @@ Module Compilers.
         Notation var' := (fun t => ucexprut t).
         Context (untranslate_ident : forall t, ident' t -> ucexprut t)
                 (ifst : forall A B, ident (A * B)%ctype A)
-                (isnd : forall A B, ident (A * B)%ctype B).
+                (isnd : forall A B, ident (A * B)%ctype B)
+                (ibool_rect : forall A, ident (A * A * type.bool)%ctype A).
 
         Fixpoint call_with_continuation
                  (e : @Output.expr.expr ident' var' r)
@@ -1703,6 +1766,10 @@ Module Compilers.
              | expr.App A f x
                => @App _ _ (type.untranslate R A) R
                        f x
+             | expr.App_bool_rect Ptrue Pfalse b
+               => AppIdent (ibool_rect _) (call_with_continuation Ptrue k,
+                                           call_with_continuation Pfalse k,
+                                           b)
              | Bind A x f
                => @call_with_continuation
                     (f (@call_primop_with_continuation A x k))
@@ -1737,15 +1804,17 @@ Module Compilers.
                  (untranslate_ident : forall t, ident' t -> @Compilers.Uncurried.expr.Expr ident (type.untranslate R t))
                  (ifst : forall A B, ident (A * B)%ctype A)
                  (isnd : forall A B, ident (A * B)%ctype B)
+                 (ibool_rect : forall A, ident (A * A * type.bool)%ctype A)
                  {t} (e : @Output.expr.Expr ident' t)
                  (k : forall var, @Uncurried.expr.expr ident var (type.untranslate R t) -> @Uncurried.expr.expr ident var R)
         : @Compilers.Uncurried.expr.Expr ident R
         := fun var => call_with_continuation
-                        (fun t idc => untranslate_ident t idc _) ifst isnd (e _) (k _).
+                        (fun t idc => untranslate_ident t idc _) ifst isnd ibool_rect (e _) (k _).
     End expr.
 
     Module ident.
       Import CPS.Output.type.
+
       Inductive ident : type -> Set :=
       | wrap {s d} (idc : Uncurried.expr.default.ident s d) : ident (type.translate (s -> d)).
 
@@ -1988,7 +2057,7 @@ Module Compilers.
       Definition Translate
                  {t} (e : @Compilers.Uncurried.expr.default.Expr t)
         : Expr (type.translate t)
-        := expr.Translate (@ident.wrap) e.
+        := expr.Translate (invert_bool_rect) (@ident.wrap) e.
 
       Definition call_with_continuation
                  {var}
@@ -1996,14 +2065,14 @@ Module Compilers.
                  {t} (e : @expr _ t)
                  (k : @Uncurried.expr.default.expr var (type.untranslate R t) -> @Uncurried.expr.default.expr var R)
         : @Compilers.Uncurried.expr.default.expr var R
-        := expr.call_with_continuation (fun t idc => @ident.untranslate _ t idc _) (@ident.fst) (@ident.snd) e k.
+        := expr.call_with_continuation (fun t idc => @ident.untranslate _ t idc _) (@ident.fst) (@ident.snd) (@ident.bool_rect) e k.
 
       Definition CallWithContinuation
                  {R : Compilers.type.type}
                  {t} (e : Expr t)
                  (k : forall var, @Uncurried.expr.default.expr var (type.untranslate R t) -> @Uncurried.expr.default.expr var R)
         : @Compilers.Uncurried.expr.default.Expr R
-        := expr.CallWithContinuation (@ident.untranslate _) (@ident.fst) (@ident.snd) e k.
+        := expr.CallWithContinuation (@ident.untranslate _) (@ident.fst) (@ident.snd) (@ident.bool_rect) e k.
 
       Definition CallFunWithIdContinuation'
                  {R}
@@ -2337,104 +2406,6 @@ Module Compilers.
 
   Definition PartialReduce {t} (e : Expr t) : Expr t
     := fun var => @partial_reduce var t (e _).
-
-  Module DeadCodeElimination.
-    Fixpoint compute_live' {t} (e : @expr (fun _ => PositiveSet.t) t) (cur_idx : positive)
-    : positive * PositiveSet.t
-      := match e with
-         | Var t v => (cur_idx, v)
-         | TT => (cur_idx, PositiveSet.empty)
-         | AppIdent s d idc args
-           => let default := @compute_live' _ args cur_idx in
-              match args in expr.expr t return ident.ident t d -> _ with
-              | Pair A B x (Abs s d f)
-                => fun idc
-                   => match idc with
-                      | ident.Let_In _ _
-                        => let '(idx, live) := @compute_live' A x cur_idx in
-                           let '(_, live) := @compute_live' _ (f (PositiveSet.add idx live)) (Pos.succ idx) in
-                           (Pos.succ idx, live)
-                      | _ => default
-                      end
-              | _ => fun _ => default
-              end idc
-         | App s d f x
-           => let '(idx, live1) := @compute_live' _ f cur_idx in
-              let '(idx, live2) := @compute_live' _ x idx in
-              (idx, PositiveSet.union live1 live2)
-         | Pair A B a b
-           => let '(idx, live1) := @compute_live' A a cur_idx in
-              let '(idx, live2) := @compute_live' B b idx in
-              (idx, PositiveSet.union live1 live2)
-         | Abs s d f
-           => let '(_, live) := @compute_live' _ (f PositiveSet.empty) cur_idx in
-              (cur_idx, live)
-         end.
-    Definition compute_live {t} e : PositiveSet.t := snd (@compute_live' t e 1).
-    Definition ComputeLive {t} (e : Expr t) := compute_live (e _).
-
-    Section with_var.
-      Context {var : type -> Type}
-              (live : PositiveSet.t).
-      Definition OUGHT_TO_BE_UNUSED {T1 T2} (v : T1) (v' : T2) := v.
-      Global Opaque OUGHT_TO_BE_UNUSED.
-      Fixpoint eliminate_dead' {t} (e : @expr (@expr var) t) (cur_idx : positive)
-        : positive * @expr var t
-        := match e with
-           | Var t v => (cur_idx, v)
-           | TT => (cur_idx, TT)
-           | AppIdent s d idc args
-             => let default := @eliminate_dead' _ args cur_idx in
-                let default := (fst default, AppIdent idc (snd default)) in
-                match args in expr.expr t return ident.ident t d -> positive * expr d -> positive * expr d with
-                | Pair A B x y
-                  => match y in expr.expr Y return ident.ident (A * Y) d -> positive * expr d -> positive * expr d with
-                     | Abs s' d' f
-                       => fun idc
-                          => let '(idx, x') := @eliminate_dead' A x cur_idx in
-                             let f' := fun v => snd (@eliminate_dead' _ (f v) (Pos.succ idx)) in
-                             match idc in ident.ident s d
-                                   return (match s return Type with
-                                           | A * _ => expr A
-                                           | _ => unit
-                                           end%ctype
-                                           -> match s return Type with
-                                              | _ * (s -> d) => (expr s -> expr d)%type
-                                              | _ => unit
-                                              end%ctype
-                                           -> positive * expr d
-                                           -> positive * expr d)
-                             with
-                             | ident.Let_In _ _
-                               => fun x' f' _
-                                  => if PositiveSet.mem idx live
-                                     then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
-                                     else (Pos.succ idx, f' (OUGHT_TO_BE_UNUSED x' (Pos.succ idx, PositiveSet.elements live)))
-                             | _ => fun _ _ default => default
-                             end x' f'
-                     | _ => fun _ default => default
-                     end
-                | _ => fun _ default => default
-                end idc default
-           | App s d f x
-             => let '(idx, f') := @eliminate_dead' _ f cur_idx in
-                let '(idx, x') := @eliminate_dead' _ x idx in
-                (idx, App f' x')
-           | Pair A B a b
-             => let '(idx, a') := @eliminate_dead' A a cur_idx in
-                let '(idx, b') := @eliminate_dead' B b idx in
-                (idx, Pair a' b')
-           | Abs s d f
-             => (cur_idx, Abs (fun v => snd (@eliminate_dead' _ (f (Var v)) cur_idx)))
-           end.
-
-      Definition eliminate_dead {t} e : expr t
-        := snd (@eliminate_dead' t e 1).
-    End with_var.
-
-    Definition EliminateDead {t} (e : Expr t) : Expr t
-      := fun var => eliminate_dead (ComputeLive e) (e _).
-  End DeadCodeElimination.
 
   Module ReassociateSmallConstants.
     Import Compilers.Uncurried.expr.default.
@@ -3553,6 +3524,30 @@ Module test5.
   Qed.
 End test5.
 
+Module test6.
+  (* check for no dead code with if *)
+  Example test6 : True.
+  Proof.
+    let v := Reify (fun y : Z
+                    => if 0 =? 1
+                       then dlet_nd x := (y * y)%RT in
+                                x
+                       else y) in
+    pose v as E.
+    vm_compute in E.
+    pose (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))) as E'.
+    lazy in E'.
+    clear E.
+    pose (PartialReduce E') as E''.
+    lazy in E''.
+    lazymatch eval cbv delta [E''] in E'' with
+    | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), Var x)%expr
+      => idtac
+    end.
+    exact I.
+  Qed.
+End test6.
+
 Axiom admit : forall {T}, T.
 
 (** TODO: split this into [carry_mul_gen] which does not use PHOAS stuff, and version that synthesizes a reified thing *)
@@ -3769,7 +3764,7 @@ Module X25519_64.
         let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
         set (E := e);
           cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (DeadCodeElimination.EliminateDead (PartialReduce E))) in
+      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (PartialReduce E)) in
            let E' := (eval lazy in E') in
            pose E' as E''.
       Time let E' := constr:(Option.invert_Some
@@ -3836,8 +3831,7 @@ Module X25519_64.
  expr_let 21 := (uint64)(x_20 >> 51) in
  expr_let 22 := ((uint64)x_20 & 2251799813685247) in
  x_19 :: x_22 :: x_21 +₆₄ x_10 :: x_13 :: x_16 :: [])%nexpr
-     : expr
-         (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+     : expr (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
 *)
 End X25519_64.
 
@@ -3922,9 +3916,9 @@ Module X25519_32.
         let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
         set (E := e);
           cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (DeadCodeElimination.EliminateDead (PartialReduce E))) in
+      Time let E' := constr:(ReassociateSmallConstants.Reassociate (2^8) (PartialReduce E)) in
            let E' := (eval lazy in E') in
-           pose E' as E''. (* about 90 s *)
+           pose E' as E''. (* about 46 s *)
       Time let E' := constr:(Option.invert_Some
                                (BoundsAnalysis.OfPHOAS.AnalyzeBounds
                                   relax_zrange E'' fg_bounds)) in
@@ -3944,19 +3938,15 @@ Module X25519_32.
   Print base_25p5_carry_mul.
 (* base_25p5_carry_mul =
 (expr_let 2 := fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
-               (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄
-                (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+               (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
                 (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                 (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄
-                  (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                 (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
                   (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                   (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄
-                    (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                   (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
                     (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                      (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
                       (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
-                      (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                       (snd @@ x_1 [[2]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                      (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[2]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                        fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
                        (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 3 := (uint64)(x_2 >> 26) in
@@ -3969,28 +3959,22 @@ Module X25519_32.
                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                     (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                      (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
-                       (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                        (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                        fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
-                        (snd @@ x_1 [[2]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
+                      (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[2]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 6 := (uint64)(x_5 >> 25) in
  expr_let 7 := ((uint32)x_5 & 33554431) in
  expr_let 8 := x_6 +₆₄
                (fst @@ x_1 [[0]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
                 (fst @@ x_1 [[1]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
                  (fst @@ x_1 [[2]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
-                  (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄
-                   (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                  (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
                    (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                    (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄
-                     (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
+                    (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
                        (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
-                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                        (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
                         (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 9 := (uint64)(x_8 >> 26) in
@@ -4002,14 +3986,10 @@ Module X25519_32.
                    (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
                     (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                      (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄
-                       (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
-                        (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[4]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 12 := (uint64)(x_11 >> 25) in
  expr_let 13 := ((uint32)x_11 & 33554431) in
  expr_let 14 := x_12 +₆₄
@@ -4020,12 +4000,10 @@ Module X25519_32.
                     (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
                      (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄
                       (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄
-                       (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
                         (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                          fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
                          (snd @@ x_1 [[5]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 15 := (uint64)(x_14 >> 26) in
@@ -4037,14 +4015,10 @@ Module X25519_32.
                    (fst @@ x_1 [[3]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
                     (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
                      (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
-                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄
-                       (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
-                        (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
+                      (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[6]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 18 := (uint64)(x_17 >> 25) in
  expr_let 19 := ((uint32)x_17 & 33554431) in
  expr_let 20 := x_18 +₆₄
@@ -4057,8 +4031,7 @@ Module X25519_32.
                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
                         (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19))) +₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
                          fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
                          (snd @@ x_1 [[7]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
  expr_let 21 := (uint64)(x_20 >> 26) in
@@ -4072,10 +4045,8 @@ Module X25519_32.
                      (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[1]] +₆₄
                        (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
-                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
-                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
-                         (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
+                        (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ (19)) +₆₄
+                         fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[8]] *₃₂₋₃₂₋₃₂ (19))))))))))) in
  expr_let 24 := (uint64)(x_23 >> 25) in
  expr_let 25 := ((uint32)x_23 & 33554431) in
  expr_let 26 := x_24 +₆₄
@@ -4086,8 +4057,7 @@ Module X25519_32.
                     (fst @@ x_1 [[4]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[4]] +₆₄
                      (fst @@ x_1 [[5]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[3]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
                       (fst @@ x_1 [[6]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[2]] +₆₄
-                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄
-                        (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
+                       (fst @@ x_1 [[7]] *₃₂₋₃₂₋₆₄ (snd @@ x_1 [[1]] *₃₂₋₃₂₋₃₂ (2)) +₆₄
                         (fst @@ x_1 [[8]] *₃₂₋₃₂₋₆₄ snd @@ x_1 [[0]] +₆₄
                          fst @@ x_1 [[9]] *₃₂₋₃₂₋₆₄
                          (snd @@ x_1 [[9]] *₃₂₋₃₂₋₃₂ ((2) *₃₂₋₃₂₋₃₂ (19)))))))))))) in
@@ -4112,11 +4082,8 @@ Module X25519_32.
  expr_let 35 := x_33 +₃₂ x_7 in
  expr_let 36 := (uint32)(x_35 >> 25) in
  expr_let 37 := ((uint32)x_35 & 33554431) in
- x_34
- :: x_37
-    :: x_36 +₃₂ x_10 :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
-     : expr
-         (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
+ x_34 :: x_37 :: x_36 +₃₂ x_10 :: x_13 :: x_16 :: x_19 :: x_22 :: x_25 :: x_28 :: x_31 :: [])%nexpr
+     : expr (BoundsAnalysis.AdjustBounds.ident.type_for_range relax_zrange f_bounds)
 *)
 End X25519_32.
 *)
