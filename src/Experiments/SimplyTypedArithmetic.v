@@ -1345,6 +1345,133 @@ Module Compilers.
     Export expr.default.
   End Uncurried.
 
+  Import Uncurried.
+  Section invert.
+    Context {var : type -> Type}.
+
+    Definition invert_Var {t} (e : @expr var t) : option (var t)
+      := match e with
+         | Var t v => Some v
+         | _ => None
+         end.
+
+    Local Notation if_arrow f
+      := (fun t => match t return Type with
+                   | type.arrow s d => f s d
+                   | _ => True
+                   end) (only parsing).
+    Local Notation if_arrow_s f := (if_arrow (fun s d => f s)) (only parsing).
+    Local Notation if_arrow_d f := (if_arrow (fun s d => f d)) (only parsing).
+    Local Notation if_prod f
+      := (fun t => match t return Type with
+                   | type.prod A B => f A B
+                   | _ => True
+                   end).
+
+    Definition invert_Abs {s d} (e : @expr var (type.arrow s d)) : option (var s -> @expr var d)
+      := match e in expr.expr t return option (if_arrow (fun _ _ => _) t) with
+         | Abs s d f => Some f
+         | _ => None
+         end.
+
+    Definition invert_App {d} (e : @expr var d) : option { s : _ & @expr var (s -> d) * @expr var s }%type
+      := match e with
+         | App s d f x => Some (existT _ s (f, x))
+         | _ => None
+         end.
+
+    Definition invert_AppIdent {d} (e : @expr var d) : option { s : _ & @ident s d * @expr var s }%type
+      := match e with
+         | AppIdent s d idc args
+           => Some (existT _ s (idc, args))
+         | _ => None
+         end.
+
+    Definition invert_App2 {d} (e : @expr var d) : option { s1s2 : _ * _ & @expr var (fst s1s2 -> snd s1s2 -> d) * @expr var (fst s1s2) * @expr var (snd s1s2) }%type
+      := match invert_App e with
+         | Some (existT s (f, y))
+           => match invert_App f with
+              | Some (existT s' (f', x))
+                => Some (existT _ (s', s) (f', x, y))
+              | None => None
+              end
+         | None => None
+         end.
+
+    Local Notation expr_prod
+      := (fun t => match t return Type with
+                   | type.prod A B => prod (expr A) (expr B)
+                   | _ => True
+                   end) (only parsing).
+
+    Definition invert_Pair {A B} (e : @expr var (type.prod A B)) : option (@expr var A * @expr var B)
+      := match e in expr.expr t return option (if_prod (fun A B => expr A * expr B)%type t) with
+         | Pair A B a b
+           => Some (a, b)
+         | _ => None
+         end.
+
+    (* if we want more code for the below, I would suggest [reify_base_type] and [reflect_base_type] *)
+    Definition reify_primitive {t} (v : type.interp (type.type_primitive t)) : @expr var (type.type_primitive t)
+      := AppIdent (ident.primitive v) TT.
+    Definition reflect_primitive {t} (e : @expr var (type.type_primitive t)) : option (type.interp (type.type_primitive t))
+      := match invert_AppIdent e with
+         | Some (existT s (idc, args))
+           => match idc in ident _ t return option (type.interp t) with
+              | ident.primitive _ v => Some v
+              | _ => None
+              end
+         | None => None
+         end.
+
+    Local Notation list_expr
+      := (fun t => match t return Type with
+                   | type.list T => list (expr T)
+                   | _ => True
+                   end) (only parsing).
+
+    (* oh, the horrors of not being able to use non-linear deep pattern matches.  c.f. COQBUG(https://github.com/coq/coq/issues/6320) *)
+    Fixpoint reflect_list {t} (e : @expr var (type.list t))
+      : option (list (@expr var t))
+      := match e in expr.expr t return option (list_expr t) with
+         | AppIdent s (type.list t) idc x_xs
+           => match x_xs in expr.expr s return ident s (type.list t) -> option (list (expr t)) with
+              | Pair A (type.list B) x xs
+                => match @reflect_list B xs with
+                   | Some xs
+                     => fun idc
+                        => match idc in ident s d
+                                 return if_prod (fun A B => expr A) s
+                                        -> if_prod (fun A B => list_expr B) s
+                                        -> option (list_expr d)
+                           with
+                           | ident.cons A
+                             => fun x xs => Some (cons x xs)
+                           | _ => fun _ _ => None
+                           end x xs
+                   | None => fun _ => None
+                   end
+              | _
+                => fun idc
+                   => match idc in ident _ t return option (list_expr t) with
+                      | ident.nil _ => Some nil
+                      | _ => None
+                      end
+              end idc
+         | _ => None
+         end.
+  End invert.
+
+  Section gallina_reify.
+    Context {var : type -> Type}.
+    Definition reify_list {t} (ls : list (@expr var t)) : @expr var (type.list t)
+      := list_rect
+           (fun _ => _)
+           (ident.nil @@ TT)%expr
+           (fun x _ xs => ident.cons @@ (x, xs))%expr
+           ls.
+  End gallina_reify.
+
   Module CPS.
     Import Uncurried.
     Module Import Output.
@@ -1898,133 +2025,6 @@ Module Compilers.
     End default.
     Include default.
   End CPS.
-
-  Import Uncurried.
-  Section invert.
-    Context {var : type -> Type}.
-
-    Definition invert_Var {t} (e : @expr var t) : option (var t)
-      := match e with
-         | Var t v => Some v
-         | _ => None
-         end.
-
-    Local Notation if_arrow f
-      := (fun t => match t return Type with
-                   | type.arrow s d => f s d
-                   | _ => True
-                   end) (only parsing).
-    Local Notation if_arrow_s f := (if_arrow (fun s d => f s)) (only parsing).
-    Local Notation if_arrow_d f := (if_arrow (fun s d => f d)) (only parsing).
-    Local Notation if_prod f
-      := (fun t => match t return Type with
-                   | type.prod A B => f A B
-                   | _ => True
-                   end).
-
-    Definition invert_Abs {s d} (e : @expr var (type.arrow s d)) : option (var s -> @expr var d)
-      := match e in expr.expr t return option (if_arrow (fun _ _ => _) t) with
-         | Abs s d f => Some f
-         | _ => None
-         end.
-
-    Definition invert_App {d} (e : @expr var d) : option { s : _ & @expr var (s -> d) * @expr var s }%type
-      := match e with
-         | App s d f x => Some (existT _ s (f, x))
-         | _ => None
-         end.
-
-    Definition invert_AppIdent {d} (e : @expr var d) : option { s : _ & @ident s d * @expr var s }%type
-      := match e with
-         | AppIdent s d idc args
-           => Some (existT _ s (idc, args))
-         | _ => None
-         end.
-
-    Definition invert_App2 {d} (e : @expr var d) : option { s1s2 : _ * _ & @expr var (fst s1s2 -> snd s1s2 -> d) * @expr var (fst s1s2) * @expr var (snd s1s2) }%type
-      := match invert_App e with
-         | Some (existT s (f, y))
-           => match invert_App f with
-              | Some (existT s' (f', x))
-                => Some (existT _ (s', s) (f', x, y))
-              | None => None
-              end
-         | None => None
-         end.
-
-    Local Notation expr_prod
-      := (fun t => match t return Type with
-                   | type.prod A B => prod (expr A) (expr B)
-                   | _ => True
-                   end) (only parsing).
-
-    Definition invert_Pair {A B} (e : @expr var (type.prod A B)) : option (@expr var A * @expr var B)
-      := match e in expr.expr t return option (if_prod (fun A B => expr A * expr B)%type t) with
-         | Pair A B a b
-           => Some (a, b)
-         | _ => None
-         end.
-
-    (* if we want more code for the below, I would suggest [reify_base_type] and [reflect_base_type] *)
-    Definition reify_primitive {t} (v : type.interp (type.type_primitive t)) : @expr var (type.type_primitive t)
-      := AppIdent (ident.primitive v) TT.
-    Definition reflect_primitive {t} (e : @expr var (type.type_primitive t)) : option (type.interp (type.type_primitive t))
-      := match invert_AppIdent e with
-         | Some (existT s (idc, args))
-           => match idc in ident _ t return option (type.interp t) with
-              | ident.primitive _ v => Some v
-              | _ => None
-              end
-         | None => None
-         end.
-
-    Local Notation list_expr
-      := (fun t => match t return Type with
-                   | type.list T => list (expr T)
-                   | _ => True
-                   end) (only parsing).
-
-    (* oh, the horrors of not being able to use non-linear deep pattern matches.  c.f. COQBUG(https://github.com/coq/coq/issues/6320) *)
-    Fixpoint reflect_list {t} (e : @expr var (type.list t))
-      : option (list (@expr var t))
-      := match e in expr.expr t return option (list_expr t) with
-         | AppIdent s (type.list t) idc x_xs
-           => match x_xs in expr.expr s return ident s (type.list t) -> option (list (expr t)) with
-              | Pair A (type.list B) x xs
-                => match @reflect_list B xs with
-                   | Some xs
-                     => fun idc
-                        => match idc in ident s d
-                                 return if_prod (fun A B => expr A) s
-                                        -> if_prod (fun A B => list_expr B) s
-                                        -> option (list_expr d)
-                           with
-                           | ident.cons A
-                             => fun x xs => Some (cons x xs)
-                           | _ => fun _ _ => None
-                           end x xs
-                   | None => fun _ => None
-                   end
-              | _
-                => fun idc
-                   => match idc in ident _ t return option (list_expr t) with
-                      | ident.nil _ => Some nil
-                      | _ => None
-                      end
-              end idc
-         | _ => None
-         end.
-  End invert.
-
-  Section gallina_reify.
-    Context {var : type -> Type}.
-    Definition reify_list {t} (ls : list (@expr var t)) : @expr var (type.list t)
-      := list_rect
-           (fun _ => _)
-           (ident.nil @@ TT)%expr
-           (fun x _ xs => ident.cons @@ (x, xs))%expr
-           ls.
-  End gallina_reify.
 
   Module partial.
     Section value.
