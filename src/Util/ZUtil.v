@@ -964,6 +964,18 @@ Module Z.
   Qed.
   Hint Resolve div_sub_mod_cond : zarith.
 
+  Lemma div_add_mod_cond_l : forall x y d, d <> 0 -> (x + y) / d = (x mod d + y) / d + x / d.
+  Proof.
+    intros. replace (x + y) with ((x - x mod d) + (x mod d + y)) by lia.
+    rewrite Z.div_add_exact by auto with zarith.
+    rewrite <- Z.div_sub_mod_exact by lia; lia.
+  Qed.
+
+  Lemma div_add_mod_cond_r : forall x y d, d <> 0 -> (x + y) / d = (x + y mod d) / d + y / d.
+  Proof.
+    intros. rewrite Z.add_comm, div_add_mod_cond_l by auto. repeat (f_equal; try ring).
+  Qed.
+
   Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
   Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
   Hint Rewrite div_between using zutil_arith : zsimplify.

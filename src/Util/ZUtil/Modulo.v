@@ -222,6 +222,9 @@ Module Z.
     : 0 <= c -> (a / b) mod c = a mod (c * b) / b.
   Proof. rewrite mod_pull_div_full; destruct (c <? 0) eqn:?; Z.ltb_to_lt; simpl; omega. Qed.
 
+  Lemma small_mod_eq a b n: a mod n = b mod n -> 0 <= a < n -> a = b mod n.
+  Proof. intros; rewrite <-(Z.mod_small a n); auto. Qed.
+
   Lemma mod_pow_full p q n : (p^q) mod n = ((p mod n)^q) mod n.
   Proof.
     destruct (Z_dec' n 0) as [ [H|H] | H]; subst;
