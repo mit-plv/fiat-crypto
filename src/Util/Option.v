@@ -16,6 +16,7 @@ Module Export Notations.
 
   Notation "A <- X ; B" := (bind X (fun A => B%option)) : option_scope.
 End Notations.
+Local Open Scope option_scope.
 
 Section Relations.
   Definition option_eq {A} eq (x y : option A) :=
@@ -172,7 +173,7 @@ Proof.
   refine (exist _ _ (option_leq_to_eq_to_leq _)).
 Qed.
 
-Definition always_invert_Some {A} (x : option A) (pf : x <> None) : A
+Definition always_invert_Some {A} (x : option A) {pf : x <> None} : A
   := match x return x <> None -> A with
      | Some v => fun _ => v
      | None => fun pf => False_rect _ (pf eq_refl)
@@ -181,15 +182,15 @@ Definition always_invert_Some {A} (x : option A) (pf : x <> None) : A
 Lemma push_always_invert_Some' {A B} (f : A -> B) (x : option A)
       (pf : x <> None)
       (pf' : option_map f x <> None)
-  : f (always_invert_Some x pf) = always_invert_Some (option_map f x) pf'.
+  : f (@always_invert_Some _ x pf) = @always_invert_Some _ (option_map f x) pf'.
 Proof.
   destruct x; [ reflexivity | congruence ].
 Qed.
 
 Definition pull_always_invert_Some {A B} (f : A -> B) (x : option A)
       (pf : option_map f x <> None)
-  : f (always_invert_Some x (fun H => pf (f_equal (option_map f) H)))
-    = always_invert_Some (option_map f x) pf
+  : f (@always_invert_Some _ x (fun H => pf (f_equal (option_map f) H)))
+    = @always_invert_Some _ (option_map f x) pf
   := push_always_invert_Some' f x _ pf.
 
 Lemma option_map_neq_None_iff {A B} (f : A -> B) x
@@ -198,10 +199,47 @@ Proof. destruct x; cbn in *; split; congruence. Qed.
 
 Definition push_always_invert_Some {A B} (f : A -> B) (x : option A)
       (pf : x <> None)
-  : f (always_invert_Some x pf)
-    = always_invert_Some (option_map f x)
+  : f (@always_invert_Some _ x pf)
+    = @always_invert_Some _ (option_map f x)
                          (proj1 (option_map_neq_None_iff f x) pf)
   := push_always_invert_Some' f x pf _.
+
+Definition always_invert_Some_bind' {A B} (x : option A) (f : A -> option B)
+           pf pf' pf''
+  : @always_invert_Some _ (bind x f) pf
+    = @always_invert_Some _ (f (@always_invert_Some _ x pf')) pf''.
+Proof.
+  destruct x as [x|]; cbn in *; [ destruct (f x); cbn in * | ];
+    congruence.
+Qed.
+
+Lemma bind_neq_None_iff {A B} (x : option A) (f : A -> option B)
+  : (bind x f <> None) <-> (x <> None /\ forall pf, f (@always_invert_Some _ x pf) <> None).
+Proof.
+  destruct x as [x|]; cbn; [ destruct (f x); cbn | ]; intuition congruence.
+Qed.
+
+Lemma bind_neq_None_iff' {A B} (x : option A) (f : A -> option B)
+  : (bind x f <> None) <-> (exists pf : x <> None, f (@always_invert_Some _ x pf) <> None).
+Proof.
+  destruct x as [x|]; cbn; [ destruct (f x); cbn | ]; repeat dintuition (congruence || constructor || eauto).
+  match goal with H : ex _ |- _ => destruct H end; congruence.
+Qed.
+
+Definition push_always_invert_Some_bind {A B} (x : option A) (f : A -> option B)
+           pf
+           (pf' := proj1 (proj1 (bind_neq_None_iff x f) pf))
+           (pf'' := proj2 (proj1 (bind_neq_None_iff x f) pf) pf')
+  : @always_invert_Some _ (bind x f) pf
+    = @always_invert_Some _ (f (@always_invert_Some _ x pf')) pf''
+  := always_invert_Some_bind' x f _ _ _.
+
+Definition pull_always_invert_Some_bind {A B} (x : option A) (f : A -> option B)
+           pf pf'
+           (pf'' := proj2 (bind_neq_None_iff' x f) (ex_intro _ pf pf'))
+  : @always_invert_Some _ (f (@always_invert_Some _ x pf)) pf'
+    = @always_invert_Some _ (bind x f) pf''
+  := eq_sym (always_invert_Some_bind' x f _ _ _).
 
 
 Ltac inversion_option_step :=
