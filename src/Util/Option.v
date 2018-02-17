@@ -222,8 +222,9 @@ Qed.
 Lemma bind_neq_None_iff' {A B} (x : option A) (f : A -> option B)
   : (bind x f <> None) <-> (exists pf : x <> None, f (@always_invert_Some _ x pf) <> None).
 Proof.
-  destruct x as [x|]; cbn; [ destruct (f x); cbn | ]; repeat dintuition (congruence || constructor || eauto).
-  match goal with H : ex _ |- _ => destruct H end; congruence.
+  destruct x as [x|]; cbn; [ destruct (f x); cbn | ];
+    split; intros; destruct_head'_ex; try unshelve econstructor;
+      congruence.
 Qed.
 
 Definition push_always_invert_Some_bind {A B} (x : option A) (f : A -> option B)
