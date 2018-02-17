@@ -172,6 +172,38 @@ Proof.
   refine (exist _ _ (option_leq_to_eq_to_leq _)).
 Qed.
 
+Definition always_invert_Some {A} (x : option A) (pf : x <> None) : A
+  := match x return x <> None -> A with
+     | Some v => fun _ => v
+     | None => fun pf => False_rect _ (pf eq_refl)
+     end pf.
+
+Lemma push_always_invert_Some' {A B} (f : A -> B) (x : option A)
+      (pf : x <> None)
+      (pf' : option_map f x <> None)
+  : f (always_invert_Some x pf) = always_invert_Some (option_map f x) pf'.
+Proof.
+  destruct x; [ reflexivity | congruence ].
+Qed.
+
+Definition pull_always_invert_Some {A B} (f : A -> B) (x : option A)
+      (pf : option_map f x <> None)
+  : f (always_invert_Some x (fun H => pf (f_equal (option_map f) H)))
+    = always_invert_Some (option_map f x) pf
+  := push_always_invert_Some' f x _ pf.
+
+Lemma option_map_neq_None_iff {A B} (f : A -> B) x
+  : x <> None <-> option_map f x <> None.
+Proof. destruct x; cbn in *; split; congruence. Qed.
+
+Definition push_always_invert_Some {A B} (f : A -> B) (x : option A)
+      (pf : x <> None)
+  : f (always_invert_Some x pf)
+    = always_invert_Some (option_map f x)
+                         (proj1 (option_map_neq_None_iff f x) pf)
+  := push_always_invert_Some' f x pf _.
+
+
 Ltac inversion_option_step :=
   match goal with
   | [ H : Some _ = Some _ |- _ ] => apply option_leq_to_eq in H; unfold option_eq in H
