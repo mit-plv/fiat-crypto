@@ -45,8 +45,8 @@ Section WordByWordMontgomery.
   Definition redc_body_cps {pred_A_numlimbs} (A : T (S pred_A_numlimbs)) (B : T R_numlimbs) (k : Z) (S' : T (S R_numlimbs))
              {cpsT} (rest : T pred_A_numlimbs * T (S R_numlimbs) -> cpsT)
     : cpsT
-    := divmod_cps A (fun '(A, a) =>
-       @scmul_cps r _ a B _ (fun aB => @add_cps r _ S' aB _ (fun S1 =>
+    := divmod_cps A (fun '(A, T1) =>
+       @scmul_cps r _ T1 B _ (fun aB => @add_cps r _ S' aB _ (fun S1 =>
        divmod_cps S1 (fun '(_, s) =>
        Z.mul_split_cps' r s k (fun mul_split_r_s_k =>
        dlet q := fst mul_split_r_s_k in
@@ -83,6 +83,9 @@ Section WordByWordMontgomery.
     Notation "'let' x .. y := 'divmod' A 'r' 'in' f"
       := (divmod_cps A (fun x => .. (fun y => f) .. ))
            (only printing, at level 200, x binder, y binder, f at level 200, format "'let'  x .. y  :=  'divmod'  A  'r'  'in' '//' f").
+    Notation "'let' x := A / 2ˢ 'in' f"
+      := (divmod_cps A (fun '(x, _) => f))
+           (only printing, at level 200, f at level 200, format "'let'  x  :=  A  /  2ˢ  'in' '//' f").
     Notation "'let' x .. y := a * B 'in' f"
       := (scmul_cps _ a B (fun x => .. (fun y => f) .. ))
            (only printing, at level 200, x binder, y binder, f at level 200, format "'let'  x .. y  :=  a  *  B  'in' '//' f").
@@ -112,14 +115,14 @@ Section WordByWordMontgomery.
 fun (pred_A_numlimbs : nat) (A : T (S pred_A_numlimbs)) (B : T R_numlimbs)
   (k : Z) (S' : T (S R_numlimbs)) (cpsT : Type)
   (rest : T pred_A_numlimbs * T (S R_numlimbs) -> cpsT) =>
-let '(A0, a) := divmod A r in
-let aB := a * B in
+let '(A0, T1) := divmod A r in
+let aB := T1 * B in
 let S1 := S' + aB in
 let '(_, s) := divmod S1 r in
 let '(q, _) := s * k in
 let qN := q * N in
 let S2 := S1 + qN in
-let '(S3, _) := divmod S2 r in
+let S3 := S2 / 2ˢ in
 let S4 := drop_high S3 in
 rest (A0, S4)
 *)
@@ -133,14 +136,14 @@ rest (A0, S4)
           | 0%nat => rest
           | S count' =>
               fun '(A0, S') =>
-              let '(A1, a) := divmod A0 r in
-              let aB := a * B in
+              let '(A1, T1) := divmod A0 r in
+              let aB := T1 * B in
               let S1 := S' + aB in
               let '(_, s) := divmod S1 r in
               let '(q, _) := s * k in
               let qN := q * N in
               let S2 := S1 + qN in
-              let '(S3, _) := divmod S2 r in
+              let S3 := S2 / 2ˢ in
               let S4 := drop_high S3 in
               redc_loop_cps count' rest (A1, S4)
           end) ?A_numlimbs (fun '(_, S') => S' + if N ≤? S' then -N else 0)
