@@ -1667,6 +1667,30 @@ Module Compilers.
 
         Local Notation "x <-- e1 ; e2" := (splice e1 (fun x => e2%cpsexpr)) : cpsexpr_scope.
 
+        (** Note: We special-case [bool_rect] because reduction of the
+            bodies of eliminators should block on the branching.  We
+            would like to just write:
+<<
+| AppIdent (A * A * type.bool) A ident.bool_rect (Ptrue, Pfalse, b)
+  => b' <-- @translate _ b;
+     App_bool_rect (@translate _ Ptrue) (@translate _ Pfalse) b'
+| AppIdent s d idc args
+  => args' <-- @translate _ args;
+     k <- Output.expr.Abs (fun r => Halt r);
+     p <- (args', k);
+     f <- Output.expr.Ident (translate_ident s d idc);
+     f @ p
+>>
+            but due do deficiencies in non-linear deep pattern
+            matching (and the fact that we're generic over the type of
+            identifiers), we cannot, and must write something
+            significantly more verbose.  Because this is so painful,
+            we do not special-case [nat_rect] nor [list_rect], which
+            anyway do not need special casing except in cases where
+            they never hit the base case; it is already the case that
+            functions get a sort of "free pass" and do get evaluated
+            until applied to arguments, and the base case ought to be
+            hit exactly once. *)
         Fixpoint translate {t}
                  (e : @Compilers.Uncurried.expr.expr ident' var' t)
           : @Output.expr.expr ident var (type.translate t)
