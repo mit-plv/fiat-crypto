@@ -1591,12 +1591,12 @@ Module Compilers.
            end.
     End reify.
 
-    Definition Reify {t : type} (v : forall var, value var t) : Expr t
+    Definition Reify_as (t : type) (v : forall var, value var t) : Expr t
       := fun var => reify (v _).
 
-    (** [AutoReify] does Ltac type inference to get the type *)
-    Notation AutoReify v
-      := (Reify (t:=type.reify_type_of v) (fun _ => v)) (only parsing).
+    (** [Reify] does Ltac type inference to get the type *)
+    Notation Reify v
+      := (Reify_as (type.reify_type_of v) (fun _ => v)) (only parsing).
   End GallinaReify.
 
   Module CPS.
@@ -4138,8 +4138,8 @@ Proof.
   let E := constr:(app_and_maybe_cancel
                      (app_and_maybe_cancel
                         (canonicalize_list_recursion E)
-                        (GallinaReify.AutoReify n))
-                     (GallinaReify.AutoReify dz)) in
+                        (GallinaReify.Reify n))
+                     (GallinaReify.Reify dz)) in
   let E := (eval vm_compute in E) in
   transitivity (Interp E i);
     [
@@ -4166,12 +4166,12 @@ Section rcarry_mul.
   Local Arguments relax_zrange_of_machine_wordsize / .
 
   Let rw := rweight limbwidth.
-  Let rs := GallinaReify.AutoReify s.
-  Let rc := GallinaReify.AutoReify c.
-  Let rn := GallinaReify.AutoReify n.
-  Let ridxs := GallinaReify.AutoReify idxs.
-  Let rlen_c := GallinaReify.AutoReify (List.length c).
-  Let rlen_idxs := GallinaReify.AutoReify (List.length idxs).
+  Let rs := GallinaReify.Reify s.
+  Let rc := GallinaReify.Reify c.
+  Let rn := GallinaReify.Reify n.
+  Let ridxs := GallinaReify.Reify idxs.
+  Let rlen_c := GallinaReify.Reify (List.length c).
+  Let rlen_idxs := GallinaReify.Reify (List.length idxs).
   Let relax_zrange := relax_zrange_of_machine_wordsize.
   Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z * type.list type.Z))
     := (f_bounds, f_bounds).
