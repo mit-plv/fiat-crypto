@@ -6466,6 +6466,7 @@ src/Util/NumTheoryUtil.v
 src/Util/Option.v
 src/Util/ParseTaps.v
 src/Util/PartiallyReifiedProp.v
+src/Util/Pointed.v
 src/Util/PointedProp.v
 src/Util/Pos.v
 src/Util/Prod.v
