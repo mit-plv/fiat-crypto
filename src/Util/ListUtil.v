@@ -4,6 +4,7 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.Pointed.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.DestructHead.
@@ -1809,3 +1810,27 @@ Proof.
   subst; cbv [expand_list]; rewrite expand_list_helper_correct by reflexivity.
   rewrite skipn_0, firstn_all; reflexivity.
 Qed.
+
+Ltac expand_lists _ :=
+  let default_for A :=
+      match goal with
+      | _ => constr:(_ : pointed A)
+      | _ => let __ := match goal with _ => idtac "Warning: could not infer a default value for list type" A end in
+             constr:(I : I)
+      end in
+  let T := lazymatch goal with |- _ = _ :> ?T => T end in
+  let v := fresh in
+  evar (v : T); transitivity v;
+  [ subst v
+  | repeat match goal with
+           | [ H : @List.length ?A ?f = ?n |- context[?f] ]
+             => let v := default_for A in
+                rewrite <- (@expand_list_correct n A v f H);
+                clear H
+           end;
+    lazymatch goal with
+    | [ H : List.length ?f = _ |- context[?f] ]
+      => fail 0 "Could not expand list" f
+    | _ => idtac
+    end;
+    subst v; reflexivity ].
