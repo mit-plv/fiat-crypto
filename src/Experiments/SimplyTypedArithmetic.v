@@ -1,5 +1,6 @@
 (* Following http://adam.chlipala.net/theses/andreser.pdf chapter 3 *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
+Require Import Coq.Strings.String.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.derive.Derive.
@@ -13,6 +14,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
