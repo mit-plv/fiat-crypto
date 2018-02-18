@@ -309,7 +309,8 @@ Module Positional. Section Positional.
             by (subst; try assumption; auto using Z.div_mod); reflexivity ].
       eapply f_equal2; [|trivial]. eapply f_equal.
       expand_lists ().
-      refine eq_refl.
+      subst carry_mulmod.
+      reflexivity.
     Qed.
   End carry_mulmod.
 End Positional. End Positional.
