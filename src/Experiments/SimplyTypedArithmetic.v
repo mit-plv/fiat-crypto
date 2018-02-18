@@ -2206,25 +2206,35 @@ Module Compilers.
         : @Compilers.Uncurried.expr.default.Expr R
         := expr.CallWithContinuation (@ident.untranslate _) (@ident.fst) (@ident.snd) (@ident.bool_rect) e k.
 
-      Module type_descr.
+      (** It's not clear how to "plug in the identity continuation"
+          for the CPS'd form of an expression of type [((A -> B) -> C)
+          -> D].  So we must describe types of at most second order
+          functions, so that we can write a uniform "plug in the
+          identity continuation" transformation. *)
+      Module second_order.
         Import Compilers.type.
-        Inductive flat_type :=
-        | type_primitive (_ : primitive)
-        | prod (_ : flat_type) (_ : flat_type)
-        | list (_ : flat_type).
-        Inductive argtype :=
-        | flat_arg (_ : flat_type)
-        | arrow_arg (s : flat_type) (d : argtype)
-        | prod_arg (_ _ : argtype).
-        Inductive type :=
-        | flat (_ : flat_type)
-        | arrow (s : argtype) (d : type).
+        Module Import type.
+          Inductive flat_type :=
+          | type_primitive (_ : primitive)
+          | prod (_ : flat_type) (_ : flat_type)
+          | list (_ : flat_type).
+          Inductive argtype :=
+          | flat_arg (_ : flat_type)
+          | arrow_arg (s : flat_type) (d : argtype)
+          | prod_arg (_ _ : argtype).
+          Inductive type :=
+          | flat (_ : flat_type)
+          | arrow (s : argtype) (d : type).
+        End type.
 
         Module Export Coercions.
           Coercion type_primitive : primitive >-> flat_type.
           Coercion flat_arg : flat_type >-> argtype.
           Coercion flat : flat_type >-> type.
         End Coercions.
+        Notation flat_type := flat_type.
+        Notation argtype := argtype.
+        Notation type := type.
 
         Fixpoint flat_to_type (t : flat_type) : Compilers.type.type
           := match t with
@@ -2254,7 +2264,7 @@ Module Compilers.
                   | Some A, Some B => @Some flat_type (prod A B)
                   | _, _ => None
                   end
-             | type.arrow s d => None
+             | Compilers.type.arrow s d => None
              | Compilers.type.list A
                => option_map list (flat_of_type A)
              end.
@@ -2269,7 +2279,7 @@ Module Compilers.
                     => @Some argtype (prod_arg A B)
                   | _, _, _ => None
                   end
-             | type.arrow s d
+             | Compilers.type.arrow s d
                => match flat_of_type s, arg_of_type d with
                   | Some s, Some d => Some (arrow_arg s d)
                   | _, _ => None
@@ -2281,7 +2291,7 @@ Module Compilers.
 
         Fixpoint of_type (t : Compilers.type.type) : option type
           := match t with
-             | type.arrow s d
+             | Compilers.type.arrow s d
                => match arg_of_type s, of_type d with
                   | Some s, Some d => Some (arrow s d)
                   | _, _ => None
@@ -2308,7 +2318,7 @@ Module Compilers.
                           end
                      | None => None
                      end
-             | type.arrow s d => fun _ => None
+             | Compilers.type.arrow s d => fun _ => None
              | Compilers.type.list A
                => fun v
                   => option_map
@@ -2334,7 +2344,7 @@ Module Compilers.
                           | None => None
                           end
                      end
-             | type.arrow s d
+             | Compilers.type.arrow s d
                => fun v
                   => match try_transport_flat_of_type (fun s => P (s -> _)%ctype) s v with
                      | Some (existT s v)
@@ -2356,7 +2366,7 @@ Module Compilers.
         Fixpoint try_transport_of_type P (t : Compilers.type.type)
           : P t -> option { t' : _ & P (to_type t') }
           := match t with
-             | type.arrow s d
+             | Compilers.type.arrow s d
                => fun v
                   => match try_transport_arg_of_type (fun s => P (s -> _)%ctype) s v with
                      | Some (existT s v)
@@ -2375,22 +2385,22 @@ Module Compilers.
                        (fun '(existT t v) => existT (fun t => P (to_type t)) (flat t) v)
                        (try_transport_flat_of_type P t v)
              end.
-      End type_descr.
-      Import type_descr.Coercions.
+      End second_order.
+      Import second_order.Coercions.
 
       Fixpoint untranslate_translate_flat
                (P : Compilers.type.type -> Type)
                {R}
-               {t : type_descr.flat_type}
-               (e : P (type_descr.to_type t))
+               {t : second_order.flat_type}
+               (e : P (second_order.to_type t))
                {struct t}
-        : P (type.untranslate R (type.translate (type_descr.to_type t)))
-        := match t return P (type_descr.to_type t)
-                          -> P (type.untranslate R (type.translate (type_descr.to_type t)))
+        : P (type.untranslate R (type.translate (second_order.to_type t)))
+        := match t return P (second_order.to_type t)
+                          -> P (type.untranslate R (type.translate (second_order.to_type t)))
            with
-           | type_descr.type_primitive x => id
-           | type_descr.prod A B
-             => fun ab : P (type_descr.flat_to_type A * type_descr.flat_to_type B)%ctype
+           | second_order.type.type_primitive x => id
+           | second_order.type.prod A B
+             => fun ab : P (second_order.flat_to_type A * second_order.flat_to_type B)%ctype
                 => @untranslate_translate_flat
                      (fun a => P (a * _)%ctype)
                      R A
@@ -2398,7 +2408,7 @@ Module Compilers.
                         (fun b => P (_ * b)%ctype)
                         R B
                         ab)
-           | type_descr.list A
+           | second_order.type.list A
              => @untranslate_translate_flat
                   (fun t => P (Compilers.type.list t))
                   R A
@@ -2407,17 +2417,17 @@ Module Compilers.
       Fixpoint untranslate_translate_flat'
                (P : Compilers.type.type -> Type)
                {R}
-               {t : type_descr.flat_type}
-               (e : P (type.untranslate R (type.translate (type_descr.to_type t))))
+               {t : second_order.flat_type}
+               (e : P (type.untranslate R (type.translate (second_order.to_type t))))
                {struct t}
-        : P (type_descr.to_type t)
-        := match t return P (type.untranslate R (type.translate (type_descr.to_type t)))
-                          -> P (type_descr.to_type t)
+        : P (second_order.to_type t)
+        := match t return P (type.untranslate R (type.translate (second_order.to_type t)))
+                          -> P (second_order.to_type t)
            with
-           | type_descr.type_primitive x => id
-           | type_descr.prod A B
+           | second_order.type.type_primitive x => id
+           | second_order.type.prod A B
              => fun ab :
-                      (* ignore this line *) P (type.untranslate R (type.translate (type_descr.flat_to_type A)) * type.untranslate R (type.translate (type_descr.flat_to_type B)))%ctype
+                      (* ignore this line *) P (type.untranslate R (type.translate (second_order.flat_to_type A)) * type.untranslate R (type.translate (second_order.flat_to_type B)))%ctype
                 => @untranslate_translate_flat'
                      (fun a => P (a * _)%ctype)
                      R A
@@ -2425,52 +2435,52 @@ Module Compilers.
                         (fun b => P (_ * b)%ctype)
                         R B
                         ab)
-           | type_descr.list A
+           | second_order.type.list A
              => @untranslate_translate_flat'
                   (fun t => P (Compilers.type.list t))
                   R A
            end e.
 
       Definition transport_final_codomain_flat P {t}
-        : P (type_descr.flat_to_type t)
-          -> P (type.final_codomain (type_descr.flat_to_type t))
+        : P (second_order.flat_to_type t)
+          -> P (type.final_codomain (second_order.flat_to_type t))
         := match t with
-           | type_descr.type_primitive x => id
-           | type_descr.prod x x0 => id
-           | type_descr.list x => id
+           | second_order.type.type_primitive x => id
+           | second_order.type.prod x x0 => id
+           | second_order.type.list x => id
            end.
 
       Definition transport_final_codomain_flat' P {t}
-        : P (type.final_codomain (type_descr.flat_to_type t))
-          -> P (type_descr.flat_to_type t)
+        : P (type.final_codomain (second_order.flat_to_type t))
+          -> P (second_order.flat_to_type t)
         := match t with
-           | type_descr.type_primitive x => id
-           | type_descr.prod x x0 => id
-           | type_descr.list x => id
+           | second_order.type.type_primitive x => id
+           | second_order.type.prod x x0 => id
+           | second_order.type.list x => id
            end.
 
       Fixpoint untranslate_translate_arg
                {var}
                {R}
-               {t : type_descr.argtype}
-               (e : @Compilers.Uncurried.expr.default.expr var (type_descr.arg_to_type t))
+               {t : second_order.argtype}
+               (e : @Compilers.Uncurried.expr.default.expr var (second_order.arg_to_type t))
                {struct t}
-        : @Compilers.Uncurried.expr.default.expr var (type.untranslate R (type.translate (type_descr.arg_to_type t)))
-        := match t return Compilers.Uncurried.expr.default.expr (type_descr.arg_to_type t)
-                          -> Compilers.Uncurried.expr.default.expr (type.untranslate R (type.translate (type_descr.arg_to_type t)))
+        : @Compilers.Uncurried.expr.default.expr var (type.untranslate R (type.translate (second_order.arg_to_type t)))
+        := match t return Compilers.Uncurried.expr.default.expr (second_order.arg_to_type t)
+                          -> Compilers.Uncurried.expr.default.expr (type.untranslate R (type.translate (second_order.arg_to_type t)))
            with
-           | type_descr.flat_arg t
+           | second_order.type.flat_arg t
              => untranslate_translate_flat _
-           | type_descr.arrow_arg s d
+           | second_order.type.arrow_arg s d
              => fun e'
                 => Abs (fun v :
-                              (* ignore this line *) var (type.untranslate R (type.translate (type_descr.flat_to_type s)) * (type.untranslate R (type.translate (type_descr.arg_to_type d)) -> R))%ctype
+                              (* ignore this line *) var (type.untranslate R (type.translate (second_order.flat_to_type s)) * (type.untranslate R (type.translate (second_order.arg_to_type d)) -> R))%ctype
                         => (ident.snd @@ Var v)
                              @ (@untranslate_translate_arg
                                   var R d
                                   (e' @ (untranslate_translate_flat' _ (ident.fst @@ Var v)))))%expr
-           | type_descr.prod_arg A B
-             => fun e' : expr.default.expr (type_descr.arg_to_type A * type_descr.arg_to_type B)
+           | second_order.type.prod_arg A B
+             => fun e' : expr.default.expr (second_order.arg_to_type A * second_order.arg_to_type B)
                 => ((Abs (fun a => Abs (fun b => (Var a, Var b))))
                       @ (@untranslate_translate_arg var R A (ident.fst @@ e'))
                       @ (@untranslate_translate_arg var R B (ident.snd @@ e')))%expr
@@ -2480,30 +2490,30 @@ Module Compilers.
 
       Fixpoint call_fun_with_id_continuation'
                {var}
-               {t : type_descr.type}
-               (R := type.final_codomain (type_descr.to_type t))
+               {t : second_order.type}
+               (R := type.final_codomain (second_order.to_type t))
                (e : @expr (fun t0 =>
                              @Uncurried.expr.expr default.ident.ident var (type.untranslate R t0))
-                          (type.translate (type_descr.to_type t)))
+                          (type.translate (second_order.to_type t)))
                {struct t}
-        : @Compilers.Uncurried.expr.default.expr var (type_descr.to_type t)
+        : @Compilers.Uncurried.expr.default.expr var (second_order.to_type t)
         := match t
                  return (@expr (fun t0 =>
-                                  @Uncurried.expr.expr default.ident.ident var (type.untranslate (type.final_codomain (type_descr.to_type t)) t0))
-                               (type.translate (type_descr.to_type t)))
-                        -> @Compilers.Uncurried.expr.default.expr var (type_descr.to_type t)
+                                  @Uncurried.expr.expr default.ident.ident var (type.untranslate (type.final_codomain (second_order.to_type t)) t0))
+                               (type.translate (second_order.to_type t)))
+                        -> @Compilers.Uncurried.expr.default.expr var (second_order.to_type t)
            with
-           | type_descr.flat t
+           | second_order.type.flat t
              => fun e'
                 => transport_final_codomain_flat'
                      _
                      (@call_with_continuation
                         var _ _ e'
                         (fun e'' => transport_final_codomain_flat _ (untranslate_translate_flat' _ e'')))
-           | type_descr.arrow s d
+           | second_order.type.arrow s d
              => fun e' :
-                      (* ignore this line *) expr (type.translate (type_descr.arg_to_type s) * (type.translate (type_descr.to_type d) --->) --->)
-                => Abs (s:=type_descr.arg_to_type s) (d:=type_descr.to_type d)
+                      (* ignore this line *) expr (type.translate (second_order.arg_to_type s) * (type.translate (second_order.to_type d) --->) --->)
+                => Abs (s:=second_order.arg_to_type s) (d:=second_order.to_type d)
                        (fun v
                         => @call_fun_with_id_continuation'
                              var d
@@ -2513,15 +2523,15 @@ Module Compilers.
                                 f @ p)%cpsexpr)
            end e.
       Definition CallFunWithIdContinuation'
-                 {t : type_descr.type}
-                 (e : Expr (type.translate (type_descr.to_type t)))
-        : @Compilers.Uncurried.expr.default.Expr (type_descr.to_type t)
+                 {t : second_order.type}
+                 (e : Expr (type.translate (second_order.to_type t)))
+        : @Compilers.Uncurried.expr.default.Expr (second_order.to_type t)
         := fun var => @call_fun_with_id_continuation' _ t (e _).
 
       Definition CallFunWithIdContinuation
                  {t}
                  (e : Expr (type.translate t))
-        := match type_descr.try_transport_of_type (fun t => Expr (type.translate t)) _
+        := match second_order.try_transport_of_type (fun t => Expr (type.translate t)) _
                                                   e
                  as o return match o with None => _ | _ => _ end
            with
