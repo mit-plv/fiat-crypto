@@ -1814,7 +1814,7 @@ Qed.
 Ltac expand_lists _ :=
   let default_for A :=
       match goal with
-      | _ => constr:(_ : pointed A)
+      | _ => (eval lazy in (_ : pointed A))
       | _ => let __ := match goal with _ => idtac "Warning: could not infer a default value for list type" A end in
              constr:(I : I)
       end in
