@@ -4078,18 +4078,6 @@ Module Pipeline.
   Admitted.
 End Pipeline.
 
-Record mul_rargs :=
-  { rw : Expr (type.nat -> type.Z);
-    rs : Expr type.Z;
-    rc : Expr (type.list (type.Z * type.Z));
-    rn : Expr type.nat;
-    rlen_c : Expr type.nat;
-    ridxs : Expr (type.list type.nat);
-    rlen_idxs : Expr type.nat;
-    relax_zrange : zrange -> option zrange;
-    arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z * type.list type.Z));
-    out_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z)) }.
-
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
   := List.fold_right
        (fun allowed cur
@@ -4172,21 +4160,24 @@ Section rcarry_mul.
   Let idxs := (seq 0 n ++ [0; 1])%list%nat.
   Let f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
 
-  Definition make_carry_mul_rargs
-    : mul_rargs
-    := {| rw := rweight limbwidth;
-          rs := GallinaReify.AutoReify s;
-          rc := GallinaReify.AutoReify c;
-          rn := GallinaReify.AutoReify n;
-          ridxs := GallinaReify.AutoReify idxs;
-          rlen_c := GallinaReify.AutoReify (List.length c);
-          rlen_idxs := GallinaReify.AutoReify (List.length idxs);
-          relax_zrange := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z;
-          arg_bounds := (f_bounds, f_bounds);
-          out_bounds := f_bounds;
-       |}.
+  Definition relax_zrange_of_machine_wordsize
+    := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z.
+  Local Arguments relax_zrange_of_machine_wordsize / .
 
-  Definition check_args {T} (args : mul_rargs) (res : Pipeline.ErrorT T)
+  Let rw := rweight limbwidth.
+  Let rs := GallinaReify.AutoReify s.
+  Let rc := GallinaReify.AutoReify c.
+  Let rn := GallinaReify.AutoReify n.
+  Let ridxs := GallinaReify.AutoReify idxs.
+  Let rlen_c := GallinaReify.AutoReify (List.length c).
+  Let rlen_idxs := GallinaReify.AutoReify (List.length idxs).
+  Let relax_zrange := relax_zrange_of_machine_wordsize.
+  Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z * type.list type.Z))
+    := (f_bounds, f_bounds).
+  Let out_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z))
+    := f_bounds.
+
+  Definition check_args {T} (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
     := if negb (Qle_bool 1 limbwidth)%Q
        then Pipeline.Error (Pipeline.Value_not_le "1 ≤ limbwidth" 1%Q limbwidth)
@@ -4198,54 +4189,51 @@ Section rcarry_mul.
                       then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" n 0%nat)
                       else res.
 
-  Lemma check_args_success_id {T} {rv : T} {res args}
-    : check_args args res = Pipeline.Success rv
+  Lemma check_args_success_id {T} {rv : T} {res}
+    : check_args res = Pipeline.Success rv
       -> res = Pipeline.Success rv.
   Proof.
     cbv [check_args]; break_innermost_match; congruence.
   Qed.
 
   Definition rcarry_mul
-    := let opts := make_carry_mul_rargs in
-       let res := Pipeline.BoundsPipeline
-                    (opts.(relax_zrange))
+    := let res := Pipeline.BoundsPipeline
+                    (relax_zrange)
                     (s:=(type.list type.Z * type.list type.Z)%ctype)
                     (d:=(type.list type.Z)%ctype)
-                    (opts.(arg_bounds))
-                    (opts.(out_bounds))
+                    (arg_bounds)
+                    (out_bounds)
                     (fun var
                      => (carry_mul_gen _)
-                          @ (opts.(rw) _)
-                          @ (opts.(rs) _)
-                          @ (opts.(rc) _)
-                          @ (opts.(rn) _)
-                          @ (opts.(rlen_c) _)
-                          @ (opts.(ridxs) _)
-                          @ (opts.(rlen_idxs) _)
+                          @ (rw _)
+                          @ (rs _)
+                          @ (rc _)
+                          @ (rn _)
+                          @ (rlen_c _)
+                          @ (ridxs _)
+                          @ (rlen_idxs _)
                     )%expr in
-       check_args opts res.
+       check_args res.
 
   Definition rcarry_mul_correctT
-             (opts := make_carry_mul_rargs)
              rv
     := forall arg
               (arg' := @BoundsAnalysis.OfPHOAS.cast_back
                          _
-                         (opts.(relax_zrange))
-                         (opts.(arg_bounds))
+                         (relax_zrange)
+                         (arg_bounds)
                          arg)
               (Hf : List.length (fst arg) = n)
               (Hg : List.length (snd arg) = n),
       BoundsAnalysis.OfPHOAS.Interp
-        (opts.(relax_zrange))
-        (opts.(arg_bounds))
-        (bs:=opts.(out_bounds))
+        (relax_zrange)
+        (arg_bounds)
+        (bs:=out_bounds)
         arg
         rv
-      = Some (carry_mulmod (Interp opts.(rw)) s c n (Interp opts.(rlen_c)) idxs (Interp opts.(rlen_idxs)) arg').
+      = Some (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs) arg').
 
   Lemma rcarry_mul_correct
-        (opts := make_carry_mul_rargs)
         rv
         (Hrv : rcarry_mul = Pipeline.Success rv)
     : rcarry_mul_correctT rv.
@@ -4258,7 +4246,6 @@ Section rcarry_mul.
     eapply Pipeline.BoundsPipeline_correct in Hrv'.
     apply check_args_success_id in Hrv; inversion Hrv; subst.
     rewrite Hrv'.
-    subst opts.
     cbv [expr.Interp].
     cbn [expr.interp].
     apply f_equal; f_equal;
