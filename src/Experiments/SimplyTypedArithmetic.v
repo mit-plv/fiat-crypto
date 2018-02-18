@@ -308,12 +308,8 @@ Module Positional. Section Positional.
         [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs) (modulo:=fun x y => Z.modulo x y) (div:=fun x y => Z.div x y)
             by (subst; try assumption; auto using Z.div_mod); reflexivity ].
       eapply f_equal2; [|trivial]. eapply f_equal.
-      erewrite <- (expand_list_correct _ (-1)%Z f),
-      <- (expand_list_correct _ (-1)%Z g),
-      <- (expand_list_correct _ 0%nat idxs),
-      <- (expand_list_correct _ (-1,-1)%Z c)
-        by eassumption.
-      subst carry_mulmod; reflexivity.
+      expand_lists ().
+      refine eq_refl.
     Qed.
   End carry_mulmod.
 End Positional. End Positional.
