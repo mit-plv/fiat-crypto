@@ -329,6 +329,9 @@ Module Compilers.
              constr:(type_primitive rt)
       end.
 
+    Notation reify t := (ltac:(let rt := reify t in exact rt)) (only parsing).
+    Notation reify_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).
+
     Module Export Notations.
       Export Coercions.
       Delimit Scope ctype_scope with ctype.
