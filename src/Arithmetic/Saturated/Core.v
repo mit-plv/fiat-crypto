@@ -394,7 +394,7 @@ Module Columns.
     Proof using Type.
       cbv [nils B.Positional.zeros]; induction n as [|n]; [reflexivity|].
       change (repeat nil (S n)) with (@nil Z :: repeat nil n).
-      rewrite map_repeat, sum_nil. reflexivity.
+      rewrite Tuple.map_repeat, sum_nil. reflexivity.
     Qed.
 
     Lemma eval_nils n : eval (nils n) = 0.
