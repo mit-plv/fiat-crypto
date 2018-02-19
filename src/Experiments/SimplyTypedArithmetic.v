@@ -482,12 +482,6 @@ Module Columns.
             {weight_positive : forall i, weight i > 0}
             {weight_multiples : forall i, weight (S i) mod weight i = 0}
             {weight_divides : forall i : nat, weight (S i) / weight i > 0}.
-    (* This div and modulo will be instantiated with versions that use bitshifts if the denominator/modulus is a power of 2 *)
-    Context {div modulo : Z -> Z -> Z}
-            {div_correct : forall x y, div x y = x / y}
-            {modulo_correct : forall x y, modulo x y = x mod y}.
-
-    Hint Rewrite div_correct modulo_correct : to_div_mod.
 
     Definition eval n (x : list (list Z)) : Z := Positional.eval weight n (map sum x).
 
@@ -508,7 +502,7 @@ Module Columns.
         match digit with
         | nil => (0, 0)
         | x :: nil =>
-          (modulo x (weight (S n) / weight n), div x (weight (S n) / weight n))
+          (x mod (weight (S n) / weight n), x / (weight (S n) / weight n))
         | x :: y :: nil => Z.add_get_carry_full (weight (S n) / weight n) x y
         | x :: tl =>
           dlet rec := compact_digit tl in (* recursively get the sum and carry *)
