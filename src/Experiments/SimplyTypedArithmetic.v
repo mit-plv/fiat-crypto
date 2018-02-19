@@ -4162,12 +4162,12 @@ Qed.
 
 (** XXX TODO: Translate Jade's python script *)
 Section rcarry_mul.
-  Context (limbwidth : Q)
+  Context (n : nat)
           (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
 
-  Let n := Z.to_nat (Qceiling (Z.log2_up (s - Associational.eval c) / limbwidth)).
+  Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
   Let idxs := (seq 0 n ++ [0; 1])%list%nat.
   Let f_bounds := List.repeat r[0~>(2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z]%zrange n.
 
@@ -4255,7 +4255,7 @@ Section rcarry_mul.
       [ | clear -Hrv; cbv [check_args] in Hrv; break_innermost_match_hyps; discriminate ].
     erewrite <- carry_mul_gen_correct.
     eapply Pipeline.BoundsPipeline_correct in Hrv'.
-    apply check_args_success_id in Hrv; inversion Hrv; subst.
+    apply check_args_success_id in Hrv; inversion Hrv; subst rv.
     rewrite Hrv'.
     cbv [expr.Interp].
     cbn [expr.interp].
@@ -4350,13 +4350,13 @@ End PrintingNotations.
 
 
 Module X25519_64.
-  Definition limbwidth := 51%Q.
+  Definition n := 5%nat.
   Definition s := 2^255.
   Definition c := [(1, 19)].
   Definition machine_wordsize := 64.
 
   Derive base_51_carry_mul
-         SuchThat (rcarry_mul_correctT limbwidth s c machine_wordsize base_51_carry_mul)
+         SuchThat (rcarry_mul_correctT n s c machine_wordsize base_51_carry_mul)
          As base_51_carry_mul_correct.
   Proof. Time solve_rcarry_mul (). Time Qed.
 
@@ -4428,13 +4428,13 @@ End X25519_64.
 
 (*
 Module X25519_32.
-  Definition limbwidth := (25 + 1/2)%Q.
+  Definition n := 10%nat.
   Definition s := 2^255.
   Definition c := [(1, 19)].
   Definition machine_wordsize := 32.
 
   Derive base_25p5_carry_mul
-         SuchThat (rcarry_mul_correctT limbwidth s c machine_wordsize base_25p5_carry_mul)
+         SuchThat (rcarry_mul_correctT n s c machine_wordsize base_25p5_carry_mul)
          As base_25p5_carry_mul_correct.
   Proof. Time solve_rcarry_mul (). Time Qed.
 
