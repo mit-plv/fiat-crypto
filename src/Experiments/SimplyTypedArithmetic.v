@@ -495,32 +495,31 @@ Module Columns.
     Qed.
 
     Section compact_digit.
-      Context (n : nat).
+      Context (fw : Z). (* maximum size of the result *)
 
       (* Outputs (sum, carry) *)
       Fixpoint compact_digit (digit : list Z) : (Z * Z) :=
         match digit with
         | nil => (0, 0)
-        | x :: nil =>
-          (x mod (weight (S n) / weight n), x / (weight (S n) / weight n))
-        | x :: y :: nil => Z.add_get_carry_full (weight (S n) / weight n) x y
+        | x :: nil => (x mod fw, x / fw)
+        | x :: y :: nil => Z.add_get_carry_full fw x y
         | x :: tl =>
           dlet rec := compact_digit tl in (* recursively get the sum and carry *)
-          dlet sum_carry := Z.add_get_carry_full (weight (S n) / weight n) x (fst rec) in (* add the new value to the sum *)
+          dlet sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
           dlet carry' := (snd sum_carry + snd rec)%RT in (* add the two carries together *)
           (fst sum_carry, carry')
         end.
     End compact_digit.
 
     Definition compact_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
-      dlet sum_carry := compact_digit (length (fst acc_carry)) (snd acc_carry::digit) in
+      dlet sum_carry := compact_digit (weight (S (length (fst acc_carry))) / weight (length (fst acc_carry))) (snd acc_carry::digit) in
       (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
 
     Definition compact (xs : list (list Z)) : list Z * Z :=
       fold_right compact_step (nil,0) (rev xs).
 
-    Lemma compact_digit_mod i (xs : list Z) :
-      fst (compact_digit i xs)  = sum xs mod (weight (S i) / weight i).
+    Lemma compact_digit_mod fw (xs : list Z) :
+      fst (compact_digit fw xs)  = sum xs mod fw.
     Proof.
       induction xs; simpl compact_digit; cbv [Let_In];
         repeat match goal with
@@ -533,20 +532,20 @@ Module Columns.
                end.
     Qed. Hint Rewrite compact_digit_mod : to_div_mod.
 
-    Lemma compact_digit_div i (xs : list Z) :
-      snd (compact_digit i xs)  = sum xs / (weight (S i) / weight i).
+    Lemma compact_digit_div fw (xs : list Z) (fw_nz : fw <> 0) :
+      snd (compact_digit fw xs)  = sum xs / fw.
     Proof.
       induction xs; simpl compact_digit; cbv [Let_In];
         repeat match goal with
                | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
-               | _ => rewrite <-Z.div_add_mod_cond_r by auto using Z.positive_is_nonzero
+               | _ => rewrite <-Z.div_add_mod_cond_r by auto
                | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
                | _ => progress break_match; try discriminate
                | _ => reflexivity
                | _ => f_equal; ring
                end.
-    Qed. Hint Rewrite compact_digit_div : to_div_mod.
+    Qed. Hint Rewrite compact_digit_div using auto with zarith : to_div_mod.
 
     (* helper for some of the modular logic in compact *)
     Lemma compact_mod_step a b c d: 0 < a -> 0 < b ->
@@ -589,9 +588,6 @@ Module Columns.
              end.
     Qed.
     Hint Rewrite compact_length : distr_length.
-
-    SearchAbout fold_right.
-    (* fold_right_invariant is not strong enough--does not enforce that new input is next in sequence *)
 
     Lemma compact_div_mod n inp :
       length inp = n ->
