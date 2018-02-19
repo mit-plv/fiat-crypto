@@ -494,34 +494,34 @@ Module Columns.
       apply Positional.eval_snoc; distr_length.
     Qed.
 
-    Section compact_digit.
+    Section flatten_column.
       Context (fw : Z). (* maximum size of the result *)
 
       (* Outputs (sum, carry) *)
-      Fixpoint compact_digit (digit : list Z) : (Z * Z) :=
+      Fixpoint flatten_column (digit : list Z) : (Z * Z) :=
         match digit with
         | nil => (0, 0)
         | x :: nil => (x mod fw, x / fw)
         | x :: y :: nil => Z.add_get_carry_full fw x y
         | x :: tl =>
-          dlet rec := compact_digit tl in (* recursively get the sum and carry *)
+          dlet rec := flatten_column tl in (* recursively get the sum and carry *)
           dlet sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
           dlet carry' := (snd sum_carry + snd rec)%RT in (* add the two carries together *)
           (fst sum_carry, carry')
         end.
-    End compact_digit.
+    End flatten_column.
 
-    Definition compact_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
-      dlet sum_carry := compact_digit (weight (S (length (fst acc_carry))) / weight (length (fst acc_carry))) (snd acc_carry::digit) in
+    Definition flatten_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
+      dlet sum_carry := flatten_column (weight (S (length (fst acc_carry))) / weight (length (fst acc_carry))) (snd acc_carry::digit) in
       (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
 
-    Definition compact (xs : list (list Z)) : list Z * Z :=
-      fold_right compact_step (nil,0) (rev xs).
+    Definition flatten (xs : list (list Z)) : list Z * Z :=
+      fold_right flatten_step (nil,0) (rev xs).
 
-    Lemma compact_digit_mod fw (xs : list Z) :
-      fst (compact_digit fw xs)  = sum xs mod fw.
+    Lemma flatten_column_mod fw (xs : list Z) :
+      fst (flatten_column fw xs)  = sum xs mod fw.
     Proof.
-      induction xs; simpl compact_digit; cbv [Let_In];
+      induction xs; simpl flatten_column; cbv [Let_In];
         repeat match goal with
                | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
@@ -530,12 +530,12 @@ Module Columns.
                | _ => reflexivity
                | _ => f_equal; ring
                end.
-    Qed. Hint Rewrite compact_digit_mod : to_div_mod.
+    Qed. Hint Rewrite flatten_column_mod : to_div_mod.
 
-    Lemma compact_digit_div fw (xs : list Z) (fw_nz : fw <> 0) :
-      snd (compact_digit fw xs)  = sum xs / fw.
+    Lemma flatten_column_div fw (xs : list Z) (fw_nz : fw <> 0) :
+      snd (flatten_column fw xs)  = sum xs / fw.
     Proof.
-      induction xs; simpl compact_digit; cbv [Let_In];
+      induction xs; simpl flatten_column; cbv [Let_In];
         repeat match goal with
                | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
@@ -545,10 +545,10 @@ Module Columns.
                | _ => reflexivity
                | _ => f_equal; ring
                end.
-    Qed. Hint Rewrite compact_digit_div using auto with zarith : to_div_mod.
+    Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
 
-    (* helper for some of the modular logic in compact *)
-    Lemma compact_mod_step a b c d: 0 < a -> 0 < b ->
+    (* helper for some of the modular logic in flatten *)
+    Lemma flatten_mod_step a b c d: 0 < a -> 0 < b ->
       c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
     Proof.
       clear. rewrite Z.add_comm.
@@ -565,7 +565,7 @@ Module Columns.
         apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
     Qed.
 
-    Lemma compact_div_step a b c d : 0 < a -> 0 < b ->
+    Lemma flatten_div_step a b c d : 0 < a -> 0 < b ->
       (c / a + d) / b = (a * d + c) / (a * b).
     Proof.
       clear. intros Ha Hb.
@@ -576,27 +576,27 @@ Module Columns.
 
     Hint Rewrite Positional.eval_nil : push_eval.
 
-    Lemma compact_length inp : length (fst (compact inp)) = length inp.
+    Lemma flatten_length inp : length (fst (flatten inp)) = length inp.
     Proof.
-      cbv [compact].
+      cbv [flatten].
       induction inp using rev_ind; [reflexivity|].
       repeat match goal with
              | _ => progress autorewrite with list cancel_pair push_fold_right
-             | _ => progress (unfold compact_step; fold compact_step)
+             | _ => progress (unfold flatten_step; fold flatten_step)
              | _ => progress cbv [Let_In]
              | _ => solve [distr_length]
              end.
     Qed.
-    Hint Rewrite compact_length : distr_length.
+    Hint Rewrite flatten_length : distr_length.
 
-    Lemma compact_div_mod n inp :
+    Lemma flatten_div_mod n inp :
       length inp = n ->
-      (Positional.eval weight n (fst (compact inp))
+      (Positional.eval weight n (fst (flatten inp))
        = (eval n inp) mod (weight n))
-        /\ (snd (compact inp) = eval n inp / weight n).
+        /\ (snd (flatten inp) = eval n inp / weight n).
     Proof.
       (* to make the invariant take the right form, we make everything depend on output length, not input length *)
-      intro. subst n. rewrite <-(compact_length inp). cbv [compact].
+      intro. subst n. rewrite <-(flatten_length inp). cbv [flatten].
       induction inp using rev_ind;
         repeat match goal with
                | _ => progress intros
@@ -607,28 +607,28 @@ Module Columns.
                | _ => rewrite IHmod
                | _ => rewrite IHdiv
                | _ => rewrite sum_cons
-               | _ => rewrite eval_snoc by (rewrite <-(compact_length inp); reflexivity)
-               | _ => rewrite compact_mod_step by auto using Z.gt_lt
-               | _ => rewrite compact_div_step by auto using Z.gt_lt
+               | _ => rewrite eval_snoc by (rewrite <-(flatten_length inp); reflexivity)
+               | _ => rewrite flatten_mod_step by auto using Z.gt_lt
+               | _ => rewrite flatten_div_step by auto using Z.gt_lt
                | _ => rewrite Z.mul_div_eq_full by auto
                | _ => rewrite weight_multiples
-               | _ => progress (unfold compact_step; fold compact_step)
+               | _ => progress (unfold flatten_step; fold flatten_step)
                | _ => progress cbv [Let_In]
                | _ => progress autorewrite with list cancel_pair distr_length to_div_mod push_fold_right
                | _ => f_equal; ring
                end.
     Qed.
 
-    Lemma compact_mod {n} inp :
+    Lemma flatten_mod {n} inp :
       length inp = n ->
-      (Positional.eval weight n (fst (compact inp)) = (eval n inp) mod (weight n)).
-    Proof. intro. apply (proj1 (compact_div_mod n inp ltac:(assumption))). Qed.
-    Hint Rewrite @compact_mod : push_eval.
+      (Positional.eval weight n (fst (flatten inp)) = (eval n inp) mod (weight n)).
+    Proof. intro. apply (proj1 (flatten_div_mod n inp ltac:(assumption))). Qed.
+    Hint Rewrite @flatten_mod : push_eval.
 
-    Lemma compact_div {n} inp :
-      length inp = n -> snd (compact inp) = eval n inp / weight n.
-    Proof. intro. apply (proj2 (compact_div_mod n inp ltac:(assumption))). Qed.
-    Hint Rewrite @compact_div : push_eval.
+    Lemma flatten_div {n} inp :
+      length inp = n -> snd (flatten inp) = eval n inp / weight n.
+    Proof. intro. apply (proj2 (flatten_div_mod n inp ltac:(assumption))). Qed.
+    Hint Rewrite @flatten_div : push_eval.
 
     (* nils *)
     Definition nils n : list (list Z) := List.repeat nil n.
@@ -688,7 +688,7 @@ Module Columns.
         let p_a := Positional.to_associational weight n p in
         let q_a := Positional.to_associational weight n q in
         let pq_a := MulSplit.Associational.sat_mul s p_a q_a in
-        fst (compact (from_associational m pq_a)).
+        fst (flatten (from_associational m pq_a)).
     End mul.
   End Columns.
 End Columns.
