@@ -1,36 +1,35 @@
+Require Import Crypto.Util.Notations.
 Require Import Coq.NArith.BinNat.
 Require Import Coq.micromega.Lia.
 
 Open Scope N_scope.
 
 
-(* This file proves an implementation of the variant of Barrett
-   reduction described in
-   http://www.ridiculousfish.com/blog/posts/labor-of-division-episode-i.html *)
+(** This file proves an implementation of the variant of Barrett reduction
+    described in
+    http://www.ridiculousfish.com/blog/posts/labor-of-division-episode-i.html *)
 
 
-(* To simulate C behavior with fixed-width words, we introduce a word
-   data type and associated operations that automatically take
-   modulus. We'll then prove the moduli are all no-ops (save one which
-   is a subtraction).
+(* To simulate C behavior with fixed-width words, we introduce a word data type
+   and associated operations that automatically take a modulus. We'll then prove
+   the moduli are all no-ops (save one which is a subtraction).
 
-   TODO(davidben): This does not perfectly match C's behavior. In C,
-   operations on types smaller than [int], notably [uint16_t], promote
-   both types to [int] first. Assuming a standard 32-bit [int],
-   multiplying two [uint32_t]s is always defined, but multiplying two
-   [uint16_t]s may not be! However, we never multiply [uint16_t]s, and
-   we would otherwise need an unreasonable large expression to
-   overflow [int] by way of promoted [uint16_t] additions. *)
+   TODO(davidben): This does not perfectly match C's behavior. In C, operations
+   on types smaller than [int], notably [uint16_t], promote both types to [int]
+   first. Assuming a standard 32-bit [int], multiplying two [uint32_t]s is
+   always defined, but multiplying two [uint16_t]s may not be! However, we never
+   multiply [uint16_t]s, and we would otherwise need an unreasonably large
+   expression to overflow [int] by way of promoted [uint16_t] additions. *)
 
-(* First, the C data types will ultimately compile down to a bunch of
-   extra modulus operations, which we must remove. Define three
-   primitive wrapping operations which we'll instruct [cbn] to leave
-   alone and match on in the proof script.
+(* First, the C data types will ultimately compile down to a bunch of extra
+   modulus operations, which we must remove. Define three primitive wrapping
+   operations which we'll instruct [cbn] to leave alone and match on in the
+   proof script.
 
-   [wrap] is used when we expect [val] to already be reduced. [wrap']
-   is when we expect one subtraction by [2^bits]. [sub_wrapped] can be
-   implemented in terms of [wrap'], but we make it a primitive so the
-   proof script can treat it more efficiently. *)
+   [wrap] is used when we expect [val] to already be reduced. [wrap'] is when we
+   expect one subtraction by [2^bits]. [sub_wrapped] can be implemented in terms
+   of [wrap'], but we make it a primitive so the proof script can treat it more
+   efficiently. *)
 Definition wrap (bits val : N) : N := val mod 2^bits.
 Definition wrap' := wrap.
 Definition sub_wrapped (bits a b : N) : N := wrap' bits (a + 2^bits - b).
@@ -40,7 +39,7 @@ Inductive word (bits : N) :=
 | Word : N -> word bits.
 
 Definition to_N {bits : N} (a : word bits) : N :=
-  match a with Word _ v => v end.
+  match a with Word v => v end.
 Definition to_word {bits : N} (val : N) :=
   Word bits (wrap bits val).
 
@@ -54,8 +53,11 @@ Definition word_add {aw bw : N} := word_binop aw bw N.add.
 Definition word_sub {aw bw : N} := word_binop aw bw (sub_wrapped (N.max aw bw)).
 Definition word_mul {aw bw : N} := word_binop aw bw N.mul.
 Definition word_div {aw bw : N} := word_binop aw bw N.div.
-Definition word_shiftl {aw bw : N} := word_binop aw bw N.shiftl.
-Definition word_shiftr {aw bw : N} := word_binop aw bw N.shiftr.
+
+Definition word_shiftl {aw bw : N} (a : word aw) (b : word bw) : word aw :=
+  to_word (N.shiftl (to_N a) (to_N b)).
+Definition word_shiftr {aw bw : N} (a : word aw) (b : word bw) : word aw :=
+  to_word (N.shiftr (to_N a) (to_N b)).
 
 Definition word_cast (from to : N) (a : word from) : word to :=
   to_word (to_N a).
@@ -83,8 +85,8 @@ Infix "+" := word_add : word_scope.
 Infix "-" := word_sub : word_scope.
 Infix "*" := word_mul : word_scope.
 Infix "/" := word_div : word_scope.
-Infix "<<" := word_shiftl (at level 30, no associativity) : word_scope.
-Infix ">>" := word_shiftr (at level 30, no associativity) : word_scope.
+Infix "<<" := word_shiftl : word_scope.
+Infix ">>" := word_shiftr : word_scope.
 Notation "1" := (N_to_u32 1) : word_scope.
 Notation "32" := (N_to_u32 32) : word_scope.
 
@@ -311,19 +313,19 @@ Qed.
    bounds. Before doing so, introduce a lemma into the context that
    the value is bounded. This is allows later goals to make use of
    earlier bounds. *)
-Ltac replace_innermost_to_word expr :=
+Local Ltac replace_innermost_wrap expr :=
   match expr with
   | context[wrap ?x ?y] =>
-    first [ replace_innermost_to_word y |
+    first [ replace_innermost_wrap y |
             assert ((wrap x y) < 2^x) by (apply wrap_bound);
             replace (wrap x y) with y in * ]
   | context[wrap' ?x ?y] =>
-    first [ replace_innermost_to_word y |
+    first [ replace_innermost_wrap y |
             assert ((wrap' x y) < 2^x) by (unfold wrap'; apply wrap_bound);
             replace (wrap' x y) with (y - 2^x) in * ]
   | context[sub_wrapped ?x ?y ?z] =>
-    first [ replace_innermost_to_word y |
-            replace_innermost_to_word z |
+    first [ replace_innermost_wrap y |
+            replace_innermost_wrap z |
             assert ((sub_wrapped x y z) < 2^x) by (unfold sub_wrapped, wrap';
                                                    apply wrap_bound);
             replace (sub_wrapped x y z) with (y - z) in * ]
@@ -373,7 +375,7 @@ Proof.
            (* Perform [a_minus_b_div_2_plus_b] earlier, so the
               generated hypotheses match too. *)
            | _ => rewrite a_minus_b_div_2_plus_b
-           | _ => replace_innermost_to_word x
+           | _ => replace_innermost_wrap x
            end
          | _ => rewrite sub_wrapped_noop
          end;
