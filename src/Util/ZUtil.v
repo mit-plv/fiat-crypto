@@ -885,14 +885,6 @@ Module Z.
   Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
   Hint Rewrite <- div_mod''' using zutil_arith : zsimplify.
 
-  Lemma div_sub_mod_exact a b : b <> 0 -> a / b = (a - a mod b) / b.
-  Proof.
-    intro.
-    rewrite (Z.div_mod a b) at 2 by lia.
-    autorewrite with zsimplify.
-    reflexivity.
-  Qed.
-
   Definition opp_distr_if (b : bool) x y : -(if b then x else y) = if b then -x else -y.
   Proof. destruct b; reflexivity. Qed.
   Hint Rewrite opp_distr_if : push_Zopp.
@@ -938,43 +930,12 @@ Module Z.
   Hint Rewrite div_l_distr_if : push_Zdiv.
   Hint Rewrite <- div_l_distr_if : pull_Zdiv.
 
-  Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
-  Proof.
-    intros; rewrite (Z_div_exact_full_2 x d) at 1 by assumption.
-    rewrite Z.div_add_l' by assumption; lia.
-  Qed.
-  Hint Rewrite div_add_exact using zutil_arith : zsimplify.
-
   Lemma sub_mod_mod_0 x d : (x - x mod d) mod d = 0.
   Proof.
     destruct (Z_zerop d); subst; autorewrite with push_Zmod zsimplify; reflexivity.
   Qed.
   Hint Resolve sub_mod_mod_0 : zarith.
   Hint Rewrite sub_mod_mod_0 : zsimplify.
-
-  Lemma div_sub_mod_cond x y d
-    : d <> 0
-      -> (x - y) / d
-         = x / d + ((x mod d - y) / d).
-  Proof. clear.
-         intro.
-         replace (x - y) with ((x - x mod d) + (x mod d - y)) by lia.
-         rewrite div_add_exact by auto with zarith.
-         rewrite <- Z.div_sub_mod_exact by lia; lia.
-  Qed.
-  Hint Resolve div_sub_mod_cond : zarith.
-
-  Lemma div_add_mod_cond_l : forall x y d, d <> 0 -> (x + y) / d = (x mod d + y) / d + x / d.
-  Proof.
-    intros. replace (x + y) with ((x - x mod d) + (x mod d + y)) by lia.
-    rewrite Z.div_add_exact by auto with zarith.
-    rewrite <- Z.div_sub_mod_exact by lia; lia.
-  Qed.
-
-  Lemma div_add_mod_cond_r : forall x y d, d <> 0 -> (x + y) / d = (x + y mod d) / d + y / d.
-  Proof.
-    intros. rewrite Z.add_comm, div_add_mod_cond_l by auto. repeat (f_equal; try ring).
-  Qed.
 
   Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
   Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
