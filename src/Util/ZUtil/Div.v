@@ -116,4 +116,44 @@ Module Z.
     intros; apply Z.div_pos; omega.
   Qed.
   Hint Resolve div_nonneg : zarith.
+
+  Lemma div_add_exact x y d : d <> 0 -> x mod d = 0 -> (x + y) / d = x / d + y / d.
+  Proof.
+    intros; rewrite (Z_div_exact_full_2 x d) at 1 by assumption.
+    rewrite Z.div_add_l' by assumption; lia.
+  Qed.
+  Hint Rewrite div_add_exact using zutil_arith : zsimplify.
+
+  Lemma div_sub_mod_exact a b : b <> 0 -> a / b = (a - a mod b) / b.
+  Proof.
+    intro.
+    rewrite (Z.div_mod a b) at 2 by lia.
+    autorewrite with zsimplify.
+    reflexivity.
+  Qed.
+
+  Lemma div_sub_mod_cond x y d
+    : d <> 0
+      -> (x - y) / d
+         = x / d + ((x mod d - y) / d).
+  Proof. clear.
+         intro.
+         replace (x - y) with ((x - x mod d) + (x mod d - y)) by lia.
+         rewrite Z.div_add_exact by (autorewrite with pull_Zmod zsimplify; auto).
+         rewrite <- Z.div_sub_mod_exact by lia; lia.
+  Qed.
+  Hint Resolve div_sub_mod_cond : zarith.
+
+  Lemma div_add_mod_cond_l : forall x y d, d <> 0 -> (x + y) / d = (x mod d + y) / d + x / d.
+  Proof.
+    intros. replace (x + y) with ((x - x mod d) + (x mod d + y)) by lia.
+    rewrite Z.div_add_exact by (autorewrite with pull_Zmod zsimplify; auto).
+    rewrite <- Z.div_sub_mod_exact by lia; lia.
+  Qed.
+
+  Lemma div_add_mod_cond_r : forall x y d, d <> 0 -> (x + y) / d = (x + y mod d) / d + y / d.
+  Proof.
+    intros. rewrite Z.add_comm, div_add_mod_cond_l by auto. repeat (f_equal; try ring).
+  Qed.
+
 End Z.
