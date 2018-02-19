@@ -2440,7 +2440,7 @@ Module Compilers.
                     => cps_of (Uncurried.expr.default.ident.interp idc)
                   | ident.Let_In tx tC
                     => fun '((x, f) : (interp R (type.translate tx)
-                                       * (interp R (type.translate tx) * (interp R (type.translate tC) -> R) -> R )))
+                                       * (interp R (type.translate tx) * (interp R (type.translate tC) -> R) -> R)))
                            (k : interp R (type.translate tC) -> R)
                        => @LetIn.Let_In
                             (type.interp R (type.translate tx)) (fun _ => R)
@@ -3105,7 +3105,6 @@ Module Compilers.
     Module ident.
       Section interp.
         Context {var : type -> Type}.
-        Eval compute in (fun a b => value var (type.Z * type.Z)).
         Fixpoint interp_let_in {tC tx : type} {struct tx} : value var tx -> (value var tx -> value var tC) -> value var tC
           := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
              | type.arrow _ _
