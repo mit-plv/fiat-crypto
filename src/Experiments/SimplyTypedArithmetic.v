@@ -228,9 +228,8 @@ Module Positional. Section Positional.
          from_associational n (a_a ++ b_a).
     Lemma eval_add n (f g:list Z)
           (Hf : length f = n) (Hg : length g = n) :
-      eval n (add n f g) mod m = (eval n f + eval n g) mod m.
-    Proof. cbv [add]; rewrite Hm in *; push; trivial.
-    destruct n; auto.                                         Qed.
+      eval n (add n f g) = (eval n f + eval n g).
+    Proof. cbv [add]; push; trivial. destruct n; auto.        Qed.
   End add.
 
   Section sub.
