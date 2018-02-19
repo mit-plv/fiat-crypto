@@ -97,8 +97,8 @@ Module Associational.
     Definition carryterm (w fw:Z) (t:Z * Z) :=
       if (Z.eqb (fst t) w)
       then dlet_nd t2 := snd t in
-           dlet_nd d2 := Z.div t2 fw in
-           dlet_nd m2 := Z.modulo t2 fw in
+           dlet_nd d2 := t2 / fw in
+           dlet_nd m2 := t2 mod fw in
            [(w * fw, d2);(w,m2)]
       else [t].
 
@@ -193,7 +193,7 @@ Module Positional. Section Positional.
     List.fold_right (fun t ls =>
       let p := place t (pred n) in
       add_to_nth (fst p) (snd p) ls ) (zeros n) p.
-  Lemma eval_from_associational {n} p (n_nz:n<>O \/ p = nil) :
+  Lemma eval_from_associational n p (n_nz:n<>O \/ p = nil) :
     eval n (from_associational n p) = Associational.eval p.
   Proof. destruct n_nz; [ induction p | subst p ];
   cbv [from_associational] in *; push; try
@@ -207,11 +207,9 @@ Module Positional. Section Positional.
   Hint Rewrite length_from_associational : distr_length.
 
   Section mulmod.
-    (** TODO(for jadep, from jgross): Add a comment about why we take
-        in [m] rather than just using [s - Associational.eval c], or
-        just remove [m] *)
-    Context (m:Z) (m_nz:m <> 0) (s:Z) (s_nz:s <> 0)
-            (c:list (Z*Z)) (Hm:m = s - Associational.eval c).
+    Context (s:Z) (s_nz:s <> 0)
+            (c:list (Z*Z))
+            (m_nz:s - Associational.eval c <> 0).
     Definition mulmod (n:nat) (a b:list Z) : list Z
       := let a_a := to_associational n a in
          let b_a := to_associational n b in
@@ -220,64 +218,61 @@ Module Positional. Section Positional.
          from_associational n abm_a.
     Lemma eval_mulmod n (f g:list Z)
           (Hf : length f = n) (Hg : length g = n) :
-      eval n (mulmod n f g) mod m = (eval n f * eval n g) mod m.
-    Proof. cbv [mulmod]; rewrite Hm in *; push; trivial.
+      eval n (mulmod n f g) mod (s - Associational.eval c)
+      = (eval n f * eval n g) mod (s - Associational.eval c).
+    Proof. cbv [mulmod]; push; trivial.
     destruct f, g; simpl in *; [ right; subst n | left; try omega.. ].
     clear; cbv -[Associational.reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
   End mulmod.
   Hint Rewrite @eval_mulmod : push_eval.
 
-  Section add.
-    Context (m:Z) (m_nz:m <> 0) (s:Z) (s_nz:s <> 0)
-            (c:list (Z*Z)) (Hm:m = s - Associational.eval c).
-    Definition add (n:nat) (a b:list Z) : list Z
-      := let a_a := to_associational n a in
-         let b_a := to_associational n b in
-         from_associational n (a_a ++ b_a).
-    Lemma eval_add n (f g:list Z)
-          (Hf : length f = n) (Hg : length g = n) :
-      eval n (add n f g) = (eval n f + eval n g).
-    Proof. cbv [add]; push; trivial. destruct n; auto.        Qed.
-    Lemma length_add n f g
-          (Hf : length f = n) (Hg : length g = n) :
-      length (add n f g) = n.
-    Proof. clear -Hf Hf; cbv [add]; distr_length.             Qed.
-  End add.
+  Definition add (n:nat) (a b:list Z) : list Z
+    := let a_a := to_associational n a in
+       let b_a := to_associational n b in
+       from_associational n (a_a ++ b_a).
+  Lemma eval_add n (f g:list Z)
+        (Hf : length f = n) (Hg : length g = n) :
+    eval n (add n f g) = (eval n f + eval n g).
+  Proof. cbv [add]; push; trivial. destruct n; auto.          Qed.
   Hint Rewrite @eval_add : push_eval.
+  Lemma length_add n f g
+        (Hf : length f = n) (Hg : length g = n) :
+    length (add n f g) = n.
+  Proof. clear -Hf Hf; cbv [add]; distr_length.               Qed.
   Hint Rewrite @length_add : distr_length.
 
   Section Carries.
-    Definition carry {n m} (index:nat) (p:list Z) : list Z :=
+    Definition carry n m (index:nat) (p:list Z) : list Z :=
       from_associational
         m (@Associational.carry (weight index)
                                 (weight (S index) / weight index)
                                 (to_associational n p)).
 
-    Lemma eval_carry {n m} i p: (n <> 0%nat) -> (m <> 0%nat) ->
+    Lemma eval_carry n m i p: (n <> 0%nat) -> (m <> 0%nat) ->
                               weight (S i) / weight i <> 0 ->
-      eval m (carry (n:=n) (m:=m) i p) = eval n p.
+      eval m (carry n m i p) = eval n p.
     Proof.
       cbv [carry]; intros; push; [|tauto].
       rewrite @Associational.eval_carry by eauto.
       apply eval_to_associational.
     Qed. Hint Rewrite @eval_carry : push_eval.
 
-    Definition carry_reduce {n} (s:Z) (c:list (Z * Z))
+    Definition carry_reduce n (s:Z) (c:list (Z * Z))
                (index:nat) (p : list Z) :=
       from_associational
         n (Associational.reduce
              s c (to_associational (S n) (@carry n (S n) index p))).
 
-    Lemma eval_carry_reduce {n} s c index p :
+    Lemma eval_carry_reduce n s c index p :
       (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
       (weight (S index) / weight index <> 0) ->
-      eval n (@carry_reduce n s c index p) mod (s - Associational.eval c)
+      eval n (carry_reduce n s c index p) mod (s - Associational.eval c)
       = eval n p mod (s - Associational.eval c).
     Proof. cbv [carry_reduce]; intros; push; auto.            Qed.
     Hint Rewrite @eval_carry_reduce : push_eval.
     Lemma length_carry_reduce n s c index p
-      : length p = n -> length (@carry_reduce n s c index p) = n.
+      : length p = n -> length (carry_reduce n s c index p) = n.
     Proof. cbv [carry_reduce]; distr_length.                  Qed.
     Hint Rewrite @length_carry_reduce : distr_length.
 
@@ -288,13 +283,13 @@ Module Positional. Section Positional.
       `Eval cbv - [Z.add] in (fun a b c d => fold_right Z.add d [a;b;c]).`
 
       will produce [fun a b c d => (a + (b + (c + d)))].*)
-    Definition chained_carries {n} s c p (idxs : list nat) :=
-      fold_right (fun a b => @carry_reduce n s c a b) p (rev idxs).
+    Definition chained_carries n s c p (idxs : list nat) :=
+      fold_right (fun a b => carry_reduce n s c a b) p (rev idxs).
 
-    Lemma eval_chained_carries {n} s c p idxs :
+    Lemma eval_chained_carries n s c p idxs :
       (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
       (forall i, In i idxs -> weight (S i) / weight i <> 0) ->
-      eval n (@chained_carries n s c p idxs) mod (s - Associational.eval c)
+      eval n (chained_carries n s c p idxs) mod (s - Associational.eval c)
       = eval n p mod (s - Associational.eval c).
     Proof using Type*.
       cbv [chained_carries]; intros; push.
@@ -310,72 +305,76 @@ Module Positional. Section Positional.
 
     (* Reverse of [eval]; translate from Z to basesystem by putting
     everything in first digit and then carrying. *)
-    Definition encode {n} s c (x : Z) : list Z :=
-      chained_carries (n:=n) s c (from_associational n [(1,x)]) (seq 0 n).
-    Lemma eval_encode {n} s c x :
+    Definition encode n s c (x : Z) : list Z :=
+      chained_carries n s c (from_associational n [(1,x)]) (seq 0 n).
+    Lemma eval_encode n s c x :
       (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
       (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
-      eval n (@encode n s c x) mod (s - Associational.eval c)
+      eval n (encode n s c x) mod (s - Associational.eval c)
       = x mod (s - Associational.eval c).
     Proof using Type*. cbv [encode]; intros; push; auto; f_equal; omega. Qed.
     Lemma length_encode n s c x
-      : length (encode (n:=n) s c x) = n.
+      : length (encode n s c x) = n.
     Proof. cbv [encode]; repeat distr_length.                 Qed.
   End Carries.
   Hint Rewrite @eval_encode : push_eval.
   Hint Rewrite @length_encode : distr_length.
 
   Section sub.
-    Definition negate_snd (n:nat) (a:list Z) : list Z
+    Context (n:nat)
+            (s:Z) (s_nz:s <> 0)
+            (c:list (Z * Z))
+            (m_nz:s - Associational.eval c <> 0)
+            (coef:Z).
+
+    Definition negate_snd (a:list Z) : list Z
       := let A := to_associational n a in
          let negA := Associational.negate_snd A in
          from_associational n negA.
 
-    Definition balance (n:nat) s c (coef:Z) : list Z
-      := encode (n:=n) s c (coef * (s - Associational.eval c)).
+    Definition balance : list Z
+      := encode n s c (coef * (s - Associational.eval c)).
 
-    Definition sub (n:nat) s c (coef:Z) (a b:list Z) : list Z
-      := let ca := add n (balance n s c coef) a in
-         let _b := negate_snd n b in
+    Definition sub (a b:list Z) : list Z
+      := let ca := add n balance a in
+         let _b := negate_snd b in
          add n ca _b.
-    Lemma eval_sub n s c coef a b
-      : (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
-        (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
+    Lemma eval_sub a b
+      : (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
         (List.length a = n) -> (List.length b = n) ->
-        eval n (sub n s c coef a b) mod (s - Associational.eval c)
+        eval n (sub a b) mod (s - Associational.eval c)
         = (eval n a - eval n b) mod (s - Associational.eval c).
     Proof.
-      intros; cbv [sub balance negate_snd]; push; repeat distr_length; eauto.
+      destruct (zerop n); subst; try reflexivity.
+      intros; cbv [sub balance negate_snd]; push; repeat distr_length;
+        eauto with omega.
       push_Zmod; push; push_Zmod; pull_Zmod; distr_length; eauto.
       f_equal; omega.
     Qed.
     Hint Rewrite eval_sub : push_eval.
-    Lemma length_sub n s c coef a b
+    Lemma length_sub a b
       : length a = n -> length b = n ->
-        length (sub n s c coef a b) = n.
+        length (sub a b) = n.
     Proof. intros; cbv [sub balance negate_snd]; repeat distr_length. Qed.
     Hint Rewrite length_sub : distr_length.
-    Definition opp (n:nat) s c (coef:Z) (a:list Z) : list Z
-      := sub n s c coef (zeros n) a.
+    Definition opp (a:list Z) : list Z
+      := sub (zeros n) a.
     Lemma eval_opp
-          (s:Z)
-          (c:list (Z*Z))
-          n coef (f:list Z)
-          (Hf : length f = n)
-      : (s <> 0) -> (s - Associational.eval c <> 0) -> (n <> 0%nat) ->
+          (a:list Z)
+      : (length a = n) ->
         (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
-        eval n (opp n s c coef f) mod (s - Associational.eval c)
-        = (- eval n f) mod (s - Associational.eval c).
+        eval n (opp a) mod (s - Associational.eval c)
+        = (- eval n a) mod (s - Associational.eval c).
     Proof. intros; cbv [opp]; push; distr_length; auto.       Qed.
-    Lemma length_opp n s c coef a
-      : length a = n -> length (opp n s c coef a) = n.
+    Lemma length_opp a
+      : length a = n -> length (opp a) = n.
     Proof. cbv [opp]; intros; repeat distr_length.            Qed.
   End sub.
   Hint Rewrite @eval_opp @eval_sub : push_eval.
   Hint Rewrite @length_sub @length_opp : distr_length.
 
   Section carry_mulmod.
-    Context (m:Z) (s:Z)
+    Context (s:Z)
             (c:list (Z*Z))
             (n : nat)
             (len_c : nat)
@@ -385,7 +384,7 @@ Module Positional. Section Positional.
 
     Derive carry_mulmod
            SuchThat (forall (f := fst fg) (g := snd fg)
-                            (m_nz:m <> 0) (s_nz:s <> 0) (Hm:m = s - Associational.eval c)
+                            (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
                             (Hf : length f = n)
                             (Hg : length g = n)
                             (Hn_nz : n <> 0%nat)
