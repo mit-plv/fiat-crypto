@@ -1378,9 +1378,13 @@ Module Compilers.
           | Z_leb : ident (Z * Z) bool
           | Z_of_nat : ident nat Z
           | Z_mul_split : ident (Z * Z * Z) (Z * Z)
+          | Z_mul_split_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
           | Z_add_get_carry : ident (Z * Z * Z) (Z * Z)
+          | Z_add_get_carry_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
           | Z_add_with_get_carry : ident (Z * Z * Z * Z) (Z * Z)
+          | Z_add_with_get_carry_concrete (s:BinInt.Z) : ident (Z * Z * Z) (Z * Z)
           | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
+          | Z_sub_get_borrow_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
           | Z_zselect : ident (Z * Z * Z) Z
           | Z_add_modulo : ident (Z * Z * Z) Z
           .
@@ -1429,9 +1433,13 @@ Module Compilers.
                | Z_leb => curry2 Z.leb
                | Z_of_nat => Z.of_nat
                | Z_mul_split => curry3 Z.mul_split
+               | Z_mul_split_concrete s => curry2 (Z.mul_split s)
                | Z_add_get_carry => curry3 Z.add_get_carry_full
+               | Z_add_get_carry_concrete s => curry2 (Z.add_get_carry s)
                | Z_add_with_get_carry => curry4 Z.add_with_get_carry_full
+               | Z_add_with_get_carry_concrete s => curry3 (Z.add_with_get_carry s)
                | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
+               | Z_sub_get_borrow_concrete s => curry2 (Z.sub_get_borrow s)
                | Z_zselect => curry3 Z.zselect
                | Z_add_modulo => curry3 Z.add_modulo
                end.
@@ -1508,9 +1516,9 @@ Module Compilers.
             | Z.leb ?x ?y => mkAppIdent ident.Z_leb (x, y)
             | Z.of_nat ?x => mkAppIdent ident.Z_of_nat x
             | Z.mul_split ?x ?y ?z => mkAppIdent ident.Z_mul_split (x, y, z)
-            | Z.add_get_carry ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
-            | Z.add_with_get_carry ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
-            | Z.sub_get_borrow ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
+            | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
+            | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
+            | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
             | Z.zselect ?x ?y ?z => mkAppIdent ident.Z_zselect (x, y, z)
             | Z.add_modulo ?x ?y ?z => mkAppIdent ident.Z_add_modulo (x,y,z)
             | _
@@ -1545,9 +1553,13 @@ Module Compilers.
             Notation leb := Z_leb.
             Notation of_nat := Z_of_nat.
             Notation mul_split := Z_mul_split.
+            Notation mul_split_concrete := Z_mul_split_concrete.
             Notation add_get_carry := Z_add_get_carry.
+            Notation add_get_carry_concrete := Z_add_get_carry_concrete.
             Notation add_with_get_carry := Z_add_with_get_carry.
+            Notation add_with_get_carry_concrete := Z_add_with_get_carry_concrete.
             Notation sub_get_borrow := Z_sub_get_borrow.
+            Notation sub_get_borrow_concrete := Z_sub_get_borrow_concrete.
             Notation zselect := Z_zselect.
             Notation add_modulo := Z_add_modulo.
           End Z.
@@ -2428,6 +2440,14 @@ Module Compilers.
                   | ident.Z_zselect as idc
                   | ident.Z_add_modulo as idc
                     => cps_of (Uncurried.expr.default.ident.interp idc)
+                  | ident.Z_mul_split_concrete s
+                    => cps_of (curry2 (Z.mul_split s))
+                  | ident.Z_add_get_carry_concrete s
+                    => cps_of (curry2 (Z.add_get_carry s))
+                  | ident.Z_add_with_get_carry_concrete s
+                    => cps_of (curry3 (Z.add_with_get_carry s))
+                  | ident.Z_sub_get_borrow_concrete s
+                    => cps_of (curry2 (Z.sub_get_borrow s))
                   | ident.Let_In tx tC
                     => fun '((x, f) : (interp R (type.translate tx)
                                        * (interp R (type.translate tx) * (interp R (type.translate tC) -> R) -> R)))
@@ -2618,8 +2638,17 @@ Module Compilers.
                 | ident.Z_mul_split as idc
                 | ident.Z_add_get_carry as idc
                 | ident.Z_sub_get_borrow as idc
+                | ident.Z_add_with_get_carry_concrete _ as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
+                     (ident.snd @@ (Var xyk))
+                       @ ((idc : default.ident _ (type.Z * type.Z))
+                            @@ (ident.fst @@ (Var xyk)))
+                | ident.Z_mul_split_concrete _ as idc
+                | ident.Z_add_get_carry_concrete _ as idc
+                | ident.Z_sub_get_borrow_concrete _ as idc
+                  => λ (xyk :
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ (type.Z * type.Z))
                             @@ (ident.fst @@ (Var xyk)))
@@ -3137,6 +3166,7 @@ Module Compilers.
                      | inr v => f (inr v) (* FIXME: do not substitute [S (big stuck term)] *)
                      end
              end.
+
         Definition interp {s d} (idc : ident s d) : value var (s -> d)
           := match idc in ident s d return value var (s -> d) with
              | ident.Let_In tx tC as idc
@@ -3219,6 +3249,71 @@ Module Compilers.
                        => List.nth_default (expr.reflect (t:=A) (AppIdent (ident.primitive default) TT)) ls idx
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=type.list A) ls))
                      end
+             | ident.Z_mul_split as idc
+               => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
+                                 (expr (type.Z * type.Z) + (expr type.Z + Z) * (expr type.Z + Z)) * (expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr (inr x, inr y), inr z) =>
+                       let result := ident.interp idc (x, y, z) in
+                       inr (inr (fst result), inr (snd result))
+                     | inr (inr (inr x, y), z)
+                       => expr.reflect (AppIdent (ident.Z.mul_split_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z))))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     end
+             | ident.Z_add_get_carry as idc
+               => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
+                                 (expr (type.Z * type.Z) + (expr type.Z + Z) * (expr type.Z + Z)) * (expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr (inr x, inr y), inr z) =>
+                       let result := ident.interp idc (x, y, z) in
+                       inr (inr (fst result), inr (snd result))
+                     | inr (inr (inr x, y), z)
+                       => expr.reflect (AppIdent (ident.Z.add_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z))))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     end
+             | ident.Z_add_with_get_carry as idc
+               => fun (x_y_z_a : (expr (_ * _ * _ * _) +
+                                  (expr (_ * _ * _) +
+                                   (expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _)) *
+                                   (expr _ + type.interp _)) * (expr _ + type.interp _))%type)
+                  => match x_y_z_a return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr (inr (inr x, inr y), inr z), inr a) =>
+                       let result := ident.interp idc (x, y, z, a) in
+                       inr (inr (fst result), inr (snd result))
+                     | inr (inr (inr (inr x, y), z), a)
+                        => expr.reflect (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a))))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_*_) x_y_z_a))
+                     end
+             | ident.Z_sub_get_borrow as idc
+               => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
+                                 (expr (type.Z * type.Z) + (expr type.Z + Z) * (expr type.Z + Z)) * (expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr (inr x, inr y), inr z) =>
+                       let result := ident.interp idc (x, y, z) in
+                       inr (inr (fst result), inr (snd result))
+                     | inr (inr (inr x, y), z)
+                       => expr.reflect (AppIdent (ident.Z.sub_get_borrow_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z))))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     end
+             | ident.Z_mul_split_concrete _ as idc
+             | ident.Z.add_get_carry_concrete _ as idc
+             | ident.Z.sub_get_borrow_concrete _ as idc
+               => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
+                  => match x_y return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr x, inr y) =>
+                       let result := ident.interp idc (x, y) in
+                       inr (inr (fst result), inr (snd result))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     end
+             | ident.Z.add_with_get_carry_concrete _ as idc
+               => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
+                                 (expr (type.Z * type.Z) + (expr type.Z + Z) * (expr type.Z + Z)) * (expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr (inr x, inr y), inr z) =>
+                       let result := ident.interp idc (x, y, z) in
+                       inr (inr (fst result), inr (snd result))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     end
              | ident.pred as idc
              | ident.Nat_succ as idc
              | ident.Z_of_nat as idc
@@ -3286,37 +3381,15 @@ Module Compilers.
                           else default
                      | inr (inl _, inl _) | inl _ => default
                      end
-                | ident.Z_mul_split as idc
-                | ident.Z_add_get_carry as idc
-                | ident.Z_sub_get_borrow as idc
-                  => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
-                                    (expr (type.Z * type.Z) + (expr type.Z + Z) * (expr type.Z + Z)) * (expr type.Z + Z))%type)
-                     => match x_y_z return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
-                        | inr (inr (inr x, inr y), inr z) =>
-                          let result := ident.interp idc (x, y, z) in
-                          inr (inr (fst result), inr (snd result))
-                        | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
-                        end
-                | ident.Z_zselect as idc
-                | ident.Z_add_modulo as idc
-                  => fun (x_y_z :  (expr (_ * _ * _) +
-                                    (expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _)) * (expr _ + type.interp _))%type)
-                     => match x_y_z return expr _ + type.interp _ with
-                        | inr (inr (inr x, inr y), inr z) => inr (ident.interp idc (x, y, z))
-                        | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
-                        end
-                | ident.Z_add_with_get_carry as idc
-                  => fun (x_y_z_a : (expr (_ * _ * _ * _) +
-                                     (expr (_ * _ * _) +
-                                      (expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _)) *
-                                      (expr _ + type.interp _)) * (expr _ + type.interp _))%type)
-                     => match x_y_z_a return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
-                        | inr (inr (inr (inr x, inr y), inr z), inr a) =>
-                          let result := ident.interp idc (x, y, z, a) in
-                          inr (inr (fst result), inr (snd result))
-                        | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_*_) x_y_z_a))
-                        end
-             end.
+             | ident.Z_zselect as idc
+             | ident.Z_add_modulo as idc
+               => fun (x_y_z :  (expr (_ * _ * _) +
+                                 (expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _)) * (expr _ + type.interp _))%type)
+                  => match x_y_z return expr _ + type.interp _ with
+                     | inr (inr (inr x, inr y), inr z) => inr (ident.interp idc (x, y, z))
+                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     end
+           end.
       End interp.
     End ident.
   End partial.
@@ -3553,12 +3626,21 @@ Module Compilers.
       | add (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
       | shiftr (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
       | land (T1 Tout : type.primitive) (mask : BinInt.Z) : ident T1 Tout
-      | cast (T1 Tout : type.primitive) : ident T1 Tout.
+      | cast (T1 Tout : type.primitive) : ident T1 Tout
+      | mul_split_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
+      | add_get_carry_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
+      | add_with_get_carry_concrete (T1 T2 T3 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2 * T3) (Tout1 * Tout2)
+      | sub_get_borrow_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
+      | zselect (T1 T2 T3 Tout : type.primitive) : ident (T1 * T2 * T3) Tout
+      | add_modulo (T1 T2 T3 Tout : type.primitive) : ident (T1 * T2 * T3) Tout
+      .
 
       Notation curry0 f
         := (fun 'tt => f).
       Notation curry2 f
         := (fun '(a, b) => f a b).
+      Notation curry3 f
+        := (fun '(a, b, c) => f a b c).
 
       Axiom admit : forall {T}, T.
 
@@ -3583,6 +3665,25 @@ Module Compilers.
         : (type.interp (T1 * T2) -> type.interp T3) -> (type.interp (T1' * T2') -> type.interp T3')
         := fun f '((x, y) : type.interp T1' * type.interp T2')
            => resize (f (resize x, resize y)).
+      Definition resize2uc2out {T1 T2 T3 T4 T1' T2' T3' T4' : type.primitive}
+        : (type.interp (T1 * T2) -> (type.interp T3 * type.interp T4)) ->
+          (type.interp (T1' * T2') -> (type.interp T3' * type.interp T4'))
+        := fun f '((x, y) : type.interp T1' * type.interp T2')
+           => (resize (Datatypes.fst (f (resize x, resize y))),
+               resize (Datatypes.snd (f (resize x, resize y)))).
+      Definition resize3uc {T1 T2 T3 T4 T1' T2' T3' T4' : type.primitive}
+        : (type.interp (T1 * T2 * T3) -> type.interp T4) ->
+          (type.interp (T1' * T2' * T3') -> type.interp T4')
+        := fun f '((x, y, z) : type.interp T1' * type.interp T2' * type.interp T3')
+           => (resize (f (resize x, resize y, resize z))).
+      Definition resize3uc2out {T1 T2 T3 T4 T5 T1' T2' T3' T4' T5' : type.primitive}
+        : (type.interp (T1 * T2 * T3) -> (type.interp T4 * type.interp T5)) ->
+          (type.interp (T1' * T2' * T3') -> (type.interp T4' * type.interp T5'))
+        := fun f '((x, y, z) : type.interp T1' * type.interp T2' * type.interp T3')
+           => (resize (Datatypes.fst (f (resize x, resize y, resize z))),
+               resize (Datatypes.snd (f (resize x, resize y, resize z)))).
+
+
 
       Fixpoint default {t : type} : type.interp t
         := match t with
@@ -3606,6 +3707,17 @@ Module Compilers.
            | shiftr _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftr v n)
            | land _ _ mask => @resize1 type.Z type.Z _ _ (fun v => Z.land v mask)
            | cast _ _ => resize
+           | mul_split_concrete _ _ _ _ n => @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.mul_split n))
+           | add_get_carry_concrete _ _ _ _ n =>
+             @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.add_get_carry n))
+           | add_with_get_carry_concrete _ _ _ _ _ n =>
+             @resize3uc2out type.Z type.Z type.Z type.Z type.Z _ _ _ _ _ (curry3 (Z.add_with_get_carry n))
+           | sub_get_borrow_concrete _ _ _ _ n =>
+             @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.sub_get_borrow n))
+           | zselect _ _ _ _ =>
+             @resize3uc type.Z type.Z type.Z type.Z _ _ _ _ (curry3 Z.zselect)
+           | add_modulo _ _ _ _ =>
+             @resize3uc type.Z type.Z type.Z type.Z _ _ _ _ (curry3 Z.add_modulo)
            end.
 
       Module Z.
@@ -3613,6 +3725,12 @@ Module Compilers.
         Notation add := (@add type.Z type.Z type.Z).
         Notation shiftr := (@shiftr type.Z type.Z).
         Notation land := (@land type.Z type.Z).
+        Notation mul_split_concrete := (@mul_split_concrete type.Z type.Z type.Z type.Z).
+        Notation add_get_carry_concrete := (@add_get_carry_concrete type.Z type.Z type.Z type.Z).
+        Notation add_with_get_carry_concrete := (@add_with_get_carry_concrete type.Z type.Z type.Z type.Z type.Z).
+        Notation sub_get_borrow_concrete := (@sub_get_borrow_concrete type.Z type.Z type.Z type.Z).
+        Notation zselect := (@zselect type.Z type.Z type.Z type.Z).
+        Notation add_modulo := (@add_modulo type.Z type.Z type.Z type.Z).
       End Z.
 
       Module List.
@@ -3809,6 +3927,18 @@ Module Compilers.
                  => Some (Z.shiftr n)
                | ident.Z_land mask
                  => Some (Z.land mask)
+               | ident.Z_mul_split_concrete s
+                 => Some (Z.mul_split_concrete s)
+               | ident.Z_add_get_carry_concrete s
+                 => Some (Z.add_get_carry_concrete s)
+               | ident.Z_sub_get_borrow_concrete s
+                 => Some (Z.sub_get_borrow_concrete s)
+               | ident.Z_add_with_get_carry_concrete s
+                 => Some (Z.add_with_get_carry_concrete s)
+               | default.ident.Z.zselect
+                 => Some Z.zselect
+               | default.ident.Z.add_modulo
+                 => Some Z.add_modulo
                | ident.Z_pow
                | ident.Z_opp
                | ident.Z_div
@@ -3816,12 +3946,10 @@ Module Compilers.
                | ident.Z_eqb
                | ident.Z_leb
                | ident.Z_of_nat
-               | ident.Z.mul_split (* TODO: is this the right thing? *)
-               | ident.Z.add_get_carry (* TODO: is this the right thing? *)
-               | ident.Z.add_with_get_carry (* TODO: is this the right thing? *)
-               | ident.Z.sub_get_borrow (* TODO: is this the right thing? *)
-               | ident.Z.zselect (* TODO: is this the right thing? *)
-               | ident.Z.add_modulo (* TODO: is this the right thing? *)
+               | ident.Z.mul_split
+               | ident.Z.add_get_carry
+               | ident.Z.add_with_get_carry
+               | ident.Z.sub_get_borrow
                  => None
                end.
         End ident.
@@ -3952,6 +4080,15 @@ Module Compilers.
                   => let (lx, ux) := x in
                      let (ly, uy) := y in
                      {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
+
+          Definition split_bounds (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
+            if upper r <? split_at
+            then if 0 <=? lower r
+                 then (r, {| lower := 0; upper := 0 |})
+                 else ( {| lower := 0; upper := split_at - 1 |},
+                        {| lower := 0; upper := Z.max ( -(lower r / split_at)) (upper r / split_at) |} )
+            else ( {| lower := 0; upper := split_at - 1 |},
+                   {| lower := 0; upper := Z.max ( -(lower r / split_at)) (upper r / split_at) |} ).
 
           (** TODO: Move me *)
           Definition smart_fst {A B} (e : @expr ident (A * B)) : @expr ident A
@@ -4138,6 +4275,45 @@ Module Compilers.
                                  (AppIdent (cast _ _) args))
                | cast _ _
                  => fun _ => None
+               | mul_split_concrete _ _ _ _ split_at
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (split_bounds (ZRange.four_corners (BinInt.Z.mul) (Datatypes.fst r) (Datatypes.snd r)) split_at)
+                                 (AppIdent (mul_split_concrete _ _ _ _ split_at) args))
+               | add_get_carry_concrete _ _ _ _ split_at
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (split_bounds (ZRange.four_corners (BinInt.Z.add) (Datatypes.fst r) (Datatypes.snd r)) split_at)
+                                 (AppIdent (add_get_carry_concrete _ _ _ _ split_at) args))
+               | add_with_get_carry_concrete _ _ _ _ _ split_at
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (split_bounds (ZRange.eight_corners (fun a b c => (a + b + c)%Z)
+                                                                       (Datatypes.fst (Datatypes.fst r))
+                                                                       (Datatypes.snd (Datatypes.fst r))
+                                                                       (Datatypes.snd r)) split_at)
+                                 (AppIdent (add_with_get_carry_concrete _ _ _ _ _ split_at) args))
+               | sub_get_borrow_concrete _ _ _ _ split_at
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (split_bounds (ZRange.four_corners (BinInt.Z.sub) (Datatypes.fst r) (Datatypes.snd r)) split_at)
+                                 (AppIdent (sub_get_borrow_concrete _ _ _ _ split_at) args))
+               | zselect _ _ _ _
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (ZRange.union (Datatypes.snd (Datatypes.fst r)) (Datatypes.snd r))
+                                 (AppIdent (zselect _ _ _ _) args))
+               | add_modulo _ _ _ _
+                 => option_map
+                      (fun '(existT r args)
+                       => existT _ (ZRange.union (ZRange.four_corners BinInt.Z.add 
+                                                                      (Datatypes.fst (Datatypes.fst r))
+                                                                      (Datatypes.snd (Datatypes.fst r)))
+                                                 (ZRange.eight_corners (fun x y m=> Z.max 0 (x + y - m)%Z)
+                                                                      (Datatypes.fst (Datatypes.fst r))
+                                                                      (Datatypes.snd (Datatypes.fst r))
+                                                                      (Datatypes.snd r)))
+                                 (AppIdent (add_modulo _ _ _ _) args))
                end%zrange%option.
         End with_relax.
       End ident.
@@ -4790,6 +4966,8 @@ Module PrintingNotations.
   Export BoundsAnalysis.ident.
   Export BoundsAnalysis.Notations.
   Open Scope btype_scope.
+  Notation "'uint256'"
+    := (r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935]%btype) : btype_scope.
   Notation "'uint128'"
     := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
   Notation "'uint64'"
@@ -5083,193 +5261,298 @@ Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Tactics.
 Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
 
-Module Montgomery256.
+Module MontgomeryReduction.
+  Section MontRed'.
+    Context (N R N' R' : Z).
+    Context (HN_range : 0 <= N < R) (HN'_range : 0 <= N' < R) (HN_nz : N <> 0)
+            (N'_good : Z.equiv_modulo R (N*N') (-1)) (R'_good: Z.equiv_modulo N (R*R') 1).
 
-  (* written in a way that is easier to reify *)
-  Definition montred' (N R N' lo hi : Z) :=
-    dlet y := fst (Z.mul_split R lo N') in
-    dlet t1_t2 := Z.mul_split R y N in
-    dlet lo'_carry := Z.add_get_carry_full R lo (fst t1_t2) in
-    dlet hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) hi (snd t1_t2) in
-    dlet y' := Z.zselect (snd hi'_carry) 0 N in
-    dlet lo'' := fst (Z.sub_get_borrow_full R (fst hi'_carry) y') in
-    Z.add_modulo lo'' 0 N.
+    (* simpler version using very wide multiplications (256x256) *)
+    Definition montred' (lo_hi : (Z * Z)) :=
+      dlet_nd y := fst (Z.mul_split R (fst lo_hi)N') in
+      dlet_nd t1_t2 := Z.mul_split R y N in
+      dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi)(fst t1_t2) in
+      dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (snd t1_t2) in
+      dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
+      dlet_nd lo'' := fst (Z.sub_get_borrow_full R (fst hi'_carry) y') in
+      Z.add_modulo lo'' 0 N.
 
-  Lemma montred'_eq N R N' lo hi T
-        (HN_range: 0 <= N < R) (HT_range: 0 <= T < R * N) (HN'_range: 0 <= N' < R)
-        (HN_nz: N <> 0) (Hlo: lo = T mod R) (Hhi: hi = T / R)
-        (HN': Z.equiv_modulo R (N*N') (-1)):
-    montred' N R N' lo hi = reduce_via_partial N R N' T.
-  Proof.
-    rewrite <-reduce_via_partial_alt_eq by nia.
-    cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In]. subst lo hi.
-    autorewrite with to_div_mod. rewrite ?Z.zselect_correct, ?Z.add_modulo_correct.
-    (* pull out value before last modular reduction *)
-    match goal with |- (if (?n <=? ?x)%Z then ?x - ?n else ?x) = (if (?n <=? ?y) then ?y - ?n else ?y)%Z =>
-                    let P := fresh "H" in assert (x = y) as P; [|rewrite P; reflexivity] end.
+    Lemma montred'_eq lo_hi T (HT_range: 0 <= T < R * N)
+          (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R):
+      montred' lo_hi = reduce_via_partial N R N' T.
+    Proof.
+      rewrite <-reduce_via_partial_alt_eq by nia.
+      cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
+      rewrite Hlo, Hhi.
+      autorewrite with to_div_mod. rewrite ?Z.zselect_correct, ?Z.add_modulo_correct.
+      (* pull out value before last modular reduction *)
+      match goal with |- (if (?n <=? ?x)%Z then ?x - ?n else ?x) = (if (?n <=? ?y) then ?y - ?n else ?y)%Z =>
+                      let P := fresh "H" in assert (x = y) as P; [|rewrite P; reflexivity] end.
 
-    match goal with
-      |- context [if R * R <=? ?x then _ else _] =>
-      match goal with |- context [if dec (?xHigh / R = 0) then _ else _] =>
-                      assert (x / R = xHigh) as cond_equiv end end.
-    { apply Z.mul_cancel_r with (p:=R); [omega|]. autorewrite with push_Zmul zdiv_to_mod push_Zmod; ring. }
-    rewrite <-cond_equiv. rewrite ?Z.mod_pull_div, ?Z.div_div by omega.
-    assert (0 < R * R)%Z by Z.zero_bounds.
+      match goal with
+        |- context [if R * R <=? ?x then _ else _] =>
+        match goal with |- context [if dec (?xHigh / R = 0) then _ else _] =>
+                        assert (x / R = xHigh) as cond_equiv end end.
+      { apply Z.mul_cancel_r with (p:=R); [omega|]. autorewrite with push_Zmul zdiv_to_mod push_Zmod; ring. }
+      rewrite <-cond_equiv. rewrite ?Z.mod_pull_div, ?Z.div_div by omega.
+      assert (0 < R * R)%Z by Z.zero_bounds.
 
-    break_match; try reflexivity; autorewrite with ltb_to_lt in *; rewrite Z.div_small_iff in * by omega;
-      repeat match goal with
-             | _ => progress autorewrite with zsimplify_fast
-             | |- context [?x mod (R * R)] =>
-               unique pose proof (Z.mod_pos_bound x (R * R));
-                 try rewrite (Z.mod_small x (R * R)) in * by Z.rewrite_mod_small_solver
-             | _ => omega
-             | _ => progress Z.rewrite_mod_small
-             end.
-  Qed.
+      break_match; try reflexivity; autorewrite with ltb_to_lt in *; rewrite Z.div_small_iff in * by omega;
+        repeat match goal with
+               | _ => progress autorewrite with zsimplify_fast
+               | |- context [?x mod (R * R)] =>
+                 unique pose proof (Z.mod_pos_bound x (R * R));
+                   try rewrite (Z.mod_small x (R * R)) in * by Z.rewrite_mod_small_solver
+               | _ => omega
+               | _ => progress Z.rewrite_mod_small
+               end.
+    Qed.
 
+    Lemma montred'_correct lo_hi T (HT_range: 0 <= T < R * N)
+          (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R): montred' lo_hi = (T * R') mod N.
+    Proof.
+      erewrite montred'_eq by eauto.
+      apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
+      replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; omega).
+      apply reduce_via_partial_in_range; omega.
+    Qed.
+  End MontRed'.
 
-  Lemma montred'_correct N R N' R' lo hi T
-        (R'_good: Z.equiv_modulo N (R * R') 1)
-        (N'_good: Z.equiv_modulo R (N * N') (-1))
-        (HN_range: 0 <= N < R) (HT_range: 0 <= T < R * N) (HN'_range: 0 <= N' < R)
-        (HN_nz: N <> 0) (Hlo: lo = T mod R) (Hhi: hi = T / R)
-        (HN': Z.equiv_modulo R (N*N') (-1)):
-    montred' N R N' lo hi = (T * R') mod N.
-  Proof.
-    erewrite montred'_eq by eauto.
-    apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
-    replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; omega).
-    apply reduce_via_partial_in_range; omega.
-  Qed.
-
+  Definition test :=
+    (fun (N R N' : Z) (lo_hi : Z * Z) =>
+      dlet_nd x := fst (Z.sub_get_borrow_full R (fst lo_hi) N) in
+      x).
+  
   Derive montred_gen
-         SuchThat (forall N R N' R'
-                      (R'_good: Z.equiv_modulo N (R * R') 1)
-                      (N'_good: Z.equiv_modulo R (N * N') (-1))
-                      (HN_range: 0 <= N < R)
-                      (HN'_range: 0 <= N' < R)
-                      (HN_nz: N <> 0)
-                      T lo_hi (lo:=fst lo_hi) (hi:=snd lo_hi)
-                      (HT_range: 0 <= T < R * N)
-                      (Hlo : lo = T mod R)
-                      (Hhi: hi = T / R)
-                      (result := montred_gen R N N' lo_hi),
-                      (result = (T * R') mod N))
+         SuchThat (forall (N R N' : Z)
+                          (lo_hi : Z * Z),
+                      Interp (t:=type.reify_type_of montred')
+                             montred_gen N R N' lo_hi
+                      = montred' N R N' lo_hi)
          As montred_gen_correct.
   Proof.
-    intros; subst montred_gen.
-    erewrite <-montred'_correct by eassumption.
-    pose (N, R, N', lo_hi) as args.
-    subst lo hi.
-    change lo_hi with (snd args).
-    change N' with (snd (fst args)).
-    change R with (snd (fst (fst args))).
-    change N with (fst (fst (fst args))).
-    remember args as args' eqn:Heqargs'.
+    intros.
     etransitivity.
     Focus 2.
-    { subst result.
-      repeat match goal with H : _ |- _ => clear H end; revert args'.
-      lazymatch goal with
-      | [ |- forall args, ?ev = @?RHS args ]
-      => refine (fun args => f_equal (fun F => F args) (_ : _ = RHS))
-      end.
-      change montgomeryZ with Z in *.
-      cbv beta delta [montred'].
-      Reify_rhs ().
-      reflexivity.
-    } Unfocus.
+    { repeat apply (f_equal (fun f => f _)).
+      Reify_rhs().
+      reflexivity. } Unfocus.
     cbv beta.
-    let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
+    let RHS := match goal with |- _ = ?RHS => RHS end in
+    let e := match RHS with context[expr.Interp _ ?e] => e end in
     set (E := e).
-
     Time let E' := constr:(PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
-    let E' := (eval lazy in E') in
+         let E' := (eval vm_compute in E') in (* 0.131 for vm, about 0.6 for lazy, slower for native and cbv *)
          pose E' as E''.
-
-    transitivity (Interp E'' args'); [|reflexivity].
-    clear E.
-    subst args' args; cbn [fst snd].
-    subst result.
+    let LHS := match goal with |- ?LHS = _ => LHS end in
+    lazymatch LHS with
+    | context LHS[expr.Interp _ _]
+      => let LHS := context LHS[Interp E''] in
+         transitivity LHS
+    end;
+      [ clear E | reflexivity ].
+    subst montred_gen.
     reflexivity.
   Qed.
+
+  Section rmontred.
+    Context (N R N' : Z)
+            (machine_wordsize : Z).
+
+    Let n : nat := Z.to_nat (Qceiling ((Z.log2_up N) / machine_wordsize)).
+    Let bound := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
+
+    Definition relax_zrange_of_machine_wordsize
+      := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
+    Local Arguments relax_zrange_of_machine_wordsize / .
+
+    Let rN := GallinaReify.Reify N.
+    Let rR := GallinaReify.Reify R.
+    Let rN' := GallinaReify.Reify N'.
+    Let relax_zrange := relax_zrange_of_machine_wordsize.
+    Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z * type.Z))
+      := (bound, bound).
+    Let out_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z))
+      := bound.
+
+    Definition check_args {T} (res : Pipeline.ErrorT T)
+      : Pipeline.ErrorT T
+      := if (N =? 0)%Z
+         then Pipeline.Error (Pipeline.Values_not_provably_distinct "N ≠ 0" N 0)
+         else if (n =? 0)%Z
+              then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" N 0)
+              else res.
+
+    Lemma check_args_success_id {T} {rv : T} {res}
+      : check_args res = Pipeline.Success rv
+        -> res = Pipeline.Success rv.
+    Proof.
+      cbv [check_args]; break_innermost_match; congruence.
+    Qed.
+
+    Definition rmontred
+      := let res := Pipeline.BoundsPipeline
+                      (relax_zrange)
+                      (s:=(type.Z * type.Z)%ctype)
+                      (d:=(type.Z)%ctype)
+                      (arg_bounds)
+                      (out_bounds)
+                      (fun var
+                       => (montred_gen _)
+                            @ (rN _)
+                            @ (rR _)
+                            @ (rN' _)
+                      )%expr in
+         check_args res.
+
+    Definition rmontred_correctT
+               rv
+      := forall arg
+                (arg' := @BoundsAnalysis.OfPHOAS.cast_back
+                           _
+                           (relax_zrange)
+                           (arg_bounds)
+                           arg),
+        BoundsAnalysis.OfPHOAS.Interp
+          (relax_zrange)
+          (arg_bounds)
+          (bs:=out_bounds)
+          arg
+          rv
+        = Some (montred' (Interp rN) (Interp rR) (Interp rN') arg').
+
+    Lemma rmontred_correct
+          rv
+          (Hrv : rmontred = Pipeline.Success rv)
+      : rmontred_correctT rv.
+    Proof.
+      hnf; intros.
+      cbv [rmontred] in Hrv.
+      edestruct (Pipeline.BoundsPipeline _ _ _ _) as [rv'|] eqn:Hrv';
+        [ | clear -Hrv; cbv [check_args] in Hrv; break_innermost_match_hyps; discriminate ].
+      erewrite <- montred_gen_correct.
+      eapply Pipeline.BoundsPipeline_correct in Hrv'.
+      apply check_args_success_id in Hrv; inversion Hrv; subst rv.
+      rewrite Hrv'.
+      cbv [expr.Interp].
+      cbn [expr.interp].
+      apply f_equal; f_equal;
+        cbn -[reify_list];
+        rewrite interp_reify_list, map_map; cbn;
+          erewrite map_ext with (g:=id), map_id; try reflexivity.
+    Qed.
+  End rmontred.
+End MontgomeryReduction.
+
+Ltac solve_rmontred _ :=
+  eapply MontgomeryReduction.rmontred_correct;
+  lazy; reflexivity.
+
+Module Montgomery256.
 
   Definition N := (2^256-2^224+2^192+2^96-1).
   Definition N':= (115792089210356248768974548684794254293921932838497980611635986753331132366849).
   Definition R := (2^256).
+  Definition machine_wordsize := 256.
 
   Derive montred256
-         SuchThat (forall
-                      (lo_hi : Z * Z)
-                      (lo := fst lo_hi) (hi := snd lo_hi)
-                      R' (R'_good: Z.equiv_modulo N (R * R') 1)
-                      T (Hlo: lo = T mod R) (Hhi: hi = T / R)
-                      (HT_range: 0 <= T < R * N)
-                      (result := montred256 lo_hi),
-                      result = (T * R') mod N)
+         SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256)
          As montred256_correct.
-  Proof.
-    intros. subst lo hi result.
-    erewrite <-montred_gen_correct with (N:=N) (N':=N') (R:=R) (R':=R') (lo_hi:=lo_hi) by exact admit.
-                                        (*
-      by (assumption || omega || reflexivity || cbv - [Z.le Z.lt]; omega). *)
-    cbv - [montred256 montred_gen]. (* simplify constants *)
-    cbv [montred_gen].
-    lazymatch goal with
-    | [ |- ?ev = expr.Interp (@ident.interp) ?e (?args, lo_hi) ]
-      => let rargs := Reify args in
-         let rargs := constr:(canonicalize_list_recursion rargs) in
-         transitivity (expr.Interp
-                         (@ident.interp)
-                         (fun var
-                          => λ (LOHI : var (type.Z * type.Z)%ctype),
-                             (e var @ (rargs var, Var LOHI)))%expr lo_hi)
-    end.
-    (* this second goal is admitted in base_51_carry_mul, presumably because either lists are hard or it's slow *)
-    Focus 2.
-    { cbv [expr.interp expr.Interp ident.interp].
-      cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer].
-      reflexivity. } Unfocus.
-    let e := match goal with |- _ = expr.Interp _ ?e _ => e end in
-    set (E := e);
-      cbv [canonicalize_list_recursion canonicalize_list_recursion.expr.transfer canonicalize_list_recursion.ident.transfer] in E.
-    Time let E' := constr:(DeadCodeElimination.EliminateDead (PartialReduce E)) in
-         let E' := (eval lazy in E') in
-         pose E' as E''.
-    transitivity (Interp E'' lo_hi); [ clear E | subst E E''; reflexivity ]. (* again, second proof admitted in base_51_carry_mul *)
-    subst montred256; reflexivity.
-  Qed.
+  Proof. Time solve_rmontred(). Time Qed.
+
+  Import PrintingNotations.
+  Print montred256.
+  (* 
+(expr_let 2 := fst @@
+               (mul_split_concrete uint256 uint256 uint256 uint256
+                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                (fst @@ x_1, (115792089210356248768974548684794254293921932838497980611635986753331132366849))) in
+ expr_let 3 := mul_split_concrete uint256 uint256 uint256 uint256
+                 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+               (x_2, (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+ expr_let 4 := add_get_carry_concrete uint256 uint256 uint256 uint256
+                 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (fst @@ x_1, fst @@ x_3) in
+ expr_let 5 := add_with_get_carry_concrete uint256 uint256 uint256 uint256 uint256
+                 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (snd @@ x_4, snd @@ x_1, snd @@ x_3) in
+ expr_let 6 := zselect uint256 uint256 uint256 uint256 @@
+               (snd @@ x_5, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+ expr_let 7 := fst @@
+               (sub_get_borrow_concrete uint256 uint256 uint256 uint256
+                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (fst @@ x_5, x_6)) in
+ add_modulo uint256 uint256 uint256 uint256 @@
+ (x_7, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)))%nexpr
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range (MontgomeryReduction.relax_zrange_of_machine_wordsize machine_wordsize)
+            r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
+   *)
+
 End Montgomery256.
 
-Import ident.
+Module Montgomery256PrintingNotations.
+  Export ident.
+  Export BoundsAnalysis.ident.
+  Export BoundsAnalysis.type.Notations.
+  Export BoundsAnalysis.Indexed.expr.Notations.
+  Export BoundsAnalysis.ident.Notations.
+  Import BoundsAnalysis.type.
+  Import BoundsAnalysis.Indexed.expr.
+  Import BoundsAnalysis.ident.
+  Open Scope btype_scope.
+  Notation "'RegMod'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 115792089210356248762697446949407573530086143415290314195533631308867097853951; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "'RegPinv'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 115792089210356248768974548684794254293921932838497980611635986753331132366849; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "'RegZero'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 0; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "'$R'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 : nexpr_scope.
+  Notation "'uint256'"
+    := (BoundsAnalysis.type.ZBounded 0 115792089237316195423570985008687907853269984665640564039457584007913129639935) : btype_scope.
+  Notation "$r n" := (BoundsAnalysis.Indexed.expr.Var _ n) (at level 10, format "$r n") : nexpr_scope.
+  Notation "$r n '_lo'" := (fst @@ (BoundsAnalysis.Indexed.expr.Var (BoundsAnalysis.type.prod _ _) n))%nexpr (at level 10, format "$r n _lo") : nexpr_scope.
+  Notation "$r n '_hi'" := (snd @@ (BoundsAnalysis.Indexed.expr.Var (BoundsAnalysis.type.prod _ _) n))%nexpr (at level 10, format "$r n _hi") : nexpr_scope.
+  Notation "'c.Mul256(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := fst @@ (mul_split_concrete uint256 uint256 uint256 uint256 $R @@ (x, y)) in
+         (f))%nexpr (at level 49, format "'[' 'c.Mul256(' '$r' n ','  x ','  y ');' ']' '//' f" ) : nexpr_scope.
+  Notation "'c.Mul256x256(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := mul_split_concrete uint256 uint256 uint256 uint256 $R @@ (x, y) in
+         f)%nexpr (at level 48, format "'[' 'c.Mul256x256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Add(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := add_get_carry_concrete uint256 uint256 uint256 uint256 $R @@ (x, y) in
+         f)%nexpr (at level 47, format "'[' 'c.Add(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Addc(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := add_with_get_carry_concrete uint256 uint256 uint256 uint256 uint256 $R @@ (_, x, y) in
+         f)%nexpr (at level 46, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Selc(' '$r' n ',' y ',' z ');' f" :=
+    (expr_let n := zselect uint256 uint256 uint256 uint256 @@ (_, y, z) in
+         f)%nexpr (at level 45, format "'[' 'c.Selc(' '$r' n ',' y ','  z ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Sub(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := fst @@ (sub_get_borrow_concrete uint256 uint256 uint256 uint256 $R @@ (x, y)) in
+         f)%nexpr (at level 44, format "'c.Sub(' '$r' n ','  x ','  y ');' '//' f") : nexpr_scope.
+  Notation "'c.AddM(' '$ret' ',' x ',' y ',' z ');'" :=
+    (add_modulo uint256 uint256 uint256 uint256 @@ (x, y, z))%nexpr (at level 40, format "'c.AddM(' '$ret' ','  x ','  y ','  z ');'") : nexpr_scope.
+End Montgomery256PrintingNotations.
+
+Import Montgomery256PrintingNotations.
+Local Open Scope nexpr_scope.
 
 Print Montgomery256.montred256.
-(* expr.Interp (@interp)
-  (fun var : type -> Type =>
-   (λ v : var (type.Z * type.Z)%ctype,
-    expr_let v0 := fst @@
-                   (Z.mul_split @@
-                    (115792089237316195423570985008687907853269984665640564039457584007913129639936, fst @@ v,
-                    115792089210356248768974548684794254293921932838497980611635986753331132366849)) in
-    expr_let v1 := Z.mul_split @@
-                   (115792089237316195423570985008687907853269984665640564039457584007913129639936, v0,
-                   115792089210356248762697446949407573530086143415290314195533631308867097853951) in
-    expr_let v2 := Z.add_get_carry @@
-                   (115792089237316195423570985008687907853269984665640564039457584007913129639936, fst @@ v, fst @@ v1) in
-    expr_let v3 := Z.add_with_get_carry @@
-                   (115792089237316195423570985008687907853269984665640564039457584007913129639936, snd @@ v2, snd @@ v, snd @@ v1) in
-    expr_let v4 := Z.zselect @@ (snd @@ v3, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
-    expr_let v5 := fst @@
-                   (Z.sub_get_borrow @@ (115792089237316195423570985008687907853269984665640564039457584007913129639936, fst @@ v3, v4)) in
-    Z.add_modulo @@ (v5, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951))%expr)
-     : Z * Z -> Z
+(*
+c.Mul256($r2, $r1_lo, RegPinv);
+c.Mul256x256($r3, $r2, RegMod);
+c.Add($r4, $r1_lo, $r3_lo);
+c.Addc($r5, $r1_hi, $r3_hi);
+c.Selc($r6,RegZero, RegMod);
+c.Sub($r7, $r5_lo, $r6);
+c.AddM($ret, $r7, RegZero, RegMod);
+     : expr
+         (BoundsAnalysis.AdjustBounds.ident.type_for_range
+            (MontgomeryReduction.relax_zrange_of_machine_wordsize
+               Montgomery256.machine_wordsize)
+            r[0 ~> 2 ^ Montgomery256.machine_wordsize - 1]%zrange)
 *)
-
-(* with named constants *)
-Goal (Montgomery256.montred256 = Datatypes.fst).
-  cbv [Montgomery256.montred256].
-  change (115792089210356248762697446949407573530086143415290314195533631308867097853951) with (Montgomery256.N).
-  change (115792089237316195423570985008687907853269984665640564039457584007913129639936) with (Montgomery256.R).
-  change (115792089210356248768974548684794254293921932838497980611635986753331132366849) with (Montgomery256.N').
-
-Abort.
