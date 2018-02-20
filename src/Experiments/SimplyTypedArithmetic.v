@@ -332,8 +332,13 @@ Module Positional. Section Positional.
          let negA := Associational.negate_snd A in
          from_associational n negA.
 
+    Definition scmul (x:Z) (a:list Z) : list Z
+      := let A := to_associational n a in
+         let R := Associational.mul A [(1, x)] in
+         from_associational n R.
+
     Definition balance : list Z
-      := encode n s c (coef * (s - Associational.eval c)).
+      := scmul coef (encode n s c (s - Associational.eval c)).
 
     Definition sub (a b:list Z) : list Z
       := let ca := add n balance a in
@@ -346,16 +351,15 @@ Module Positional. Section Positional.
         = (eval n a - eval n b) mod (s - Associational.eval c).
     Proof.
       destruct (zerop n); subst; try reflexivity.
-      intros; cbv [sub balance negate_snd]; push; repeat distr_length;
+      intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
         eauto with omega.
-      push_Zmod; push; push_Zmod; pull_Zmod; distr_length; eauto.
-      f_equal; omega.
+      push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
     Hint Rewrite eval_sub : push_eval.
     Lemma length_sub a b
       : length a = n -> length b = n ->
         length (sub a b) = n.
-    Proof. intros; cbv [sub balance negate_snd]; repeat distr_length. Qed.
+    Proof. intros; cbv [sub balance scmul negate_snd]; repeat distr_length. Qed.
     Hint Rewrite length_sub : distr_length.
     Definition opp (a:list Z) : list Z
       := sub (zeros n) a.
