@@ -506,7 +506,7 @@ Module Columns.
         | x :: tl =>
           dlet rec := flatten_column tl in (* recursively get the sum and carry *)
           dlet sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
-          dlet carry' := (snd sum_carry + snd rec)%RT in (* add the two carries together *)
+          dlet carry' := snd sum_carry + snd rec in (* add the two carries together *)
           (fst sum_carry, carry')
         end.
     End flatten_column.
