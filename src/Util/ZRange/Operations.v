@@ -55,12 +55,12 @@ Module ZRange.
        union (four_corners (f lx) y z)
              (four_corners (f ux) y z).
 
-  Definition upper_lor_and_bounds (x y : BinInt.Z) : BinInt.Z
+  Definition upper_lor_land_bounds (x y : BinInt.Z) : BinInt.Z
     := 2^(1 + Z.log2_up (Z.max x y)).
   Definition extreme_lor_land_bounds (x y : zrange) : zrange
     := let mx := ZRange.upper (ZRange.abs x) in
        let my := ZRange.upper (ZRange.abs y) in
-       {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
+       {| lower := -upper_lor_land_bounds mx my ; upper := upper_lor_land_bounds mx my |}.
   Definition extremization_bounds (f : zrange -> zrange -> zrange) (x y : zrange) : zrange
     := let (lx, ux) := x in
        let (ly, uy) := y in
