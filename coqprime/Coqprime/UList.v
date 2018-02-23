@@ -255,7 +255,7 @@ apply ulist_incl_length; auto.
 Qed.
 
 End UniqueList.
-Implicit Arguments ulist [A].
+Arguments ulist [A].
 Hint Constructors ulist .
 
 Theorem ulist_map:
