@@ -434,7 +434,7 @@ Module MulSplit.
     Section Associational.
 
       Definition sat_multerm s (t t' : (Z * Z)) : list (Z * Z) :=
-        dlet xy := Z.mul_split s (snd t) (snd t') in
+        dlet_nd xy := Z.mul_split s (snd t) (snd t') in
         [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
 
       Definition sat_mul s (p q : list (Z * Z)) : list (Z * Z) :=
@@ -498,17 +498,23 @@ Module Columns.
       Context (fw : Z). (* maximum size of the result *)
 
       (* Outputs (sum, carry) *)
-      Fixpoint flatten_column (digit : list Z) : (Z * Z) :=
-        match digit with
-        | nil => (0, 0)
-        | x :: nil => (x mod fw, x / fw)
-        | x :: y :: nil => Z.add_get_carry_full fw x y
-        | x :: tl =>
-          dlet rec := flatten_column tl in (* recursively get the sum and carry *)
-          dlet sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
-          dlet carry' := snd sum_carry + snd rec in (* add the two carries together *)
-          (fst sum_carry, carry')
-        end.
+      Definition flatten_column (digit: list Z) : (Z * Z) :=
+        list_rect (fun _ => (Z * Z)%type) (0,0)
+                  (fun xx tl flatten_column_tl =>
+                     list_rect
+                       (fun _ => (Z * Z)%type) (xx mod fw, xx / fw)
+                       (fun yy tl' _ =>
+                          list_rect
+                            (fun _ => (Z * Z)%type) (dlet_nd x := xx in dlet_nd y := yy in Z.add_get_carry_full fw x y)
+                            (fun _ _ _ =>
+                               dlet_nd x := xx in
+                               dlet_nd rec := flatten_column_tl in (* recursively get the sum and carry *)
+                               dlet_nd sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
+                               dlet_nd carry' := snd sum_carry + snd rec in (* add the two carries together *)
+                                 (fst sum_carry, carry'))
+                            tl')
+                       tl)
+                  digit.
     End flatten_column.
 
     Definition flatten_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
@@ -516,7 +522,14 @@ Module Columns.
       (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
 
     Definition flatten (xs : list (list Z)) : list Z * Z :=
-      fold_right flatten_step (nil,0) (rev xs).
+      fold_right (fun a b => flatten_step a b) (nil,0) (rev xs).
+
+    Lemma list_rect_to_match A (P:list A -> Type) (Pnil: P []) (PS: forall a tl, P (a :: tl)) ls :
+      @list_rect A P Pnil (fun a tl _ => PS a tl) ls = match ls with
+                                                       | cons a tl => PS a tl
+                                                       | nil => Pnil
+                                                       end.
+    Proof. destruct ls; reflexivity. Qed.
 
     Lemma flatten_column_mod fw (xs : list Z) :
       fst (flatten_column fw xs)  = sum xs mod fw.
@@ -525,6 +538,8 @@ Module Columns.
         repeat match goal with
                | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
+               | |- context [list_rect _ _ _ ?ls] =>
+                 rewrite list_rect_to_match; destruct ls
                | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
                | _ => progress break_match; try discriminate
                | _ => reflexivity
@@ -539,6 +554,8 @@ Module Columns.
         repeat match goal with
                | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
+               | |- context [list_rect _ _ _ ?ls] =>
+                 rewrite list_rect_to_match; destruct ls
                | _ => rewrite <-Z.div_add_mod_cond_r by auto
                | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
                | _ => progress break_match; try discriminate
@@ -579,6 +596,7 @@ Module Columns.
     Lemma flatten_length inp : length (fst (flatten inp)) = length inp.
     Proof.
       cbv [flatten].
+      unfold flatten_step; fold flatten_step.
       induction inp using rev_ind; [reflexivity|].
       repeat match goal with
              | _ => progress autorewrite with list cancel_pair push_fold_right
@@ -597,6 +615,7 @@ Module Columns.
     Proof.
       (* to make the invariant take the right form, we make everything depend on output length, not input length *)
       intro. subst n. rewrite <-(flatten_length inp). cbv [flatten].
+      unfold flatten_step; fold flatten_step.
       induction inp using rev_ind;
         repeat match goal with
                | _ => progress intros
@@ -1085,7 +1104,9 @@ Module Compilers.
           | snd {A B} : ident (A * B) B
           | bool_rect {T} : ident (T * T * bool) T
           | nat_rect {P} : ident (P * (nat * P -> P) * nat) P
+          | list_rect {A P} : ident (P * (A * list A * P -> P) * list A) P
           | pred : ident nat nat
+          | List_length {T} : ident (list T) nat
           | List_seq : ident (nat * nat) (list nat)
           | List_repeat {A} : ident (A * nat) (list A)
           | List_combine {A B} : ident (list A * list B) (list (A * B))
@@ -1124,10 +1145,14 @@ Module Compilers.
             := (fun '(a, b, c, d) => f a b c d).
           Notation uncurry2 f
             := (fun a b => f (a, b)).
+          Notation uncurry3 f
+            := (fun a b c => f (a, b, c)).
           Notation curry3_1 f
             := (fun '(a, b, c) => f (uncurry2 a) b c).
           Notation curry3_2 f
             := (fun '(a, b, c) => f a (uncurry2 b) c).
+          Notation curry3_3 f
+            := (fun '(a, b, c) => f a (uncurry3 b) c).
 
           Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
             := match idc in ident s d return type.interp s -> type.interp d with
@@ -1140,7 +1165,9 @@ Module Compilers.
                | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
                | bool_rect T => curry3 (@Datatypes.bool_rect (fun _ => type.interp T))
                | nat_rect P => curry3_2 (@Datatypes.nat_rect (fun _ => type.interp P))
+               | list_rect A P => curry3_3 (@Datatypes.list_rect (type.interp A) (fun _ => type.interp P))
                | pred => Nat.pred
+               | List_length T => @List.length (type.interp T)
                | List_seq => curry2 List.seq
                | List_combine A B => curry2 (@List.combine (type.interp A) (type.interp B))
                | List_map A B => curry2 (@List.map (type.interp A) (type.interp B))
@@ -1205,7 +1232,21 @@ Module Compilers.
             | @Datatypes.nat_rect (fun _ => ?T) ?P0 ?PS ?n
               => let dummy := match goal with _ => fail 1 "nat_rect successor case is not syntactically a function of two arguments:" PS end in
                  constr:(I : I)
+            | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil (fun a tl Ptl => ?PS) ?ls
+              => let rA := type.reify A in
+                 let rT := type.reify T in
+                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
+                 mkAppIdent (@ident.list_rect rA rT) (Pnil,
+                                                      (fun pat : A * Datatypes.list A * T
+                                                       => let '(a, tl, Ptl) := pat in PS),
+                                                      ls)
+            | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil ?PS ?ls
+              => let dummy := match goal with _ => fail 1 "list_rect successor case is not syntactically a function of three arguments:" PS end in
+                 constr:(I : I)
             | Nat.pred ?x => mkAppIdent ident.pred x
+            | @List.length ?A ?x =>
+              let rA := type.reify A in
+              mkAppIdent (@ident.List_length rA) x
             | List.seq ?x ?y  => mkAppIdent ident.List_seq (x, y)
             | @List.repeat ?A ?x ?y
               => let rA := type.reify A in
@@ -1282,6 +1323,7 @@ Module Compilers.
             end.
 
           Module List.
+            Notation length := List_length.
             Notation seq := List_seq.
             Notation repeat := List_repeat.
             Notation combine := List_combine.
@@ -1367,6 +1409,7 @@ Module Compilers.
           | List_nth_default {T} : ident (T * list T * nat) T
           | List_nth_default_concrete {T : type.primitive} (d : interp T) (n : Datatypes.nat) : ident (list T) T
           | Z_shiftr (offset : BinInt.Z) : ident Z Z
+          | Z_shiftl (offset : BinInt.Z) : ident Z Z
           | Z_land (mask : BinInt.Z) : ident Z Z
           | Z_add : ident (Z * Z) Z
           | Z_mul : ident (Z * Z) Z
@@ -1422,6 +1465,7 @@ Module Compilers.
                | List_nth_default T => curry3 (@List.nth_default (type.interp T))
                | List_nth_default_concrete T d n => fun ls => @List.nth_default (type.interp T) d ls n
                | Z_shiftr n => fun v => Z.shiftr v n
+               | Z_shiftl n => fun v => Z.shiftl v n
                | Z_land mask => fun v => Z.land v mask
                | Z_add => curry2 Z.add
                | Z_mul => curry2 Z.mul
@@ -1542,6 +1586,7 @@ Module Compilers.
 
           Module Z.
             Notation shiftr := Z_shiftr.
+            Notation shiftl := Z_shiftl.
             Notation land := Z_land.
             Notation add := Z_add.
             Notation mul := Z_mul.
@@ -1637,6 +1682,8 @@ Module Compilers.
                => AppIdent ident.bool_rect
              | for_reification.ident.nat_rect P
                => AppIdent ident.nat_rect
+             | for_reification.ident.list_rect A P
+               => AppIdent ident.list_rect
              | for_reification.ident.pred
                => AppIdent ident.pred
              | for_reification.ident.primitive t v
@@ -1671,6 +1718,17 @@ Module Compilers.
                => AppIdent ident.Z.zselect
              | for_reification.ident.Z_add_modulo
                => AppIdent ident.Z.add_modulo
+             | for_reification.ident.List_length A
+               => ltac:(
+                    let v := reify
+                               (@expr var)
+                               (fun (ls : list (type.interp A))
+                                => list_rect
+                                     (fun _ => nat)
+                                     0%nat
+                                     (fun a t len_t => S len_t)
+                                     ls) in
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_seq
                => ltac:(
                     let v
@@ -2423,6 +2481,7 @@ Module Compilers.
                   | ident.Nat_succ as idc
                   | ident.pred as idc
                   | ident.Z_shiftr _ as idc
+                  | ident.Z_shiftl _ as idc
                   | ident.Z_land _ as idc
                   | ident.Z_add as idc
                   | ident.Z_mul as idc
@@ -2605,6 +2664,7 @@ Module Compilers.
                        @ ((idc : default.ident _ type.nat)
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Z_shiftr _ as idc
+                | ident.Z_shiftl _ as idc
                 | ident.Z_land _ as idc
                 | ident.Z_opp as idc
                   => λ (xyk :
@@ -3268,7 +3328,15 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr x, y), z)
-                       => expr.reflect (AppIdent (ident.Z.add_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z))))
+                       => let default := expr.reflect (AppIdent (ident.Z.add_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z)))) in
+                          match (y,z) with
+                          | (inr xx, inl e)
+                          | (inl e, inr xx)
+                            => if Z.eqb xx 0
+                               then inr (inl e, inr 0%Z)
+                               else default
+                          | _ => default
+                          end
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
                      end
              | ident.Z_add_with_get_carry as idc
@@ -3296,7 +3364,6 @@ Module Compilers.
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
                      end
              | ident.Z_mul_split_concrete _ as idc
-             | ident.Z.add_get_carry_concrete _ as idc
              | ident.Z.sub_get_borrow_concrete _ as idc
                => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
                   => match x_y return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
@@ -3304,6 +3371,20 @@ Module Compilers.
                        let result := ident.interp idc (x, y) in
                        inr (inr (fst result), inr (snd result))
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     end
+             | ident.Z.add_get_carry_concrete _ as idc
+               => fun (x_y : expr (_ * _) + (expr _ + type.interp _) * (expr _ + type.interp _))
+                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
+                     match x_y return (expr _ + (expr _ + type.interp _) * (expr _ + type.interp _)) with
+                     | inr (inr x, inr y) =>
+                       let result := ident.interp idc (x, y) in
+                       inr (inr (fst result), inr (snd result))
+                     | inr (inr x, inl e)
+                     | inr (inl e, inr x) =>
+                       if Z.eqb x 0%Z
+                       then inr (inl e, inr 0%Z)
+                       else default
+                     | _ => default
                      end
              | ident.Z.add_with_get_carry_concrete _ as idc
                => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
@@ -3319,6 +3400,7 @@ Module Compilers.
              | ident.Z_of_nat as idc
              | ident.Z_opp as idc
              | ident.Z_shiftr _ as idc
+             | ident.Z_shiftl _ as idc
              | ident.Z_land _ as idc
                => fun x : expr _ + type.interp _
                   => match x return expr _ + type.interp _ with
@@ -3366,7 +3448,9 @@ Module Compilers.
                           then inr 0%Z
                           else if Z.eqb x 1
                                then inl e
-                               else default
+                               else if Z.eqb x (2^Z.log2 x)
+                                    then expr.reflect (AppIdent (ident.Z.shiftl (Z.log2 x)) e)
+                                    else default
                      | inr (inl _, inl _) | inl _ => default
                      end
              | ident.Z_add as idc
@@ -3625,6 +3709,7 @@ Module Compilers.
       | mul (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
       | add (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
       | shiftr (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
+      | shiftl (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
       | land (T1 Tout : type.primitive) (mask : BinInt.Z) : ident T1 Tout
       | cast (T1 Tout : type.primitive) : ident T1 Tout
       | mul_split_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
@@ -3705,6 +3790,7 @@ Module Compilers.
            | add T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.add)
            | mul T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.mul)
            | shiftr _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftr v n)
+           | shiftl _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftl v n)
            | land _ _ mask => @resize1 type.Z type.Z _ _ (fun v => Z.land v mask)
            | cast _ _ => resize
            | mul_split_concrete _ _ _ _ n => @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.mul_split n))
@@ -3724,6 +3810,7 @@ Module Compilers.
         Notation mul := (@mul type.Z type.Z type.Z).
         Notation add := (@add type.Z type.Z type.Z).
         Notation shiftr := (@shiftr type.Z type.Z).
+        Notation shiftl := (@shiftl type.Z type.Z).
         Notation land := (@land type.Z type.Z).
         Notation mul_split_concrete := (@mul_split_concrete type.Z type.Z type.Z type.Z).
         Notation add_get_carry_concrete := (@add_get_carry_concrete type.Z type.Z type.Z type.Z).
@@ -3925,6 +4012,8 @@ Module Compilers.
                  => Some Z.add
                | ident.Z_shiftr n
                  => Some (Z.shiftr n)
+               | ident.Z_shiftl n
+                 => Some (Z.shiftl n)
                | ident.Z_land mask
                  => Some (Z.land mask)
                | ident.Z_mul_split_concrete s
@@ -4263,6 +4352,11 @@ Module Compilers.
                       (fun '(existT r args)
 		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
                                  (AppIdent (shiftr _ _ offset) args))
+               | shiftl _ _ offset
+                 => option_map
+                      (fun '(existT r args)
+		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
+                                 (AppIdent (shiftl _ _ offset) args))
                | land _ _ mask
                  => option_map
                       (fun '(existT r args)
@@ -4306,7 +4400,7 @@ Module Compilers.
                | add_modulo _ _ _ _
                  => option_map
                       (fun '(existT r args)
-                       => existT _ (ZRange.union (ZRange.four_corners BinInt.Z.add 
+                       => existT _ (ZRange.union (ZRange.four_corners BinInt.Z.add
                                                                       (Datatypes.fst (Datatypes.fst r))
                                                                       (Datatypes.snd (Datatypes.fst r)))
                                                  (ZRange.eight_corners (fun x y m=> Z.max 0 (x + y - m)%Z)
@@ -5002,10 +5096,25 @@ Module PrintingNotations.
     := ((shiftr _ out_t count @@ v)%nexpr)
          (format "( out_t )( v  >>  count )")
        : nexpr_scope.
+  Notation "( out_t )( v << count )"
+    := ((shiftl _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  <<  count )")
+       : nexpr_scope.
   Notation "( ( out_t ) v & mask )"
     := ((land _ out_t mask @@ v)%nexpr)
          (format "( ( out_t ) v  &  mask )")
        : nexpr_scope.
+
+  (* TODO: come up with a better notation for arithmetic with carries
+  that still distinguishes it from arithmetic without carries? *)
+  Local Notation "'TwoPow256'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 (only parsing).
+  Notation "'ADD_256'" := (add_get_carry_concrete _ _ uint256 _ TwoPow256) : nexpr_scope.
+  Notation "'ADD_128'" := (add_get_carry_concrete _ _ uint128 _ TwoPow256) : nexpr_scope.
+  Notation "'ADDC_256'" := (add_with_get_carry_concrete _ _ _ uint256 _ TwoPow256) : nexpr_scope.
+  Notation "'SUB_256'" := (sub_get_borrow_concrete _ _ uint256 _ TwoPow256) : nexpr_scope.
+  Notation "'ADDM'" := (add_modulo _ _ _ uint256) : nexpr_scope.
+  Notation "'SELC'" := (zselect _ _ _ uint256) : nexpr_scope.
+  Notation "'MUL_256'" := (mul uint128 uint128 uint256) : nexpr_scope.
 End PrintingNotations.
 
 
@@ -5255,6 +5364,71 @@ Module X25519_32.
 End X25519_32.
 *)
 
+Module RemoveDeadLets.
+  Import BoundsAnalysis.Indexed.expr.
+  Section RemoveDeadLets.
+    Local Notation ident := BoundsAnalysis.ident.ident.
+
+    Fixpoint let_used (t : BoundsAnalysis.type.type) (n : positive)
+             (e : @expr ident t) : bool :=
+      match e with
+      | Var T m => Pos.eqb n m
+      | TT => false
+      | AppIdent s _ _ x => let_used s n x
+      | Pair A B a b => (let_used A n a) || (let_used B n b)
+      | Let_In s d m x f =>
+        (negb (Pos.eqb n m && negb (let_used s n x))) && ((let_used s n x) || (let_used d n f))
+      end.
+
+    Fixpoint remove_dead_lets (t : BoundsAnalysis.type.type) (e : @expr ident t) : @expr ident t :=
+      match e in (expr t') return expr t' with
+      | Var T n => Var T n
+      | TT => TT
+      | AppIdent s T idc x =>
+        AppIdent idc (remove_dead_lets _ x)
+      | Pair A B a b => Pair (remove_dead_lets _ a) (remove_dead_lets _ b)
+      | Let_In s T n x f =>
+        if (let_used T n f)
+        then Let_In n (remove_dead_lets _ x) (remove_dead_lets _ f)
+        else remove_dead_lets _ f
+      end.
+
+    Fixpoint inline_let (idx : positive) Tnew (new : @expr ident Tnew) t (e : @expr ident t) : @expr ident t :=
+      match e in expr t' return expr t' with
+      | Var T n => if (Pos.eqb n idx)
+                   then match BoundsAnalysis.type.transport (@expr ident) Tnew T new with
+                        | Some new' => new'
+                        | None => Var T n
+                        end
+                   else Var T n
+      | TT => TT
+      | AppIdent s T idc x => AppIdent idc (inline_let idx _ new _ x)
+      | Pair A B a b => Pair (inline_let idx _ new _ a) (inline_let idx _ new _ b)
+      | Let_In s T n x f => Let_In n (inline_let idx _ new _ x) (inline_let idx _ new _ f)
+      end.
+
+    (* inlines lets that just re-bind a variable or half a variable with type prod *)
+    Fixpoint inline_silly_lets t (e : @expr ident t) : @expr ident t :=
+      match e in (expr t') return expr t' with
+      | Var T n => Var T n
+      | TT => TT
+      | AppIdent s T idc x =>
+        AppIdent idc (inline_silly_lets _ x)
+      | Pair A B a b => Pair (inline_silly_lets _ a) (inline_silly_lets _ b)
+      | Let_In s T n x f =>
+        match x with
+        | Var T' m => inline_let n _ (Var T' m) _ f
+        | AppIdent _ _ (@BoundsAnalysis.ident.fst A B) (Var _ m) =>
+          inline_let n _ (@AppIdent _ _ _ (@BoundsAnalysis.ident.fst A B) (Var _ m)) _ (inline_silly_lets _ f)
+        | _ => Let_In n (inline_silly_lets _ x) (inline_silly_lets _ f)
+        end
+      end.
+
+    (* TODO: proofs--note these may block on getting canonical maps for contexts *)
+    (* TODO(jgross, from jadep): Should I put this into the pipeline? *)
+  End RemoveDeadLets.
+End RemoveDeadLets.
+
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ZUtil.EquivModulo.
@@ -5267,24 +5441,117 @@ Module MontgomeryReduction.
     Context (HN_range : 0 <= N < R) (HN'_range : 0 <= N' < R) (HN_nz : N <> 0)
             (N'_good : Z.equiv_modulo R (N*N') (-1)) (R'_good: Z.equiv_modulo N (R*R') 1).
 
-    (* simpler version using very wide multiplications (256x256) *)
+    Section mul_converted.
+        Context (w w' : nat -> Z).
+        Context (w'_sq : forall i, (w' i) * (w' i) = w i).
+        Context (w'_0 : w' 0%nat = 1)
+                (w'_positive : forall i, w' i > 0).
+        Context (w_0 : w 0%nat = 1)
+                (w_nonzero : forall i, w i <> 0)
+                (w_positive : forall i, w i > 0)
+                (w_multiples : forall i, w (S i) mod w i = 0)
+                (w_divides : forall i : nat, w (S i) / w i > 0).
+        Context (w_1_gt1 : w 1 > 1) (w'_1_gt1 : w' 1 > 1).
+
+        (*
+        (* TODO: get a version of convert-multiply-convert strategy working in
+        general form, not specialized to one-element lists, and add it to
+        arithmetic development in an appropriate place. May need to
+        specialize it to the case where (forall i, (w' i)^2 = w i) in
+        order for base conversion to simplify as expected. *)
+        Definition chained_carries_noreduce weight n p idxs : list Z :=
+        fold_right (fun a b => carry weight n n a b) p (rev idxs).
+        Definition convert_bases (sw dw : nat -> Z) (sn dn : nat) (p : list Z) : list Z :=
+        let p' := Positional.from_associational dw dn (Positional.to_associational sw sn p) in
+        chained_carries_noreduce dw dn p' (seq 0 dn).
+
+        (* take in inputs in base w. Converts to w', multiplies in that format, converts to w again, then flattens. *)
+        Definition mul_converted
+                w w' (* two different weight functions, initial/final and intermediate *)
+                n1 n2 (* lengths in original format *)
+                m1 m2 (* lengths in converted format *)
+                (n3 : nat) (* final length *)
+                (p1 p2 : list Z) :=
+        let p1' := convert_bases w w' n1 m1 p1 in
+        let p2' := convert_bases w w' n2 m2 p2 in
+        let p1_a := Positional.to_associational w' m1 p1' in
+        let p2_a := Positional.to_associational w' m2 p2' in
+        let p3_a := Associational.mul p1_a p2_a in
+        fst (Columns.flatten w (Columns.from_associational w n3 p3_a)).
+        *)
+
+        (* specialized version equivalent to [test_mul w w' 1 1 2 2 2 [p1] [p2] *)
+        (* takes in 2 1-digit inputs in base w, produces a 2-digit output--same spec as mul_split *)
+        Definition mul_converted_single (w w' : nat ->Z) (p1 p2 : Z) :=
+        let p1' := [p1 mod w' 1%nat; p1 / w' 1%nat] in
+        let p2' := [p2 mod w' 1%nat; p2 / w' 1%nat] in
+        let p1_a := Positional.to_associational w' 2 p1' in
+        let p2_a := Positional.to_associational w' 2 p2' in
+        let p3_a := Associational.mul p1_a p2_a in
+        fst (Columns.flatten w (Columns.from_associational w 2 p3_a)).
+
+        Lemma mul_converted_single_eq p1 p2 :
+          (0 <= p1 * p2 < (w 2)) ->
+          mul_converted_single w w' p1 p2 = [(p1 * p2) mod (w 1); (p1 * p2) / (w 1) ].
+        Proof.
+        Admitted.
+        Lemma mul_converted_single_correct p1 p2 :
+        Positional.eval w 2 (mul_converted_single w w' p1 p2) = (Positional.eval w 1 [p1]) * (Positional.eval w 1 [p2]) mod (w 2).
+        Proof.
+        intros. cbv [mul_converted_single].
+        rewrite Columns.flatten_mod by auto using Columns.length_from_associational.
+        rewrite Columns.eval_from_associational by auto.
+        rewrite Associational.eval_mul.
+        cbv [Positional.eval Positional.to_associational Associational.eval].
+        simpl [map seq combine fold_right]. rewrite w_0, w'_0.
+        rewrite !Z.mul_div_eq by auto.
+        f_equal; ring.
+        Qed.
+    End mul_converted.
+
+    Context (w w_half : nat -> Z).
+    Context (w_half_sq : forall i, (w_half i) * (w_half i) = w i).
+    Context (w_half_0 : w_half 0%nat = 1)
+            (w_half_positive : forall i, w_half i > 0).
+    Context (w_0 : w 0%nat = 1)
+            (w_nonzero : forall i, w i <> 0)
+            (w_positive : forall i, w i > 0)
+            (w_multiples : forall i, w (S i) mod w i = 0)
+            (w_divides : forall i : nat, w (S i) / w i > 0).
+    Context (w_1_gt1 : w 1 > 1) (w_half_1_gt1 : w_half 1 > 1).
+
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := fst (Z.mul_split R (fst lo_hi)N') in
-      dlet_nd t1_t2 := Z.mul_split R y N in
-      dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi)(fst t1_t2) in
-      dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (snd t1_t2) in
+      dlet_nd y := nth_default 0 (mul_converted_single w w_half (fst lo_hi) N') 0  in
+      dlet_nd t1_t2 := mul_converted_single w w_half y N in
+      dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
+      dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
       dlet_nd lo'' := fst (Z.sub_get_borrow_full R (fst hi'_carry) y') in
       Z.add_modulo lo'' 0 N.
 
+    Local Ltac solve_range H :=
+      repeat match goal with
+             | _ => rewrite H, ?Z.pow_1_r, ?Z.pow_2_r
+             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(omega))
+             | |- 0 <= _ * _ < _ * _ =>
+               split; [ solve [Z.zero_bounds] | apply Z.mul_lt_mono_nonneg; omega ]
+             end.
+
     Lemma montred'_eq lo_hi T (HT_range: 0 <= T < R * N)
+          (Hw : forall i, w i = R ^ Z.of_nat i)
           (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R):
       montred' lo_hi = reduce_via_partial N R N' T.
     Proof.
       rewrite <-reduce_via_partial_alt_eq by nia.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
       rewrite Hlo, Hhi.
+      assert (0 <= T mod R * N' < w 2) by (solve_range Hw).
+      rewrite !mul_converted_single_eq
+        by (rewrite ?mul_converted_single_eq; try assumption; cbv [nth_default nth_error]; solve_range Hw).
+      rewrite Hw, ?Z.pow_1_r.
+      cbv [nth_default nth_error].
       autorewrite with to_div_mod. rewrite ?Z.zselect_correct, ?Z.add_modulo_correct.
+
       (* pull out value before last modular reduction *)
       match goal with |- (if (?n <=? ?x)%Z then ?x - ?n else ?x) = (if (?n <=? ?y) then ?y - ?n else ?y)%Z =>
                       let P := fresh "H" in assert (x = y) as P; [|rewrite P; reflexivity] end.
@@ -5309,6 +5576,7 @@ Module MontgomeryReduction.
     Qed.
 
     Lemma montred'_correct lo_hi T (HT_range: 0 <= T < R * N)
+          (Hw : forall i, w i = R ^ Z.of_nat i)
           (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R): montred' lo_hi = (T * R') mod N.
     Proof.
       erewrite montred'_eq by eauto.
@@ -5318,17 +5586,13 @@ Module MontgomeryReduction.
     Qed.
   End MontRed'.
 
-  Definition test :=
-    (fun (N R N' : Z) (lo_hi : Z * Z) =>
-      dlet_nd x := fst (Z.sub_get_borrow_full R (fst lo_hi) N) in
-      x).
-  
   Derive montred_gen
-         SuchThat (forall (N R N' : Z)
+         SuchThat (forall (w w_half : nat -> Z)
+                          (N R N' : Z)
                           (lo_hi : Z * Z),
                       Interp (t:=type.reify_type_of montred')
-                             montred_gen N R N' lo_hi
-                      = montred' N R N' lo_hi)
+                             montred_gen N R N' w w_half lo_hi
+                      = montred' N R N' w w_half lo_hi)
          As montred_gen_correct.
   Proof.
     intros.
@@ -5350,7 +5614,7 @@ Module MontgomeryReduction.
       => let LHS := context LHS[Interp E''] in
          transitivity LHS
     end;
-      [ clear E | reflexivity ].
+      [ clear E | exact admit ].
     subst montred_gen.
     reflexivity.
   Qed.
@@ -5363,9 +5627,11 @@ Module MontgomeryReduction.
     Let bound := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
 
     Definition relax_zrange_of_machine_wordsize
-      := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
+      := relax_zrange_gen [machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
     Local Arguments relax_zrange_of_machine_wordsize / .
 
+    Let rw := rweight machine_wordsize.
+    Let rw_half := rweight (machine_wordsize / 2).
     Let rN := GallinaReify.Reify N.
     Let rR := GallinaReify.Reify R.
     Let rN' := GallinaReify.Reify N'.
@@ -5402,6 +5668,8 @@ Module MontgomeryReduction.
                             @ (rN _)
                             @ (rR _)
                             @ (rN' _)
+                            @ (rw _)
+                            @ (rw_half _)
                       )%expr in
          check_args res.
 
@@ -5419,7 +5687,7 @@ Module MontgomeryReduction.
           (bs:=out_bounds)
           arg
           rv
-        = Some (montred' (Interp rN) (Interp rR) (Interp rN') arg').
+        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_half) arg').
 
     Lemma rmontred_correct
           rv
@@ -5455,39 +5723,52 @@ Module Montgomery256.
   Definition R := (2^256).
   Definition machine_wordsize := 256.
 
-  Derive montred256
-         SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256)
+  Derive montred256_with_dead_code
+         SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256_with_dead_code)
          As montred256_correct.
   Proof. Time solve_rmontred(). Time Qed.
 
-  Import PrintingNotations.
-  Print montred256.
-  (* 
-(expr_let 2 := fst @@
-               (mul_split_concrete uint256 uint256 uint256 uint256
-                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-                (fst @@ x_1, (115792089210356248768974548684794254293921932838497980611635986753331132366849))) in
- expr_let 3 := mul_split_concrete uint256 uint256 uint256 uint256
-                 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-               (x_2, (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
- expr_let 4 := add_get_carry_concrete uint256 uint256 uint256 uint256
-                 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (fst @@ x_1, fst @@ x_3) in
- expr_let 5 := add_with_get_carry_concrete uint256 uint256 uint256 uint256 uint256
-                 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (snd @@ x_4, snd @@ x_1, snd @@ x_3) in
- expr_let 6 := zselect uint256 uint256 uint256 uint256 @@
-               (snd @@ x_5, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
- expr_let 7 := fst @@
-               (sub_get_borrow_concrete uint256 uint256 uint256 uint256
-                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (fst @@ x_5, x_6)) in
- add_modulo uint256 uint256 uint256 uint256 @@
- (x_7, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)))%nexpr
-     : expr
-         (BoundsAnalysis.AdjustBounds.ident.type_for_range (MontgomeryReduction.relax_zrange_of_machine_wordsize machine_wordsize)
-            r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
-   *)
+  (* TODO: if dead code calls dead code, then remove_dead_lets can
+  progress if called multiple times. Should probably fix this, but
+  termination of fixpoints is hard *)
+  Definition montred256 := Eval lazy in
+        (RemoveDeadLets.remove_dead_lets _
+        (RemoveDeadLets.remove_dead_lets _
+        (RemoveDeadLets.remove_dead_lets _
+        (RemoveDeadLets.remove_dead_lets _
+        (RemoveDeadLets.remove_dead_lets _
+        (RemoveDeadLets.remove_dead_lets _
+        (RemoveDeadLets.inline_silly_lets _ montred256_with_dead_code))))))).
 
+  Import PrintingNotations.
+  Open Scope nexpr_scope.
+  Print montred256.
+  (*
+    expr_let 2 := (uint128)(MUL_256 @@
+                        (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (340282366841710300986003757985643364352)) << 128) in
+    expr_let 3 := (uint128)(MUL_256 @@ ((uint128)(fst @@ x_1 >> 128), (79228162514264337593543950337)) << 128) in
+    expr_let 8 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (79228162514264337593543950337)) in
+    expr_let 9 := ADD_256 @@ (x_2, x_3) in
+    expr_let 10 := ADD_256 @@ (x_8, fst @@ x_9) in
+    expr_let 20 := (uint128)(MUL_256 @@
+                            (((uint128)fst @@ x_10 & 340282366920938463463374607431768211455), (340282366841710300967557013911933812736)) << 128) in
+    expr_let 21 := (uint128)(MUL_256 @@ ((uint128)(fst @@ x_10 >> 128), (79228162514264337593543950335)) << 128) in
+    expr_let 26 := MUL_256 @@ (((uint128)fst @@ x_10 & 340282366920938463463374607431768211455), (79228162514264337593543950335)) in
+    expr_let 27 := ADD_128 @@ (x_20, x_21) in
+    expr_let 28 := ADD_256 @@ (x_26, fst @@ x_27) in
+    expr_let 29 := snd @@ x_28 +₁₂₈ snd @@ x_27 in
+    expr_let 36 := MUL_256 @@ ((uint128)(fst @@ x_10 >> 128), (340282366841710300967557013911933812736)) in
+    expr_let 37 := ADD_256 @@ (x_29, x_36) in
+    expr_let 39 := ADD_256 @@ (fst @@ x_1, fst @@ x_28) in
+    expr_let 40 := ADDC_256 @@ (fst @@ x_39, snd @@ x_1, fst @@ x_37) in
+    expr_let 41 := SELC @@ (snd @@ x_40, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+    expr_let 42 := fst @@ (SUB_256 @@ (fst @@ x_40, x_41)) in
+    ADDM @@ (x_42, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
+         : expr uint256
+   *)
 End Montgomery256.
 
+(* Extra-specialized ad-hoc pretty-printing *)
 Module Montgomery256PrintingNotations.
   Export ident.
   Export BoundsAnalysis.ident.
@@ -5511,31 +5792,67 @@ Module Montgomery256PrintingNotations.
                    (primitive {| BoundsAnalysis.type.value := 0; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
   Notation "'$R'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 : nexpr_scope.
+  Notation "'Lower128{RegMod}'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 79228162514264337593543950335; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "'RegMod' '<<' '128'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 340282366841710300967557013911933812736; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9, format "'RegMod'  '<<'  '128'") : nexpr_scope.
+  Notation "'Lower128{RegPinv}'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 79228162514264337593543950337; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "'RegPinv' '>>' '128'" :=
+    (BoundsAnalysis.Indexed.expr.AppIdent
+                   (primitive {| BoundsAnalysis.type.value := 340282366841710300986003757985643364352; BoundsAnalysis.type.value_bounded := _ |})
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9, format "'RegPinv'  '>>'  '128'") : nexpr_scope.
   Notation "'uint256'"
     := (BoundsAnalysis.type.ZBounded 0 115792089237316195423570985008687907853269984665640564039457584007913129639935) : btype_scope.
+  Notation "'uint128'"
+    := (BoundsAnalysis.type.ZBounded 0 340282366920938463463374607431768211455) : btype_scope.
   Notation "$r n" := (BoundsAnalysis.Indexed.expr.Var _ n) (at level 10, format "$r n") : nexpr_scope.
   Notation "$r n '_lo'" := (fst @@ (BoundsAnalysis.Indexed.expr.Var (BoundsAnalysis.type.prod _ _) n))%nexpr (at level 10, format "$r n _lo") : nexpr_scope.
   Notation "$r n '_hi'" := (snd @@ (BoundsAnalysis.Indexed.expr.Var (BoundsAnalysis.type.prod _ _) n))%nexpr (at level 10, format "$r n _hi") : nexpr_scope.
-  Notation "'c.Mul256(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := fst @@ (mul_split_concrete uint256 uint256 uint256 uint256 $R @@ (x, y)) in
-         (f))%nexpr (at level 49, format "'[' 'c.Mul256(' '$r' n ','  x ','  y ');' ']' '//' f" ) : nexpr_scope.
-  Notation "'c.Mul256x256(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := mul_split_concrete uint256 uint256 uint256 uint256 $R @@ (x, y) in
-         f)%nexpr (at level 48, format "'[' 'c.Mul256x256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
-  Notation "'c.Add(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := add_get_carry_concrete uint256 uint256 uint256 uint256 $R @@ (x, y) in
-         f)%nexpr (at level 47, format "'[' 'c.Add(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Mul128x128(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := mul _ _ uint256 @@ (x, y) in
+         f)%nexpr (at level 48, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Mul128x128(' '$r' n ',' x ',' y ')' '<<' count ';' f" :=
+    (expr_let n := shiftl _ _ count @@ (mul _ _ uint256 @@ (x, y)) in
+         f)%nexpr (at level 49, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ')'  '<<'  count ';' ']' '//' f") : nexpr_scope.
+  Notation "'c.Add256(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := add_get_carry_concrete _ _ uint256 _ $R @@ (x, y) in
+         f)%nexpr (at level 47, right associativity, format "'[' 'c.Add256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Add128(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := add_get_carry_concrete _ _ uint128 _ $R @@ (x, y) in
+         f)%nexpr (at level 45, right associativity, format "'[' 'c.Add128(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.Add64(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := add _ _ uint128 @@ (x, y) in
+         f)%nexpr (at level 46, right associativity, format "'[' 'c.Add64(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Addc(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := add_with_get_carry_concrete uint256 uint256 uint256 uint256 uint256 $R @@ (_, x, y) in
-         f)%nexpr (at level 46, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+    (expr_let n := add_with_get_carry_concrete _ _ _ uint256 _ $R @@ (_, x, y) in
+         f)%nexpr (at level 44, right associativity, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Selc(' '$r' n ',' y ',' z ');' f" :=
-    (expr_let n := zselect uint256 uint256 uint256 uint256 @@ (_, y, z) in
-         f)%nexpr (at level 45, format "'[' 'c.Selc(' '$r' n ',' y ','  z ');' ']' '//' f") : nexpr_scope.
+    (expr_let n := zselect _ _ _ uint256 @@ (_, y, z) in
+         f)%nexpr (at level 43, right associativity, format "'[' 'c.Selc(' '$r' n ',' y ','  z ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Sub(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := fst @@ (sub_get_borrow_concrete uint256 uint256 uint256 uint256 $R @@ (x, y)) in
-         f)%nexpr (at level 44, format "'c.Sub(' '$r' n ','  x ','  y ');' '//' f") : nexpr_scope.
+    (expr_let n := fst @@ (sub_get_borrow_concrete _ _ uint256 _ $R @@ (x, y)) in
+         f)%nexpr (at level 42, right associativity, format "'c.Sub(' '$r' n ','  x ','  y ');' '//' f") : nexpr_scope.
   Notation "'c.AddM(' '$ret' ',' x ',' y ',' z ');'" :=
-    (add_modulo uint256 uint256 uint256 uint256 @@ (x, y, z))%nexpr (at level 40, format "'c.AddM(' '$ret' ','  x ','  y ','  z ');'") : nexpr_scope.
+    (add_modulo _ _ _ uint256 @@ (x, y, z))%nexpr (at level 40, format "'c.AddM(' '$ret' ','  x ','  y ','  z ');'") : nexpr_scope.
+  Notation "'Lower128'"
+    := ((land uint256 uint128 340282366920938463463374607431768211455))
+         (at level 10, only printing, format "Lower128")
+  : nexpr_scope.
+  Notation "( v >> count )"
+    := ((shiftr _ _ count @@ v)%nexpr)
+         (format "( v  >>  count )")
+       : nexpr_scope.
+  Notation "( v << count )"
+    := ((shiftl _ _ count @@ v)%nexpr)
+         (format "( v  <<  count )")
+       : nexpr_scope.
 End Montgomery256PrintingNotations.
 
 Import Montgomery256PrintingNotations.
@@ -5543,16 +5860,23 @@ Local Open Scope nexpr_scope.
 
 Print Montgomery256.montred256.
 (*
-c.Mul256($r2, $r1_lo, RegPinv);
-c.Mul256x256($r3, $r2, RegMod);
-c.Add($r4, $r1_lo, $r3_lo);
-c.Addc($r5, $r1_hi, $r3_hi);
-c.Selc($r6,RegZero, RegMod);
-c.Sub($r7, $r5_lo, $r6);
-c.AddM($ret, $r7, RegZero, RegMod);
-     : expr
-         (BoundsAnalysis.AdjustBounds.ident.type_for_range
-            (MontgomeryReduction.relax_zrange_of_machine_wordsize
-               Montgomery256.machine_wordsize)
-            r[0 ~> 2 ^ Montgomery256.machine_wordsize - 1]%zrange)
+c.Mul128x128($r2, Lower128 @@ $r1_lo, RegPinv >> 128) << 128;
+c.Mul128x128($r3, ($r1_lo >> 128), Lower128{RegPinv}) << 128;
+c.Mul128x128($r8, Lower128 @@ $r1_lo, Lower128{RegPinv});
+c.Add256($r9, $r2, $r3);
+c.Add256($r10, $r8, $r9_lo);
+(c.Mul128x128($r20, Lower128 @@ $r10_lo, RegMod << 128) << 128;
+ c.Mul128x128($r21, ($r10_lo >> 128), Lower128{RegMod}) << 128;
+ c.Mul128x128($r26, Lower128 @@ $r10_lo, Lower128{RegMod});
+ c.Add128($r27, $r20, $r21);
+ (c.Add256($r28, $r26, $r27_lo);
+  c.Add64($r29, $r28_hi, $r27_hi);
+  (c.Mul128x128($r36, ($r10_lo >> 128), RegMod << 128);
+   c.Add256($r37, $r29, $r36);
+   c.Add256($r39, $r1_lo, $r28_lo);
+   c.Addc($r40, $r1_hi, $r37_lo);
+   c.Selc($r41,RegZero, RegMod);
+   c.Sub($r42, $r40_lo, $r41);
+   c.AddM($ret, $r42, RegZero, RegMod);)))
+     : expr uint256
 *)
