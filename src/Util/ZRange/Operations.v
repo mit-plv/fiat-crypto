@@ -3,6 +3,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Notations.
 
 Module ZRange.
+  Local Open Scope Z_scope.
   Local Open Scope zrange_scope.
 
   Local Notation eta v := r[ lower v ~> upper v ].
@@ -53,4 +54,32 @@ Module ZRange.
     := let (lx, ux) := eta x in
        union (four_corners (f lx) y z)
              (four_corners (f ux) y z).
+
+  Definition upper_lor_and_bounds (x y : BinInt.Z) : BinInt.Z
+    := 2^(1 + Z.log2_up (Z.max x y)).
+  Definition extreme_lor_land_bounds (x y : zrange) : zrange
+    := let mx := ZRange.upper (ZRange.abs x) in
+       let my := ZRange.upper (ZRange.abs y) in
+       {| lower := -upper_lor_and_bounds mx my ; upper := upper_lor_and_bounds mx my |}.
+  Definition extremization_bounds (f : zrange -> zrange -> zrange) (x y : zrange) : zrange
+    := let (lx, ux) := x in
+       let (ly, uy) := y in
+       if ((lx <? 0) || (ly <? 0))%Z%bool
+       then extreme_lor_land_bounds x y
+       else f x y.
+  Definition land_bounds : zrange -> zrange -> zrange
+    := extremization_bounds
+         (fun x y
+          => let (lx, ux) := x in
+             let (ly, uy) := y in
+             {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
+
+  Definition split_bounds (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
+    if upper r <? split_at
+    then if (0 <=? lower r)%Z
+         then (r, {| lower := 0; upper := 0 |})
+         else ( {| lower := 0; upper := split_at - 1 |},
+                {| lower := 0; upper := Z.max ( -(lower r / split_at)) (upper r / split_at) |} )
+    else ( {| lower := 0; upper := split_at - 1 |},
+           {| lower := 0; upper := Z.max ( -(lower r / split_at)) (upper r / split_at) |} ).
 End ZRange.
