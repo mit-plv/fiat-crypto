@@ -434,10 +434,10 @@ Hint Resolve permutation_app_swap.
    Implicits
    **************************************)
 
-Implicit Arguments permutation [A].
-Implicit Arguments split_one [A].
-Implicit Arguments all_permutations [A].
-Implicit Arguments permutation_dec [A].
+Arguments permutation [A] _ _.
+Arguments split_one [A] _.
+Arguments all_permutations [A] _.
+Arguments permutation_dec [A].
 
 (**************************************
    Permutation is compatible with map

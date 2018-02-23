@@ -82,9 +82,9 @@ intros z n; generalize z; elim n; simpl; auto.
 Qed.
 
 End Iterator.
-Implicit Arguments iter [A B].
-Implicit Arguments progression [A].
-Implicit Arguments next_n [A].
+Arguments iter [A B].
+Arguments progression [A].
+Arguments next_n [A].
 Hint Unfold iter .
 Hint Unfold progression .
 Hint Unfold next_n .
