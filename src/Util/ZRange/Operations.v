@@ -27,6 +27,10 @@ Module ZRange.
     := let (l, u) := eta v in
        r[ 0 ~> Z.max (Z.abs l) (Z.abs u) ].
 
+  Definition opp (v : zrange) : zrange
+    := let (l, u) := eta v in
+       r[ -u ~> -l ].
+
   Definition map (f : Z -> Z) (v : zrange) : zrange
     := let (l, u) := eta v in
        r[ f l ~> f u ].
