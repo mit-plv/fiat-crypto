@@ -15,6 +15,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -1727,6 +1728,7 @@ Module Compilers.
           | Z_sub_get_borrow_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
           | Z_zselect : ident (Z * Z * Z) Z
           | Z_add_modulo : ident (Z * Z * Z) Z
+          | Z_cast (range : zrange) : ident Z Z
           .
 
           Notation curry0 f
@@ -1745,6 +1747,9 @@ Module Compilers.
             := (fun '(a, b, c) => f a (uncurry3 b) c).
           Notation curry3_2 f
             := (fun '(a, b, c) => f a (uncurry2 b) c).
+
+          Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
+          Proof. exact v. Qed.
 
           Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
             := match idc in ident s d return type.interp s -> type.interp d with
@@ -1786,6 +1791,9 @@ Module Compilers.
                | Z_sub_get_borrow_concrete s => curry2 (Z.sub_get_borrow s)
                | Z_zselect => curry3 Z.zselect
                | Z_add_modulo => curry3 Z.add_modulo
+               | Z_cast r => fun x => if (lower r <=? x) && (x <=? upper r)
+                                      then x
+                                      else cast_outside_of_range r x
                end.
 
           Ltac reify
@@ -1911,6 +1919,7 @@ Module Compilers.
             Notation sub_get_borrow_concrete := Z_sub_get_borrow_concrete.
             Notation zselect := Z_zselect.
             Notation add_modulo := Z_add_modulo.
+            Notation cast := Z_cast.
           End Z.
 
           Module Nat.
@@ -2302,6 +2311,16 @@ Module Compilers.
          | Some (existT s (idc, args))
            => match idc in ident s t return expr s -> option (expr type.Z) with
               | ident.Z_opp => fun v => Some v
+              | _ => fun _ => None
+              end args
+         | None => None
+         end.
+
+    Definition invert_Z_cast (e : @expr var type.Z) : option (zrange * @expr var type.Z)
+      := match invert_AppIdent e with
+         | Some (existT s (idc, args))
+           => match idc in ident s t return expr s -> option (zrange * expr type.Z) with
+              | ident.Z_cast r => fun v => Some (r, v)
               | _ => fun _ => None
               end args
          | None => None
@@ -2822,6 +2841,7 @@ Module Compilers.
                   | ident.Z_sub_get_borrow as idc
                   | ident.Z_zselect as idc
                   | ident.Z_add_modulo as idc
+                  | ident.Z_cast _ as idc
                     => cps_of (Uncurried.expr.default.ident.interp idc)
                   | ident.Z_mul_split_concrete s
                     => cps_of (curry2 (Z.mul_split s))
@@ -2998,6 +3018,7 @@ Module Compilers.
                 | ident.Z_shiftl _ as idc
                 | ident.Z_land _ as idc
                 | ident.Z_opp as idc
+                | ident.Z_cast _ as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * (type.Z -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
@@ -3422,37 +3443,346 @@ Module Compilers.
     Include default.
   End CPS.
 
-  Module sign.
-    Local Set Boolean Equality Schemes.
-    Local Set Decidable Equality Schemes.
-    Inductive sign := pos | neg.
-    Module Z.
-      Definition interp (s : sign) : Z -> Z
-        := match s with
-           | pos => id
-           | neg => Z.opp
+  Module ZRange.
+    Module type.
+      Module primitive.
+        Definition interp (t : type.primitive) : Set
+          := match t with
+             | type.unit => unit
+             | type.Z => zrange
+             | type.nat => unit
+             | type.bool => unit
+             end.
+        Definition is_neg {t} : interp t -> bool
+          := match t with
+             | type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
+             | _ => fun _ => false
+             end.
+        Definition is_tighter_than {t} : interp t -> interp t -> bool
+          := match t with
+             | type.Z => is_tighter_than_bool
+             | type.unit
+             | type.nat
+             | type.bool
+               => fun _ _ => true
+             end.
+        Definition is_bounded_by {t} : interp t -> type.interp t -> bool
+          := match t with
+             | type.Z => fun r z => (lower r <=? z) && (z <=? upper r)
+             | type.unit
+             | type.nat
+             | type.bool
+               => fun _ _ => true
+             end.
+        Module option.
+          Definition interp (t : type.primitive) : Set
+            := match t with
+               | type.unit => unit
+               | type.Z => option zrange
+               | type.nat => unit
+               | type.bool => unit
+               end.
+          Definition None {t} : interp t
+            := match t with
+               | type.Z => None
+               | _ => tt
+               end.
+          Definition Some {t} : primitive.interp t -> interp t
+            := match t with
+               | type.Z => Some
+               | _ => id
+               end.
+          Definition is_neg {t} : interp t -> bool
+            := match t with
+               | type.Z => fun v => match v with
+                                    | Datatypes.Some v => @is_neg type.Z v
+                                    | Datatypes.None => false
+                                    end
+               | t => @primitive.is_neg t
+               end.
+        Definition is_tighter_than {t} : interp t -> interp t -> bool
+          := match t with
+             | type.Z
+               => fun r1 r2
+                  => match r1, r2 with
+                     | _, Datatypes.None => true
+                     | Datatypes.None, Datatypes.Some _ => false
+                     | Datatypes.Some r1, Datatypes.Some r2 => is_tighter_than (t:=type.Z) r1 r2
+                     end
+             | t => @is_tighter_than t
+             end.
+        Definition is_bounded_by {t} : interp t -> type.interp t -> bool
+          := match t with
+             | type.Z
+               => fun r
+                  => match r with
+                     | Datatypes.Some r => @is_bounded_by type.Z r
+                     | Datatypes.None => fun _ => true
+                     end
+             | t => @is_bounded_by t
+             end.
+        End option.
+      End primitive.
+      Fixpoint interp (t : type) : Set
+        := match t with
+           | type.type_primitive x => primitive.interp x
+           | type.prod A B => interp A * interp B
+           | type.arrow s d => interp s -> interp d
+           | type.list A => list (interp A)
            end.
-    End Z.
-    Definition of_Z (v : Z) : sign
-      := match v with
-         | Zneg _ => neg
-         | Zpos _ => pos
-         | Z0 => (* default *) pos
-         end.
-    Definition opp (s : sign) : sign
-      := match s with
-         | pos => neg
-         | neg => pos
-         end.
-    Definition mul (s1 s2 : sign) : sign
-      := match s1, s2 with
-         | pos, pos => pos
-         | neg, neg => pos
-         | pos, neg | neg, pos => neg
-         end.
-  End sign.
-  Notation sign := sign.sign.
+      Fixpoint fold_andb_map {A B} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B)
+        : bool
+        := match ls1, ls2 with
+           | nil, nil => true
+           | nil, _ => false
+           | cons x xs, cons y ys => andb (f x y) (@fold_andb_map A B f xs ys)
+           | cons _ _, _ => false
+           end.
+      Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+        := match t with
+           | type.type_primitive x => @primitive.is_tighter_than x
+           | type.prod A B
+             => fun '((ra, rb) : interp A * interp B)
+                    '((ra', rb') : interp A * interp B)
+                => @is_tighter_than A ra ra' && @is_tighter_than B rb rb'
+           | type.arrow s d => fun _ _ => false
+           | type.list A
+             => fold_andb_map (@is_tighter_than A)
+           end.
+      Fixpoint is_bounded_by {t} : interp t -> Compilers.type.interp t -> bool
+        := match t return interp t -> Compilers.type.interp t -> bool with
+           | type.type_primitive x => @primitive.is_bounded_by x
+           | type.prod A B
+             => fun '((ra, rb) : interp A * interp B)
+                    '((ra', rb') : Compilers.type.interp A * Compilers.type.interp B)
+                => @is_bounded_by A ra ra' && @is_bounded_by B rb rb'
+           | type.arrow s d => fun _ _ => false
+           | type.list A
+             => fold_andb_map (@is_bounded_by A)
+           end.
+      Module option.
+        Fixpoint interp (t : type) : Set
+          := match t with
+             | type.type_primitive x => primitive.option.interp x
+             | type.prod A B => interp A * interp B
+             | type.arrow s d => interp s -> interp d
+             | type.list A => list (interp A)
+             end.
+        Fixpoint None {t : type} : interp t
+          := match t with
+             | type.type_primitive x => @primitive.option.None x
+             | type.prod A B => (@None A, @None B)
+             | type.arrow s d => fun _ => @None d
+             | type.list A => @nil (interp A)
+             end.
+        Fixpoint Some {t : type} : type.interp t -> interp t
+          := match t with
+             | type.type_primitive x => @primitive.option.Some x
+             | type.prod A B
+               => fun x : type.interp A * type.interp B
+                  => (@Some A (fst x), @Some B (snd x))
+             | type.arrow s d => fun _ _ => @None d
+             | type.list A => List.map (@Some A)
+             end.
+        Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+          := match t with
+             | type.type_primitive x => @primitive.option.is_tighter_than x
+             | type.prod A B
+               => fun '((ra, rb) : interp A * interp B)
+                      '((ra', rb') : interp A * interp B)
+                  => @is_tighter_than A ra ra' && @is_tighter_than B rb rb'
+             | type.arrow s d => fun _ _ => false
+             | type.list A
+               => fold_andb_map (@is_tighter_than A)
+             end.
+        Fixpoint is_bounded_by {t} : interp t -> Compilers.type.interp t -> bool
+          := match t return interp t -> Compilers.type.interp t -> bool with
+             | type.type_primitive x => @primitive.option.is_bounded_by x
+             | type.prod A B
+               => fun '((ra, rb) : interp A * interp B)
+                      '((ra', rb') : Compilers.type.interp A * Compilers.type.interp B)
+                  => @is_bounded_by A ra ra' && @is_bounded_by B rb rb'
+             | type.arrow s d => fun _ _ => false
+             | type.list A
+               => fold_andb_map (@is_bounded_by A)
+             end.
+
+        Lemma fold_andb_map_map {A B C} f g ls1 ls2
+          : @fold_andb_map A B f ls1 (@List.map C _ g ls2)
+            = fold_andb_map (fun a b => f a (g b)) ls1 ls2.
+        Proof. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
+
+        Lemma is_tighter_than_Some_is_bounded_by {t} r1 r2 val
+              (Htight : @is_tighter_than t r1 (Some r2) = true)
+              (Hbounds : is_bounded_by r1 val = true)
+          : type.is_bounded_by r2 val = true.
+        Proof.
+          induction t;
+            repeat first [ progress destruct_head'_prod
+                         | progress destruct_head'_and
+                         | progress destruct_head' type.primitive
+                         | progress cbn in *
+                         | progress destruct_head' option
+                         | solve [ eauto with nocore ]
+                         | progress cbv [is_tighter_than_bool] in *
+                         | progress rewrite ?Bool.andb_true_iff in *
+                         | discriminate
+                         | apply conj
+                         | Z.ltb_to_lt; omega
+                         | rewrite @fold_andb_map_map in * ].
+          { revert r1 r2 val Htight Hbounds IHt.
+            induction r1, r2, val; cbn; auto with nocore; try congruence; [].
+            rewrite !Bool.andb_true_iff; intros; destruct_head'_and; split; eauto with nocore. }
+        Qed.
+      End option.
+    End type.
+
+    Module ident.
+      Module option.
+        Local Open Scope zrange_scope.
+
+        Notation curry0 f
+          := (fun 'tt => f).
+        Notation curry2 f
+          := (fun '(a, b) => f a b).
+        Notation uncurry2 f
+          := (fun a b => f (a, b)).
+        Notation curry3 f
+          := (fun '(a, b, c) => f a b c).
+
+        Definition interp {s d} (idc : ident s d) : type.option.interp s -> type.option.interp d
+          := match idc in ident.ident s d return type.option.interp s -> type.option.interp d with
+             | ident.primitive type.Z v => fun _ => Some r[v ~> v]
+             | ident.Let_In tx tC => fun '(x, C) => C x
+             | ident.primitive _ _
+             | ident.Nat_succ
+             | ident.bool_rect _
+             | ident.nat_rect _
+             | ident.pred
+             | ident.list_rect _ _
+             | ident.List_nth_default _
+             | ident.Z_pow
+             | ident.Z_div
+             | ident.Z_eqb
+             | ident.Z_leb
+             | ident.Z_of_nat
+             | ident.Z_mul_split
+             | ident.Z_add_get_carry
+             | ident.Z_add_with_get_carry
+             | ident.Z_sub_get_borrow
+             | ident.Z_modulo
+               => fun _ => type.option.None
+             | ident.nil t => curry0 (@nil (type.option.interp t))
+             | ident.cons t => curry2 (@Datatypes.cons (type.option.interp t))
+             | ident.fst A B => @Datatypes.fst (type.option.interp A) (type.option.interp B)
+             | ident.snd A B => @Datatypes.snd (type.option.interp A) (type.option.interp B)
+             | ident.List_nth_default_concrete T d n
+               => fun ls => @nth_default (type.option.interp T) type.option.None ls n
+             | ident.Z_shiftr _ as idc
+             | ident.Z_shiftl _ as idc
+             | ident.Z_opp as idc
+               => option_map (ZRange.two_corners (ident.interp idc))
+             | ident.Z_land mask
+               => option_map
+                    (fun r : zrange
+                     => ZRange.land_bounds r r[mask~>mask])
+             | ident.Z_add as idc
+             | ident.Z_mul as idc
+             | ident.Z_sub as idc
+               => fun '((x, y) : option zrange * option zrange)
+                  => match x, y with
+                     | Some x, Some y
+                       => Some (ZRange.four_corners (uncurry2 (ident.interp idc)) x y)
+                     | Some _, None | None, Some _ | None, None => None
+                     end
+             | ident.Z_cast range
+               => fun r : option zrange
+                  => Some match r with
+                          | Some r => ZRange.intersection r range
+                          | None => range
+                          end
+             | ident.Z_mul_split_concrete split_at
+               => fun '((x, y) : option zrange * option zrange)
+                  => match x, y with
+                     | Some x, Some y
+                       => type.option.Some
+                            (t:=(type.Z*type.Z)%ctype)
+                            (ZRange.split_bounds (ZRange.four_corners BinInt.Z.mul x y) split_at)
+                     | Some _, None | None, Some _ | None, None => type.option.None
+                     end
+             | ident.Z_add_get_carry_concrete split_at
+               => fun '((x, y) : option zrange * option zrange)
+                  => match x, y with
+                     | Some x, Some y
+                       => type.option.Some
+                            (t:=(type.Z*type.Z)%ctype)
+                            (ZRange.split_bounds (ZRange.four_corners BinInt.Z.add x y) split_at)
+                     | Some _, None | None, Some _ | None, None => type.option.None
+                     end
+             | ident.Z_add_with_get_carry_concrete split_at
+               => fun '((x, y, z) : option zrange * option zrange * option zrange)
+                  => match x, y, z with
+                     | Some x, Some y, Some z
+                       => type.option.Some
+                            (t:=(type.Z*type.Z)%ctype)
+                            (ZRange.split_bounds
+                               (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
+                               split_at)
+                     | _, _, _ => type.option.None
+                     end
+             | ident.Z_sub_get_borrow_concrete split_at
+               => fun '((x, y) : option zrange * option zrange)
+                  => match x, y with
+                     | Some x, Some y
+                       => type.option.Some
+                            (t:=(type.Z*type.Z)%ctype)
+                            (ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at)
+                     | Some _, None | None, Some _ | None, None => type.option.None
+                     end
+             | ident.Z_zselect
+               => fun '((x, y, z) : option zrange * option zrange * option zrange)
+                  => match y, z with
+                     | Some y, Some z => Some (ZRange.union y z)
+                     | Some _, None | None, Some _ | None, None => None
+                     end
+             | ident.Z_add_modulo
+               => fun '((x, y, z) : option zrange * option zrange * option zrange)
+                  => match x, y, z with
+                     | Some x, Some y, Some m
+                       => Some (ZRange.union
+                                  (ZRange.four_corners BinInt.Z.add x y)
+                                  (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
+                                                        x y m))
+                     | _, _, _ => None
+                     end
+             end.
+      End option.
+    End ident.
+  End ZRange.
+
+  Module DefaultValue.
+    Module type.
+      Module primitive.
+        Definition default {t : type.primitive} : type.interp t
+          := match t with
+             | type.unit => tt
+             | type.Z => (-1)%Z
+             | type.nat => 0%nat
+             | type.bool => true
+             end.
+      End primitive.
+      Fixpoint default {t} : type.interp t
+        := match t with
+           | type.type_primitive x => @primitive.default x
+           | type.prod A B => (@default A, @default B)
+           | type.arrow s d => fun _ => @default d
+           | type.list A => @nil (type.interp A)
+           end.
+    End type.
+  End DefaultValue.
+
   Module partial.
+    Notation Zdata := (option zrange).
     Section value.
       Context (var : type -> Type).
       Definition value_prestep (value : type -> Type) (t : type)
@@ -3468,7 +3798,7 @@ Module Compilers.
            | type.arrow _ _ as t
              => value_prestep value t
            | type.type_primitive type.Z as t
-             => sign * @expr var t + value_prestep value t
+             => Zdata * @expr var t + value_prestep value t
            | type.prod _ _ as t
            | type.list _ as t
            | type.type_primitive _ as t
@@ -3476,10 +3806,22 @@ Module Compilers.
            end%type.
       Fixpoint value (t : type)
         := value_step value t.
+
+      Fixpoint value_default {t} : value t
+        := match t return value t with
+           | type.type_primitive type.Z
+           | type.type_primitive _
+             => inr DefaultValue.type.primitive.default
+           | type.prod A B
+             => inr (@value_default A, @value_default B)
+           | type.arrow s d => fun _ => @value_default d
+           | type.list A => inr (@nil (value A))
+           end.
     End value.
 
     Module expr.
       Section reify.
+        Context (relax_zrange : zrange -> option zrange).
         Context {var : type -> Type}.
         Fixpoint reify {t : type} {struct t}
           : value var t -> @expr var t
@@ -3501,10 +3843,14 @@ Module Compilers.
                      | inr v => reify_list (List.map (@reify A) v)
                      end
              | type.type_primitive type.Z as t
-               => fun x : sign * expr t + type.interp t
+               => fun x : Zdata * expr t + type.interp t
                   => match x with
-                     | inl (sign.pos, v) => v
-                     | inl (sign.neg, v) => ident.Z.opp @@ v
+                     | inl (Some r, v)
+                       => match relax_zrange r with
+                          | Some r => ident.Z.cast r @@ v
+                          | None => v
+                          end
+                     | inl (None, v) => v
                      | inr v => ident.primitive v @@ TT
                      end%core%expr
              | type.type_primitive _ as t
@@ -3542,12 +3888,12 @@ Module Compilers.
                         end
                 | type.type_primitive type.Z as t
                   => fun v : expr t
-                     => let inr := @inr (sign * expr t) (value_prestep (value var) t) in
-                        let inl := @inl (sign * expr t) (value_prestep (value var) t) in
-                        match reflect_primitive v, invert_Z_opp v with
-                        | Some v, _ => inr v
-                        | None, Some v => inl (sign.neg, v)
-                        | None, None => inl (sign.pos, v)
+                     => let inr' := @inr (Zdata * expr t) (value_prestep (value var) t) in
+                        let inl' := @inl (Zdata * expr t) (value_prestep (value var) t) in
+                        match reflect_primitive v, invert_Z_cast v with
+                        | Some v, _ => inr' v
+                        | None, Some (r, v) => inl' (Some r, v)
+                        | None, None => inl' (None, v)
                         end
                 | type.type_primitive _ as t
                   => fun v : expr t
@@ -3563,7 +3909,8 @@ Module Compilers.
 
     Module ident.
       Section interp.
-        Context {var : type -> Type}.
+        Context (relax_zrange : zrange -> option zrange)
+                {var : type -> Type}.
         Fixpoint is_var_like {t} (e : @expr var t) : bool
           := match e with
              | Var t v => true
@@ -3605,16 +3952,19 @@ Module Compilers.
                              => @interp_let_in
                                   _ B b
                                   (fun b => f (inr (a, b))))
-                     | inl e => partial.expr.reflect (expr_let y := e in partial.expr.reify (f (inl (Var y))))%expr
+                     | inl e => partial.expr.reflect relax_zrange (expr_let y := e in partial.expr.reify relax_zrange (f (inl (Var y))))%expr
                      end
              | type.type_primitive type.Z as t
-               => fun (x : sign * expr t + type.interp t)
-                      (f : sign * expr t + type.interp t -> value var tC)
+               => fun (x : Zdata * expr t + type.interp t)
+                      (f : Zdata * expr t + type.interp t -> value var tC)
                   => match x with
-                     | inl (sgn, e)
+                     | inl (data, e)
                        => if is_var_like e
-                          then f (inl (sgn, e))
-                          else partial.expr.reflect (expr_let y := e in partial.expr.reify (f (inl (sgn, Var y)%core)))%expr
+                          then f (inl (data, e))
+                          else partial.expr.reflect
+                                 relax_zrange
+                                 (expr_let y := (partial.expr.reify relax_zrange (t:=t) x) in
+                                      partial.expr.reify relax_zrange (f (inl (data, Var y)%core)))%expr
                      | inr v => f (inr v)
                      end
              | type.type_primitive _ as t
@@ -3623,7 +3973,10 @@ Module Compilers.
                      | inl e
                        => match invert_Var e with
                           | Some v => f (inl (Var v))
-                          | None => partial.expr.reflect (expr_let y := e in partial.expr.reify (f (inl (Var y))))%expr
+                          | None => partial.expr.reflect
+                                      relax_zrange
+                                      (expr_let y := e in
+                                           partial.expr.reify relax_zrange (f (inl (Var y))))%expr
                           end
                      | inr v => f (inr v) (* FIXME: do not substitute [S (big stuck term)] *)
                      end
@@ -3635,7 +3988,7 @@ Module Compilers.
                => fun (xf : expr (tx * (tx -> tC)) + value var tx * value var (tx -> tC))
                   => match xf with
                      | inr (x, f) => interp_let_in x f
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=tx * (tx -> tC)) xf))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=tx * (tx -> tC)) xf))
                      end
              | ident.nil t
                => fun _ => inr (@nil (value var t))
@@ -3647,26 +4000,26 @@ Module Compilers.
                => fun (x_xs : expr (t * type.list t) + value var t * (expr (type.list t) + list (value var t)))
                   => match x_xs return expr (type.list t) + list (value var t) with
                      | inr (x, inr xs) => inr (cons x xs)
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=t * type.list t) x_xs))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=t * type.list t) x_xs))
                      end
              | ident.fst A B as idc
                => fun x : expr (A * B) + value var A * value var B
                   => match x with
                      | inr x => fst x
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=A*B) x))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=A*B) x))
                      end
              | ident.snd A B as idc
                => fun x : expr (A * B) + value var A * value var B
                   => match x with
                      | inr x => snd x
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=A*B) x))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=A*B) x))
                      end
              | ident.bool_rect T as idc
                => fun (true_case_false_case_b : expr (T * T * type.bool) + (expr (T * T) + value var T * value var T) * (expr type.bool + bool))
                   => match true_case_false_case_b with
                      | inr (inr (true_case, false_case), inr b)
                        => @bool_rect (fun _ => value var T) true_case false_case b
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=T*T*type.bool) true_case_false_case_b))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=T*T*type.bool) true_case_false_case_b))
                      end
              | ident.nat_rect P as idc
                => fun (O_case_S_case_n : expr (P * (type.nat * P -> P) * type.nat) + (expr (P * (type.nat * P -> P)) + value var P * value var (type.nat * P -> P)) * (expr type.nat + nat))
@@ -3676,7 +4029,7 @@ Module Compilers.
                                     O_case
                                     (fun n' rec => S_case (inr (inr n', rec)))
                                     n
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=P * (type.nat * P -> P) * type.nat) O_case_S_case_n))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=P * (type.nat * P -> P) * type.nat) O_case_S_case_n))
                      end
              | ident.list_rect A P as idc
                => fun (nil_case_cons_case_ls : expr (P * (A * type.list A * P -> P) * type.list A) + (expr (P * (A * type.list A * P -> P)) + value var P * value var (A * type.list A * P -> P)) * (expr (type.list A) + list (value var A)))
@@ -3688,16 +4041,16 @@ Module Compilers.
                             nil_case
                             (fun x xs rec => cons_case (inr (inr (x, inr xs), rec)))
                             ls
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=P * (A * type.list A * P -> P) * type.list A) nil_case_cons_case_ls))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=P * (A * type.list A * P -> P) * type.list A) nil_case_cons_case_ls))
                      end
              | ident.List.nth_default type.Z as idc
-               => fun (default_ls_idx : expr (type.Z * type.list type.Z * type.nat) + (expr (type.Z * type.list type.Z) + (sign * expr type.Z + type.interp type.Z) * (expr (type.list type.Z) + list (value var type.Z))) * (expr type.nat + nat))
+               => fun (default_ls_idx : expr (type.Z * type.list type.Z * type.nat) + (expr (type.Z * type.list type.Z) + (_ * expr type.Z + type.interp type.Z) * (expr (type.list type.Z) + list (value var type.Z))) * (expr type.nat + nat))
                   => match default_ls_idx with
                      | inr (inr (default, inr ls), inr idx)
                        => List.nth_default default ls idx
                      | inr (inr (inr default, ls), inr idx)
-                       => expr.reflect (AppIdent (ident.List.nth_default_concrete default idx) (expr.reify (t:=type.list type.Z) ls))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=type.Z * type.list type.Z * type.nat) default_ls_idx))
+                       => expr.reflect relax_zrange (AppIdent (ident.List.nth_default_concrete default idx) (expr.reify relax_zrange (t:=type.list type.Z) ls))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=type.Z * type.list type.Z * type.nat) default_ls_idx))
                      end
              | ident.List.nth_default (type.type_primitive A) as idc
                => fun (default_ls_idx : expr (A * type.list A * type.nat) + (expr (A * type.list A) + (expr A + type.interp A) * (expr (type.list A) + list (value var A))) * (expr type.nat + nat))
@@ -3705,44 +4058,44 @@ Module Compilers.
                      | inr (inr (default, inr ls), inr idx)
                        => List.nth_default default ls idx
                      | inr (inr (inr default, ls), inr idx)
-                       => expr.reflect (AppIdent (ident.List.nth_default_concrete default idx) (expr.reify (t:=type.list A) ls))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=A * type.list A * type.nat) default_ls_idx))
+                       => expr.reflect relax_zrange (AppIdent (ident.List.nth_default_concrete default idx) (expr.reify relax_zrange (t:=type.list A) ls))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=A * type.list A * type.nat) default_ls_idx))
                      end
              | ident.List.nth_default A as idc
                => fun (default_ls_idx : expr (A * type.list A * type.nat) + (expr (A * type.list A) + value var A * (expr (type.list A) + list (value var A))) * (expr type.nat + nat))
                   => match default_ls_idx with
                      | inr (inr (default, inr ls), inr idx)
                        => List.nth_default default ls idx
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=A * type.list A * type.nat) default_ls_idx))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=A * type.list A * type.nat) default_ls_idx))
                      end
              | ident.List.nth_default_concrete A default idx as idc
                => fun (ls : expr (type.list A) + list (value var A))
                   => match ls with
                      | inr ls
-                       => List.nth_default (expr.reflect (t:=A) (AppIdent (ident.primitive default) TT)) ls idx
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=type.list A) ls))
+                       => List.nth_default (expr.reflect relax_zrange (t:=A) (AppIdent (ident.primitive default) TT)) ls idx
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=type.list A) ls))
                      end
              | ident.Z_mul_split as idc
                => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
-                                 (expr (type.Z * type.Z) + (sign * expr type.Z + Z) * (sign * expr type.Z + Z)) * (sign * expr type.Z + Z))%type)
-                  => match x_y_z return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+                                 (expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr x, inr y), inr z) =>
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr x, y), z)
-                       => expr.reflect (AppIdent (ident.Z.mul_split_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z))))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                       => expr.reflect relax_zrange (AppIdent (ident.Z.mul_split_concrete x) (expr.reify relax_zrange (t:=type.Z*type.Z) (inr (y, z))))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_*_) x_y_z))
                      end
              | ident.Z_add_get_carry as idc
                => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
-                                 (expr (type.Z * type.Z) + (sign * expr type.Z + Z) * (sign * expr type.Z + Z)) * (sign * expr type.Z + Z))%type)
-                  => match x_y_z return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+                                 (expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr x, inr y), inr z) =>
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr x, y), z)
-                       => let default := expr.reflect (AppIdent (ident.Z.add_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z)))) in
-                          match (y,z) with
+                       => let default := expr.reflect relax_zrange (AppIdent (ident.Z.add_get_carry_concrete x) (expr.reify relax_zrange (t:=type.Z*type.Z) (inr (y, z)))) in
+                          match (y, z) with
                           | (inr xx, inl e)
                           | (inl e, inr xx)
                             => if Z.eqb xx 0
@@ -3750,45 +4103,45 @@ Module Compilers.
                                else default
                           | _ => default
                           end
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_*_) x_y_z))
                      end
              | ident.Z_add_with_get_carry as idc
                => fun (x_y_z_a : (expr (_ * _ * _ * _) +
                                   (expr (_ * _ * _) +
-                                   (expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) *
-                                   (sign * expr _ + type.interp _)) * (sign * expr _ + type.interp _))%type)
-                  => match x_y_z_a return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+                                   (expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) *
+                                   (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
+                  => match x_y_z_a return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr (inr x, inr y), inr z), inr a) =>
                        let result := ident.interp idc (x, y, z, a) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr (inr x, y), z), a)
-                        => expr.reflect (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a))))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_*_) x_y_z_a))
+                        => expr.reflect relax_zrange (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify relax_zrange (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a))))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_*_*_) x_y_z_a))
                      end
              | ident.Z_sub_get_borrow as idc
                => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
-                                 (expr (type.Z * type.Z) + (sign * expr type.Z + Z) * (sign * expr type.Z + Z)) * (sign * expr type.Z + Z))%type)
-                  => match x_y_z return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+                                 (expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr x, inr y), inr z) =>
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr x, y), z)
-                       => expr.reflect (AppIdent (ident.Z.sub_get_borrow_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (y, z))))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                       => expr.reflect relax_zrange (AppIdent (ident.Z.sub_get_borrow_concrete x) (expr.reify relax_zrange (t:=type.Z*type.Z) (inr (y, z))))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_*_) x_y_z))
                      end
              | ident.Z_mul_split_concrete _ as idc
              | ident.Z.sub_get_borrow_concrete _ as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => match x_y return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => match x_y return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr x, inr y) =>
                        let result := ident.interp idc (x, y) in
                        inr (inr (fst result), inr (snd result))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y))
                      end
              | ident.Z.add_get_carry_concrete _ as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
-                     match x_y return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => let default := expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y)) in
+                     match x_y return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr x, inr y) =>
                        let result := ident.interp idc (x, y) in
                        inr (inr (fst result), inr (snd result))
@@ -3801,156 +4154,185 @@ Module Compilers.
                      end
              | ident.Z.add_with_get_carry_concrete _ as idc
                => fun (x_y_z :  (expr (type.Z * type.Z * type.Z) +
-                                 (expr (type.Z * type.Z) + (sign * expr type.Z + Z) * (sign * expr type.Z + Z)) * (sign * expr type.Z + Z))%type)
-                  => match x_y_z return (expr _ + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) with
+                                 (expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
+                  => match x_y_z return (expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr x, inr y), inr z) =>
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_*_) x_y_z))
                      end
              | ident.pred as idc
              | ident.Nat_succ as idc
                => fun x : expr _ + type.interp _
                   => match x return expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
-                     | inl x => expr.reflect (AppIdent idc x)
+                     | inl x => expr.reflect relax_zrange (AppIdent idc x)
                      end
              | ident.Z_of_nat as idc
                => fun x : expr _ + type.interp _
-                  => match x return sign * expr _ + type.interp _ with
+                  => match x return _ * expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
-                     | inl x => expr.reflect (AppIdent idc x)
+                     | inl x => expr.reflect relax_zrange (AppIdent idc x)
                      end
              | ident.Z_opp as idc
-               => fun x : sign * expr _ + type.interp _
-                  => match x return sign * expr _ + type.interp _ with
+               => fun x : _ * expr _ + type.interp _
+                  => match x return _ * expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
-                     | inl (sgn, x) => inl (sign.opp sgn, x)
+                     | inl (r, x)
+                       => match invert_Z_opp x with
+                          | Some x => inl (r, x)
+                          | None => inl (ZRange.ident.option.interp idc r, AppIdent idc x)
+                          end
                      end
              | ident.Z_shiftr _ as idc
              | ident.Z_shiftl _ as idc
              | ident.Z_land _ as idc
-               => fun x : sign * expr _ + type.interp _
-                  => match x return sign * expr _ + type.interp _ with
+               => fun x : _ * expr _ + type.interp _
+                  => match x return _ * expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
-                     | inl _ => expr.reflect (AppIdent idc (expr.reify (t:=type.Z) x))
+                     | inl _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=type.Z) x))
                      end
              | ident.Nat_add as idc
              | ident.Nat_mul as idc
              | ident.Z_pow as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => match x_y return sign * expr _ + type.interp _ with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y))
                      end
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
                   => match x_y return expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y))
                      end
              | ident.Z_div as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
-                     match x_y return sign * expr _ + type.interp _ with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => let default := expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y)) in
+                     match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (x, inr y)
                        => if Z.eqb y (2^Z.log2 y)
-                          then expr.reflect (AppIdent (ident.Z.shiftr (Z.log2 y)) (expr.reify (t:=type.Z) x))
+                          then expr.reflect relax_zrange (AppIdent (ident.Z.shiftr (Z.log2 y)) (expr.reify relax_zrange (t:=type.Z) x))
                           else default
                      | _ => default
                      end
              | ident.Z_modulo as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
-                     match x_y return sign * expr _ + type.interp _ with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => let default := expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y)) in
+                     match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (x, inr y)
                        => if Z.eqb y (2^Z.log2 y)
-                          then expr.reflect (AppIdent (ident.Z.land (y-1)) (expr.reify (t:=type.Z) x))
+                          then expr.reflect relax_zrange (AppIdent (ident.Z.land (y-1)) (expr.reify relax_zrange (t:=type.Z) x))
                           else default
                      | _ => default
                      end
              | ident.Z_mul as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
-                     match x_y return sign * expr _ + type.interp _ with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => let default := expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y)) in
+                     match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (inr x, inl (sgn, e))
-                     | inr (inl (sgn, e), inr x)
-                       => if Z.eqb x 0
+                     | inr (inr x, inl (data, e) as y)
+                     | inr (inl (data, e) as y, inr x)
+                       => let data' := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
+                          if Z.eqb x 0
                           then inr 0%Z
                           else if Z.eqb x 1
-                               then inl (sgn, e)
+                               then y
                                else if Z.eqb x (-1)
-                                    then inl (sign.opp sgn, e)
-                                    else let sgn' := sign.mul sgn (sign.of_Z x) in
-                                         let x' := Z.abs x in
-                                         if Z.eqb x' (2^Z.log2 x')
-                                         then inl (sgn',
-                                                   AppIdent (ident.Z.shiftl (Z.log2 x')) e)
-                                         else inl (sgn',
-                                                   AppIdent idc (ident.primitive (t:=type.Z) x @@ TT, e))
-                     | inr (inl (sgna, a), inl (sgnb, b))
-                       => inl (sign.mul sgna sgnb, AppIdent idc (a, b))
+                                    then inl (data', AppIdent ident.Z.opp (expr.reify relax_zrange (t:=type.Z) y))
+                                    else if Z.eqb x (2^Z.log2 x)
+                                         then inl (data',
+                                                   AppIdent (ident.Z.shiftl (Z.log2 x)) (expr.reify relax_zrange (t:=type.Z) y))
+                                         else inl (data',
+                                                   AppIdent idc (ident.primitive (t:=type.Z) x @@ TT, expr.reify relax_zrange (t:=type.Z) y))
+                     | inr (inl (dataa, a), inl (datab, b))
+                       => inl (ZRange.ident.option.interp idc (dataa, datab),
+                               AppIdent idc (a, b))
                      | inl _ => default
                      end
              | ident.Z_add as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
-                     match x_y return sign * expr _ + type.interp _ with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => let default0 := AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y) in
+                     let default := expr.reflect relax_zrange default0 in
+                     match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (inr x, inl (sgn, e))
-                     | inr (inl (sgn, e), inr x)
-                       => if Z.eqb x 0
-                          then inl (sgn, e)
-                          else match sgn with
-                               | sign.pos => default
-                               | sign.neg
-                                 => inl (sign.pos,
-                                         AppIdent
-                                           ident.Z.sub
-                                           (ident.primitive (t:=type.Z) x @@ TT,
-                                            e))
-                               end
-                     | inr (inl (sign.pos, p), inl (sign.neg, n))
-                     | inr (inl (sign.neg, n), inl (sign.pos, p))
-                       => inl (sign.pos, AppIdent ident.Z.sub (p, n)%expr)
-                     | inr (inl (sign.neg, a), inl (sign.neg, b))
-                       => inl (sign.neg, AppIdent idc (a, b)%expr)
-                     | inr (inl (sign.pos, _), inl (sign.pos, _))
+                     | inr (inr x, inl (data, e) as y)
+                     | inr (inl (data, e) as y, inr x)
+                       => let data' := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
+                          if Z.eqb x 0
+                          then y
+                          else inl (data', match invert_Z_opp e with
+                                           | Some e => AppIdent
+                                                         ident.Z.sub
+                                                         (ident.primitive (t:=type.Z) x @@ TT,
+                                                          e)
+                                           | None => default0
+                                           end)
+                     | inr (inl (dataa, a), inl (datab, b))
+                       => let data' := ZRange.ident.option.interp idc (dataa, datab) in
+                          match invert_Z_opp a, invert_Z_opp b with
+                          | Some a, Some b
+                            => inl (data',
+                                    AppIdent
+                                      ident.Z.opp
+                                      (idc @@ (a, b)))
+                          | Some a, None
+                            => inl (data', AppIdent ident.Z.sub (b, a))
+                          | None, Some b
+                            => inl (data', AppIdent ident.Z.sub (a, b))
+                          | None, None => inl (data', default0)
+                          end
                      | inl _ => default
                      end
              | ident.Z_sub as idc
-               => fun (x_y : expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _))
-                  => let default := expr.reflect (AppIdent idc (expr.reify (t:=_*_) x_y)) in
-                     match x_y return sign * expr _ + type.interp _ with
+               => fun (x_y : expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
+                  => let default0 := AppIdent idc (expr.reify relax_zrange (t:=_*_) x_y) in
+                     let default := expr.reflect relax_zrange default0 in
+                     match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (inr x, inl (sgn, e))
-                       => if Z.eqb x 0
-                          then inl (sign.opp sgn, e)
-                          else default
-                     | inr (inl (sgn, e), inr x)
-                       => if Z.eqb x 0
-                          then inl (sgn, e)
-                          else default
-                     | inr (inl (sign.pos, p), inl (sign.neg, n))
-                       => inl (sign.pos, AppIdent ident.Z.add (p, n))
-                     | inr (inl (sign.neg, n), inl (sign.pos, p))
-                       => inl (sign.neg, AppIdent ident.Z.add (p, n))
-                     | inr (inl (sign.neg, a), inl (sign.neg, b))
-                       => inl (sign.pos, AppIdent ident.Z.sub (b, a))
-                     | inr (inl (sign.pos, _), inl (sign.pos, _))
+                     | inr (inr x, inl (data, e))
+                       => let data' := ZRange.ident.option.interp idc (Some r[x~>x]%zrange, data) in
+                          if Z.eqb x 0
+                          then inl (data, AppIdent ident.Z.opp e)
+                          else inl (data, default0)
+                     | inr (inl (data, e), inr x)
+                       => let data' := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
+                          if Z.eqb x 0
+                          then inl (data', e)
+                          else inl (data', default0)
+                     | inr (inl (dataa, a), inl (datab, b))
+                       => let data' := ZRange.ident.option.interp idc (dataa, datab) in
+                          match invert_Z_opp a, invert_Z_opp b with
+                          | Some a, Some b
+                            => inl (data',
+                                    AppIdent
+                                      ident.Z.opp
+                                      (idc @@ (a, b)))
+                          | Some a, None
+                            => inl (data', AppIdent ident.Z.add (b, a))
+                          | None, Some b
+                            => inl (data', AppIdent ident.Z.add (a, b))
+                          | None, None => inl (data', default0)
+                          end
                      | inl _ => default
                      end
              | ident.Z_zselect as idc
              | ident.Z_add_modulo as idc
                => fun (x_y_z :  (expr (_ * _ * _) +
-                                 (expr (_ * _) + (sign * expr _ + type.interp _) * (sign * expr _ + type.interp _)) * (sign * expr _ + type.interp _))%type)
-                  => match x_y_z return sign * expr _ + type.interp _ with
+                                 (expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
+                  => match x_y_z return _ * expr _ + type.interp _ with
                      | inr (inr (inr x, inr y), inr z) => inr (ident.interp idc (x, y, z))
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_) x_y_z))
+                     | _ => expr.reflect relax_zrange (AppIdent idc (expr.reify relax_zrange (t:=_*_*_) x_y_z))
+                     end
+             | ident.Z_cast r as idc
+               => fun (x : _ * expr _ + type.interp _)
+                  => match x with
+                     | inr x => inr (ident.interp idc x)
+                     | inl (data, e)
+                       => inl (ZRange.ident.option.interp idc data, e)
                      end
            end.
       End interp.
@@ -3958,25 +4340,233 @@ Module Compilers.
   End partial.
 
   Section partial_reduce.
-    Context {var : type -> Type}.
+    Context (relax_zrange : zrange -> option zrange)
+            {var : type -> Type}.
 
     Fixpoint partial_reduce' {t} (e : @expr (partial.value var) t)
       : partial.value var t
       := match e in expr.expr t return partial.value var t with
          | Var t v => v
          | TT => inr tt
-         | AppIdent s d idc args => partial.ident.interp idc (@partial_reduce' _ args)
+         | AppIdent s d idc args => partial.ident.interp relax_zrange idc (@partial_reduce' _ args)
          | Pair A B a b => inr (@partial_reduce' A a, @partial_reduce' B b)
          | App s d f x => @partial_reduce' _ f (@partial_reduce' _ x)
          | Abs s d f => fun x => @partial_reduce' d (f x)
          end.
 
     Definition partial_reduce {t} (e : @expr (partial.value var) t) : @expr var t
-      := partial.expr.reify (@partial_reduce' t e).
+      := partial.expr.reify relax_zrange (@partial_reduce' t e).
+
+    Fixpoint extend_concrete_list_with_obounds {t}
+             (extend_with_obounds : ZRange.type.option.interp t -> partial.value var t -> partial.value var t )
+             (ls : list (ZRange.type.option.interp t))
+             (e : list (partial.value var t))
+             {struct ls}
+      : list (partial.value var t)
+      := match ls with
+         | nil => nil
+         | cons b bs
+           => cons (extend_with_obounds
+                      b
+                      (hd (partial.value_default _) e))
+                   (@extend_concrete_list_with_obounds
+                      t extend_with_obounds bs (tl e))
+         end.
+
+    Fixpoint extend_list_expr_with_obounds {t}
+             (extend_with_obounds : ZRange.type.primitive.option.interp t -> partial.value var t -> partial.value var t )
+             (starting_index : nat)
+             (ls : list (ZRange.type.option.interp t))
+             (e : @expr var (type.list t))
+             {struct ls}
+      : list (partial.value var t)
+      := match ls with
+         | nil => nil
+         | cons b bs
+           => cons (extend_with_obounds
+                      b
+                      (partial.expr.reflect
+                         relax_zrange
+                         (AppIdent
+                            (ident.List_nth_default_concrete
+                               DefaultValue.type.default starting_index)
+                            e)))
+                   (@extend_list_expr_with_obounds
+                      t extend_with_obounds (S starting_index) bs e)
+         end.
+
+    Fixpoint extend_with_obounds {t} : ZRange.type.option.interp t -> partial.value var t -> partial.value var t
+      := match t return ZRange.type.option.interp t -> partial.value var t -> partial.value var t with
+         | type.type_primitive type.Z
+           => fun (r : option zrange) (e : option zrange * expr _ + type.interp _)
+              => match r, e with
+                 | Some r, inr v => inr (ident.interp (ident.Z.cast r) v)
+                 | Some r, inl (data, e)
+                   => inl (ZRange.ident.option.interp (ident.Z.cast r) data, e)
+                 | None, e => e
+                 end
+         | type.type_primitive t => fun _ => id
+         | type.prod A B
+           => fun '((ra, rb) : ZRange.type.option.interp A * ZRange.type.option.interp B)
+                  (e : expr _ + partial.value var A * partial.value var B)
+              => match e with
+                 | inr (a, b)
+                   => inr (@extend_with_obounds A ra a,
+                           @extend_with_obounds B rb b)
+                 | inl e
+                   => if partial.ident.is_var_like e
+                      then inr (@extend_with_obounds A ra (partial.expr.reflect relax_zrange (AppIdent ident.fst e)),
+                                @extend_with_obounds B rb (partial.expr.reflect relax_zrange (AppIdent ident.snd e)))
+                      else inl e
+                 end
+         | type.arrow s d => fun _ => id
+         | type.list A
+           => fun (ls : Datatypes.list (ZRange.type.option.interp A))
+                  (e : expr _ + list (partial.value var A))
+              => match e with
+                 | inl e
+                   => match A return (ZRange.type.option.interp A -> partial.value var A -> partial.value var A)
+                                     -> Datatypes.list (ZRange.type.option.interp A)
+                                     -> expr (type.list A)
+                                     -> partial.value var (type.list A)
+                      with
+                      | type.type_primitive A
+                        => fun extend_with_obounds ls e
+                           => inr (extend_list_expr_with_obounds
+                                     extend_with_obounds 0 ls e)
+                      | A'
+                        => fun _ _ e => inl e
+                      end (@extend_with_obounds A) ls e
+                 | inr e => inr (extend_concrete_list_with_obounds
+                                   (@extend_with_obounds A) ls e)
+                 end
+         end.
+    Definition extend_with_bounds {t}
+               (b : ZRange.type.interp t)
+               (e : partial.value var t)
+      : partial.value var t
+      := @extend_with_obounds t (ZRange.type.option.Some b) e.
+
+    Section extract.
+      Context (fill_var : forall t, var t).
+      Fixpoint extract_bounds {t} : partial.value var t -> ZRange.type.option.interp t
+        := match t return partial.value var t -> ZRange.type.option.interp t with
+           | type.type_primitive type.Z
+             => fun (e : option zrange * _ + type.interp _)
+                => match e with
+                   | inl (data, _) => data
+                   | inr z => Some r[z~>z]%zrange
+                   end
+           | type.type_primitive t => fun _ => ZRange.type.option.None
+           | type.prod A B
+             => fun (e : expr _ + partial.value var A * partial.value var B)
+                => match e with
+                   | inl e => ZRange.type.option.None
+                   | inr (a, b) => (@extract_bounds A a, @extract_bounds B b)
+                   end
+           | type.arrow s d
+             => fun (f : partial.value var s -> partial.value var d)
+                    (b : ZRange.type.option.interp s)
+                => @extract_bounds d (f (extend_with_obounds b (partial.expr.reflect relax_zrange (Var (fill_var _)))))
+           | type.list A
+             => fun (e : expr _ + list (partial.value var A))
+                => match e with
+                   | inl e => ZRange.type.option.None
+                   | inr ls => List.map (@extract_bounds A) ls
+                   end
+           end.
+    End extract.
+
+    Definition partial_reduce_with_bounds1' {s d} (e : @expr (partial.value var) (s -> d))
+               (b : ZRange.type.interp s)
+      : partial.value var (s -> d)
+      := fun x : partial.value var s
+         => partial_reduce' e (extend_with_bounds b x).
+
+    Definition partial_reduce_with_bounds1 {s d} (e : @expr (partial.value var) (s -> d))
+               (b : ZRange.type.interp s)
+      := partial.expr.reify relax_zrange (@partial_reduce_with_bounds1' s d e b).
   End partial_reduce.
 
   Definition PartialReduce {t} (e : Expr t) : Expr t
-    := fun var => @partial_reduce var t (e _).
+    := fun var => @partial_reduce (fun r => Some r) var t (e _).
+
+  Definition PartialReduceWithBounds1
+             (relax_zrange : zrange -> option zrange)
+             {s d} (e : Expr (s -> d)) (b : ZRange.type.interp s)
+    : Expr (s -> d)
+    := fun var => @partial_reduce_with_bounds1 relax_zrange var s d (e _) b.
+
+  Definition CheckedPartialReduceWithBounds1
+             (relax_zrange : zrange -> option zrange)
+             {s d} (e : Expr (s -> d))
+             (b_in : ZRange.type.interp s)
+             (b_out : ZRange.type.interp d)
+    : Expr (s -> d) + ZRange.type.option.interp d
+    := dlet_nd v := (fun var => @partial_reduce_with_bounds1' relax_zrange var s d (e _) b_in) in
+             let b_computed := extract_bounds relax_zrange (@DefaultValue.type.default) (v type.interp) (ZRange.type.option.Some b_in) in
+             if ZRange.type.option.is_tighter_than b_computed (ZRange.type.option.Some b_out)
+             then @inl (Expr (s -> d)) _ (fun var => partial.expr.reify relax_zrange (v var))
+             else @inr _ (ZRange.type.option.interp d) b_computed.
+
+  Definition CheckedPartialReduceWithBounds0
+             (relax_zrange : zrange -> option zrange)
+             {t} (e : Expr t)
+             (b_out : ZRange.type.interp t)
+    : Expr t + ZRange.type.option.interp t
+    := dlet_nd v := (fun var => @partial_reduce' relax_zrange var t (e _)) in
+             let b_computed := extract_bounds relax_zrange (@DefaultValue.type.default) (v type.interp) in
+             if ZRange.type.option.is_tighter_than b_computed (ZRange.type.option.Some b_out)
+             then @inl (Expr t) _ (fun var => partial.expr.reify relax_zrange (v var))
+             else @inr _ (ZRange.type.option.interp t) b_computed.
+
+  Axiom admit_pf : False.
+  Local Notation admit := (match admit_pf with end).
+
+  Theorem CheckedPartialReduceWithBounds1_Correct
+          (relax_zrange : zrange -> option zrange)
+          (Hrelax : forall r r' z, is_tighter_than_bool z r = true
+                                   -> relax_zrange r = Some r'
+                                   -> is_tighter_than_bool z r' = true)
+          {s d} (e : Expr (s -> d))
+          (b_in : ZRange.type.interp s)
+          (b_out : ZRange.type.interp d)
+          rv (Hrv : CheckedPartialReduceWithBounds1 relax_zrange e b_in b_out = inl rv)
+    : forall arg
+             (Harg : ZRange.type.is_bounded_by b_in arg = true),
+      Interp rv arg = Interp e arg
+      /\ ZRange.type.is_bounded_by b_out (Interp rv arg) = true.
+  Proof.
+    cbv [CheckedPartialReduceWithBounds1 Let_In] in *;
+      break_innermost_match_hyps; inversion_sum; subst.
+    intros arg Harg.
+    split.
+    { exact admit. (* correctness of interp *) }
+    { eapply ZRange.type.option.is_tighter_than_Some_is_bounded_by; [ eassumption | ].
+      cbv [expr.Interp].
+      revert Harg.
+      exact admit. (* boundedness *) }
+  Qed.
+
+  Theorem CheckedPartialReduceWithBounds0_Correct
+          (relax_zrange : zrange -> option zrange)
+          (Hrelax : forall r r' z, is_tighter_than_bool z r = true
+                                   -> relax_zrange r = Some r'
+                                   -> is_tighter_than_bool z r' = true)
+          {t} (e : Expr t)
+          (b_out : ZRange.type.interp t)
+          rv (Hrv : CheckedPartialReduceWithBounds0 relax_zrange e b_out = inl rv)
+    : Interp rv = Interp e
+      /\ ZRange.type.is_bounded_by b_out (Interp rv) = true.
+  Proof.
+    cbv [CheckedPartialReduceWithBounds0 Let_In] in *;
+      break_innermost_match_hyps; inversion_sum; subst.
+    split.
+    { exact admit. (* correctness of interp *) }
+    { eapply ZRange.type.option.is_tighter_than_Some_is_bounded_by; [ eassumption | ].
+      cbv [expr.Interp].
+      exact admit. (* boundedness *) }
+  Qed.
 
   Module DeadCodeElimination.
     Fixpoint compute_live' {t} (e : @expr (fun _ => PositiveSet.t) t) (cur_idx : positive)
@@ -4165,258 +4755,12 @@ Module Compilers.
       := fun var => reassociate max_const_val (e _).
   End ReassociateSmallConstants.
 
-  Module BoundsAnalysis.
-    Module type.
-      Local Set Boolean Equality Schemes.
-      Local Set Decidable Equality Schemes.
-      Variant primitive := unit | Z | ZBounded (lower : Z) (upper : Z).
-      Inductive type := type_primitive (_:primitive) | prod (A B : type) | list (A : primitive).
-
-      Module Export Coercions.
-        Global Coercion type_primitive : primitive >-> type.
-      End Coercions.
-
-      Fixpoint transport_positive (P : positive -> Type)
-               (A B : positive)
-        : P A -> option (P B)
-        := match A, B return P A -> option (P B) with
-           | xI x, xI y => transport_positive (fun p => P (xI p)) x y
-           | xI _, _ => fun _ => None
-           | xO x, xO y => transport_positive (fun p => P (xO p)) x y
-           | xO _, _ => fun _ => None
-           | xH, xH => fun x => Some x
-           | xH, _ => fun _ => None
-           end.
-      Definition transport_Z (P : BinInt.Z -> Type)
-                 (A B : BinInt.Z)
-        : P A -> option (P B)
-        := match A, B return P A -> option (P B) with
-           | Z0, Z0 => fun x => Some x
-           | Z0, _ => fun _ => None
-           | Zpos x, Zpos y => transport_positive (fun p => P (Zpos p)) x y
-           | Zpos _, _ => fun _ => None
-           | Zneg x, Zneg y => transport_positive (fun p => P (Zneg p)) x y
-           | Zneg _, _ => fun _ => None
-           end.
-
-      Definition transport_primitive (P : primitive -> Type)
-                 (A B : primitive)
-        : P A -> option (P B)
-        := match A, B return P A -> option (P B) with
-           | unit, unit => fun x => Some x
-           | unit, _ => fun _ => None
-           | Z, Z => fun x => Some x
-           | Z, _ => fun _ => None
-           | ZBounded l u, ZBounded l' u'
-             => fun x
-                => match transport_Z (fun u => P (ZBounded l u)) u u' x with
-                   | Some x => transport_Z (fun l => P (ZBounded l u')) l l' x
-                   | None => None
-                   end
-           | ZBounded _ _, _ => fun _ => None
-           end.
-
-      Fixpoint transport (P : type -> Type) (A B : type)
-        : P A -> option (P B)
-        := match A, B return P A -> option (P B) with
-           | type_primitive x, type_primitive y => transport_primitive P x y
-           | type_primitive _, _ => fun _ => None
-           | list A, list B => transport_primitive (fun A => P (list A)) A B
-           | list _, _ => fun _ => None
-           | prod A B, prod A' B'
-             => fun x
-                => match transport (fun B => P (prod A B)) B B' x with
-                   | Some x => transport (fun A => P (prod A B')) A A' x
-                   | None => None
-                   end
-           | prod _ _, _ => fun _ => None
-           end.
-
-      (** TODO: MOVE ME *)
-      Record BoundedZ (lower upper : BinInt.Z)
-        := { value :> BinInt.Z;
-             value_bounded : andb (Z.min lower upper <=? value)
-                                  (value <=? Z.max upper lower)
-                             = true }.
-      Global Arguments value {_ _} _.
-      Global Arguments value_bounded [_ _] _, _ _ _.
-
-      Definition fix_bool {b} : b = true -> b = true
-        := if b as b return b = true -> b = true
-           then fun _ => eq_refl
-           else fun x => x.
-
-      Module primitive.
-        Definition interp (t : primitive)
-          := match t with
-             | unit => Datatypes.unit
-             | Z => BinInt.Z
-             | ZBounded lower upper => BoundedZ lower upper
-             end%type.
-      End primitive.
-
-      Fixpoint interp (t : type)
-        := match t with
-           | prod A B => interp A * interp B
-           | list A => Datatypes.list (primitive.interp A)
-           | type_primitive t => primitive.interp t
-           end%type.
-
-      Module Export Notations.
-        Export Coercions.
-        Delimit Scope btype_scope with btype.
-        Bind Scope btype_scope with type.
-        Notation "()" := unit : btype_scope.
-        Notation "A * B" := (prod A B) : btype_scope.
-        Notation "r[ l ~> u ]" := (ZBounded l u) : btype_scope.
-        Notation type := type.
-      End Notations.
-    End type.
-    Export type.Notations.
-
-    Module ident.
+  (*Module Indexed.
+    Module Export Range.
       Import type.
-      Inductive ident : type -> type -> Set :=
-      | primitive {t : type.primitive} (v : interp t) : ident () t
-      | nil {t} : ident () (list t)
-      | cons {t : type.primitive} : ident (t * list t) (list t)
-      | fst {A B} : ident (A * B) A
-      | snd {A B} : ident (A * B) B
-      | List_nth {T : type.primitive} (n : nat) : ident (list T) T
-      | mul (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
-      | add (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
-      | sub (T1 T2 Tout : type.primitive) : ident (T1 * T2) Tout
-      | shiftr (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
-      | shiftl (T1 Tout : type.primitive) (offset : BinInt.Z) : ident T1 Tout
-      | land (T1 Tout : type.primitive) (mask : BinInt.Z) : ident T1 Tout
-      | cast (T1 Tout : type.primitive) : ident T1 Tout
-      | mul_split_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
-      | add_get_carry_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
-      | add_with_get_carry_concrete (T1 T2 T3 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2 * T3) (Tout1 * Tout2)
-      | sub_get_borrow_concrete (T1 T2 Tout1 Tout2 : type.primitive) (split_at : BinInt.Z) : ident (T1 * T2) (Tout1 * Tout2)
-      | zselect (T1 T2 T3 Tout : type.primitive) : ident (T1 * T2 * T3) Tout
-      | add_modulo (T1 T2 T3 Tout : type.primitive) : ident (T1 * T2 * T3) Tout
-      .
 
-      Notation curry0 f
-        := (fun 'tt => f).
-      Notation curry2 f
-        := (fun '(a, b) => f a b).
-      Notation curry3 f
-        := (fun '(a, b, c) => f a b c).
-
-      Axiom admit_pf : False.
-      Notation admit := (match admit_pf with end).
-
-      Definition resize {T1 Tout : type.primitive} : type.interp T1 -> type.interp Tout
-        := match T1, Tout return type.interp T1 -> type.interp Tout with
-           | _, unit => fun _ => tt
-           | unit, Z => fun _ => 0
-           | unit, ZBounded lower upper
-             => fun _ => {| value := lower ; value_bounded := fix_bool admit |}
-           | Z, Z => id
-           | Z, ZBounded lower upper
-             => fun v => {| value := lower + Z.modulo (v - lower) (1 + upper - lower) ; value_bounded := fix_bool admit |}
-           | ZBounded lower upper, Z => fun v => v.(value)
-           | ZBounded l u, ZBounded l' u'
-             => fun v
-                => {| value := l + Z.modulo (value v - l) (1 + u - l) ; value_bounded := fix_bool admit |}
-           end.
-      Definition resize1 {T1 T2 T1' T2' : type.primitive}
-        : (type.interp T1 -> type.interp T2) -> (type.interp T1' -> type.interp T2')
-        := fun f x => resize (f (resize x)).
-      Definition resize2uc {T1 T2 T3 T1' T2' T3' : type.primitive}
-        : (type.interp (T1 * T2) -> type.interp T3) -> (type.interp (T1' * T2') -> type.interp T3')
-        := fun f '((x, y) : type.interp T1' * type.interp T2')
-           => resize (f (resize x, resize y)).
-      Definition resize2uc2out {T1 T2 T3 T4 T1' T2' T3' T4' : type.primitive}
-        : (type.interp (T1 * T2) -> (type.interp T3 * type.interp T4)) ->
-          (type.interp (T1' * T2') -> (type.interp T3' * type.interp T4'))
-        := fun f '((x, y) : type.interp T1' * type.interp T2')
-           => (resize (Datatypes.fst (f (resize x, resize y))),
-               resize (Datatypes.snd (f (resize x, resize y)))).
-      Definition resize3uc {T1 T2 T3 T4 T1' T2' T3' T4' : type.primitive}
-        : (type.interp (T1 * T2 * T3) -> type.interp T4) ->
-          (type.interp (T1' * T2' * T3') -> type.interp T4')
-        := fun f '((x, y, z) : type.interp T1' * type.interp T2' * type.interp T3')
-           => (resize (f (resize x, resize y, resize z))).
-      Definition resize3uc2out {T1 T2 T3 T4 T5 T1' T2' T3' T4' T5' : type.primitive}
-        : (type.interp (T1 * T2 * T3) -> (type.interp T4 * type.interp T5)) ->
-          (type.interp (T1' * T2' * T3') -> (type.interp T4' * type.interp T5'))
-        := fun f '((x, y, z) : type.interp T1' * type.interp T2' * type.interp T3')
-           => (resize (Datatypes.fst (f (resize x, resize y, resize z))),
-               resize (Datatypes.snd (f (resize x, resize y, resize z)))).
-
-
-
-      Fixpoint default {t : type} : type.interp t
-        := match t with
-           | unit => tt
-           | Z => -1
-           | ZBounded lower upper => {| value := lower ; value_bounded := admit |}
-           | prod A B => (default, default)
-           | list A => Datatypes.nil
-           end.
-
-      Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
-        := match idc with
-           | primitive t v => curry0 v
-           | nil t => curry0 (@Datatypes.nil (type.interp t))
-           | cons t => curry2 (@Datatypes.cons (type.interp t))
-           | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
-           | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-           | List_nth T n => fun ls => @List.nth_default (type.interp T) default ls n
-           | add T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.add)
-           | sub T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.sub)
-           | mul T1 T2 Tout => @resize2uc type.Z type.Z type.Z _ _ _ (curry2 Z.mul)
-           | shiftr _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftr v n)
-           | shiftl _ _ n => @resize1 type.Z type.Z _ _ (fun v => Z.shiftl v n)
-           | land _ _ mask => @resize1 type.Z type.Z _ _ (fun v => Z.land v mask)
-           | cast _ _ => resize
-           | mul_split_concrete _ _ _ _ n => @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.mul_split n))
-           | add_get_carry_concrete _ _ _ _ n =>
-             @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.add_get_carry n))
-           | add_with_get_carry_concrete _ _ _ _ _ n =>
-             @resize3uc2out type.Z type.Z type.Z type.Z type.Z _ _ _ _ _ (curry3 (Z.add_with_get_carry n))
-           | sub_get_borrow_concrete _ _ _ _ n =>
-             @resize2uc2out type.Z type.Z type.Z type.Z _ _ _ _ (curry2 (Z.sub_get_borrow n))
-           | zselect _ _ _ _ =>
-             @resize3uc type.Z type.Z type.Z type.Z _ _ _ _ (curry3 Z.zselect)
-           | add_modulo _ _ _ _ =>
-             @resize3uc type.Z type.Z type.Z type.Z _ _ _ _ (curry3 Z.add_modulo)
-           end.
-
-      Module Z.
-        Notation mul := (@mul type.Z type.Z type.Z).
-        Notation sub := (@sub type.Z type.Z type.Z).
-        Notation add := (@add type.Z type.Z type.Z).
-        Notation shiftr := (@shiftr type.Z type.Z).
-        Notation shiftl := (@shiftl type.Z type.Z).
-        Notation land := (@land type.Z type.Z).
-        Notation mul_split_concrete := (@mul_split_concrete type.Z type.Z type.Z type.Z).
-        Notation add_get_carry_concrete := (@add_get_carry_concrete type.Z type.Z type.Z type.Z).
-        Notation add_with_get_carry_concrete := (@add_with_get_carry_concrete type.Z type.Z type.Z type.Z type.Z).
-        Notation sub_get_borrow_concrete := (@sub_get_borrow_concrete type.Z type.Z type.Z type.Z).
-        Notation zselect := (@zselect type.Z type.Z type.Z type.Z).
-        Notation add_modulo := (@add_modulo type.Z type.Z type.Z type.Z).
-      End Z.
-
-      Module List.
-        Notation nth := List_nth.
-      End List.
-
-      Module Notations.
-        Notation ident := ident.
-      End Notations.
-    End ident.
-    Export ident.Notations.
-
-    Module Indexed.
-      Module Export Range.
-        Import type.
-
-        Section with_relax.
-          Context (relax_zrange : zrange -> option zrange).
+      Section with_relax.
+        Context (relax_zrange : zrange -> option zrange).
 
           Definition primitive_for_option_zrange (v : option zrange) : type.primitive
             := match v with
@@ -5234,7 +5578,7 @@ Module Compilers.
            let v := Indexed.expr.interp (@ident.interp) e ctx in
            option_cast_back relax_zrange v.
     End OfPHOAS.
-  End BoundsAnalysis.
+  End BoundsAnalysis.*)
 End Compilers.
 Import Associational Positional Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
@@ -5293,17 +5637,14 @@ Module test2.
               expr_let x1 := (Var x0 * Var x0) in
               (Var x1, Var x1))%expr) => idtac
     end.
-    Import BoundsAnalysis.ident.
-    Import BoundsAnalysis.Notations.
-    pose (projT2 (Option.invert_Some (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                                        (fun x => Some x) E' r[0~>10]%zrange))) as E''.
+    pose (PartialReduceWithBounds1 (fun r => Some r) E' r[0~>10]%zrange) as E''.
     lazy in E''.
     lazymatch (eval cbv delta [E''] in E'') with
-    | (expr_let 2%positive := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@
-                                  (x_ 1, x_ 1) in
-           expr_let 3%positive := mul r[0 ~> 100]%btype r[0 ~> 100]%btype r[0 ~> 10000]%btype @@
-                                      (x_ 2, x_ 2) in
-           (x_ 3, x_ 3))%nexpr
+    | (fun var : type -> Type =>
+         (λ x : var (type.type_primitive type.Z),
+          expr_let y := ident.Z.cast r[0 ~> 100] @@ (Var x * Var x) in
+          expr_let y0 := ident.Z.cast r[0 ~> 10000] @@ (Var y * Var y) in
+          (ident.Z.cast r[0 ~> 10000] @@ Var y0, ident.Z.cast r[0 ~> 10000] @@ Var y0))%expr)
       => idtac
     end.
     constructor.
@@ -5332,21 +5673,16 @@ Module test3.
               Var x3 * Var x3)%expr)
       => idtac
     end.
-    Import BoundsAnalysis.ident.
-    Import BoundsAnalysis.Notations.
-    pose (projT2 (Option.invert_Some (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                                        (fun x => Some x) E' r[0~>10]%zrange))) as E'''.
+    pose (PartialReduceWithBounds1 (fun r => Some r) E' r[0~>10]%zrange) as E'''.
     lazy in E'''.
     lazymatch (eval cbv delta [E'''] in E''') with
-    | (expr_let 2 := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@ (x_ 1, x_ 1) in
-           expr_let 3 := mul r[0 ~> 100]%btype r[0 ~> 100]%btype r[0 ~> 10000]%btype @@
-                             (x_ 2, x_ 2) in
-           expr_let 4 := mul r[0 ~> 10000]%btype r[0 ~> 10000]%btype r[0 ~> 100000000]%btype @@
-                             (x_ 3, x_ 3) in
-           expr_let 5 := mul r[0 ~> 100000000]%btype r[0 ~> 100000000]%btype
-                             r[0 ~> 10000000000000000]%btype @@ (x_ 4, x_ 4) in
-           mul r[0 ~> 10000000000000000]%btype r[0 ~> 10000000000000000]%btype
-               r[0 ~> 100000000000000000000000000000000]%btype @@ (x_ 5, x_ 5))%nexpr
+    | (fun var : type -> Type =>
+          (λ x : var (type.type_primitive type.Z),
+           expr_let y := ident.Z.cast r[0 ~> 100] @@ (Var x * Var x) in
+           expr_let y0 := ident.Z.cast r[0 ~> 10000] @@ (Var y * Var y) in
+           expr_let y1 := ident.Z.cast r[0 ~> 100000000] @@ (Var y0 * Var y0) in
+           expr_let y2 := ident.Z.cast r[0 ~> 10000000000000000] @@ (Var y1 * Var y1) in
+           ident.Z.cast r[0 ~> 100000000000000000000000000000000] @@ (Var y2 * Var y2))%expr)
       => idtac
     end.
     constructor.
@@ -5366,20 +5702,17 @@ Module test4.
     pose (PartialReduce (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
     lazy in E'.
     clear E.
-    Import BoundsAnalysis.ident.
-    Import BoundsAnalysis.Notations.
-    pose (projT2 (Option.invert_Some
-                    (BoundsAnalysis.OfPHOAS.AnalyzeBounds
-                       (fun x => Some x) E' ([r[0~>10]%zrange],[r[0~>10]%zrange])))) as E''.
+    pose (PartialReduceWithBounds1 (fun r => Some r) E' ([r[0~>10]%zrange],[r[0~>10]%zrange])) as E''.
     lazy in E''.
     lazymatch (eval cbv delta [E''] in E'') with
-    | (expr_let 2 := List.nth 0 @@ (fst @@ x_ 1) in
-          expr_let 3 := List.nth 0 @@ (snd @@ x_ 1) in
-          expr_let 4 := mul r[0 ~> 10]%btype r[0 ~> 10]%btype r[0 ~> 100]%btype @@
-                        (x_ 2, x_ 3) in
-           x_ 4
-              ::
-             x_ 4 :: [])%nexpr
+    | (fun var : type -> Type =>
+         (λ x : var (type.list (type.type_primitive type.Z) * type.list (type.type_primitive type.Z))%ctype,
+          expr_let y := ident.Z.cast r[0 ~> 10] @@
+                        (ident.List.nth_default_concrete (-1) 0 @@ (ident.fst @@ Var x)) in
+          expr_let y0 := ident.Z.cast r[0 ~> 10] @@
+                         (ident.List.nth_default_concrete (-1) 0 @@ (ident.snd @@ Var x)) in
+          expr_let y1 := ident.Z.cast r[0 ~> 100] @@ (Var y * Var y0) in
+          ident.Z.cast r[0 ~> 100] @@ Var y1 :: ident.Z.cast r[0 ~> 100] @@ Var y1 :: [])%expr)
       => idtac
     end.
     constructor.
@@ -5591,7 +5924,7 @@ Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipel
 Module Pipeline.
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
-      {t} (computed_bounds expected_bounds : BoundsAnalysis.Indexed.Range.range t)
+      {t} (computed_bounds expected_bounds : ZRange.type.option.interp t)
   | Bounds_analysis_failed
   | Return_type_mismatch {T'} (found expected : T')
   | Value_not_le (descr : string) {T'} (lhs rhs : T')
@@ -5610,12 +5943,6 @@ Module Pipeline.
        | Error msg => msg
        end.
 
-  Definition transport_or_error P {A B} (v : P A) : ErrorT (P B)
-    := match BoundsAnalysis.type.transport P A B v with
-       | Some v => Success v
-       | None => Error (Return_type_mismatch A B)
-       end.
-
   Definition BoundsPipeline
              (with_dead_code_elimination : bool)
              relax_zrange
@@ -5623,23 +5950,22 @@ Module Pipeline.
              arg_bounds
              out_bounds
              (E : Expr (s -> d))
-  : ErrorT (BoundsAnalysis.Indexed.expr.Notations.expr (BoundsAnalysis.Indexed.Range.type_for_range relax_zrange (t:=BoundsAnalysis.Indexed.OfPHOAS.type.compile d) out_bounds))
+  : ErrorT (Expr (s -> d))
     := let E := PartialReduce E in
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := BoundsAnalysis.OfPHOAS.AnalyzeBounds relax_zrange E arg_bounds in
+       let E := CheckedPartialReduceWithBounds1 relax_zrange E arg_bounds out_bounds in
        let E := match E with
-                | Some (existT b v)
-                  => if BoundsAnalysis.Indexed.Range.range_is_tighter_than b out_bounds
-                     then transport_or_error BoundsAnalysis.Indexed.expr.Notations.expr v
-                     else Error (Computed_bounds_are_not_tight_enough b out_bounds)
-                | None => Error Bounds_analysis_failed
+                | inl v => Success v
+                | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some out_bounds))
                 end in
        E.
 
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool)
              relax_zrange
+             (Hrelax : forall r r' z : zrange,
+                 (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
              {s d}
              arg_bounds
              out_bounds
@@ -5647,26 +5973,18 @@ Module Pipeline.
              rv
              (Hrv : BoundsPipeline with_dead_code_elimination relax_zrange arg_bounds out_bounds E = Success rv)
     : forall arg
-             (Harg : BoundsAnalysis.Indexed.Range.type_for_range_bounded_by
-                       relax_zrange
-                       arg_bounds arg = true)
-             (arg' := @BoundsAnalysis.OfPHOAS.cast_back
-                        s
-                        relax_zrange
-                        arg_bounds
-                        arg),
-      exists res,
-        let ctx :=
-            BoundsAnalysis.Indexed.Context.extendb
-              (PositiveMap.empty _) 1 arg in
-        BoundsAnalysis.Indexed.expr.interp (@BoundsAnalysis.ident.interp) rv ctx
-        = Some res
-        /\ BoundsAnalysis.Indexed.Range.type_for_range_bounded_by
-             relax_zrange out_bounds res = true
-        /\ BoundsAnalysis.OfPHOAS.cast_back relax_zrange res
-           = Interp E arg'.
+             (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
+      ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
+      /\ Interp rv arg = Interp E arg.
   Proof.
-  Admitted.
+    cbv [BoundsPipeline] in *; edestruct (CheckedPartialReduceWithBounds1 _ _ _ _) eqn:H.
+    inversion Hrv; subst.
+    { intros; eapply CheckedPartialReduceWithBounds1_Correct in H; [ | eassumption.. ].
+      destruct H as [H0 H1].
+      split; [ exact H1 | rewrite H0 ].
+      exact admit. (* interp correctness *) }
+    { congruence. }
+  Qed.
 
   Definition BoundsPipelineConst
              (with_dead_code_elimination : bool)
@@ -5674,38 +5992,38 @@ Module Pipeline.
              {t}
              bounds
              (E : Expr t)
-  : ErrorT (BoundsAnalysis.Indexed.expr.Notations.expr (BoundsAnalysis.Indexed.Range.type_for_range relax_zrange (t:=BoundsAnalysis.Indexed.OfPHOAS.type.compile t) bounds))
+  : ErrorT (Expr t)
     := let E := PartialReduce E in
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := BoundsAnalysis.OfPHOAS.AnalyzeBoundsConst relax_zrange E in
+       let E := CheckedPartialReduceWithBounds0 relax_zrange E bounds in
        let E := match E with
-                | Some (existT b v)
-                  => if BoundsAnalysis.Indexed.Range.range_is_tighter_than b bounds
-                     then transport_or_error BoundsAnalysis.Indexed.expr.Notations.expr v
-                     else Error (Computed_bounds_are_not_tight_enough b bounds)
-                | None => Error Bounds_analysis_failed
+                | inl v => Success v
+                | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some bounds))
                 end in
        E.
 
   Lemma BoundsPipelineConst_correct
              (with_dead_code_elimination : bool)
              relax_zrange
+             (Hrelax : forall r r' z : zrange,
+                 (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
              {d}
              bounds
              (E : Expr d)
              rv
              (Hrv : BoundsPipelineConst with_dead_code_elimination relax_zrange bounds E = Success rv)
-    : exists res,
-        let ctx := PositiveMap.empty _ in
-        BoundsAnalysis.Indexed.expr.interp (@BoundsAnalysis.ident.interp) rv ctx
-        = Some res
-        /\ BoundsAnalysis.Indexed.Range.type_for_range_bounded_by
-             relax_zrange bounds res = true
-        /\ BoundsAnalysis.OfPHOAS.cast_back relax_zrange res
-           = Interp E.
+    : ZRange.type.is_bounded_by bounds (Interp rv) = true
+      /\ Interp rv = Interp E.
   Proof.
-  Admitted.
+    cbv [BoundsPipelineConst] in *; edestruct (CheckedPartialReduceWithBounds0 _ _ _) eqn:H.
+    inversion Hrv; subst.
+    { intros; eapply CheckedPartialReduceWithBounds0_Correct in H; [ | eassumption.. ].
+      destruct H as [H0 H1].
+      split; [ exact H1 | rewrite H0 ].
+      exact admit. (* interp correctness *) }
+    { congruence. }
+  Qed.
 End Pipeline.
 
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
@@ -5795,7 +6113,7 @@ Section rcarry_mul.
   Let upperbound_loose := (3 * upperbound_tight)%Z.
   Let f_bounds_tight := List.repeat r[0~>upperbound_tight]%zrange n.
   Let f_bounds_loose := List.repeat r[0~>upperbound_loose]%zrange n.
-  Let prime_bound : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z))
+  Let prime_bound : ZRange.type.interp (type.Z)
     := r[0~>(s - Associational.eval c - 1)]%zrange.
 
   Definition relax_zrange_of_machine_wordsize
@@ -5811,14 +6129,36 @@ Section rcarry_mul.
   Let rlen_idxs := GallinaReify.Reify (List.length idxs).
   Let rcoef := GallinaReify.Reify 2.
   Let relax_zrange := relax_zrange_of_machine_wordsize.
-  Let tight_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z))
+  Let tight_bounds : ZRange.type.interp (type.list type.Z)
     := f_bounds_tight.
-  Let tight2_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z * type.list type.Z))
+  Let tight2_bounds : ZRange.type.interp (type.list type.Z * type.list type.Z)
     := (tight_bounds, tight_bounds).
-  Let loose_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z))
+  Let loose_bounds : ZRange.type.interp (type.list type.Z)
     := f_bounds_loose.
-  Let loose2_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.list type.Z * type.list type.Z))
+  Let loose2_bounds : ZRange.type.interp (type.list type.Z * type.list type.Z)
     := (loose_bounds, loose_bounds).
+
+  Lemma relax_zrange_of_machine_wordsize_good
+    : forall r r' z : zrange,
+      (z <=? r)%zrange = true -> relax_zrange_of_machine_wordsize r = Some r' -> (z <=? r')%zrange = true.
+  Proof.
+    cbv [is_tighter_than_bool relax_zrange_of_machine_wordsize relax_zrange_gen]; intros *.
+    pose proof (Z.log2_up_nonneg (upper r + 1)).
+    rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
+    cbv [round_up_bitwidth_gen fold_right option_map].
+    break_innermost_match; intros; destruct_head'_and;
+      inversion_option; inversion_zrange;
+        subst;
+        repeat apply conj;
+        Z.ltb_to_lt; try omega;
+          destruct (Z_gt_le_dec 0 machine_wordsize);
+          try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
+  Qed.
+
+  Let relax_zrange_good
+    : forall r r' z : zrange,
+      (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
+    := relax_zrange_of_machine_wordsize_good.
 
   Definition check_args {T} (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
@@ -5846,11 +6186,9 @@ Section rcarry_mul.
     let rop := lazymatch type of Hrv with ?rop = Pipeline.Success _ => rop end in
     hnf; intros; cbv [rop] in Hrv;
     eapply pipeline_lem in Hrv; [ | eassumption.. ];
-    let res := fresh "res" in
-    destruct Hrv as [res Hrv];
-    exists res; do 2 try apply conj;
-    [ | | etransitivity ];
-    [ solve [ apply Hrv ].. | ];
+    let Hrv' := fresh "Hrv'" in
+    destruct Hrv as [Hrv Hrv'];
+    apply conj; [ exact Hrv | rewrite Hrv' ];
     repeat match goal with H := _ |- _ => subst H end;
     erewrite <- gen_correct;
     cbv [expr.Interp];
@@ -5887,48 +6225,37 @@ Section rcarry_mul.
                     res in
        res.
 
-  Definition rexpr_1_correctT_ctx
-             relax_zrange
+  Definition rexpr_1_correctT_Interp
+             {t}
              t_out
-             ctx
+             (Interp : Expr t -> _)
              out_bounds
              (f : type.interp t_out)
              rv
-    := (exists res,
-           BoundsAnalysis.Indexed.expr.interp (@BoundsAnalysis.ident.interp) rv ctx
-           = Some res
-           /\ BoundsAnalysis.Indexed.Range.type_for_range_bounded_by
-                relax_zrange out_bounds res = true
-           /\ BoundsAnalysis.OfPHOAS.cast_back relax_zrange res
-              = f).
+    := (ZRange.type.is_bounded_by out_bounds (Interp rv) = true
+        /\ Interp rv = f).
 
   Definition rexpr_n1_correctT
-             relax_zrange
              t_in t_out
              in_bounds out_bounds
-             (f : _ -> type.interp t_out)
+             (f : type.interp t_in -> type.interp t_out)
              rv
     := forall arg
-              (arg' := @BoundsAnalysis.OfPHOAS.cast_back
-                         t_in
-                         relax_zrange
-                         in_bounds
-                         arg)
-              (Harg : BoundsAnalysis.Indexed.Range.type_for_range_bounded_by
-                        relax_zrange
-                        (t:=BoundsAnalysis.Indexed.OfPHOAS.type.compile t_in)
-                        in_bounds arg = true),
-      let ctx :=
-          BoundsAnalysis.Indexed.Context.extendb
-            (PositiveMap.empty _) 1 arg in
-      @rexpr_1_correctT_ctx relax_zrange t_out ctx out_bounds (f arg') rv.
+              (Harg : ZRange.type.is_bounded_by in_bounds arg = true),
+      @rexpr_1_correctT_Interp (t_in -> t_out) t_out (fun rv => Interp rv arg) out_bounds (f arg) rv.
+
+  Definition rexpr_1_correctT
+             t_out
+             out_bounds
+             (f : type.interp t_out)
+             rv
+    := @rexpr_1_correctT_Interp t_out t_out Interp out_bounds f rv.
 
   Definition rexpr_21_correctT
              in_bounds out_bounds
              (f : _ -> type.interp (type.list type.Z))
              rv
-    := @rexpr_n1_correctT relax_zrange
-                          (type.list type.Z * type.list type.Z)
+    := @rexpr_n1_correctT (type.list type.Z * type.list type.Z)
                           (type.list type.Z)
                           (in_bounds, in_bounds) out_bounds f rv.
 
@@ -5936,8 +6263,7 @@ Section rcarry_mul.
              in_bounds out_bounds
              (f : _ -> type.interp (type.list type.Z))
              rv
-    := @rexpr_n1_correctT relax_zrange
-                          (type.list type.Z)
+    := @rexpr_n1_correctT (type.list type.Z)
                           (type.list type.Z)
                           in_bounds out_bounds f rv.
 
@@ -5945,14 +6271,14 @@ Section rcarry_mul.
              in_bounds out_bounds
              (f : _ -> type.interp (type.list type.Z))
              rv
-    := @rexpr_n1_correctT relax_zrange type.Z (type.list type.Z)
+    := @rexpr_n1_correctT type.Z (type.list type.Z)
                           in_bounds out_bounds f rv.
 
   Definition rexpr_01_correctT
              out_bounds
              (f : type.interp (type.list type.Z))
              rv
-    := @rexpr_1_correctT_ctx relax_zrange (type.list type.Z) (PositiveMap.empty _) out_bounds f rv.
+    := @rexpr_1_correctT (type.list type.Z) out_bounds f rv.
 
   Definition rcarry_mul
     := let res := BoundsPipeline21
@@ -6212,51 +6538,34 @@ Section rcarry_mul.
     : rone_correctT rv.
   Proof. solve_correct_const one_gen_correct. Qed.
 
-  Definition encodedT := { ls : option
-                                  (list (BoundsAnalysis.type.primitive.interp
-                                           (BoundsAnalysis.Indexed.Range.primitive_for_option_zrange
-                                              (relax_zrange (fold_right ZRange.union r[0 ~> 0]%zrange f_bounds_tight)))))
-                         |  exists res,
-                            ls = Some res
-                            /\ BoundsAnalysis.Indexed.Range.type_for_range_bounded_by
-                                 relax_zrange tight_bounds res = true }.
+  Definition encodedT
+    := { ls : list Z
+       |  ZRange.type.is_bounded_by (t:=type.list type.Z) tight_bounds ls = true }.
 
-  Program Definition list_of_encodedT (v : encodedT) : list _
-    := @Option.always_invert_Some
-         _
-         (proj1_sig v)
-         _.
-  Next Obligation.
-    repeat match goal with H : _ |- _ => clear H end.
-    destruct v as [? [? [H0 H1] ] ]; cbn; subst; congruence.
-  Qed.
+  Definition list_of_encodedT (v : encodedT) : list _
+    := proj1_sig v.
 
   Lemma length_list_of_encodedT v : List.length (list_of_encodedT v) = n.
   Proof.
-    destruct v as [v [res [Hpf H] ] ]; destruct v; cbn in *; [ | discriminate ].
+    destruct v as [v H]; cbv [ZRange.type.is_bounded_by] in H; cbn in H |- *.
+    exact admit (*destruct v; cbn in *; [ | discriminate ].
     apply BoundsAnalysis.Indexed.Range.length_list_bounded_by in H.
     inversion_option; subst.
     etransitivity; [ exact H | ].
     subst tight_bounds f_bounds_tight.
-    rewrite repeat_length; reflexivity.
+    rewrite repeat_length; reflexivity*).
   Qed.
 
   Let m : positive := Z.to_pos (s - Associational.eval c).
   Definition Zdecode (v : encodedT)
-    := BoundsAnalysis.OfPHOAS.cast_back
-         (d:=type.list type.Z)
-         _
-         (list_of_encodedT v).
+    := list_of_encodedT v.
   Definition Fdecode (v : encodedT) : F m
     := F.of_Z m (Positional.eval (Interp rw) n (Zdecode v)).
   Definition encodedT_eq (x y : encodedT)
     := Fdecode x = Fdecode y.
 
   Lemma length_Zdecode v : List.length (Zdecode v) = n.
-  Proof.
-    cbn [Zdecode BoundsAnalysis.OfPHOAS.cast_back].
-    rewrite map_length, length_list_of_encodedT; reflexivity.
-  Qed.
+  Proof. apply length_list_of_encodedT. Qed.
 
   Section make_ring.
     Context (curve_good : check_args (Pipeline.Success tt) = Pipeline.Success tt)
@@ -6347,75 +6656,65 @@ Section rcarry_mul.
     Proof. apply use_curve_good. Qed.
 
     Local Arguments Z.pow !_ !_ .
-    Lemma relax_is_good
-      : BoundsAnalysis.OfPHOAS.relax_is_good relax_zrange.
-    Proof.
-      cbn; cbv [BoundsAnalysis.OfPHOAS.relax_is_good relax_zrange_gen]; cbn.
-      intros [l u] [l' u']; cbn.
-      pose proof (Z.log2_up_nonneg (u + 1)).
-      destruct (Z.log2_up_null (u + 1)).
-      unfold is_tighter_than_bool; rewrite Bool.andb_true_iff;
-        break_innermost_match; cbn; Z.ltb_to_lt; intros;
-          inversion_option; inversion_zrange; subst;
-            repeat apply conj; Z.ltb_to_lt; try omega;
-              try (rewrite <- ZUtil.Z.log2_up_le_pow2_full in * by lia; cbn in *; lia).
-    Qed.
 
-    Local Notation option_interp0 f
-      := (BoundsAnalysis.Indexed.expr.interp
-            (@BoundsAnalysis.ident.interp)
-            f
-            (PositiveMap.empty _)).
-
-    Local Notation option_interp1 f arg
-      := (arg' <- arg;
-            BoundsAnalysis.Indexed.expr.interp
-              (@BoundsAnalysis.ident.interp)
-              f
-              (BoundsAnalysis.Indexed.Context.extendb
-                 (T:=BoundsAnalysis.type.list _)
-                 (PositiveMap.empty _)
-                 1 arg'))%option.
-
-    Local Notation option_interp2 f arg1 arg2
-      := (x <- arg1;
-            y <- arg2;
-            BoundsAnalysis.Indexed.expr.interp
-              (@BoundsAnalysis.ident.interp)
-              f
-              (BoundsAnalysis.Indexed.Context.extendb
-                 (T:=BoundsAnalysis.type.prod
-                       (BoundsAnalysis.type.list _)
-                       (BoundsAnalysis.type.list _))
-                 (PositiveMap.empty _)
-                 1 (x, y)))%option.
+    Local Ltac specialize_from_interp _ :=
+      repeat match goal with
+             | [ H := Interp ?rv ?arg, Hc : context[?rv] |- _ ]
+               => unique pose proof (Hc arg)
+             end.
+    Local Ltac specialize_with_bounded _ :=
+      repeat match goal with
+             | _ => progress cbv [Zdecode list_of_encodedT] in *
+             | _ => progress cbn [ZRange.type.is_bounded_by proj1_sig] in *
+             | [ H : context[andb ?x ?y = true] |- _ ]
+               => rewrite (Bool.andb_true_iff x y) in H
+             | [ H : _ /\ _ -> _ |- _ ] => specialize (fun a b => H (conj a b))
+             | _ => progress destruct_head'_and
+             | [ H : ?f (proj1_sig ?v) = true -> _ |- _ ]
+               => specialize (H (proj2_sig v)); hnf in H
+             | [ H : ?x = true -> _, H' : ?x = true |- _ ]
+               => specialize (H H'); hnf in H
+             | [ H : ?x = true |- { pf : ?x = true | _ } ] => exists H
+             end.
+    Local Ltac rewrite_interp _ :=
+      repeat match goal with
+             | [ H := _ |- _ ] => subst H
+             | [ H : ?x = _ |- context[?x] ] => rewrite H
+             | _ => rewrite expanding_id_id
+             | [ |- ?x = ?x ] => reflexivity
+             | [ |- List.length (proj1_sig _) = _ ] => apply length_list_of_encodedT
+             end.
 
     Local Ltac solve_encodedT _ :=
+      specialize_from_interp ();
+      specialize_with_bounded ();
+      rewrite_interp ().
+    (*Local Ltac solve_encodedT _ :=
       repeat match goal with
              | _ => progress destruct_head' encodedT
              | _ => progress (destruct_head'_ex; destruct_head'_and; subst)
              | _ => progress cbn [proj1_sig Option.bind always_invert_Some] in *
              | [ H : ?x = Some _ |- context[?x] ] => rewrite H
              | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
-             | [ |- BoundsAnalysis.Indexed.Range.type_for_range_bounded_by _ _ (_, _) = true ]
-               => progress cbn [BoundsAnalysis.Indexed.Range.type_for_range_bounded_by BoundsAnalysis.Indexed.OfPHOAS.type.compile]
+             (*| [ |- BoundsAnalysis.Indexed.Range.type_for_range_bounded_by _ _ (_, _) = true ]
+               => progress cbn [BoundsAnalysis.Indexed.Range.type_for_range_bounded_by BoundsAnalysis.Indexed.OfPHOAS.type.compile]*)
              | _ => progress cbn [BoundsAnalysis.Indexed.Range.type_for_range BoundsAnalysis.Indexed.OfPHOAS.type.compile fst snd] in * (* for getting rewrite to match *)
              | [ |- andb _ _ = true ] => rewrite Bool.andb_true_iff
              | _ => solve [ eauto ]
              | [ |- sig _ ] => progress rewrite expanding_id_id in *
              | [ |- List.length (List.map _ _) = _ ] => rewrite map_length
-             | [ H : BoundsAnalysis.Indexed.Range.type_for_range_bounded_by _ _ ?x = true
+             (*| [ H : BoundsAnalysis.Indexed.Range.type_for_range_bounded_by _ _ ?x = true
                  |- List.length ?x = _ ]
-               => erewrite BoundsAnalysis.Indexed.Range.length_list_bounded_by by exact H
+               => erewrite BoundsAnalysis.Indexed.Range.length_list_bounded_by by exact H*)
              | _ => progress rewrite ?length_tight_bounds, ?length_loose_bounds
              | [ H : map _ ?x = map _ _ |- _ ] => rewrite H in *
              | [ H : map _ ?x = _ |- context[map _ ?x] ]
                => cbv [tight_bounds loose_bounds] in H |- *; rewrite H
              | _ => rewrite BoundsAnalysis.OfPHOAS.cast_back_primitive_cast_primitive in *
-             | [ fx := (BoundsAnalysis.Indexed.expr.interp _ ?rop (BoundsAnalysis.Indexed.Context.extendb _ _ ?x)),
+             (*| [ fx := (BoundsAnalysis.Indexed.expr.interp _ ?rop (BoundsAnalysis.Indexed.Context.extendb _ _ ?x)),
                        H : forall arg, BoundsAnalysis.Indexed.Range.type_for_range_bounded_by _ ?bs arg = true -> rexpr_1_correctT_ctx _ _ _ _ _ ?rop
                                        |- _ ]
-               => destruct (H x); [ clear H | subst fx ]
+               => destruct (H x); [ clear H | subst fx ]*)
              | [ fx := Option.bind ?x ?f, H : ?x = Some ?v |- _ ]
                => let H' := fresh in
                   let fx' := fresh fx in
@@ -6424,7 +6723,7 @@ Section rcarry_mul.
                     by (subst fx fx'; apply f_equal2; [ exact H | reflexivity ]);
                   cbn [Option.bind] in fx'; clearbody fx; subst fx
              | _ => progress cbn [BoundsAnalysis.OfPHOAS.cast_back] in * (* for getting eauto to work *)
-             end.
+             end.*)
 
     Definition ring_mul_sig
       : forall (x y : encodedT),
@@ -6433,14 +6732,12 @@ Section rcarry_mul.
     Proof.
       simple refine
              (fun x y
-              => let x' := option_interp1 rrelaxv (proj1_sig x) in
-                 let y' := option_interp1 rrelaxv (proj1_sig y) in
-                 let v' := option_interp2 rcarry_mulv x' y' in
+              => let x' := Interp rrelaxv (proj1_sig x) in
+                 let y' := Interp rrelaxv (proj1_sig y) in
+                 let v' := Interp rcarry_mulv (x', y') in
                  let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                      := _ in
                  exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
-      hnf in Hrrelaxv, Hrmulv.
       abstract solve_encodedT ().
     Defined.
 
@@ -6453,13 +6750,11 @@ Section rcarry_mul.
     Proof.
       simple refine
              (fun x y
-              => let v'' := option_interp2 raddv (proj1_sig x) (proj1_sig y) in
-                 let v' := option_interp1 rcarryv v'' in
+              => let v'' := Interp raddv (proj1_sig x, proj1_sig y) in
+                 let v' := Interp rcarryv v'' in
                  let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                      := _ in
                  exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
-      hnf in Hrcarryv, Hraddv; clear -Hrcarryv Hraddv.
       abstract solve_encodedT ().
     Defined.
     Definition ring_sub_sig
@@ -6471,13 +6766,11 @@ Section rcarry_mul.
     Proof.
       simple refine
              (fun x y
-              => let v'' := option_interp2 rsubv (proj1_sig x) (proj1_sig y) in
-                 let v' := option_interp1 rcarryv v'' in
+              => let v'' := Interp rsubv (proj1_sig x, proj1_sig y) in
+                 let v' := Interp rcarryv v'' in
                  let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                      := _ in
                  exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
-      hnf in Hrcarryv, Hrsubv.
       abstract solve_encodedT ().
     Defined.
     Definition ring_opp_sig
@@ -6489,13 +6782,11 @@ Section rcarry_mul.
     Proof.
       simple refine
              (fun x
-              => let v'' := option_interp1 roppv (proj1_sig x) in
-                 let v' := option_interp1 rcarryv v'' in
+              => let v'' := Interp roppv (proj1_sig x) in
+                 let v' := Interp rcarryv v'' in
                  let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                      := _ in
                  exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
-      hnf in Hrcarryv, Hroppv.
       abstract solve_encodedT ().
     Defined.
     Definition ring_zero_sig
@@ -6504,11 +6795,10 @@ Section rcarry_mul.
                         (Interp rw) s c n (Interp rlen_c) }.
     Proof.
       simple refine
-             (let v' := option_interp0 rzerov in
+             (let v' := Interp rzerov in
               let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                   := _ in
               exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
       abstract (
           destruct Hrzerov; subst v';
           solve_encodedT ()
@@ -6520,7 +6810,7 @@ Section rcarry_mul.
                         (Interp rw) s c n (Interp rlen_c) }.
     Proof.
       simple refine
-             (let v' := option_interp0 ronev in
+             (let v' := Interp ronev in
               let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                   := _ in
               exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
@@ -6539,62 +6829,21 @@ Section rcarry_mul.
     Proof.
       simple refine
              (fun v
-              => let pf0 := _ in
-                 let pf1 := _ in
-                 let arg := BoundsAnalysis.OfPHOAS.cast_primitiveZ
-                              relax_zrange
-                              (F.to_Z v) relax_is_good pf0 in
+              => let pf1 := _ in
+                 let arg := F.to_Z v in
                  let Hrencodev' := Hrencodev arg pf1 in
-                 let v' := BoundsAnalysis.Indexed.expr.interp
-                             (@BoundsAnalysis.ident.interp)
-                             rencodev
-                             (BoundsAnalysis.Indexed.Context.extendb
-                                (T:=BoundsAnalysis.type.type_primitive _)
-                                (PositiveMap.empty _)
-                                1 arg) in
+                 let v' := Interp rencodev arg in
                  let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
                      := _ in
                  exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      { pose proof use_curve_good as keep.
-        clear -curve_good keep.
+      { generalize m_eq.
+        generalize sc_pos.
+        cbn; clear -v.
         abstract (
-            split; [ | exact I ];
-            destruct v as [v Hv]; hnf; cbn;
-            rewrite m_eq in Hv; rewrite Hv;
-            pose proof (Z.mod_pos_bound v _ sc_pos); lia
-          ). }
-      { clearbody pf0.
-        clear -pf0.
-        cbn.
-        (** TODO: clean up this part of the proof.  It is annoying
-            because [BoundsAnalysis.OfPHOAS.cast_primitiveZ] and
-            [BoundsAnalysis.Indexed.Range.type_for_range_bounded_by]
-            use different notions of the "interpretation" of a
-            not-necessarily-Z thing as probably-a-Z *)
-        generalize (BoundsAnalysis.OfPHOAS.cast_back_primitive_cast_primitive
-                      relax_zrange _ _ relax_is_good pf0).
-        generalize (BoundsAnalysis.OfPHOAS.cast_primitiveZ
-                      relax_zrange (F.to_Z v) relax_is_good pf0).
-        generalize (relax_is_good prime_bound).
-        cbv [BoundsAnalysis.Indexed.Range.primitive_bounded_by].
-        cbn [BoundsAnalysis.type.primitive.interp].
-        cbv [BoundsAnalysis.OfPHOAS.cast_back_primitive].
-        cbv [BoundsAnalysis.Indexed.Range.primitive_for_zrange].
-        abstract (
-            break_innermost_match; cbn;
-            intros; destruct_head' BoundsAnalysis.type.BoundedZ; cbn [BoundsAnalysis.type.value] in *;
-            subst;
-            hnf in pf0;
-            cbv [prime_bound is_tighter_than_bool] in *;
-            try lazymatch goal with
-                | [ H : forall _, Some _ = Some _ -> _ |- _ ]
-                  => specialize (H _ eq_refl)
-                end;
-            rewrite ?Bool.andb_true_iff in *;
-            destruct_head'_and;
-            apply conj; Z.ltb_to_lt;
-            cbn [upper lower] in *;
-            try omega
+            intros sc_pos m_eq;
+            destruct v as [v Hv]; cbn; rewrite m_eq in Hv;
+            pose proof (Z.mod_pos_bound v _ sc_pos);
+            rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; lia
           ). }
       { cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
         subst v' arg; clearbody Hrencodev'; cbv beta zeta in *.
@@ -6688,23 +6937,22 @@ Section rcarry_mul.
   End make_ring.
 End rcarry_mul.
 
-Ltac solve_rcarry_mul _ := eapply rcarry_mul_correct; lazy; reflexivity.
-Ltac solve_rcarry _ := eapply rcarry_correct; lazy; reflexivity.
-Ltac solve_radd _ := eapply radd_correct; lazy; reflexivity.
-Ltac solve_rsub _ := eapply rsub_correct; lazy; reflexivity.
-Ltac solve_ropp _ := eapply ropp_correct; lazy; reflexivity.
-Ltac solve_rencode _ := eapply rencode_correct; lazy; reflexivity.
-Ltac solve_rrelax _ := eapply rrelax_correct; lazy; reflexivity.
-Ltac solve_rzero _ := eapply rzero_correct; lazy; reflexivity.
-Ltac solve_rone _ := eapply rone_correct; lazy; reflexivity.
+Ltac solve_rop rop_correct machine_wordsizev :=
+  eapply rop_correct with (machine_wordsize:=machine_wordsizev); lazy; reflexivity.
+Ltac solve_rcarry_mul := solve_rop rcarry_mul_correct.
+Ltac solve_rcarry := solve_rop rcarry_correct.
+Ltac solve_radd := solve_rop radd_correct.
+Ltac solve_rsub := solve_rop rsub_correct.
+Ltac solve_ropp := solve_rop ropp_correct.
+Ltac solve_rencode := solve_rop rencode_correct.
+Ltac solve_rrelax := solve_rop rrelax_correct.
+Ltac solve_rzero := solve_rop rzero_correct.
+Ltac solve_rone := solve_rop rone_correct.
 
 Module PrintingNotations.
   Export ident.
-  Export BoundsAnalysis.ident.
-  Export BoundsAnalysis.Notations.
-  Open Scope btype_scope.
   Global Set Printing Width 100000.
-  Notation "'uint256'"
+  (*Notation "'uint256'"
     := (r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935]%btype) : btype_scope.
   Notation "'uint128'"
     := (r[0 ~> 340282366920938463463374607431768211455]%btype) : btype_scope.
@@ -6760,17 +7008,17 @@ Module PrintingNotations.
     := ((land _ out_t mask @@ v)%nexpr)
          (format "( ( out_t ) v  &  mask )")
        : nexpr_scope.
-
+*)
   (* TODO: come up with a better notation for arithmetic with carries
   that still distinguishes it from arithmetic without carries? *)
   Local Notation "'TwoPow256'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 (only parsing).
-  Notation "'ADD_256'" := (add_get_carry_concrete _ _ uint256 _ TwoPow256) : nexpr_scope.
+  (*Notation "'ADD_256'" := (add_get_carry_concrete _ _ uint256 _ TwoPow256) : nexpr_scope.
   Notation "'ADD_128'" := (add_get_carry_concrete _ _ uint128 _ TwoPow256) : nexpr_scope.
   Notation "'ADDC_256'" := (add_with_get_carry_concrete _ _ _ uint256 _ TwoPow256) : nexpr_scope.
   Notation "'SUB_256'" := (sub_get_borrow_concrete _ _ uint256 _ TwoPow256) : nexpr_scope.
   Notation "'ADDM'" := (add_modulo _ _ _ uint256) : nexpr_scope.
   Notation "'SELC'" := (zselect _ _ _ uint256) : nexpr_scope.
-  Notation "'MUL_256'" := (mul uint128 uint128 uint256) : nexpr_scope.
+  Notation "'MUL_256'" := (mul uint128 uint128 uint256) : nexpr_scope.*)
 End PrintingNotations.
 
 
@@ -6780,42 +7028,60 @@ Module X25519_64.
   Definition c := [(1, 19)].
   Definition machine_wordsize := 64.
 
+  Set Printing Width 80.
+
+  Derive base_51_relax
+         SuchThat (rrelax_correctT n s c base_51_relax)
+         As base_51_relax_correct.
+  Proof. Time solve_rrelax machine_wordsize. Time Qed.
   Derive base_51_carry_mul
-         SuchThat (rcarry_mul_correctT n s c machine_wordsize base_51_carry_mul)
+         SuchThat (rcarry_mul_correctT n s c base_51_carry_mul)
          As base_51_carry_mul_correct.
-  Proof. Time solve_rcarry_mul (). Time Qed.
+  Proof.
+    eapply rcarry_mul_correct with (machine_wordsize:=machine_wordsize).
+    cbv [rcarry_mul].
+    set (k := List.repeat _ _) at 1; lazy in k; subst k.
+    set (k := List.repeat _ _) at 1; lazy in k; subst k.
+    set (k := List.repeat _ _) at 1; lazy in k; subst k.
+    cbv [Pipeline.BoundsPipeline].
+    cbv [CheckedPartialReduceWithBounds1].
+    cbv [Let_In].
+    set (k := extract_bounds _ _ _).
+    set (k' := k _); subst k.
+    cbv [extract_bounds] in k'.
+    set (k'' := partial_reduce_with_bounds1' _ _ _ _) in (value of k').
+    exfalso.
+    lazy in k''.
+
+    Time solve_rcarry_mul machine_wordsize. Time Qed.
   Derive base_51_carry
          SuchThat (rcarry_correctT n s c machine_wordsize base_51_carry)
          As base_51_carry_correct.
-  Proof. Time solve_rcarry (). Time Qed.
-  Derive base_51_relax
-         SuchThat (rrelax_correctT n s c machine_wordsize base_51_relax)
-         As base_51_relax_correct.
-  Proof. Time solve_rrelax (). Time Qed.
+  Proof. Time solve_rcarry machine_wordsize. Time Qed.
   Derive base_51_add
          SuchThat (radd_correctT n s c machine_wordsize base_51_add)
          As base_51_add_correct.
-  Proof. Time solve_radd (). Time Qed.
+  Proof. Time solve_radd machine_wordsize. Time Qed.
   Derive base_51_sub
          SuchThat (rsub_correctT n s c machine_wordsize base_51_sub)
          As base_51_sub_correct.
-  Proof. Time solve_rsub (). Time Qed.
+  Proof. Time solve_rsub machine_wordsize. Time Qed.
   Derive base_51_opp
          SuchThat (ropp_correctT n s c machine_wordsize base_51_opp)
          As base_51_opp_correct.
-  Proof. Time solve_ropp (). Time Qed.
+  Proof. Time solve_ropp machine_wordsize. Time Qed.
   Derive base_51_encode
          SuchThat (rencode_correctT n s c machine_wordsize base_51_encode)
          As base_51_encode_correct.
-  Proof. Time solve_rencode (). Time Qed.
+  Proof. Time solve_rencode machine_wordsize. Time Qed.
   Derive base_51_zero
          SuchThat (rzero_correctT n s c machine_wordsize base_51_zero)
          As base_51_zero_correct.
-  Proof. Time solve_rzero (). Time Qed.
+  Proof. Time solve_rzero machine_wordsize. Time Qed.
   Derive base_51_one
          SuchThat (rone_correctT n s c machine_wordsize base_51_one)
          As base_51_one_correct.
-  Proof. Time solve_rone (). Time Qed.
+  Proof. Time solve_rone machine_wordsize. Time Qed.
   Lemma base_51_curve_good
     : check_args n s c machine_wordsize (Pipeline.Success tt) = Pipeline.Success tt.
   Proof. vm_compute; reflexivity. Qed.
@@ -7211,9 +7477,9 @@ Module MontgomeryReduction.
     Let rN' := GallinaReify.Reify N'.
     Let rn := GallinaReify.Reify 2%nat.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
-    Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z * type.Z))
+    Let arg_bounds : ZRange.type.interp (type.Z * type.Z))
       := (bound, bound).
-    Let out_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z))
+    Let out_bounds : ZRange.type.interp (type.Z))
       := bound.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
