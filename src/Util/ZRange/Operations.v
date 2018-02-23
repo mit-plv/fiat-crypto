@@ -16,6 +16,11 @@ Module ZRange.
        let (ly, uy) := eta y in
        r[ Z.min lx ly ~> Z.max ux uy ].
 
+  Definition intersection (x y : zrange) : zrange
+    := let (lx, ux) := eta x in
+       let (ly, uy) := eta y in
+       r[ Z.max lx ly ~> Z.min ux uy ].
+
   Definition normalize (v : zrange) : zrange
     := r[ Z.min (lower v) (upper v) ~> Z.max (upper v) (lower v) ].
 
