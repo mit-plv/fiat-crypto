@@ -4,3 +4,6 @@
 [submodule "bbv"]
 	path = bbv
 	url = ../../mit-plv/bbv.git
+[submodule "coqprime"]
+	path = coqprime
+	url = https://github.com/thery/coqprime
