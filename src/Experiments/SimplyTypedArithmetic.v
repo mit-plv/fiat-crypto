@@ -993,6 +993,408 @@ Module Columns.
   End mul_converted.
 End Columns.
 
+Module Import MOVEME.
+  Fixpoint fold_andb_map {A B} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B)
+  : bool
+    := match ls1, ls2 with
+       | nil, nil => true
+       | nil, _ => false
+       | cons x xs, cons y ys => andb (f x y) (@fold_andb_map A B f xs ys)
+       | cons _ _, _ => false
+       end.
+  Lemma fold_andb_map_map {A B C} f g ls1 ls2
+    : @fold_andb_map A B f ls1 (@List.map C _ g ls2)
+      = fold_andb_map (fun a b => f a (g b)) ls1 ls2.
+  Proof. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
+
+  Lemma fold_andb_map_length A B f ls1 ls2
+        (H : @fold_andb_map A B f ls1 ls2 = true)
+    : length ls1 = length ls2.
+  Proof.
+    revert ls1 ls2 H; induction ls1, ls2; cbn; intros; Bool.split_andb; f_equal;
+      try congruence; auto.
+  Qed.
+End MOVEME.
+
+Definition expanding_id (n : nat) (ls : list Z) := expand_list (-1)%Z ls n.
+
+Lemma expanding_id_id n ls (H : List.length ls = n)
+  : expanding_id n ls = ls.
+Proof.
+  unfold expanding_id. rewrite expand_list_correct by assumption; reflexivity.
+Qed.
+
+Module Ring.
+  Local Notation is_bounded_by0 r v
+    := ((lower r <=? v) && (v <=? upper r)).
+  Local Notation is_bounded_by bounds ls
+    := (fold_andb_map (fun r v => is_bounded_by0 r v) bounds ls).
+  Local Notation is_bounded_by2 bounds ls
+    := (let '(a, b) := ls in andb (is_bounded_by bounds a) (is_bounded_by bounds b)).
+
+  Section ring_goal.
+    Context (weight : nat -> Z)
+            (weight_0 : weight 0%nat = 1)
+            (weight_nz : forall i, weight i <> 0)
+            (n : nat)
+            (s : Z)
+            (c : list (Z * Z))
+            (tight_bounds : list zrange)
+            (length_tight_bounds : length tight_bounds = n)
+            (loose_bounds : list zrange)
+            (length_loose_bounds : length loose_bounds = n).
+    Local Notation eval := (Positional.eval weight n).
+    Let prime_bound : zrange
+      := r[0~>(s - Associational.eval c - 1)]%zrange.
+    Let m := Z.to_pos (s - Associational.eval c).
+    Context (m_eq : Z.pos m = s - Associational.eval c)
+            (sc_pos : 0 < s - Associational.eval c)
+            (Interp_rrelaxv : list Z -> list Z)
+            (HInterp_rrelaxv : forall arg,
+                is_bounded_by tight_bounds arg = true
+                -> is_bounded_by loose_bounds (Interp_rrelaxv arg) = true
+                   /\ Interp_rrelaxv arg = expanding_id n arg)
+            (carry_mulmod : list Z * list Z -> list Z)
+            (Hcarry_mulmod
+             : forall fg,
+                length (fst fg) = n -> length (snd fg) = n ->
+                (eval (carry_mulmod fg)) mod (s - Associational.eval c)
+                = (eval (fst fg) * eval (snd fg)) mod (s - Associational.eval c))
+            (Interp_rcarry_mulv : list Z * list Z -> list Z)
+            (HInterp_rcarry_mulv : forall arg,
+                is_bounded_by2 loose_bounds arg = true
+                -> is_bounded_by tight_bounds (Interp_rcarry_mulv arg) = true
+                   /\ Interp_rcarry_mulv arg = carry_mulmod arg)
+            (carrymod : list Z -> list Z)
+            (Hcarrymod
+             : forall f,
+                length f = n ->
+                (eval (carrymod f)) mod (s - Associational.eval c)
+                = (eval f) mod (s - Associational.eval c))
+            (Interp_rcarryv : list Z -> list Z)
+            (HInterp_rcarryv : forall arg,
+                is_bounded_by loose_bounds arg = true
+                -> is_bounded_by tight_bounds (Interp_rcarryv arg) = true
+                   /\ Interp_rcarryv arg = carrymod arg)
+            (addmod : list Z * list Z -> list Z)
+            (Haddmod
+             : forall fg,
+                length (fst fg) = n -> length (snd fg) = n ->
+                (eval (addmod fg)) mod (s - Associational.eval c)
+                = (eval (fst fg) + eval (snd fg)) mod (s - Associational.eval c))
+            (Interp_raddv : list Z * list Z -> list Z)
+            (HInterp_raddv : forall arg,
+                is_bounded_by2 tight_bounds arg = true
+                -> is_bounded_by loose_bounds (Interp_raddv arg) = true
+                   /\ Interp_raddv arg = addmod arg)
+            (submod : list Z * list Z -> list Z)
+            (Hsubmod
+             : forall fg,
+                length (fst fg) = n -> length (snd fg) = n ->
+                (eval (submod fg)) mod (s - Associational.eval c)
+                = (eval (fst fg) - eval (snd fg)) mod (s - Associational.eval c))
+            (Interp_rsubv : list Z * list Z -> list Z)
+            (HInterp_rsubv : forall arg,
+                is_bounded_by2 tight_bounds arg = true
+                -> is_bounded_by loose_bounds (Interp_rsubv arg) = true
+                   /\ Interp_rsubv arg = submod arg)
+            (oppmod : list Z -> list Z)
+            (Hoppmod
+             : forall f,
+                length f = n ->
+                (eval (oppmod f)) mod (s - Associational.eval c)
+                = (- eval f) mod (s - Associational.eval c))
+            (Interp_roppv : list Z -> list Z)
+            (HInterp_roppv : forall arg,
+                is_bounded_by tight_bounds arg = true
+                -> is_bounded_by loose_bounds (Interp_roppv arg) = true
+                   /\ Interp_roppv arg = oppmod arg)
+            (zeromod : list Z)
+            (Hzeromod
+             : (eval zeromod) mod (s - Associational.eval c)
+                = 0 mod (s - Associational.eval c))
+            (Interp_rzerov : list Z)
+            (HInterp_rzerov : is_bounded_by tight_bounds Interp_rzerov = true
+                              /\ Interp_rzerov = zeromod)
+            (onemod : list Z)
+            (Honemod
+             : (eval onemod) mod (s - Associational.eval c)
+                = 1 mod (s - Associational.eval c))
+            (Interp_ronev : list Z)
+            (HInterp_ronev : is_bounded_by tight_bounds Interp_ronev = true
+                              /\ Interp_ronev = onemod)
+            (encodemod : Z -> list Z)
+            (Hencodemod
+             : forall f,
+                (eval (encodemod f)) mod (s - Associational.eval c)
+                = f mod (s - Associational.eval c))
+            (Interp_rencodev : Z -> list Z)
+            (HInterp_rencodev : forall arg,
+                is_bounded_by0 prime_bound arg = true
+                -> is_bounded_by tight_bounds (Interp_rencodev arg) = true
+                   /\ Interp_rencodev arg = encodemod arg).
+
+    Definition encodedT
+      := { ls : list Z | is_bounded_by tight_bounds ls = true }.
+
+    Definition list_of_encodedT (v : encodedT) : list _
+      := proj1_sig v.
+
+    Lemma length_list_of_encodedT v : List.length (list_of_encodedT v) = n.
+    Proof.
+      destruct v as [v H]; cbn in H |- *.
+      apply fold_andb_map_length in H; rewrite <- H.
+      assumption.
+    Qed.
+
+    Definition Zdecode (v : encodedT)
+      := list_of_encodedT v.
+    Definition Fdecode (v : encodedT) : F m
+      := F.of_Z m (Positional.eval weight n (Zdecode v)).
+    Definition encodedT_eq (x y : encodedT)
+      := Fdecode x = Fdecode y.
+
+    Lemma length_Zdecode v : List.length (Zdecode v) = n.
+    Proof. apply length_list_of_encodedT. Qed.
+
+
+    Local Ltac specialize_from_interp _ :=
+      repeat match goal with
+             | [ H := ?Interp_rv ?arg, Hc : context[?Interp_rv] |- _ ]
+               => unique pose proof (Hc arg)
+             end.
+    Local Ltac specialize_with_bounded _ :=
+      repeat match goal with
+             | _ => progress cbv [Zdecode list_of_encodedT] in *
+             | _ => progress cbn [proj1_sig fst snd] in *
+             | [ H : context[andb ?x ?y = true] |- _ ]
+               => rewrite (Bool.andb_true_iff x y) in H
+             | [ H : _ /\ _ -> _ |- _ ] => specialize (fun a b => H (conj a b))
+             | _ => progress destruct_head'_and
+             | [ H : ?f (proj1_sig ?v) = true -> _ |- _ ]
+               => specialize (H (proj2_sig v)); hnf in H
+             | [ H : ?x = true -> _, H' : ?x = true |- _ ]
+               => specialize (H H'); hnf in H
+             | [ H : ?x = true |- { pf : ?x = true | _ } ] => exists H
+             end.
+    Local Ltac rewrite_interp _ :=
+      repeat match goal with
+             | [ H := _ |- _ ] => subst H
+             | [ H : ?x = _ |- context[?x] ] => rewrite H
+             | _ => rewrite expanding_id_id
+             | [ |- ?x = ?x ] => reflexivity
+             | [ |- List.length (proj1_sig _) = _ ] => apply length_list_of_encodedT
+             end.
+
+    Local Ltac solve_encodedT _ :=
+      specialize_from_interp ();
+      specialize_with_bounded ();
+      rewrite_interp ().
+
+    Definition ring_mul_sig
+      : forall (x y : encodedT),
+        { v : encodedT
+        | Zdecode v = carry_mulmod (Zdecode x, Zdecode y) }.
+    Proof.
+      simple refine
+             (fun x y
+              => let x' := Interp_rrelaxv (proj1_sig x) in
+                 let y' := Interp_rrelaxv (proj1_sig y) in
+                 let v' := Interp_rcarry_mulv (x', y') in
+                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                     := _ in
+                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      clear dependent HInterp_rzerov; clear dependent HInterp_ronev.
+      abstract solve_encodedT ().
+    Defined.
+
+    Definition ring_add_sig
+      : forall (x y : encodedT),
+        { v : encodedT
+        | Zdecode v = carrymod (addmod (Zdecode x, Zdecode y)) }.
+    Proof.
+      simple refine
+             (fun x y
+              => let v'' := Interp_raddv (proj1_sig x, proj1_sig y) in
+                 let v' := Interp_rcarryv v'' in
+                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                     := _ in
+                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      clear dependent HInterp_rzerov; clear dependent HInterp_ronev.
+      abstract solve_encodedT ().
+    Defined.
+    Definition ring_sub_sig
+      : forall (x y : encodedT),
+        { v : encodedT
+        | Zdecode v = carrymod (submod (Zdecode x, Zdecode y)) }.
+    Proof.
+      simple refine
+             (fun x y
+              => let v'' := Interp_rsubv (proj1_sig x, proj1_sig y) in
+                 let v' := Interp_rcarryv v'' in
+                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                     := _ in
+                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      clear dependent HInterp_rzerov; clear dependent HInterp_ronev.
+      abstract solve_encodedT ().
+    Defined.
+    Definition ring_opp_sig
+      : forall (x : encodedT),
+        { v : encodedT
+        | Zdecode v = carrymod (oppmod (Zdecode x)) }.
+    Proof.
+      simple refine
+             (fun x
+              => let v'' := Interp_roppv (proj1_sig x) in
+                 let v' := Interp_rcarryv v'' in
+                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                     := _ in
+                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      clear dependent HInterp_rzerov; clear dependent HInterp_ronev.
+      abstract solve_encodedT ().
+    Defined.
+    Definition ring_zero_sig
+      : { v : encodedT
+        | Zdecode v = zeromod }.
+    Proof.
+      simple refine
+             (let v' := Interp_rzerov in
+              let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                  := _ in
+              exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      cbn; clear -HInterp_rzerov.
+      abstract (destruct HInterp_rzerov; constructor; assumption).
+    Defined.
+    Definition ring_one_sig
+      : { v : encodedT
+        | Zdecode v = onemod }.
+    Proof.
+      simple refine
+             (let v' := Interp_ronev in
+              let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                  := _ in
+              exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      cbn; clear -HInterp_ronev.
+      abstract (destruct HInterp_ronev; cbn; constructor; assumption).
+    Defined.
+    Arguments Z.mul !_ !_ .
+    Definition ring_encode_sig
+      : forall (x : F m),
+        { v : encodedT
+        | Zdecode v = encodemod (F.to_Z x) }.
+    Proof.
+      simple refine
+             (fun v
+              => let pf1 := _ in
+                 let arg := F.to_Z v in
+                 let Hrencodev' := HInterp_rencodev arg pf1 in
+                 let v' := Interp_rencodev arg in
+                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
+                     := _ in
+                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
+      { generalize m_eq.
+        generalize sc_pos.
+        cbn; clear -v.
+        abstract (
+            intros sc_pos m_eq;
+            destruct v as [v Hv]; cbn; rewrite m_eq in Hv;
+            pose proof (Z.mod_pos_bound v _ sc_pos);
+            rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; lia
+          ). }
+      { cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
+        subst v' arg; clearbody Hrencodev'; cbv beta zeta in *.
+        clear -Hrencodev'.
+        abstract (constructor; apply Hrencodev'). }
+    Defined.
+
+    Lemma length_addmod x y
+      : List.length (addmod (Zdecode x, Zdecode y)) = n.
+    Proof.
+      destruct (HInterp_raddv (Zdecode x, Zdecode y)) as [H0 H1];
+        [ .. | apply fold_andb_map_length in H0; rewrite <- H1, <- H0; assumption ].
+      cbv [Zdecode fst snd list_of_encodedT].
+      rewrite (proj2_sig x), (proj2_sig y); reflexivity.
+    Qed.
+    Lemma length_submod x y
+      : List.length (submod (Zdecode x, Zdecode y)) = n.
+    Proof.
+      destruct (HInterp_rsubv (Zdecode x, Zdecode y)) as [H0 H1];
+        [ .. | apply fold_andb_map_length in H0; rewrite <- H1, <- H0; assumption ].
+      cbv [Zdecode fst snd list_of_encodedT].
+      rewrite (proj2_sig x), (proj2_sig y); reflexivity.
+    Qed.
+    Lemma length_oppmod x
+      : List.length (oppmod (Zdecode x)) = n.
+    Proof.
+      destruct (HInterp_roppv (Zdecode x)) as [H0 H1];
+        [ .. | apply fold_andb_map_length in H0; rewrite <- H1, <- H0; assumption ].
+      cbv [Zdecode fst snd list_of_encodedT].
+      rewrite (proj2_sig x); reflexivity.
+    Qed.
+
+    Definition ring_mul x y := proj1_sig (ring_mul_sig x y).
+    Definition ring_add x y := proj1_sig (ring_add_sig x y).
+    Definition ring_sub x y := proj1_sig (ring_sub_sig x y).
+    Definition ring_opp x := proj1_sig (ring_opp_sig x).
+    Definition ring_zero := proj1_sig ring_zero_sig.
+    Definition ring_one := proj1_sig ring_one_sig.
+    Definition ring_encode x := proj1_sig (ring_encode_sig x).
+
+    Definition GoodT : Prop
+      := @Hierarchy.ring
+           encodedT encodedT_eq ring_zero ring_one ring_opp ring_add ring_sub ring_mul
+         /\ @Ring.is_homomorphism
+              (F m) eq 1%F F.add F.mul
+              encodedT encodedT_eq ring_one ring_add ring_mul ring_encode
+         /\ @Ring.is_homomorphism
+              encodedT encodedT_eq ring_one ring_add ring_mul
+              (F m) eq 1%F F.add F.mul
+              Fdecode.
+
+    Hint Rewrite ->@F.to_Z_add : push_FtoZ.
+    Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
+    Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
+    Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+
+    Local Ltac rewrite_proj2_sig _ :=
+      lazymatch goal with
+      | [ |- context[proj1_sig ?x] ] => rewrite (proj2_sig x)
+      end.
+
+    Lemma Good : GoodT.
+    Proof.
+      eapply ring_by_isomorphism; intros; [ | reflexivity | .. ]; rewrite F.eq_to_Z_iff;
+        cbv [F.sub Fdecode];
+        autorewrite with push_FtoZ;
+        pull_Zmod;
+        rewrite ?Z.add_opp_r.
+      { cbv [ring_encode]; rewrite_proj2_sig ().
+        erewrite m_eq, Hencodemod, <- m_eq by assumption.
+        let A := lazymatch goal with A : F _ |- _ => A end in
+        destruct A as [v Hv]; cbn; congruence. }
+      { cbv [ring_zero]; rewrite_proj2_sig ().
+        erewrite m_eq, Hzeromod, Zmod_0_l by eassumption; reflexivity. }
+      { cbv [ring_one]; rewrite_proj2_sig ().
+        cbn; erewrite m_eq, Honemod; reflexivity. }
+      { cbv [ring_opp]; rewrite_proj2_sig ().
+        erewrite m_eq, Hcarrymod, Hoppmod
+          by eauto using length_Zdecode, length_oppmod;
+          reflexivity. }
+      { cbv [ring_add]; rewrite_proj2_sig ().
+        erewrite m_eq, Hcarrymod, Haddmod
+          by eauto using length_Zdecode, length_addmod;
+          reflexivity. }
+      { cbv [ring_sub]; rewrite_proj2_sig ().
+        erewrite m_eq, Hcarrymod, Hsubmod
+          by eauto using length_Zdecode, length_submod;
+          reflexivity. }
+      { cbv [ring_mul]; rewrite_proj2_sig ().
+        erewrite m_eq, Hcarry_mulmod
+          by eauto using length_Zdecode; reflexivity. }
+    Qed.
+  End ring_goal.
+End Ring.
+
 Module Compilers.
   Module type.
     Variant primitive := unit | Z | nat | bool.
@@ -3540,14 +3942,6 @@ Module Compilers.
            | type.arrow s d => interp s -> interp d
            | type.list A => list (interp A)
            end.
-      Fixpoint fold_andb_map {A B} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B)
-        : bool
-        := match ls1, ls2 with
-           | nil, nil => true
-           | nil, _ => false
-           | cons x xs, cons y ys => andb (f x y) (@fold_andb_map A B f xs ys)
-           | cons _ _, _ => false
-           end.
       Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
         := match t with
            | type.type_primitive x => @primitive.is_tighter_than x
@@ -3616,19 +4010,6 @@ Module Compilers.
              | type.list A
                => fold_andb_map (@is_bounded_by A)
              end.
-
-        Lemma fold_andb_map_map {A B C} f g ls1 ls2
-          : @fold_andb_map A B f ls1 (@List.map C _ g ls2)
-            = fold_andb_map (fun a b => f a (g b)) ls1 ls2.
-        Proof. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
-
-        Lemma fold_andb_map_length A B f ls1 ls2
-              (H : @fold_andb_map A B f ls1 ls2 = true)
-          : length ls1 = length ls2.
-        Proof.
-          revert ls1 ls2 H; induction ls1, ls2; cbn; intros; Bool.split_andb; f_equal;
-            try congruence; auto.
-        Qed.
 
         Lemma is_tighter_than_Some_is_bounded_by {t} r1 r2 val
               (Htight : @is_tighter_than t r1 (Some r2) = true)
@@ -5968,14 +6349,6 @@ Derive one_gen
        As one_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
 
-Definition expanding_id (n : nat) (ls : list Z) := expand_list (-1)%Z ls n.
-
-Lemma expanding_id_id n ls (H : List.length ls = n)
-  : expanding_id n ls = ls.
-Proof.
-  unfold expanding_id. rewrite expand_list_correct by assumption; reflexivity.
-Qed.
-
 Derive id_gen
        SuchThat (forall (n : nat)
                         (ls : list Z),
@@ -6599,31 +6972,7 @@ Section rcarry_mul.
     : rone_correctT rv.
   Proof. solve_correct_const one_gen_correct. Qed.
 
-  Definition encodedT
-    := { ls : list Z
-       |  ZRange.type.is_bounded_by (t:=type.list type.Z) tight_bounds ls = true }.
-
-  Definition list_of_encodedT (v : encodedT) : list _
-    := proj1_sig v.
-
-  Lemma length_list_of_encodedT v : List.length (list_of_encodedT v) = n.
-  Proof.
-    destruct v as [v H]; cbv [ZRange.type.is_bounded_by] in H; cbn in H |- *.
-    apply ZRange.type.option.fold_andb_map_length in H; rewrite <- H.
-    cbv [tight_bounds f_bounds_tight].
-    rewrite repeat_length; reflexivity.
-  Qed.
-
   Let m : positive := Z.to_pos (s - Associational.eval c).
-  Definition Zdecode (v : encodedT)
-    := list_of_encodedT v.
-  Definition Fdecode (v : encodedT) : F m
-    := F.of_Z m (Positional.eval (Interp rw) n (Zdecode v)).
-  Definition encodedT_eq (x y : encodedT)
-    := Fdecode x = Fdecode y.
-
-  Lemma length_Zdecode v : List.length (Zdecode v) = n.
-  Proof. apply length_list_of_encodedT. Qed.
 
   Section make_ring.
     Context (curve_good : check_args (Pipeline.Success tt) = Pipeline.Success tt)
@@ -6713,249 +7062,49 @@ Section rcarry_mul.
     Local Lemma length_loose_bounds : List.length loose_bounds = n.
     Proof. apply use_curve_good. Qed.
 
-    Local Arguments Z.pow !_ !_ .
-
-    Local Ltac specialize_from_interp _ :=
-      repeat match goal with
-             | [ H := Interp ?rv ?arg, Hc : context[?rv] |- _ ]
-               => unique pose proof (Hc arg)
-             end.
-    Local Ltac specialize_with_bounded _ :=
-      repeat match goal with
-             | _ => progress cbv [Zdecode list_of_encodedT] in *
-             | _ => progress cbn [ZRange.type.is_bounded_by proj1_sig] in *
-             | [ H : context[andb ?x ?y = true] |- _ ]
-               => rewrite (Bool.andb_true_iff x y) in H
-             | [ H : _ /\ _ -> _ |- _ ] => specialize (fun a b => H (conj a b))
-             | _ => progress destruct_head'_and
-             | [ H : ?f (proj1_sig ?v) = true -> _ |- _ ]
-               => specialize (H (proj2_sig v)); hnf in H
-             | [ H : ?x = true -> _, H' : ?x = true |- _ ]
-               => specialize (H H'); hnf in H
-             | [ H : ?x = true |- { pf : ?x = true | _ } ] => exists H
-             end.
-    Local Ltac rewrite_interp _ :=
-      repeat match goal with
-             | [ H := _ |- _ ] => subst H
-             | [ H : ?x = _ |- context[?x] ] => rewrite H
-             | _ => rewrite expanding_id_id
-             | [ |- ?x = ?x ] => reflexivity
-             | [ |- List.length (proj1_sig _) = _ ] => apply length_list_of_encodedT
-             end.
-
-    Local Ltac solve_encodedT _ :=
-      specialize_from_interp ();
-      specialize_with_bounded ();
-      rewrite_interp ().
-
-    Definition ring_mul_sig
-      : forall (x y : encodedT),
-        { v : encodedT
-        | Zdecode v = carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs) (Zdecode x, Zdecode y) }.
-    Proof.
-      simple refine
-             (fun x y
-              => let x' := Interp rrelaxv (proj1_sig x) in
-                 let y' := Interp rrelaxv (proj1_sig y) in
-                 let v' := Interp rcarry_mulv (x', y') in
-                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                     := _ in
-                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      abstract solve_encodedT ().
-    Defined.
-
-    Definition ring_add_sig
-      : forall (x y : encodedT),
-        { v : encodedT
-        | Zdecode v = carrymod
-                        (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)
-                        (addmod (Interp rw) n (Zdecode x, Zdecode y)) }.
-    Proof.
-      simple refine
-             (fun x y
-              => let v'' := Interp raddv (proj1_sig x, proj1_sig y) in
-                 let v' := Interp rcarryv v'' in
-                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                     := _ in
-                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      abstract solve_encodedT ().
-    Defined.
-    Definition ring_sub_sig
-      : forall (x y : encodedT),
-        { v : encodedT
-        | Zdecode v = carrymod
-                        (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)
-                        (submod (Interp rw) s c n (Interp rlen_c) (Interp rcoef) (Zdecode x, Zdecode y)) }.
-    Proof.
-      simple refine
-             (fun x y
-              => let v'' := Interp rsubv (proj1_sig x, proj1_sig y) in
-                 let v' := Interp rcarryv v'' in
-                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                     := _ in
-                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      abstract solve_encodedT ().
-    Defined.
-    Definition ring_opp_sig
-      : forall (x : encodedT),
-        { v : encodedT
-        | Zdecode v = carrymod
-                        (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)
-                        (oppmod (Interp rw) s c n (Interp rlen_c) (Interp rcoef) (Zdecode x)) }.
-    Proof.
-      simple refine
-             (fun x
-              => let v'' := Interp roppv (proj1_sig x) in
-                 let v' := Interp rcarryv v'' in
-                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                     := _ in
-                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      abstract solve_encodedT ().
-    Defined.
-    Definition ring_zero_sig
-      : { v : encodedT
-        | Zdecode v = zeromod
-                        (Interp rw) s c n (Interp rlen_c) }.
-    Proof.
-      simple refine
-             (let v' := Interp rzerov in
-              let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                  := _ in
-              exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      abstract (
-          destruct Hrzerov; subst v';
-          solve_encodedT ()
-        ).
-    Defined.
-    Definition ring_one_sig
-      : { v : encodedT
-        | Zdecode v = onemod
-                        (Interp rw) s c n (Interp rlen_c) }.
-    Proof.
-      simple refine
-             (let v' := Interp ronev in
-              let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                  := _ in
-              exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
-      abstract (
-          destruct Hronev; subst v';
-          solve_encodedT ()
-        ).
-    Defined.
-    Arguments Z.mul !_ !_ .
-    Definition ring_encode_sig
-      : forall (x : F m),
-        { v : encodedT
-        | Zdecode v = encodemod
-                        (Interp rw) s c n (Interp rlen_c) (F.to_Z x) }.
-    Proof.
-      simple refine
-             (fun v
-              => let pf1 := _ in
-                 let arg := F.to_Z v in
-                 let Hrencodev' := Hrencodev arg pf1 in
-                 let v' := Interp rencodev arg in
-                 let pf : { pf0 : _ | Zdecode (exist _ v' pf0) = _ }
-                     := _ in
-                 exist _ (exist _ v' (proj1_sig pf)) (proj2_sig pf)).
-      { generalize m_eq.
-        generalize sc_pos.
-        cbn; clear -v.
-        abstract (
-            intros sc_pos m_eq;
-            destruct v as [v Hv]; cbn; rewrite m_eq in Hv;
-            pose proof (Z.mod_pos_bound v _ sc_pos);
-            rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; lia
-          ). }
-      { cbv [Zdecode list_of_encodedT]; cbn [proj1_sig].
-        subst v' arg; clearbody Hrencodev'; cbv beta zeta in *.
-        abstract (
-            destruct Hrencodev';
-            solve_encodedT ()
-          ). }
-    Defined.
-
-    Lemma length_addmod x y
-      : List.length (addmod (Interp rw) n (Zdecode x, Zdecode y)) = n.
-    Proof.
-      cbv [addmod]; apply length_add; rewrite expand_list_correct;
-        cbn [fst snd]; apply length_Zdecode.
-    Qed.
-    Lemma length_submod x y
-      : List.length (submod (Interp rw) s c n (Interp rlen_c) (Interp rcoef) (Zdecode x, Zdecode y)) = n.
-    Proof.
-      cbv [submod]; apply length_sub; rewrite expand_list_correct;
-        cbn [fst snd]; apply length_Zdecode.
-    Qed.
-    Lemma length_oppmod x
-      : List.length (oppmod (Interp rw) s c n (Interp rlen_c) (Interp rcoef) (Zdecode x)) = n.
-    Proof.
-      cbv [oppmod]; apply length_opp; rewrite expand_list_correct;
-        cbn [fst snd]; apply length_Zdecode.
-    Qed.
-
-    Definition ring_mul x y := proj1_sig (ring_mul_sig x y).
-    Definition ring_add x y := proj1_sig (ring_add_sig x y).
-    Definition ring_sub x y := proj1_sig (ring_sub_sig x y).
-    Definition ring_opp x := proj1_sig (ring_opp_sig x).
-    Definition ring_zero := proj1_sig ring_zero_sig.
-    Definition ring_one := proj1_sig ring_one_sig.
-    Definition ring_encode x := proj1_sig (ring_encode_sig x).
-
     Definition GoodT : Prop
-      := @Hierarchy.ring
-           encodedT encodedT_eq ring_zero ring_one ring_opp ring_add ring_sub ring_mul
-         /\ @Ring.is_homomorphism
-              (F m) eq 1%F F.add F.mul
-              encodedT encodedT_eq ring_one ring_add ring_mul ring_encode
-         /\ @Ring.is_homomorphism
-              encodedT encodedT_eq ring_one ring_add ring_mul
-              (F m) eq 1%F F.add F.mul
-              Fdecode.
+      := @Ring.GoodT
+           (Interp rw)
+           n s c
+           tight_bounds
+           length_tight_bounds
+           loose_bounds
+           m_eq
+           sc_pos
+           (Interp rrelaxv) Hrrelaxv
+           (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs))
+           (Interp rcarry_mulv) Hrmulv
+           (carrymod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs))
+           (Interp rcarryv) Hrcarryv
+           (addmod (Interp rw) n)
+           (Interp raddv) Hraddv
+           (submod (Interp rw) s c n (Interp rlen_c) (Interp rcoef))
+           (Interp rsubv) Hrsubv
+           (oppmod (Interp rw) s c n (Interp rlen_c) (Interp rcoef))
+           (Interp roppv) Hroppv
+           (zeromod (Interp rw) s c n (Interp rlen_c))
+           (Interp rzerov) Hrzerov
+           (onemod (Interp rw) s c n (Interp rlen_c))
+           (Interp ronev) Hronev
+           (encodemod (Interp rw) s c n (Interp rlen_c))
+           (Interp rencodev) Hrencodev.
 
-    Hint Rewrite ->@F.to_Z_add : push_FtoZ.
-    Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
-    Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
-    Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
-
-    Local Ltac rewrite_proj2_sig _ :=
-      lazymatch goal with
-      | [ |- context[proj1_sig ?x] ] => rewrite (proj2_sig x)
-      end.
-
-    Lemma Good : GoodT.
+    Theorem Good : GoodT.
     Proof.
-      pose proof use_curve_good.
-      destruct_head'_and.
-      eapply ring_by_isomorphism; intros; [ | reflexivity | .. ]; rewrite F.eq_to_Z_iff;
-        cbv [F.sub Fdecode];
-        autorewrite with push_FtoZ;
-        pull_Zmod;
-        rewrite ?Z.add_opp_r.
-      { cbv [ring_encode]; rewrite_proj2_sig ().
-        erewrite m_eq, eval_encodemod, <- m_eq by assumption.
-        let A := lazymatch goal with A : F _ |- _ => A end in
-        destruct A as [v Hv]; cbn; congruence. }
-      { cbv [ring_zero]; rewrite_proj2_sig ().
-        cbv [zeromod]; erewrite m_eq, eval_encodemod, Zmod_0_l by eassumption; reflexivity. }
-      { cbv [ring_one]; rewrite_proj2_sig ().
-        cbv [onemod]; cbn; erewrite m_eq, eval_encodemod by eassumption; reflexivity. }
-      { cbv [ring_opp]; rewrite_proj2_sig ().
-        erewrite m_eq, eval_carrymod, eval_oppmod
-          by eauto using length_Zdecode, length_oppmod;
-          reflexivity. }
-      { cbv [ring_add]; rewrite_proj2_sig ().
-        erewrite m_eq, eval_carrymod, eval_addmod
-          by eauto using length_Zdecode, length_addmod;
-          reflexivity. }
-      { cbv [ring_sub]; rewrite_proj2_sig ().
-        erewrite m_eq, eval_carrymod, eval_submod
-          by eauto using length_Zdecode, length_submod;
-          reflexivity. }
-      { cbv [ring_mul]; rewrite_proj2_sig ().
-        erewrite m_eq, eval_carry_mulmod
-          by eauto using length_Zdecode; reflexivity. }
+      pose proof use_curve_good; destruct_head'_and.
+      apply Ring.Good;
+        repeat first [ assumption
+                     | progress intros
+                     | rewrite eval_carry_mulmod
+                     | rewrite eval_carrymod
+                     | rewrite eval_addmod
+                     | rewrite eval_submod
+                     | rewrite eval_oppmod
+                     | rewrite eval_encodemod
+                     | progress cbv [onemod zeromod]
+                     | match goal with
+                       | [ |- ?x = ?x ] => reflexivity
+                       end ].
     Qed.
   End make_ring.
 End rcarry_mul.
