@@ -5,38 +5,38 @@ Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z.
 
-Require Coqprime.Euler Coqprime.Zp Coqprime.IGroup Coqprime.EGroup Coqprime.FGroup Coqprime.UList.
+Require Coqprime.PrimalityTest.Euler Coqprime.PrimalityTest.Zp Coqprime.PrimalityTest.IGroup Coqprime.PrimalityTest.EGroup Coqprime.PrimalityTest.FGroup Coqprime.List.UList.
 
-(* TODO: move somewhere else for lemmas about Coqprime? *)
+(* TODO: move somewhere else for lemmas about Coqprime.PrimalityTest? *)
 Lemma in_ZPGroup_range (n : Z) (n_pos : 1 < n) (p : Z) :
-  List.In p (Coqprime.FGroup.s (Coqprime.Zp.ZPGroup n n_pos)) -> 1 <= p < n.
+  List.In p (Coqprime.PrimalityTest.FGroup.s (Coqprime.PrimalityTest.Zp.ZPGroup n n_pos)) -> 1 <= p < n.
 Proof.
-unfold Coqprime.Zp.ZPGroup; simpl; intros Hin.
-pose proof (Coqprime.IGroup.isupport_incl Z (Coqprime.Zp.pmult n) (Coqprime.Zp.mkZp n) 1 Z.eq_dec) as H.
+unfold Coqprime.PrimalityTest.Zp.ZPGroup; simpl; intros Hin.
+pose proof (Coqprime.PrimalityTest.IGroup.isupport_incl Z (Coqprime.PrimalityTest.Zp.pmult n) (Coqprime.PrimalityTest.Zp.mkZp n) 1 Z.eq_dec) as H.
 unfold List.incl in *.
 specialize (H p Hin).
-apply Coqprime.Zp.in_mkZp in H; auto.
+apply Coqprime.PrimalityTest.Zp.in_mkZp in H; auto.
 destruct (Z.eq_dec p 0); try subst.
-apply Coqprime.IGroup.isupport_is_inv_true in Hin.
-rewrite Coqprime.Zp.rel_prime_is_inv in Hin by auto.
+apply Coqprime.PrimalityTest.IGroup.isupport_is_inv_true in Hin.
+rewrite Coqprime.PrimalityTest.Zp.rel_prime_is_inv in Hin by auto.
 pose proof (not_rel_prime_0 n n_pos).
 destruct (rel_prime_dec 0 n) in Hin; try congruence.
 omega.
 Qed.
 
 Lemma generator_subgroup_is_group p (lt_1_p : 1 < p): forall y,
-  (List.In y (Coqprime.FGroup.s (Coqprime.Zp.ZPGroup p lt_1_p))
-  /\ Coqprime.EGroup.e_order Z.eq_dec y (Coqprime.Zp.ZPGroup p lt_1_p) = Coqprime.FGroup.g_order (Coqprime.Zp.ZPGroup p lt_1_p))
-  -> forall a, List.In a (Coqprime.FGroup.s (Coqprime.Zp.ZPGroup p lt_1_p)) ->
-  List.In a (Coqprime.EGroup.support Z.eq_dec y (Coqprime.Zp.ZPGroup p lt_1_p)).
+  (List.In y (Coqprime.PrimalityTest.FGroup.s (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p))
+  /\ Coqprime.PrimalityTest.EGroup.e_order Z.eq_dec y (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p) = Coqprime.PrimalityTest.FGroup.g_order (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p))
+  -> forall a, List.In a (Coqprime.PrimalityTest.FGroup.s (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p)) ->
+  List.In a (Coqprime.PrimalityTest.EGroup.support Z.eq_dec y (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p)).
 Proof.
   intros y H a H0.
   destruct H as [in_ZPGroup_y y_order].
-  pose proof (Coqprime.EGroup.support_incl_G Z Z.eq_dec (Coqprime.Zp.pmult p) y (Coqprime.Zp.ZPGroup p lt_1_p) in_ZPGroup_y).
+  pose proof (Coqprime.PrimalityTest.EGroup.support_incl_G Z Z.eq_dec (Coqprime.PrimalityTest.Zp.pmult p) y (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p) in_ZPGroup_y).
   eapply Permutation.permutation_in; [|eauto].
   apply Permutation.permutation_sym.
-  eapply Coqprime.UList.ulist_eq_permutation; try apply Coqprime.EGroup.support_ulist; eauto.
-  unfold Coqprime.EGroup.e_order, Coqprime.FGroup.g_order in y_order.
+  eapply Coqprime.List.UList.ulist_eq_permutation; try apply Coqprime.PrimalityTest.EGroup.support_ulist; eauto.
+  unfold Coqprime.PrimalityTest.EGroup.e_order, Coqprime.PrimalityTest.FGroup.g_order in y_order.
   apply Nat2Z.inj in y_order.
   auto.
 Qed.
@@ -60,10 +60,10 @@ Proof using x_id.
   ring_simplify in x_id; apply Z.mul_cancel_l in x_id; omega.
 Qed.
 
-Lemma mod_p_order : Coqprime.FGroup.g_order (Coqprime.Zp.ZPGroup p lt_1_p) = p - 1.
+Lemma mod_p_order : Coqprime.PrimalityTest.FGroup.g_order (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p) = p - 1.
 Proof using Type.
-  intros; rewrite <- Coqprime.Zp.phi_is_order.
-  apply Coqprime.Euler.prime_phi_n_minus_1; auto.
+  intros; rewrite <- Coqprime.PrimalityTest.Zp.phi_is_order.
+  apply Coqprime.PrimalityTest.Euler.prime_phi_n_minus_1; auto.
 Qed.
 
 Lemma p_odd : Z.odd p = true.
@@ -90,10 +90,10 @@ Proof using prime_p.
     apply rel_prime_le_prime; auto; pose proof (Z.mod_pos_bound a p p_pos).
     omega.
   }
-  rewrite (Coqprime.Zp.Zpower_mod_is_gpow _ _ _ lt_1_p) by (auto || prime_bound).
+  rewrite (Coqprime.PrimalityTest.Zp.Zpower_mod_is_gpow _ _ _ lt_1_p) by (auto || prime_bound).
   rewrite <- mod_p_order.
-  apply Coqprime.EGroup.fermat_gen; try apply Z.eq_dec.
-  apply Coqprime.Zp.in_mod_ZPGroup; auto.
+  apply Coqprime.PrimalityTest.EGroup.fermat_gen; try apply Z.eq_dec.
+  apply Coqprime.PrimalityTest.Zp.in_mod_ZPGroup; auto.
 Qed.
 
 Lemma fermat_inv : forall a, a mod p <> 0 -> ((a^(p-2) mod p) * a) mod p = 1.
@@ -137,30 +137,30 @@ Proof using Type*.
 Qed.
 
 Lemma exists_primitive_root_power :
-  (exists y, List.In y (Coqprime.FGroup.s (Coqprime.Zp.ZPGroup p lt_1_p))
-  /\ Coqprime.EGroup.e_order Z.eq_dec y (Coqprime.Zp.ZPGroup p lt_1_p) = Coqprime.FGroup.g_order (Coqprime.Zp.ZPGroup p lt_1_p)
+  (exists y, List.In y (Coqprime.PrimalityTest.FGroup.s (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p))
+  /\ Coqprime.PrimalityTest.EGroup.e_order Z.eq_dec y (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p) = Coqprime.PrimalityTest.FGroup.g_order (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p)
   /\ (forall a (a_range : 1 <= a <= p - 1), exists j, 0 <= j <= p - 1 /\ y ^ j mod p = a)).
 Proof using Type.
   intros.
-  destruct (Coqprime.Zp.Zp_cyclic p lt_1_p prime_p) as [y [y_in_ZPGroup y_order]].
+  destruct (Coqprime.PrimalityTest.Zp.Zp_cyclic p lt_1_p prime_p) as [y [y_in_ZPGroup y_order]].
   exists y; repeat split; auto.
   intros.
   pose proof (in_ZPGroup_range p lt_1_p y y_in_ZPGroup) as y_range1.
   assert (0 <= y < p) as y_range0 by omega.
   assert (rel_prime y p) as rel_prime_y_p by (apply rel_prime_le_prime; omega || auto).
   assert (rel_prime a p) as rel_prime_a_p by (apply rel_prime_le_prime; omega || auto).
-  assert (List.In a (Coqprime.FGroup.s (Coqprime.Zp.ZPGroup p lt_1_p))) as a_in_ZPGroup by (apply Coqprime.Zp.in_ZPGroup; omega || auto).
-  destruct (Coqprime.EGroup.support_gpow Z Z.eq_dec (Coqprime.Zp.pmult p) y (Coqprime.Zp.ZPGroup p lt_1_p) y_in_ZPGroup a)
+  assert (List.In a (Coqprime.PrimalityTest.FGroup.s (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p))) as a_in_ZPGroup by (apply Coqprime.PrimalityTest.Zp.in_ZPGroup; omega || auto).
+  destruct (Coqprime.PrimalityTest.EGroup.support_gpow Z Z.eq_dec (Coqprime.PrimalityTest.Zp.pmult p) y (Coqprime.PrimalityTest.Zp.ZPGroup p lt_1_p) y_in_ZPGroup a)
     as [k [k_range gpow_y_k]]; [apply generator_subgroup_is_group; auto |].
   exists k; split. {
-    unfold Coqprime.EGroup.e_order in y_order.
+    unfold Coqprime.PrimalityTest.EGroup.e_order in y_order.
     rewrite y_order in k_range.
     rewrite mod_p_order in k_range.
     omega.
   } {
     assert (y mod p = y) as y_small by (apply Z.mod_small; omega).
     rewrite <- y_small in gpow_y_k.
-    rewrite <- (Coqprime.Zp.Zpower_mod_is_gpow y k p lt_1_p) in gpow_y_k by (omega || auto).
+    rewrite <- (Coqprime.PrimalityTest.Zp.Zpower_mod_is_gpow y k p lt_1_p) in gpow_y_k by (omega || auto).
     auto.
   }
 Qed.
@@ -180,13 +180,13 @@ Proof using Type*.
   rewrite <- Z.mod_pow in pow_a_x by prime_bound.
   rewrite <- Z.pow_mul_r in pow_a_x by omega.
   assert (p - 1 | j * x) as divide_mul_j_x. {
-    rewrite <- Coqprime.Zp.phi_is_order in y_order.
-    rewrite Coqprime.Euler.prime_phi_n_minus_1 in y_order by auto.
-    ereplace (p-1); try eapply Coqprime.EGroup.e_order_divide_gpow; eauto with zarith.
+    rewrite <- Coqprime.PrimalityTest.Zp.phi_is_order in y_order.
+    rewrite Coqprime.PrimalityTest.Euler.prime_phi_n_minus_1 in y_order by auto.
+    ereplace (p-1); try eapply Coqprime.PrimalityTest.EGroup.e_order_divide_gpow; eauto with zarith.
     simpl.
     apply in_ZPGroup_range in in_ZPGroup_y.
     replace y with (y mod p) by (apply Z.mod_small; omega).
-    erewrite <- Coqprime.Zp.Zpower_mod_is_gpow; eauto.
+    erewrite <- Coqprime.PrimalityTest.Zp.Zpower_mod_is_gpow; eauto.
     apply rel_prime_le_prime; (omega || auto).
     apply Z.mul_nonneg_nonneg; intuition; omega.
   }

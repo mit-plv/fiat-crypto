@@ -193,11 +193,11 @@ endif
 OTHERFLAGS += -w "-notation-overridden"
 endif
 
-COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)
+COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)/src
 export COQPATH
 
 coqprime:
-	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER)
+	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
 
 clean-coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) clean
