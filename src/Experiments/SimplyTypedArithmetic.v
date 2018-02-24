@@ -7012,6 +7012,9 @@ Module PrintingNotations.
   Notation "( out_t )( v >> count )"
     := ((ident.Z.cast out_t @@ (ident.Z.shiftr count @@ v))%expr)
          (format "( out_t )( v  >>  count )") : expr_scope.
+  Notation "( out_t )( v << count )"
+    := ((ident.Z.cast out_t @@ (ident.Z.shiftl count @@ v))%expr)
+         (format "( out_t )( v  <<  count )") : expr_scope.
   Notation "( range )( v )"
     := ((ident.Z.cast range @@ Var v)%expr)
          (format "( range )( v )") : expr_scope.
