@@ -5647,12 +5647,43 @@ Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : opt
        None
        possible_values.
 
+Lemma round_up_bitwidth_gen_le possible_values bitwidth v
+  : round_up_bitwidth_gen possible_values bitwidth = Some v
+    -> bitwidth <= v.
+Proof.
+  cbv [round_up_bitwidth_gen].
+  induction possible_values as [|x xs IHxs]; cbn; intros; inversion_option.
+  break_innermost_match_hyps; Z.ltb_to_lt; inversion_option; subst; trivial.
+  specialize_by_assumption; omega.
+Qed.
+
 Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
   := (fun '(r[ l ~> u ])
       => if (0 <=? l)%Z
          then option_map (fun u => r[0~>2^u-1])
                          (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
          else None)%zrange.
+
+Lemma relax_zrange_gen_good
+      (possible_values : list Z)
+  : forall r r' z : zrange,
+    (z <=? r)%zrange = true -> relax_zrange_gen possible_values r = Some r' -> (z <=? r')%zrange = true.
+Proof.
+  cbv [is_tighter_than_bool relax_zrange_gen]; intros *.
+  pose proof (Z.log2_up_nonneg (upper r + 1)).
+  rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
+  cbv [fold_right option_map].
+  break_innermost_match; intros; destruct_head'_and;
+    try match goal with
+        | [ H : _ |- _ ] => apply round_up_bitwidth_gen_le in H
+        end;
+    inversion_option; inversion_zrange;
+      subst;
+      repeat apply conj;
+      Z.ltb_to_lt; try omega;
+        try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
+Qed.
+
 
 (** TODO: Move me? *)
 Definition app_and_maybe_cancel {s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
@@ -5747,27 +5778,10 @@ Section rcarry_mul.
   Let loose2_bounds : ZRange.type.interp (type.list type.Z * type.list type.Z)
     := (loose_bounds, loose_bounds).
 
-  Lemma relax_zrange_of_machine_wordsize_good
-    : forall r r' z : zrange,
-      (z <=? r)%zrange = true -> relax_zrange_of_machine_wordsize r = Some r' -> (z <=? r')%zrange = true.
-  Proof.
-    cbv [is_tighter_than_bool relax_zrange_of_machine_wordsize relax_zrange_gen]; intros *.
-    pose proof (Z.log2_up_nonneg (upper r + 1)).
-    rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
-    cbv [round_up_bitwidth_gen fold_right option_map].
-    break_innermost_match; intros; destruct_head'_and;
-      inversion_option; inversion_zrange;
-        subst;
-        repeat apply conj;
-        Z.ltb_to_lt; try omega;
-          destruct (Z_gt_le_dec 0 machine_wordsize);
-          try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
-  Qed.
-
   Let relax_zrange_good
     : forall r r' z : zrange,
       (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
-    := relax_zrange_of_machine_wordsize_good.
+    := relax_zrange_gen_good _.
 
   Definition check_args {T} (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
@@ -7002,10 +7016,15 @@ Module MontgomeryReduction.
     Let rN' := GallinaReify.Reify N'.
     Let rn := GallinaReify.Reify 2%nat.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
-    Let arg_bounds : ZRange.type.interp (type.Z * type.Z))
+    Let arg_bounds : ZRange.type.interp (type.Z * type.Z)
       := (bound, bound).
-    Let out_bounds : ZRange.type.interp (type.Z))
+    Let out_bounds : ZRange.type.interp (type.Z)
       := bound.
+
+    Let relax_zrange_good
+    : forall r r' z : zrange,
+      (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
+    := relax_zrange_gen_good _.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
       : Pipeline.ErrorT T
@@ -7047,11 +7066,9 @@ Module MontgomeryReduction.
       let rop := lazymatch type of Hrv with ?rop = Pipeline.Success _ => rop end in
       hnf; intros; cbv [rop] in Hrv;
       eapply pipeline_lem in Hrv; [ | eassumption.. ];
-      let res := fresh "res" in
-      destruct Hrv as [res Hrv];
-      exists res; do 2 try apply conj;
-      [ | | etransitivity ];
-      [ solve [ apply Hrv ].. | ];
+      let Hrv' := fresh "Hrv'" in
+      destruct Hrv as [Hrv Hrv'];
+      apply conj; [ exact Hrv | rewrite Hrv' ];
       repeat match goal with H := _ |- _ => subst H end;
       erewrite <- gen_correct;
       cbv [expr.Interp];
@@ -7070,7 +7087,6 @@ Module MontgomeryReduction.
                rv
       := Eval hnf in
           @rexpr_n1_correctT
-            relax_zrange
             ((type.Z * type.Z)%ctype) type.Z
             arg_bounds out_bounds
             (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_half) (Interp rn))
@@ -7098,7 +7114,14 @@ Module Montgomery256.
   Derive montred256
          SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256)
          As montred256_correct.
-  Proof. Time solve_rmontred(). Time Qed.
+  Proof.
+    eapply MontgomeryReduction.rmontred_correct.
+    cbv [MontgomeryReduction.rmontred].
+    cbv [Pipeline.BoundsPipeline].
+    cbv [CheckedPartialReduceWithBounds1].
+    set (k := PartialReduceWithBounds1 _ _).
+    Timeout 10 Time lazy in k.
+    Time solve_rmontred(). Time Qed.
 
   Import PrintingNotations.
   Open Scope nexpr_scope.
