@@ -6285,7 +6285,22 @@ Section rcarry_mul.
 End rcarry_mul.
 
 Ltac solve_rop rop_correct machine_wordsizev :=
-  eapply rop_correct with (machine_wordsize:=machine_wordsizev); lazy; reflexivity.
+  eapply rop_correct with (machine_wordsize:=machine_wordsizev);
+  (* Doing [lazy] is twice as slow as doing [lazy -[Let_In]; lazy].
+  This is because the bounds pipeline does [dlet E : Expr := (reduced
+  thing) in let b := extract_bounds E in ...].  If we allow [lazy] to
+  unfold [Let_In] before it fully reduces the function (function,
+  because [Expr := forall var, @expr var]), then there is no sharing
+  between the partial reduction in bounds extraction and the partial
+  reduction in the return value.  So we force [lazy] to fully reduce
+  the argument first, and only then permit [lazy] to inline it.  This
+  is slightly slower than doing bounds analysis in a non-PHOAS
+  representation; we spend about 3%-5% of the overall time doing
+  bounds extraction, and fully reducing the bounds extraction
+  expression before plugging in arguments costs a bit more.  However,
+  it's still reasonably fast, and the code is much simpler when
+  [Interp] always succeeds rather than returning [option]. *)
+  lazy -[Let_In]; lazy; reflexivity.
 Ltac solve_rcarry_mul := solve_rop rcarry_mul_correct.
 Ltac solve_rcarry := solve_rop rcarry_correct.
 Ltac solve_radd := solve_rop radd_correct.
