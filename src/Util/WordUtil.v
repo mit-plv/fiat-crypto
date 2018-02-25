@@ -177,11 +177,6 @@ Section Natural.
 End Natural.
 
 Section Pow2.
-  Lemma pow2_id : forall n, pow2 n = 2 ^ n.
-  Proof.
-    induction n; intros; simpl; auto.
-  Qed.
-
   Lemma Zpow_pow2 : forall n, pow2 n = Z.to_nat (2 ^ (Z.of_nat n)).
   Proof.
     induction n as [|n IHn]; intros; auto.
@@ -750,7 +745,7 @@ Proof.
   rewrite <- Nnat.N2Nat.id, Npow2_nat.
   replace (Z.to_N x) with (N.of_nat (Z.to_nat x)) by apply Z_nat_N.
   apply (Nat2N_inj_lt _ (pow2 n)).
-  rewrite pow2_id; assumption.
+  assumption.
 Qed.
 
 Lemma weqb_false_iff : forall sz (x y : word sz), weqb x y = false <-> x <> y.
@@ -887,8 +882,7 @@ Proof.
          end.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
   apply Min.min_case_strong; intros Hbc x0 x1;
-    pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1);
-      rewrite pow2_id in *.
+    pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1).
   { assert (b - c = 0) by omega.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
     generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try omega; [].
@@ -919,8 +913,7 @@ Proof.
   rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
   apply Min.min_case_strong; intros Hbc x0 x1;
-    pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1);
-      rewrite pow2_id in *.
+    pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1).
   { assert (b - c = 0) by omega.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
     generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try omega.
