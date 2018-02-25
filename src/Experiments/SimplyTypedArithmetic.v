@@ -6517,7 +6517,7 @@ End X25519_64.
 (** TODO: write a lemma that for things equal to all operations using defaulting interp, we get a ring isomorphic to F m *)
 (** TODO: compose with stringification + wrappers for prime, extract to OCaml/Haskell *)
 (** TODO: proofs *)
-
+(*
 Module X25519_32.
   Definition n := 10%nat.
   Definition s := 2^255.
