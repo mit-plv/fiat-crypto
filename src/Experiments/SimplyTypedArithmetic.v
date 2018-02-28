@@ -846,14 +846,20 @@ Module Columns.
       let p3_a := Associational.mul p1_a p2_a in
       (* important not to use Positional.carry here; we don't want to accumulate yet *)
       let p3'_a := fold_right (fun i acc => Associational.carry (w' i) (w' (S i) / w' i) acc) p3_a (rev idxs) in
-      fst (flatten w (from_associational w n3 p3_a)).
+      fst (flatten w (from_associational w n3 p3'_a)).
 
       Hint Rewrite
            @Columns.eval_from_associational
            @Associational.eval_carry
            @Associational.eval_mul
            @Positional.eval_to_associational
-           @BaseConversion.eval_convert_bases using solve [auto] : push_eval.
+           @BaseConversion.eval_convert_bases using solve [auto using Z.positive_is_nonzero] : push_eval.
+
+      Lemma eval_carries p idxs :
+        Associational.eval (fold_right (fun i acc => Associational.carry (w' i) (w' (S i) / w' i) acc) p idxs) =
+        Associational.eval p.
+      Proof. apply fold_right_invariant; intros; autorewrite with push_eval; congruence. Qed.
+      Hint Rewrite eval_carries: push_eval.
 
       Lemma eval_mul_converted n1 n2 m1 m2 n3 idxs p1 p2 (_:n3<>0%nat) (_:m1<>0%nat) (_:m2<>0%nat):
         length p1 = n1 -> length p2 = n2 ->
@@ -5321,6 +5327,7 @@ Module PrintingNotations.
   Notation "x +₃₂ y"
     := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
   Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  (*
   Notation "( out_t )( v >> count )"
     := ((shiftr _ out_t count @@ v)%nexpr)
          (format "( out_t )( v  >>  count )")
@@ -5333,6 +5340,7 @@ Module PrintingNotations.
     := ((land _ out_t mask @@ v)%nexpr)
          (format "( ( out_t ) v  &  mask )")
        : nexpr_scope.
+*)
 
   (* TODO: come up with a better notation for arithmetic with carries
   that still distinguishes it from arithmetic without carries? *)
@@ -5636,7 +5644,7 @@ Module RemoveDeadLets.
       | Let_In s T n x f => Let_In n (inline_let idx _ new _ x) (inline_let idx _ new _ f)
       end.
 
-    (* inlines lets that just re-bind a variable or the output of a specified operation on a single variable *)
+    (* inlines lets that just re-bind a variable or half a variable with type prod *)
     Fixpoint inline_silly_lets t (e : @expr ident t) : @expr ident t :=
       match e in (expr t') return expr t' with
       | Var T n => Var T n
@@ -5648,7 +5656,7 @@ Module RemoveDeadLets.
         match x with
         | Var T' m => inline_let n _ (Var T' m) _ f
         | AppIdent _ _ (@BoundsAnalysis.ident.fst A B) (Var _ m) =>
-           inline_let n _ (@AppIdent _ _ _ (@BoundsAnalysis.ident.fst A B) (Var _ m)) _ (inline_silly_lets _ f)
+          inline_let n _ (@AppIdent _ _ _ (@BoundsAnalysis.ident.fst A B) (Var _ m)) _ (inline_silly_lets _ f)
         | _ => Let_In n (inline_silly_lets _ x) (inline_silly_lets _ f)
         end
       end.
@@ -6021,9 +6029,11 @@ Module Montgomery256PrintingNotations.
   Notation "'c.AddM(' '$ret' ',' x ',' y ',' z ');'" :=
     (add_modulo _ _ _ uint256 @@ (x, y, z))%nexpr (at level 40, format "'c.AddM(' '$ret' ','  x ','  y ','  z ');'") : nexpr_scope.
   Notation "'c.ShiftR(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := (shiftr _ _ y @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftR(' '$r' n ',' x ','  y ');' ']' '//' f") : nexpr_scope.
+    (expr_let n := (shiftr _ _ y @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftR(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+  Notation "'c.ShiftL(' '$r' n ',' x ',' y ');' f" :=
+    (expr_let n := (shiftl _ _ y @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftL(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Lower128(' '$r' n ',' x ');' f" :=
-    (expr_let n := (land _ _ 340282366920938463463374607431768211455 @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Lower128(' '$r' n ',' x ');' ']' '//' f") : nexpr_scope.
+    (expr_let n := (land _ _ 340282366920938463463374607431768211455 @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Lower128(' '$r' n ','  x ');' ']' '//' f") : nexpr_scope.
   Notation "'Lower128'"
     := ((land uint256 uint128 340282366920938463463374607431768211455))
          (at level 10, only printing, format "Lower128")
@@ -6041,29 +6051,42 @@ End Montgomery256PrintingNotations.
 Import Montgomery256PrintingNotations.
 Local Open Scope nexpr_scope.
 
+
 Print Montgomery256.montred256.
 (*
-c.ShiftR($r3,$r1_lo, 128);
-c.Lower128($r4,$r1_lo);
-c.Mul128x128($r11, $r4, RegPinv >> 128) << 128;
-c.Mul128x128($r12, $r3, Lower128{RegPinv}) << 128;
+c.ShiftR($r3, $r1_lo, 128);
+c.Lower128($r4, $r1_lo);
+c.Mul128x128($r5, $r3, Lower128{RegPinv});
+c.Lower128($r7, $r5);
+c.Mul128x128($r8, $r4, RegPinv >> 128);
+c.Lower128($r10, $r8);
+c.ShiftL($r11, $r10, 128);
+c.ShiftL($r12, $r7, 128);
 c.Mul128x128($r17, $r4, Lower128{RegPinv});
-c.Add256($r18, $r11, $r12);
+c.Add128($r18, $r11, $r12);
 c.Add256($r19, $r17, $r18_lo);
-c.ShiftR($r29,$r19_lo, 128);
-c.Lower128($r30,$r19_lo);
-c.Mul128x128($r37, $r30, RegMod << 128) << 128;
-c.Mul128x128($r38, $r29, Lower128{RegMod}) << 128;
-c.Mul128x128($r43, $r30, Lower128{RegMod});
-c.Add128($r44, $r37, $r38);
-c.Add256($r45, $r43, $r44_lo);
-c.Add64($r46, $r45_hi, $r44_hi);
-c.Mul128x128($r53, $r29, RegMod << 128);
-c.Add256($r54, $r46, $r53);
-c.Add256($r55, $r1_lo, $r45_lo);
-c.Addc($r56, $r1_hi, $r54_lo);
-c.Selc($r57,RegZero, RegMod);
-c.Sub($r58, $r56_lo, $r57);
-c.AddM($ret, $r58, RegZero, RegMod);
+c.ShiftR($r43, $r19_lo, 128);
+c.Lower128($r44, $r19_lo);
+c.Mul128x128($r45, $r43, Lower128{RegMod});
+c.ShiftR($r46, $r45, 128);
+c.Lower128($r47, $r45);
+c.Mul128x128($r48, $r44, RegMod << 128);
+c.ShiftR($r49, $r48, 128);
+c.Lower128($r50, $r48);
+c.ShiftL($r51, $r50, 128);
+c.ShiftL($r52, $r47, 128);
+c.Mul128x128($r57, $r44, Lower128{RegMod});
+c.Add128($r58, $r51, $r52);
+c.Add256($r59, $r57, $r58_lo);
+c.Add64($r60, $r59_hi, $r58_hi);
+c.Mul128x128($r67, $r43, RegMod << 128);
+c.Add256($r69, $r46, $r67);
+c.Add256($r70, $r49, $r69_lo);
+c.Add256($r80, $r60, $r70_lo);
+c.Add256($r83, $r1_lo, $r59_lo);
+c.Addc($r84, $r1_hi, $r80_lo);
+c.Selc($r85,RegZero, RegMod);
+c.Sub($r86, $r84_lo, $r85);
+c.AddM($ret, $r86, RegZero, RegMod);
      : expr uint256
  *)
