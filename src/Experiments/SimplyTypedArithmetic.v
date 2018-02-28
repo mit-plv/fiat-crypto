@@ -812,33 +812,40 @@ Module Columns.
 
     Section Rows.
 
-      Print flatten_column.
-      Print Z.add_with_get_carry_full.
-      Definition rowwise_step (fw: Z) (carry:Z) (inp: list (list Z)) : list (list Z) :=
+      Let fw := (fun i => weight (S i) / weight i).
+
+      Fixpoint finish_row (idx: nat) (carry:Z) (inp: list (list Z)) : list (list Z) * Z :=
         match inp with
-        | nil => nil
+        | nil => (nil, carry)
         | col :: inp' =>
           match col with
-          | nil => col :: rowwise_step fw 0 inp'
+          | nil => ([carry] :: inp', 0) 
           | x :: nil =>
-            let sum_carry := Z.add_with_get_carry_full fw carry x 0 in
-            (fst sum_carry) :: rowwise_step fw (snd sum_carry) inp'
-          | x :: y :: nil =>
-            let sum_carry := Z.add_with_get_carry_full fw carry x y in
-            
-      Check from_associational.
+            let sum_carry := Z.add_with_get_carry_full (fw idx) carry x 0 in
+            let rec := finish_row (S idx) (snd sum_carry) inp' in
+            ([(fst sum_carry)] :: fst rec, snd rec)
+          | x :: y :: tl =>
+            let sum_carry := Z.add_with_get_carry_full (fw idx) carry x y in
+            let rec := finish_row (S idx) (snd sum_carry) inp' in
+            (((fst sum_carry) :: tl) :: fst rec, snd rec)
+          end
+        end.
 
-      Local Notation row := (nat * list (Z * Z))%type.
-      Local Notation col := (list Z).
-      
-      Definition to_rows (start: nat) (inp : list col) : list row :=
+      Fixpoint flatten_rowwise' (start_value : Z) (start_col : list Z) (other_cols : list (list Z)) : list Z * Z :=
+        match start_col with
+        | nil => (start_value :: map sum other_cols, 0)
+        | x :: tl =>
+          let sum_carry := Z.add_get_carry_full (fw 0%nat) start_value x in
+          let other_cols'_carry := finish_row 1%nat (snd sum_carry) other_cols in
+          let rec := flatten_rowwise' (fst sum_carry) tl (fst other_cols'_carry) in
+          (fst rec, snd rec + snd other_cols'_carry)
+        end.
+
+      Definition flatten_rowwise (inp : list (list Z)) : list Z * Z :=
         match inp with
-        | nil => nil
-        | c :: inp' =>
-          match c with
-          | x :: y :: _ => (start, (x, y) :: get_single_row inp') :: to_rows (S start) inp'
-          | _ => to_rows (S start) inp'
-          end.
+        | (x :: tl) :: other_cols =>
+          flatten_rowwise' x tl other_cols
+        | _ => (map sum inp, 0)
         end.
 
     End Rows.
