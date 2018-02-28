@@ -810,6 +810,39 @@ Module Columns.
           reflexivity. } }
     Qed.
 
+    Section Rows.
+
+      Print flatten_column.
+      Print Z.add_with_get_carry_full.
+      Definition rowwise_step (fw: Z) (carry:Z) (inp: list (list Z)) : list (list Z) :=
+        match inp with
+        | nil => nil
+        | col :: inp' =>
+          match col with
+          | nil => col :: rowwise_step fw 0 inp'
+          | x :: nil =>
+            let sum_carry := Z.add_with_get_carry_full fw carry x 0 in
+            (fst sum_carry) :: rowwise_step fw (snd sum_carry) inp'
+          | x :: y :: nil =>
+            let sum_carry := Z.add_with_get_carry_full fw carry x y in
+            
+      Check from_associational.
+
+      Local Notation row := (nat * list (Z * Z))%type.
+      Local Notation col := (list Z).
+      
+      Definition to_rows (start: nat) (inp : list col) : list row :=
+        match inp with
+        | nil => nil
+        | c :: inp' =>
+          match c with
+          | x :: y :: _ => (start, (x, y) :: get_single_row inp') :: to_rows (S start) inp'
+          | _ => to_rows (S start) inp'
+          end.
+        end.
+
+    End Rows.
+
     Section mul.
       Definition mul s n m (p q : list Z) : list Z :=
         let p_a := Positional.to_associational weight n p in
