@@ -894,8 +894,8 @@ Module Columns.
         Qed.
 
         Derive mul_converted_single
-               SuchThat (forall (p1 p2 : Z), (0 <= p1 < w 1) -> (0 <= p2 < w 1) ->
-                             mul_converted_single p1 p2 = mul_converted 1 1 2 2 2 [p1] [p2])
+               SuchThat (forall n (p1 p2 : Z), (0 <= p1 < w 1) -> (0 <= p2 < w 1) ->
+                             mul_converted_single n p1 p2 = mul_converted 1 1 2 2 n [p1] [p2])
                As mul_converted_single_eq.
         Proof.
           intros.
@@ -983,29 +983,30 @@ Module Columns.
           reflexivity.
         Qed.
 
-        Lemma eval_mul_converted_single p1 p2 (_: 0 <= p1 < w 1) (_:0 <= p2 < w 1) (_: 0 <= p1 * p2 < w 2) :
-          Positional.eval w 2 (mul_converted_single p1 p2) = (Positional.eval w 1 [p1]) * (Positional.eval w 1 [p2]).
+        Lemma eval_mul_converted_single n p1 p2 (_: n <> 0%nat) (_: 0 <= p1 < w 1) (_:0 <= p2 < w 1) (_: 0 <= p1 * p2 < w n) :
+          Positional.eval w n (mul_converted_single n p1 p2) = (Positional.eval w 1 [p1]) * (Positional.eval w 1 [p2]).
         Proof. rewrite mul_converted_single_eq by auto. apply mul_converted_correct; cbn; nia. Qed.
 
         Hint Rewrite @length_from_associational : distr_length.
 
-        Lemma mul_converted_single_mod x y :
-          0 <= x < w 1 -> 0 <= y < w 1 ->
-          nth_default 0 (mul_converted_single x y) 0 = (x * y) mod (w 1).
+        Lemma mul_converted_single_mod n x y :
+          n = 2%nat -> 0 <= x < w 1 -> 0 <= y < w 1 ->
+          nth_default 0 (mul_converted_single n x y) 0 = (x * y) mod (w 1).
         Proof.
-          intros; rewrite mul_converted_single_eq by auto. cbv [mul_converted].
+          intros; subst n; rewrite mul_converted_single_eq by auto. cbv [mul_converted].
           erewrite flatten_partitions by (auto; distr_length).
           autorewrite with distr_length push_eval. cbn.
           rewrite w_0; autorewrite with zsimplify.
           reflexivity.
         Qed.
 
-        Lemma mul_converted_single_div x y :
+        Lemma mul_converted_single_div n x y :
+          n = 2%nat ->
           0 <= x < w 1 -> 0 <= y < w 1 ->
           0 <= x * y < w 2 ->
-          nth_default 0 (mul_converted_single x y) 1 = (x * y) / (w 1).
+          nth_default 0 (mul_converted_single n x y) 1 = (x * y) / (w 1).
         Proof.
-          intros; rewrite mul_converted_single_eq by auto. cbv [mul_converted].
+          intros; subst n; rewrite mul_converted_single_eq by auto. cbv [mul_converted].
           erewrite flatten_partitions by (auto; distr_length).
           autorewrite with distr_length push_eval. cbn.
           rewrite w_0; autorewrite with zsimplify.
@@ -5763,10 +5764,11 @@ Module MontgomeryReduction.
             (w_multiples : forall i, w (S i) mod w i = 0)
             (w_divides : forall i : nat, w (S i) / w i > 0).
     Context (w_1_gt1 : w 1 > 1) (w_half_1_gt1 : w_half 1 > 1).
+    Context (n:nat) (Hn : n = 2%nat).
 
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (Columns.mul_converted_single w w_half (fst lo_hi) N') 0  in
-      dlet_nd t1_t2 := Columns.mul_converted_single w w_half y N in
+      dlet_nd y := nth_default 0 (Columns.mul_converted_single w w_half n (fst lo_hi) N') 0  in
+      dlet_nd t1_t2 := Columns.mul_converted_single w w_half n y N in
       dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
       dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
@@ -5832,12 +5834,13 @@ Module MontgomeryReduction.
   End MontRed'.
 
   Derive montred_gen
-         SuchThat (forall (w w_half : nat -> Z)
-                          (N R N' : Z)
+         SuchThat (forall (N R N' : Z)
+                          (w w_half : nat -> Z)
+                          (n : nat)
                           (lo_hi : Z * Z),
                       Interp (t:=type.reify_type_of montred')
-                             montred_gen N R N' w w_half lo_hi
-                      = montred' N R N' w w_half lo_hi)
+                             montred_gen N R N' w w_half n lo_hi
+                      = montred' N R N' w w_half n lo_hi)
          As montred_gen_correct.
   Proof.
     intros.
@@ -5880,6 +5883,7 @@ Module MontgomeryReduction.
     Let rN := GallinaReify.Reify N.
     Let rR := GallinaReify.Reify R.
     Let rN' := GallinaReify.Reify N'.
+    Let rn := GallinaReify.Reify 2%nat.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
     Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z * type.Z))
       := (bound, bound).
@@ -5915,6 +5919,7 @@ Module MontgomeryReduction.
                             @ (rN' _)
                             @ (rw _)
                             @ (rw_half _)
+                            @ (rn _)
                       )%expr in
          check_args res.
 
@@ -5932,7 +5937,7 @@ Module MontgomeryReduction.
           (bs:=out_bounds)
           arg
           rv
-        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_half) arg').
+        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_half) (Interp rn) arg').
 
     Lemma rmontred_correct
           rv
@@ -6004,11 +6009,11 @@ Module Montgomery256.
     expr_let 29 := snd @@ x_28 +₁₂₈ snd @@ x_27 in
     expr_let 36 := MUL_256 @@ ((uint128)(fst @@ x_10 >> 128), (340282366841710300967557013911933812736)) in
     expr_let 37 := ADD_256 @@ (x_29, x_36) in
-    expr_let 39 := ADD_256 @@ (fst @@ x_1, fst @@ x_28) in
-    expr_let 40 := ADDC_256 @@ (snd @@ x_39, snd @@ x_1, fst @@ x_37) in
-    expr_let 41 := SELC @@ (snd @@ x_40, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
-    expr_let 42 := fst @@ (SUB_256 @@ (fst @@ x_40, x_41)) in
-    ADDM @@ (x_42, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
+    expr_let 38 := ADD_256 @@ (fst @@ x_1, fst @@ x_28) in
+    expr_let 39 := ADDC_256 @@ (snd @@ x_38, snd @@ x_1, fst @@ x_37) in
+    expr_let 40 := SELC @@ (snd @@ x_39, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+    expr_let 41 := fst @@ (SUB_256 @@ (fst @@ x_39, x_40)) in
+    ADDM @@ (x_41, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
          : expr uint256
    *)
 End Montgomery256.
@@ -6062,28 +6067,28 @@ Module Montgomery256PrintingNotations.
   Notation "$r n '_hi'" := (snd @@ (BoundsAnalysis.Indexed.expr.Var (BoundsAnalysis.type.prod _ _) n))%nexpr (at level 10, format "$r n _hi") : nexpr_scope.
   Notation "'c.Mul128x128(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := mul _ _ uint256 @@ (x, y) in
-         f)%nexpr (at level 48, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Mul128x128(' '$r' n ',' x ',' y ')' '<<' count ';' f" :=
     (expr_let n := shiftl _ _ count @@ (mul _ _ uint256 @@ (x, y)) in
-         f)%nexpr (at level 49, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ')'  '<<'  count ';' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ')'  '<<'  count ';' ']' '//' f") : nexpr_scope.
   Notation "'c.Add256(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := add_get_carry_concrete _ _ uint256 _ $R @@ (x, y) in
-         f)%nexpr (at level 47, right associativity, format "'[' 'c.Add256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Add128(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := add_get_carry_concrete _ _ uint128 _ $R @@ (x, y) in
-         f)%nexpr (at level 45, right associativity, format "'[' 'c.Add128(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add128(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Add64(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := add _ _ uint128 @@ (x, y) in
-         f)%nexpr (at level 46, right associativity, format "'[' 'c.Add64(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add64(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Addc(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := add_with_get_carry_concrete _ _ _ uint256 _ $R @@ (_, x, y) in
-         f)%nexpr (at level 44, right associativity, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Selc(' '$r' n ',' y ',' z ');' f" :=
     (expr_let n := zselect _ _ _ uint256 @@ (_, y, z) in
-         f)%nexpr (at level 43, right associativity, format "'[' 'c.Selc(' '$r' n ',' y ','  z ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Selc(' '$r' n ',' y ','  z ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Sub(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := fst @@ (sub_get_borrow_concrete _ _ uint256 _ $R @@ (x, y)) in
-         f)%nexpr (at level 42, right associativity, format "'c.Sub(' '$r' n ','  x ','  y ');' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'c.Sub(' '$r' n ','  x ','  y ');' '//' f") : nexpr_scope.
   Notation "'c.AddM(' '$ret' ',' x ',' y ',' z ');'" :=
     (add_modulo _ _ _ uint256 @@ (x, y, z))%nexpr (at level 40, format "'c.AddM(' '$ret' ','  x ','  y ','  z ');'") : nexpr_scope.
   Notation "'Lower128'"
@@ -6110,18 +6115,18 @@ c.Mul128x128($r3, ($r1_lo >> 128), Lower128{RegPinv}) << 128;
 c.Mul128x128($r8, Lower128 @@ $r1_lo, Lower128{RegPinv});
 c.Add256($r9, $r2, $r3);
 c.Add256($r10, $r8, $r9_lo);
-(c.Mul128x128($r20, Lower128 @@ $r10_lo, RegMod << 128) << 128;
- c.Mul128x128($r21, ($r10_lo >> 128), Lower128{RegMod}) << 128;
- c.Mul128x128($r26, Lower128 @@ $r10_lo, Lower128{RegMod});
- c.Add128($r27, $r20, $r21);
- (c.Add256($r28, $r26, $r27_lo);
-  c.Add64($r29, $r28_hi, $r27_hi);
-  (c.Mul128x128($r36, ($r10_lo >> 128), RegMod << 128);
-   c.Add256($r37, $r29, $r36);
-   c.Add256($r39, $r1_lo, $r28_lo);
-   c.Addc($r40, $r1_hi, $r37_lo);
-   c.Selc($r41,RegZero, RegMod);
-   c.Sub($r42, $r40_lo, $r41);
-   c.AddM($ret, $r42, RegZero, RegMod);)))
+c.Mul128x128($r20, Lower128 @@ $r10_lo, RegMod << 128) << 128;
+c.Mul128x128($r21, ($r10_lo >> 128), Lower128{RegMod}) << 128;
+c.Mul128x128($r26, Lower128 @@ $r10_lo, Lower128{RegMod});
+c.Add128($r27, $r20, $r21);
+c.Add256($r28, $r26, $r27_lo);
+c.Add64($r29, $r28_hi, $r27_hi);
+c.Mul128x128($r36, ($r10_lo >> 128), RegMod << 128);
+c.Add256($r37, $r29, $r36);
+c.Add256($r38, $r1_lo, $r28_lo);
+c.Addc($r39, $r1_hi, $r37_lo);
+c.Selc($r40,RegZero, RegMod);
+c.Sub($r41, $r39_lo, $r40);
+c.AddM($ret, $r41, RegZero, RegMod);
      : expr uint256
  *)
