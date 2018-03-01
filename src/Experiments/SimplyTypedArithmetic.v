@@ -5327,7 +5327,6 @@ Module PrintingNotations.
   Notation "x +₃₂ y"
     := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
   Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
-  (*
   Notation "( out_t )( v >> count )"
     := ((shiftr _ out_t count @@ v)%nexpr)
          (format "( out_t )( v  >>  count )")
@@ -5340,7 +5339,6 @@ Module PrintingNotations.
     := ((land _ out_t mask @@ v)%nexpr)
          (format "( ( out_t ) v  &  mask )")
        : nexpr_scope.
-*)
 
   (* TODO: come up with a better notation for arithmetic with carries
   that still distinguishes it from arithmetic without carries? *)
@@ -5931,26 +5929,38 @@ Module Montgomery256.
   (*
     expr_let 3 := (uint128)(fst @@ x_1 >> 128) in
     expr_let 4 := ((uint128)fst @@ x_1 & 340282366920938463463374607431768211455) in
-    expr_let 11 := (uint128)(MUL_256 @@ (x_4, (340282366841710300986003757985643364352)) << 128) in
-    expr_let 12 := (uint128)(MUL_256 @@ (x_3, (79228162514264337593543950337)) << 128) in
+    expr_let 5 := MUL_256 @@ (x_3, (79228162514264337593543950337)) in
+    expr_let 7 := ((uint128)x_5 & 340282366920938463463374607431768211455) in
+    expr_let 8 := MUL_256 @@ (x_4, (340282366841710300986003757985643364352)) in
+    expr_let 10 := ((uint128)x_8 & 340282366920938463463374607431768211455) in
+    expr_let 11 := (uint128)(x_10 << 128) in
+    expr_let 12 := (uint128)(x_7 << 128) in
     expr_let 17 := MUL_256 @@ (x_4, (79228162514264337593543950337)) in
-    expr_let 18 := ADD_256 @@ (x_11, x_12) in
+    expr_let 18 := ADD_128 @@ (x_11, x_12) in
     expr_let 19 := ADD_256 @@ (x_17, fst @@ x_18) in
-    expr_let 29 := (uint128)(fst @@ x_19 >> 128) in
-    expr_let 30 := ((uint128)fst @@ x_19 & 340282366920938463463374607431768211455) in
-    expr_let 37 := (uint128)(MUL_256 @@ (x_30, (340282366841710300967557013911933812736)) << 128) in
-    expr_let 38 := (uint128)(MUL_256 @@ (x_29, (79228162514264337593543950335)) << 128) in
-    expr_let 43 := MUL_256 @@ (x_30, (79228162514264337593543950335)) in
-    expr_let 44 := ADD_128 @@ (x_37, x_38) in
-    expr_let 45 := ADD_256 @@ (x_43, fst @@ x_44) in
-    expr_let 46 := snd @@ x_45 +₁₂₈ snd @@ x_44 in
-    expr_let 53 := MUL_256 @@ (x_29, (340282366841710300967557013911933812736)) in
-    expr_let 54 := ADD_256 @@ (x_46, x_53) in
-    expr_let 55 := ADD_256 @@ (fst @@ x_1, fst @@ x_45) in
-    expr_let 56 := ADDC_256 @@ (snd @@ x_55, snd @@ x_1, fst @@ x_54) in
-    expr_let 57 := SELC @@ (snd @@ x_56, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
-    expr_let 58 := fst @@ (SUB_256 @@ (fst @@ x_56, x_57)) in
-    ADDM @@ (x_58, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
+    expr_let 43 := (uint128)(fst @@ x_19 >> 128) in
+    expr_let 44 := ((uint128)fst @@ x_19 & 340282366920938463463374607431768211455) in
+    expr_let 45 := MUL_256 @@ (x_43, (79228162514264337593543950335)) in
+    expr_let 46 := (uint128)(x_45 >> 128) in
+    expr_let 47 := ((uint128)x_45 & 340282366920938463463374607431768211455) in
+    expr_let 48 := MUL_256 @@ (x_44, (340282366841710300967557013911933812736)) in
+    expr_let 49 := (uint128)(x_48 >> 128) in
+    expr_let 50 := ((uint128)x_48 & 340282366920938463463374607431768211455) in
+    expr_let 51 := (uint128)(x_50 << 128) in
+    expr_let 52 := (uint128)(x_47 << 128) in
+    expr_let 57 := MUL_256 @@ (x_44, (79228162514264337593543950335)) in
+    expr_let 58 := ADD_128 @@ (x_51, x_52) in
+    expr_let 59 := ADD_256 @@ (x_57, fst @@ x_58) in
+    expr_let 60 := snd @@ x_59 +₁₂₈ snd @@ x_58 in
+    expr_let 67 := MUL_256 @@ (x_43, (340282366841710300967557013911933812736)) in
+    expr_let 69 := ADD_256 @@ (x_46, x_67) in
+    expr_let 70 := ADD_256 @@ (x_49, fst @@ x_69) in
+    expr_let 80 := ADD_256 @@ (x_60, fst @@ x_70) in
+    expr_let 83 := ADD_256 @@ (fst @@ x_1, fst @@ x_59) in
+    expr_let 84 := ADDC_256 @@ (snd @@ x_83, snd @@ x_1, fst @@ x_80) in
+    expr_let 85 := SELC @@ (snd @@ x_84, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+    expr_let 86 := fst @@ (SUB_256 @@ (fst @@ x_84, x_85)) in
+    ADDM @@ (x_86, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
          : expr uint256
    *)
 End Montgomery256.
