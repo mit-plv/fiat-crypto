@@ -994,52 +994,59 @@ Module Rows.
       let first_row := hd nil inp in
       flatten' (first_row, 0) (hd (Positional.zeros (length first_row)) (tl inp) :: tl (tl inp)).
 
+    
     Lemma sum_rows'_div_mod row1 :
       forall n m start_state row2 row1' row2',
         length (fst start_state) = m -> length row1 = n -> length row2 = n ->
         length row1' = m -> length row2' = m ->
-        Positional.eval weight m (fst start_state) = (Positional.eval weight m row1' + Positional.eval weight m row2') mod (weight m) ->
-        snd start_state = (Positional.eval weight m row1' + Positional.eval weight m row2') / weight m ->
-        Positional.eval weight (n+m) (fst (sum_rows' start_state row1 row2))
-        = (Positional.eval weight (n+m) (row1' ++ row1) + Positional.eval weight (n+m) (row2' ++ row2)) mod (weight (n + m))
+        let nm : nat := (n + m)%nat in
+        let eval (n:nat) := Positional.eval weight n in
+        eval m (fst start_state) = (eval m row1' + eval m row2') mod (weight m) ->
+        snd start_state = (eval m row1' + eval m row2') / weight m ->
+        eval nm (fst (sum_rows' start_state row1 row2))
+        = (eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) mod (weight nm)
         /\ snd (sum_rows' start_state row1 row2) 
-           = (Positional.eval weight (n+m) (row1' ++ row1) + Positional.eval weight (n+m) (row2' ++ row2)) / (weight (n + m)).
+           = (eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) / (weight nm).
     Proof.
       cbv [sum_rows'].
-      induction row1 as [|x1 row1]; intros; destruct row2 as [|x2 row2]; distr_length.
-      { subst n. autorewrite with natsimplify. cbn. rewrite !app_nil_r. omega. }
-      { rewrite combine_cons. simpl fold_left.
-        specialize (IHrow1 (pred n) (S m)).
-        replace (pred n + S m)%nat with (n + m)%nat in IHrow1 by omega.
-        rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
-        apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length; try omega;
+      induction row1 as [|x1 row1]; intros;
+        destruct row2 as [|x2 row2]; distr_length; [ subst n | ];
           repeat match goal with
-                 | H : ?LHS = _ |- _ =>
-                   match LHS with context [start_state] => rewrite H end
-                 | H : length _ = _ |- _ => rewrite H
-                 | _ => rewrite <-Z.div_add by auto
-                 | _ => rewrite Z.div_div by auto using Z.gt_lt
-                 | _ => rewrite Z.mul_div_eq by auto
-                 | _ => rewrite weight_multiples
-                 | _ => erewrite Positional.eval_snoc by eauto
-                 | _ => progress autorewrite with cancel_pair distr_length to_div_mod in *
-                 | |- context [ ?x mod ?m + ?m * (((?x + ?a * ?m + ?b * ?m)/ ?m) mod ?c) ] =>
-                   replace (x mod m) with ((x + a * m + b * m) mod m) by
-                       (autorewrite with zsimplify; ring);
-                     rewrite <-Z.rem_mul_r by auto using Z.gt_lt
-                 | _ => f_equal; ring
-                 end. }
+                 | _ => progress autorewrite with natsimplify
+                 | _ => progress cbn [fold_left combine]
+                 | _ => rewrite app_nil_r
+                 | _ => omega
+                 end.
+
+      specialize (IHrow1 (pred n) (S m)).
+      replace (pred n + S m)%nat with (n + m)%nat in IHrow1 by omega.
+      rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
+      apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length; try omega;
+        repeat match goal with
+               | H : ?LHS = _ |- _ =>
+                 match LHS with context [start_state] => rewrite H end
+               | H : length _ = _ |- _ => rewrite H
+               | _ => rewrite <-Z.div_add by auto
+               | _ => rewrite Z.div_div by auto using Z.gt_lt
+               | _ => rewrite Z.mul_div_eq by auto
+               | _ => rewrite weight_multiples
+               | _ => erewrite Positional.eval_snoc by eauto
+               | _ => progress autorewrite with cancel_pair distr_length to_div_mod in *
+               | |- context [ ?x mod ?m + ?m * (((?x + ?a * ?m + ?b * ?m)/ ?m) mod ?c) ] =>
+                 replace (x mod m) with ((x + a * m + b * m) mod m) by
+                     (autorewrite with zsimplify; ring);
+                   rewrite <-Z.rem_mul_r by auto using Z.gt_lt
+               | _ => f_equal; ring
+               end.
     Qed.
     
     Lemma sum_rows_div_mod n row1 row2 :
       length row1 = n -> length row2 = n ->
-      Positional.eval weight n (fst (sum_rows row1 row2))
-      = (Positional.eval weight n row1 + Positional.eval weight n row2) mod (weight n)
-      /\ snd (sum_rows row1 row2)
-         = (Positional.eval weight n row1 + Positional.eval weight n row2) / (weight n).
+      let eval := Positional.eval weight in
+      eval n (fst (sum_rows row1 row2)) = (eval n row1 + eval n row2) mod (weight n)
+      /\ snd (sum_rows row1 row2) = (eval n row1 + eval n row2) / (weight n).
     Proof.
-      cbv [sum_rows]; intros.
-      rewrite <-(Nat.add_0_r n).
+      cbv [sum_rows]; intros. rewrite <-(Nat.add_0_r n).
       edestruct sum_rows'_div_mod as [Hmod  Hdiv];
         try erewrite Hmod, Hdiv; auto using nil_length0;
         autorewrite with cancel_pair push_eval zsimplify_fast; distr_length.
@@ -1062,6 +1069,7 @@ Module Rows.
       length row1 = n -> length row2 = n -> (i < n)%nat ->
       nth_default 0 (fst (sum_rows row1 row2)) i
       = ((Positional.eval weight n row1 + Positional.eval weight n row2) / weight i) mod (fw i).
+    Proof.
     Admitted.
 
     Lemma length_sum_rows row1 row2 n :
