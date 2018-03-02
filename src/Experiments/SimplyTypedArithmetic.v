@@ -925,7 +925,7 @@ Module Rows.
 
     Local Notation rows := (list (list Z)) (only parsing).
     Local Notation cols := (list (list Z)) (only parsing).
-    Hint Rewrite Positional.eval_nil : push_eval.
+    Hint Rewrite Positional.eval_nil Positional.eval0 : push_eval.
     Hint Resolve in_eq in_cons.
 
     Definition eval n (inp : rows) :=
@@ -933,6 +933,9 @@ Module Rows.
     Lemma eval_nil n : eval n nil = 0.
     Proof. cbv [eval]. rewrite map_nil, sum_nil; reflexivity. Qed.
     Hint Rewrite eval_nil : push_eval.
+    Lemma eval0 x : eval 0 x = 0.
+    Proof. cbv [eval]. induction x; rewrite ?map_nil, ?sum_nil, ?map_cons, ?sum_cons; autorewrite with push_eval; omega. Qed.
+    Hint Rewrite eval0 : push_eval.
     Lemma eval_cons n r inp : eval n (r :: inp) = Positional.eval weight n r + eval n inp.
     Proof. cbv [eval]. rewrite map_cons, sum_cons; reflexivity. Qed.
     Hint Rewrite eval_cons : push_eval.
@@ -942,30 +945,43 @@ Module Rows.
                     (tl col :: fst state, hd 0 col :: snd state)
                  ) (nil, nil) inp.
 
-    Definition from_columns n (inp : cols) : rows :=
-      snd
-        (fold_right (fun _ (state : cols * rows) =>
-                       let cols'_row := extract_row (fst state) in
-                       (fst cols'_row, snd state ++ [snd cols'_row])
-                    ) (inp, nil) (seq 0 n)).
+    Definition max_column_size (x:cols) := fold_right Nat.max 0%nat (map (@length Z) x).
+
+    Definition from_columns' n start_state (inp : cols) : cols * rows :=
+      fold_right (fun _ (state : cols * rows) =>
+                    let cols'_row := extract_row (fst state) in
+                    (fst cols'_row, snd state ++ [snd cols'_row])
+                 ) start_state (seq 0 n).
+
+    Definition from_columns (inp : cols) : rows := snd (from_columns' (max_column_size inp) (inp, []) inp).
+    
+    Lemma eval_from_columns' (st : cols * rows) (inp : cols) :
+      forall n m, length inp = n ->
+                (m = Nat.max (max_column_size inp) (max_column_size (fst st))) ->
+                eval n (snd (from_columns' m st inp)) = Columns.eval weight n (fst st) + eval n (snd st).
+    Proof.
+      cbv [from_columns'].
+      intros n m Hn Hm.
+      induction inp; intros; distr_length.
+      { subst n. subst m. cbn. autorewrite with push_eval; omega. }
+    Admitted.
 
     Lemma eval_from_columns (inp : cols) :
-      forall n m, length inp = n ->
-                (m = fold_right Nat.max 0%nat (map (@length Z) inp))%nat ->
-                eval n (from_columns m inp) = Columns.eval weight n inp.
+      forall n, length inp = n -> eval n (from_columns inp) = Columns.eval weight n inp.
     Proof.
-      cbv [eval Columns.eval from_columns].
-      induction inp; intros; distr_length.
-      { subst n. subst m. reflexivity. }
-   Admitted.
+      intros; cbv [from_columns].
+      rewrite eval_from_columns' by (auto; rewrite Nat.max_id; reflexivity).
+      autorewrite with cancel_pair push_eval. ring.
+    Qed.
 
     Local Notation fw := (fun i => weight (S i) / weight i) (only parsing).
 
-    Definition sum_rows (row1 row2 : list Z) : list Z * Z :=
+    Definition sum_rows' start_state (row1 row2 : list Z) : list Z * Z :=
       fold_left (fun (state : list Z * Z) next =>
                     let i := length (fst state) in (* length of output accumulator tells us the index of [next] *)
                     let sum_carry := Z.add_with_get_carry_full (fw i) (snd state) (fst next) (snd next) in
-                    (fst state ++ [fst sum_carry], snd sum_carry)) (combine row1 row2) (nil,0).
+                    (fst state ++ [fst sum_carry], snd sum_carry)) (combine row1 row2) start_state.
+    Definition sum_rows := sum_rows' (nil,0).
 
     Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=
       fold_right (fun next_row (state : list Z * Z)=>
@@ -978,17 +994,67 @@ Module Rows.
       let first_row := hd nil inp in
       flatten' (first_row, 0) (hd (Positional.zeros (length first_row)) (tl inp) :: tl (tl inp)).
 
-    Lemma sum_rows_mod row1 row2 n:
+    Lemma sum_rows'_div_mod row1 :
+      forall n m start_state row2 row1' row2',
+        length (fst start_state) = m -> length row1 = n -> length row2 = n ->
+        length row1' = m -> length row2' = m ->
+        Positional.eval weight m (fst start_state) = (Positional.eval weight m row1' + Positional.eval weight m row2') mod (weight m) ->
+        snd start_state = (Positional.eval weight m row1' + Positional.eval weight m row2') / weight m ->
+        Positional.eval weight (n+m) (fst (sum_rows' start_state row1 row2))
+        = (Positional.eval weight (n+m) (row1' ++ row1) + Positional.eval weight (n+m) (row2' ++ row2)) mod (weight (n + m))
+        /\ snd (sum_rows' start_state row1 row2) 
+           = (Positional.eval weight (n+m) (row1' ++ row1) + Positional.eval weight (n+m) (row2' ++ row2)) / (weight (n + m)).
+    Proof.
+      cbv [sum_rows'].
+      induction row1 as [|x1 row1]; intros; destruct row2 as [|x2 row2]; distr_length.
+      { subst n. autorewrite with natsimplify. cbn. rewrite !app_nil_r. omega. }
+      { rewrite combine_cons. simpl fold_left.
+        specialize (IHrow1 (pred n) (S m)).
+        replace (pred n + S m)%nat with (n + m)%nat in IHrow1 by omega.
+        rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
+        apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length; try omega;
+          repeat match goal with
+                 | H : ?LHS = _ |- _ =>
+                   match LHS with context [start_state] => rewrite H end
+                 | H : length _ = _ |- _ => rewrite H
+                 | _ => rewrite <-Z.div_add by auto
+                 | _ => rewrite Z.div_div by auto using Z.gt_lt
+                 | _ => rewrite Z.mul_div_eq by auto
+                 | _ => rewrite weight_multiples
+                 | _ => erewrite Positional.eval_snoc by eauto
+                 | _ => progress autorewrite with cancel_pair distr_length to_div_mod in *
+                 | |- context [ ?x mod ?m + ?m * (((?x + ?a * ?m + ?b * ?m)/ ?m) mod ?c) ] =>
+                   replace (x mod m) with ((x + a * m + b * m) mod m) by
+                       (autorewrite with zsimplify; ring);
+                     rewrite <-Z.rem_mul_r by auto using Z.gt_lt
+                 | _ => f_equal; ring
+                 end. }
+    Qed.
+    
+    Lemma sum_rows_div_mod n row1 row2 :
+      length row1 = n -> length row2 = n ->
+      Positional.eval weight n (fst (sum_rows row1 row2))
+      = (Positional.eval weight n row1 + Positional.eval weight n row2) mod (weight n)
+      /\ snd (sum_rows row1 row2)
+         = (Positional.eval weight n row1 + Positional.eval weight n row2) / (weight n).
+    Proof.
+      cbv [sum_rows]; intros.
+      rewrite <-(Nat.add_0_r n).
+      edestruct sum_rows'_div_mod as [Hmod  Hdiv];
+        try erewrite Hmod, Hdiv; auto using nil_length0;
+        autorewrite with cancel_pair push_eval zsimplify_fast; distr_length.
+    Qed.
+
+    Lemma sum_rows_mod n row1 row2 :
       length row1 = n -> length row2 = n ->
       Positional.eval weight n (fst (sum_rows row1 row2))
       = (Positional.eval weight n row1 + Positional.eval weight n row2) mod (weight n).
-    Admitted.
-
+    Proof. apply sum_rows_div_mod. Qed.
     Lemma sum_rows_div row1 row2 n:
       length row1 = n -> length row2 = n ->
       snd (sum_rows row1 row2)
       = (Positional.eval weight n row1 + Positional.eval weight n row2) / (weight n).
-    Admitted.
+    Proof. apply sum_rows_div_mod. Qed.
 
     Hint Rewrite sum_rows_mod using (auto; solve [distr_length; auto]) : push_eval.
 
