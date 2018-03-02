@@ -928,6 +928,10 @@ Module Rows.
     Hint Rewrite Positional.eval_nil Positional.eval0 : push_eval.
     Hint Resolve in_eq in_cons.
 
+    (* TODO: move to ListUtil *)
+    Lemma sum_app x y : sum (x ++ y) = sum x + sum y.
+    Proof. induction x; rewrite ?app_nil_l, <-?app_comm_cons, ?sum_nil, ?sum_cons; omega. Qed.
+
     Definition eval n (inp : rows) :=
       sum (map (Positional.eval weight n) inp).
     Lemma eval_nil n : eval n nil = 0.
@@ -939,6 +943,9 @@ Module Rows.
     Lemma eval_cons n r inp : eval n (r :: inp) = Positional.eval weight n r + eval n inp.
     Proof. cbv [eval]. rewrite map_cons, sum_cons; reflexivity. Qed.
     Hint Rewrite eval_cons : push_eval.
+    Lemma eval_app n x y : eval n (x ++ y) = eval n x + eval n y.
+    Proof. cbv [eval]. rewrite map_app, sum_app; reflexivity. Qed.
+    Hint Rewrite eval_app : push_eval.
 
     Definition extract_row (inp : cols) : cols * list Z :=
       fold_right (fun col state =>
@@ -947,31 +954,84 @@ Module Rows.
 
     Definition max_column_size (x:cols) := fold_right Nat.max 0%nat (map (@length Z) x).
 
-    Definition from_columns' n start_state (inp : cols) : cols * rows :=
+    Definition from_columns' n start_state : cols * rows :=
       fold_right (fun _ (state : cols * rows) =>
                     let cols'_row := extract_row (fst state) in
                     (fst cols'_row, snd state ++ [snd cols'_row])
-                 ) start_state (seq 0 n).
+                 ) start_state (List.repeat 0 n).
 
-    Definition from_columns (inp : cols) : rows := snd (from_columns' (max_column_size inp) (inp, []) inp).
-    
-    Lemma eval_from_columns' (st : cols * rows) (inp : cols) :
-      forall n m, length inp = n ->
-                (m = Nat.max (max_column_size inp) (max_column_size (fst st))) ->
-                eval n (snd (from_columns' m st inp)) = Columns.eval weight n (fst st) + eval n (snd st).
+    Definition from_columns (inp : cols) : rows := snd (from_columns' (max_column_size inp) (inp, [])).
+
+    Lemma eval_extract_row n (inp : cols) :
+      length inp = n ->
+      Positional.eval weight n (snd (extract_row inp)) = Columns.eval weight n inp - Columns.eval weight n (fst (extract_row inp)) .
+    Admitted.
+    Hint Rewrite eval_extract_row using (solve [distr_length]) : push_eval.
+    Lemma length_extract_row n (inp : cols) :
+      length inp = n -> length (fst (extract_row inp)) = n.
+    Admitted.
+    Hint Rewrite length_extract_row : distr_length.
+    Lemma max_column_size0 n (inp : cols) :
+      max_column_size inp = 0%nat -> Columns.eval weight n inp = 0.
+    Admitted.
+    Lemma eval_from_columns'_with_length m st n:
+      (length (fst st) = n) ->
+      length (fst (from_columns' m st)) = n /\
+      eval n (snd (from_columns' m st)) = Columns.eval weight n (fst st) + eval n (snd st)
+                                                                           - Columns.eval weight n (fst (from_columns' m st)).
+    Proof.
+      cbv [from_columns']; intros.
+      apply fold_right_invariant; intros; [ split; assumption || ring | ].
+      autorewrite with cancel_pair push_eval.
+      split; [ | omega]. apply length_extract_row; tauto.
+    Qed.
+    Lemma length_from_columns' m st n :
+      (length (fst st) = n) -> length (fst (from_columns' m st)) = n.
+    Proof. apply eval_from_columns'_with_length. Qed.
+    Lemma eval_from_columns' m st n :
+      (length (fst st) = n) -> 
+      eval n (snd (from_columns' m st)) = Columns.eval weight n (fst st) + eval n (snd st)
+                                                                           - Columns.eval weight n (fst (from_columns' m st)).
+    Proof. apply eval_from_columns'_with_length. Qed.
+
+    Lemma max_column_size_cons col (inp : cols) :
+      max_column_size (col :: inp) = Nat.max (length col) (max_column_size inp).
+    Admitted.
+    Lemma max_column_size_extract_row inp :
+      max_column_size (fst (extract_row inp)) = (max_column_size inp - 1)%nat.
+    Proof.
+      cbv [extract_row].
+      induction inp; [ reflexivity | ].
+      repeat match goal with
+             | _ => progress rewrite ?max_column_size_cons, ?fold_right_cons
+             | _ => rewrite IHinp
+             | _ => progress cbn [tl]
+             | _ => progress autorewrite with cancel_pair
+             | |- Nat.max _ _ = (Nat.max (length ?x) ?n - 1)%nat =>
+               destruct x, n; autorewrite with natsimplify distr_length; try reflexivity;
+                 rewrite <-Max.succ_max_distr
+             | _ => lia
+             end.
+    Qed.
+    Lemma max_column_size_from_columns' m st :
+      max_column_size (fst (from_columns' m st)) = (max_column_size (fst st) - m)%nat.
     Proof.
       cbv [from_columns'].
-      intros n m Hn Hm.
-      induction inp; intros; distr_length.
-      { subst n. subst m. cbn. autorewrite with push_eval; omega. }
-    Admitted.
+      induction m; intros; cbn - [max_column_size Nat.max];
+        rewrite ?max_column_size_extract_row, ?IHm by auto; lia.
+    Qed.
 
     Lemma eval_from_columns (inp : cols) :
       forall n, length inp = n -> eval n (from_columns inp) = Columns.eval weight n inp.
     Proof.
-      intros; cbv [from_columns].
-      rewrite eval_from_columns' by (auto; rewrite Nat.max_id; reflexivity).
-      autorewrite with cancel_pair push_eval. ring.
+      intros; cbv [from_columns];
+        repeat match goal with
+               | _ => rewrite eval_from_columns' by auto
+               | _ => progress autorewrite with cancel_pair push_eval
+               | _ => rewrite max_column_size0 with (inp := fst (from_columns' _ _)); [ ring | ]
+               | _ => rewrite max_column_size_from_columns'
+               | _ => omega
+               end.
     Qed.
 
     Local Notation fw := (fun i => weight (S i) / weight i) (only parsing).
