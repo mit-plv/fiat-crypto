@@ -6584,22 +6584,22 @@ Module Montgomery256PrintingNotations.
                    (primitive {| BoundsAnalysis.type.value := 0; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
   Notation "'$R'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 : nexpr_scope.
-  Notation "'Lower128{RegMod}'" :=
+  Notation "c.LowerHalf(RegMod)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 79228162514264337593543950335; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
-  Notation "'RegMod' '<<' '128'" :=
+  Notation "c.UpperHalf(RegMod)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 340282366841710300967557013911933812736; BoundsAnalysis.type.value_bounded := _ |})
-                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9, format "'RegMod'  '<<'  '128'") : nexpr_scope.
-  Notation "'Lower128{RegPinv}'" :=
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "c.LowerHalf(RegPinv)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 79228162514264337593543950337; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
-  Notation "'RegPinv' '>>' '128'" :=
+  Notation "c.UpperHalf(RegPinv)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 340282366841710300986003757985643364352; BoundsAnalysis.type.value_bounded := _ |})
-                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9, format "'RegPinv'  '>>'  '128'") : nexpr_scope.
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
   Notation "'uint256'"
     := (BoundsAnalysis.type.ZBounded 0 115792089237316195423570985008687907853269984665640564039457584007913129639935) : btype_scope.
   Notation "'uint128'"
@@ -6639,39 +6639,44 @@ Module Montgomery256PrintingNotations.
     (expr_let n := (shiftl _ _ y @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftL(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Lower128(' '$r' n ',' x ');' f" :=
     (expr_let n := (land _ _ 340282366920938463463374607431768211455 @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Lower128(' '$r' n ','  x ');' ']' '//' f") : nexpr_scope.
-  Notation "'Lower128{' x '}'"
+  Notation "'c.LowerHalf(' x ')'"
     := ((land uint256 uint128 340282366920938463463374607431768211455 @@ x)%nexpr)
-         (at level 10, only printing, format "Lower128{ x }")
+         (at level 10, only printing, format "c.LowerHalf( x )")
+  : nexpr_scope.
+  Notation "'c.UpperHalf(' x ')'"
+    := ((shiftr uint256 uint128 128 @@ x)%nexpr)
+         (at level 10, only printing, format "c.UpperHalf( x )")
   : nexpr_scope.
   Notation "( v << count )"
     := ((shiftl _ _ count @@ v)%nexpr)
          (format "( v  <<  count )")
        : nexpr_scope.
+  (*
   Notation "( x >> count )"
     := ((shiftr _ _ count @@ x)%nexpr)
          (format "( x  >>  count )")
        : nexpr_scope.
+  *)
 End Montgomery256PrintingNotations.
 
 Import Montgomery256PrintingNotations.
 Local Open Scope nexpr_scope.
 
-
 Print Montgomery256.montred256.
 (*
-c.Mul128x128($r5, ($r1_lo >> 128), Lower128{RegPinv});
-c.Mul128x128($r8, Lower128{$r1_lo}, RegPinv >> 128);
-c.Mul128x128($r12, Lower128{$r1_lo}, Lower128{RegPinv});
-c.Add256($r13, (Lower128{$r5} << 128), $r12);
-c.Add256($r18, (Lower128{$r8} << 128), $r13_lo);
-c.Mul128x128($r24, ($r18_lo >> 128), Lower128{RegMod});
-c.Mul128x128($r27, Lower128{$r18_lo}, RegMod << 128);
-c.Mul128x128($r31, Lower128{$r18_lo}, Lower128{RegMod});
-c.Add256($r32, (Lower128{$r24} << 128), $r31);
-c.Mul128x128($r33, ($r18_lo >> 128), RegMod << 128);
-c.Addc($r34, $r33, ($r27 >> 128));
-c.Add256($r37, (Lower128{$r27} << 128), $r32_lo);
-c.Addc($r39, ($r24 >> 128), $r34_lo);
+c.Mul128x128($r5, c.UpperHalf($r1_lo), c.LowerHalf(RegPinv));
+c.Mul128x128($r8, c.LowerHalf($r1_lo), c.UpperHalf(RegPinv));
+c.Mul128x128($r12, c.LowerHalf($r1_lo), c.LowerHalf(RegPinv));
+c.Add256($r13, (c.LowerHalf($r5) << 128), $r12);
+c.Add256($r18, (c.LowerHalf($r8) << 128), $r13_lo);
+c.Mul128x128($r24, c.UpperHalf($r18_lo), c.LowerHalf(RegMod));
+c.Mul128x128($r27, c.LowerHalf($r18_lo), c.UpperHalf(RegMod));
+c.Mul128x128($r31, c.LowerHalf($r18_lo), c.LowerHalf(RegMod));
+c.Add256($r32, (c.LowerHalf($r24) << 128), $r31);
+c.Mul128x128($r33, c.UpperHalf($r18_lo), c.UpperHalf(RegMod));
+c.Addc($r34, $r33, c.UpperHalf($r27));
+c.Add256($r37, (c.LowerHalf($r27) << 128), $r32_lo);
+c.Addc($r39, c.UpperHalf($r24), $r34_lo);
 c.Add256($r40, $r1_lo, $r37_lo);
 c.Addc($r41, $r1_hi, $r39_lo);
 c.Selc($r42, RegZero, RegMod);
