@@ -8256,14 +8256,19 @@ Module Montgomery256PrintingNotations.
     (expr_let n := Z.cast _ @@ (Z.shiftl y @@ x) in f)%expr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftL(' '$' n ','  x ','  y ');' ']' '//' f") : expr_scope.
   Notation "'c.Lower128(' '$' n ',' x ');' f" :=
     (expr_let n := Z.cast _ @@ (Z.land 340282366920938463463374607431768211455 @@ x) in f)%expr (at level 40, f at level 200, right associativity, format "'[' 'c.Lower128(' '$' n ','  x ');' ']' '//' f") : expr_scope.
-  Notation "'Lower128'"
+  Notation "'c.LowerHalf(' x ')'"
     := (Z.cast uint128 @@ (Z.land 340282366920938463463374607431768211455))
-         (at level 10, only printing, format "Lower128")
+         (at level 10, only printing, format "c.LowerHalf( x )")
+  : expr_scope.
+  Notation "'c.UpperHalf(' x ')'"
+    := (Z.cast uint128 @@ (Z.shiftr 340282366920938463463374607431768211455))
+         (at level 10, only printing, format "c.UpperHalf( x )")
   : expr_scope.
   Notation "( v << count )"
     := (Z.cast _ @@ (Z.shiftl count @@ v)%expr)
          (format "( v  <<  count )")
        : expr_scope.
+  (*
   Notation "( x >> count )"
     := (Z.cast _ @@ (Z.shiftr count @@ x)%expr)
          (format "( x  >>  count )")
@@ -8271,11 +8276,11 @@ Module Montgomery256PrintingNotations.
   Notation "x * y"
     := (Z.cast uint256 @@ (Z.mul @@ (x, y)))
        : expr_scope.
+  *)
 End Montgomery256PrintingNotations.
 
 Import Montgomery256PrintingNotations.
 Local Open Scope expr_scope.
-
 
 Print Montgomery256.montred256.
 (*
