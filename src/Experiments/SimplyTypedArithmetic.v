@@ -8275,7 +8275,6 @@ Local Open Scope expr_scope.
 
 Print Montgomery256.montred256.
 (*
-<<<<<<< HEAD
 c.ShiftR($x0, $x_lo, 128);
 c.Lower128($x1, $x_lo);
 c.Mul128x128($x2, Lower128{RegPinv}, $x0);
