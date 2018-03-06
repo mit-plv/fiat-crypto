@@ -845,9 +845,9 @@ Module Rows.
     Proof. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
     Hint Rewrite eval_app : push_eval.
 
-    Definition extract_row (inp : cols) : cols * list Z := (map (@tl _) inp, map (hd 0) inp).
+    Definition extract_row (inp : cols) : cols * list Z := (map (fun c => tl c) inp, map (fun c => hd 0 c) inp).
 
-    Definition max_column_size (x:cols) := fold_right Nat.max 0%nat (map (@length Z) x).
+    Definition max_column_size (x:cols) := fold_right (fun a b => Nat.max a b) 0%nat (map (fun c => length c) x).
 
     Definition from_columns' n start_state : cols * rows :=
       fold_right (fun _ (state : cols * rows) =>
@@ -1016,10 +1016,11 @@ Module Rows.
     Local Notation fw := (fun i => weight (S i) / weight i) (only parsing).
 
     Definition sum_rows' start_state (row1 row2 : list Z) : list Z * Z :=
-      fold_left (fun (state : list Z * Z) next =>
+      fold_right (fun next (state : list Z * Z) =>
                     let i := length (fst state) in (* length of output accumulator tells us the index of [next] *)
-                    let sum_carry := Z.add_with_get_carry_full (fw i) (snd state) (fst next) (snd next) in
-                    (fst state ++ [fst sum_carry], snd sum_carry)) (combine row1 row2) start_state.
+                    dlet_nd next := next in (* makes the output correctly bind variables *)
+                    dlet_nd sum_carry := Z.add_with_get_carry_full (fw i) (snd state) (fst next) (snd next) in
+                    (fst state ++ [fst sum_carry], snd sum_carry)) start_state (rev (combine row1 row2)).
     Definition sum_rows := sum_rows' (nil,0).
 
     Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=
@@ -1047,8 +1048,8 @@ Module Rows.
         /\ snd (sum_rows' start_state row1 row2) 
            = (eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) / (weight nm).
     Proof.
-      cbv [sum_rows'].
-      induction row1 as [|x1 row1]; intros;
+      cbv [sum_rows' Let_In].
+      induction row1 as [|x1 row1]; intros; rewrite fold_left_rev_right in *;
         destruct row2 as [|x2 row2]; distr_length; [ subst n | ];
           repeat match goal with
                  | _ => progress autorewrite with natsimplify list
@@ -1059,6 +1060,7 @@ Module Rows.
       specialize (IHrow1 (pred n) (S m)).
       replace (pred n + S m)%nat with (n + m)%nat in IHrow1 by omega.
       rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
+      rewrite <-fold_left_rev_right.
       apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length; try omega;
         repeat match goal with
                | H : ?LHS = _ |- _ =>
@@ -1124,8 +1126,8 @@ Module Rows.
           nth_default 0 (fst (sum_rows' start_state row1 row2)) i
           = ((eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) mod (weight (S i))) / (weight i).
     Proof.
-      cbv [sum_rows'].
-      induction row1 as [|x1 row1]; intros;
+      cbv [sum_rows' Let_In].
+      induction row1 as [|x1 row1]; intros; rewrite fold_left_rev_right in *;
         destruct row2 as [|x2 row2]; distr_length; [ subst n | ];
           repeat match goal with
                  | _ => progress cbn [fold_left]
@@ -1137,6 +1139,7 @@ Module Rows.
       specialize (IHrow1 (pred n) (S m)).
       replace (pred n + S m)%nat with (n + m)%nat in IHrow1 by omega.
       rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
+      rewrite <-fold_left_rev_right.
       apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length; try omega;
         repeat match goal with
                | _ => progress intros
@@ -1368,10 +1371,10 @@ Module MulConverted.
       let p3_a := Associational.mul p1_a p2_a in
       (* important not to use Positional.carry here; we don't want to accumulate yet *)
       let p3'_a := fold_right (fun i acc => Associational.carry (w' i) (w' (S i) / w' i) acc) p3_a (rev idxs) in
-      fst (Columns.flatten w (Columns.from_associational w n3 p3'_a)).
+      fst (Rows.flatten w (Rows.from_associational w n3 p3'_a)).
 
       Hint Rewrite
-           @Columns.eval_from_associational
+           @Rows.eval_from_associational
            @Associational.eval_carry
            @Associational.eval_mul
            @Positional.eval_to_associational
@@ -1389,12 +1392,10 @@ Module MulConverted.
         Positional.eval w n3 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) = (Positional.eval w n1 p1) * (Positional.eval w n2 p2).
       Proof.
         cbv [mul_converted]; intros.
-        rewrite Columns.flatten_mod by auto using Columns.length_from_associational.
+        rewrite Rows.flatten_mod by eauto using Rows.length_from_associational.
         autorewrite with push_eval. auto using Z.mod_small.
       Qed.
       Hint Rewrite eval_mul_converted : push_eval.
-
-      Hint Rewrite @Columns.length_from_associational : distr_length.
 
       Lemma mul_converted_mod n1 n2 m1 m2 n3 idxs p1 p2  (_:n3<>0%nat) (_:m1<>0%nat) (_:m2<>0%nat):
         length p1 = n1 -> length p2 = n2 ->
@@ -1402,7 +1403,7 @@ Module MulConverted.
         nth_default 0 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) 0 = (Positional.eval w n1 p1 * Positional.eval w n2 p2) mod (w 1).
       Proof.
         intros; cbv [mul_converted].
-        erewrite Columns.flatten_partitions by (auto; distr_length).
+        rewrite Rows.flatten_partitions with (n:=n3) by (eauto using Rows.length_from_associational; omega).
         autorewrite with distr_length push_eval natsimplify.
         rewrite w_0; autorewrite with zsimplify.
         reflexivity.
@@ -1417,7 +1418,7 @@ Module MulConverted.
         nth_default 0 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) 1 = (Positional.eval w n1 p1 * Positional.eval w n2 p2) / (w 1).
       Proof.
         intros; subst n3; cbv [mul_converted].
-        erewrite Columns.flatten_partitions by (auto; distr_length).
+        rewrite Rows.flatten_partitions with (n:=2%nat) by (eauto using Rows.length_from_associational; omega).
         autorewrite with distr_length push_eval.
         rewrite Z.mod_small; omega.
       Qed.
@@ -1817,6 +1818,7 @@ Module Compilers.
           | primitive {t:type.primitive} (v : interp t) : ident () t
           | Let_In {tx tC} : ident (tx * (tx -> tC)) tC
           | Nat_succ : ident nat nat
+          | Nat_max : ident (nat * nat) nat
           | Nat_mul : ident (nat * nat) nat
           | Nat_add : ident (nat * nat) nat
           | nil {t} : ident () (list t)
@@ -1836,6 +1838,8 @@ Module Compilers.
           | List_partition {A} : ident ((A -> bool) * list A) (list A * list A)
           | List_app {A} : ident (list A * list A) (list A)
           | List_rev {A} : ident (list A) (list A)
+          | List_tl {A} : ident (list A) (list A)
+          | List_hd {A} : ident (A * list A) A
           | List_fold_right {A B} : ident ((B * A -> A) * A * list B) A
           | List_update_nth {T} : ident (nat * (T -> T) * list T) (list T)
           | List_nth_default {T} : ident (T * list T * nat) T
@@ -1882,6 +1886,7 @@ Module Compilers.
                | Nat_succ => Nat.succ
                | Nat_add => curry2 Nat.add
                | Nat_mul => curry2 Nat.mul
+               | Nat_max => curry2 Nat.max
                | nil t => curry0 (@Datatypes.nil (type.interp t))
                | cons t => curry2 (@Datatypes.cons (type.interp t))
                | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
@@ -1899,6 +1904,8 @@ Module Compilers.
                | List_partition A => curry2 (@List.partition (type.interp A))
                | List_app A => curry2 (@List.app (type.interp A))
                | List_rev A => @List.rev (type.interp A)
+               | List_tl A => @List.tl (type.interp A)
+               | List_hd A => curry2 (@List.hd (type.interp A))
                | List_fold_right A B => curry3_1 (@List.fold_right (type.interp A) (type.interp B))
                | List_update_nth T => curry3 (@update_nth (type.interp T))
                | List_nth_default T => curry3 (@List.nth_default (type.interp T))
@@ -1929,6 +1936,7 @@ Module Compilers.
             | Nat.succ ?x => mkAppIdent Nat_succ x
             | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
             | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
+            | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
             | S ?x => mkAppIdent Nat_succ x
             | @Datatypes.nil ?T
               => let rT := type.reify T in
@@ -2004,6 +2012,12 @@ Module Compilers.
             | @List.rev ?A ?ls
               => let rA := type.reify A in
                  mkAppIdent (@ident.List_rev rA) ls
+            | @List.tl ?A ?ls
+              => let rA := type.reify A in
+                 mkAppIdent (@ident.List_tl rA) ls
+            | @List.hd ?A ?x ?ls
+              => let rA := type.reify A in
+                 mkAppIdent (@ident.List_hd rA) (x, ls)
             | @List.fold_right ?A ?B (fun b a => ?f) ?a0 ?ls
               => let rA := type.reify A in
                  let rB := type.reify B in
@@ -2057,6 +2071,8 @@ Module Compilers.
             Notation partition := List_partition.
             Notation app := List_app.
             Notation rev := List_rev.
+            Notation tl := List_tl.
+            Notation hd := List_hd.
             Notation fold_right := List_fold_right.
             Notation update_nth := List_update_nth.
             Notation nth_default := List_nth_default.
@@ -2084,6 +2100,7 @@ Module Compilers.
             Notation succ := Nat_succ.
             Notation add := Nat_add.
             Notation mul := Nat_mul.
+            Notation max := Nat_max.
           End Nat.
 
           Module Export Notations.
@@ -2127,6 +2144,7 @@ Module Compilers.
           | Nat_succ : ident nat nat
           | Nat_add : ident (nat * nat) nat
           | Nat_mul : ident (nat * nat) nat
+          | Nat_max : ident (nat * nat) nat
           | nil {t} : ident () (list t)
           | cons {t} : ident (t * list t) (list t)
           | fst {A B} : ident (A * B) A
@@ -2185,6 +2203,7 @@ Module Compilers.
                | Nat_succ => Nat.succ
                | Nat_add => curry2 Nat.add
                | Nat_mul => curry2 Nat.mul
+               | Nat_max => curry2 Nat.max
                | nil t => curry0 (@Datatypes.nil (type.interp t))
                | cons t => curry2 (@Datatypes.cons (type.interp t))
                | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
@@ -2229,6 +2248,7 @@ Module Compilers.
             | Nat.succ ?x => mkAppIdent Nat_succ x
             | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
             | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
+            | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
             | S ?x => mkAppIdent Nat_succ x
             | @Datatypes.nil ?T
               => let rT := type.reify T in
@@ -2346,6 +2366,7 @@ Module Compilers.
             Notation succ := Nat_succ.
             Notation add := Nat_add.
             Notation mul := Nat_mul.
+            Notation max := Nat_max.
           End Nat.
 
           Module Export Notations.
@@ -2409,6 +2430,8 @@ Module Compilers.
                => AppIdent ident.Nat_add
              | for_reification.ident.Nat_mul
                => AppIdent ident.Nat_mul
+             | for_reification.ident.Nat_max
+               => AppIdent ident.Nat_max
              | for_reification.ident.nil t
                => AppIdent ident.nil
              | for_reification.ident.cons t
@@ -2563,6 +2586,28 @@ Module Compilers.
                                      nil
                                      (fun x l' rev_l' => List_app rev_l' [x])
                                      ls) in
+                    let v := app_and_maybe_cancel v in exact v)
+             | for_reification.ident.List_tl A
+               => ltac:(
+                    let v := reify
+                               (@expr var)
+                               (fun ls
+                                => list_rect
+                                     (fun _ => list (type.interp A))
+                                     nil
+                                     (fun _ l' _ => l')
+                                     ls) in
+                    let v := app_and_maybe_cancel v in exact v)
+             | for_reification.ident.List_hd A
+               => ltac:(
+                    let v := reify
+                               (@expr var)
+                               (fun (xls : type.interp A * list (type.interp A))
+                                => list_rect
+                                     (fun _ => type.interp A)
+                                     (fst xls)
+                                     (fun x _ _ => x)
+                                     (snd xls)) in
                     let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_fold_right A B
                => ltac:(
@@ -3220,6 +3265,7 @@ Module Compilers.
                   | ident.Nat_succ as idc
                   | ident.Nat_add as idc
                   | ident.Nat_mul as idc
+                  | ident.Nat_max as idc
                   | ident.pred as idc
                   | ident.Z_shiftr _ as idc
                   | ident.Z_shiftl _ as idc
@@ -3406,6 +3452,7 @@ Module Compilers.
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Nat_add as idc
                 | ident.Nat_mul as idc
+                | ident.Nat_max as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.nat * type.nat * (type.nat -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
@@ -4097,7 +4144,15 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z, a) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr (inr x, y), z), a)
-                        => expr.reflect (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a))))
+                       => let default := expr.reflect (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a)))) in
+                          match (z, a) with
+                          | (inr xx, inl e)
+                          | (inl e, inr xx)
+                            => if Z.eqb xx 0
+                               then inr (inl e, inr 0%Z)
+                               else default
+                          | _ => default
+                          end
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_*_) x_y_z_a))
                      end
              | ident.Z_sub_get_borrow as idc
@@ -4157,6 +4212,7 @@ Module Compilers.
                      end
              | ident.Nat_add as idc
              | ident.Nat_mul as idc
+             | ident.Nat_max as idc
              | ident.Z_pow as idc
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
@@ -4739,6 +4795,7 @@ Module Compilers.
                | ident.Nat_succ => None
                | ident.Nat_add => None
                | ident.Nat_mul => None
+               | ident.Nat_max => None
                | default.ident.nil (Compilers.type.type_primitive t)
                  => Some (@nil (type.primitive.compile t))
                | default.ident.nil _
@@ -6450,34 +6507,32 @@ Module Montgomery256.
     expr_let 7 := ((uint128)x_5 & 340282366920938463463374607431768211455) in
     expr_let 8 := MUL_256 @@ (x_4, (340282366841710300986003757985643364352)) in
     expr_let 10 := ((uint128)x_8 & 340282366920938463463374607431768211455) in
-    expr_let 11 := (uint128)(x_10 << 128) in
-    expr_let 12 := (uint128)(x_7 << 128) in
-    expr_let 17 := MUL_256 @@ (x_4, (79228162514264337593543950337)) in
-    expr_let 18 := ADD_128 @@ (x_11, x_12) in
-    expr_let 19 := ADD_256 @@ (x_17, fst @@ x_18) in
-    expr_let 43 := (uint128)(fst @@ x_19 >> 128) in
-    expr_let 44 := ((uint128)fst @@ x_19 & 340282366920938463463374607431768211455) in
-    expr_let 45 := MUL_256 @@ (x_43, (79228162514264337593543950335)) in
-    expr_let 46 := (uint128)(x_45 >> 128) in
-    expr_let 47 := ((uint128)x_45 & 340282366920938463463374607431768211455) in
-    expr_let 48 := MUL_256 @@ (x_44, (340282366841710300967557013911933812736)) in
-    expr_let 49 := (uint128)(x_48 >> 128) in
-    expr_let 50 := ((uint128)x_48 & 340282366920938463463374607431768211455) in
-    expr_let 51 := (uint128)(x_50 << 128) in
-    expr_let 52 := (uint128)(x_47 << 128) in
-    expr_let 57 := MUL_256 @@ (x_44, (79228162514264337593543950335)) in
-    expr_let 58 := ADD_128 @@ (x_51, x_52) in
-    expr_let 59 := ADD_256 @@ (x_57, fst @@ x_58) in
-    expr_let 60 := snd @@ x_59 +₁₂₈ snd @@ x_58 in
-    expr_let 67 := MUL_256 @@ (x_43, (340282366841710300967557013911933812736)) in
-    expr_let 69 := ADD_256 @@ (x_46, x_67) in
-    expr_let 70 := ADD_256 @@ (x_49, fst @@ x_69) in
-    expr_let 80 := ADD_256 @@ (x_60, fst @@ x_70) in
-    expr_let 83 := ADD_256 @@ (fst @@ x_1, fst @@ x_59) in
-    expr_let 84 := ADDC_256 @@ (snd @@ x_83, snd @@ x_1, fst @@ x_80) in
-    expr_let 85 := SELC @@ (snd @@ x_84, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
-    expr_let 86 := fst @@ (SUB_256 @@ (fst @@ x_84, x_85)) in
-    ADDM @@ (x_86, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
+    expr_let 11 := (uint128)(x_7 << 128) in
+    expr_let 12 := MUL_256 @@ (x_4, (79228162514264337593543950337)) in
+    expr_let 13 := ADDC_256 @@ ((0), x_11, x_12) in
+    expr_let 16 := (uint128)(x_10 << 128) in
+    expr_let 18 := ADDC_256 @@ ((0), x_16, fst @@ x_13) in
+    expr_let 22 := (uint128)(fst @@ x_18 >> 128) in
+    expr_let 23 := ((uint128)fst @@ x_18 & 340282366920938463463374607431768211455) in
+    expr_let 24 := MUL_256 @@ (x_22, (79228162514264337593543950335)) in
+    expr_let 25 := (uint128)(x_24 >> 128) in
+    expr_let 26 := ((uint128)x_24 & 340282366920938463463374607431768211455) in
+    expr_let 27 := MUL_256 @@ (x_23, (340282366841710300967557013911933812736)) in
+    expr_let 28 := (uint128)(x_27 >> 128) in
+    expr_let 29 := ((uint128)x_27 & 340282366920938463463374607431768211455) in
+    expr_let 30 := (uint128)(x_26 << 128) in
+    expr_let 31 := MUL_256 @@ (x_23, (79228162514264337593543950335)) in
+    expr_let 32 := ADDC_256 @@ ((0), x_30, x_31) in
+    expr_let 33 := MUL_256 @@ (x_22, (340282366841710300967557013911933812736)) in
+    expr_let 34 := ADDC_256 @@ (snd @@ x_32, x_33, x_28) in
+    expr_let 35 := (uint128)(x_29 << 128) in
+    expr_let 37 := ADDC_256 @@ ((0), x_35, fst @@ x_32) in
+    expr_let 39 := ADDC_256 @@ (snd @@ x_37, x_25, fst @@ x_34) in
+    expr_let 40 := ADD_256 @@ (fst @@ x_1, fst @@ x_37) in
+    expr_let 41 := ADDC_256 @@ (snd @@ x_40, snd @@ x_1, fst @@ x_39) in
+    expr_let 42 := SELC @@ (snd @@ x_41, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+    expr_let 43 := fst @@ (SUB_256 @@ (fst @@ x_41, x_42)) in
+    ADDM @@ (x_43, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
          : expr uint256
    *)
 End Montgomery256.
@@ -6587,33 +6642,30 @@ c.Mul128x128($r5, $r3, Lower128{RegPinv});
 c.Lower128($r7, $r5);
 c.Mul128x128($r8, $r4, RegPinv >> 128);
 c.Lower128($r10, $r8);
-c.ShiftL($r11, $r10, 128);
-c.ShiftL($r12, $r7, 128);
-c.Mul128x128($r17, $r4, Lower128{RegPinv});
-c.Add128($r18, $r11, $r12);
-c.Add256($r19, $r17, $r18_lo);
-c.ShiftR($r43, $r19_lo, 128);
-c.Lower128($r44, $r19_lo);
-c.Mul128x128($r45, $r43, Lower128{RegMod});
-c.ShiftR($r46, $r45, 128);
-c.Lower128($r47, $r45);
-c.Mul128x128($r48, $r44, RegMod << 128);
-c.ShiftR($r49, $r48, 128);
-c.Lower128($r50, $r48);
-c.ShiftL($r51, $r50, 128);
-c.ShiftL($r52, $r47, 128);
-c.Mul128x128($r57, $r44, Lower128{RegMod});
-c.Add128($r58, $r51, $r52);
-c.Add256($r59, $r57, $r58_lo);
-c.Add64($r60, $r59_hi, $r58_hi);
-c.Mul128x128($r67, $r43, RegMod << 128);
-c.Add256($r69, $r46, $r67);
-c.Add256($r70, $r49, $r69_lo);
-c.Add256($r80, $r60, $r70_lo);
-c.Add256($r83, $r1_lo, $r59_lo);
-c.Addc($r84, $r1_hi, $r80_lo);
-c.Selc($r85,RegZero, RegMod);
-c.Sub($r86, $r84_lo, $r85);
-c.AddM($ret, $r86, RegZero, RegMod);
-     : expr uint256
+c.ShiftL($r11, $r7, 128);
+c.Mul128x128($r12, $r4, Lower128{RegPinv});
+c.Addc($r13, $r11, $r12);
+c.ShiftL($r16, $r10, 128);
+c.Addc($r18, $r16, $r13_lo);
+c.ShiftR($r22, $r18_lo, 128);
+c.Lower128($r23, $r18_lo);
+c.Mul128x128($r24, $r22, Lower128{RegMod});
+c.ShiftR($r25, $r24, 128);
+c.Lower128($r26, $r24);
+c.Mul128x128($r27, $r23, RegMod << 128);
+c.ShiftR($r28, $r27, 128);
+c.Lower128($r29, $r27);
+c.ShiftL($r30, $r26, 128);
+c.Mul128x128($r31, $r23, Lower128{RegMod});
+c.Addc($r32, $r30, $r31);
+c.Mul128x128($r33, $r22, RegMod << 128);
+c.Addc($r34, $r33, $r28);
+c.ShiftL($r35, $r29, 128);
+c.Addc($r37, $r35, $r32_lo);
+c.Addc($r39, $r25, $r34_lo);
+c.Add256($r40, $r1_lo, $r37_lo);
+c.Addc($r41, $r1_hi, $r39_lo);
+c.Selc($r42,RegZero, RegMod);
+c.Sub($r43, $r41_lo, $r42);
+c.AddM($ret, $r43, RegZero, RegMod);
  *)
