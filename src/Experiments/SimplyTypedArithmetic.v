@@ -6238,21 +6238,34 @@ Module RemoveDeadLets.
         end
       end.
 
-    (* inlines lets that bind only shifts *)
-    Fixpoint inline_shifts t (e : @expr ident t) : @expr ident t :=
+    (* TODO(jadep): this is pretty ad-hoc and should eventually be removed *)
+    (* inlines lets that bind only shifts/lands *)
+    Fixpoint inline_shifts_and_lands t (e : @expr ident t) : @expr ident t :=
       match e in (expr t') return expr t' with
       | Var T n => Var T n
       | TT => TT
       | AppIdent s T idc x =>
-        AppIdent idc (inline_shifts _ x)
-      | Pair A B a b => Pair (inline_shifts _ a) (inline_shifts _ b)
+        AppIdent idc (inline_shifts_and_lands _ x)
+      | Pair A B a b => Pair (inline_shifts_and_lands _ a) (inline_shifts_and_lands _ b)
       | Let_In s T n x f =>
+        let default := Let_In n (inline_shifts_and_lands _ x) (inline_shifts_and_lands _ f) in
         match x with
-        | AppIdent _ _ (@BoundsAnalysis.ident.shiftr T1 Tout b) (Var _ m) =>
-          inline_let n _ (@AppIdent _ _ _ (@BoundsAnalysis.ident.shiftr T1 Tout b) (Var _ m)) _ (inline_shifts _ f)
-        | AppIdent _ _ (@BoundsAnalysis.ident.shiftl T1 Tout b) (Var _ m) =>
-          inline_let n _ (@AppIdent _ _ _ (@BoundsAnalysis.ident.shiftl T1 Tout b) (Var _ m)) _ (inline_shifts _ f)
-        | _ => Let_In n (inline_shifts _ x) (inline_shifts _ f)
+        | AppIdent _ _ idc inp =>
+          match idc with
+          | (@BoundsAnalysis.ident.shiftr T1 Tout b) as idc'
+          | (@BoundsAnalysis.ident.shiftl T1 Tout b) as idc'
+          | (@BoundsAnalysis.ident.land T1 Tout b) as idc'
+            =>
+            match inp with
+            | Var _ m as inp'
+            | AppIdent _ _ (@BoundsAnalysis.ident.fst _ _) (Var _ m) as inp'
+              =>
+              inline_let n _ (@AppIdent _ _ _ idc' inp') _ (inline_shifts_and_lands _ f)
+            | _ => default
+            end
+          | _ => default
+          end
+        | _ => default
         end
       end.
 
@@ -6518,33 +6531,25 @@ Module Montgomery256.
         (RemoveDeadLets.remove_dead_lets _
         (RemoveDeadLets.remove_dead_lets _
         (RemoveDeadLets.remove_dead_lets _
-        (RemoveDeadLets.inline_shifts _
+        (RemoveDeadLets.inline_shifts_and_lands _
         (RemoveDeadLets.inline_silly_lets _ montred256_with_dead_code)))))))).
 
   Import PrintingNotations.
   Open Scope nexpr_scope.
   Print montred256.
   (*
-    expr_let 3 := (uint128)(fst @@ x_1 >> 128) in
-    expr_let 4 := ((uint128)fst @@ x_1 & 340282366920938463463374607431768211455) in
-    expr_let 5 := MUL_256 @@ (x_3, (79228162514264337593543950337)) in
-    expr_let 7 := ((uint128)x_5 & 340282366920938463463374607431768211455) in
-    expr_let 8 := MUL_256 @@ (x_4, (340282366841710300986003757985643364352)) in
-    expr_let 10 := ((uint128)x_8 & 340282366920938463463374607431768211455) in
-    expr_let 12 := MUL_256 @@ (x_4, (79228162514264337593543950337)) in
-    expr_let 13 := ADD_256 @@ ((uint128)(x_7 << 128), x_12) in
-    expr_let 18 := ADD_256 @@ ((uint128)(x_10 << 128), fst @@ x_13) in
-    expr_let 22 := (uint128)(fst @@ x_18 >> 128) in
-    expr_let 23 := ((uint128)fst @@ x_18 & 340282366920938463463374607431768211455) in
-    expr_let 24 := MUL_256 @@ (x_22, (79228162514264337593543950335)) in
-    expr_let 26 := ((uint128)x_24 & 340282366920938463463374607431768211455) in
-    expr_let 27 := MUL_256 @@ (x_23, (340282366841710300967557013911933812736)) in
-    expr_let 29 := ((uint128)x_27 & 340282366920938463463374607431768211455) in
-    expr_let 31 := MUL_256 @@ (x_23, (79228162514264337593543950335)) in
-    expr_let 32 := ADD_256 @@ ((uint128)(x_26 << 128), x_31) in
-    expr_let 33 := MUL_256 @@ (x_22, (340282366841710300967557013911933812736)) in
+    expr_let 5 := MUL_256 @@ ((uint128)(fst @@ x_1 >> 128), (79228162514264337593543950337)) in
+    expr_let 8 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (340282366841710300986003757985643364352)) in
+    expr_let 12 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (79228162514264337593543950337)) in
+    expr_let 13 := ADD_256 @@ ((uint128)(((uint128)x_5 & 340282366920938463463374607431768211455) << 128), x_12) in
+    expr_let 18 := ADD_256 @@ ((uint128)(((uint128)x_8 & 340282366920938463463374607431768211455) << 128), fst @@ x_13) in
+    expr_let 24 := MUL_256 @@ ((uint128)(fst @@ x_18 >> 128), (79228162514264337593543950335)) in
+    expr_let 27 := MUL_256 @@ (((uint128)fst @@ x_18 & 340282366920938463463374607431768211455), (340282366841710300967557013911933812736)) in
+    expr_let 31 := MUL_256 @@ (((uint128)fst @@ x_18 & 340282366920938463463374607431768211455), (79228162514264337593543950335)) in
+    expr_let 32 := ADD_256 @@ ((uint128)(((uint128)x_24 & 340282366920938463463374607431768211455) << 128), x_31) in
+    expr_let 33 := MUL_256 @@ ((uint128)(fst @@ x_18 >> 128), (340282366841710300967557013911933812736)) in
     expr_let 34 := ADDC_256 @@ (snd @@ x_32, x_33, (uint128)(x_27 >> 128)) in
-    expr_let 37 := ADD_256 @@ ((uint128)(x_29 << 128), fst @@ x_32) in
+    expr_let 37 := ADD_256 @@ ((uint128)(((uint128)x_27 & 340282366920938463463374607431768211455) << 128), fst @@ x_32) in
     expr_let 39 := ADDC_256 @@ (snd @@ x_37, (uint128)(x_24 >> 128), fst @@ x_34) in
     expr_let 40 := ADD_256 @@ (fst @@ x_1, fst @@ x_37) in
     expr_let 41 := ADDC_256 @@ (snd @@ x_40, snd @@ x_1, fst @@ x_39) in
@@ -6634,9 +6639,9 @@ Module Montgomery256PrintingNotations.
     (expr_let n := (shiftl _ _ y @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftL(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Lower128(' '$r' n ',' x ');' f" :=
     (expr_let n := (land _ _ 340282366920938463463374607431768211455 @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Lower128(' '$r' n ','  x ');' ']' '//' f") : nexpr_scope.
-  Notation "'Lower128'"
-    := ((land uint256 uint128 340282366920938463463374607431768211455))
-         (at level 10, only printing, format "Lower128")
+  Notation "'Lower128{' x '}'"
+    := ((land uint256 uint128 340282366920938463463374607431768211455 @@ x)%nexpr)
+         (at level 10, only printing, format "Lower128{ x }")
   : nexpr_scope.
   Notation "( v << count )"
     := ((shiftl _ _ count @@ v)%nexpr)
@@ -6654,26 +6659,18 @@ Local Open Scope nexpr_scope.
 
 Print Montgomery256.montred256.
 (*
-c.ShiftR($r3, $r1_lo, 128);
-c.Lower128($r4, $r1_lo);
-c.Mul128x128($r5, $r3, Lower128{RegPinv});
-c.Lower128($r7, $r5);
-c.Mul128x128($r8, $r4, RegPinv >> 128);
-c.Lower128($r10, $r8);
-c.Mul128x128($r12, $r4, Lower128{RegPinv});
-c.Add256($r13, ($r7 << 128), $r12);
-c.Add256($r18, ($r10 << 128), $r13_lo);
-c.ShiftR($r22, $r18_lo, 128);
-c.Lower128($r23, $r18_lo);
-c.Mul128x128($r24, $r22, Lower128{RegMod});
-c.Lower128($r26, $r24);
-c.Mul128x128($r27, $r23, RegMod << 128);
-c.Lower128($r29, $r27);
-c.Mul128x128($r31, $r23, Lower128{RegMod});
-c.Add256($r32, ($r26 << 128), $r31);
-c.Mul128x128($r33, $r22, RegMod << 128);
+c.Mul128x128($r5, ($r1_lo >> 128), Lower128{RegPinv});
+c.Mul128x128($r8, Lower128{$r1_lo}, RegPinv >> 128);
+c.Mul128x128($r12, Lower128{$r1_lo}, Lower128{RegPinv});
+c.Add256($r13, (Lower128{$r5} << 128), $r12);
+c.Add256($r18, (Lower128{$r8} << 128), $r13_lo);
+c.Mul128x128($r24, ($r18_lo >> 128), Lower128{RegMod});
+c.Mul128x128($r27, Lower128{$r18_lo}, RegMod << 128);
+c.Mul128x128($r31, Lower128{$r18_lo}, Lower128{RegMod});
+c.Add256($r32, (Lower128{$r24} << 128), $r31);
+c.Mul128x128($r33, ($r18_lo >> 128), RegMod << 128);
 c.Addc($r34, $r33, ($r27 >> 128));
-c.Add256($r37, ($r29 << 128), $r32_lo);
+c.Add256($r37, (Lower128{$r27} << 128), $r32_lo);
 c.Addc($r39, ($r24 >> 128), $r34_lo);
 c.Add256($r40, $r1_lo, $r37_lo);
 c.Addc($r41, $r1_hi, $r39_lo);
