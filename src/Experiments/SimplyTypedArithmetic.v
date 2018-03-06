@@ -5267,8 +5267,13 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z, a) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr (inr x, y), z), a)
-                       => let default := default_interp (ident.Z.add_with_get_carry_concrete x) (inr (inr (y, z), a)) in
-                          match (z, a) with
+                       => let default_with_carry := default_interp (ident.Z.add_with_get_carry_concrete x) (inr (inr (y, z), a)) in
+                          let default_no_carry := default_interp (ident.Z.add_get_carry_concrete x) (inr (z,a)) in
+                          let default := match y with
+                                         | inr xx => if Z.eqb xx 0 then default_no_carry else default_with_carry
+                                         | _ => default_with_carry
+                                         end in
+                          match (z,a) with
                           | (inr xx, inl e)
                           | (inl e, inr xx)
                             => if Z.eqb xx 0
@@ -8146,9 +8151,9 @@ montred256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * 
              expr_let x5 := ((uint128)(x4) & 340282366920938463463374607431768211455) in
              expr_let x6 := (uint256)(x3 << 128) in
              expr_let x7 := 79228162514264337593543950337 *₂₅₆ x1 in
-             expr_let x8 := ADDC_256 (0, x6, x7) in
+             expr_let x8 := ADD_256 (x6, x7) in
              expr_let x9 := (uint256)(x5 << 128) in
-             expr_let x10 := ADDC_256 (0, x9, x8₁) in
+             expr_let x10 := ADD_256 (x9, x8₁) in
              expr_let x11 := (uint128)(x10₁ >> 128) in
              expr_let x12 := ((uint128)(x10₁) & 340282366920938463463374607431768211455) in
              expr_let x13 := 79228162514264337593543950335 *₂₅₆ x11 in
@@ -8159,18 +8164,17 @@ montred256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * 
              expr_let x18 := ((uint128)(x16) & 340282366920938463463374607431768211455) in
              expr_let x19 := (uint256)(x15 << 128) in
              expr_let x20 := 79228162514264337593543950335 *₂₅₆ x12 in
-             expr_let x21 := ADDC_256 (0, x19, x20) in
+             expr_let x21 := ADD_256 (x19, x20) in
              expr_let x22 := 340282366841710300967557013911933812736 *₂₅₆ x11 in
              expr_let x23 := ADDC_256 (x21₂, x22, x17) in
              expr_let x24 := (uint256)(x18 << 128) in
-             expr_let x25 := ADDC_256 (0, x24, x21₁) in
+             expr_let x25 := ADD_256 (x24, x21₁) in
              expr_let x26 := ADDC_256 (x25₂, x14, x23₁) in
              expr_let x27 := ADD_256 (x₁, x25₁) in
              expr_let x28 := ADDC_256 (x27₂, x₂, x26₁) in
              expr_let x29 := SELC (x28₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
              expr_let x30 := Z.cast uint256 @@ (fst @@ SUB_256 (x28₁, x29)) in
              ADDM (x30, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951)
-     : Expr (type.type_primitive type.Z * type.type_primitive type.Z -> type.type_primitive type.Z)
    *)
 End Montgomery256.
 
@@ -8283,9 +8287,9 @@ c.Mul128x128($x4, RegPinv >> 128, $x1);
 c.Lower128($x5, $x4);
 c.ShiftL($x6, $x3, 128);
 c.Mul128x128($x7, Lower128{RegPinv}, $x1);
-c.Addc($x8, $x6, $x7);
+c.Add256($x8, $x6, $x7);
 c.ShiftL($x9, $x5, 128);
-c.Addc($x10, $x9, $x8_lo);
+c.Add256($x10, $x9, $x8_lo);
 c.ShiftR($x11, $x10_lo, 128);
 c.Lower128($x12, $x10_lo);
 c.Mul128x128($x13, Lower128{RegMod}, $x11);
@@ -8296,16 +8300,15 @@ c.ShiftR($x17, $x16, 128);
 c.Lower128($x18, $x16);
 c.ShiftL($x19, $x15, 128);
 c.Mul128x128($x20, Lower128{RegMod}, $x12);
-c.Addc($x21, $x19, $x20);
+c.Add256($x21, $x19, $x20);
 c.Mul128x128($x22, RegMod << 128, $x11);
 c.Addc($x23, $x22, $x17);
 c.ShiftL($x24, $x18, 128);
-c.Addc($x25, $x24, $x21_lo);
+c.Add256($x25, $x24, $x21_lo);
 c.Addc($x26, $x14, $x23_lo);
 c.Add256($x27, $x_lo, $x25_lo);
 c.Addc($x28, $x_hi, $x26_lo);
 c.Selc($x29,RegZero, RegMod);
 c.Sub($x30, $x28_lo, $x29);
 c.AddM($ret, $x30, RegZero, RegMod);
-     : Expr (type.type_primitive type.Z * type.type_primitive type.Z -> type.type_primitive type.Z)
  *)
