@@ -5169,7 +5169,7 @@ Module Compilers.
                | shiftl _ _ offset
                  => option_map
                       (fun '(existT r args)
-		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
+		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftl v offset) r)
                                  (AppIdent (shiftl _ _ offset) args))
                | land _ _ mask
                  => option_map
@@ -6418,7 +6418,7 @@ Module MontgomeryReduction.
     Let bound := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
 
     Definition relax_zrange_of_machine_wordsize
-      := relax_zrange_gen [machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
+      := relax_zrange_gen [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
     Local Arguments relax_zrange_of_machine_wordsize / .
 
     Let rw := rweight machine_wordsize.
@@ -6614,7 +6614,7 @@ Module Montgomery256PrintingNotations.
     (expr_let n := shiftl _ _ count @@ (mul _ _ uint256 @@ (x, y)) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ')'  '<<'  count ';' ']' '//' f") : nexpr_scope.
   Notation "'c.Add256(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := add_get_carry_concrete _ _ uint256 _ $R @@ (x, y) in
+    (expr_let n := add_get_carry_concrete _ _ uint256 r[0 ~> 1] $R @@ (x, y) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Add128(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := add_get_carry_concrete _ _ uint128 _ $R @@ (x, y) in
@@ -6623,7 +6623,7 @@ Module Montgomery256PrintingNotations.
     (expr_let n := add _ _ uint128 @@ (x, y) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add64(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Addc(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := add_with_get_carry_concrete _ _ _ uint256 _ $R @@ (_, x, y) in
+    (expr_let n := add_with_get_carry_concrete _ _ _ uint256 r[0 ~> 1] $R @@ (_, x, y) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Selc(' '$r' n ',' y ',' z ');' f" :=
     (expr_let n := zselect _ _ _ uint256 @@ (_, y, z) in
