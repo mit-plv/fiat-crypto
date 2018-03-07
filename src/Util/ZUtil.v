@@ -170,7 +170,7 @@ Module Z.
   Proof.
     intros i ?.
     apply natlike_ind with (x := i); [ intros a b n | intros x H0 H1 a b n | ]; intros; try assumption;
-      (destruct (Z_eq_dec 0 n); [ subst; rewrite Z.pow_0_r in *;
+      (destruct (Z.eq_dec 0 n); [ subst; rewrite Z.pow_0_r in *;
        replace a with 0 by omega; f_equal; ring | ]); try omega.
     rewrite <-Z.add_1_r at 1. rewrite <-Z.shiftr_spec by assumption.
     replace (Z.succ x - n) with (x - (n - 1)) by ring.
@@ -346,7 +346,7 @@ Module Z.
     destruct (Z_le_lt_eq_dec i n G1).
     + destruct (Z.shiftr_ones' a n G i G0); omega.
     + subst; rewrite Z.sub_diag.
-      destruct (Z_eq_dec a 0).
+      destruct (Z.eq_dec a 0).
       - subst; rewrite Z.shiftr_0_l; reflexivity.
       - rewrite Z.shiftr_eq_0; try omega; try reflexivity.
         apply Z.log2_lt_pow2; omega.
@@ -358,7 +358,7 @@ Module Z.
     intros a ? ? [a_nonneg a_upper_bound].
     apply Z_le_lt_eq_dec in a_upper_bound.
     destruct a_upper_bound.
-    + destruct (Z_eq_dec 0 a).
+    + destruct (Z.eq_dec 0 a).
       - subst; rewrite Z.shiftr_0_l; omega.
       - rewrite Z.shiftr_eq_0; auto; try omega.
         apply Z.log2_lt_pow2; auto; omega.
@@ -580,7 +580,7 @@ Module Z.
   Lemma compare_add_shiftl : forall x1 y1 x2 y2 n, 0 <= n ->
     Z.pow2_mod x1 n = x1 -> Z.pow2_mod x2 n = x2  ->
     x1 + (y1 << n) ?= x2 + (y2 << n) =
-      if Z_eq_dec y1 y2
+      if Z.eq_dec y1 y2
       then x1 ?= x2
       else y1 ?= y2.
   Proof.
