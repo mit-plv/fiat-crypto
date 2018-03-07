@@ -535,7 +535,7 @@ Module Columns.
     Proof.
       cbv [eval]; intros; subst. rewrite map_app. simpl map.
       apply Positional.eval_snoc; distr_length.
-    Qed.
+    Qed. Hint Rewrite eval_snoc using (solve [distr_length]) : push_eval.
 
     Section flatten_column.
       Context (fw : Z). (* maximum size of the result *)
@@ -581,24 +581,33 @@ Module Columns.
       match goal with
       | |- _ /\ _ => split
       | H: _ /\ _ |- _ => destruct H
+      | H: _ \/ _ |- _ => destruct H
       | _ => progress break_match; try discriminate
       end.
     
-    Local Ltac push :=
+    Local Ltac push_fast :=
       repeat match goal with
                | _ => progress cbv [Let_In]
-               | |- context [list_rect _ _ _ ?ls] =>
-                 rewrite list_rect_to_match; destruct ls
+               | |- context [list_rect _ _ _ ?ls] => rewrite list_rect_to_match; destruct ls
                | _ => progress (unfold flatten_step in *; fold flatten_step in * )
-               | _ => progress cases
+               | _ => rewrite Nat.add_1_r
                | _ => rewrite Z.mul_div_eq_full by (auto; omega)
                | _ => rewrite weight_multiples
                | _ => reflexivity
                | _ => solve [repeat (f_equal; try ring)]
-               | _ => progress autorewrite with cancel_pair to_div_mod list push_sum push_fold_right in *
-               | _ => progress autorewrite with pull_Zmod pull_Zdiv zsimplify_fast
-               | _ => progress autorewrite with distr_length push_eval 
+               | _ => congruence
+               | _ => progress cases
                end.
+    Local Ltac push :=
+      repeat match goal with
+             | _ => progress push_fast
+             | _ => progress autorewrite with cancel_pair to_div_mod
+             | _ => progress autorewrite with push_sum push_fold_right push_nth_default in *
+             | _ => progress autorewrite with pull_Zmod pull_Zdiv zsimplify_fast
+             | _ => progress autorewrite with list distr_length push_eval
+             end.
+    
+
     
     Lemma flatten_column_mod fw (xs : list Z) :
       fst (flatten_column fw xs)  = sum xs mod fw.
@@ -624,22 +633,22 @@ Module Columns.
     (* helper for some of the modular logic in flatten *)
     Lemma flatten_mod_step a b c d: 0 < a -> 0 < b ->
       c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
-    Proof.
-      intros; rewrite Z.rem_mul_r by omega.
-      push_Zmod. push.
-    Qed.
+    Proof. intros; rewrite Z.rem_mul_r by omega. push_Zmod. push. Qed.
 
     Lemma flatten_div_step a b c d : 0 < a -> 0 < b ->
       (c / a + d) / b = (a * d + c) / (a * b).
     Proof. intros; push. Qed.
 
     Hint Rewrite Positional.eval_nil : push_eval.
+    Hint Resolve Z.gt_lt.
 
-    Lemma flatten_length inp : length (fst (flatten inp)) = length inp.
-    Proof.
-      cbv [flatten]. induction inp using rev_ind; push. distr_length.
-    Qed.
-    Hint Rewrite flatten_length : distr_length.
+    Lemma length_flatten_step digit state :
+      length (fst (flatten_step digit state)) = S (length (fst state)).
+    Proof. cbv [flatten_step]; push. Qed.
+    Hint Rewrite length_flatten_step : distr_length.
+    Lemma length_flatten inp : length (fst (flatten inp)) = length inp.
+    Proof. cbv [flatten]. induction inp using rev_ind; push. Qed.
+    Hint Rewrite length_flatten : distr_length.
 
     Lemma flatten_div_mod n inp :
       length inp = n ->
@@ -648,18 +657,18 @@ Module Columns.
         /\ (snd (flatten inp) = eval n inp / weight n).
     Proof.
       (* to make the invariant take the right form, we make everything depend on output length, not input length *)
-      intro. subst n. rewrite <-(flatten_length inp). cbv [flatten].
-      induction inp using rev_ind; intros; push;
-        repeat match goal with
-               | _ => rewrite Nat.add_1_r
-               | _ => erewrite Positional.eval_snoc by reflexivity
-               | _ => rewrite eval_snoc by (rewrite <-(flatten_length inp); reflexivity)
-               | H: _ = _ mod (weight _) |- _ => rewrite H
-               | H: _ = _ / (weight _) |- _ => rewrite H
-               | _ => rewrite flatten_mod_step by auto using Z.gt_lt
-               | _ => rewrite flatten_div_step by auto using Z.gt_lt
-               | _ => progress push
-               end.
+      intro. subst n. rewrite <-(length_flatten inp). cbv [flatten].
+      induction inp using rev_ind; intros; [push|].
+      repeat match goal with
+             | _ => rewrite Nat.add_1_r
+             | _ => progress (fold (flatten inp) in * )
+             | _ => erewrite Positional.eval_snoc by (distr_length; reflexivity)
+             | H: _ = _ mod (weight _) |- _ => rewrite H
+             | H: _ = _ / (weight _) |- _ => rewrite H
+             | _ => progress rewrite ?flatten_mod_step, ?flatten_div_step by auto
+             | _ => progress autorewrite with cancel_pair to_div_mod push_sum list push_fold_right push_eval
+             | _ => progress (distr_length; push_fast)
+             end.
     Qed.
 
     Lemma flatten_mod {n} inp :
@@ -700,8 +709,12 @@ Module Columns.
     Proof using Type.
       cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
       apply Positional.eval_add_to_nth; distr_length.
-    Qed. Hint Rewrite eval_cons_to_nth using omega : push_eval.
+    Qed. Hint Rewrite eval_cons_to_nth using (solve [distr_length]) : push_eval.
 
+    Hint Rewrite Positional.eval_zeros : push_eval.
+    Hint Rewrite Positional.length_from_associational : distr_length.
+    Hint Rewrite Positional.eval_add_to_nth using (solve [distr_length]): push_eval.
+    
     (* from_associational *)
     Definition from_associational n (p:list (Z*Z)) : list (list Z) :=
       List.fold_right (fun t ls =>
@@ -713,35 +726,43 @@ Module Columns.
     Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil):
       eval n (from_associational n p) = Associational.eval p.
     Proof.
-      erewrite <-Positional.eval_from_associational by eauto. induction p.
-      { simpl. autorewrite with push_eval. rewrite Positional.eval_zeros; auto. }
-      { pose proof (length_from_associational n p).
-        cbv [from_associational] in *. destruct n_nonzero; try congruence; [ ].
-        simpl. rewrite eval_cons_to_nth, Positional.eval_add_to_nth;
-                 rewrite ?Positional.length_from_associational;
-        try match goal with |- context [Positional.place _ ?x ?n] =>
-                        pose proof (Positional.weight_place weight ltac:(assumption) ltac:(assumption) x n);
-                          pose proof (Positional.place_in_range weight x n); rewrite Nat.succ_pred in * by auto
-            end; auto; try omega.
-        rewrite IHp by tauto. ring. }
+      erewrite <-Positional.eval_from_associational by eauto.
+      induction p; push.
+      cbv [from_associational Positional.from_associational]; autorewrite with push_fold_right.
+      fold (from_associational n p); fold (Positional.from_associational weight n p).
+      match goal with |- context [Positional.place _ ?x ?n] =>
+                      pose proof (Positional.place_in_range weight x n) end.
+      repeat match goal with
+             | _ => rewrite Nat.succ_pred in * by auto
+             | _ => rewrite IHp by auto
+             | _ => progress push
+        end.
     Qed.
 
     Lemma flatten_snoc x inp : flatten (inp ++ [x]) = flatten_step x (flatten inp).
     Proof. cbv [flatten]. rewrite rev_unit. reflexivity. Qed.
 
-    Lemma weight_multiples_full j : forall i, (i <= j)%nat -> weight j mod weight i = 0.
+    Lemma weight_multiples_full' j : forall i, weight (i+j) mod weight i = 0.
     Proof.
-      induction j; intros; [replace i with 0%nat by omega
-                           | destruct (dec (i <= j)%nat); [ rewrite (Z.div_mod (weight (S j)) (weight j)) by auto
-                                                          | replace i with (S j) by omega ] ];
-      repeat match goal with
-             | _ => rewrite weight_0
-             | _ => rewrite weight_multiples
-             | _ => rewrite IHj by omega
-             | _ => progress autorewrite with push_Zmod zsimplify
-             | _ => reflexivity
-             end.
+      induction j; intros;
+        repeat match goal with
+               | _ => rewrite Nat.add_succ_r
+               | _ => rewrite IHj
+               | |- context [weight (S ?x) mod weight _] =>
+                 rewrite (Z.div_mod (weight (S x)) (weight x)), weight_multiples by auto
+               | _ => progress autorewrite with push_Zmod natsimplify zsimplify_fast
+               | _ => reflexivity
+               end.
     Qed.
+    
+    Lemma weight_multiples_full j i : (i <= j)%nat -> weight j mod weight i = 0.
+    Proof.
+      intros; replace j with (i + (j - i))%nat by omega.
+      apply weight_multiples_full'.
+    Qed.
+
+    Lemma weight_div_mod j i : (i <= j)%nat -> weight j = weight i * (weight j / weight i).
+    Proof. intros. apply Z.div_exact; auto using weight_multiples_full. Qed.
 
     (* TODO: move to ZUtil *)
     Lemma Z_divide_div_mul_exact' a b c : b <> 0 -> (b | a) -> a * c / b = c * (a / b).
@@ -752,29 +773,19 @@ Module Columns.
                   nth_default 0 (fst (flatten inp)) i = ((eval n inp) mod (weight (S i))) / weight i.
     Proof.
       induction inp using rev_ind; intros; destruct n; distr_length.
-      { rewrite flatten_snoc, eval_snoc by omega.
-        cbv [flatten_step Let_In]. cbn [fst].
-        rewrite nth_default_app.
-        break_match; distr_length.
-        { rewrite IHinp with (n:=n) by omega.
-          rewrite (Z.div_mod (weight n) (weight (S i))) by auto.
-          rewrite weight_multiples_full by omega.
-          push_Zmod.
-          autorewrite with zsimplify.
-          reflexivity. }
-        { repeat match goal with
-                 | _ => progress replace (Datatypes.length inp) with n by omega
-                 | _ => progress replace i with n by omega
-                 | _ => rewrite sum_cons
-                 | _ => rewrite flatten_column_mod
-                 | _ => erewrite flatten_div by eauto
-                 | _ => rewrite <-Z.div_add' by auto
-                 | _ => rewrite Z.mod_pull_div by auto using Z.lt_le_incl, Z.gt_lt
-                 | _ => rewrite Z.mul_div_eq', weight_multiples by auto
-                 | _ => progress autorewrite with push_nth_default natsimplify
-                 end.
-          autorewrite with zsimplify.
-          reflexivity. } }
+      rewrite flatten_snoc.
+      push; distr_length;
+        [rewrite IHinp with (n:=n) by omega; rewrite (weight_div_mod n (S i)) by omega; push_Zmod; push |].
+      repeat match goal with
+             | _ => progress replace (length inp) with n by omega
+             | _ => progress replace i with n by omega
+             | _ => progress push
+             | _ => erewrite flatten_div by eauto
+             | _ => rewrite <-Z.div_add' by auto
+             | _ => rewrite Z.mul_div_eq' by auto
+             | _ => rewrite Z.mod_pull_div by auto using Z.lt_le_incl
+             | _ => progress autorewrite with push_nth_default natsimplify
+             end.
     Qed.
 
     Section mul.
