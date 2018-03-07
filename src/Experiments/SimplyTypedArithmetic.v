@@ -906,11 +906,11 @@ Module Columns.
       Qed.
 
       (* shortcut definition for convert-mul-convert for cases when we are halving the bitwidth before multiplying. *)
-      (* the most important feature here is the carries--we carry from all the odd indices after multiplying, 
+      (* the most important feature here is the carries--we carry from all the odd indices after multiplying,
          thus pre-aligning everything with the double-size bitwidth *)
       Definition mul_converted_halve n n2 :=
         mul_converted n n n2 n2 n2 (map (fun x => 2*x + 1)%nat (seq 0 n)).
-      
+
   End mul_converted.
 End Columns.
 
@@ -1082,7 +1082,7 @@ Module Compilers.
         | cons {t} (gallina_v : type.interp t) (v : var t) (ctx : list).
       End var_context.
 
-      (* cf COQBUG(https://github.com/coq/coq/issues/5448) , COQBUG(https://github.com/coq/coq/issues/6315) , COQBUG(https://github.com/coq/coq/issues/6559) *)
+      (* cf COQBUG(https://github.com/coq/coq/issues/5448) , COQBUG(https://github.com/coq/coq/issues/6315) , COQBUG(https://github.com/coq/coq/issues/6559) , COQBUG(https://github.com/coq/coq/issues/6534) , https://github.com/mit-plv/fiat-crypto/issues/320 *)
       Ltac require_same_var n1 n2 :=
         (*idtac n1 n2;*)
         let c1 := constr:(fun n1 n2 : Set => ltac:(exact n1)) in
@@ -1208,9 +1208,9 @@ Module Compilers.
             | false
               =>
               let rT := type.reify T in
-              let not_x := fresh in
-              let not_x2 := fresh in
-              let not_x3 := fresh in
+              let not_x := fresh (* could be [refresh x ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
+              let not_x2 := fresh (* could be [refresh not_x ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
+              let not_x3 := fresh (* could be [refresh not_x2 ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
               (*let dummy := match goal with _ => idtac "reify_in_context: λ case:" term "using vars:" not_x not_x2 not_x3 end in*)
               let rf0 :=
                   constr:(
