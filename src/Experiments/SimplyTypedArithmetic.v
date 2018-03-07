@@ -820,14 +820,6 @@ Module Rows.
     Hint Rewrite Positional.eval_nil Positional.eval0 @Positional.eval_snoc
          Columns.eval_nil Columns.eval_snoc using (auto; solve [distr_length]) : push_eval.
 
-    (* TODO: move to ListUtil *)
-    Lemma sum_app x y : sum (x ++ y) = sum x + sum y.
-    Proof. induction x; rewrite ?app_nil_l, <-?app_comm_cons, ?sum_nil, ?sum_cons; omega. Qed.
-    (* TODO: move to listUtil or wherever push_map is defined *)
-    Hint Rewrite @map_app : push_map.
-    Hint Rewrite sum_nil sum_cons sum_app : push_sum.
-    Hint Rewrite @combine_nil_r @combine_cons : push_combine.
-
     Hint Resolve in_eq in_cons.
 
     Definition eval n (inp : rows) :=
@@ -951,11 +943,6 @@ Module Rows.
     Proof. apply eval_from_columns'_with_length. Qed.
     Hint Rewrite eval_from_columns' using (auto; solve [distr_length]) : push_eval.
 
-    (* TODO: move to ListUtil *)
-    Lemma length_tl {A} ls : length (@tl A ls) = (length ls - 1)%nat.
-    Proof. destruct ls; cbn [tl length]; lia. Qed.
-    Hint Rewrite @length_tl : distr_length.
-    
     Lemma max_column_size_extract_row inp :
       max_column_size (fst (extract_row inp)) = (max_column_size inp - 1)%nat.
     Proof.
