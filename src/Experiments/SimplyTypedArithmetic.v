@@ -574,19 +574,39 @@ Module Columns.
                                                        end.
     Proof. destruct ls; reflexivity. Qed.
 
+    Hint Rewrite <- Z.div_add' using omega : pull_Zdiv.
+
+
+    Local Ltac cases :=
+      match goal with
+      | |- _ /\ _ => split
+      | H: _ /\ _ |- _ => destruct H
+      | _ => progress break_match; try discriminate
+      end.
+    
+    Local Ltac push :=
+      repeat match goal with
+               | _ => progress cbv [Let_In]
+               | |- context [list_rect _ _ _ ?ls] =>
+                 rewrite list_rect_to_match; destruct ls
+               | _ => progress (unfold flatten_step in *; fold flatten_step in * )
+               | _ => progress cases
+               | _ => rewrite Z.mul_div_eq_full by (auto; omega)
+               | _ => rewrite weight_multiples
+               | _ => reflexivity
+               | _ => solve [repeat (f_equal; try ring)]
+               | _ => progress autorewrite with cancel_pair to_div_mod list push_sum push_fold_right in *
+               | _ => progress autorewrite with pull_Zmod pull_Zdiv zsimplify_fast
+               | _ => progress autorewrite with distr_length push_eval 
+               end.
+    
     Lemma flatten_column_mod fw (xs : list Z) :
       fst (flatten_column fw xs)  = sum xs mod fw.
     Proof.
       induction xs; simpl flatten_column; cbv [Let_In];
         repeat match goal with
-               | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
-               | |- context [list_rect _ _ _ ?ls] =>
-                 rewrite list_rect_to_match; destruct ls
-               | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
-               | _ => progress break_match; try discriminate
-               | _ => reflexivity
-               | _ => f_equal; ring
+               | _ => progress push 
                end.
     Qed. Hint Rewrite flatten_column_mod : to_div_mod.
 
@@ -595,15 +615,9 @@ Module Columns.
     Proof.
       induction xs; simpl flatten_column; cbv [Let_In];
         repeat match goal with
-               | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
                | _ => rewrite IHxs
-               | |- context [list_rect _ _ _ ?ls] =>
-                 rewrite list_rect_to_match; destruct ls
-               | _ => rewrite <-Z.div_add_mod_cond_r by auto
-               | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
-               | _ => progress break_match; try discriminate
-               | _ => reflexivity
-               | _ => f_equal; ring
+               | _ => rewrite Z.mul_div_eq_full by omega
+               | _ => progress push
                end.
     Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
 
@@ -611,42 +625,19 @@ Module Columns.
     Lemma flatten_mod_step a b c d: 0 < a -> 0 < b ->
       c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
     Proof.
-      clear. rewrite Z.add_comm.
-      intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; omega).
-      pose proof (Z.mod_pos_bound c a Ha).
-      pose proof (Z.mod_pos_bound (c/a+d) b Hb).
-      apply Z.small_mod_eq.
-      { rewrite <-(Z.mod_small (c mod a) (a * b)) by omega.
-        rewrite <-Z.mul_mod_distr_l with (c:=a) by omega.
-        rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by omega.
-        f_equal; ring. }
-      { split; [zero_bounds|].
-        apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; omega].
-        apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
+      intros; rewrite Z.rem_mul_r by omega.
+      push_Zmod. push.
     Qed.
 
     Lemma flatten_div_step a b c d : 0 < a -> 0 < b ->
       (c / a + d) / b = (a * d + c) / (a * b).
-    Proof.
-      clear. intros Ha Hb.
-      rewrite <-Z.div_div by omega.
-      rewrite Z.div_add_l' by omega.
-      f_equal; ring.
-    Qed.
+    Proof. intros; push. Qed.
 
     Hint Rewrite Positional.eval_nil : push_eval.
 
     Lemma flatten_length inp : length (fst (flatten inp)) = length inp.
     Proof.
-      cbv [flatten].
-      unfold flatten_step; fold flatten_step.
-      induction inp using rev_ind; [reflexivity|].
-      repeat match goal with
-             | _ => progress autorewrite with list cancel_pair push_fold_right
-             | _ => progress (unfold flatten_step; fold flatten_step)
-             | _ => progress cbv [Let_In]
-             | _ => solve [distr_length]
-             end.
+      cbv [flatten]. induction inp using rev_ind; push. distr_length.
     Qed.
     Hint Rewrite flatten_length : distr_length.
 
@@ -658,38 +649,28 @@ Module Columns.
     Proof.
       (* to make the invariant take the right form, we make everything depend on output length, not input length *)
       intro. subst n. rewrite <-(flatten_length inp). cbv [flatten].
-      unfold flatten_step; fold flatten_step.
-      induction inp using rev_ind;
+      induction inp using rev_ind; intros; push;
         repeat match goal with
-               | _ => progress intros
-               | H: _ = ?x mod ?y /\ _ = ?x / ?y |- _ => destruct H as [IHmod IHdiv]
-               | _ => split
                | _ => rewrite Nat.add_1_r
                | _ => erewrite Positional.eval_snoc by reflexivity
-               | _ => rewrite IHmod
-               | _ => rewrite IHdiv
-               | _ => rewrite sum_cons
                | _ => rewrite eval_snoc by (rewrite <-(flatten_length inp); reflexivity)
+               | H: _ = _ mod (weight _) |- _ => rewrite H
+               | H: _ = _ / (weight _) |- _ => rewrite H
                | _ => rewrite flatten_mod_step by auto using Z.gt_lt
                | _ => rewrite flatten_div_step by auto using Z.gt_lt
-               | _ => rewrite Z.mul_div_eq_full by auto
-               | _ => rewrite weight_multiples
-               | _ => progress (unfold flatten_step; fold flatten_step)
-               | _ => progress cbv [Let_In]
-               | _ => progress autorewrite with list cancel_pair distr_length to_div_mod push_fold_right
-               | _ => f_equal; ring
+               | _ => progress push
                end.
     Qed.
 
     Lemma flatten_mod {n} inp :
       length inp = n ->
       (Positional.eval weight n (fst (flatten inp)) = (eval n inp) mod (weight n)).
-    Proof. intro. apply (proj1 (flatten_div_mod n inp ltac:(assumption))). Qed.
+    Proof. apply flatten_div_mod. Qed.
     Hint Rewrite @flatten_mod : push_eval.
 
     Lemma flatten_div {n} inp :
       length inp = n -> snd (flatten inp) = eval n inp / weight n.
-    Proof. intro. apply (proj2 (flatten_div_mod n inp ltac:(assumption))). Qed.
+    Proof. apply flatten_div_mod. Qed.
     Hint Rewrite @flatten_div : push_eval.
 
     (* nils *)
