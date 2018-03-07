@@ -3,44 +3,243 @@ Require Import Lia.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.LetIn.
-Require Crypto.Util.ListUtil. (* for tests *)
+
+Require Import Crypto.Util.CPSNotations.
 
 Section Loops.
-  Context {continue_state break_state}
-          (body : continue_state -> break_state + continue_state)
-          (body_cps : continue_state ->
-                  forall {T}, (break_state + continue_state -> T)
-                              -> T).
+  Context {A B : Type} (body : A -> A + B).
 
-  Definition funapp {A B} (f : A -> B) (x : A) := f x.
+  Definition loop (fuel : nat) (s : A) : A + B :=
+    nat_rect _ (inl s)
+             (fun _ s =>
+                match s with
+                | inl a => body a
+                | inr b => s
+                end
+             ) fuel.
 
-  Fixpoint loop_cps (fuel: nat) (start : continue_state)
-           {T} (ret : break_state -> T) : continue_state + T :=
-    funapp
-    (body_cps start _) (fun next =>
-                      match next with
-                      | inl state => inr (ret state)
-                      | inr state =>
-                        match fuel with
-                        | O => inl state
-                        | S fuel' =>
-                          loop_cps fuel' state ret
-                        end end).
+  Context (body_cps : A ~> A + B).
+(* WHY does the following not work?
+Set Printing Universes.
+Check (nat_rect (fun _ => forall R, (A+B -> R)->R)
+                (fun R ret => ret (inl s))
+                (fun _ recurse =>
+                   recurse (forall R, (A + B -> R) -> R)
+                           (fun s R ret =>
+                              match s with
+                              | inl a =>
+                                s' <- body_cps a;
+                                ret s'
+                              | inr b => ret (inr b)
+                              end
+                ))
+                fuel).
+The term
+ "recurse (~> A + B)
+    (fun (s : A + B) (R : Type@{Top.1376}) (ret : A + B -> R) =>
+     match s with
+     | inl a => s' <- body_cps a;
+                ret s'
+     | inr b => ret (inr b)
+     end)" has type "forall (R : Type@{Top.1376}) (_ : forall _ : sum A B, R), R"
+while it is expected to have type
+ "forall (R : Type@{Top.1374}) (_ : forall _ : sum A B, R), R"
+(universe inconsistency: Cannot enforce Top.1374 <= Top.1376 because Top.1376
+< Top.1375 <= Top.1374). *)
+  Definition loop_cps (fuel : nat) (s : A) : ~> A+B :=
+    nat_rect (fun _ => forall R, (A + B -> R) -> R)
+             (fun R ret => ret (inl s))
+             (fun _ recurse R =>
+                recurse ((A + B -> R) -> R)
+                        (fun s ret =>
+                           match s with
+                           | inl a =>
+                             s' <- body_cps a;
+                               ret s'
+                           | inr b => ret (inr b)
+                           end
+             )) fuel.
+
+  Context (body_cps_ok : forall s {R} f, body_cps s R f = f (body s)).
+  Lemma loop_cps_ok n s {R} f : loop_cps n s R f = f (loop n s).
+  Proof.
+    revert f; revert R; revert s; induction n; [reflexivity|].
+    simpl loop; simpl loop_cps; intros. (* FIXME: unsimpl *)
+    rewrite IHn; break_match; [|reflexivity].
+    cbv [cpscall]; rewrite body_cps_ok; reflexivity.
+  Qed.
+
+  Context (body_cps2 : A -> forall {R}, (A -> R) -> (B -> R) -> R).
+  Definition loop_cps2 (fuel : nat) (s : A) :
+    forall {R} (timeout : A -> R) (ret : B -> R), R :=
+    nat_rect (fun _ => forall R, (A -> R) -> (B -> R) -> R)
+             (fun R continue break => continue s)
+             (fun _ recurse R continue break =>
+                recurse R (fun a => body_cps2 a R continue break) break
+             )
+             fuel.
+
+  Context (body_cps2_ok : forall s {R} continue break,
+              body_cps2 s R continue break =
+              match body s with
+              | inl a => continue a
+              | inr b => break b
+              end).
+  Lemma loop_cps2_ok n s {R} timeout ret :
+    @loop_cps2 n s R timeout ret =
+    match loop n s with
+    | inl a => timeout a
+    | inr b => ret b
+    end.
+  Proof.
+    revert ret; revert timeout; revert R; revert s; induction n;
+      [intros; reflexivity|].
+    simpl loop; simpl loop_cps2; intros. (* FIXME: unsimpl *)
+    repeat (rewrite IHn || rewrite body_cps2_ok || break_match || congruence).
+  Qed.
+
+  Lemma loop_fuel_0 s : loop 0 s = inl s.
+  Proof. reflexivity. Qed.
+
+  Lemma loop_fuel_S n s : loop (S n) s =
+                          match loop n s with
+                          | inl a => body a
+                          | inr b => loop n s
+                          end.
+  Proof. reflexivity. Qed.
+
+  Lemma loop_fuel_S_stable n s b (H : loop n s = inr b) : loop (S n) s = inr b.
+  Proof.
+    revert H; revert b; revert s; induction n; intros ? ? H.
+    { cbn [loop nat_rect] in H. congruence_sum. }
+    { rewrite loop_fuel_S.
+      break_match; congruence_sum; reflexivity. }
+  Qed.
+
+  Lemma loop_fuel_add_stable n m s b (H : loop n s = inr b) : loop (m+n) s = inr b.
+  Proof.
+    induction m; intros.
+    { rewrite PeanoNat.Nat.add_0_l. assumption. }
+    { rewrite PeanoNat.Nat.add_succ_l.
+      erewrite loop_fuel_S_stable; eauto. }
+  Qed.
+
+  Lemma loop_fuel_irrelevant n m s bn bm
+        (Hn : loop n s = inr bn)
+        (Hm : loop m s = inr bm)
+    : bn = bm.
+  Proof.
+    destruct (Compare_dec.le_le_S_dec n m) as [H|H];
+      destruct (PeanoNat.Nat.le_exists_sub _ _ H) as [d [? _]]; subst.
+    { erewrite loop_fuel_add_stable in Hm by eassumption; congruence. }
+    { erewrite loop_fuel_add_stable in Hn.
+      { congruence_sum. reflexivity. }
+      { erewrite loop_fuel_S_stable by eassumption. congruence. } }
+  Qed.
+
+  Lemma by_invariant_with_inv_for_measure' (inv P:_->Prop) measure f s0
+          (inv_init : inv s0)
+          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
+          (inv_break : forall s s', body s = inr s' -> inv s -> P s')
+          (measure_decreases : forall s s', body s = inl s' -> inv s -> measure s' < measure s)
+          (measure_fuel : measure s0 < f)
+    : match loop f s0 with
+      | inl a => inv a
+      | inr s => P s
+      end.
+  Proof.
+    revert dependent s0; induction f; intros.
+    { exfalso; lia. }
+  Abort. (* I don't know how to prove this one *)
+
+  Lemma by_invariant' P inv f s0
+        (inv_init : inv s0)
+        (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
+        (inv_break : forall s s', body s = inr s' -> inv s -> P s')
+    : match loop f s0 with
+      | inl a => inv a
+      | inr s => P s
+      end.
+  Proof.
+    induction f.
+    { rewrite loop_fuel_0; auto. }
+    { rewrite loop_fuel_S.
+      destruct (loop f s0) eqn:Hn;
+        [ destruct (body a) eqn:Ha; eauto | eauto ]. }
+  Qed.
+
+  Lemma by_invariant P inv f s0 b (H : loop f s0 = inr b)
+          (inv_init : inv s0)
+          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
+          (inv_break : forall s s', body s = inr s' -> inv s -> P s')
+      : P b.
+  Proof.
+    pose proof (by_invariant' P inv f s0) as HH.
+    rewrite H in HH; eauto.
+  Qed.
+
+  Lemma invariant_complete (P:_->Prop) f s0 b (Hf : loop f s0 = inr b) (H : P b) :
+    exists (inv : A -> Prop),
+      inv s0
+      /\ (forall s s', body s = inl s' -> inv s -> inv s')
+      /\ (forall s s', body s = inr s' -> inv s -> P s').
+  Proof.
+    exists (fun s => exists n, match loop n s0 with
+                               | inl a => a = s
+                               | _ => False end).
+    repeat split.
+    { exists 0. rewrite loop_fuel_0. reflexivity. }
+    { intros s s' Hss' [n Hn]. exists (S n).
+      destruct (loop n s0) eqn:Hn_; [|contradiction]; subst a; rename Hn_ into Hn.
+      rewrite loop_fuel_S, Hn, Hss'. reflexivity. }
+    { intros s s' Hss' [n Hn].
+      destruct (loop n s0) eqn:Hn_; [|contradiction]; subst a; rename Hn_ into Hn.
+      assert (loop (S n) s0 = inr s') as HH by
+            (rewrite loop_fuel_S, Hn, Hss'; reflexivity).
+      rewrite (loop_fuel_irrelevant _ _ _ _ _ HH Hf); assumption. }
+  Qed.
+
+  Lemma loop_invariant_iff P f s0 b (H : loop f s0 = inr b) :
+      P b <->
+      (exists (inv : A -> Prop),
+          inv s0
+          /\ (forall s s', body s = inl s' -> inv s -> inv s')
+          /\ (forall s s', body s = inr s' -> inv s -> P s')).
+  Proof.
+    split.
+    { intros; eapply invariant_complete; eauto. }
+    { intros [? [?[]]]; eapply by_invariant; eauto. }
+  Qed.
+
+  (*
+WIP WIP
   
-  Fixpoint loop (fuel: nat) (start : continue_state)
-    : continue_state + break_state :=
-    match (body start) with
-    | inl state => inr state
-    | inr state => 
-      match fuel with
-      | O => inl state
-      | S fuel' => loop fuel' state
+  Fixpoint loop' (fuel : nat) (s : A) {struct fuel} : A + B :=
+    match fuel with
+    | O => inl s
+    | S fuel' =>
+      match body s with
+      | inl s => loop' fuel' s
+      | inr b => inr b
       end end.
+
+  Fixpoint loop'_cps (fuel : nat) (s : A) {struct fuel} : ~> A + B :=
+    match fuel with
+    | O => return (inl s)
+    | S fuel' =>
+      s_b <- body_cps s;
+        match s_b with
+        | inl s => loop'_cps fuel' s
+        | inr b => return (inr b)
+        end
+    end.
+    
   
   Lemma loop_break_step fuel start state :
     (body start = inl state) ->
@@ -88,33 +287,6 @@ Section Loops.
     loop fuel start = inr (loop_default fuel start default).
   Proof.
     cbv [terminates loop_default sum_rect] in *; break_match; congruence.
-  Qed.
-
-  Lemma invariant_iff fuel start default (H : terminates fuel start) P :
-      P (loop_default fuel start default) <->
-      (exists (inv : continue_state -> Prop),
-          inv start
-          /\ (forall s s', body s = inr s' -> inv s -> inv s')
-          /\ (forall s s', body s = inl s' -> inv s -> P s')).
-  Proof.
-    split;
-      [ exists (fun st => exists f e, (loop f st = inr e /\ P e ))
-      | destruct 1 as [?[??]]; revert dependent start; induction fuel ];
-      repeat match goal with
-             | _ => solve [ trivial | congruence | eauto ] 
-             | _ => progress destruct_head' @ex
-             | _ => progress destruct_head' @and
-             | _ => progress intros
-             | _ => progress cbv [loop_default terminates] in *
-             | _ => progress cbn [loop] in *
-             | _ => progress erewrite loop_default_eq by eassumption
-             | _ => progress erewrite loop_continue_step in * by eassumption
-             | _ => progress erewrite loop_break_step in * by eassumption
-             | _ => progress break_match_hyps
-             | _ => progress break_match
-             | _ => progress eexists
-             | H1:_, c:_ |- _ => progress specialize (H1 c); congruence
-             end.
   Qed.
 End Loops.
 
@@ -182,103 +354,4 @@ Definition for2 {state} (test : state -> bool) (increment body : state -> state)
 
 Definition for3 {state} init test increment body fuel :=
   @for2 state test increment body fuel init.
-
-Module _test.
-  Section GCD.
-    Definition gcd_step :=
-      fun '(a, b) => if Nat.ltb a b
-                     then inr (a, b-a)
-                     else if Nat.ltb b a
-                          then inr (a-b, b)
-                          else inl a.
-
-    Definition gcd fuel a b := loop_default gcd_step fuel (a,b) 0.
-
-    (* Eval cbv [gcd loop_default loop gcd_step] in (gcd 10 5 7). *)
-    
-    Example gcd_test : gcd 1000 28 35 = 7 := eq_refl.
-
-    Definition gcd_step_cps
-      : (nat * nat) -> forall T, (nat + (nat * nat) -> T) -> T 
-      :=
-        fun st T ret =>
-          let a := fst st in
-          let b := snd st in
-          if Nat.ltb a b
-          then ret (inr (a, b-a))
-          else if Nat.ltb b a
-               then ret (inr (a-b, b))
-               else ret (inl a).
-
-    Definition gcd_cps fuel a b {T} (ret:nat->T)
-      := loop_cps gcd_step_cps fuel (a,b) ret.
-
-    Example gcd_test2 : gcd_cps 1000 28 35 id = inr 7 := eq_refl.
-    
-    (* Eval cbv [gcd_cps loop_cps gcd_step_cps id] in (gcd_cps 2 5 7 id). *)
-
-  End GCD.
-
-  (* simple example--set all elements in a list to 0 *)
-  Section ZeroLoop.
-    Import Crypto.Util.ListUtil.
-
-    Definition zero_body (state : nat * list nat) :
-      list nat + (nat * list nat) :=
-      if dec (fst state < length (snd state))
-      then inr (S (fst state), set_nth (fst state) 0 (snd state))
-      else inl (snd state).
-
-    Lemma zero_body_progress (arr : list nat) :
-      progress zero_body (fun state : nat * list nat => length (snd state) - fst state).
-    Proof.
-      cbv [zero_body progress]; intros until 0;
-        repeat match goal with
-               | _ => progress autorewrite with cancel_pair distr_length
-               | _ => progress subst
-               | _ => progress break_match; intros
-               | _ => congruence
-               | H: inl _ = inl _ |- _ => injection H; intros; subst; clear H
-               | H: inr _ = inr _ |- _ => injection H; intros; subst ;clear H
-               | _ => lia
-               end.
-    Qed.
-
-    Definition zero_loop (arr : list nat) : list nat :=
-      loop_default zero_body (length arr) (0,arr) nil.
-    
-    Definition zero_invariant (state : nat * list nat) :=
-      fst state <= length (snd state)
-      /\ forall n, n < fst state -> nth_default 0 (snd state) n = 0.
-
-    Lemma zero_correct (arr : list nat) :
-      forall n, nth_default 0 (zero_loop arr) n = 0.
-    Proof.
-      intros. cbv [zero_loop].
-      eapply (by_invariant zero_invariant); eauto using zero_body_progress;
-        [ cbv [zero_invariant]; autorewrite with cancel_pair; split; intros; lia | ..];
-        cbv [zero_invariant zero_body];
-        intros until 0;
-        break_match; intros;
-          repeat match goal with
-                 | _ => congruence
-                 | H: inl _ = inl _ |- _ => injection H; intros; subst; clear H
-                 | H: inr _ = inr _ |- _ => injection H; intros; subst ;clear H
-                 | _ => progress split
-                 | _ => progress intros
-                 | _ => progress subst
-                 | _ => progress (autorewrite with cancel_pair distr_length in * )
-                 | _ => rewrite set_nth_nth_default by lia
-                 | _ => progress break_match
-                 | H : _ /\ _ |- _ => destruct H
-                 | H : (_,_) = ?x |- _ =>
-                   destruct x; inversion H; subst; destruct H
-                 | H : _ |- _ => apply H; lia
-                 | _ => lia
-                 end.
-      destruct (Compare_dec.lt_dec n (fst s)).
-      apply H1; lia.
-      apply nth_default_out_of_bounds; lia.
-    Qed.
-  End ZeroLoop.
-End _test.
+*)
