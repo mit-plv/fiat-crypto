@@ -166,7 +166,7 @@ while it is expected to have type
       { erewrite loop_fuel_S_stable by eassumption. congruence. } }
   Qed.
 
-  Lemma by_invariant_with_inv_for_measure' (inv P:_->Prop) measure f s0
+  Lemma by_invariant' (inv P:_->Prop) measure f s0
           (inv_init : inv s0)
           (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
           (inv_break : forall s s', body s = inr s' -> inv s -> P s')
@@ -195,11 +195,106 @@ while it is expected to have type
           (measure_fuel : measure s0 < f)
     : exists b, loop f s0 = inr b /\ P b.
   Proof.
-    pose proof (by_invariant_with_inv_for_measure' inv P measure f s0);
+    pose proof (by_invariant' inv P measure f s0);
       specialize_by assumption; break_match_hyps; [contradiction|eauto].
   Qed.
 
-  Lemma partial_by_invariant' P inv f s0
+  Definition iterations_required fuel s : option nat :=
+    nat_rect _ None
+             (fun n r =>
+                match r with
+                | Some _ => r
+                | None =>
+                  match loop (S n) s with
+                  | inl a => None
+                  | inr b => Some (S n)
+                  end
+                end
+             ) fuel.
+
+  Definition universal_measure f s :=
+    match iterations_required f s with
+    | None => 0
+    | Some s => pred s
+    end.
+  
+  Lemma iterations_required_sufficient fuel s n
+        (H:iterations_required fuel s = Some n)
+    : exists b, loop n s = inr b.
+  Proof.
+    induction fuel; [cbv in H; inversion H|].
+    change (iterations_required (S fuel) s)
+      with (match iterations_required fuel s with
+            | None => match loop (S fuel) s with
+                      | inl _ => None
+                      | inr _ => Some (S fuel)
+                      end
+            | Some _ => iterations_required fuel s
+            end) in *.
+    destruct (iterations_required fuel s) eqn:?; inversion_option; [ solve[eauto] |].
+    destruct (loop (S fuel) s) eqn:HH; inversion_option; []; subst.
+    rewrite HH; eauto.
+  Qed.
+
+  Lemma iterations_required_le_fuel fuel s n
+        (H:iterations_required fuel s = Some n) : n <= fuel.
+  Proof.
+    revert H; revert n; revert s; induction fuel; intros.
+    { cbv in H. inversion H. }
+    change (iterations_required (S fuel) s)
+      with (match iterations_required fuel s with
+            | None => match loop (S fuel) s with
+                      | inl _ => None
+                      | inr _ => Some (S fuel)
+                      end
+            | Some _ => iterations_required fuel s
+            end) in *.
+    destruct (iterations_required fuel s) eqn:HH; inversion_option; subst.
+    { specialize (IHfuel _ _ HH); lia. }
+    { destruct (loop (S fuel) s) eqn:?; inversion_option; []; lia. }
+  Qed.
+
+  Lemma iterations_required_complete fuel s b (H:loop fuel s = inr b) :
+    exists n, iterations_required fuel s = Some n /\ loop n s = inr b.
+  Proof.
+    induction fuel.
+    { rewrite loop_fuel_0 in H; inversion H. }
+    { change (iterations_required (S fuel) s)
+        with (match iterations_required fuel s with
+              | None => match loop (S fuel) s with
+                        | inl _ => None
+                        | inr _ => Some (S fuel)
+                        end
+              | Some _ => iterations_required fuel s
+              end) in *.
+      rewrite (loop_fuel_S_last fuel s).
+      destruct (loop fuel s) eqn:Heqs.
+      { pose proof H as HH.
+        rewrite loop_fuel_S_last, Heqs in HH; rewrite HH.
+        destruct (iterations_required fuel s) eqn:HX; [|solve [eauto]].
+        apply iterations_required_sufficient in HX; destruct HX as [x Hx].
+        exists n. (* unique *) admit. }
+      { destruct IHfuel as [? [Hx1 Hx2]].
+        admit. (* unique *)
+        rewrite Hx1; eauto. }
+  Qed.
+
+  Lemma inveriant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
+        : exists inv measure,
+          inv s0
+          /\ (forall s s', body s = inl s' -> inv s -> inv s')
+          /\ (forall s s', body s = inr s' -> inv s -> P s')
+          /\ (forall s s', body s = inl s' -> inv s -> measure s' < measure s)
+          /\ measure s0 < f.
+  Proof.
+    exists (fun s => match loop (S (universal_measure f s)) s0 with
+                     | inl a => False
+                     | inr r => r = b end).
+    exists (universal_measure f).
+    repeat split.
+    { rewrite loop_fuel_S_first; break_match.
+
+  Lemma partial_by_invariant P inv f s0
         (inv_init : inv s0)
         (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
         (inv_break : forall s s', body s = inr s' -> inv s -> P s')
@@ -215,17 +310,17 @@ while it is expected to have type
         [ destruct (body a) eqn:Ha; eauto | eauto ]. }
   Qed.
 
-  Lemma partial_by_invariant P inv f s0 b (H : loop f s0 = inr b)
+  Lemma by_invariant_inr P inv f s0 b (H : loop f s0 = inr b)
           (inv_init : inv s0)
           (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
           (inv_break : forall s s', body s = inr s' -> inv s -> P s')
       : P b.
   Proof.
-    pose proof (partial_by_invariant' P inv f s0) as HH.
+    pose proof (partial_by_invariant P inv f s0) as HH.
     rewrite H in HH; eauto.
   Qed.
 
-  Lemma invariant_complete (P:_->Prop) f s0 b (Hf : loop f s0 = inr b) (H : P b) :
+  Lemma by_invariant_inr_complete (P:_->Prop) f s0 b (Hf : loop f s0 = inr b) (H : P b) :
     exists (inv : A -> Prop),
       inv s0
       /\ (forall s s', body s = inl s' -> inv s -> inv s')
@@ -246,7 +341,7 @@ while it is expected to have type
       rewrite (loop_fuel_irrelevant _ _ _ _ _ HH Hf); assumption. }
   Qed.
 
-  Lemma loop_invariant_iff P f s0 b (H : loop f s0 = inr b) :
+  Lemma invariant_inr_iff P f s0 b (H : loop f s0 = inr b) :
       P b <->
       (exists (inv : A -> Prop),
           inv s0
@@ -254,8 +349,8 @@ while it is expected to have type
           /\ (forall s s', body s = inr s' -> inv s -> P s')).
   Proof.
     split.
-    { intros; eapply invariant_complete; eauto. }
-    { intros [? [?[]]]; eapply partial_by_invariant; eauto. }
+    { intros; eapply by_invariant_inr_complete; eauto. }
+    { intros [? [?[]]]; eapply by_invariant_inr; eauto. }
   Qed.
 
   (*
