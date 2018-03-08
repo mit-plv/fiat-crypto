@@ -6291,7 +6291,8 @@ Module MontgomeryReduction.
             (N'_good : Z.equiv_modulo R (N*N') (-1)) (R'_good: Z.equiv_modulo N (R*R') 1).
 
     Context (w w_mul : nat -> Z).
-    Context (w_mul_sq : forall i, (w_mul i) * (w_mul i) = w i).
+    Context (n:nat) (Hn_nz: n <> 0%nat).
+    Context (w_mul_pown : forall i, (w_mul i) ^ n = w i).
     Context (w_mul_0 : w_mul 0%nat = 1)
             (w_mul_nonzero : forall i, w_mul i <> 0)
             (w_mul_positive : forall i, w_mul i > 0)
@@ -6303,16 +6304,16 @@ Module MontgomeryReduction.
             (w_multiples : forall i, w (S i) mod w i = 0)
             (w_divides : forall i : nat, w (S i) / w i > 0).
     Context (w_1_gt1 : w 1 > 1) (w_mul_1_gt1 : w_mul 1 > 1).
-    Context (n:nat) (Hn: n = 2%nat).
+    Context (nout : nat) (Hnout : nout = 2%nat).
 
     (* simpler version of mul_converted with a carry chain that aligns
       terms in the intermediate weight with the final weight *)
-    Definition mul_converted_aligned w w' n m :=
-      MulConverted.mul_converted w w' n n m m m (map (fun i => ((m * (i + 1)) - 1))%nat (seq 0 m)).
+    Definition mul_converted_aligned w w' (log_w'_w : nat) n m nout :=
+      MulConverted.mul_converted w w' n n m m nout (map (fun i => ((log_w'_w * (i + 1)) - 1))%nat (seq 0 nout)).
 
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (mul_converted_aligned w w_mul 1%nat n [fst lo_hi] [N']) 0  in
-      dlet_nd t1_t2 := mul_converted_aligned w w_mul 1%nat n [y] [N] in
+      dlet_nd y := nth_default 0 (mul_converted_aligned w w_mul n 1%nat n nout [fst lo_hi] [N']) 0  in
+      dlet_nd t1_t2 := mul_converted_aligned w w_mul n 1%nat n nout [y] [N] in
       dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
       dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
@@ -6343,7 +6344,7 @@ Module MontgomeryReduction.
     Proof.
       rewrite <-reduce_via_partial_alt_eq by nia.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
-      rewrite Hlo, Hhi. subst n.
+      rewrite Hlo, Hhi. subst nout.
       assert (0 <= T mod R * N' < w 2) by (solve_range).
       cbv [mul_converted_aligned]. cbn [seq map].
       autorewrite with mul_conv.
@@ -6388,11 +6389,11 @@ Module MontgomeryReduction.
   Derive montred_gen
          SuchThat (forall (N R N' : Z)
                           (w w_mul : nat -> Z)
-                          (n: nat)
+                          (n nout: nat)
                           (lo_hi : Z * Z),
                       Interp (t:=type.reify_type_of montred')
-                             montred_gen N R N' w w_mul n lo_hi
-                      = montred' N R N' w w_mul n lo_hi)
+                             montred_gen N R N' w w_mul n nout lo_hi
+                      = montred' N R N' w w_mul n nout lo_hi)
          As montred_gen_correct.
   Proof.
     intros.
@@ -6436,6 +6437,7 @@ Module MontgomeryReduction.
     Let rR := GallinaReify.Reify R.
     Let rN' := GallinaReify.Reify N'.
     Let rn := GallinaReify.Reify 2%nat.
+    Let rnout := GallinaReify.Reify 2%nat.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
     Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z * type.Z))
       := (bound, bound).
@@ -6472,6 +6474,7 @@ Module MontgomeryReduction.
                             @ (rw _)
                             @ (rw_mul _)
                             @ (rn _)
+                            @ (rnout _)
                       )%expr in
          check_args res.
 
@@ -6489,7 +6492,7 @@ Module MontgomeryReduction.
           (bs:=out_bounds)
           arg
           rv
-        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_mul) (Interp rn) arg').
+        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_mul) (Interp rn) (Interp rnout) arg').
 
     Lemma rmontred_correct
           rv
