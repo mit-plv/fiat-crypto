@@ -1055,14 +1055,17 @@ Module Rows.
 
         Ltac push :=
           repeat match goal with
+                 | _ => progress intros
                  | _ => progress cbv [Let_In]
                  | _ => rewrite Nat.add_1_r
                  | _ => erewrite Positional.eval_snoc by eauto
                  | H : length _ = _ |- _ => rewrite H
                  | H: 0%nat = _ |- _ => rewrite <-H
-                 | p := _ |- _ => subst p
-                 | _ => progress autorewrite with cancel_pair natsimplify push_sum_rows list
+                 | [p := _ |- _] => subst p
+                 | _ => progress autorewrite with cancel_pair natsimplify push_sum_rows list push_nth_default
+                 | _ => progress autorewrite with cancel_pair in *
                  | _ => progress distr_length
+                 | _ => progress break_match
                  | _ => ring
                  | _ => solve [ repeat (f_equal; try ring) ]
                  | _ => tauto
@@ -1130,11 +1133,26 @@ Module Rows.
         Lemma weight_divides_full j i : (i <= j)%nat -> weight j / weight i > 0.
         Proof. auto using Z.div_positive_gt_0, Columns.weight_multiples_full. Qed.
 
+        (* TODO: move to ZUtil *)
+        Lemma add_mod_div_multiple a b n m:
+          n > 0 ->
+          0 <= m / n ->
+          m mod n = 0 ->
+          (a / n + b) mod (m / n) = (a + n * b) mod m / n.
+        Proof.
+          intros. rewrite <-!Z.div_add' by auto using Z.positive_is_nonzero.
+          rewrite Z.mod_pull_div, Z.mul_div_eq' by auto using Z.gt_lt.
+          repeat (f_equal; try omega).
+        Qed.
+        
         Lemma sum_rows'_partitions row1 :
-          forall n m start_state row2 row1' row2',
-            length (fst start_state) = m -> length row1 = n -> length row2 = n ->
-            length row1' = m -> length row2' = m ->
-            let nm := (n + m)%nat in
+          forall nm start_state row2 row1' row2',
+            let m := length (fst start_state) in
+            let n := length row1 in
+            length row2 = n ->
+            length row1' = m ->
+            length row2' = m ->
+            nm = (n + m)%nat ->
             let eval := Positional.eval weight in
             snd start_state = (eval m row1' + eval m row2') / weight m ->
             (forall j, (j < m)%nat ->
@@ -1143,44 +1161,23 @@ Module Rows.
                       nth_default 0 (fst (sum_rows' start_state row1 row2)) i
                       = ((eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) mod (weight (S i))) / (weight i).
         Proof.
-          cbv [sum_rows' Let_In].
-          induction row1 as [|x1 row1]; intros; rewrite fold_left_rev_right in *;
-            destruct row2 as [|x2 row2]; distr_length; [ subst n | ];
-              repeat match goal with
-                     | _ => progress cbn [fold_left]
-                     | H : length _ = _ |- _ => rewrite H
-                     | H: _ |- _ => solve [apply H; omega]
-                     | _ => progress autorewrite with push_eval zsimplify_fast push_combine list natsimplify cancel_pair to_div_mod
-                     end.
-
-          specialize (IHrow1 (pred n) (S m)).
-          replace (pred n + S m)%nat with (n + m)%nat in IHrow1 by omega.
+          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push.
+          
           rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
-          rewrite <-fold_left_rev_right.
-          apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length; try omega;
+          apply IHrow1; clear IHrow1; push;
             repeat match goal with
-                   | _ => progress intros
-                   | _ => progress autorewrite with push_nth_default
-                   | _ => progress break_match
-                   | H : length _ = _ |- _ => rewrite H
                    | H : ?LHS = _ |- _ =>
                      match LHS with context [start_state] => rewrite H end
                    | H : context [nth_default 0 (fst start_state)] |- _ => rewrite H by omega
-                   | _ => rewrite Positional.eval_snoc with (n:=m) by eauto
+                   | _ => rewrite <-(Z.add_assoc _ x1 x2)
                    end.
-          { erewrite @Columns.weight_div_mod with (j:=S m) (i:=m) by eauto.
-            rewrite <-Z.div_div by auto using Z.gt_lt.
-            autorewrite with zsimplify.
-            f_equal; ring. }
-          { erewrite @Columns.weight_div_mod with (j:=m) (i:=S j) by (eauto; omega).
-            push_Zmod. autorewrite with zsimplify. lia. }
-          { replace j with m by omega.
-            autorewrite with push_nth_default natsimplify.
-            rewrite <-!Z.div_add' by auto.
-            rewrite Z.mod_pull_div, Z.mul_div_eq' by (auto using Z.lt_le_incl, Z.gt_lt).
-            rewrite weight_multiples.
-            autorewrite with zsimplify_fast.
-            repeat (f_equal; try ring). }
+          { rewrite (@Columns.flatten_div_step weight) by auto using Z.gt_lt.
+            rewrite Z.mul_div_eq_full by auto; rewrite weight_multiples. push. }
+          { erewrite @Columns.weight_div_mod with (j:=length (fst start_state)) (i:=S j) by (eauto; omega).
+            push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
+          { push. replace (length (fst start_state)) with j in * by omega.
+            push. rewrite add_mod_div_multiple by auto using Z.lt_le_incl.
+            push. }
         Qed.
         
         Lemma sum_rows_partitions row1: forall row2 n i,
