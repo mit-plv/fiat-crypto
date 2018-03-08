@@ -2668,6 +2668,7 @@ Module Compilers.
                  | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
                  | Nat_succ => Nat.succ
                  | Nat_add => curry2 Nat.add
+                 | Nat_sub => curry2 Nat.sub
                  | Nat_mul => curry2 Nat.mul
                  | Nat_max => curry2 Nat.max
                  | nil t => curry0 (@Datatypes.nil (type.interp t))
@@ -4637,6 +4638,7 @@ Module Compilers.
              | ident.primitive _ _
              | ident.Nat_succ
              | ident.Nat_add
+             | ident.Nat_sub
              | ident.Nat_mul
              | ident.Nat_max
              | ident.bool_rect _
@@ -7950,13 +7952,13 @@ Module MontgomeryReduction.
 
     Context (Zlog2R : Z).
     Let w : nat -> Z := weight Zlog2R 1.
-    Let w_half : nat -> Z := weight (Zlog2R / 2) 1.
+    Let w_mul : nat -> Z := weight (Zlog2R / 2) 1.
     Context (R_square : 2 * (Zlog2R / 2) = Zlog2R)
             (R_big_enough : 2 <= Zlog2R)
             (R_two_pow : 2^Zlog2R = R).
-    Local Lemma w_half_sq : forall i, (w_half i) * (w_half i) = w i.
+    Local Lemma w_mul_sq : forall i, (w_mul i) * (w_mul i) = w i.
     Proof.
-      cbv [w_half w weight]; intro.
+      cbv [w_mul w weight]; intro.
       autorewrite with pull_Zpow zsimplify.
       rewrite Z.mul_assoc, R_square.
       reflexivity.
@@ -7965,14 +7967,14 @@ Module MontgomeryReduction.
     Proof. clear -R_big_enough; lia. Qed.
     Local Lemma half_log2R_good : 0 < 1 <= Zlog2R / 2.
     Proof. clear -R_big_enough; Z.div_mod_to_quot_rem; nia. Qed.
-    Let w_half_0 : w_half 0%nat = 1 := weight_0 _ _.
-    Let w_half_nonzero : forall i, w_half i <> 0
+    Let w_mul_0 : w_mul 0%nat = 1 := weight_0 _ _.
+    Let w_mul_nonzero : forall i, w_mul i <> 0
       := weight_nz _ _ half_log2R_good.
-    Let w_half_positive : forall i, w_half i > 0
+    Let w_mul_positive : forall i, w_mul i > 0
       := weight_positive _ _ half_log2R_good.
-    Let w_half_multiples : forall i, w_half (S i) mod w_half i = 0
+    Let w_mul_multiples : forall i, w_mul (S i) mod w_mul i = 0
       := weight_multiples _ _ half_log2R_good.
-    Let w_half_divides : forall i : nat, w_half (S i) / w_half i > 0
+    Let w_mul_divides : forall i : nat, w_mul (S i) / w_mul i > 0
       := weight_divides _ _ half_log2R_good.
     Let w_0 : w 0%nat = 1 := weight_0 _ _.
     Let w_nonzero : forall i, w i <> 0
@@ -7984,7 +7986,7 @@ Module MontgomeryReduction.
     Let w_divides : forall i : nat, w (S i) / w i > 0
       := weight_divides _ _ log2R_good.
     Let w_1_gt1 : w 1 > 1 := weight_1_gt_1 _ _ log2R_good.
-    Let w_half_1_gt1 : w_half 1 > 1 := weight_1_gt_1 _ _ half_log2R_good.
+    Let w_mul_1_gt1 : w_mul 1 > 1 := weight_1_gt_1 _ _ half_log2R_good.
     Context (n:nat) (Hn: n = 2%nat).
 
     (* simpler version of mul_converted with a carry chain that aligns
@@ -7993,8 +7995,8 @@ Module MontgomeryReduction.
       MulConverted.mul_converted w w' n n m m m (map (fun i => ((m * (i + 1)) - 1))%nat (seq 0 m)).
 
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (mul_converted_aligned w w_half 1%nat n [fst lo_hi] [N']) 0  in
-      dlet_nd t1_t2 := mul_converted_aligned w w_half 1%nat n [y] [N] in
+      dlet_nd y := nth_default 0 (mul_converted_aligned w w_mul 1%nat n [fst lo_hi] [N']) 0  in
+      dlet_nd t1_t2 := mul_converted_aligned w w_mul 1%nat n [y] [N] in
       dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
       dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
