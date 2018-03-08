@@ -12,6 +12,17 @@ Require Import Crypto.Util.LetIn.
 
 Require Import Crypto.Util.CPSNotations.
 
+(* TODO: do we have these anywhere? 
+Ltac forward H :=
+  match type of H with
+  | ?A -> ?B => let HA := fresh in assert A as HA; [|specialize(H HA)]
+  end.
+Ltac forward_by H t :=
+  match type of H with
+  | ?A -> ?B => let HA := fresh in assert A as HA by t; [|specialize(H HA)]
+  end.
+ *)
+
 Section Loops.
   Context {A B : Type} (body : A -> A + B).
 
@@ -107,18 +118,30 @@ while it is expected to have type
   Lemma loop_fuel_0 s : loop 0 s = inl s.
   Proof. reflexivity. Qed.
 
-  Lemma loop_fuel_S n s : loop (S n) s =
+  Lemma loop_fuel_S_last n s : loop (S n) s =
                           match loop n s with
                           | inl a => body a
                           | inr b => loop n s
                           end.
   Proof. reflexivity. Qed.
 
+  Lemma loop_fuel_S_first n s : loop (S n) s =
+                                match body s with
+                                | inl a => loop n a
+                                | inr b => inr b
+                                end.
+  Proof.
+    revert s; induction n; intros s.
+    { break_match; rewrite ?loop_fuel_S_last, ?loop_fuel_0; congruence. }
+    { rewrite loop_fuel_S_last, IHn.
+      destruct (body s) eqn:?; [rewrite loop_fuel_S_last; reflexivity | reflexivity]. }
+  Qed.
+
   Lemma loop_fuel_S_stable n s b (H : loop n s = inr b) : loop (S n) s = inr b.
   Proof.
     revert H; revert b; revert s; induction n; intros ? ? H.
     { cbn [loop nat_rect] in H. congruence_sum. }
-    { rewrite loop_fuel_S.
+    { rewrite loop_fuel_S_last.
       break_match; congruence_sum; reflexivity. }
   Qed.
 
@@ -150,15 +173,33 @@ while it is expected to have type
           (measure_decreases : forall s s', body s = inl s' -> inv s -> measure s' < measure s)
           (measure_fuel : measure s0 < f)
     : match loop f s0 with
-      | inl a => inv a
+      | inl a => False
       | inr s => P s
       end.
   Proof.
     revert dependent s0; induction f; intros.
     { exfalso; lia. }
-  Abort. (* I don't know how to prove this one *)
+    { rewrite loop_fuel_S_first.
+      destruct (body s0) eqn:Hs0a; [|solve [eauto] ].
+      specialize (IHf a).
+      specialize (inv_continue s0 a Hs0a inv_init).
+      specialize (measure_decreases s0 a).
+      specialize_by (assumption || lia); auto. }
+  Qed.
 
-  Lemma by_invariant' P inv f s0
+  Lemma by_invariant (inv P:_->Prop) measure f s0
+          (inv_init : inv s0)
+          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
+          (inv_break : forall s s', body s = inr s' -> inv s -> P s')
+          (measure_decreases : forall s s', body s = inl s' -> inv s -> measure s' < measure s)
+          (measure_fuel : measure s0 < f)
+    : exists b, loop f s0 = inr b /\ P b.
+  Proof.
+    pose proof (by_invariant_with_inv_for_measure' inv P measure f s0);
+      specialize_by assumption; break_match_hyps; [contradiction|eauto].
+  Qed.
+
+  Lemma partial_by_invariant' P inv f s0
         (inv_init : inv s0)
         (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
         (inv_break : forall s s', body s = inr s' -> inv s -> P s')
@@ -169,18 +210,18 @@ while it is expected to have type
   Proof.
     induction f.
     { rewrite loop_fuel_0; auto. }
-    { rewrite loop_fuel_S.
+    { rewrite loop_fuel_S_last.
       destruct (loop f s0) eqn:Hn;
         [ destruct (body a) eqn:Ha; eauto | eauto ]. }
   Qed.
 
-  Lemma by_invariant P inv f s0 b (H : loop f s0 = inr b)
+  Lemma partial_by_invariant P inv f s0 b (H : loop f s0 = inr b)
           (inv_init : inv s0)
           (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
           (inv_break : forall s s', body s = inr s' -> inv s -> P s')
       : P b.
   Proof.
-    pose proof (by_invariant' P inv f s0) as HH.
+    pose proof (partial_by_invariant' P inv f s0) as HH.
     rewrite H in HH; eauto.
   Qed.
 
@@ -197,11 +238,11 @@ while it is expected to have type
     { exists 0. rewrite loop_fuel_0. reflexivity. }
     { intros s s' Hss' [n Hn]. exists (S n).
       destruct (loop n s0) eqn:Hn_; [|contradiction]; subst a; rename Hn_ into Hn.
-      rewrite loop_fuel_S, Hn, Hss'. reflexivity. }
+      rewrite loop_fuel_S_last, Hn, Hss'. reflexivity. }
     { intros s s' Hss' [n Hn].
       destruct (loop n s0) eqn:Hn_; [|contradiction]; subst a; rename Hn_ into Hn.
       assert (loop (S n) s0 = inr s') as HH by
-            (rewrite loop_fuel_S, Hn, Hss'; reflexivity).
+            (rewrite loop_fuel_S_last, Hn, Hss'; reflexivity).
       rewrite (loop_fuel_irrelevant _ _ _ _ _ HH Hf); assumption. }
   Qed.
 
@@ -214,7 +255,7 @@ while it is expected to have type
   Proof.
     split.
     { intros; eapply invariant_complete; eauto. }
-    { intros [? [?[]]]; eapply by_invariant; eauto. }
+    { intros [? [?[]]]; eapply partial_by_invariant; eauto. }
   Qed.
 
   (*
