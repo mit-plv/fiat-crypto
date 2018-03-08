@@ -6546,17 +6546,17 @@ Module Montgomery256.
     expr_let 5 := MUL_256 @@ ((uint128)(fst @@ x_1 >> 128), (79228162514264337593543950337)) in
     expr_let 8 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (340282366841710300986003757985643364352)) in
     expr_let 12 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (79228162514264337593543950337)) in
-    expr_let 13 := ADD_256 @@ ((uint128)(((uint128)x_5 & 340282366920938463463374607431768211455) << 128), x_12) in
-    expr_let 18 := ADD_256 @@ ((uint128)(((uint128)x_8 & 340282366920938463463374607431768211455) << 128), fst @@ x_13) in
-    expr_let 24 := MUL_256 @@ ((uint128)(fst @@ x_18 >> 128), (79228162514264337593543950335)) in
-    expr_let 27 := MUL_256 @@ (((uint128)fst @@ x_18 & 340282366920938463463374607431768211455), (340282366841710300967557013911933812736)) in
-    expr_let 31 := MUL_256 @@ (((uint128)fst @@ x_18 & 340282366920938463463374607431768211455), (79228162514264337593543950335)) in
-    expr_let 32 := ADD_256 @@ ((uint128)(((uint128)x_24 & 340282366920938463463374607431768211455) << 128), x_31) in
-    expr_let 33 := MUL_256 @@ ((uint128)(fst @@ x_18 >> 128), (340282366841710300967557013911933812736)) in
-    expr_let 34 := ADDC_256 @@ (snd @@ x_32, x_33, (uint128)(x_27 >> 128)) in
-    expr_let 37 := ADD_256 @@ ((uint128)(((uint128)x_27 & 340282366920938463463374607431768211455) << 128), fst @@ x_32) in
-    expr_let 39 := ADDC_256 @@ (snd @@ x_37, (uint128)(x_24 >> 128), fst @@ x_34) in
-    expr_let 40 := ADD_256 @@ (fst @@ x_1, fst @@ x_37) in
+    expr_let 13 := ADD_256 @@ ((uint256)(((uint128)x_8 & 340282366920938463463374607431768211455) << 128), x_12) in
+    expr_let 17 := ADD_256 @@ ((uint256)(((uint128)x_5 & 340282366920938463463374607431768211455) << 128), fst @@ x_13) in
+    expr_let 24 := MUL_256 @@ ((uint128)(fst @@ x_17 >> 128), (79228162514264337593543950335)) in
+    expr_let 27 := MUL_256 @@ (((uint128)fst @@ x_17 & 340282366920938463463374607431768211455), (340282366841710300967557013911933812736)) in
+    expr_let 31 := MUL_256 @@ (((uint128)fst @@ x_17 & 340282366920938463463374607431768211455), (79228162514264337593543950335)) in
+    expr_let 32 := ADD_256 @@ ((uint256)(((uint128)x_27 & 340282366920938463463374607431768211455) << 128), x_31) in
+    expr_let 33 := ADDC_256 @@ (snd @@ x_32, (uint128)(x_24 >> 128), (uint128)(x_27 >> 128)) in
+    expr_let 36 := ADD_256 @@ ((uint256)(((uint128)x_24 & 340282366920938463463374607431768211455) << 128), fst @@ x_32) in
+    expr_let 37 := MUL_256 @@ ((uint128)(fst @@ x_17 >> 128), (340282366841710300967557013911933812736)) in
+    expr_let 39 := ADDC_256 @@ (snd @@ x_36, x_37, fst @@ x_33) in
+    expr_let 40 := ADD_256 @@ (fst @@ x_1, fst @@ x_36) in
     expr_let 41 := ADDC_256 @@ (snd @@ x_40, snd @@ x_1, fst @@ x_39) in
     expr_let 42 := SELC @@ (snd @@ x_41, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
     expr_let 43 := fst @@ (SUB_256 @@ (fst @@ x_41, x_42)) in
@@ -6672,17 +6672,17 @@ Print Montgomery256.montred256.
 c.Mul128x128($r5, c.UpperHalf($r1_lo), c.LowerHalf(RegPinv));
 c.Mul128x128($r8, c.LowerHalf($r1_lo), c.UpperHalf(RegPinv));
 c.Mul128x128($r12, c.LowerHalf($r1_lo), c.LowerHalf(RegPinv));
-c.Add256($r13, (c.LowerHalf($r5) << 128), $r12);
-c.Add256($r18, (c.LowerHalf($r8) << 128), $r13_lo);
-c.Mul128x128($r24, c.UpperHalf($r18_lo), c.LowerHalf(RegMod));
-c.Mul128x128($r27, c.LowerHalf($r18_lo), c.UpperHalf(RegMod));
-c.Mul128x128($r31, c.LowerHalf($r18_lo), c.LowerHalf(RegMod));
-c.Add256($r32, (c.LowerHalf($r24) << 128), $r31);
-c.Mul128x128($r33, c.UpperHalf($r18_lo), c.UpperHalf(RegMod));
-c.Addc($r34, $r33, c.UpperHalf($r27));
-c.Add256($r37, (c.LowerHalf($r27) << 128), $r32_lo);
-c.Addc($r39, c.UpperHalf($r24), $r34_lo);
-c.Add256($r40, $r1_lo, $r37_lo);
+c.Add256($r13, (c.LowerHalf($r8) << 128), $r12);
+c.Add256($r17, (c.LowerHalf($r5) << 128), $r13_lo);
+c.Mul128x128($r24, c.UpperHalf($r17_lo), c.LowerHalf(RegMod));
+c.Mul128x128($r27, c.LowerHalf($r17_lo), c.UpperHalf(RegMod));
+c.Mul128x128($r31, c.LowerHalf($r17_lo), c.LowerHalf(RegMod));
+c.Add256($r32, (c.LowerHalf($r27) << 128), $r31);
+c.Addc($r33, c.UpperHalf($r24), c.UpperHalf($r27));
+c.Add256($r36, (c.LowerHalf($r24) << 128), $r32_lo);
+c.Mul128x128($r37, c.UpperHalf($r17_lo), c.UpperHalf(RegMod));
+c.Addc($r39, $r37, $r33_lo);
+c.Add256($r40, $r1_lo, $r36_lo);
 c.Addc($r41, $r1_hi, $r39_lo);
 c.Selc($r42, RegZero, RegMod);
 c.Sub($r43, $r41_lo, $r42);
