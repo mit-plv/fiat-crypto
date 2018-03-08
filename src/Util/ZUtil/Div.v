@@ -124,6 +124,9 @@ Module Z.
   Qed.
   Hint Rewrite div_add_exact using zutil_arith : zsimplify.
 
+  Lemma Z_divide_div_mul_exact' a b c : b <> 0 -> (b | a) -> a * c / b = c * (a / b).
+  Proof. intros. rewrite Z.mul_comm. auto using Z.divide_div_mul_exact. Qed.
+
   Lemma div_sub_mod_exact a b : b <> 0 -> a / b = (a - a mod b) / b.
   Proof.
     intro.

@@ -98,6 +98,9 @@ Module Export List.
   End FlatMap.
   Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
 
+  Lemma rev_cons {A} x ls : @rev A (x :: ls) = rev ls ++ [x]. Proof. reflexivity. Qed. 
+  Hint Rewrite @rev_cons : list.
+
   Section FoldRight.
     Context {A B} (f:B->A->A).
     Lemma fold_right_nil : forall {A B} (f:B->A->A) a,
@@ -106,8 +109,14 @@ Module Export List.
     Lemma fold_right_cons : forall a b bs,
       fold_right f a (b::bs) = f b (fold_right f a bs).
     Proof. reflexivity. Qed.
+    Lemma fold_right_snoc a x ls:
+      @fold_right A B f a (ls ++ [x]) = fold_right f (f x a) ls.
+    Proof.
+      rewrite <-(rev_involutive ls), <-rev_cons.
+      rewrite !fold_left_rev_right; reflexivity.
+    Qed.
   End FoldRight.
-  Hint Rewrite @fold_right_nil @fold_right_cons : simpl_fold_right push_fold_right.
+  Hint Rewrite @fold_right_nil @fold_right_cons @fold_right_snoc : simpl_fold_right push_fold_right.
 
   Section Partition.
     Lemma partition_nil {A} (f:A->_) : partition f nil = (nil, nil).
@@ -1860,3 +1869,10 @@ Ltac expand_lists _ :=
     | _ => idtac
     end;
     subst v; reflexivity ].
+
+Lemma list_rect_to_match A (P:list A -> Type) (Pnil: P nil) (PS: forall a tl, P (a :: tl)) ls :
+  @list_rect A P Pnil (fun a tl _ => PS a tl) ls = match ls with
+                                                   | cons a tl => PS a tl
+                                                   | nil => Pnil
+                                                   end.
+Proof. destruct ls; reflexivity. Qed.

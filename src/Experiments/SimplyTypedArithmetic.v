@@ -640,14 +640,6 @@ Module Columns.
       apply Positional.eval_snoc; distr_length.
     Qed. Hint Rewrite eval_snoc using (solve [distr_length]) : push_eval.
 
-    (* TODO: move to ListUtil *)
-    Lemma list_rect_to_match A (P:list A -> Type) (Pnil: P []) (PS: forall a tl, P (a :: tl)) ls :
-      @list_rect A P Pnil (fun a tl _ => PS a tl) ls = match ls with
-                                                       | cons a tl => PS a tl
-                                                       | nil => Pnil
-                                                       end.
-    Proof. destruct ls; reflexivity. Qed.
-
     Hint Rewrite <- Z.div_add' using omega : pull_Zdiv.
 
     Ltac cases :=
@@ -777,10 +769,6 @@ Module Columns.
 
       Lemma flatten_snoc x inp : flatten (inp ++ [x]) = flatten_step x (flatten inp).
       Proof. cbv [flatten]. rewrite rev_unit. reflexivity. Qed.
-
-      (* TODO: move to ZUtil *)
-      Lemma Z_divide_div_mul_exact' a b c : b <> 0 -> (b | a) -> a * c / b = c * (a / b).
-      Proof. intros. rewrite Z.mul_comm. auto using Z.divide_div_mul_exact. Qed.
 
       Lemma flatten_partitions inp:
         forall n i, length inp = n -> (i < n)%nat ->
@@ -1238,19 +1226,6 @@ Module Rows.
         let first_row := hd nil inp in
         flatten' (first_row, 0) (hd (Positional.zeros (length first_row)) (tl inp) :: tl (tl inp)).
 
-      (* TODO : move to ListUtil *)
-      Lemma rev_cons {A} x ls : @rev A (x :: ls) = rev ls ++ [x]. Proof. reflexivity. Qed. 
-      Hint Rewrite @rev_cons : list.
-      
-      (* TODO: move to ListUtil *)
-      Lemma fold_right_snoc {A B} f a x ls:
-        @fold_right A B f a (ls ++ [x]) = fold_right f (f x a) ls.
-      Proof.
-        rewrite <-(rev_involutive ls), <-rev_cons.
-        rewrite !fold_left_rev_right; reflexivity.
-      Qed.
-      Hint Rewrite @fold_right_snoc : push_fold_right.
-      
       Lemma flatten'_cons state r inp :
         flatten' state (r :: inp) = flatten' (fst (sum_rows r (fst state)), snd state + snd (sum_rows r (fst state))) inp.
       Proof. cbv [flatten']; autorewrite with list push_fold_right. reflexivity. Qed.
