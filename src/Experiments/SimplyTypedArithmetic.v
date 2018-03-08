@@ -2244,6 +2244,7 @@ Module Compilers.
           | Nat_max : ident (nat * nat) nat
           | Nat_mul : ident (nat * nat) nat
           | Nat_add : ident (nat * nat) nat
+          | Nat_sub : ident (nat * nat) nat
           | nil {t} : ident () (list t)
           | cons {t} : ident (t * list t) (list t)
           | fst {A B} : ident (A * B) A
@@ -2311,6 +2312,7 @@ Module Compilers.
                | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
                | Nat_succ => Nat.succ
                | Nat_add => curry2 Nat.add
+               | Nat_sub => curry2 Nat.sub
                | Nat_mul => curry2 Nat.mul
                | Nat_max => curry2 Nat.max
                | nil t => curry0 (@Datatypes.nil (type.interp t))
@@ -2363,6 +2365,7 @@ Module Compilers.
             lazymatch term with
             | Nat.succ ?x => mkAppIdent Nat_succ x
             | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
+            | Nat.sub ?x ?y => mkAppIdent Nat_sub (x, y)
             | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
             | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
             | S ?x => mkAppIdent Nat_succ x
@@ -2543,6 +2546,7 @@ Module Compilers.
           Module Nat.
             Notation succ := Nat_succ.
             Notation add := Nat_add.
+            Notation sub := Nat_sub.
             Notation mul := Nat_mul.
             Notation max := Nat_max.
           End Nat.
@@ -2587,6 +2591,7 @@ Module Compilers.
           | Let_In {tx tC} : ident (tx * (tx -> tC)) tC
           | Nat_succ : ident nat nat
           | Nat_add : ident (nat * nat) nat
+          | Nat_sub : ident (nat * nat) nat
           | Nat_mul : ident (nat * nat) nat
           | Nat_max : ident (nat * nat) nat
           | nil {t} : ident () (list t)
@@ -2722,6 +2727,7 @@ Module Compilers.
             lazymatch term with
             | Nat.succ ?x => mkAppIdent Nat_succ x
             | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
+            | Nat.sub ?x ?y => mkAppIdent Nat_sub (x, y)
             | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
             | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
             | S ?x => mkAppIdent Nat_succ x
@@ -2846,6 +2852,7 @@ Module Compilers.
           Module Nat.
             Notation succ := Nat_succ.
             Notation add := Nat_add.
+            Notation sub := Nat_sub.
             Notation mul := Nat_mul.
             Notation max := Nat_max.
           End Nat.
@@ -2911,6 +2918,8 @@ Module Compilers.
                => AppIdent ident.Nat_succ
              | for_reification.ident.Nat_add
                => AppIdent ident.Nat_add
+             | for_reification.ident.Nat_sub
+               => AppIdent ident.Nat_sub
              | for_reification.ident.Nat_mul
                => AppIdent ident.Nat_mul
              | for_reification.ident.Nat_max
@@ -3731,6 +3740,7 @@ Module Compilers.
                   | ident.primitive _ _ as idc
                   | ident.Nat_succ as idc
                   | ident.Nat_add as idc
+                  | ident.Nat_sub as idc
                   | ident.Nat_mul as idc
                   | ident.Nat_max as idc
                   | ident.pred as idc
@@ -3923,6 +3933,7 @@ Module Compilers.
                        @ ((idc : default.ident _ type.nat)
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Nat_add as idc
+                | ident.Nat_sub as idc
                 | ident.Nat_mul as idc
                 | ident.Nat_max as idc
                   => λ (xyk :
@@ -5355,6 +5366,7 @@ Module Compilers.
                                AppIdent idc (expr.reify (t:=type.Z) x))
                      end
              | ident.Nat_add as idc
+             | ident.Nat_sub as idc
              | ident.Nat_mul as idc
              | ident.Nat_max as idc
              | ident.Z_pow as idc
@@ -7975,9 +7987,14 @@ Module MontgomeryReduction.
     Let w_half_1_gt1 : w_half 1 > 1 := weight_1_gt_1 _ _ half_log2R_good.
     Context (n:nat) (Hn: n = 2%nat).
 
+    (* simpler version of mul_converted with a carry chain that aligns
+      terms in the intermediate weight with the final weight *)
+    Definition mul_converted_aligned w w' n m :=
+      MulConverted.mul_converted w w' n n m m m (map (fun i => ((m * (i + 1)) - 1))%nat (seq 0 m)).
+
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (MulConverted.mul_converted_halve w w_half 1%nat n [fst lo_hi] [N']) 0  in
-      dlet_nd t1_t2 := MulConverted.mul_converted_halve w w_half 1%nat n [y] [N] in
+      dlet_nd y := nth_default 0 (mul_converted_aligned w w_half 1%nat n [fst lo_hi] [N']) 0  in
+      dlet_nd t1_t2 := mul_converted_aligned w w_half 1%nat n [y] [N] in
       dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
       dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
@@ -8015,7 +8032,7 @@ Module MontgomeryReduction.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
       rewrite Hlo, Hhi. subst n.
       assert (0 <= T mod R * N' < w 2) by (solve_range).
-      cbv [MulConverted.mul_converted_halve]. cbn [seq map].
+      cbv [mul_converted_aligned]. cbn [seq map].
       autorewrite with mul_conv.
       rewrite Hw, ?Z.pow_1_r.
       autorewrite with to_div_mod. rewrite ?Z.zselect_correct, ?Z.add_modulo_correct.
