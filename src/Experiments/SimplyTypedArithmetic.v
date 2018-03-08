@@ -1346,7 +1346,6 @@ Module Rows.
           rewrite <-(app_nil_l row1), <-(app_nil_l row2).
           apply sum_rows'_partitions; intros;
             autorewrite with cancel_pair push_eval zsimplify_fast push_nth_default; distr_length.
-          rewrite Z.div_0_l by auto; omega.
         Qed.
 
         Lemma length_sum_rows row1 row2 n:
@@ -7950,23 +7949,24 @@ Module MontgomeryReduction.
     Context (HN_range : 0 <= N < R) (HN'_range : 0 <= N' < R) (HN_nz : N <> 0) (R_gt_1 : R > 1)
             (N'_good : Z.equiv_modulo R (N*N') (-1)) (R'_good: Z.equiv_modulo N (R*R') 1).
 
-    Context (Zlog2R : Z).
+    Context (Zlog2R : Z) .
     Let w : nat -> Z := weight Zlog2R 1.
-    Let w_mul : nat -> Z := weight (Zlog2R / 2) 1.
-    Context (R_square : 2 * (Zlog2R / 2) = Zlog2R)
-            (R_big_enough : 2 <= Zlog2R)
+    Context (n:nat) (Hn_nz: n <> 0%nat) (n_good : Zlog2R mod Z.of_nat n = 0).
+    Context (R_big_enough : n <= Zlog2R)
             (R_two_pow : 2^Zlog2R = R).
-    Local Lemma w_mul_sq : forall i, (w_mul i) * (w_mul i) = w i.
+    Let w_mul : nat -> Z := weight (Zlog2R / n) 1.
+    Local Lemma w_mul_pown : forall i, (w_mul i) ^ n = w i.
     Proof.
       cbv [w_mul w weight]; intro.
       autorewrite with pull_Zpow zsimplify.
-      rewrite Z.mul_assoc, R_square.
-      reflexivity.
+      rewrite <-Z.pow_mul_r by Z.zero_bounds. apply f_equal.
+      rewrite (Z.div_mod Zlog2R n) at 2 by Z.zero_bounds.
+      rewrite n_good. lia.
     Qed.
     Local Lemma log2R_good : 0 < 1 <= Zlog2R.
-    Proof. clear -R_big_enough; lia. Qed.
-    Local Lemma half_log2R_good : 0 < 1 <= Zlog2R / 2.
-    Proof. clear -R_big_enough; Z.div_mod_to_quot_rem; nia. Qed.
+    Proof. clear -R_big_enough Hn_nz; lia. Qed.
+    Local Lemma half_log2R_good : 0 < 1 <= Zlog2R / n.
+    Proof. clear -R_big_enough Hn_nz; Z.div_mod_to_quot_rem; nia. Qed.
     Let w_mul_0 : w_mul 0%nat = 1 := weight_0 _ _.
     Let w_mul_nonzero : forall i, w_mul i <> 0
       := weight_nz _ _ half_log2R_good.
@@ -7987,16 +7987,16 @@ Module MontgomeryReduction.
       := weight_divides _ _ log2R_good.
     Let w_1_gt1 : w 1 > 1 := weight_1_gt_1 _ _ log2R_good.
     Let w_mul_1_gt1 : w_mul 1 > 1 := weight_1_gt_1 _ _ half_log2R_good.
-    Context (n:nat) (Hn: n = 2%nat).
+    Context (nout : nat) (Hnout : nout = 2%nat).
 
     (* simpler version of mul_converted with a carry chain that aligns
       terms in the intermediate weight with the final weight *)
-    Definition mul_converted_aligned w w' n m :=
-      MulConverted.mul_converted w w' n n m m m (map (fun i => ((m * (i + 1)) - 1))%nat (seq 0 m)).
+    Definition mul_converted_aligned w w' (log_w'_w : nat) n m nout :=
+      MulConverted.mul_converted w w' n n m m nout (map (fun i => ((log_w'_w * (i + 1)) - 1))%nat (seq 0 nout)).
 
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (mul_converted_aligned w w_mul 1%nat n [fst lo_hi] [N']) 0  in
-      dlet_nd t1_t2 := mul_converted_aligned w w_mul 1%nat n [y] [N] in
+      dlet_nd y := nth_default 0 (mul_converted_aligned w w_mul n 1%nat n nout [fst lo_hi] [N']) 0  in
+      dlet_nd t1_t2 := mul_converted_aligned w w_mul n 1%nat n nout [y] [N] in
       dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
       dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
@@ -8005,7 +8005,7 @@ Module MontgomeryReduction.
 
     Local Lemma Hw : forall i, w i = R ^ Z.of_nat i.
     Proof.
-      clear -R_two_pow R_big_enough; cbv [w weight]; intro.
+      clear -R_big_enough R_two_pow; cbv [w weight]; intro.
       autorewrite with zsimplify.
       rewrite Z.pow_mul_r, R_two_pow by omega; reflexivity.
     Qed.
@@ -8032,7 +8032,7 @@ Module MontgomeryReduction.
     Proof.
       rewrite <-reduce_via_partial_alt_eq by nia.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
-      rewrite Hlo, Hhi. subst n.
+      rewrite Hlo, Hhi. subst nout.
       assert (0 <= T mod R * N' < w 2) by (solve_range).
       cbv [mul_converted_aligned]. cbn [seq map].
       autorewrite with mul_conv.
@@ -8077,15 +8077,15 @@ Module MontgomeryReduction.
   Derive montred_gen
          SuchThat (forall (N R N' : Z)
                           (Zlog2R : Z)
-                          (n: nat)
+                          (n nout: nat)
                           (lo_hi : Z * Z),
                       Interp (t:=type.reify_type_of montred')
-                             montred_gen N R N' Zlog2R n lo_hi
-                      = montred' N R N' Zlog2R n lo_hi)
+                             montred_gen N R N' Zlog2R n nout lo_hi
+                      = montred' N R N' Zlog2R n nout lo_hi)
          As montred_gen_correct.
   Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
   Module Export ReifyHints.
-    Global Hint Extern 1 (_ = montred' _ _ _ _ _ _) => simple apply montred_gen_correct : reify_gen_cache.
+    Global Hint Extern 1 (_ = montred' _ _ _ _ _ _ _) => simple apply montred_gen_correct : reify_gen_cache.
   End ReifyHints.
 
   Section rmontred.
@@ -8127,7 +8127,7 @@ Module MontgomeryReduction.
       := BoundsPipeline_correct
            (bound, bound)
            bound
-           (montred' N R N' (Z.log2 R) 2).
+           (montred' N R N' (Z.log2 R) 2 2).
 
     Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
     Definition rmontred_correctT rv : Prop
