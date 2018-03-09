@@ -5556,12 +5556,12 @@ Module Pipeline.
        end.
 
   Definition BoundsPipeline
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
              relax_zrange
              {s d}
+             (E : Expr (s -> d))
              arg_bounds
              out_bounds
-             (E : Expr (s -> d))
   : ErrorT (Expr (s -> d))
     := let E := PartialReduce E in
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
@@ -5574,16 +5574,16 @@ Module Pipeline.
        E.
 
   Lemma BoundsPipeline_correct
-             (with_dead_code_elimination : bool)
+             (*with_dead_code_elimination : bool*)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
              {s d}
+             (E : Expr (s -> d))
              arg_bounds
              out_bounds
-             (E : Expr (s -> d))
              rv
-             (Hrv : BoundsPipeline with_dead_code_elimination relax_zrange arg_bounds out_bounds E = Success rv)
+             (Hrv : BoundsPipeline (*with_dead_code_elimination*) relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
       ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
@@ -5599,11 +5599,11 @@ Module Pipeline.
   Qed.
 
   Definition BoundsPipelineConst
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
              relax_zrange
              {t}
-             bounds
              (E : Expr t)
+             bounds
   : ErrorT (Expr t)
     := let E := PartialReduce E in
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
@@ -5616,15 +5616,15 @@ Module Pipeline.
        E.
 
   Lemma BoundsPipelineConst_correct
-             (with_dead_code_elimination : bool)
+             (*with_dead_code_elimination : bool*)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
              {d}
-             bounds
              (E : Expr d)
+             bounds
              rv
-             (Hrv : BoundsPipelineConst with_dead_code_elimination relax_zrange bounds E = Success rv)
+             (Hrv : BoundsPipelineConst (*with_dead_code_elimination*) relax_zrange E bounds = Success rv)
     : ZRange.type.is_bounded_by bounds (Interp rv) = true
       /\ Interp rv = Interp E.
   Proof.
@@ -5826,26 +5826,68 @@ Section rcarry_mul.
   Local Ltac solve_correct_const gen_correct :=
     solve_correct_gen Pipeline.BoundsPipelineConst_correct gen_correct.
 
+  (* TODO(jgross): open bug about sensitivity of order of arguments on type inference with interp, expr *)
+  (* TODO(jgross): Make @ apply to Expr, not just expr *)
+  Definition rcarry_mul
+    := let res := Pipeline.BoundsPipeline
+                    relax_zrange
+                    (fun var
+                     => (carry_mul_gen _)
+                          @ (rw _)
+                          @ (rs _)
+                          @ (rc _)
+                          @ (rn _)
+                          @ (rlen_c _)
+                          @ (ridxs _)
+                          @ (rlen_idxs _)
+                    )%expr
+                    (loose_bounds, loose_bounds)
+                    tight_bounds in
+       res.
+
+  Definition rcarry_mul_correctT
+             (rv : Expr (type.list type.Z * type.list type.Z -> type.list type.Z))
+    := (forall
+           arg
+           (Harg : ZRange.type.is_bounded_by (t:=type.prod (type.list type.Z) (type.list type.Z))
+                                             (loose_bounds, loose_bounds) arg = true),
+           ZRange.type.is_bounded_by (t:=type.list type.Z)
+                                     tight_bounds
+                                     (Interp rv arg) = true /\
+           Interp rv arg =
+           carry_mulmod (Interp rw) s c n (Interp rlen_c)
+                        idxs (Interp rlen_idxs) arg).
+  Check (@Pipeline.BoundsPipeline_correct
+           relax_zrange
+           _
+           _ _
+       ).
+
+    Lemma rcarry_mul_correct
+        rv (Hrv : rcarry_mul = Pipeline.Success rv)
+    : rcarry_mul_correctT rv.
+  Proof. solve_correct carry_mul_gen_correct. Qed.
+
+
+
   Let BoundsPipeline21 in_bounds out_bounds res
     := let res := Pipeline.BoundsPipeline
-                    false
                     relax_zrange
                     (s:=(type.list type.Z * type.list type.Z)%ctype)
                     (d:=(type.list type.Z)%ctype)
+                    res
                     (in_bounds, in_bounds)
-                    out_bounds
-                    res in
+                    out_bounds in
        res.
 
   Let BoundsPipeline11 in_bounds out_bounds res
     := let res := Pipeline.BoundsPipeline
-                    false
                     relax_zrange
                     (s:=(type.list type.Z)%ctype)
                     (d:=(type.list type.Z)%ctype)
+                    res
                     (in_bounds)
-                    out_bounds
-                    res in
+                    out_bounds in
        res.
 
   Definition rexpr_1_correctT_Interp
@@ -5903,22 +5945,6 @@ Section rcarry_mul.
              rv
     := @rexpr_1_correctT (type.list type.Z) out_bounds f rv.
 
-  Definition rcarry_mul
-    := let res := BoundsPipeline21
-                    loose_bounds
-                    tight_bounds
-                    (fun var
-                     => (carry_mul_gen _)
-                          @ (rw _)
-                          @ (rs _)
-                          @ (rc _)
-                          @ (rn _)
-                          @ (rlen_c _)
-                          @ (ridxs _)
-                          @ (rlen_idxs _)
-                    )%expr in
-       res.
-
   Definition rcarry_mul_correctT
              rv
     := Eval hnf in
@@ -5926,6 +5952,8 @@ Section rcarry_mul.
           loose_bounds tight_bounds
           (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs))
           rv.
+  Eval cbv [rcarry_mul_correctT rexpr_1_correctT_Interp] in rcarry_mul_correctT.
+  Print rcarry_mul_correctT.
 
   Lemma rcarry_mul_correct
         rv (Hrv : rcarry_mul = Pipeline.Success rv)
