@@ -18,6 +18,10 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -445,8 +449,6 @@ Module Positional. Section Positional.
   End carry_mulmod.
 End Positional. End Positional.
 
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-
 Module BaseConversion.
   Import Positional.
   Section BaseConversion.
@@ -470,10 +472,6 @@ Module BaseConversion.
 
   End BaseConversion.
 End BaseConversion.
-
-Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
 
 Module Saturated.
   Section Weight.
