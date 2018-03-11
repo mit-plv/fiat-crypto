@@ -1,7 +1,13 @@
 -R src Crypto
 -R bbv bbv
+bbv/BinNotation.v
+bbv/BinNotationZ.v
 bbv/DepEq.v
 bbv/DepEqNat.v
+bbv/HexNotation.v
+bbv/HexNotationWord.v
+bbv/HexNotationZ.v
+bbv/NLib.v
 bbv/NatLib.v
 bbv/Nomega.v
 bbv/Word.v
