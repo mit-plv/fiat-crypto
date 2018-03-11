@@ -85,8 +85,12 @@ Section Isomorphism.
   Context {H} {ok : H -> Prop} {eq : H -> H -> Prop} {zero one : H} {opp : H -> H} {add sub mul : H -> H -> H}.
   Context {phi:F->H} {phi':H->F}.
   Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
-  Context (OK_respects_EQ : Proper (EQ ==> Basics.flip Basics.impl) OK)
-          (ok_respects_eq : Proper (eq ==> Basics.impl) ok)
+  Context (ok_zero : ok zero)
+          (ok_one : ok one)
+          (ok_opp : forall x, ok x -> ok (opp x))
+          (ok_add : forall x y, ok x -> ok y -> ok (add x y))
+          (ok_sub : forall x y, ok x -> ok y -> ok (sub x y))
+          (ok_mul : forall x y, ok x -> ok y -> ok (mul x y))
           (phi_ok : forall x, OK x -> ok (phi x))
           (phi'_ok : forall x, ok x -> OK (phi' x))
           (phi'_phi_id : forall A, OK A -> phi' (phi A) = A)
@@ -116,10 +120,7 @@ Section Isomorphism.
           [ .. | exact Hring ]
         | | ] ];
       cbn; intros; destruct_head'_sig; cbn;
-        auto with nocore.
-    1-6:(eapply ok_respects_eq; [ eapply phi'_eq, phi'_phi_id | apply phi_ok ]);
-      (eapply OK_respects_EQ; [ solve [ eauto with nocore ] | ]);
-      solve [ destruct ringF; auto with nocore ].
+        auto with nocore; [ | ].
     1:clear H1.
     2:clear H0.
     all:destruct_head' @is_homomorphism; cbn in *.
@@ -140,7 +141,12 @@ Section IsomorphismToTrivial.
   Context {H} {ok : H -> Prop} {eq : H -> H -> Prop} {zero one : H} {opp : H -> H} {add sub mul : H -> H -> H}.
   Context {phi:F->H} {phi':H->F}.
   Local Infix "=" := EQ. Local Infix "=" := EQ : type_scope.
-  Context (ok_respects_eq : Proper (eq ==> Basics.impl) ok)
+  Context (ok_zero : ok zero)
+          (ok_one : ok one)
+          (ok_opp : forall x, ok x -> ok (opp x))
+          (ok_add : forall x y, ok x -> ok y -> ok (add x y))
+          (ok_sub : forall x y, ok x -> ok y -> ok (sub x y))
+          (ok_mul : forall x y, ok x -> ok y -> ok (mul x y))
           (phi_ok : forall x, ok (phi x))
           (phi'_phi_id : forall A, phi' (phi A) = A)
           (phi'_eq : forall a b, EQ (phi' a) (phi' b) <-> eq a b)
