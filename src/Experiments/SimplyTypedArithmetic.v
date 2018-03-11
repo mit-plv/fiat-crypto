@@ -1251,6 +1251,18 @@ Module Compilers.
          | arrow s d => final_codomain d
          end.
 
+    Definition domain (t : type) : type
+      := match t with
+         | arrow s d => s
+         | _ => type_primitive unit
+         end.
+
+    Definition codomain (t : type) : type
+      := match t with
+         | arrow s d => d
+         | t => t
+         end.
+
     Fixpoint under_arrows (t : type) (f : type -> type) : type
       := match t with
          | type_primitive _ as t
@@ -1369,6 +1381,11 @@ Module Compilers.
         Definition Interp_APP {s d} (f : @Expr ident (s -> d)) (x : @Expr ident s)
           : Interp (f @ x)%Expr = Interp f (Interp x)
           := eq_refl.
+
+        Definition Interp_APP_rel_reflexive {s d} {R} {H:Reflexive R}
+                   (f : @Expr ident (s -> d)) (x : @Expr ident s)
+          : R (Interp (f @ x)%Expr) (Interp f (Interp x))
+          := H _.
       End with_ident.
 
       Ltac require_primitive_const term :=
@@ -5472,7 +5489,7 @@ Module Pipeline.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
     eapply @BoundsPipeline_correct; eassumption.
   Qed.
-    
+
   Definition BoundsPipelineConst
              (with_dead_code_elimination : bool)
              relax_zrange
@@ -5514,7 +5531,7 @@ Module Pipeline.
       exact admit. (* interp correctness *) }
     { congruence. }
   Qed.
-  
+
   Definition BoundsPipelineConst_correct_transT
              {t}
              (E : Expr t)
@@ -5723,6 +5740,7 @@ Section rcarry_mul.
 
   Notation type_of := ((fun T (_ : T) => T) _).
   Notation type_of_strip_arrow := ((fun s (d : Prop) (_ : s -> d) => d) _ _).
+  Notation type_of_strip_2arrow := ((fun s s' (d : Prop) (_ : s -> s' -> d) => d) _ _ _).
 
   Notation BoundsPipeline rop in_bounds out_bounds
     := (Pipeline.BoundsPipeline
@@ -5746,7 +5764,22 @@ Section rcarry_mul.
           in_bounds
           out_bounds
           op
-          ltac:(do_interp_correct)).
+          ltac:(do_interp_correct))
+         (only parsing).
+
+  Notation BoundsPipeline_correct_nocache in_bounds out_bounds op
+    := (fun (rop : Expr (type.reify_type_of op%function)) rv Hrop
+        => @Pipeline.BoundsPipeline_correct_trans
+             false
+             relax_zrange
+             relax_zrange_good
+             _ _
+             rop
+             in_bounds
+             out_bounds
+             op
+             Hrop rv)
+         (only parsing).
 
   Notation BoundsPipelineConst_correct rop out_bounds op
     := (@Pipeline.BoundsPipelineConst_correct_trans
@@ -5757,7 +5790,8 @@ Section rcarry_mul.
           rop%Expr
           out_bounds
           op
-          ltac:(do_interp_correct)).
+          ltac:(do_interp_correct))
+         (only parsing).
 
   (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
   Definition rcarry_mul
@@ -5771,6 +5805,12 @@ Section rcarry_mul.
     := BoundsPipeline_correct
          (carry_mul_gen
             @ rw @ rs @ rc @ rn @ rlen_c @ ridxs @ rlen_idxs)%Expr
+         (loose_bounds, loose_bounds)
+         tight_bounds
+         (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
+
+  Definition rcarry_mul_correct_nocache
+    := BoundsPipeline_correct_nocache
          (loose_bounds, loose_bounds)
          tight_bounds
          (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
@@ -5832,6 +5872,8 @@ Section rcarry_mul.
 
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] *)
   Definition rcarry_mul_correctT rv : Prop := type_of_strip_arrow (@rcarry_mul_correct rv).
+  Definition rcarry_mul_correct_nocacheT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rcarry_mul_correct_nocache rop rv).
   Definition rcarry_correctT rv : Prop := type_of_strip_arrow (@rcarry_correct rv).
   Definition rrelax_correctT rv : Prop := type_of_strip_arrow (@rrelax_correct rv).
   Definition radd_correctT rv : Prop := type_of_strip_arrow (@radd_correct rv).
@@ -5966,6 +6008,53 @@ Section rcarry_mul.
   End make_ring.
 End rcarry_mul.
 
+(** TODO: MOVE ME *)
+Lemma fg_equal {A B} (f g : A -> B) (x y : A)
+  : f = g -> x = y -> f x = g y.
+Proof. intros; subst; reflexivity. Defined.
+Lemma fg_equal_rel {A B R} (f g : A -> B) (x y : A)
+  : (pointwise_relation _ R) f g -> x = y -> R (f x) (g y).
+Proof. cbv [pointwise_relation]; intros; subst; trivial. Qed.
+
+Ltac peel_interp_app _ :=
+  lazymatch goal with
+  | [ |- ?R' (Interp ?ev) (?f ?x) ]
+    => let sv := type of x in
+       let fx := constr:(f x) in
+       let dv := type of fx in
+       let rs := type.reify sv in
+       let rd := type.reify dv in
+       etransitivity;
+       [ apply @Interp_APP_rel_reflexive with (s:=rs) (d:=rd) (R:=R');
+         typeclasses eauto
+       | apply fg_equal_rel;
+         [ try peel_interp_app ()
+         | try lazymatch goal with
+               | [ |- ?R (Interp ?ev) (Interp _) ]
+                 => reflexivity
+               | [ |- ?R (Interp ?ev) ?c ]
+                 => let rc := constr:(GallinaReify.Reify c) in
+                    unify ev rc; reflexivity
+               end ] ]
+  end.
+Ltac pre_cache_reify _ :=
+  let arg := fresh "arg" in
+  intros arg _;
+  apply (f_equal (fun f => f arg));
+  peel_interp_app ();
+  [ lazymatch goal with
+    | [ |- ?R (Interp ?ev) _ ]
+      => (tryif is_evar ev
+           then let ev' := fresh "ev" in set (ev' := ev)
+           else idtac)
+    end;
+    cbv [pointwise_relation]; intros; clear
+  | .. ].
+Ltac do_inline_cache_reify _ :=
+  pre_cache_reify ();
+  [ cache_reify (); exact admit
+  | .. ].
+
 Ltac solve_rop rop_correct machine_wordsizev :=
   eapply rop_correct with (machine_wordsize:=machine_wordsizev);
   (* Doing [lazy] is twice as slow as doing [lazy -[Let_In]; lazy].
@@ -5983,7 +6072,12 @@ Ltac solve_rop rop_correct machine_wordsizev :=
   it's still reasonably fast, and the code is much simpler when
   [Interp] always succeeds rather than returning [option]. *)
   lazy -[Let_In]; lazy; reflexivity.
+Ltac solve_rop_nocache rop_correct machine_wordsizev :=
+  eexists; eapply rop_correct with (machine_wordsize:=machine_wordsizev);
+  [ do_inline_cache_reify ()
+  | lazy -[Let_In]; lazy; reflexivity ].
 Ltac solve_rcarry_mul := solve_rop rcarry_mul_correct.
+Ltac solve_rcarry_mul_nocache := solve_rop_nocache rcarry_mul_correct_nocache.
 Ltac solve_rcarry := solve_rop rcarry_correct.
 Ltac solve_radd := solve_rop radd_correct.
 Ltac solve_rsub := solve_rop rsub_correct.
@@ -6134,6 +6228,10 @@ Module X25519_64.
          SuchThat (rcarry_mul_correctT n s c machine_wordsize base_51_carry_mul)
          As base_51_carry_mul_correct.
   Proof. Time solve_rcarry_mul machine_wordsize. Time Qed.
+  Derive base_51_carry_mul_nocache
+         SuchThat (rcarry_mul_correct_nocacheT n s c machine_wordsize base_51_carry_mul_nocache)
+         As base_51_carry_mul_nocache_correct.
+  Proof. Time solve_rcarry_mul_nocache machine_wordsize. Time Qed.
   Derive base_51_carry
          SuchThat (rcarry_correctT n s c machine_wordsize base_51_carry)
          As base_51_carry_correct.
