@@ -21,6 +21,7 @@ Create HintDb simpl_skipn discriminated.
 Create HintDb simpl_fold_right discriminated.
 Create HintDb simpl_sum_firstn discriminated.
 Create HintDb push_map discriminated.
+Create HintDb push_combine discriminated.
 Create HintDb push_flat_map discriminated.
 Create HintDb push_fold_right discriminated.
 Create HintDb push_partition discriminated.
@@ -32,6 +33,7 @@ Create HintDb pull_firstn discriminated.
 Create HintDb push_firstn discriminated.
 Create HintDb pull_skipn discriminated.
 Create HintDb push_skipn discriminated.
+Create HintDb push_sum discriminated.
 Create HintDb pull_update_nth discriminated.
 Create HintDb push_update_nth discriminated.
 Create HintDb znonzero discriminated.
@@ -85,6 +87,7 @@ Module Export List.
     Proof. induction n; simpl List.repeat; simpl map; congruence. Qed.
   End Map.
   Hint Rewrite @map_cons @map_nil @map_repeat : push_map.
+  Hint Rewrite @map_app : push_map.
 
   Section FlatMap.
     Lemma flat_map_nil {A B} (f:A->list B) : List.flat_map f (@nil A) = nil.
@@ -95,6 +98,9 @@ Module Export List.
   End FlatMap.
   Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
 
+  Lemma rev_cons {A} x ls : @rev A (x :: ls) = rev ls ++ [x]. Proof. reflexivity. Qed. 
+  Hint Rewrite @rev_cons : list.
+
   Section FoldRight.
     Context {A B} (f:B->A->A).
     Lemma fold_right_nil : forall {A B} (f:B->A->A) a,
@@ -103,8 +109,14 @@ Module Export List.
     Lemma fold_right_cons : forall a b bs,
       fold_right f a (b::bs) = f b (fold_right f a bs).
     Proof. reflexivity. Qed.
+    Lemma fold_right_snoc a x ls:
+      @fold_right A B f a (ls ++ [x]) = fold_right f (f x a) ls.
+    Proof.
+      rewrite <-(rev_involutive ls), <-rev_cons.
+      rewrite !fold_left_rev_right; reflexivity.
+    Qed.
   End FoldRight.
-  Hint Rewrite @fold_right_nil @fold_right_cons : simpl_fold_right push_fold_right.
+  Hint Rewrite @fold_right_nil @fold_right_cons @fold_right_snoc : simpl_fold_right push_fold_right.
 
   Section Partition.
     Lemma partition_nil {A} (f:A->_) : partition f nil = (nil, nil).
@@ -914,6 +926,10 @@ Proof.
   induction xs; boring; discriminate.
 Qed.
 
+Lemma length_tl {A} ls : length (@tl A ls) = (length ls - 1)%nat.
+Proof. destruct ls; cbn [tl length]; omega. Qed.
+Hint Rewrite @length_tl : distr_length.
+
 Lemma length_snoc : forall {T} xs (x:T),
   length xs = pred (length (xs++x::nil)).
 Proof.
@@ -923,6 +939,7 @@ Qed.
 Lemma combine_cons : forall {A B} a b (xs:list A) (ys:list B),
   combine (a :: xs) (b :: ys) = (a,b) :: combine xs ys.
 Proof. reflexivity. Qed.
+Hint Rewrite @combine_cons : push_combine.
 
 Lemma firstn_combine : forall {A B} n (xs:list A) (ys:list B),
   firstn n (combine xs ys) = combine (firstn n xs) (firstn n ys).
@@ -938,6 +955,7 @@ Lemma combine_nil_r : forall {A B} (xs:list A),
 Proof.
   induction xs; boring.
 Qed.
+Hint Rewrite @combine_nil_r : push_combine.
 
 Lemma skipn_combine : forall {A B} n (xs:list A) (ys:list B),
   skipn n (combine xs ys) = combine (skipn n xs) (skipn n ys).
@@ -1449,9 +1467,15 @@ Hint Rewrite @sum_firstn_app_sum : simpl_sum_firstn.
 
 Lemma sum_cons xs x : sum (x :: xs) = (x + sum xs)%Z.
 Proof. reflexivity. Qed.
+Hint Rewrite sum_cons : push_sum.
 
 Lemma sum_nil : sum nil = 0%Z.
 Proof. reflexivity. Qed.
+Hint Rewrite sum_nil : push_sum.
+
+Lemma sum_app x y : sum (x ++ y) = (sum x + sum y)%Z.
+Proof. induction x; rewrite ?app_nil_l, <-?app_comm_cons; autorewrite with push_sum; omega. Qed.
+Hint Rewrite sum_app : push_sum.
 
 Lemma nth_error_skipn : forall {A} n (l : list A) m,
 nth_error (skipn n l) m = nth_error l (n + m).
@@ -1845,3 +1869,10 @@ Ltac expand_lists _ :=
     | _ => idtac
     end;
     subst v; reflexivity ].
+
+Lemma list_rect_to_match A (P:list A -> Type) (Pnil: P nil) (PS: forall a tl, P (a :: tl)) ls :
+  @list_rect A P Pnil (fun a tl _ => PS a tl) ls = match ls with
+                                                   | cons a tl => PS a tl
+                                                   | nil => Pnil
+                                                   end.
+Proof. destruct ls; reflexivity. Qed.

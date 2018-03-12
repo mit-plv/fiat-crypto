@@ -18,6 +18,10 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -445,8 +449,6 @@ Module Positional. Section Positional.
   End carry_mulmod.
 End Positional. End Positional.
 
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-
 Module BaseConversion.
   Import Positional.
   Section BaseConversion.
@@ -471,14 +473,47 @@ Module BaseConversion.
   End BaseConversion.
 End BaseConversion.
 
-(* Non-CPS version of Arithmetic/Saturated/MulSplit.v *)
-Module MulSplit.
+Module Saturated.
+  Section Weight.
+    Context (weight : nat->Z)
+            {weight_0 : weight 0%nat = 1}
+            {weight_nonzero : forall i, weight i <> 0}
+            {weight_positive : forall i, weight i > 0}
+            {weight_multiples : forall i, weight (S i) mod weight i = 0}
+            {weight_divides : forall i : nat, weight (S i) / weight i > 0}.
+
+    Lemma weight_multiples_full' j : forall i, weight (i+j) mod weight i = 0.
+    Proof.
+      induction j; intros;
+        repeat match goal with
+               | _ => rewrite Nat.add_succ_r
+               | _ => rewrite IHj
+               | |- context [weight (S ?x) mod weight _] =>
+                 rewrite (Z.div_mod (weight (S x)) (weight x)), weight_multiples by auto
+               | _ => progress autorewrite with push_Zmod natsimplify zsimplify_fast
+               | _ => reflexivity
+               end.
+    Qed.
+    
+    Lemma weight_multiples_full j i : (i <= j)%nat -> weight j mod weight i = 0.
+    Proof.
+      intros; replace j with (i + (j - i))%nat by omega.
+      apply weight_multiples_full'.
+    Qed.
+
+    Lemma weight_divides_full j i : (i <= j)%nat -> weight j / weight i > 0.
+    Proof. auto using Z.div_positive_gt_0, weight_multiples_full. Qed.
+
+    Lemma weight_div_mod j i : (i <= j)%nat -> weight j = weight i * (weight j / weight i).
+    Proof. intros. apply Z.div_exact; auto using weight_multiples_full. Qed.
+  End Weight.
+
   Module Associational.
     Section Associational.
 
       Definition sat_multerm s (t t' : (Z * Z)) : list (Z * Z) :=
         dlet_nd xy := Z.mul_split s (snd t) (snd t') in
-        [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
+              [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
 
       Definition sat_mul s (p q : list (Z * Z)) : list (Z * Z) :=
         flat_map (fun t => flat_map (sat_multerm s t) q) p.
@@ -500,24 +535,90 @@ Module MulSplit.
       Lemma eval_sat_mul s p q (s_nonzero:s<>0):
         Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
       Proof.
-      cbv [sat_mul]; induction p; [reflexivity|].
-      repeat match goal with
-              | _ => progress (autorewrite with push_eval in * )
-              | _ => progress simpl flat_map
-              | _ => rewrite IHp
-              | _ => ring_simplify; omega
-              end.
+        cbv [sat_mul]; induction p; [reflexivity|].
+        repeat match goal with
+               | _ => progress (autorewrite with push_eval in * )
+               | _ => progress simpl flat_map
+               | _ => rewrite IHp
+               | _ => ring_simplify; omega
+               end.
       Qed.
       Hint Rewrite eval_sat_mul : push_eval.
     End Associational.
   End Associational.
-End MulSplit.
 
-Require Import Crypto.Util.ZUtil.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
+  Section DivMod.
+    Lemma mod_step a b c d: 0 < a -> 0 < b ->
+                            c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
+    Proof.
+      intros; rewrite Z.rem_mul_r by omega. push_Zmod.
+      autorewrite with zsimplify pull_Zmod. repeat (f_equal; try ring).
+    Qed.
+
+    Lemma div_step a b c d : 0 < a -> 0 < b ->
+                             (c / a + d) / b = (a * d + c) / (a * b).
+    Proof.
+      intros. rewrite <- Z.div_add' by omega.
+      autorewrite with pull_Zdiv. repeat (f_equal; try ring ).
+    Qed.
+
+    Lemma add_mod_div_multiple a b n m:
+      n > 0 ->
+      0 <= m / n ->
+      m mod n = 0 ->
+      (a / n + b) mod (m / n) = (a + n * b) mod m / n.
+    Proof.
+      intros. rewrite <-!Z.div_add' by auto using Z.positive_is_nonzero.
+      rewrite Z.mod_pull_div, Z.mul_div_eq' by auto using Z.gt_lt.
+      repeat (f_equal; try omega).
+    Qed.
+    
+    Lemma add_mod_l_multiple a b n m:
+      0 < n / m -> m <> 0 -> n mod m = 0 ->
+      (a mod n + b) mod m = (a + b) mod m.
+    Proof.
+      intros.
+      rewrite (proj2 (Z.div_exact n m ltac:(auto))) by auto.
+      rewrite Z.rem_mul_r by auto.
+      push_Zmod. autorewrite with zsimplify.
+      pull_Zmod. reflexivity.
+    Qed.
+
+    Definition is_div_mod {T} (evalf : T -> Z) dm y n :=
+      evalf (fst dm) = y mod n /\ snd dm = y / n. 
+
+    Lemma is_div_mod_step {T} evalf1 evalf2 dm1 dm2 y1 y2 n1 n2 x :
+      n1 > 0 ->
+      0 < n2 / n1 ->
+      n2 mod n1 = 0 ->
+      evalf2 (fst dm2) = evalf1 (fst dm1) + n1 * ((snd dm1 + x) mod (n2 / n1)) ->
+      snd dm2 = (snd dm1 + x) / (n2 / n1) ->
+      y2 = y1 + n1 * x ->
+      @is_div_mod T evalf1 dm1 y1 n1 ->
+      @is_div_mod T evalf2 dm2 y2 n2.
+    Proof.
+      intros; subst y2; cbv [is_div_mod] in *.
+      repeat match goal with
+             | H: _ /\ _ |- _ => destruct H
+             | H: ?LHS = _ |- _ => match LHS with context [dm2] => rewrite H end
+             | H: ?LHS = _ |- _ => match LHS with context [dm1] => rewrite H end
+             | _ => rewrite mod_step by omega
+             | _ => rewrite div_step by omega
+             | _ => rewrite Z.mul_div_eq_full by omega
+             end.
+      split; f_equal; omega.
+    Qed.
+
+    Lemma is_div_mod_result_equal {T} evalf dm y1 y2 n :
+      y1 = y2 ->
+      @is_div_mod T evalf dm y1 n ->
+      @is_div_mod T evalf dm y2 n.
+    Proof. congruence. Qed.
+  End DivMod.
+End Saturated.
 
 Module Columns.
+  Import Saturated.
   Section Columns.
     Context (weight : nat->Z)
             {weight_0 : weight 0%nat = 1}
@@ -535,290 +636,702 @@ Module Columns.
     Proof.
       cbv [eval]; intros; subst. rewrite map_app. simpl map.
       apply Positional.eval_snoc; distr_length.
-    Qed.
+    Qed. Hint Rewrite eval_snoc using (solve [distr_length]) : push_eval.
 
-    Section flatten_column.
-      Context (fw : Z). (* maximum size of the result *)
+    Hint Rewrite <- Z.div_add' using omega : pull_Zdiv.
 
-      (* Outputs (sum, carry) *)
-      Definition flatten_column (digit: list Z) : (Z * Z) :=
-        list_rect (fun _ => (Z * Z)%type) (0,0)
-                  (fun xx tl flatten_column_tl =>
-                     list_rect
-                       (fun _ => (Z * Z)%type) (xx mod fw, xx / fw)
-                       (fun yy tl' _ =>
-                          list_rect
-                            (fun _ => (Z * Z)%type) (dlet_nd x := xx in dlet_nd y := yy in Z.add_get_carry_full fw x y)
-                            (fun _ _ _ =>
-                               dlet_nd x := xx in
-                               dlet_nd rec := flatten_column_tl in (* recursively get the sum and carry *)
-                               dlet_nd sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
-                               dlet_nd carry' := snd sum_carry + snd rec in (* add the two carries together *)
-                                 (fst sum_carry, carry'))
-                            tl')
-                       tl)
-                  digit.
-    End flatten_column.
+    Ltac cases :=
+      match goal with
+      | |- _ /\ _ => split
+      | H: _ /\ _ |- _ => destruct H
+      | H: _ \/ _ |- _ => destruct H
+      | _ => progress break_match; try discriminate
+      end.
 
-    Definition flatten_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
-      dlet sum_carry := flatten_column (weight (S (length (fst acc_carry))) / weight (length (fst acc_carry))) (snd acc_carry::digit) in
-      (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
+    Section Flatten.
+      Section flatten_column.
+        Context (fw : Z). (* maximum size of the result *)
 
-    Definition flatten (xs : list (list Z)) : list Z * Z :=
-      fold_right (fun a b => flatten_step a b) (nil,0) (rev xs).
+        (* Outputs (sum, carry) *)
+        Definition flatten_column (digit: list Z) : (Z * Z) :=
+          list_rect (fun _ => (Z * Z)%type) (0,0)
+                    (fun xx tl flatten_column_tl =>
+                       list_rect
+                         (fun _ => (Z * Z)%type) (xx mod fw, xx / fw)
+                         (fun yy tl' _ =>
+                            list_rect
+                              (fun _ => (Z * Z)%type) (dlet_nd x := xx in dlet_nd y := yy in Z.add_get_carry_full fw x y)
+                              (fun _ _ _ =>
+                                 dlet_nd x := xx in
+                                   dlet_nd rec := flatten_column_tl in (* recursively get the sum and carry *)
+                                   dlet_nd sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
+                                   dlet_nd carry' := snd sum_carry + snd rec in (* add the two carries together *)
+                                   (fst sum_carry, carry'))
+                              tl')
+                         tl)
+                    digit.
+      End flatten_column.
 
-    Lemma list_rect_to_match A (P:list A -> Type) (Pnil: P []) (PS: forall a tl, P (a :: tl)) ls :
-      @list_rect A P Pnil (fun a tl _ => PS a tl) ls = match ls with
-                                                       | cons a tl => PS a tl
-                                                       | nil => Pnil
-                                                       end.
-    Proof. destruct ls; reflexivity. Qed.
+      Definition flatten_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
+        dlet sum_carry := flatten_column (weight (S (length (fst acc_carry))) / weight (length (fst acc_carry))) (snd acc_carry::digit) in
+              (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
 
-    Lemma flatten_column_mod fw (xs : list Z) :
-      fst (flatten_column fw xs)  = sum xs mod fw.
-    Proof.
-      induction xs; simpl flatten_column; cbv [Let_In];
+      Definition flatten (xs : list (list Z)) : list Z * Z :=
+        fold_right (fun a b => flatten_step a b) (nil,0) (rev xs).
+
+      Ltac push_fast :=
         repeat match goal with
-               | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
-               | _ => rewrite IHxs
-               | |- context [list_rect _ _ _ ?ls] =>
-                 rewrite list_rect_to_match; destruct ls
-               | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
-               | _ => progress break_match; try discriminate
-               | _ => reflexivity
-               | _ => f_equal; ring
-               end.
-    Qed. Hint Rewrite flatten_column_mod : to_div_mod.
-
-    Lemma flatten_column_div fw (xs : list Z) (fw_nz : fw <> 0) :
-      snd (flatten_column fw xs)  = sum xs / fw.
-    Proof.
-      induction xs; simpl flatten_column; cbv [Let_In];
-        repeat match goal with
-               | _ => progress autorewrite with cancel_pair to_div_mod pull_Zmod
-               | _ => rewrite IHxs
-               | |- context [list_rect _ _ _ ?ls] =>
-                 rewrite list_rect_to_match; destruct ls
-               | _ => rewrite <-Z.div_add_mod_cond_r by auto
-               | _ => progress (rewrite ?sum_cons, ?sum_nil in * )
-               | _ => progress break_match; try discriminate
-               | _ => reflexivity
-               | _ => f_equal; ring
-               end.
-    Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
-
-    (* helper for some of the modular logic in flatten *)
-    Lemma flatten_mod_step a b c d: 0 < a -> 0 < b ->
-      c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
-    Proof.
-      clear. rewrite Z.add_comm.
-      intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; omega).
-      pose proof (Z.mod_pos_bound c a Ha).
-      pose proof (Z.mod_pos_bound (c/a+d) b Hb).
-      apply Z.small_mod_eq.
-      { rewrite <-(Z.mod_small (c mod a) (a * b)) by omega.
-        rewrite <-Z.mul_mod_distr_l with (c:=a) by omega.
-        rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by omega.
-        f_equal; ring. }
-      { split; [zero_bounds|].
-        apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; omega].
-        apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
-    Qed.
-
-    Lemma flatten_div_step a b c d : 0 < a -> 0 < b ->
-      (c / a + d) / b = (a * d + c) / (a * b).
-    Proof.
-      clear. intros Ha Hb.
-      rewrite <-Z.div_div by omega.
-      rewrite Z.div_add_l' by omega.
-      f_equal; ring.
-    Qed.
-
-    Hint Rewrite Positional.eval_nil : push_eval.
-
-    Lemma flatten_length inp : length (fst (flatten inp)) = length inp.
-    Proof.
-      cbv [flatten].
-      unfold flatten_step; fold flatten_step.
-      induction inp using rev_ind; [reflexivity|].
-      repeat match goal with
-             | _ => progress autorewrite with list cancel_pair push_fold_right
-             | _ => progress (unfold flatten_step; fold flatten_step)
-             | _ => progress cbv [Let_In]
-             | _ => solve [distr_length]
-             end.
-    Qed.
-    Hint Rewrite flatten_length : distr_length.
-
-    Lemma flatten_div_mod n inp :
-      length inp = n ->
-      (Positional.eval weight n (fst (flatten inp))
-       = (eval n inp) mod (weight n))
-        /\ (snd (flatten inp) = eval n inp / weight n).
-    Proof.
-      (* to make the invariant take the right form, we make everything depend on output length, not input length *)
-      intro. subst n. rewrite <-(flatten_length inp). cbv [flatten].
-      unfold flatten_step; fold flatten_step.
-      induction inp using rev_ind;
-        repeat match goal with
-               | _ => progress intros
-               | H: _ = ?x mod ?y /\ _ = ?x / ?y |- _ => destruct H as [IHmod IHdiv]
-               | _ => split
-               | _ => rewrite Nat.add_1_r
-               | _ => erewrite Positional.eval_snoc by reflexivity
-               | _ => rewrite IHmod
-               | _ => rewrite IHdiv
-               | _ => rewrite sum_cons
-               | _ => rewrite eval_snoc by (rewrite <-(flatten_length inp); reflexivity)
-               | _ => rewrite flatten_mod_step by auto using Z.gt_lt
-               | _ => rewrite flatten_div_step by auto using Z.gt_lt
-               | _ => rewrite Z.mul_div_eq_full by auto
-               | _ => rewrite weight_multiples
-               | _ => progress (unfold flatten_step; fold flatten_step)
                | _ => progress cbv [Let_In]
-               | _ => progress autorewrite with list cancel_pair distr_length to_div_mod push_fold_right
-               | _ => f_equal; ring
+               | |- context [list_rect _ _ _ ?ls] => rewrite list_rect_to_match; destruct ls
+               | _ => progress (unfold flatten_step in *; fold flatten_step in * )
+               | _ => rewrite Nat.add_1_r
+               | _ => rewrite Z.mul_div_eq_full by (auto; omega)
+               | _ => rewrite weight_multiples
+               | _ => reflexivity
+               | _ => solve [repeat (f_equal; try ring)]
+               | _ => congruence
+               | _ => progress cases
                end.
-    Qed.
-
-    Lemma flatten_mod {n} inp :
-      length inp = n ->
-      (Positional.eval weight n (fst (flatten inp)) = (eval n inp) mod (weight n)).
-    Proof. intro. apply (proj1 (flatten_div_mod n inp ltac:(assumption))). Qed.
-    Hint Rewrite @flatten_mod : push_eval.
-
-    Lemma flatten_div {n} inp :
-      length inp = n -> snd (flatten inp) = eval n inp / weight n.
-    Proof. intro. apply (proj2 (flatten_div_mod n inp ltac:(assumption))). Qed.
-    Hint Rewrite @flatten_div : push_eval.
-
-    (* nils *)
-    Definition nils n : list (list Z) := List.repeat nil n.
-    Lemma length_nils n : length (nils n) = n. Proof. cbv [nils]. distr_length. Qed.
-    Hint Rewrite length_nils : distr_length.
-    Lemma eval_nils n : eval n (nils n) = 0.
-    Proof.
-      erewrite <-Positional.eval_zeros by eauto.
-      cbv [eval nils]; rewrite List.map_repeat; reflexivity.
-    Qed. Hint Rewrite eval_nils : push_eval.
-
-    (* cons_to_nth *)
-    Definition cons_to_nth i x (xs : list (list Z)) : list (list Z) :=
-      ListUtil.update_nth i (fun y => cons x y) xs.
-    Lemma length_cons_to_nth i x xs : length (cons_to_nth i x xs) = length xs.
-    Proof. cbv [cons_to_nth]. distr_length. Qed.
-    Hint Rewrite length_cons_to_nth : distr_length.
-    Lemma cons_to_nth_add_to_nth xs : forall i x,
-      map sum (cons_to_nth i x xs) = Positional.add_to_nth i x (map sum xs).
-    Proof.
-      cbv [cons_to_nth]; induction xs as [|? ? IHxs];
-        intros i x; destruct i; simpl; rewrite ?IHxs; reflexivity.
-    Qed.
-    Lemma eval_cons_to_nth n i x xs : (i < length xs)%nat -> length xs = n ->
-      eval n (cons_to_nth i x xs) = weight i * x + eval n xs.
-    Proof using Type.
-      cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
-      apply Positional.eval_add_to_nth; distr_length.
-    Qed. Hint Rewrite eval_cons_to_nth using omega : push_eval.
-
-    (* from_associational *)
-    Definition from_associational n (p:list (Z*Z)) : list (list Z) :=
-      List.fold_right (fun t ls =>
-        let p := Positional.place weight t (pred n) in
-        cons_to_nth (fst p) (snd p) ls ) (nils n) p.
-    Lemma length_from_associational n p : length (from_associational n p) = n.
-    Proof. cbv [from_associational]. apply fold_right_invariant; intros; distr_length. Qed.
-    Hint Rewrite length_from_associational: distr_length.
-    Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil):
-      eval n (from_associational n p) = Associational.eval p.
-    Proof.
-      erewrite <-Positional.eval_from_associational by eauto. induction p.
-      { simpl. autorewrite with push_eval. rewrite Positional.eval_zeros; auto. }
-      { pose proof (length_from_associational n p).
-        cbv [from_associational] in *. destruct n_nonzero; try congruence; [ ].
-        simpl. rewrite eval_cons_to_nth, Positional.eval_add_to_nth;
-                 rewrite ?Positional.length_from_associational;
-        try match goal with |- context [Positional.place _ ?x ?n] =>
-                        pose proof (Positional.weight_place weight ltac:(assumption) ltac:(assumption) x n);
-                          pose proof (Positional.place_in_range weight x n); rewrite Nat.succ_pred in * by auto
-            end; auto; try omega.
-        rewrite IHp by tauto. ring. }
-    Qed.
-
-    Lemma flatten_snoc x inp : flatten (inp ++ [x]) = flatten_step x (flatten inp).
-    Proof. cbv [flatten]. rewrite rev_unit. reflexivity. Qed.
-
-    Lemma weight_multiples_full j : forall i, (i <= j)%nat -> weight j mod weight i = 0.
-    Proof.
-      induction j; intros; [replace i with 0%nat by omega
-                           | destruct (dec (i <= j)%nat); [ rewrite (Z.div_mod (weight (S j)) (weight j)) by auto
-                                                          | replace i with (S j) by omega ] ];
-      repeat match goal with
-             | _ => rewrite weight_0
-             | _ => rewrite weight_multiples
-             | _ => rewrite IHj by omega
-             | _ => progress autorewrite with push_Zmod zsimplify
-             | _ => reflexivity
-             end.
-    Qed.
-
-    (* TODO: move to ZUtil *)
-    Lemma Z_divide_div_mul_exact' a b c : b <> 0 -> (b | a) -> a * c / b = c * (a / b).
-    Proof. intros. rewrite Z.mul_comm. auto using Z.divide_div_mul_exact. Qed.
-
-    Lemma flatten_partitions inp:
-      forall n i, length inp = n -> (i < n)%nat ->
-                  nth_default 0 (fst (flatten inp)) i = (((eval n inp) / weight i)) mod (weight (S i) / weight i).
-    Proof.
-      induction inp using rev_ind; distr_length; intros.
-      { cbn.
-        autorewrite with push_eval push_nth_default zsimplify.
-        reflexivity. }
-      {
-        destruct n as [| n]; [omega|].
-        rewrite flatten_snoc, eval_snoc by omega.
-        cbv [flatten_step Let_In]. cbn [fst].
-        rewrite nth_default_app.
-        break_match; distr_length.
-        { rewrite IHinp with (n:=n) by omega.
-          rewrite (Z.div_mod (weight n) (weight i)) by auto.
-          rewrite weight_multiples_full by omega.
-          rewrite (Z.div_mod (weight n) (weight (S i))) by auto.
-          rewrite weight_multiples_full by omega.
-          autorewrite with zsimplify.
+      Ltac push :=
+        repeat match goal with
+               | _ => progress push_fast
+               | _ => progress autorewrite with cancel_pair to_div_mod
+               | _ => progress autorewrite with push_sum push_fold_right push_nth_default in *
+               | _ => progress autorewrite with pull_Zmod pull_Zdiv zsimplify_fast
+               | _ => progress autorewrite with list distr_length push_eval
+               end.
+      
+      Lemma flatten_column_mod fw (xs : list Z) :
+        fst (flatten_column fw xs)  = sum xs mod fw.
+      Proof.
+        induction xs; simpl flatten_column; cbv [Let_In];
           repeat match goal with
-                 | _ => rewrite Z_divide_div_mul_exact' by (try apply Z.mod_divide; auto)
-                 | |- context [ (_ + ?a * ?b * ?c) / ?a ] =>
-                   replace (a * b * c) with (a * (b * c)) by ring;
-                     rewrite Z.div_add' by auto
-                 | |- context [ (_ + ?a * ?b * ?c) mod ?b ] =>
-                   replace (a * b * c) with (a * c * b) by ring;
-                     rewrite Z.mod_add by auto using ZUtil.Z.positive_is_nonzero
-                 | _ => reflexivity
+                 | _ => rewrite IHxs
+                 | _ => progress push 
                  end.
-        }
-        { repeat match goal with
-                 | _ => progress replace (Datatypes.length inp) with n by omega
-                 | _ => progress replace i with n by omega
-                 | _ => rewrite nth_default_cons
-                 | _ => rewrite sum_cons
-                 | _ => rewrite flatten_column_mod
-                 | _ => erewrite flatten_div by eauto
-                 | _ => progress autorewrite with natsimplify
+      Qed. Hint Rewrite flatten_column_mod : to_div_mod.
+
+      Lemma flatten_column_div fw (xs : list Z) (fw_nz : fw <> 0) :
+        snd (flatten_column fw xs)  = sum xs / fw.
+      Proof.
+        induction xs; simpl flatten_column; cbv [Let_In];
+          repeat match goal with
+                 | _ => rewrite IHxs
+                 | _ => rewrite Z.mul_div_eq_full by omega
+                 | _ => progress push
                  end.
-          rewrite Z.div_add' by auto.
-          reflexivity. } }
-    Qed.
+      Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
+
+      Hint Rewrite Positional.eval_nil : push_eval.
+      Hint Resolve Z.gt_lt.
+
+      Lemma length_flatten_step digit state :
+        length (fst (flatten_step digit state)) = S (length (fst state)).
+      Proof. cbv [flatten_step]; push. Qed.
+      Hint Rewrite length_flatten_step : distr_length.
+      Lemma length_flatten inp : length (fst (flatten inp)) = length inp.
+      Proof. cbv [flatten]. induction inp using rev_ind; push. Qed.
+      Hint Rewrite length_flatten : distr_length.
+
+      Lemma flatten_div_mod n inp :
+        length inp = n ->
+        (Positional.eval weight n (fst (flatten inp))
+         = (eval n inp) mod (weight n))
+        /\ (snd (flatten inp) = eval n inp / weight n).
+      Proof.
+        (* to make the invariant take the right form, we make everything depend on output length, not input length *)
+        intro. subst n. rewrite <-(length_flatten inp). cbv [flatten].
+        induction inp using rev_ind; intros; [push|].
+        repeat match goal with
+               | _ => rewrite Nat.add_1_r
+               | _ => progress (fold (flatten inp) in * )
+               | _ => erewrite Positional.eval_snoc by (distr_length; reflexivity)
+               | H: _ = _ mod (weight _) |- _ => rewrite H
+               | H: _ = _ / (weight _) |- _ => rewrite H
+               | _ => progress rewrite ?mod_step, ?div_step by auto
+               | _ => progress autorewrite with cancel_pair to_div_mod push_sum list push_fold_right push_eval
+               | _ => progress (distr_length; push_fast)
+               end.
+      Qed.
+
+      Lemma flatten_mod {n} inp :
+        length inp = n ->
+        (Positional.eval weight n (fst (flatten inp)) = (eval n inp) mod (weight n)).
+      Proof. apply flatten_div_mod. Qed.
+      Hint Rewrite @flatten_mod : push_eval.
+
+      Lemma flatten_div {n} inp :
+        length inp = n -> snd (flatten inp) = eval n inp / weight n.
+      Proof. apply flatten_div_mod. Qed.
+      Hint Rewrite @flatten_div : push_eval.
+
+      Lemma flatten_snoc x inp : flatten (inp ++ [x]) = flatten_step x (flatten inp).
+      Proof. cbv [flatten]. rewrite rev_unit. reflexivity. Qed.
+
+      Lemma flatten_partitions inp:
+        forall n i, length inp = n -> (i < n)%nat ->
+                    nth_default 0 (fst (flatten inp)) i = ((eval n inp) mod (weight (S i))) / weight i.
+      Proof.
+        induction inp using rev_ind; intros; destruct n; distr_length.
+        rewrite flatten_snoc.
+        push; distr_length;
+          [rewrite IHinp with (n:=n) by omega; rewrite weight_div_mod with (j:=n) (i:=S i) by (eauto; omega); push_Zmod; push |].
+        repeat match goal with
+               | _ => progress replace (length inp) with n by omega
+               | _ => progress replace i with n by omega
+               | _ => progress push
+               | _ => erewrite flatten_div by eauto
+               | _ => rewrite <-Z.div_add' by auto
+               | _ => rewrite Z.mul_div_eq' by auto
+               | _ => rewrite Z.mod_pull_div by auto using Z.lt_le_incl
+               | _ => progress autorewrite with push_nth_default natsimplify
+               end.
+      Qed.
+    End Flatten.
+
+    Section FromAssociational.
+      (* nils *)
+      Definition nils n : list (list Z) := List.repeat nil n.
+      Lemma length_nils n : length (nils n) = n. Proof. cbv [nils]. distr_length. Qed.
+      Hint Rewrite length_nils : distr_length.
+      Lemma eval_nils n : eval n (nils n) = 0.
+      Proof.
+        erewrite <-Positional.eval_zeros by eauto.
+        cbv [eval nils]; rewrite List.map_repeat; reflexivity.
+      Qed. Hint Rewrite eval_nils : push_eval.
+
+      (* cons_to_nth *)
+      Definition cons_to_nth i x (xs : list (list Z)) : list (list Z) :=
+        ListUtil.update_nth i (fun y => cons x y) xs.
+      Lemma length_cons_to_nth i x xs : length (cons_to_nth i x xs) = length xs.
+      Proof. cbv [cons_to_nth]. distr_length. Qed.
+      Hint Rewrite length_cons_to_nth : distr_length.
+      Lemma cons_to_nth_add_to_nth xs : forall i x,
+          map sum (cons_to_nth i x xs) = Positional.add_to_nth i x (map sum xs).
+      Proof.
+        cbv [cons_to_nth]; induction xs as [|? ? IHxs];
+          intros i x; destruct i; simpl; rewrite ?IHxs; reflexivity.
+      Qed.
+      Lemma eval_cons_to_nth n i x xs : (i < length xs)%nat -> length xs = n ->
+                                        eval n (cons_to_nth i x xs) = weight i * x + eval n xs.
+      Proof using Type.
+        cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
+        apply Positional.eval_add_to_nth; distr_length.
+      Qed. Hint Rewrite eval_cons_to_nth using (solve [distr_length]) : push_eval.
+
+      Hint Rewrite Positional.eval_zeros : push_eval.
+      Hint Rewrite Positional.length_from_associational : distr_length.
+      Hint Rewrite Positional.eval_add_to_nth using (solve [distr_length]): push_eval.
+      
+      (* from_associational *)
+      Definition from_associational n (p:list (Z*Z)) : list (list Z) :=
+        List.fold_right (fun t ls =>
+                           let p := Positional.place weight t (pred n) in
+                           cons_to_nth (fst p) (snd p) ls ) (nils n) p.
+      Lemma length_from_associational n p : length (from_associational n p) = n.
+      Proof. cbv [from_associational]. apply fold_right_invariant; intros; distr_length. Qed.
+      Hint Rewrite length_from_associational: distr_length.
+      Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil):
+        eval n (from_associational n p) = Associational.eval p.
+      Proof.
+        erewrite <-Positional.eval_from_associational by eauto.
+        induction p; [ autorewrite with push_eval; congruence |].
+        cbv [from_associational Positional.from_associational]; autorewrite with push_fold_right.
+        fold (from_associational n p); fold (Positional.from_associational weight n p).
+        match goal with |- context [Positional.place _ ?x ?n] =>
+                        pose proof (Positional.place_in_range weight x n) end.
+        repeat match goal with
+               | _ => rewrite Nat.succ_pred in * by auto
+               | _ => rewrite IHp by auto
+               | _ => progress autorewrite with push_eval
+               | _ => progress cases
+               | _ => congruence
+               end.
+      Qed.
+    End FromAssociational.
 
     Section mul.
       Definition mul s n m (p q : list Z) : list Z :=
         let p_a := Positional.to_associational weight n p in
         let q_a := Positional.to_associational weight n q in
-        let pq_a := MulSplit.Associational.sat_mul s p_a q_a in
+        let pq_a := Associational.sat_mul s p_a q_a in
         fst (flatten (from_associational m pq_a)).
     End mul.
   End Columns.
+End Columns.
 
+Module Rows.
+  Import Saturated.
+  Section Rows.
+    Context (weight : nat->Z)
+            {weight_0 : weight 0%nat = 1}
+            {weight_nonzero : forall i, weight i <> 0}
+            {weight_positive : forall i, weight i > 0}
+            {weight_multiples : forall i, weight (S i) mod weight i = 0}
+            {weight_divides : forall i : nat, weight (S i) / weight i > 0}.
+
+    Local Notation rows := (list (list Z)) (only parsing).
+    Local Notation cols := (list (list Z)) (only parsing).
+
+    Hint Rewrite Positional.eval_nil Positional.eval0 @Positional.eval_snoc
+         Columns.eval_nil Columns.eval_snoc using (auto; solve [distr_length]) : push_eval.
+    Hint Resolve in_eq in_cons.
+    Hint Resolve Z.gt_lt.
+
+    Definition eval n (inp : rows) :=
+      sum (map (Positional.eval weight n) inp).
+    Lemma eval_nil n : eval n nil = 0.
+    Proof. cbv [eval]. rewrite map_nil, sum_nil; reflexivity. Qed.
+    Hint Rewrite eval_nil : push_eval.
+    Lemma eval0 x : eval 0 x = 0.
+    Proof. cbv [eval]. induction x; autorewrite with push_map push_sum push_eval; omega. Qed.
+    Hint Rewrite eval0 : push_eval.
+    Lemma eval_cons n r inp : eval n (r :: inp) = Positional.eval weight n r + eval n inp.
+    Proof. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
+    Hint Rewrite eval_cons : push_eval.
+    Lemma eval_app n x y : eval n (x ++ y) = eval n x + eval n y.
+    Proof. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
+    Hint Rewrite eval_app : push_eval.
+
+    Ltac In_cases :=
+      repeat match goal with
+             | H: In _ (_ ++ _) |- _ => apply in_app_or in H; destruct H
+             | H: In _ (_ :: _) |- _ => apply in_inv in H; destruct H
+             | H: In _ nil |- _ => contradiction H
+             | H: forall x, In x (?y :: ?ls) -> ?P |- _ =>
+               unique pose proof (H y ltac:(apply in_eq));
+               unique assert (forall x, In x ls -> P) by auto
+             end.
+
+    Section FromAssociational.
+      (* extract row *)
+      Definition extract_row (inp : cols) : cols * list Z := (map (fun c => tl c) inp, map (fun c => hd 0 c) inp).
+
+      Lemma eval_extract_row (inp : cols): forall n,
+          length inp = n ->
+          Positional.eval weight n (snd (extract_row inp)) = Columns.eval weight n inp - Columns.eval weight n (fst (extract_row inp)) .
+      Proof.
+        cbv [extract_row].
+        induction inp using rev_ind; [ | destruct n ];
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => progress distr_length
+                 | _ => rewrite Positional.eval_snoc with (n:=n) by distr_length
+                 | _ => progress autorewrite with cancel_pair push_eval push_map in *
+                 | _ => ring 
+                 end.
+        rewrite IHinp by distr_length.
+        destruct x; cbn [hd tl]; rewrite ?sum_nil, ?sum_cons; ring.
+      Qed. Hint Rewrite eval_extract_row using (solve [distr_length]) : push_eval.
+
+      Lemma length_fst_extract_row n (inp : cols) :
+        length inp = n -> length (fst (extract_row inp)) = n.
+      Proof. cbv [extract_row]; autorewrite with cancel_pair; distr_length. Qed.
+      Hint Rewrite length_fst_extract_row : distr_length.
+      
+      Lemma length_snd_extract_row n (inp : cols) :
+        length inp = n -> length (snd (extract_row inp)) = n.
+      Proof. cbv [extract_row]; autorewrite with cancel_pair; distr_length. Qed.
+      Hint Rewrite length_snd_extract_row : distr_length.
+
+      (* max column size *)
+      Definition max_column_size (x:cols) := fold_right (fun a b => Nat.max a b) 0%nat (map (fun c => length c) x).
+
+      (* TODO: move to where list is defined *)
+      Hint Rewrite @app_nil_l : list.
+      Hint Rewrite <-@app_comm_cons: list.
+ 
+      Lemma max_column_size_nil : max_column_size nil = 0%nat.
+      Proof. reflexivity. Qed. Hint Rewrite max_column_size_nil : push_max_column_size.
+      Lemma max_column_size_cons col (inp : cols) :
+        max_column_size (col :: inp) = Nat.max (length col) (max_column_size inp).
+      Proof. reflexivity. Qed. Hint Rewrite max_column_size_cons : push_max_column_size.
+      Lemma max_column_size_app (x y : cols) :
+        max_column_size (x ++ y) = Nat.max (max_column_size x) (max_column_size y).
+      Proof. induction x; autorewrite with list push_max_column_size; lia. Qed.
+      Hint Rewrite max_column_size_app : push_max_column_size.
+      Lemma max_column_size0 (inp : cols) :
+        forall n,
+          length inp = n -> (* this is not needed to make the lemma true, but prevents reliance on the implementation of Columns.eval*)
+          max_column_size inp = 0%nat -> Columns.eval weight n inp = 0.
+      Proof.
+        induction inp as [|x inp] using rev_ind; destruct n; try destruct x; intros;
+          autorewrite with push_max_column_size push_eval push_sum distr_length in *; try lia.
+        rewrite IHinp; distr_length; lia.
+      Qed.
+
+      (* from_columns *)
+      Definition from_columns' n start_state : cols * rows :=
+        fold_right (fun _ (state : cols * rows) =>
+                      let cols'_row := extract_row (fst state) in
+                      (fst cols'_row, snd state ++ [snd cols'_row])
+                   ) start_state (List.repeat 0 n).
+
+      Definition from_columns (inp : cols) : rows := snd (from_columns' (max_column_size inp) (inp, [])).
+
+      Lemma eval_from_columns'_with_length m st n:
+        (length (fst st) = n) ->
+        length (fst (from_columns' m st)) = n /\
+        ((forall r, In r (snd st) -> length r = n) ->
+         forall r, In r (snd (from_columns' m st)) -> length r = n) /\
+        eval n (snd (from_columns' m st)) = Columns.eval weight n (fst st) + eval n (snd st)
+                                                                             - Columns.eval weight n (fst (from_columns' m st)).
+      Proof.
+        cbv [from_columns']; intros.
+        apply fold_right_invariant; intros;
+          repeat match goal with
+                 | _ => progress (intros; subst)
+                 | _ => progress autorewrite with cancel_pair push_eval
+                 | _ => progress In_cases
+                 | _ => split; try omega
+                 | H: _ /\ _ |- _ => destruct H
+                 | _ => solve [auto using length_fst_extract_row, length_snd_extract_row]
+                 end.
+      Qed.
+      Lemma length_fst_from_columns' m st :
+        length (fst (from_columns' m st)) = length (fst st).
+      Proof. apply eval_from_columns'_with_length; reflexivity. Qed.
+      Hint Rewrite length_fst_from_columns' : distr_length.
+      Lemma length_snd_from_columns' m st :
+        (forall r, In r (snd st) -> length r = length (fst st)) ->
+        forall r, In r (snd (from_columns' m st)) -> length r = length (fst st).
+      Proof. apply eval_from_columns'_with_length. reflexivity. Qed.
+      Hint Rewrite length_snd_from_columns' : distr_length.
+      Lemma eval_from_columns' m st n :
+        (length (fst st) = n) -> 
+        eval n (snd (from_columns' m st)) = Columns.eval weight n (fst st) + eval n (snd st)
+                                                                             - Columns.eval weight n (fst (from_columns' m st)).
+      Proof. apply eval_from_columns'_with_length. Qed.
+      Hint Rewrite eval_from_columns' using (auto; solve [distr_length]) : push_eval.
+
+      Lemma max_column_size_extract_row inp :
+        max_column_size (fst (extract_row inp)) = (max_column_size inp - 1)%nat.
+      Proof.
+        cbv [extract_row]. autorewrite with cancel_pair.
+        induction inp; [ reflexivity | ].
+        autorewrite with push_max_column_size push_map distr_length.
+        rewrite IHinp. auto using Nat.sub_max_distr_r.
+      Qed.
+      Hint Rewrite max_column_size_extract_row : push_max_column_size.
+
+      Lemma max_column_size_from_columns' m st :
+        max_column_size (fst (from_columns' m st)) = (max_column_size (fst st) - m)%nat.
+      Proof.
+        cbv [from_columns']; induction m; intros; cbn - [max_column_size extract_row];
+          autorewrite with push_max_column_size; lia.
+      Qed.
+      Hint Rewrite max_column_size_from_columns' : push_max_column_size.
+
+      Lemma eval_from_columns (inp : cols) :
+        forall n, length inp = n -> eval n (from_columns inp) = Columns.eval weight n inp.
+      Proof.
+        intros; cbv [from_columns];
+          repeat match goal with
+                 | _ => progress autorewrite with cancel_pair push_eval push_max_column_size
+                 | _ => rewrite max_column_size0 with (inp := fst (from_columns' _ _)) by
+                       (autorewrite with push_max_column_size; distr_length)
+                 | _ => omega
+                 end.
+      Qed.
+      Hint Rewrite eval_from_columns using (auto; solve [distr_length]) : push_eval.
+
+      Lemma length_from_columns inp:
+        forall r, In r (from_columns inp) -> length r = length inp.
+      Proof.
+        cbv [from_columns]; intros.
+        change inp with (fst (inp, @nil (list Z))).
+        eapply length_snd_from_columns'; eauto.
+        autorewrite with cancel_pair; intros; In_cases.
+      Qed.
+      Hint Rewrite length_from_columns : distr_length.
+
+      (* from associational *)
+      Definition from_associational n (p : list (Z * Z)) := from_columns (Columns.from_associational weight n p).
+      
+      Lemma eval_from_associational n p: (n <> 0%nat \/ p = nil) ->
+                                         eval n (from_associational n p) = Associational.eval p.
+      Proof.
+        intros. cbv [from_associational].
+        rewrite eval_from_columns by auto using Columns.length_from_associational.
+        auto using Columns.eval_from_associational.
+      Qed.
+
+      Lemma length_from_associational n p :
+        forall r, In r (from_associational n p) -> length r = n.
+      Proof.
+        cbv [from_associational]; intros.
+        match goal with H: _ |- _ => apply length_from_columns in H end.
+        rewrite Columns.length_from_associational in *; auto.
+      Qed.
+    End FromAssociational.
+
+    Section Flatten.
+      Local Notation fw := (fun i => weight (S i) / weight i) (only parsing).
+
+      Section SumRows.
+        Definition sum_rows' start_state (row1 row2 : list Z) : list Z * Z :=
+          fold_right (fun next (state : list Z * Z) =>
+                        let i := length (fst state) in (* length of output accumulator tells us the index of [next] *)
+                        dlet_nd next := next in (* makes the output correctly bind variables *)
+                          dlet_nd sum_carry := Z.add_with_get_carry_full (fw i) (snd state) (fst next) (snd next) in
+                          (fst state ++ [fst sum_carry], snd sum_carry)) start_state (rev (combine row1 row2)).
+        Definition sum_rows := sum_rows' (nil,0).
+
+        Ltac push :=
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => progress cbv [Let_In]
+                 | _ => rewrite Nat.add_1_r
+                 | _ => erewrite Positional.eval_snoc by eauto
+                 | H : length _ = _ |- _ => rewrite H
+                 | H: 0%nat = _ |- _ => rewrite <-H
+                 | [p := _ |- _] => subst p
+                 | _ => progress autorewrite with cancel_pair natsimplify push_sum_rows list push_nth_default
+                 | _ => progress autorewrite with cancel_pair in *
+                 | _ => progress distr_length
+                 | _ => progress break_match
+                 | _ => ring
+                 | _ => solve [ repeat (f_equal; try ring) ]
+                 | _ => tauto
+                 | _ => solve [eauto]
+                 end.
+
+        Lemma sum_rows'_cons state x1 row1 x2 row2 :
+          sum_rows' state (x1 :: row1) (x2 :: row2) =
+          sum_rows' (fst state ++ [(snd state + x1 + x2) mod (fw (length (fst state)))], (snd state + x1 + x2) / fw (length (fst state))) row1 row2.
+        Proof.
+          cbv [sum_rows' Let_In]; autorewrite with push_combine.
+          rewrite !fold_left_rev_right. cbn [fold_left].
+          autorewrite with cancel_pair to_div_mod. congruence.
+        Qed.
+
+        Lemma sum_rows'_nil state :
+          sum_rows' state nil nil = state.
+        Proof. reflexivity. Qed.
+
+        Hint Rewrite sum_rows'_cons sum_rows'_nil : push_sum_rows.
+
+        Lemma sum_rows'_div_mod_length row1 :
+          forall nm start_state row2 row1' row2',
+            let m := length (fst start_state) in
+            let n := length row1 in
+            length row2 = n ->
+            length row1' = m ->
+            length row2' = m ->
+            (nm = n + m)%nat ->
+            let eval := Positional.eval weight in
+            is_div_mod (eval m) start_state (eval m row1' + eval m row2') (weight m) ->
+            length (fst (sum_rows' start_state row1 row2)) = nm
+            /\ is_div_mod (eval nm) (sum_rows' start_state row1 row2)
+                          (eval nm (row1' ++ row1) + eval nm (row2' ++ row2))
+                          (weight nm).
+        Proof.
+          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push.
+          rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
+          apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length in *; try omega.
+          eapply is_div_mod_step with (x := x1 + x2); try eassumption; push.
+        Qed.
+        
+        Lemma sum_rows_div_mod n row1 row2 :
+          length row1 = n -> length row2 = n ->
+          let eval := Positional.eval weight in
+          is_div_mod (eval n) (sum_rows row1 row2) (eval n row1 + eval n row2) (weight n).
+        Proof.
+          cbv [sum_rows]; intros.
+          apply sum_rows'_div_mod_length with (row1':=nil) (row2':=nil);
+            cbv [is_div_mod]; autorewrite with cancel_pair push_eval zsimplify; distr_length.
+        Qed.
+
+        Lemma sum_rows_mod n row1 row2 :
+          length row1 = n -> length row2 = n ->
+          Positional.eval weight n (fst (sum_rows row1 row2))
+          = (Positional.eval weight n row1 + Positional.eval weight n row2) mod (weight n).
+        Proof. apply sum_rows_div_mod. Qed.
+        Lemma sum_rows_div row1 row2 n:
+          length row1 = n -> length row2 = n ->
+          snd (sum_rows row1 row2)
+          = (Positional.eval weight n row1 + Positional.eval weight n row2) / (weight n).
+        Proof. apply sum_rows_div_mod. Qed.
+
+        Lemma sum_rows'_partitions row1 :
+          forall nm start_state row2 row1' row2',
+            let m := length (fst start_state) in
+            let n := length row1 in
+            length row2 = n ->
+            length row1' = m ->
+            length row2' = m ->
+            nm = (n + m)%nat ->
+            let eval := Positional.eval weight in
+            snd start_state = (eval m row1' + eval m row2') / weight m ->
+            (forall j, (j < m)%nat ->
+                       nth_default 0 (fst start_state) j = ((eval m row1' + eval m row2') mod (weight (S j))) / (weight j)) ->
+            forall i, (i < nm)%nat ->
+                      nth_default 0 (fst (sum_rows' start_state row1 row2)) i
+                      = ((eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) mod (weight (S i))) / (weight i).
+        Proof.
+          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push.
+          
+          rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
+          apply IHrow1; clear IHrow1; push;
+            repeat match goal with
+                   | H : ?LHS = _ |- _ =>
+                     match LHS with context [start_state] => rewrite H end
+                   | H : context [nth_default 0 (fst start_state)] |- _ => rewrite H by omega
+                   | _ => rewrite <-(Z.add_assoc _ x1 x2)
+                   end.
+          { rewrite div_step by auto using Z.gt_lt.
+            rewrite Z.mul_div_eq_full by auto; rewrite weight_multiples. push. }
+          { rewrite weight_div_mod with (j:=length (fst start_state)) (i:=S j) by (auto; omega).
+            push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
+          { push. replace (length (fst start_state)) with j in * by omega.
+            push. rewrite add_mod_div_multiple by auto using Z.lt_le_incl.
+            push. }
+        Qed.
+        
+        Lemma sum_rows_partitions row1: forall row2 n i,
+            length row1 = n -> length row2 = n -> (i < n)%nat ->
+            nth_default 0 (fst (sum_rows row1 row2)) i
+            = ((Positional.eval weight n row1 + Positional.eval weight n row2) mod weight (S i)) / (weight i).
+        Proof.
+          cbv [sum_rows]; intros. rewrite <-(Nat.add_0_r n).
+          rewrite <-(app_nil_l row1), <-(app_nil_l row2).
+          apply sum_rows'_partitions; intros;
+            autorewrite with cancel_pair push_eval zsimplify_fast push_nth_default; distr_length.
+          rewrite Z.div_0_l by auto; omega.
+        Qed.
+
+        Lemma length_sum_rows row1 row2 n:
+          length row1 = n -> length row2 = n ->
+          length (fst (sum_rows row1 row2)) = n.
+        Proof.
+          cbv [sum_rows]; intros.
+          eapply sum_rows'_div_mod_length; cbv [is_div_mod];
+            autorewrite with cancel_pair; distr_length; auto using nil_length0.
+        Qed. Hint Rewrite length_sum_rows : distr_length.
+      End SumRows.
+      Hint Resolve length_sum_rows.
+      Hint Rewrite sum_rows_mod using (auto; solve [distr_length; auto]) : push_eval.
+
+
+      Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=
+        fold_right (fun next_row (state : list Z * Z)=>
+                      let out_carry := sum_rows next_row (fst state) in
+                      (fst out_carry, snd state + snd out_carry)) start_state (rev inp).
+
+      (* For correctness if there is only one row, we add a row of
+         zeroes with the same length so that the add loop still happens. *)
+      Definition flatten (inp : rows) : list Z * Z :=
+        let first_row := hd nil inp in
+        flatten' (first_row, 0) (hd (Positional.zeros (length first_row)) (tl inp) :: tl (tl inp)).
+
+      Lemma flatten'_cons state r inp :
+        flatten' state (r :: inp) = flatten' (fst (sum_rows r (fst state)), snd state + snd (sum_rows r (fst state))) inp.
+      Proof. cbv [flatten']; autorewrite with list push_fold_right. reflexivity. Qed.
+      Lemma flatten'_nil state : flatten' state [] = state. Proof. reflexivity. Qed.
+      Hint Rewrite flatten'_cons flatten'_nil : push_flatten.
+
+      Ltac push :=
+        repeat match goal with
+               | _ => progress intros
+               | H: length ?x = ?n |- context [snd (sum_rows ?x _)] => rewrite sum_rows_div with (n:=n) by (distr_length; eauto)
+               | H: length ?x = ?n |- context [snd (sum_rows _ ?x)] => rewrite sum_rows_div with (n:=n) by (distr_length; eauto)
+               | H: length _ = _ |- _ => rewrite H
+               | _ => progress autorewrite with cancel_pair push_flatten push_eval distr_length zsimplify_fast
+               | _ => progress In_cases
+               | |- _ /\ _ => split
+               | |- context [?x mod ?y] => unique pose proof (Z.mul_div_eq_full x y ltac:(auto)); lia
+               | _ => solve [repeat (f_equal; try ring)]
+               | _ => congruence
+               | _ => solve [eauto]
+               end.
+
+      Lemma flatten'_div_mod_length n inp : forall start_state,
+        length (fst start_state) = n ->
+        (forall row, In row inp -> length row = n) ->
+        length (fst (flatten' start_state inp)) = n
+        /\ (inp <> nil ->
+            is_div_mod (Positional.eval weight n) (flatten' start_state inp)
+                       (Positional.eval weight n (fst start_state) + eval n inp + weight n * snd start_state)
+                       (weight n)).
+      Proof.
+        induction inp; push; [apply IHinp; push|].
+        destruct (dec (inp = nil)); [subst inp; cbv [is_div_mod]
+                                    | eapply is_div_mod_result_equal; try apply IHinp]; push.
+        { autorewrite with zsimplify; push. }
+        { autorewrite with zsimplify; push. }
+      Qed.
+
+      Hint Rewrite (@Positional.length_zeros weight) : distr_length.
+      Hint Rewrite (@Positional.eval_zeros weight) using auto : push_eval.
+
+      Lemma flatten_div_mod inp n :
+        (forall row, In row inp -> length row = n) ->
+        is_div_mod (Positional.eval weight n) (flatten inp) (eval n inp) (weight n).
+      Proof.
+        intros; cbv [flatten].
+        destruct inp; [|destruct inp]; cbn [hd tl]; try solve [cbv [is_div_mod]; push].
+        eapply is_div_mod_result_equal; try apply flatten'_div_mod_length; push.
+      Qed.
+
+      Lemma flatten_mod inp n :
+        (forall row, In row inp -> length row = n) ->
+        Positional.eval weight n (fst (flatten inp)) = (eval n inp) mod (weight n).
+      Proof. apply flatten_div_mod. Qed.
+      Lemma flatten_div inp n :
+        (forall row, In row inp -> length row = n) ->
+        snd (flatten inp) = (eval n inp) / (weight n).
+      Proof. apply flatten_div_mod. Qed.
+
+      Lemma length_flatten' n start_state inp :
+        length (fst start_state) = n ->
+        (forall row, In row inp -> length row = n) ->
+        length (fst (flatten' start_state inp)) = n.
+      Proof. apply flatten'_div_mod_length. Qed.
+      Hint Rewrite length_flatten' : distr_length. 
+
+      Lemma length_flatten n inp :
+        (forall row, In row inp -> length row = n) ->
+        inp <> nil ->
+        length (fst (flatten inp)) = n.
+      Proof.
+        intros. apply flatten'_div_mod_length; push;
+          destruct inp as [|? [|? ?] ]; try congruence; cbn [hd tl] in *; push.
+        subst row; distr_length; auto.
+      Qed. Hint Rewrite length_flatten : distr_length.
+
+      Lemma flatten'_partitions n inp : forall start_state,
+        length (fst start_state) = n ->
+        (forall row, In row inp -> length row = n) ->
+        inp <> nil ->
+        forall i, (i < n)%nat ->
+                  nth_default 0 (fst (flatten' start_state inp)) i
+                  = ((Positional.eval weight n (fst start_state) + eval n inp) mod weight (S i)) / (weight i).
+      Proof.
+        induction inp; push.
+        destruct (dec (inp = nil)).
+        { subst inp; push. rewrite sum_rows_partitions with (n:=n) by eauto. push. }
+        { erewrite IHinp; push.
+          rewrite add_mod_l_multiple by auto using weight_divides_full, weight_multiples_full.
+          repeat (f_equal; try ring). }
+      Qed.
+
+      Lemma flatten_partitions inp n :
+        (forall row, In row inp -> length row = n) ->
+        forall i, (i < n)%nat ->
+                  nth_default 0 (fst (flatten inp)) i = (eval n inp mod weight (S i)) / (weight i).
+      Proof.
+        intros; cbv [flatten].
+        intros; destruct inp as [| ? [| ? ?] ]; try congruence; cbn [hd tl] in *;  try solve [push].
+        { cbn. autorewrite with push_nth_default. reflexivity. }
+        { push. rewrite sum_rows_partitions with (n:=n) by distr_length; push. }
+        { rewrite flatten'_partitions with (n:=n); push. }
+      Qed.
+    End Flatten.
+
+  End Rows.
+End Rows.
+
+Module MulConverted.
   Section mul_converted.
       Context (w w' : nat -> Z).
       Context (w'_0 : w' 0%nat = 1)
@@ -846,10 +1359,10 @@ Module Columns.
       let p3_a := Associational.mul p1_a p2_a in
       (* important not to use Positional.carry here; we don't want to accumulate yet *)
       let p3'_a := fold_right (fun i acc => Associational.carry (w' i) (w' (S i) / w' i) acc) p3_a (rev idxs) in
-      fst (flatten w (from_associational w n3 p3'_a)).
+      fst (Rows.flatten w (Rows.from_associational w n3 p3'_a)).
 
       Hint Rewrite
-           @Columns.eval_from_associational
+           @Rows.eval_from_associational
            @Associational.eval_carry
            @Associational.eval_mul
            @Positional.eval_to_associational
@@ -867,12 +1380,10 @@ Module Columns.
         Positional.eval w n3 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) = (Positional.eval w n1 p1) * (Positional.eval w n2 p2).
       Proof.
         cbv [mul_converted]; intros.
-        rewrite Columns.flatten_mod by auto using Columns.length_from_associational.
+        rewrite Rows.flatten_mod by eauto using Rows.length_from_associational.
         autorewrite with push_eval. auto using Z.mod_small.
       Qed.
       Hint Rewrite eval_mul_converted : push_eval.
-
-      Hint Rewrite @length_from_associational : distr_length.
 
       Lemma mul_converted_mod n1 n2 m1 m2 n3 idxs p1 p2  (_:n3<>0%nat) (_:m1<>0%nat) (_:m2<>0%nat):
         length p1 = n1 -> length p2 = n2 ->
@@ -880,7 +1391,7 @@ Module Columns.
         nth_default 0 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) 0 = (Positional.eval w n1 p1 * Positional.eval w n2 p2) mod (w 1).
       Proof.
         intros; cbv [mul_converted].
-        erewrite flatten_partitions by (auto; distr_length).
+        rewrite Rows.flatten_partitions with (n:=n3) by (eauto using Rows.length_from_associational; omega).
         autorewrite with distr_length push_eval natsimplify.
         rewrite w_0; autorewrite with zsimplify.
         reflexivity.
@@ -895,14 +1406,9 @@ Module Columns.
         nth_default 0 (mul_converted n1 n2 m1 m2 n3 idxs p1 p2) 1 = (Positional.eval w n1 p1 * Positional.eval w n2 p2) / (w 1).
       Proof.
         intros; subst n3; cbv [mul_converted].
-        erewrite flatten_partitions by (auto; distr_length).
+        rewrite Rows.flatten_partitions with (n:=2%nat) by (eauto using Rows.length_from_associational; omega).
         autorewrite with distr_length push_eval.
-        pose proof (w_positive 1).
-        apply Z.mod_small.
-        split; [ solve[Z.zero_bounds] | ].
-        apply Z.div_lt_upper_bound; [omega|].
-        rewrite Z.mul_div_eq_full by auto.
-        rewrite w_multiples. omega.
+        rewrite Z.mod_small; omega.
       Qed.
 
       (* shortcut definition for convert-mul-convert for cases when we are halving the bitwidth before multiplying. *)
@@ -912,7 +1418,7 @@ Module Columns.
         mul_converted n n n2 n2 n2 (map (fun x => 2*x + 1)%nat (seq 0 n)).
 
   End mul_converted.
-End Columns.
+End MulConverted.
 
 Module Compilers.
   Module type.
@@ -1300,8 +1806,10 @@ Module Compilers.
           | primitive {t:type.primitive} (v : interp t) : ident () t
           | Let_In {tx tC} : ident (tx * (tx -> tC)) tC
           | Nat_succ : ident nat nat
+          | Nat_max : ident (nat * nat) nat
           | Nat_mul : ident (nat * nat) nat
           | Nat_add : ident (nat * nat) nat
+          | Nat_sub : ident (nat * nat) nat
           | nil {t} : ident () (list t)
           | cons {t} : ident (t * list t) (list t)
           | fst {A B} : ident (A * B) A
@@ -1319,6 +1827,8 @@ Module Compilers.
           | List_partition {A} : ident ((A -> bool) * list A) (list A * list A)
           | List_app {A} : ident (list A * list A) (list A)
           | List_rev {A} : ident (list A) (list A)
+          | List_tl {A} : ident (list A) (list A)
+          | List_hd {A} : ident (A * list A) A
           | List_fold_right {A B} : ident ((B * A -> A) * A * list B) A
           | List_update_nth {T} : ident (nat * (T -> T) * list T) (list T)
           | List_nth_default {T} : ident (T * list T * nat) T
@@ -1364,7 +1874,9 @@ Module Compilers.
                | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
                | Nat_succ => Nat.succ
                | Nat_add => curry2 Nat.add
+               | Nat_sub => curry2 Nat.sub
                | Nat_mul => curry2 Nat.mul
+               | Nat_max => curry2 Nat.max
                | nil t => curry0 (@Datatypes.nil (type.interp t))
                | cons t => curry2 (@Datatypes.cons (type.interp t))
                | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
@@ -1382,6 +1894,8 @@ Module Compilers.
                | List_partition A => curry2 (@List.partition (type.interp A))
                | List_app A => curry2 (@List.app (type.interp A))
                | List_rev A => @List.rev (type.interp A)
+               | List_tl A => @List.tl (type.interp A)
+               | List_hd A => curry2 (@List.hd (type.interp A))
                | List_fold_right A B => curry3_1 (@List.fold_right (type.interp A) (type.interp B))
                | List_update_nth T => curry3 (@update_nth (type.interp T))
                | List_nth_default T => curry3 (@List.nth_default (type.interp T))
@@ -1411,7 +1925,9 @@ Module Compilers.
             lazymatch term with
             | Nat.succ ?x => mkAppIdent Nat_succ x
             | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
+            | Nat.sub ?x ?y => mkAppIdent Nat_sub (x, y)
             | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
+            | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
             | S ?x => mkAppIdent Nat_succ x
             | @Datatypes.nil ?T
               => let rT := type.reify T in
@@ -1487,6 +2003,12 @@ Module Compilers.
             | @List.rev ?A ?ls
               => let rA := type.reify A in
                  mkAppIdent (@ident.List_rev rA) ls
+            | @List.tl ?A ?ls
+              => let rA := type.reify A in
+                 mkAppIdent (@ident.List_tl rA) ls
+            | @List.hd ?A ?x ?ls
+              => let rA := type.reify A in
+                 mkAppIdent (@ident.List_hd rA) (x, ls)
             | @List.fold_right ?A ?B (fun b a => ?f) ?a0 ?ls
               => let rA := type.reify A in
                  let rB := type.reify B in
@@ -1540,6 +2062,8 @@ Module Compilers.
             Notation partition := List_partition.
             Notation app := List_app.
             Notation rev := List_rev.
+            Notation tl := List_tl.
+            Notation hd := List_hd.
             Notation fold_right := List_fold_right.
             Notation update_nth := List_update_nth.
             Notation nth_default := List_nth_default.
@@ -1566,7 +2090,9 @@ Module Compilers.
           Module Nat.
             Notation succ := Nat_succ.
             Notation add := Nat_add.
+            Notation sub := Nat_sub.
             Notation mul := Nat_mul.
+            Notation max := Nat_max.
           End Nat.
 
           Module Export Notations.
@@ -1609,7 +2135,9 @@ Module Compilers.
           | Let_In {tx tC} : ident (tx * (tx -> tC)) tC
           | Nat_succ : ident nat nat
           | Nat_add : ident (nat * nat) nat
+          | Nat_sub : ident (nat * nat) nat
           | Nat_mul : ident (nat * nat) nat
+          | Nat_max : ident (nat * nat) nat
           | nil {t} : ident () (list t)
           | cons {t} : ident (t * list t) (list t)
           | fst {A B} : ident (A * B) A
@@ -1667,7 +2195,9 @@ Module Compilers.
                | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
                | Nat_succ => Nat.succ
                | Nat_add => curry2 Nat.add
+               | Nat_sub => curry2 Nat.sub
                | Nat_mul => curry2 Nat.mul
+               | Nat_max => curry2 Nat.max
                | nil t => curry0 (@Datatypes.nil (type.interp t))
                | cons t => curry2 (@Datatypes.cons (type.interp t))
                | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
@@ -1711,7 +2241,9 @@ Module Compilers.
             lazymatch term with
             | Nat.succ ?x => mkAppIdent Nat_succ x
             | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
+            | Nat.sub ?x ?y => mkAppIdent Nat_sub (x, y)
             | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
+            | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
             | S ?x => mkAppIdent Nat_succ x
             | @Datatypes.nil ?T
               => let rT := type.reify T in
@@ -1828,7 +2360,9 @@ Module Compilers.
           Module Nat.
             Notation succ := Nat_succ.
             Notation add := Nat_add.
+            Notation sub := Nat_sub.
             Notation mul := Nat_mul.
+            Notation max := Nat_max.
           End Nat.
 
           Module Export Notations.
@@ -1890,8 +2424,12 @@ Module Compilers.
                => AppIdent ident.Nat_succ
              | for_reification.ident.Nat_add
                => AppIdent ident.Nat_add
+             | for_reification.ident.Nat_sub
+               => AppIdent ident.Nat_sub
              | for_reification.ident.Nat_mul
                => AppIdent ident.Nat_mul
+             | for_reification.ident.Nat_max
+               => AppIdent ident.Nat_max
              | for_reification.ident.nil t
                => AppIdent ident.nil
              | for_reification.ident.cons t
@@ -2046,6 +2584,28 @@ Module Compilers.
                                      nil
                                      (fun x l' rev_l' => List_app rev_l' [x])
                                      ls) in
+                    let v := app_and_maybe_cancel v in exact v)
+             | for_reification.ident.List_tl A
+               => ltac:(
+                    let v := reify
+                               (@expr var)
+                               (fun ls
+                                => list_rect
+                                     (fun _ => list (type.interp A))
+                                     nil
+                                     (fun _ l' _ => l')
+                                     ls) in
+                    let v := app_and_maybe_cancel v in exact v)
+             | for_reification.ident.List_hd A
+               => ltac:(
+                    let v := reify
+                               (@expr var)
+                               (fun (xls : type.interp A * list (type.interp A))
+                                => list_rect
+                                     (fun _ => type.interp A)
+                                     (fst xls)
+                                     (fun x _ _ => x)
+                                     (snd xls)) in
                     let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_fold_right A B
                => ltac:(
@@ -2702,7 +3262,9 @@ Module Compilers.
                   | ident.primitive _ _ as idc
                   | ident.Nat_succ as idc
                   | ident.Nat_add as idc
+                  | ident.Nat_sub as idc
                   | ident.Nat_mul as idc
+                  | ident.Nat_max as idc
                   | ident.pred as idc
                   | ident.Z_shiftr _ as idc
                   | ident.Z_shiftl _ as idc
@@ -2888,7 +3450,9 @@ Module Compilers.
                        @ ((idc : default.ident _ type.nat)
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Nat_add as idc
+                | ident.Nat_sub as idc
                 | ident.Nat_mul as idc
+                | ident.Nat_max as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.nat * type.nat * (type.nat -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
@@ -3580,7 +4144,20 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z, a) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr (inr x, y), z), a)
-                        => expr.reflect (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a))))
+                       => let default_with_carry := expr.reflect (AppIdent (ident.Z.add_with_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z*type.Z) (inr (inr (y, z), a)))) in
+                          let default_no_carry := expr.reflect (AppIdent (ident.Z.add_get_carry_concrete x) (expr.reify (t:=type.Z*type.Z) (inr (z,a)))) in
+                          let default := match y with
+                                         | inr xx=> if Z.eqb xx 0 then default_no_carry else default_with_carry
+                                         | _ => default_with_carry
+                                         end in
+                          match (z,a) with 
+                          | (inr xx, inl e)
+                          | (inl e, inr xx)
+                            => if Z.eqb xx 0
+                               then inr (inl e, inr 0%Z)
+                               else default
+                          | _ => default
+                          end
                      | _ => expr.reflect (AppIdent idc (expr.reify (t:=_*_*_*_) x_y_z_a))
                      end
              | ident.Z_sub_get_borrow as idc
@@ -3639,7 +4216,9 @@ Module Compilers.
                      | inl x => expr.reflect (AppIdent idc x)
                      end
              | ident.Nat_add as idc
+             | ident.Nat_sub as idc
              | ident.Nat_mul as idc
+             | ident.Nat_max as idc
              | ident.Z_pow as idc
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
@@ -4221,7 +4800,9 @@ Module Compilers.
                | ident.Let_In tx tC => None
                | ident.Nat_succ => None
                | ident.Nat_add => None
+               | ident.Nat_sub => None
                | ident.Nat_mul => None
+               | ident.Nat_max => None
                | default.ident.nil (Compilers.type.type_primitive t)
                  => Some (@nil (type.primitive.compile t))
                | default.ident.nil _
@@ -4590,7 +5171,7 @@ Module Compilers.
                | shiftl _ _ offset
                  => option_map
                       (fun '(existT r args)
-		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftr v offset) r)
+		       => existT _ (ZRange.two_corners (fun v => BinInt.Z.shiftl v offset) r)
                                  (AppIdent (shiftl _ _ offset) args))
                | land _ _ mask
                  => option_map
@@ -5659,6 +6240,37 @@ Module RemoveDeadLets.
         end
       end.
 
+    (* TODO(jadep): this is pretty ad-hoc and should eventually be removed *)
+    (* inlines lets that bind only shifts/lands *)
+    Fixpoint inline_shifts_and_lands t (e : @expr ident t) : @expr ident t :=
+      match e in (expr t') return expr t' with
+      | Var T n => Var T n
+      | TT => TT
+      | AppIdent s T idc x =>
+        AppIdent idc (inline_shifts_and_lands _ x)
+      | Pair A B a b => Pair (inline_shifts_and_lands _ a) (inline_shifts_and_lands _ b)
+      | Let_In s T n x f =>
+        let default := Let_In n (inline_shifts_and_lands _ x) (inline_shifts_and_lands _ f) in
+        match x with
+        | AppIdent _ _ idc inp =>
+          match idc with
+          | (@BoundsAnalysis.ident.shiftr T1 Tout b) as idc'
+          | (@BoundsAnalysis.ident.shiftl T1 Tout b) as idc'
+          | (@BoundsAnalysis.ident.land T1 Tout b) as idc'
+            =>
+            match inp with
+            | Var _ m as inp'
+            | AppIdent _ _ (@BoundsAnalysis.ident.fst _ _) (Var _ m) as inp'
+              =>
+              inline_let n _ (@AppIdent _ _ _ idc' inp') _ (inline_shifts_and_lands _ f)
+            | _ => default
+            end
+          | _ => default
+          end
+        | _ => default
+        end
+      end.
+
     (* TODO: proofs--note these may block on getting canonical maps for contexts *)
     (* TODO(jgross, from jadep): Should I put this into the pipeline? *)
   End RemoveDeadLets.
@@ -5676,24 +6288,30 @@ Module MontgomeryReduction.
     Context (HN_range : 0 <= N < R) (HN'_range : 0 <= N' < R) (HN_nz : N <> 0) (R_gt_1 : R > 1)
             (N'_good : Z.equiv_modulo R (N*N') (-1)) (R'_good: Z.equiv_modulo N (R*R') 1).
 
-    Context (w w_half : nat -> Z).
-    Context (w_half_sq : forall i, (w_half i) * (w_half i) = w i).
-    Context (w_half_0 : w_half 0%nat = 1)
-            (w_half_nonzero : forall i, w_half i <> 0)
-            (w_half_positive : forall i, w_half i > 0)
-            (w_half_multiples : forall i, w_half (S i) mod w_half i = 0)
-            (w_half_divides : forall i : nat, w_half (S i) / w_half i > 0).
+    Context (w w_mul : nat -> Z).
+    Context (n:nat) (Hn_nz: n <> 0%nat).
+    Context (w_mul_pown : forall i, (w_mul i) ^ n = w i).
+    Context (w_mul_0 : w_mul 0%nat = 1)
+            (w_mul_nonzero : forall i, w_mul i <> 0)
+            (w_mul_positive : forall i, w_mul i > 0)
+            (w_mul_multiples : forall i, w_mul (S i) mod w_mul i = 0)
+            (w_mul_divides : forall i : nat, w_mul (S i) / w_mul i > 0).
     Context (w_0 : w 0%nat = 1)
             (w_nonzero : forall i, w i <> 0)
             (w_positive : forall i, w i > 0)
             (w_multiples : forall i, w (S i) mod w i = 0)
             (w_divides : forall i : nat, w (S i) / w i > 0).
-    Context (w_1_gt1 : w 1 > 1) (w_half_1_gt1 : w_half 1 > 1).
-    Context (n:nat) (Hn: n = 2%nat).
+    Context (w_1_gt1 : w 1 > 1) (w_mul_1_gt1 : w_mul 1 > 1).
+    Context (nout : nat) (Hnout : nout = 2%nat).
+
+    (* simpler version of mul_converted with a carry chain that aligns
+      terms in the intermediate weight with the final weight *)
+    Definition mul_converted_aligned w w' (log_w'_w : nat) n m nout :=
+      MulConverted.mul_converted w w' n n m m nout (map (fun i => ((log_w'_w * (i + 1)) - 1))%nat (seq 0 nout)).
 
     Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (Columns.mul_converted_halve w w_half 1%nat n [fst lo_hi] [N']) 0  in
-      dlet_nd t1_t2 := Columns.mul_converted_halve w w_half 1%nat n [y] [N] in
+      dlet_nd y := nth_default 0 (mul_converted_aligned w w_mul n 1%nat n nout [fst lo_hi] [N']) 0  in
+      dlet_nd t1_t2 := mul_converted_aligned w w_mul n 1%nat n nout [y] [N] in
       dlet_nd lo'_carry := Z.add_get_carry_full R (fst lo_hi) (nth_default 0 t1_t2 0) in
       dlet_nd hi'_carry := Z.add_with_get_carry_full R (snd lo'_carry) (snd lo_hi) (nth_default 0 t1_t2 1) in
       dlet_nd y' := Z.zselect (snd hi'_carry) 0 N in
@@ -5715,7 +6333,7 @@ Module MontgomeryReduction.
              end.
 
     Hint Rewrite
-         Columns.mul_converted_mod Columns.mul_converted_div using (solve [auto; autorewrite with mul_conv; solve_range])
+         MulConverted.mul_converted_mod MulConverted.mul_converted_div using (solve [auto; autorewrite with mul_conv; solve_range])
       : mul_conv.
 
     Lemma montred'_eq lo_hi T (HT_range: 0 <= T < R * N)
@@ -5724,9 +6342,9 @@ Module MontgomeryReduction.
     Proof.
       rewrite <-reduce_via_partial_alt_eq by nia.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
-      rewrite Hlo, Hhi. subst n.
+      rewrite Hlo, Hhi. subst nout.
       assert (0 <= T mod R * N' < w 2) by (solve_range).
-      cbv [Columns.mul_converted_halve]. cbn.
+      cbv [mul_converted_aligned]. cbn [seq map].
       autorewrite with mul_conv.
       rewrite Hw, ?Z.pow_1_r.
       autorewrite with to_div_mod. rewrite ?Z.zselect_correct, ?Z.add_modulo_correct.
@@ -5768,12 +6386,12 @@ Module MontgomeryReduction.
 
   Derive montred_gen
          SuchThat (forall (N R N' : Z)
-                          (w w_half : nat -> Z)
-                          (n: nat)
+                          (w w_mul : nat -> Z)
+                          (n nout: nat)
                           (lo_hi : Z * Z),
                       Interp (t:=type.reify_type_of montred')
-                             montred_gen N R N' w w_half n lo_hi
-                      = montred' N R N' w w_half n lo_hi)
+                             montred_gen N R N' w w_mul n nout lo_hi
+                      = montred' N R N' w w_mul n nout lo_hi)
          As montred_gen_correct.
   Proof.
     intros.
@@ -5808,15 +6426,16 @@ Module MontgomeryReduction.
     Let bound := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
 
     Definition relax_zrange_of_machine_wordsize
-      := relax_zrange_gen [machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
+      := relax_zrange_gen [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
     Local Arguments relax_zrange_of_machine_wordsize / .
 
     Let rw := rweight machine_wordsize.
-    Let rw_half := rweight (machine_wordsize / 2).
+    Let rw_mul := rweight (machine_wordsize / 2).
     Let rN := GallinaReify.Reify N.
     Let rR := GallinaReify.Reify R.
     Let rN' := GallinaReify.Reify N'.
     Let rn := GallinaReify.Reify 2%nat.
+    Let rnout := GallinaReify.Reify 2%nat.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
     Let arg_bounds : BoundsAnalysis.Indexed.Range.range (BoundsAnalysis.Indexed.OfPHOAS.type.compile (type.Z * type.Z))
       := (bound, bound).
@@ -5851,8 +6470,9 @@ Module MontgomeryReduction.
                             @ (rR _)
                             @ (rN' _)
                             @ (rw _)
-                            @ (rw_half _)
+                            @ (rw_mul _)
                             @ (rn _)
+                            @ (rnout _)
                       )%expr in
          check_args res.
 
@@ -5870,7 +6490,7 @@ Module MontgomeryReduction.
           (bs:=out_bounds)
           arg
           rv
-        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_half) (Interp rn) arg').
+        = Some (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_mul) (Interp rn) (Interp rnout) arg').
 
     Lemma rmontred_correct
           rv
@@ -5921,46 +6541,31 @@ Module Montgomery256.
         (RemoveDeadLets.remove_dead_lets _
         (RemoveDeadLets.remove_dead_lets _
         (RemoveDeadLets.remove_dead_lets _
-        (RemoveDeadLets.inline_silly_lets _ montred256_with_dead_code))))))).
+        (RemoveDeadLets.inline_shifts_and_lands _
+        (RemoveDeadLets.inline_silly_lets _ montred256_with_dead_code)))))))).
 
   Import PrintingNotations.
   Open Scope nexpr_scope.
   Print montred256.
   (*
-    expr_let 3 := (uint128)(fst @@ x_1 >> 128) in
-    expr_let 4 := ((uint128)fst @@ x_1 & 340282366920938463463374607431768211455) in
-    expr_let 5 := MUL_256 @@ (x_3, (79228162514264337593543950337)) in
-    expr_let 7 := ((uint128)x_5 & 340282366920938463463374607431768211455) in
-    expr_let 8 := MUL_256 @@ (x_4, (340282366841710300986003757985643364352)) in
-    expr_let 10 := ((uint128)x_8 & 340282366920938463463374607431768211455) in
-    expr_let 11 := (uint128)(x_10 << 128) in
-    expr_let 12 := (uint128)(x_7 << 128) in
-    expr_let 17 := MUL_256 @@ (x_4, (79228162514264337593543950337)) in
-    expr_let 18 := ADD_128 @@ (x_11, x_12) in
-    expr_let 19 := ADD_256 @@ (x_17, fst @@ x_18) in
-    expr_let 43 := (uint128)(fst @@ x_19 >> 128) in
-    expr_let 44 := ((uint128)fst @@ x_19 & 340282366920938463463374607431768211455) in
-    expr_let 45 := MUL_256 @@ (x_43, (79228162514264337593543950335)) in
-    expr_let 46 := (uint128)(x_45 >> 128) in
-    expr_let 47 := ((uint128)x_45 & 340282366920938463463374607431768211455) in
-    expr_let 48 := MUL_256 @@ (x_44, (340282366841710300967557013911933812736)) in
-    expr_let 49 := (uint128)(x_48 >> 128) in
-    expr_let 50 := ((uint128)x_48 & 340282366920938463463374607431768211455) in
-    expr_let 51 := (uint128)(x_50 << 128) in
-    expr_let 52 := (uint128)(x_47 << 128) in
-    expr_let 57 := MUL_256 @@ (x_44, (79228162514264337593543950335)) in
-    expr_let 58 := ADD_128 @@ (x_51, x_52) in
-    expr_let 59 := ADD_256 @@ (x_57, fst @@ x_58) in
-    expr_let 60 := snd @@ x_59 +₁₂₈ snd @@ x_58 in
-    expr_let 67 := MUL_256 @@ (x_43, (340282366841710300967557013911933812736)) in
-    expr_let 69 := ADD_256 @@ (x_46, x_67) in
-    expr_let 70 := ADD_256 @@ (x_49, fst @@ x_69) in
-    expr_let 80 := ADD_256 @@ (x_60, fst @@ x_70) in
-    expr_let 83 := ADD_256 @@ (fst @@ x_1, fst @@ x_59) in
-    expr_let 84 := ADDC_256 @@ (snd @@ x_83, snd @@ x_1, fst @@ x_80) in
-    expr_let 85 := SELC @@ (snd @@ x_84, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
-    expr_let 86 := fst @@ (SUB_256 @@ (fst @@ x_84, x_85)) in
-    ADDM @@ (x_86, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
+    expr_let 5 := MUL_256 @@ ((uint128)(fst @@ x_1 >> 128), (79228162514264337593543950337)) in
+    expr_let 8 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (340282366841710300986003757985643364352)) in
+    expr_let 12 := MUL_256 @@ (((uint128)fst @@ x_1 & 340282366920938463463374607431768211455), (79228162514264337593543950337)) in
+    expr_let 13 := ADD_256 @@ ((uint256)(((uint128)x_8 & 340282366920938463463374607431768211455) << 128), x_12) in
+    expr_let 17 := ADD_256 @@ ((uint256)(((uint128)x_5 & 340282366920938463463374607431768211455) << 128), fst @@ x_13) in
+    expr_let 24 := MUL_256 @@ ((uint128)(fst @@ x_17 >> 128), (79228162514264337593543950335)) in
+    expr_let 27 := MUL_256 @@ (((uint128)fst @@ x_17 & 340282366920938463463374607431768211455), (340282366841710300967557013911933812736)) in
+    expr_let 31 := MUL_256 @@ (((uint128)fst @@ x_17 & 340282366920938463463374607431768211455), (79228162514264337593543950335)) in
+    expr_let 32 := ADD_256 @@ ((uint256)(((uint128)x_27 & 340282366920938463463374607431768211455) << 128), x_31) in
+    expr_let 33 := ADDC_256 @@ (snd @@ x_32, (uint128)(x_24 >> 128), (uint128)(x_27 >> 128)) in
+    expr_let 36 := ADD_256 @@ ((uint256)(((uint128)x_24 & 340282366920938463463374607431768211455) << 128), fst @@ x_32) in
+    expr_let 37 := MUL_256 @@ ((uint128)(fst @@ x_17 >> 128), (340282366841710300967557013911933812736)) in
+    expr_let 39 := ADDC_256 @@ (snd @@ x_36, x_37, fst @@ x_33) in
+    expr_let 40 := ADD_256 @@ (fst @@ x_1, fst @@ x_36) in
+    expr_let 41 := ADDC_256 @@ (snd @@ x_40, snd @@ x_1, fst @@ x_39) in
+    expr_let 42 := SELC @@ (snd @@ x_41, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951)) in
+    expr_let 43 := fst @@ (SUB_256 @@ (fst @@ x_41, x_42)) in
+    ADDM @@ (x_43, (0), (115792089210356248762697446949407573530086143415290314195533631308867097853951))
          : expr uint256
    *)
 End Montgomery256.
@@ -5989,22 +6594,22 @@ Module Montgomery256PrintingNotations.
                    (primitive {| BoundsAnalysis.type.value := 0; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
   Notation "'$R'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 : nexpr_scope.
-  Notation "'Lower128{RegMod}'" :=
+  Notation "c.LowerHalf(RegMod)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 79228162514264337593543950335; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
-  Notation "'RegMod' '<<' '128'" :=
+  Notation "c.UpperHalf(RegMod)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 340282366841710300967557013911933812736; BoundsAnalysis.type.value_bounded := _ |})
-                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9, format "'RegMod'  '<<'  '128'") : nexpr_scope.
-  Notation "'Lower128{RegPinv}'" :=
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
+  Notation "c.LowerHalf(RegPinv)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 79228162514264337593543950337; BoundsAnalysis.type.value_bounded := _ |})
                    BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
-  Notation "'RegPinv' '>>' '128'" :=
+  Notation "c.UpperHalf(RegPinv)" :=
     (BoundsAnalysis.Indexed.expr.AppIdent
                    (primitive {| BoundsAnalysis.type.value := 340282366841710300986003757985643364352; BoundsAnalysis.type.value_bounded := _ |})
-                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9, format "'RegPinv'  '>>'  '128'") : nexpr_scope.
+                   BoundsAnalysis.Indexed.expr.TT) (only printing, at level 9) : nexpr_scope.
   Notation "'uint256'"
     := (BoundsAnalysis.type.ZBounded 0 115792089237316195423570985008687907853269984665640564039457584007913129639935) : btype_scope.
   Notation "'uint128'"
@@ -6019,7 +6624,7 @@ Module Montgomery256PrintingNotations.
     (expr_let n := shiftl _ _ count @@ (mul _ _ uint256 @@ (x, y)) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Mul128x128(' '$r' n ','  x ','  y ')'  '<<'  count ';' ']' '//' f") : nexpr_scope.
   Notation "'c.Add256(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := add_get_carry_concrete _ _ uint256 _ $R @@ (x, y) in
+    (expr_let n := add_get_carry_concrete _ _ uint256 r[0 ~> 1] $R @@ (x, y) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add256(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Add128(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := add_get_carry_concrete _ _ uint128 _ $R @@ (x, y) in
@@ -6028,11 +6633,11 @@ Module Montgomery256PrintingNotations.
     (expr_let n := add _ _ uint128 @@ (x, y) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Add64(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Addc(' '$r' n ',' x ',' y ');' f" :=
-    (expr_let n := add_with_get_carry_concrete _ _ _ uint256 _ $R @@ (_, x, y) in
+    (expr_let n := add_with_get_carry_concrete _ _ _ uint256 r[0 ~> 1] $R @@ (_, x, y) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Addc(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Selc(' '$r' n ',' y ',' z ');' f" :=
     (expr_let n := zselect _ _ _ uint256 @@ (_, y, z) in
-         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Selc(' '$r' n ',' y ','  z ');' ']' '//' f") : nexpr_scope.
+         f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Selc(' '$r' n ','  y ','  z ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Sub(' '$r' n ',' x ',' y ');' f" :=
     (expr_let n := fst @@ (sub_get_borrow_concrete _ _ uint256 _ $R @@ (x, y)) in
          f)%nexpr (at level 40, f at level 200, right associativity, format "'c.Sub(' '$r' n ','  x ','  y ');' '//' f") : nexpr_scope.
@@ -6044,59 +6649,47 @@ Module Montgomery256PrintingNotations.
     (expr_let n := (shiftl _ _ y @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.ShiftL(' '$r' n ','  x ','  y ');' ']' '//' f") : nexpr_scope.
   Notation "'c.Lower128(' '$r' n ',' x ');' f" :=
     (expr_let n := (land _ _ 340282366920938463463374607431768211455 @@ x) in f)%nexpr (at level 40, f at level 200, right associativity, format "'[' 'c.Lower128(' '$r' n ','  x ');' ']' '//' f") : nexpr_scope.
-  Notation "'Lower128'"
-    := ((land uint256 uint128 340282366920938463463374607431768211455))
-         (at level 10, only printing, format "Lower128")
+  Notation "'c.LowerHalf(' x ')'"
+    := ((land uint256 uint128 340282366920938463463374607431768211455 @@ x)%nexpr)
+         (at level 10, only printing, format "c.LowerHalf( x )")
+  : nexpr_scope.
+  Notation "'c.UpperHalf(' x ')'"
+    := ((shiftr uint256 uint128 128 @@ x)%nexpr)
+         (at level 10, only printing, format "c.UpperHalf( x )")
   : nexpr_scope.
   Notation "( v << count )"
     := ((shiftl _ _ count @@ v)%nexpr)
          (format "( v  <<  count )")
        : nexpr_scope.
+  (*
   Notation "( x >> count )"
     := ((shiftr _ _ count @@ x)%nexpr)
          (format "( x  >>  count )")
        : nexpr_scope.
+  *)
 End Montgomery256PrintingNotations.
 
 Import Montgomery256PrintingNotations.
 Local Open Scope nexpr_scope.
 
-
 Print Montgomery256.montred256.
 (*
-c.ShiftR($r3, $r1_lo, 128);
-c.Lower128($r4, $r1_lo);
-c.Mul128x128($r5, $r3, Lower128{RegPinv});
-c.Lower128($r7, $r5);
-c.Mul128x128($r8, $r4, RegPinv >> 128);
-c.Lower128($r10, $r8);
-c.ShiftL($r11, $r10, 128);
-c.ShiftL($r12, $r7, 128);
-c.Mul128x128($r17, $r4, Lower128{RegPinv});
-c.Add128($r18, $r11, $r12);
-c.Add256($r19, $r17, $r18_lo);
-c.ShiftR($r43, $r19_lo, 128);
-c.Lower128($r44, $r19_lo);
-c.Mul128x128($r45, $r43, Lower128{RegMod});
-c.ShiftR($r46, $r45, 128);
-c.Lower128($r47, $r45);
-c.Mul128x128($r48, $r44, RegMod << 128);
-c.ShiftR($r49, $r48, 128);
-c.Lower128($r50, $r48);
-c.ShiftL($r51, $r50, 128);
-c.ShiftL($r52, $r47, 128);
-c.Mul128x128($r57, $r44, Lower128{RegMod});
-c.Add128($r58, $r51, $r52);
-c.Add256($r59, $r57, $r58_lo);
-c.Add64($r60, $r59_hi, $r58_hi);
-c.Mul128x128($r67, $r43, RegMod << 128);
-c.Add256($r69, $r46, $r67);
-c.Add256($r70, $r49, $r69_lo);
-c.Add256($r80, $r60, $r70_lo);
-c.Add256($r83, $r1_lo, $r59_lo);
-c.Addc($r84, $r1_hi, $r80_lo);
-c.Selc($r85,RegZero, RegMod);
-c.Sub($r86, $r84_lo, $r85);
-c.AddM($ret, $r86, RegZero, RegMod);
-     : expr uint256
+c.Mul128x128($r5, c.UpperHalf($r1_lo), c.LowerHalf(RegPinv));
+c.Mul128x128($r8, c.LowerHalf($r1_lo), c.UpperHalf(RegPinv));
+c.Mul128x128($r12, c.LowerHalf($r1_lo), c.LowerHalf(RegPinv));
+c.Add256($r13, (c.LowerHalf($r8) << 128), $r12);
+c.Add256($r17, (c.LowerHalf($r5) << 128), $r13_lo);
+c.Mul128x128($r24, c.UpperHalf($r17_lo), c.LowerHalf(RegMod));
+c.Mul128x128($r27, c.LowerHalf($r17_lo), c.UpperHalf(RegMod));
+c.Mul128x128($r31, c.LowerHalf($r17_lo), c.LowerHalf(RegMod));
+c.Add256($r32, (c.LowerHalf($r27) << 128), $r31);
+c.Addc($r33, c.UpperHalf($r24), c.UpperHalf($r27));
+c.Add256($r36, (c.LowerHalf($r24) << 128), $r32_lo);
+c.Mul128x128($r37, c.UpperHalf($r17_lo), c.UpperHalf(RegMod));
+c.Addc($r39, $r37, $r33_lo);
+c.Add256($r40, $r1_lo, $r36_lo);
+c.Addc($r41, $r1_hi, $r39_lo);
+c.Selc($r42, RegZero, RegMod);
+c.Sub($r43, $r41_lo, $r42);
+c.AddM($ret, $r43, RegZero, RegMod);
  *)
