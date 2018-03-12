@@ -5272,6 +5272,8 @@ Ltac cache_reify _ :=
           vm_cast_no_check (eq_refl RHS'))
   | clearbody E ].
 
+Create HintDb reify_gen_cache.
+
 Derive carry_mul_gen
        SuchThat (forall (w : nat -> Z)
                         (fg : list Z * list Z)
@@ -5286,6 +5288,7 @@ Derive carry_mul_gen
                     = carry_mulmod w s c n len_c idxs len_idxs fg)
        As carry_mul_gen_correct.
 Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
+Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
 
 Derive carry_gen
        SuchThat (forall (w : nat -> Z)
@@ -5301,6 +5304,7 @@ Derive carry_gen
                     = carrymod w s c n len_c idxs len_idxs f)
        As carry_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
 
 Derive encode_gen
        SuchThat (forall (w : nat -> Z)
@@ -5314,6 +5318,7 @@ Derive encode_gen
                     = encodemod w s c n len_c v)
        As encode_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = encode_gen _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
 
 Derive add_gen
        SuchThat (forall (w : nat -> Z)
@@ -5324,6 +5329,7 @@ Derive add_gen
                     = addmod w n fg)
        As add_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = addmod _ _ _) => simple apply add_gen_correct : reify_gen_cache.
 
 Derive sub_gen
        SuchThat (forall (w : nat -> Z)
@@ -5338,6 +5344,7 @@ Derive sub_gen
                     = submod w s c n len_c coef fg)
        As sub_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = submod _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
 
 Derive opp_gen
        SuchThat (forall (w : nat -> Z)
@@ -5352,6 +5359,7 @@ Derive opp_gen
                     = oppmod w s c n len_c coef f)
        As opp_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
 
 Definition zeromod w n s c len_c := encodemod w n s c len_c 0.
 Definition onemod w n s c len_c := encodemod w n s c len_c 1.
@@ -5367,6 +5375,7 @@ Derive zero_gen
                     = zeromod w s c n len_c)
        As zero_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
 
 Derive one_gen
        SuchThat (forall (w : nat -> Z)
@@ -5379,6 +5388,7 @@ Derive one_gen
                     = onemod w s c n len_c)
        As one_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
 
 Derive id_gen
        SuchThat (forall (n : nat)
@@ -5388,6 +5398,7 @@ Derive id_gen
                     = expanding_id n ls)
        As id_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Hint Extern 1 (_ = expanding_id _ _) => simple apply id_gen_correct : reify_gen_cache.
 
 Module Pipeline.
   Inductive ErrorMessage :=
@@ -5754,20 +5765,7 @@ Section rcarry_mul.
           relax_zrange
           rop%Expr out_bounds).
 
-  Notation BoundsPipeline_correct rop in_bounds out_bounds op
-    := (@Pipeline.BoundsPipeline_correct_trans
-          false
-          relax_zrange
-          relax_zrange_good
-          _ _
-          rop%Expr
-          in_bounds
-          out_bounds
-          op
-          ltac:(do_interp_correct))
-         (only parsing).
-
-  Notation BoundsPipeline_correct_nocache in_bounds out_bounds op
+  Notation BoundsPipeline_correct in_bounds out_bounds op
     := (fun (rop : Expr (type.reify_type_of op%function)) rv Hrop
         => @Pipeline.BoundsPipeline_correct_trans
              false
@@ -5781,16 +5779,17 @@ Section rcarry_mul.
              Hrop rv)
          (only parsing).
 
-  Notation BoundsPipelineConst_correct rop out_bounds op
-    := (@Pipeline.BoundsPipelineConst_correct_trans
-          false
-          relax_zrange
-          relax_zrange_good
-          _
-          rop%Expr
-          out_bounds
-          op
-          ltac:(do_interp_correct))
+  Notation BoundsPipelineConst_correct out_bounds op
+    := (fun (rop : Expr (type.reify_type_of op)) rv Hrop
+        => @Pipeline.BoundsPipelineConst_correct_trans
+             false
+             relax_zrange
+             relax_zrange_good
+             _
+             rop%Expr
+             out_bounds
+             op
+             Hrop rv)
          (only parsing).
 
   (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
@@ -5803,85 +5802,75 @@ Section rcarry_mul.
 
   Definition rcarry_mul_correct
     := BoundsPipeline_correct
-         (carry_mul_gen
-            @ rw @ rs @ rc @ rn @ rlen_c @ ridxs @ rlen_idxs)%Expr
-         (loose_bounds, loose_bounds)
-         tight_bounds
-         (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
-
-  Definition rcarry_mul_correct_nocache
-    := BoundsPipeline_correct_nocache
          (loose_bounds, loose_bounds)
          tight_bounds
          (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
 
   Definition rcarry_correct
     := BoundsPipeline_correct
-         (carry_gen
-            @ rw @ rs @ rc @ rn @ rlen_c @ ridxs @ rlen_idxs)%Expr
          loose_bounds
          tight_bounds
          (carrymod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
-         (id_gen @ rn)%Expr
          tight_bounds
          loose_bounds
          (expanding_id n).
 
   Definition radd_correct
     := BoundsPipeline_correct
-         (add_gen @ rw @ rn)%Expr
          (tight_bounds, tight_bounds)
          loose_bounds
          (addmod (Interp rw) n).
 
   Definition rsub_correct
     := BoundsPipeline_correct
-         (sub_gen @ rw @ rs @ rc @ rn @ rlen_c @ rcoef)%Expr
          (tight_bounds, tight_bounds)
          loose_bounds
          (submod (Interp rw) s c n (Interp rlen_c) (Interp rcoef)).
 
   Definition ropp_correct
     := BoundsPipeline_correct
-         (opp_gen @ rw @ rs @ rc @ rn @ rlen_c @ rcoef)%Expr
          tight_bounds
          loose_bounds
          (oppmod (Interp rw) s c n (Interp rlen_c) (Interp rcoef)).
 
   Definition rencode_correct
     := BoundsPipeline_correct
-         (encode_gen @ rw @ rs @ rc @ rn @ rlen_c)%Expr
          prime_bound
          tight_bounds
          (encodemod (Interp rw) s c n (Interp rlen_c)).
 
   Definition rzero_correct
     := BoundsPipelineConst_correct
-         (zero_gen @ rw @ rs @ rc @ rn @ rlen_c)%Expr
          tight_bounds
          (zeromod (Interp rw) s c n (Interp rlen_c)).
 
   Definition rone_correct
     := BoundsPipelineConst_correct
-         (one_gen @ rw @ rs @ rc @ rn @ rlen_c)%Expr
          tight_bounds
          (onemod (Interp rw) s c n (Interp rlen_c)).
 
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] *)
-  Definition rcarry_mul_correctT rv : Prop := type_of_strip_arrow (@rcarry_mul_correct rv).
-  Definition rcarry_mul_correct_nocacheT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rcarry_mul_correct_nocache rop rv).
-  Definition rcarry_correctT rv : Prop := type_of_strip_arrow (@rcarry_correct rv).
-  Definition rrelax_correctT rv : Prop := type_of_strip_arrow (@rrelax_correct rv).
-  Definition radd_correctT rv : Prop := type_of_strip_arrow (@radd_correct rv).
-  Definition rsub_correctT rv : Prop := type_of_strip_arrow (@rsub_correct rv).
-  Definition ropp_correctT rv : Prop := type_of_strip_arrow (@ropp_correct rv).
-  Definition rencode_correctT rv : Prop := type_of_strip_arrow (@rencode_correct rv).
-  Definition rzero_correctT rv : Prop := type_of_strip_arrow (@rzero_correct rv).
-  Definition rone_correctT rv : Prop := type_of_strip_arrow (@rone_correct rv).
+  Definition rcarry_mul_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rcarry_mul_correct rop rv).
+  Definition rcarry_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rcarry_correct rop rv).
+  Definition rrelax_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rrelax_correct rop rv).
+  Definition radd_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@radd_correct rop rv).
+  Definition rsub_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rsub_correct rop rv).
+  Definition ropp_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@ropp_correct rop rv).
+  Definition rencode_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rencode_correct rop rv).
+  Definition rzero_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rzero_correct rop rv).
+  Definition rone_correctT rv : Prop
+    := exists rop, type_of_strip_2arrow (@rone_correct rop rv).
 
   Section make_ring.
     Let m : positive := Z.to_pos (s - Associational.eval c).
@@ -5989,7 +5978,7 @@ Section rcarry_mul.
 
     Theorem Good : GoodT.
     Proof.
-      pose proof use_curve_good; destruct_head'_and.
+      pose proof use_curve_good; destruct_head'_and; destruct_head_hnf' ex.
       eapply Ring.Good;
         repeat first [ assumption
                      | intros; apply eval_carry_mulmod
@@ -6040,7 +6029,7 @@ Ltac peel_interp_app _ :=
 Ltac pre_cache_reify _ :=
   let arg := fresh "arg" in
   intros arg _;
-  apply (f_equal (fun f => f arg));
+  apply fg_equal_rel; [ | reflexivity ];
   peel_interp_app ();
   [ lazymatch goal with
     | [ |- ?R (Interp ?ev) _ ]
@@ -6050,14 +6039,20 @@ Ltac pre_cache_reify _ :=
     end;
     cbv [pointwise_relation]; intros; clear
   | .. ].
-Ltac do_inline_cache_reify _ :=
+Ltac do_inline_cache_reify do_if_not_cached :=
   pre_cache_reify ();
-  [ cache_reify (); exact admit
+  [ try solve [
+          repeat match goal with H := ?e |- _ => is_evar e; subst H end;
+          eauto with nocore reify_gen_cache;
+          do_if_not_cached ()
+        ];
+    cache_reify (); exact admit
   | .. ].
 
-Ltac solve_rop rop_correct machine_wordsizev :=
-  eapply rop_correct with (machine_wordsize:=machine_wordsizev);
-  (* Doing [lazy] is twice as slow as doing [lazy -[Let_In]; lazy].
+Ltac solve_rop' rop_correct do_if_not_cached machine_wordsizev :=
+  eexists; eapply rop_correct with (machine_wordsize:=machine_wordsizev);
+  [ do_inline_cache_reify do_if_not_cached
+  | (* Doing [lazy] is twice as slow as doing [lazy -[Let_In]; lazy].
   This is because the bounds pipeline does [dlet E : Expr := (reduced
   thing) in let b := extract_bounds E in ...].  If we allow [lazy] to
   unfold [Let_In] before it fully reduces the function (function,
@@ -6071,13 +6066,15 @@ Ltac solve_rop rop_correct machine_wordsizev :=
   expression before plugging in arguments costs a bit more.  However,
   it's still reasonably fast, and the code is much simpler when
   [Interp] always succeeds rather than returning [option]. *)
-  lazy -[Let_In]; lazy; reflexivity.
-Ltac solve_rop_nocache rop_correct machine_wordsizev :=
-  eexists; eapply rop_correct with (machine_wordsize:=machine_wordsizev);
-  [ do_inline_cache_reify ()
-  | lazy -[Let_In]; lazy; reflexivity ].
+  lazy -[Let_In]; lazy; reflexivity ].
+Ltac solve_rop_nocache rop_correct :=
+  solve_rop' rop_correct ltac:(fun _ => idtac).
+Ltac solve_rop rop_correct :=
+  solve_rop'
+    rop_correct
+    ltac:(fun _ => let G := get_goal in fail 2 "Could not find a solution in reify_gen_cache for" G).
 Ltac solve_rcarry_mul := solve_rop rcarry_mul_correct.
-Ltac solve_rcarry_mul_nocache := solve_rop_nocache rcarry_mul_correct_nocache.
+Ltac solve_rcarry_mul_nocache := solve_rop_nocache rcarry_mul_correct.
 Ltac solve_rcarry := solve_rop rcarry_correct.
 Ltac solve_radd := solve_rop radd_correct.
 Ltac solve_rsub := solve_rop rsub_correct.
@@ -6228,10 +6225,6 @@ Module X25519_64.
          SuchThat (rcarry_mul_correctT n s c machine_wordsize base_51_carry_mul)
          As base_51_carry_mul_correct.
   Proof. Time solve_rcarry_mul machine_wordsize. Time Qed.
-  Derive base_51_carry_mul_nocache
-         SuchThat (rcarry_mul_correct_nocacheT n s c machine_wordsize base_51_carry_mul_nocache)
-         As base_51_carry_mul_nocache_correct.
-  Proof. Time solve_rcarry_mul_nocache machine_wordsize. Time Qed.
   Derive base_51_carry
          SuchThat (rcarry_correctT n s c machine_wordsize base_51_carry)
          As base_51_carry_correct.
