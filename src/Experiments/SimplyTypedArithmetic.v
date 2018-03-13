@@ -1272,6 +1272,33 @@ Module Compilers.
          | arrow s d => arrow s (under_arrows d f)
          end.
 
+    Fixpoint try_transport (P : type -> Type) (t1 t2 : type) : P t1 -> option (P t2)
+      := match t1, t2 return P t1 -> option (P t2) with
+         | unit, unit
+         | Z, Z
+         | nat, nat
+         | bool, bool
+           => @Some _
+         | prod A B, prod A' B'
+           => fun v
+              => (v <- try_transport (fun A => P (prod A B)) A A' v;
+                    try_transport (fun B => P (prod A' B)) B B' v)%option
+         | arrow s d, arrow s' d'
+           => fun v
+              => (v <- try_transport (fun s => P (arrow s d)) s s' v;
+                    try_transport (fun d => P (arrow s' d)) d d' v)%option
+         | list A, list A'
+           => @try_transport (fun A => P (list A)) A A'
+         | unit, _
+         | Z, _
+         | nat, _
+         | bool, _
+         | prod _ _, _
+         | arrow _ _, _
+         | list _, _
+           => fun _ => None
+         end.
+
     Ltac reify_primitive ty :=
       lazymatch eval cbv beta in ty with
       | Datatypes.unit => unit
@@ -3706,6 +3733,15 @@ Module Compilers.
            | Some v => CallFunWithIdContinuation' (projT2 v)
            | None => I
            end.
+
+      Definition CallFunWithIdContinuation_opt
+                 {t}
+                 (e : Expr (type.translate t))
+        : option (@Compilers.Uncurried.expr.default.Expr t)
+        := (e' <- (second_order.try_transport_of_type
+                     (fun t => Expr (type.translate t)) _
+                     e);
+              type.try_transport _ _ _ (CallFunWithIdContinuation' (projT2 e')))%option.
     End default.
     Include default.
   End CPS.
@@ -5164,7 +5200,6 @@ Module test3.
     constructor.
   Qed.
 End test3.
-
 Module test4.
   Example test4 : True.
   Proof.
@@ -5194,7 +5229,6 @@ Module test4.
     constructor.
   Qed.
 End test4.
-
 Module test5.
   Example test5 : True.
   Proof.
@@ -5216,7 +5250,6 @@ Module test5.
     constructor.
   Qed.
 End test5.
-
 Module test6.
   (* check for no dead code with if *)
   Example test6 : True.
@@ -5240,10 +5273,8 @@ Module test6.
     exact I.
   Qed.
 End test6.
-
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
-
 Ltac cache_reify _ :=
   intros;
   etransitivity;
@@ -5330,7 +5361,6 @@ Derive add_gen
        As add_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
 Hint Extern 1 (_ = addmod _ _ _) => simple apply add_gen_correct : reify_gen_cache.
-
 Derive sub_gen
        SuchThat (forall (w : nat -> Z)
                         (n : nat)
@@ -5405,6 +5435,7 @@ Module Pipeline.
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.option.interp t)
   | Bounds_analysis_failed
+  | Type_too_complicated_for_cps (t : type)
   | Return_type_mismatch {T'} (found expected : T')
   | Value_not_le (descr : string) {T'} (lhs rhs : T')
   | Value_not_lt (descr : string) {T'} (lhs rhs : T')
@@ -5421,6 +5452,22 @@ Module Pipeline.
        | Success v => v
        | Error msg => msg
        end.
+
+  Definition PrePipeline
+             {t}
+             (E : for_reification.Expr t)
+  : ErrorT (Expr t)
+    := let E := option_map PartialReduce (CPS.CallFunWithIdContinuation_opt (CPS.Translate (canonicalize_list_recursion E))) in
+       match E with
+       | Some E => Success E
+       | None => Error (Type_too_complicated_for_cps t)
+       end.
+
+  Lemma PrePipeline_correct {t} E v
+        (H : @PrePipeline t E = Success v)
+    : expr.Interp (@ident.interp) v =
+      expr.Interp (@for_reification.ident.interp) E.
+  Admitted.
 
   Definition BoundsPipeline
              (with_dead_code_elimination : bool)
@@ -5501,6 +5548,44 @@ Module Pipeline.
     eapply @BoundsPipeline_correct; eassumption.
   Qed.
 
+  Definition BoundsPipeline_full
+             (with_dead_code_elimination : bool)
+             relax_zrange
+             {s d}
+             (E : for_reification.Expr (s -> d))
+             arg_bounds
+             out_bounds
+  : ErrorT (Expr (s -> d))
+    := match PrePipeline E with
+       | Success E => @BoundsPipeline
+                        with_dead_code_elimination
+                        relax_zrange
+                        s d E arg_bounds out_bounds
+       | Error m => Error m
+       end.
+
+  Lemma BoundsPipeline_full_correct
+             (with_dead_code_elimination : bool)
+             relax_zrange
+             (Hrelax : forall r r' z : zrange,
+                 (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
+             {s d}
+             (E : for_reification.Expr (s -> d))
+             arg_bounds
+             out_bounds
+             rv
+             (Hrv : BoundsPipeline_full with_dead_code_elimination relax_zrange E arg_bounds out_bounds = Success rv)
+    : forall arg
+             (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
+      ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
+      /\ Interp rv arg = for_reification.Interp E arg.
+  Proof.
+    cbv [BoundsPipeline_full] in *.
+    destruct (PrePipeline E) eqn:Hpre; [ | congruence ].
+    eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption ].
+    intros; erewrite PrePipeline_correct; [ reflexivity | eassumption ].
+  Qed.
+
   Definition BoundsPipelineConst
              (with_dead_code_elimination : bool)
              relax_zrange
@@ -5569,6 +5654,40 @@ Module Pipeline.
   Proof.
     rewrite <- InterpE_correct.
     eapply @BoundsPipelineConst_correct; eassumption.
+  Qed.
+
+  Definition BoundsPipelineConst_full
+             (with_dead_code_elimination : bool)
+             relax_zrange
+             {t}
+             (E : for_reification.Expr t)
+             out_bounds
+  : ErrorT (Expr t)
+    := match PrePipeline E with
+       | Success E => @BoundsPipelineConst
+                        with_dead_code_elimination
+                        relax_zrange
+                        t E out_bounds
+       | Error m => Error m
+       end.
+
+  Lemma BoundsPipelineConst_full_correct
+             (with_dead_code_elimination : bool)
+             relax_zrange
+             (Hrelax : forall r r' z : zrange,
+                 (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
+             {t}
+             (E : for_reification.Expr t)
+             out_bounds
+             rv
+             (Hrv : BoundsPipelineConst_full with_dead_code_elimination relax_zrange E out_bounds = Success rv)
+    : ZRange.type.is_bounded_by out_bounds (Interp rv) = true
+      /\ Interp rv = for_reification.Interp E.
+  Proof.
+    cbv [BoundsPipelineConst_full] in *.
+    destruct (PrePipeline E) eqn:Hpre; [ | congruence ].
+    eapply BoundsPipelineConst_correct_trans; [ eassumption | | eassumption ].
+    intros; erewrite PrePipeline_correct; [ reflexivity | eassumption ].
   Qed.
 End Pipeline.
 
