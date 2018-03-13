@@ -6329,6 +6329,48 @@ Module PrintingNotations.
   Notation "'MUL_256'" := (mul uint128 uint128 uint256) : nexpr_scope.*)
 End PrintingNotations.
 
+(*
+Notation "a ∈ b" := (ZRange.type.is_bounded_by b%zrange a = true) (at level 10) : type_scope.
+Notation Interp := (expr.Interp _).
+Notation "'ℤ'" := (type.type_primitive type.Z).
+Set Printing Width 70.
+Goal False.
+  let rop' := Reify (fun v1v2 : Z * Z => fst v1v2 + snd v1v2) in
+  pose rop' as rop.
+  pose (@Pipeline.BoundsPipeline_full
+          false (fun v => Some v) (type.Z * type.Z) type.Z
+          rop
+          (r[0~>10], r[0~>10])%zrange
+          r[0~>20]%zrange
+       ) as E.
+  simple refine (let Ev := _ in
+                 let compiler_outputs_Ev : E = Pipeline.Success Ev := _ in
+                 _); [ shelve | .. ]; revgoals.
+  clearbody compiler_outputs_Ev.
+  refine (let H' :=
+              (fun H'' =>
+                 @Pipeline.BoundsPipeline_full_correct
+                   _ _
+                   H'' _ _ _ _ _ _ compiler_outputs_Ev) _
+          in _);
+    clearbody H'.
+  Focus 2.
+  { cbv [Pipeline.BoundsPipeline_full] in E.
+    remember (Pipeline.PrePipeline rop) as cache eqn:Hcache in (value of E).
+    lazy in Hcache.
+    subst cache.
+    lazy in E.
+    subst E Ev; reflexivity.
+  } Unfocus.
+  cbv [rop] in H'; cbn [expr.Interp expr.interp for_reification.ident.interp] in H'.
+(*
+  H' : forall arg : type.interp (ℤ * ℤ),
+       arg ∈ (r[0 ~> 10], r[0 ~> 10]) ->
+       (Interp Ev arg) ∈ r[0 ~> 20] /\
+       Interp Ev arg = fst arg + snd arg
+*)
+Abort.
+*)
 
 Module X25519_64.
   Definition n := 5%nat.
