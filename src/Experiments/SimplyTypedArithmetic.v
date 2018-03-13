@@ -1231,6 +1231,7 @@ Module Compilers.
       Global Coercion type_primitive : primitive >-> type.
     End Coercions.
 
+    (** Denote [type]s into their interpretation in [Type]/[Set] *)
     Fixpoint interp (t : type)
       := match t with
          | unit => Datatypes.unit
@@ -1393,6 +1394,7 @@ Module Compilers.
         Context {ident : type -> type -> Type}
                 (interp_ident : forall s d, ident s d -> type.interp s -> type.interp d).
 
+        (** Denote expressions *)
         Fixpoint interp {t} (e : @expr ident type.interp t) : type.interp t
           := match e with
              | Var t v => v
@@ -1405,10 +1407,15 @@ Module Compilers.
 
         Definition Interp {t} (e : Expr t) := interp (e _).
 
+        (** [Interp (APP _ _)] is the same thing as Gallina
+            application of the [Interp]retations of the two arguments
+            to [APP]. *)
         Definition Interp_APP {s d} (f : @Expr ident (s -> d)) (x : @Expr ident s)
           : Interp (f @ x)%Expr = Interp f (Interp x)
           := eq_refl.
 
+        (** Same as [Interp_APP], but for any reflexive relation, not
+            just [eq] *)
         Definition Interp_APP_rel_reflexive {s d} {R} {H:Reflexive R}
                    (f : @Expr ident (s -> d)) (x : @Expr ident s)
           : R (Interp (f @ x)%Expr) (Interp f (Interp x))
@@ -1724,6 +1731,7 @@ Module Compilers.
           Notation curry3_3 f
             := (fun '(a, b, c) => f a (uncurry3 b) c).
 
+          (** Denote identifiers *)
           Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
             := match idc in ident s d return type.interp s -> type.interp d with
                | primitive _ v => curry0 v
@@ -2035,6 +2043,12 @@ Module Compilers.
           Section gen.
             Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
 
+            (** Interpret identifiers where the behavior of [Z_cast]
+                on a value that does not fit in the range is given by
+                a context variable.  (This allows us to treat [Z_cast]
+                as "undefined behavior" when the value doesn't fit in
+                the range by quantifying over all possible
+                interpretations. *)
             Definition gen_interp {s d} (idc : ident s d) : type.interp s -> type.interp d
               := match idc in ident s d return type.interp s -> type.interp d with
                  | primitive _ v => curry0 v
@@ -2084,6 +2098,9 @@ Module Compilers.
           Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
           Proof. exact v. Qed.
 
+          (** Interpret identifiers where [Z_cast] is an opaque
+              identity function when the value is not inside the range
+              *)
           Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
             := @gen_interp cast_outside_of_range s d idc.
           Global Arguments interp _ _ !_ _ / .
@@ -2759,6 +2776,7 @@ Module Compilers.
 
         Section interp.
           Context (R : Type).
+          (** denote CPS types *)
           Fixpoint interp (t : type)
             := match t return Type with
                | type_primitive t => Compilers.type.interp t
@@ -2801,6 +2819,7 @@ Module Compilers.
                   (interp_ident
                    : forall t, ident t -> type.interp R t).
 
+          (** denote CPS exprs *)
           Fixpoint interp (e : @expr ident (type.interp R) r) (k : type.interp R r -> R)
                    {struct e}
             : R
@@ -3105,6 +3124,7 @@ Module Compilers.
       Notation curry3_2 f
         := (fun '(a, b, c) => f a (uncurry2 b) c).
 
+      (** denote CPS identifiers *)
       Definition interp {R} {t} (idc : ident t) : type.interp R t
         := match idc in ident t return type.interp R t with
            | wrap s d idc
@@ -3749,6 +3769,8 @@ Module Compilers.
   Module ZRange.
     Module type.
       Module primitive.
+        (** turn a [type.primitive] into a [Set] describing the type
+            of bounds on that primitive *)
         Definition interp (t : type.primitive) : Set
           := match t with
              | type.unit => unit
@@ -3778,6 +3800,10 @@ Module Compilers.
                => fun _ _ => true
              end.
         Module option.
+          (** turn a [type.primitive] into a [Set] describing the type
+              of optional bounds on that primitive; bounds on a [Z]
+              may be either a range, or [None], generally indicating
+              that the [Z] is unbounded. *)
           Definition interp (t : type.primitive) : Set
             := match t with
                | type.unit => unit
@@ -3826,6 +3852,9 @@ Module Compilers.
              end.
         End option.
       End primitive.
+      (** turn a [type] into a [Set] describing the type of bounds on
+          that type; this lifts [primitive.interp] from
+          [type.primitive] to [type] *)
       Fixpoint interp (t : type) : Set
         := match t with
            | type.type_primitive x => primitive.interp x
@@ -3856,6 +3885,11 @@ Module Compilers.
              => fold_andb_map (@is_bounded_by A)
            end.
       Module option.
+        (** turn a [type] into a [Set] describing the type of optional
+            bounds on that primitive; bounds on a [Z] may be either a
+            range, or [None], generally indicating that the [Z] is
+            unbounded.  This lifts [primitive.option.interp] from
+            [type.primitive] to [type] *)
         Fixpoint interp (t : type) : Set
           := match t with
              | type.type_primitive x => primitive.option.interp x
@@ -3940,6 +3974,8 @@ Module Compilers.
         Notation curry3 f
           := (fun '(a, b, c) => f a b c).
 
+        (** do bounds analysis on identifiers; take in optional bounds
+            on arguments, return optional bounds on outputs. *)
         Definition interp {s d} (idc : ident s d) : type.option.interp s -> type.option.interp d
           := match idc in ident.ident s d return type.option.interp s -> type.option.interp d with
              | ident.primitive type.Z v => fun _ => Some r[v ~> v]
@@ -4209,6 +4245,8 @@ Module Compilers.
              | Abs _ _ _
                => false
              end.
+        (** do partial reduction on let-in, controlling what gets
+            inlined and what doesn't *)
         Fixpoint interp_let_in {tC tx : type} {struct tx} : value var tx -> (value var tx -> value var tC) -> value var tC
           := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
              | type.arrow _ _
@@ -4266,6 +4304,7 @@ Module Compilers.
                      end
              end.
 
+        (** do partial reduction on identifiers *)
         Definition interp {s d} (idc : ident s d) : value var (s -> d)
           := match idc in ident s d return value var (s -> d) with
              | ident.Let_In tx tC as idc
