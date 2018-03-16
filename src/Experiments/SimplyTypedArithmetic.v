@@ -1180,11 +1180,11 @@ Module Ring.
     Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
 
     Lemma Fm_bounded_alt (x : F m)
-      : (0 <=? F.to_Z x) && (F.to_Z x <=? 'm - 1) = true.
+      : (0 <=? F.to_Z x) && (F.to_Z x <=? Z.pos m - 1) = true.
     Proof using m_eq.
       clear -m_eq.
       destruct x as [x H]; cbn [F.to_Z proj1_sig].
-      pose proof (Z.mod_pos_bound x ('m)).
+      pose proof (Z.mod_pos_bound x (Z.pos m)).
       rewrite andb_true_iff; split; Z.ltb_to_lt; lia.
     Qed.
 
@@ -5388,7 +5388,7 @@ Derive encode_gen
                     = encodemod w s c n len_c v)
        As encode_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = encode_gen _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
 
 Derive add_gen
        SuchThat (forall (w : nat -> Z)
@@ -6186,8 +6186,9 @@ Ltac peel_interp_app _ :=
   end.
 Ltac pre_cache_reify _ :=
   let arg := fresh "arg" in
-  intros arg _;
-  apply fg_equal_rel; [ | reflexivity ];
+  (tryif intros arg _
+    then apply fg_equal_rel; [ | reflexivity ]
+    else hnf);
   peel_interp_app ();
   [ lazymatch goal with
     | [ |- ?R (Interp ?ev) _ ]
@@ -6457,20 +6458,18 @@ Module X25519_64.
     : check_args n s c machine_wordsize (Pipeline.Success tt) = Pipeline.Success tt.
   Proof. vm_compute; reflexivity. Qed.
 
-  Definition base_51_goodT
-    := GoodT n s c machine_wordsize
-             base_51_curve_good
-             base_51_carry_mul_correct
-             base_51_carry_correct
-             base_51_relax_correct
-             base_51_add_correct
-             base_51_sub_correct
-             base_51_opp_correct
-             base_51_zero_correct
-             base_51_one_correct
-             base_51_encode_correct.
-  Theorem base_51_good : base_51_goodT.
-  Proof. apply Good. Qed.
+  Definition base_51_good : GoodT n s c
+    := Good n s c machine_wordsize
+            base_51_curve_good
+            base_51_carry_mul_correct
+            base_51_carry_correct
+            base_51_relax_correct
+            base_51_add_correct
+            base_51_sub_correct
+            base_51_opp_correct
+            base_51_zero_correct
+            base_51_one_correct
+            base_51_encode_correct.
 
   Print Assumptions base_51_good.
 
