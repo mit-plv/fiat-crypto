@@ -4874,6 +4874,27 @@ Module Compilers.
     : Expr (s -> d)
     := fun var => @partial_reduce_with_bounds1 var s d (e _) b.
 
+  Definition CheckPartialReduceWithBounds1
+             (relax_zrange : zrange -> option zrange)
+             {s d} (E : Expr (s -> d))
+             (b_in : ZRange.type.interp s)
+             (b_out : ZRange.type.interp d)
+    : Expr (s -> d) + ZRange.type.option.interp d
+    := let b_computed := partial.bounds.expr.Extract E (ZRange.type.option.Some b_in) in
+       if ZRange.type.option.is_tighter_than b_computed (ZRange.type.option.Some b_out)
+       then @inl (Expr (s -> d)) _ (RelaxZRange.expr.Relax relax_zrange E)
+       else @inr _ (ZRange.type.option.interp d) b_computed.
+
+  Definition CheckPartialReduceWithBounds0
+             (relax_zrange : zrange -> option zrange)
+             {t} (E : Expr t)
+             (b_out : ZRange.type.interp t)
+    : Expr t + ZRange.type.option.interp t
+    := let b_computed := partial.bounds.expr.Extract E in
+       if ZRange.type.option.is_tighter_than b_computed (ZRange.type.option.Some b_out)
+       then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
+       else @inr _ (ZRange.type.option.interp t) b_computed.
+
   Definition CheckedPartialReduceWithBounds1
              (relax_zrange : zrange -> option zrange)
              {s d} (e : Expr (s -> d))
@@ -4881,10 +4902,7 @@ Module Compilers.
              (b_out : ZRange.type.interp d)
     : Expr (s -> d) + ZRange.type.option.interp d
     := dlet_nd E := PartialReduceWithBounds1 e b_in in
-             let b_computed := partial.bounds.expr.Extract E (ZRange.type.option.Some b_in) in
-             if ZRange.type.option.is_tighter_than b_computed (ZRange.type.option.Some b_out)
-             then @inl (Expr (s -> d)) _ (RelaxZRange.expr.Relax relax_zrange E)
-             else @inr _ (ZRange.type.option.interp d) b_computed.
+             CheckPartialReduceWithBounds1 relax_zrange E b_in b_out.
 
   Definition CheckedPartialReduceWithBounds0
              (relax_zrange : zrange -> option zrange)
@@ -4892,10 +4910,7 @@ Module Compilers.
              (b_out : ZRange.type.interp t)
     : Expr t + ZRange.type.option.interp t
     := dlet_nd E := PartialReduce e in
-             let b_computed := partial.bounds.expr.Extract E in
-             if ZRange.type.option.is_tighter_than b_computed (ZRange.type.option.Some b_out)
-             then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
-             else @inr _ (ZRange.type.option.interp t) b_computed.
+             CheckPartialReduceWithBounds0 relax_zrange E b_out.
 
   Axiom admit_pf : False.
   Local Notation admit := (match admit_pf with end).
@@ -4908,13 +4923,14 @@ Module Compilers.
           {s d} (e : Expr (s -> d))
           (b_in : ZRange.type.interp s)
           (b_out : ZRange.type.interp d)
-          rv (Hrv : CheckedPartialReduceWithBounds1 relax_zrange e b_in b_out = inl rv)
+          E (HE : PartialReduceWithBounds1 e b_in = E)
+          rv (Hrv : CheckPartialReduceWithBounds1 relax_zrange E b_in b_out = inl rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by b_in arg = true),
       Interp rv arg = Interp e arg
       /\ ZRange.type.is_bounded_by b_out (Interp rv arg) = true.
   Proof.
-    cbv [CheckedPartialReduceWithBounds1 Let_In] in *;
+    cbv [CheckedPartialReduceWithBounds1 CheckPartialReduceWithBounds1 Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     intros arg Harg.
     split.
@@ -4932,11 +4948,12 @@ Module Compilers.
                                    -> is_tighter_than_bool z r' = true)
           {t} (e : Expr t)
           (b_out : ZRange.type.interp t)
-          rv (Hrv : CheckedPartialReduceWithBounds0 relax_zrange e b_out = inl rv)
+          E (HE : PartialReduce e = E)
+          rv (Hrv : CheckPartialReduceWithBounds0 relax_zrange E b_out = inl rv)
     : Interp rv = Interp e
       /\ ZRange.type.is_bounded_by b_out (Interp rv) = true.
   Proof.
-    cbv [CheckedPartialReduceWithBounds0 Let_In] in *;
+    cbv [CheckedPartialReduceWithBounds0 CheckPartialReduceWithBounds0 Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     split.
     { exact admit. (* correctness of interp *) }
@@ -5508,6 +5525,35 @@ Module Pipeline.
       expr.Interp (@for_reification.ident.interp) E.
   Admitted.
 
+  Definition BoundsPipelineNoCheck
+             (with_dead_code_elimination : bool)
+             {s d}
+             (E : Expr (s -> d))
+             arg_bounds
+  : Expr (s -> d)
+    := let E := PartialReduce E in
+       (* Note that DCE evaluates the expr with two different [var]
+          arguments, and so will likely result in a pipeline that is
+          2x slower *)
+       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       let E := ReassociateSmallConstants.Reassociate (2^8) E in
+       let E := PartialReduceWithBounds1 E arg_bounds in
+       E.
+
+  Definition CheckBoundsPipeline
+             relax_zrange
+             {s d}
+             (E : Expr (s -> d))
+             arg_bounds
+             out_bounds
+    : ErrorT (Expr (s -> d))
+    := let E := CheckPartialReduceWithBounds1 relax_zrange E arg_bounds out_bounds in
+       let E := match E with
+                | inl v => Success v
+                | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some out_bounds))
+                end in
+       E.
+
   Definition BoundsPipeline
              (with_dead_code_elimination : bool)
              relax_zrange
@@ -5516,18 +5562,8 @@ Module Pipeline.
              arg_bounds
              out_bounds
   : ErrorT (Expr (s -> d))
-    := let E := PartialReduce E in
-       (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so will likely result in a pipeline that is
-          2x slower *)
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-       let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := CheckedPartialReduceWithBounds1 relax_zrange E arg_bounds out_bounds in
-       let E := match E with
-                | inl v => Success v
-                | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some out_bounds))
-                end in
-       E.
+    := let E := BoundsPipelineNoCheck with_dead_code_elimination E arg_bounds in
+       CheckBoundsPipeline relax_zrange E arg_bounds out_bounds.
 
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool)
@@ -5535,19 +5571,22 @@ Module Pipeline.
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
              {s d}
-             (E : Expr (s -> d))
+             (e : Expr (s -> d))
              arg_bounds
              out_bounds
+             E
              rv
-             (Hrv : BoundsPipeline with_dead_code_elimination relax_zrange E arg_bounds out_bounds = Success rv)
+             (HE : BoundsPipelineNoCheck with_dead_code_elimination e arg_bounds = E)
+             (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
       ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
-      /\ Interp rv arg = Interp E arg.
+      /\ Interp rv arg = Interp e arg.
   Proof.
-    cbv [BoundsPipeline Let_In] in *; edestruct (CheckedPartialReduceWithBounds1 _ _ _ _) eqn:H.
+    cbv [BoundsPipeline BoundsPipelineNoCheck CheckBoundsPipeline Let_In] in *; subst E;
+      edestruct (CheckPartialReduceWithBounds1 _ _ _ _) eqn:H.
     inversion Hrv; subst.
-    { intros; eapply CheckedPartialReduceWithBounds1_Correct in H; [ | eassumption.. ].
+    { intros; eapply CheckedPartialReduceWithBounds1_Correct in H; [ | eassumption || reflexivity.. ].
       destruct H as [H0 H1].
       split; [ exact H1 | rewrite H0 ].
       exact admit. (* interp correctness *) }
@@ -5556,7 +5595,6 @@ Module Pipeline.
 
   Definition BoundsPipeline_correct_transT
              {s d}
-             (E : Expr (s -> d))
              arg_bounds
              out_bounds
              (InterpE : type.interp s -> type.interp d)
@@ -5573,15 +5611,17 @@ Module Pipeline.
          : forall r r' z : zrange,
             (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
         {s d}
-        (E : Expr (s -> d))
+        (e : Expr (s -> d))
         arg_bounds out_bounds
         (InterpE : type.interp s -> type.interp d)
         (InterpE_correct
          : forall arg
                   (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
-            Interp E arg = InterpE arg)
-        rv (Hrv : BoundsPipeline with_dead_code_elimination relax_zrange E arg_bounds out_bounds = Success rv)
-    : BoundsPipeline_correct_transT E arg_bounds out_bounds InterpE rv.
+            Interp e arg = InterpE arg)
+        rv E
+        (HE : BoundsPipelineNoCheck with_dead_code_elimination e arg_bounds = E)
+        (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
+    : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
     eapply @BoundsPipeline_correct; eassumption.
@@ -5621,9 +5661,36 @@ Module Pipeline.
   Proof.
     cbv [BoundsPipeline_full] in *.
     destruct (PrePipeline E) eqn:Hpre; [ | congruence ].
-    eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption ].
+    eapply BoundsPipeline_correct_trans; [ eassumption | | reflexivity | eassumption ].
     intros; erewrite PrePipeline_correct; [ reflexivity | eassumption ].
   Qed.
+
+  Definition BoundsPipelineConstNoCheck
+             (with_dead_code_elimination : bool)
+             {t}
+             (e : Expr t)
+  : Expr t
+    := let E := PartialReduce e in
+       (* Note that DCE evaluates the expr with two different [var]
+          arguments, and so will likely result in a pipeline that is
+          2x slower *)
+       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       let E := ReassociateSmallConstants.Reassociate (2^8) E in
+       let E := PartialReduce E in
+       E.
+
+  Definition CheckBoundsPipelineConst
+             relax_zrange
+             {t}
+             (E : Expr t)
+             bounds
+  : ErrorT (Expr t)
+    := let E := CheckPartialReduceWithBounds0 relax_zrange E bounds in
+       let E := match E with
+                | inl v => Success v
+                | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some bounds))
+                end in
+       E.
 
   Definition BoundsPipelineConst
              (with_dead_code_elimination : bool)
@@ -5632,18 +5699,8 @@ Module Pipeline.
              (E : Expr t)
              bounds
   : ErrorT (Expr t)
-    := let E := PartialReduce E in
-       (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so will likely result in a pipeline that is
-          2x slower *)
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-       let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := CheckedPartialReduceWithBounds0 relax_zrange E bounds in
-       let E := match E with
-                | inl v => Success v
-                | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some bounds))
-                end in
-       E.
+    := let E := BoundsPipelineConstNoCheck with_dead_code_elimination E in
+       CheckBoundsPipelineConst relax_zrange E bounds.
 
   Lemma BoundsPipelineConst_correct
              (with_dead_code_elimination : bool)
@@ -5651,16 +5708,19 @@ Module Pipeline.
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
              {d}
-             (E : Expr d)
+             (e : Expr d)
              bounds
              rv
-             (Hrv : BoundsPipelineConst with_dead_code_elimination relax_zrange E bounds = Success rv)
+             E
+             (HE : BoundsPipelineConstNoCheck with_dead_code_elimination e = E)
+             (Hrv : CheckBoundsPipelineConst relax_zrange E bounds = Success rv)
     : ZRange.type.is_bounded_by bounds (Interp rv) = true
-      /\ Interp rv = Interp E.
+      /\ Interp rv = Interp e.
   Proof.
-    cbv [BoundsPipelineConst Let_In] in *; edestruct (CheckedPartialReduceWithBounds0 _ _ _) eqn:H.
+    cbv [BoundsPipelineConst CheckBoundsPipelineConst BoundsPipelineConstNoCheck Let_In] in *;
+      edestruct (CheckPartialReduceWithBounds0 _ _ _) eqn:H.
     inversion Hrv; subst.
-    { intros; eapply CheckedPartialReduceWithBounds0_Correct in H; [ | eassumption.. ].
+    { intros; eapply CheckedPartialReduceWithBounds0_Correct in H; [ | eassumption || reflexivity.. ].
       destruct H as [H0 H1].
       split; [ exact H1 | rewrite H0 ].
       exact admit. (* interp correctness *) }
@@ -5669,7 +5729,6 @@ Module Pipeline.
 
   Definition BoundsPipelineConst_correct_transT
              {t}
-             (E : Expr t)
              out_bounds
              (InterpE : type.interp t)
              (rv : Expr t)
@@ -5683,13 +5742,15 @@ Module Pipeline.
          : forall r r' z : zrange,
             (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
         {t}
-        (E : Expr t)
+        (e : Expr t)
         out_bounds
         (InterpE : type.interp t)
-        (InterpE_correct : Interp E = InterpE)
+        (InterpE_correct : Interp e = InterpE)
         rv
-        (Hrv : BoundsPipelineConst with_dead_code_elimination relax_zrange E out_bounds = Success rv)
-    : BoundsPipelineConst_correct_transT E out_bounds InterpE rv.
+        E
+        (HE : BoundsPipelineConstNoCheck with_dead_code_elimination e = E)
+        (Hrv : CheckBoundsPipelineConst relax_zrange E out_bounds = Success rv)
+    : BoundsPipelineConst_correct_transT out_bounds InterpE rv.
   Proof.
     rewrite <- InterpE_correct.
     eapply @BoundsPipelineConst_correct; eassumption.
@@ -5725,7 +5786,7 @@ Module Pipeline.
   Proof.
     cbv [BoundsPipelineConst_full] in *.
     destruct (PrePipeline E) eqn:Hpre; [ | congruence ].
-    eapply BoundsPipelineConst_correct_trans; [ eassumption | | eassumption ].
+    eapply BoundsPipelineConst_correct_trans; [ eassumption | | reflexivity | eassumption ].
     intros; erewrite PrePipeline_correct; [ reflexivity | eassumption ].
   Qed.
 End Pipeline.
@@ -5909,7 +5970,7 @@ Section rcarry_mul.
 
   Notation type_of := ((fun T (_ : T) => T) _).
   Notation type_of_strip_arrow := ((fun s (d : Prop) (_ : s -> d) => d) _ _).
-  Notation type_of_strip_2arrow := ((fun s s' (d : Prop) (_ : s -> s' -> d) => d) _ _ _).
+  Notation type_of_strip_5arrow := ((fun (d : Prop) (_ : forall A B C D E, d) => d) _).
 
   Notation BoundsPipeline rop in_bounds out_bounds
     := (Pipeline.BoundsPipeline
@@ -5924,7 +5985,7 @@ Section rcarry_mul.
           rop%Expr out_bounds).
 
   Notation BoundsPipeline_correct in_bounds out_bounds op
-    := (fun (rop : Expr (type.reify_type_of op%function)) rv Hrop
+    := (fun rv (rop : Expr (type.reify_type_of op%function)) E Hrop HE
         => @Pipeline.BoundsPipeline_correct_trans
              false
              relax_zrange
@@ -5934,11 +5995,11 @@ Section rcarry_mul.
              in_bounds
              out_bounds
              op
-             Hrop rv)
+             Hrop rv E HE)
          (only parsing).
 
   Notation BoundsPipelineConst_correct out_bounds op
-    := (fun (rop : Expr (type.reify_type_of op)) rv Hrop
+    := (fun rv (rop : Expr (type.reify_type_of op)) E Hrop HE
         => @Pipeline.BoundsPipelineConst_correct_trans
              false
              relax_zrange
@@ -5947,7 +6008,7 @@ Section rcarry_mul.
              rop%Expr
              out_bounds
              op
-             Hrop rv)
+             Hrop rv E HE)
          (only parsing).
 
   (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
@@ -6010,25 +6071,25 @@ Section rcarry_mul.
          tight_bounds
          (onemod (Interp rw) s c n (Interp rlen_c)).
 
-  (* we need to strip off [Hrv : ... = Pipeline.Success rv] *)
+  (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
   Definition rcarry_mul_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rcarry_mul_correct rop rv).
+    := type_of_strip_5arrow (@rcarry_mul_correct rv).
   Definition rcarry_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rcarry_correct rop rv).
+    := type_of_strip_5arrow (@rcarry_correct rv).
   Definition rrelax_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rrelax_correct rop rv).
+    := type_of_strip_5arrow (@rrelax_correct rv).
   Definition radd_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@radd_correct rop rv).
+    := type_of_strip_5arrow (@radd_correct rv).
   Definition rsub_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rsub_correct rop rv).
+    := type_of_strip_5arrow (@rsub_correct rv).
   Definition ropp_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@ropp_correct rop rv).
+    := type_of_strip_5arrow (@ropp_correct rv).
   Definition rencode_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rencode_correct rop rv).
+    := type_of_strip_5arrow (@rencode_correct rv).
   Definition rzero_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rzero_correct rop rv).
+    := type_of_strip_5arrow (@rzero_correct rv).
   Definition rone_correctT rv : Prop
-    := exists rop, type_of_strip_2arrow (@rone_correct rop rv).
+    := type_of_strip_5arrow (@rone_correct rv).
 
   Section make_ring.
     Let m : positive := Z.to_pos (s - Associational.eval c).
@@ -6209,23 +6270,10 @@ Ltac do_inline_cache_reify do_if_not_cached :=
   | .. ].
 
 Ltac solve_rop' rop_correct do_if_not_cached machine_wordsizev :=
-  eexists; eapply rop_correct with (machine_wordsize:=machine_wordsizev);
+  eapply rop_correct with (machine_wordsize:=machine_wordsizev);
   [ do_inline_cache_reify do_if_not_cached
-  | (* Doing [lazy] is twice as slow as doing [lazy -[Let_In]; lazy].
-  This is because the bounds pipeline does [dlet E : Expr := (reduced
-  thing) in let b := extract_bounds E in ...].  If we allow [lazy] to
-  unfold [Let_In] before it fully reduces the function (function,
-  because [Expr := forall var, @expr var]), then there is no sharing
-  between the partial reduction in bounds extraction and the partial
-  reduction in the return value.  So we force [lazy] to fully reduce
-  the argument first, and only then permit [lazy] to inline it.  This
-  is slightly slower than doing bounds analysis in a non-PHOAS
-  representation; we spend about 3%-5% of the overall time doing
-  bounds extraction, and fully reducing the bounds extraction
-  expression before plugging in arguments costs a bit more.  However,
-  it's still reasonably fast, and the code is much simpler when
-  [Interp] always succeeds rather than returning [option]. *)
-  lazy -[Let_In]; lazy; reflexivity ].
+  | lazy; reflexivity
+  | lazy; reflexivity ].
 Ltac solve_rop_nocache rop_correct :=
   solve_rop' rop_correct ltac:(fun _ => idtac).
 Ltac solve_rop rop_correct :=
@@ -6969,20 +7017,12 @@ Module MontgomeryReduction.
 
     Let rw := rweight machine_wordsize.
     Let rw_half := rweight (machine_wordsize / 2).
-    Let rN := GallinaReify.Reify N.
-    Let rR := GallinaReify.Reify R.
-    Let rN' := GallinaReify.Reify N'.
-    Let rn := GallinaReify.Reify 2%nat.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
-    Let arg_bounds : ZRange.type.interp (type.Z * type.Z)
-      := (bound, bound).
-    Let out_bounds : ZRange.type.interp (type.Z)
-      := bound.
 
     Let relax_zrange_good
-    : forall r r' z : zrange,
-      (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
-    := relax_zrange_gen_good _.
+      : forall r r' z : zrange,
+        (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
+      := relax_zrange_gen_good _.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
       : Pipeline.ErrorT T
@@ -6992,75 +7032,34 @@ Module MontgomeryReduction.
               then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" N 0)
               else res.
 
-    Lemma check_args_success_id {T} {rv : T} {res}
-      : check_args res = Pipeline.Success rv
-        -> res = Pipeline.Success rv.
-    Proof.
-      cbv [check_args]; break_innermost_match; congruence.
-    Qed.
+    Notation BoundsPipeline_correct in_bounds out_bounds op
+      := (fun (rop : Expr (type.reify_type_of op%function)) rv Hrop
+          => @Pipeline.BoundsPipeline_correct_trans
+               true (* DCE *)
+               relax_zrange
+               relax_zrange_good
+               _ _
+               rop
+               in_bounds
+               out_bounds
+               op
+               Hrop rv)
+           (only parsing).
 
-    Definition rmontred
-      := let res := Pipeline.BoundsPipeline
-                      true
-                      (relax_zrange)
-                      (s:=(type.Z * type.Z)%ctype)
-                      (d:=(type.Z)%ctype)
-                      (arg_bounds)
-                      (out_bounds)
-                      (fun var
-                       => (montred_gen _)
-                            @ (rN _)
-                            @ (rR _)
-                            @ (rN' _)
-                            @ (rw _)
-                            @ (rw_half _)
-                            @ (rn _)
-                      )%expr in
-         res.
+    Definition rmontred_correct
+      := BoundsPipeline_correct
+           (bound, bound)
+           bound
+           (montred' N R N' (Interp rw) (Interp rw_half) 2).
 
-    (* copied from above *)
-    Local Ltac solve_correct_gen pipeline_lem gen_correct :=
-      let Hrv := lazymatch goal with H : ?rop = Pipeline.Success _ |- _ => H end in
-      let rop := lazymatch type of Hrv with ?rop = Pipeline.Success _ => rop end in
-      hnf; intros; cbv [rop] in Hrv;
-      eapply pipeline_lem in Hrv; [ | eassumption.. ];
-      let Hrv' := fresh "Hrv'" in
-      destruct Hrv as [Hrv Hrv'];
-      apply conj; [ exact Hrv | rewrite Hrv' ];
-      repeat match goal with H := _ |- _ => subst H end;
-      erewrite <- gen_correct;
-      cbv [expr.Interp];
-      cbn [expr.interp];
-      f_equal;
-      cbn -[reify_list];
-      try (rewrite interp_reify_list, map_map; cbn;
-           erewrite map_ext with (g:=id), map_id; try reflexivity);
-      try (intros []; reflexivity).
-    Local Ltac solve_correct gen_correct :=
-      solve_correct_gen Pipeline.BoundsPipeline_correct gen_correct.
-    Local Ltac solve_correct_const gen_correct :=
-      solve_correct_gen Pipeline.BoundsPipelineConst_correct gen_correct.
-
-    Definition rmontred_correctT
-               rv
-      := Eval hnf in
-          @rexpr_n1_correctT
-            ((type.Z * type.Z)%ctype) type.Z
-            arg_bounds out_bounds
-            (montred' (Interp rN) (Interp rR) (Interp rN') (Interp rw) (Interp rw_half) (Interp rn))
-            rv.
-
-    Lemma rmontred_correct
-          rv
-          (Hrv : rmontred = Pipeline.Success rv)
-      : rmontred_correctT rv.
-    Proof. solve_correct montred_gen_correct. Qed.
+    Notation type_of_strip_2arrow := ((fun s s' (d : Prop) (_ : s -> s' -> d) => d) _ _ _).
+    Definition rmontred_correctT rv : Prop
+      := exists rop, type_of_strip_2arrow (@rmontred_correct rop rv).
   End rmontred.
 End MontgomeryReduction.
 
-Ltac solve_rmontred _ :=
-  eapply MontgomeryReduction.rmontred_correct;
-  lazy; reflexivity.
+Ltac solve_rmontred := solve_rop MontgomeryReduction.rmontred_correct.
+Ltac solve_rmontred_nocache := solve_rop_nocache MontgomeryReduction.rmontred_correct.
 
 Module Montgomery256.
 
@@ -7073,6 +7072,33 @@ Module Montgomery256.
          SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256)
          As montred256_correct.
   Proof.
+    eexists; eapply MontgomeryReduction.rmontred_correct with (machine_wordsize:=machine_wordsize).
+    Time do_inline_cache_reify ltac:(fun _ => idtac).
+    cbv [Pipeline.BoundsPipeline].
+    set (k := PartialReduce _).
+    cbv [CheckedPartialReduceWithBounds1].
+    Time set (k' := PartialReduceWithBounds1 _ _).
+    Time lazy in k'.
+    Print fold_left.
+    Time lazy; reflexivity.
+    Time lazy -[Let_In k'].
+  | (* Doing [lazy] is twice as slow as doing [lazy -[Let_In]; lazy].
+  This is because the bounds pipeline does [dlet E : Expr := (reduced
+  thing) in let b := extract_bounds E in ...].  If we allow [lazy] to
+  unfold [Let_In] before it fully reduces the function (function,
+  because [Expr := forall var, @expr var]), then there is no sharing
+  between the partial reduction in bounds extraction and the partial
+  reduction in the return value.  So we force [lazy] to fully reduce
+  the argument first, and only then permit [lazy] to inline it.  This
+  is slightly slower than doing bounds analysis in a non-PHOAS
+  representation; we spend about 3%-5% of the overall time doing
+  bounds extraction, and fully reducing the bounds extraction
+  expression before plugging in arguments costs a bit more.  However,
+  it's still reasonably fast, and the code is much simpler when
+  [Interp] always succeeds rather than returning [option]. *)
+  lazy -[Let_In]; lazy; reflexivity ].
+
+    Time solve_rmontred_nocache machine_wordsize.
     eapply MontgomeryReduction.rmontred_correct.
     cbv [MontgomeryReduction.rmontred].
     cbv [Pipeline.BoundsPipeline].
