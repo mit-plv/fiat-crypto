@@ -1264,15 +1264,6 @@ Module Compilers.
          | t => t
          end.
 
-    Fixpoint under_arrows (t : type) (f : type -> type) : type
-      := match t with
-         | type_primitive _ as t
-         | prod _ _ as t
-         | list _ as t
-           => f t
-         | arrow s d => arrow s (under_arrows d f)
-         end.
-
     Fixpoint try_transport (P : type -> Type) (t1 t2 : type) : P t1 -> option (P t2)
       := match t1, t2 return P t1 -> option (P t2) with
          | unit, unit
