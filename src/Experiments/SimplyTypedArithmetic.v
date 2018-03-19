@@ -1669,9 +1669,9 @@ Module Compilers.
           | cons {t} : ident (t * list t) (list t)
           | fst {A B} : ident (A * B) A
           | snd {A B} : ident (A * B) B
-          | bool_rect {T} : ident (T * T * bool) T
-          | nat_rect {P} : ident (P * (nat * P -> P) * nat) P
-          | list_rect {A P} : ident (P * (A * list A * P -> P) * list A) P
+          | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
+          | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
+          | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
           | pred : ident nat nat
           | List_length {T} : ident (list T) nat
           | List_seq : ident (nat * nat) (list nat)
@@ -1734,9 +1734,9 @@ Module Compilers.
                | cons t => curry2 (@Datatypes.cons (type.interp t))
                | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
                | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-               | bool_rect T => curry3 (@Datatypes.bool_rect (fun _ => type.interp T))
-               | nat_rect P => curry3_2 (@Datatypes.nat_rect (fun _ => type.interp P))
-               | list_rect A P => curry3_3 (@Datatypes.list_rect (type.interp A) (fun _ => type.interp P))
+               | bool_rect T => curry3 (fun t f => @Datatypes.bool_rect (fun _ => type.interp T) (t tt) (f tt))
+               | nat_rect P => curry3_2 (fun O_case => @Datatypes.nat_rect (fun _ => type.interp P) (O_case tt))
+               | list_rect A P => curry3_3 (fun N_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt))
                | pred => Nat.pred
                | List_length T => @List.length (type.interp T)
                | List_seq => curry2 List.seq
@@ -1795,11 +1795,12 @@ Module Compilers.
                  mkAppIdent (@ident.snd rA rB) x
             | @Datatypes.bool_rect (fun _ => ?T) ?Ptrue ?Pfalse ?b
               => let rT := type.reify T in
-                 mkAppIdent (@ident.bool_rect rT) (Ptrue, Pfalse, b)
+                 mkAppIdent (@ident.bool_rect rT)
+                            ((fun _ : Datatypes.unit => Ptrue), (fun _ : Datatypes.unit => Pfalse), b)
             | @Datatypes.nat_rect (fun _ => ?T) ?P0 (fun (n' : Datatypes.nat) Pn => ?PS) ?n
               => let rT := type.reify T in
                  let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.nat_rect rT) (P0,
+                 mkAppIdent (@ident.nat_rect rT) ((fun _ : Datatypes.unit => P0),
                                                   (fun pat : Datatypes.nat * T
                                                    => let '(n', Pn) := pat in PS),
                                                   n)
@@ -1810,10 +1811,11 @@ Module Compilers.
               => let rA := type.reify A in
                  let rT := type.reify T in
                  let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.list_rect rA rT) (Pnil,
-                                                      (fun pat : A * Datatypes.list A * T
-                                                       => let '(a, tl, Ptl) := pat in PS),
-                                                      ls)
+                 mkAppIdent (@ident.list_rect rA rT)
+                            ((fun _ : Datatypes.unit => Pnil),
+                             (fun pat : A * Datatypes.list A * T
+                              => let '(a, tl, Ptl) := pat in PS),
+                             ls)
             | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil ?PS ?ls
               => let dummy := match goal with _ => fail 1 "list_rect successor case is not syntactically a function of three arguments:" PS end in
                  constr:(I : I)
@@ -1982,10 +1984,10 @@ Module Compilers.
           | cons {t} : ident (t * list t) (list t)
           | fst {A B} : ident (A * B) A
           | snd {A B} : ident (A * B) B
-          | bool_rect {T} : ident (T * T * bool) T
-          | nat_rect {P} : ident (P * (nat * P -> P) * nat) P
+          | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
+          | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
           | pred : ident nat nat
-          | list_rect {A P} : ident (P * (A * list A * P -> P) * list A) P
+          | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
           | List_nth_default {T} : ident (T * list T * nat) T
           | List_nth_default_concrete {T : type.primitive} (d : interp T) (n : Datatypes.nat) : ident (list T) T
           | Z_shiftr (offset : BinInt.Z) : ident Z Z
@@ -2057,10 +2059,10 @@ Module Compilers.
                  | cons t => curry2 (@Datatypes.cons (type.interp t))
                  | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
                  | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-                 | bool_rect T => curry3 (@Datatypes.bool_rect (fun _ => type.interp T))
-                 | nat_rect P => curry3_2 (@Datatypes.nat_rect (fun _ => type.interp P))
+                 | bool_rect T => curry3 (fun t f => @Datatypes.bool_rect (fun _ => type.interp T) (t tt) (f tt))
+                 | nat_rect P => curry3_2 (fun O_case => @Datatypes.nat_rect (fun _ => type.interp P) (O_case tt))
                  | pred => Nat.pred
-                 | list_rect A P => curry3_23 (@Datatypes.list_rect (type.interp A) (fun _ => type.interp P))
+                 | list_rect A P => curry3_23 (fun N_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt))
                  | List_nth_default T => curry3 (@List.nth_default (type.interp T))
                  | List_nth_default_concrete T d n => fun ls => @List.nth_default (type.interp T) d ls n
                  | Z_shiftr n => fun v => Z.shiftr v n
@@ -2128,14 +2130,16 @@ Module Compilers.
                  mkAppIdent (@ident.snd rA rB) x
             | @Datatypes.bool_rect (fun _ => ?T) ?Ptrue ?Pfalse ?b
               => let rT := type.reify T in
-                 mkAppIdent (@ident.bool_rect rT) (Ptrue, Pfalse, b)
+                 mkAppIdent (@ident.bool_rect rT)
+                            ((fun _ : Datatypes.unit => Ptrue), (fun _ : Datatypes.unit => Pfalse), b)
             | @Datatypes.nat_rect (fun _ => ?T) ?P0 (fun (n' : Datatypes.nat) Pn => ?PS) ?n
               => let rT := type.reify T in
                  let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.nat_rect rT) (P0,
-                                                  (fun pat : Datatypes.nat * T
-                                                   => let '(n', Pn) := pat in PS),
-                                                  n)
+                 mkAppIdent (@ident.nat_rect rT)
+                            ((fun _ : Datatypes.unit => P0),
+                             (fun pat : Datatypes.nat * T
+                              => let '(n', Pn) := pat in PS),
+                             n)
             | @Datatypes.nat_rect (fun _ => ?T) ?P0 ?PS ?n
               => let dummy := match goal with _ => fail 1 "nat_rect successor case is not syntactically a function of two arguments:" PS end in
                  constr:(I : I)
@@ -2153,7 +2157,7 @@ Module Compilers.
                  let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
                  let pat' := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) (must also not overlap with [rec], but I think [fresh] handles that correctly, at least) *)
                  mkAppIdent (@ident.list_rect rA rB)
-                            (Pnil,
+                            ((fun _ : Datatypes.unit => Pnil),
                              (fun pat : A * Datatypes.list A * B
                               => let '(pat', rec) := pat in
                                  let '(x, xs) := pat' in
@@ -2680,25 +2684,6 @@ Module Compilers.
               end idc
          | _ => None
          end.
-
-    Definition invert_bool_rect P Q v1 v2 d (idc : ident (v1 * v2 * type.bool)%ctype d)
-      : P v1
-        -> Q v2
-        -> option (P d * Q d)
-      := match idc in ident.ident s d
-               return (match s return Type with
-                       | (v1 * v2 * type.bool)%ctype => P v1
-                       | _ => unit
-                       end
-                       -> match s return Type with
-                          | (v1 * v2 * type.bool)%ctype => Q v2
-                          | _ => unit
-                          end
-                       -> option (P d * Q d))
-         with
-         | ident.bool_rect T => fun p q => Some (p, q)
-         | _ => fun _ _ => None
-         end.
   End invert.
 
   Section gallina_reify.
@@ -2802,7 +2787,6 @@ Module Compilers.
           Inductive expr :=
           | Halt (v : var R)
           | App {A} (f : var (A --->)) (x : var A)
-          | App_bool_rect (Ptrue : expr) (Pfalse : expr) (b : var type.bool)
           | Bind {A} (x : primop A) (f : var A -> expr)
           with
           primop : type -> Type :=
@@ -2833,7 +2817,6 @@ Module Compilers.
             := match e with
                | Halt v => k v
                | App A f x => f x
-               | App_bool_rect Ptrue Pfalse b => bool_rect _ (interp Ptrue k) (interp Pfalse k) b
                | Bind A x f => interp (f (@interp_primop _ x k)) k
                end
           with interp_primop {t} (e : @primop ident (type.interp R) r t) (k : type.interp R r -> R)
@@ -2899,12 +2882,6 @@ Module Compilers.
         Context {ident : Output.type.type -> Type}
                 {ident' : type -> type -> Type}
                 {var : Output.type.type -> Type}
-                (invert_bool_rect
-                 : forall P Q v1 v2 d,
-                    ident' (v1 * v2 * type.bool)%ctype d
-                    -> P v1
-                    -> Q v2
-                    -> option (P d * Q d))
                 (translate_ident : forall s d, ident' s d -> ident (type.translate (s -> d))).
         Notation var' := (fun t => var (type.translate t)).
         Local Notation oexpr := (@Output.expr.expr ident var).
@@ -2917,8 +2894,6 @@ Module Compilers.
             := match e1 with
                | Halt v => e2 v
                | f @ x => f @ x
-               | App_bool_rect Ptrue Pfalse b
-                 => App_bool_rect (@splice Ptrue e2) (@splice Pfalse e2) b
                | Bind A x f => v <- @splice_primop _ x e2; @splice (f v) e2
                end%cpsexpr
           with
@@ -2939,9 +2914,10 @@ Module Compilers.
 
         Local Notation "x <-- e1 ; e2" := (splice e1 (fun x => e2%cpsexpr)) : cpsexpr_scope.
 
-        (** Note: We special-case [bool_rect] because reduction of the
-            bodies of eliminators should block on the branching.  We
-            would like to just write:
+        (** Note: We used to special-case [bool_rect] because
+            reduction of the bodies of eliminators should block on the
+            branching.  We would like to just write:
+
 <<
 | AppIdent (A * A * type.bool) A ident.bool_rect (Ptrue, Pfalse, b)
   => b' <-- @translate _ b;
@@ -2962,7 +2938,10 @@ Module Compilers.
             they never hit the base case; it is already the case that
             functions get a sort of "free pass" and do get evaluated
             until applied to arguments, and the base case ought to be
-            hit exactly once. *)
+            hit exactly once.
+
+            However, now that [bool_rect]'s arguments are thunked, we
+            no longer need to do this. *)
         Fixpoint translate {t}
                  (e : @Compilers.Uncurried.expr.expr ident' var' t)
           : @Output.expr.expr ident var (type.translate t)
@@ -2970,38 +2949,11 @@ Module Compilers.
              | Var t v => Halt v
              | TT => x <- () ; Halt x
              | AppIdent s d idc args
-               => let default
-                      := (args' <-- @translate _ args;
-                            k <- Output.expr.Abs (fun r => Halt r);
-                            p <- (args', k);
-                            f <- Output.expr.Ident (translate_ident s d idc);
-                            f @ p) in
-                  match args in Compilers.Uncurried.expr.expr t
-                        return ident' t d
-                               -> Output.expr.expr _
-                               -> Output.expr.expr _
-                  with
-                  | Pair AB type.bool ab c
-                    => match ab in Compilers.Uncurried.expr.expr t
-                             return ident' (t * type.bool)%ctype d
-                                    -> Output.expr.expr _
-                                    -> Output.expr.expr _
-                       with
-                       | Pair A B a b
-                         => fun idc default
-                            => match invert_bool_rect
-                                       (fun t => @Output.expr.expr ident var (type.translate t))
-                                       (fun t => @Output.expr.expr ident var (type.translate t))
-                                       A B d idc (@translate _ a) (@translate _ b) with
-                               | Some (Ptrue, Pfalse)%core
-                                 => (b' <-- @translate _ c;
-                                       App_bool_rect Ptrue Pfalse b')
-                               | None => default
-                               end
-                       | _ => fun _ default => default
-                       end
-                  | _ => fun _ default => default
-                  end idc default
+               => (args' <-- @translate _ args;
+                     k <- Output.expr.Abs (fun r => Halt r);
+                     p <- (args', k);
+                     f <- Output.expr.Ident (translate_ident s d idc);
+                     f @ p)
              | Pair A B a b
                => (a' <-- @translate _ a;
                      b' <-- @translate _ b;
@@ -3027,16 +2979,10 @@ Module Compilers.
       Definition Translate
                  {ident : Output.type.type -> Type}
                  {ident' : type -> type -> Type}
-                 (invert_bool_rect
-                  : forall P Q v1 v2 d,
-                     ident' (v1 * v2 * type.bool)%ctype d
-                     -> P v1
-                     -> Q v2
-                     -> option (P d * Q d))
                  (translate_ident : forall s d, ident' s d -> ident (type.translate (s -> d)))
                  {t} (e : @Compilers.Uncurried.expr.Expr ident' t)
         : @Output.expr.Expr ident (type.translate t)
-        := fun var => translate invert_bool_rect translate_ident (e _).
+        := fun var => translate translate_ident (e _).
 
       Section call_with_cont.
         Context {ident' : Output.type.type -> Type}
@@ -3049,8 +2995,7 @@ Module Compilers.
         Notation var' := (fun t => ucexprut t).
         Context (untranslate_ident : forall t, ident' t -> ucexprut t)
                 (ifst : forall A B, ident (A * B)%ctype A)
-                (isnd : forall A B, ident (A * B)%ctype B)
-                (ibool_rect : forall A, ident (A * A * type.bool)%ctype A).
+                (isnd : forall A B, ident (A * B)%ctype B).
 
         Fixpoint call_with_continuation
                  (e : @Output.expr.expr ident' var' r)
@@ -3062,10 +3007,6 @@ Module Compilers.
              | expr.App A f x
                => @App _ _ (type.untranslate R A) R
                        f x
-             | expr.App_bool_rect Ptrue Pfalse b
-               => AppIdent (ibool_rect _) (call_with_continuation Ptrue k,
-                                           call_with_continuation Pfalse k,
-                                           b)
              | Bind A x f
                => @call_with_continuation
                     (f (@call_primop_with_continuation A x k))
@@ -3100,12 +3041,11 @@ Module Compilers.
                  (untranslate_ident : forall t, ident' t -> @Compilers.Uncurried.expr.Expr ident (type.untranslate R t))
                  (ifst : forall A B, ident (A * B)%ctype A)
                  (isnd : forall A B, ident (A * B)%ctype B)
-                 (ibool_rect : forall A, ident (A * A * type.bool)%ctype A)
                  {t} (e : @Output.expr.Expr ident' t)
                  (k : forall var, @Uncurried.expr.expr ident var (type.untranslate R t) -> @Uncurried.expr.expr ident var R)
         : @Compilers.Uncurried.expr.Expr ident R
         := fun var => call_with_continuation
-                        (fun t idc => untranslate_ident t idc _) ifst isnd ibool_rect (e _) (k _).
+                        (fun t idc => untranslate_ident t idc _) ifst isnd (e _) (k _).
     End expr.
 
     Module ident.
@@ -3191,32 +3131,32 @@ Module Compilers.
                     => cps_of (@Datatypes.snd (interp R (type.translate A)) (interp R (type.translate B)))
                   | ident.bool_rect T
                     => fun '((tc, fc, b) :
-                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) type.interp R (type.translate T) * type.interp R (type.translate T) * bool)
+                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) ((unit * (type.interp R (type.translate T) -> R) -> R) * (unit * (type.interp R (type.translate T) -> R) -> R) * bool))
                            k
                        => @Datatypes.bool_rect
                             (fun _ => R)
-                            (k tc)
-                            (k fc)
+                            (tc (tt, k))
+                            (fc (tt, k))
                             b
                   | ident.nat_rect P
                     => fun '((PO, PS, n) :
-                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) interp R (type.translate P) * (nat * interp R (type.translate P) * (interp R (type.translate P) -> R) -> R) * nat)
+                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) ((unit * (interp R (type.translate P) -> R) -> R) * (nat * interp R (type.translate P) * (interp R (type.translate P) -> R) -> R) * nat))
                            k
                        => @Datatypes.nat_rect
                             (fun _ => (interp R (type.translate P) -> R) -> R)
-                            (fun k => k PO)
+                            (fun k => PO (tt, k))
                             (fun n' rec k
                              => rec (fun rec => PS (n', rec, k)))
                             n
                             k
                   | ident.list_rect A P
                     => fun '((Pnil, Pcons, ls) :
-                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) interp R (type.translate P) * (interp R (type.translate A) * Datatypes.list (interp R (type.translate A)) * interp R (type.translate P) * (interp R (type.translate P) -> R) -> R) * Datatypes.list (interp R (type.translate A)))
+                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) ((unit * (interp R (type.translate P) -> R) -> R) * (interp R (type.translate A) * Datatypes.list (interp R (type.translate A)) * interp R (type.translate P) * (interp R (type.translate P) -> R) -> R) * Datatypes.list (interp R (type.translate A))))
                            k
                        => @Datatypes.list_rect
                             (interp R (type.translate A))
                             (fun _ => (interp R (type.translate P) -> R) -> R)
-                            (fun k => k Pnil)
+                            (fun k => Pnil (tt, k))
                             (fun x xs rec k
                              => rec (fun rec => Pcons (x, xs, rec, k)))
                             ls
@@ -3233,10 +3173,10 @@ Module Compilers.
       Definition untranslate {R} {t} (idc : ident t)
         : @Compilers.Uncurried.expr.Expr Uncurried.expr.default.ident (type.untranslate R t)
         := fun var
-           => match idc in ident t return Compilers.Uncurried.expr.expr (type.untranslate _ t) with
+           => match idc in ident t return @Compilers.Uncurried.expr.expr Uncurried.expr.default.ident var (type.untranslate R t) with
               | wrap s d idc
                 =>
-                match idc in default.ident s d return Compilers.Uncurried.expr.expr (type.untranslate _ (type.translate (s -> d))) with
+                match idc in default.ident s d return @Compilers.Uncurried.expr.expr Uncurried.expr.default.ident var (type.untranslate R (type.translate (s -> d))) with
                 | ident.primitive t v
                   => λ (_k :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (() * (t -> R))%ctype) ,
@@ -3253,12 +3193,12 @@ Module Compilers.
                               @ (Var x, ident.snd @@ Var xyk)))
                 | ident.nat_rect P
                   => λ (PO_PS_n_k :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate P) * (type.nat * type.untranslate _ (type.translate P) * (type.untranslate _ (type.translate P) -> R) -> R) * type.nat * (type.untranslate _ (type.translate P) -> R))%ctype) ,
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate P) -> R) -> R) * (Compilers.type.type_primitive type.nat * type.untranslate R (type.translate P) * (type.untranslate R (type.translate P) -> R) -> R) * Compilers.type.type_primitive type.nat * (type.untranslate R (type.translate P) -> R))%ctype) ,
                      let (PO_PS_n, k) := var_eta (Var PO_PS_n_k) in
                      let (PO_PS, n) := var_eta PO_PS_n in
                      let (PO, PS) := var_eta PO_PS in
                      ((@ident.nat_rect ((type.untranslate _ (type.translate P) -> R) -> R))
-                        @@ ((λ k , Var k @ PO),
+                        @@ ((λ tt k , PO @ (Var tt, Var k)),
                             (λ n'rec k ,
                              let (n', rec) := var_eta (Var n'rec) in
                              rec @ (λ rec , PS @ (n', Var rec, Var k))),
@@ -3266,14 +3206,14 @@ Module Compilers.
                        @ k
                 | ident.list_rect A P
                   => λ (Pnil_Pcons_ls_k :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate P) * (type.untranslate _ (type.translate A) * Compilers.type.list (type.untranslate _ (type.translate A)) * type.untranslate _ (type.translate P) * (type.untranslate _ (type.translate P) -> R) -> R) * Compilers.type.list (type.untranslate _ (type.translate A)) * (type.untranslate _ (type.translate P) -> R))%ctype) ,
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate P) -> R) -> R) * (type.untranslate R (type.translate A) * Compilers.type.list (type.untranslate R (type.translate A)) * type.untranslate R (type.translate P) * (type.untranslate R (type.translate P) -> R) -> R) * Compilers.type.list (type.untranslate R (type.translate A)) * (type.untranslate R (type.translate P) -> R))%ctype) ,
                      let (Pnil_Pcons_ls, k) := var_eta (Var Pnil_Pcons_ls_k) in
                      let (Pnil_Pcons, ls) := var_eta Pnil_Pcons_ls in
                      let (Pnil, Pcons) := var_eta Pnil_Pcons in
                      ((@ident.list_rect
                          (type.untranslate _ (type.translate A))
                          ((type.untranslate _ (type.translate P) -> R) -> R))
-                        @@ ((λ k, Var k @ Pnil),
+                        @@ ((λ tt k, Pnil @ (Var tt, Var k)),
                             (λ x_xs_rec k,
                              let (x_xs, rec) := var_eta (Var x_xs_rec) in
                              let (x, xs) := var_eta x_xs in
@@ -3292,12 +3232,14 @@ Module Compilers.
                        @ (ident.List_nth_default_concrete d n @@ (ident.fst @@ Var xk))
                 | ident.bool_rect T
                   => λ (xyzk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate T) * type.untranslate _ (type.translate T) * type.bool * (type.untranslate _ (type.translate T) -> R))%ctype) ,
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate T) -> R) -> R) * (Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate T) -> R) -> R) * Compilers.type.type_primitive type.bool * (type.untranslate R (type.translate T) -> R))%ctype) ,
                      ident.bool_rect
-                       @@ ((ident.snd @@ (Var xyzk))
-                             @ (ident.fst @@ (ident.fst @@ (ident.fst @@ (Var xyzk)))),
-                           (ident.snd @@ (Var xyzk))
-                             @ (ident.snd @@ (ident.fst @@ (ident.fst @@ (Var xyzk)))),
+                       @@ ((λ tt,
+                            (ident.fst @@ (ident.fst @@ (ident.fst @@ (Var xyzk))))
+                              @ (Var tt, (ident.snd @@ (Var xyzk)))),
+                           (λ tt,
+                            (ident.snd @@ (ident.fst @@ (ident.fst @@ (Var xyzk))))
+                              @ (Var tt, (ident.snd @@ (Var xyzk)))),
                            ident.snd @@ (ident.fst @@ (Var xyzk)))
                 | ident.nil t
                   => λ (_k :
@@ -3413,7 +3355,7 @@ Module Compilers.
       Definition Translate
                  {t} (e : @Compilers.Uncurried.expr.default.Expr t)
         : Expr (type.translate t)
-        := expr.Translate (invert_bool_rect) (@ident.wrap) e.
+        := expr.Translate (@ident.wrap) e.
 
       Definition call_with_continuation
                  {var}
@@ -3421,14 +3363,14 @@ Module Compilers.
                  {t} (e : @expr _ t)
                  (k : @Uncurried.expr.default.expr var (type.untranslate R t) -> @Uncurried.expr.default.expr var R)
         : @Compilers.Uncurried.expr.default.expr var R
-        := expr.call_with_continuation (fun t idc => @ident.untranslate _ t idc _) (@ident.fst) (@ident.snd) (@ident.bool_rect) e k.
+        := expr.call_with_continuation (fun t idc => @ident.untranslate _ t idc _) (@ident.fst) (@ident.snd) e k.
 
       Definition CallWithContinuation
                  {R : Compilers.type.type}
                  {t} (e : Expr t)
                  (k : forall var, @Uncurried.expr.default.expr var (type.untranslate R t) -> @Uncurried.expr.default.expr var R)
         : @Compilers.Uncurried.expr.default.Expr R
-        := expr.CallWithContinuation (@ident.untranslate _) (@ident.fst) (@ident.snd) (@ident.bool_rect) e k.
+        := expr.CallWithContinuation (@ident.untranslate _) (@ident.fst) (@ident.snd) e k.
 
       (** It's not clear how to "plug in the identity continuation"
           for the CPS'd form of an expression of type [((A -> B) -> C)
@@ -4429,30 +4371,30 @@ Module Compilers.
                      | _ => default_interp idc x
                      end
              | ident.bool_rect T as idc
-               => fun (true_case_false_case_b : data (T * T * type.bool) * expr (T * T * type.bool) + (data (T * T) * expr (T * T) + value var T * value var T) * (data type.bool * expr type.bool + bool))
+               => fun (true_case_false_case_b : data ((type.unit -> T) * (type.unit -> T) * type.bool) * expr ((type.unit -> T) * (type.unit -> T) * type.bool) + (data ((type.unit -> T) * (type.unit -> T)) * expr ((type.unit -> T) * (type.unit -> T)) + (_ + Datatypes.unit -> value var T) * (_ + Datatypes.unit -> value var T)) * (data type.bool * expr type.bool + bool))
                   => match true_case_false_case_b with
                      | inr (inr (true_case, false_case), inr b)
-                       => @bool_rect (fun _ => value var T) true_case false_case b
+                       => @bool_rect (fun _ => value var T) (true_case (inr tt)) (false_case (inr tt)) b
                      | _ => default_interp idc true_case_false_case_b
                      end
              | ident.nat_rect P as idc
-               => fun (O_case_S_case_n : _ * expr (P * (type.nat * P -> P) * type.nat) + (_ * expr (P * (type.nat * P -> P)) + value var P * value var (type.nat * P -> P)) * (_ * expr type.nat + nat))
+               => fun (O_case_S_case_n : _ * expr ((type.unit -> P) * (type.nat * P -> P) * type.nat) + (_ * expr ((type.unit -> P) * (type.nat * P -> P)) + (_ + Datatypes.unit -> value var P) * value var (type.nat * P -> P)) * (_ * expr type.nat + nat))
                   => match O_case_S_case_n with
                      | inr (inr (O_case, S_case), inr n)
                        => @nat_rect (fun _ => value var P)
-                                    O_case
+                                    (O_case (inr tt))
                                     (fun n' rec => S_case (inr (inr n', rec)))
                                     n
                      | _ => default_interp idc O_case_S_case_n
                      end
              | ident.list_rect A P as idc
-               => fun (nil_case_cons_case_ls : _ * expr (P * (A * type.list A * P -> P) * type.list A) + (_ * expr (P * (A * type.list A * P -> P)) + value var P * value var (A * type.list A * P -> P)) * (_ * expr (type.list A) + list (value var A)))
+               => fun (nil_case_cons_case_ls : _ * expr ((type.unit -> P) * (A * type.list A * P -> P) * type.list A) + (_ * expr ((type.unit -> P) * (A * type.list A * P -> P)) + (_ + Datatypes.unit -> value var P) * value var (A * type.list A * P -> P)) * (_ * expr (type.list A) + list (value var A)))
                   => match nil_case_cons_case_ls with
                      | inr (inr (nil_case, cons_case), inr ls)
                        => @list_rect
                             (value var A)
                             (fun _ => value var P)
-                            nil_case
+                            (nil_case (inr tt))
                             (fun x xs rec => cons_case (inr (inr (x, inr xs), rec)))
                             ls
                      | _ => default_interp idc nil_case_cons_case_ls
