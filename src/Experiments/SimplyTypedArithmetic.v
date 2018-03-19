@@ -6128,9 +6128,9 @@ Section rcarry_mul.
   Lemma Interp_rn : Interp rn = n. Proof. reflexivity. Qed.
   Lemma Interp_ridxs : Interp ridxs = idxs. Proof. t_solve_interp. Qed.
 
-  Local Hint Rewrite @Interp_APP : interp_correct.
-  Local Hint Rewrite Interp_rs Interp_rc Interp_rn Interp_ridxs : interp_correct.
-  Local Hint Rewrite carry_mul_gen_correct carry_gen_correct id_gen_correct add_gen_correct sub_gen_correct opp_gen_correct encode_gen_correct zero_gen_correct one_gen_correct : interp_correct.
+  Hint Rewrite @Interp_APP : interp_correct.
+  Hint Rewrite Interp_rs Interp_rc Interp_rn Interp_ridxs : interp_correct.
+  Hint Rewrite carry_mul_gen_correct carry_gen_correct id_gen_correct add_gen_correct sub_gen_correct opp_gen_correct encode_gen_correct zero_gen_correct one_gen_correct : interp_correct.
 
   Local Ltac do_interp_correct :=
     intros; repeat autorewrite with interp_correct; reflexivity.
