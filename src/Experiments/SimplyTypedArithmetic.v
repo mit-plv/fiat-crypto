@@ -218,19 +218,19 @@ Module Positional. Section Positional.
 
   Definition from_associational n (p:list (Z*Z)) :=
     List.fold_right (fun t ls =>
-      let p := place t (pred n) in
+      dlet_nd p := place t (pred n) in
       add_to_nth (fst p) (snd p) ls ) (zeros n) p.
   Lemma eval_from_associational n p (n_nz:n<>O \/ p = nil) :
     eval n (from_associational n p) = Associational.eval p.
   Proof. destruct n_nz; [ induction p | subst p ];
-  cbv [from_associational] in *; push; try
+  cbv [from_associational Let_In] in *; push; try
   pose proof place_in_range a (pred n); try omega; try nsatz;
   apply fold_right_invariant; cbv [zeros add_to_nth];
   intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
   try omega.                                                  Qed.
   Hint Rewrite @eval_from_associational : push_eval.
   Lemma length_from_associational n p : length (from_associational n p) = n.
-  Proof. cbv [from_associational]. apply fold_right_invariant; intros; distr_length. Qed.
+  Proof. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
   Hint Rewrite length_from_associational : distr_length.
 
   Section mulmod.
@@ -817,7 +817,7 @@ Module Columns.
       { simpl. autorewrite with push_eval. rewrite Positional.eval_zeros; auto. }
       { pose proof (length_from_associational n p).
         cbv [from_associational] in *. destruct n_nonzero; try congruence; [ ].
-        simpl. rewrite eval_cons_to_nth, Positional.eval_add_to_nth;
+        simpl; cbv [Let_In]. rewrite eval_cons_to_nth, Positional.eval_add_to_nth;
                  rewrite ?Positional.length_from_associational;
         try match goal with |- context [Positional.place _ ?x ?n] =>
                         pose proof (Positional.weight_place weight ltac:(assumption) ltac:(assumption) x n);
