@@ -4279,7 +4279,7 @@ Module Compilers.
              | Abs _ _ _
                => false
              end.
-        (** do partial reduction on let-in, controlling what gets
+        (** do partial evaluation on let-in, controlling what gets
             inlined and what doesn't *)
         Fixpoint interp_let_in {tC tx : type} {struct tx} : value var tx -> (value var tx -> value var tC) -> value var tC
           := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
@@ -4342,7 +4342,7 @@ Module Compilers.
                           AppIdent idc (expr.reify args))
              end.
 
-        (** do partial reduction on identifiers *)
+        (** do partial evaluation on identifiers *)
         Definition interp {s d} (idc : ident s d) : value var (s -> d)
           := match idc in ident s d return value var (s -> d) with
              | ident.Let_In tx tC as idc
@@ -4887,44 +4887,44 @@ Module Compilers.
     End bounds.
   End partial.
 
-  Section partial_reduce.
+  Section partial_evaluate.
     Context (inline_var_nodes : bool)
             {var : type -> Type}.
 
-    Definition partial_reduce'_step
-               (partial_reduce' : forall {t} (e : @expr (partial.value var) t),
+    Definition partial_evaluate'_step
+               (partial_evaluate' : forall {t} (e : @expr (partial.value var) t),
                    partial.value var t)
                {t} (e : @expr (partial.value var) t)
       : partial.value var t
       := match e in expr.expr t return partial.value var t with
          | Var t v => v
          | TT => inr tt
-         | AppIdent s d idc args => partial.ident.interp inline_var_nodes idc (@partial_reduce' _ args)
-         | Pair A B a b => inr (@partial_reduce' A a, @partial_reduce' B b)
-         | App s d f x => @partial_reduce' _ f (@partial_reduce' _ x)
-         | Abs s d f => fun x => @partial_reduce' d (f x)
+         | AppIdent s d idc args => partial.ident.interp inline_var_nodes idc (@partial_evaluate' _ args)
+         | Pair A B a b => inr (@partial_evaluate' A a, @partial_evaluate' B b)
+         | App s d f x => @partial_evaluate' _ f (@partial_evaluate' _ x)
+         | Abs s d f => fun x => @partial_evaluate' d (f x)
          end.
-    Fixpoint partial_reduce' {t} (e : @expr (partial.value var) t)
+    Fixpoint partial_evaluate' {t} (e : @expr (partial.value var) t)
       : partial.value var t
-      := @partial_reduce'_step (@partial_reduce') t e.
+      := @partial_evaluate'_step (@partial_evaluate') t e.
 
-    Definition partial_reduce {t} (e : @expr (partial.value var) t) : @expr var t
-      := partial.expr.reify (@partial_reduce' t e).
+    Definition partial_evaluate {t} (e : @expr (partial.value var) t) : @expr var t
+      := partial.expr.reify (@partial_evaluate' t e).
 
-    Definition partial_reduce_with_bounds1' {s d} (e : @expr (partial.value var) (s -> d))
+    Definition partial_evaluate_with_bounds1' {s d} (e : @expr (partial.value var) (s -> d))
                (b : ZRange.type.interp s)
       : partial.value var (s -> d)
       := fun x : partial.value var s
-         => partial_reduce' e (partial.bounds.extend_with_bounds b x).
+         => partial_evaluate' e (partial.bounds.extend_with_bounds b x).
 
-    Definition partial_reduce_with_bounds1 {s d} (e : @expr (partial.value var) (s -> d))
+    Definition partial_evaluate_with_bounds1 {s d} (e : @expr (partial.value var) (s -> d))
                (b : ZRange.type.interp s)
-      := partial.expr.reify (@partial_reduce_with_bounds1' s d e b).
+      := partial.expr.reify (@partial_evaluate_with_bounds1' s d e b).
 
-  End partial_reduce.
+  End partial_evaluate.
 
-  Definition PartialReduce (inline_var_nodes : bool) {t} (e : Expr t) : Expr t
-    := fun var => @partial_reduce inline_var_nodes var t (e _).
+  Definition PartialEvaluate (inline_var_nodes : bool) {t} (e : Expr t) : Expr t
+    := fun var => @partial_evaluate inline_var_nodes var t (e _).
 
   Module RelaxZRange.
     Module ident.
@@ -4974,12 +4974,12 @@ Module Compilers.
     End expr.
   End RelaxZRange.
 
-  Definition PartialReduceWithBounds1
+  Definition PartialEvaluateWithBounds1
              {s d} (e : Expr (s -> d)) (b : ZRange.type.interp s)
     : Expr (s -> d)
-    := fun var => @partial_reduce_with_bounds1 true var s d (e _) b.
+    := fun var => @partial_evaluate_with_bounds1 true var s d (e _) b.
 
-  Definition CheckPartialReduceWithBounds1
+  Definition CheckPartialEvaluateWithBounds1
              (relax_zrange : zrange -> option zrange)
              {s d} (E : Expr (s -> d))
              (b_in : ZRange.type.interp s)
@@ -4990,7 +4990,7 @@ Module Compilers.
        then @inl (Expr (s -> d)) _ (RelaxZRange.expr.Relax relax_zrange E)
        else @inr _ (ZRange.type.option.interp d) b_computed.
 
-  Definition CheckPartialReduceWithBounds0
+  Definition CheckPartialEvaluateWithBounds0
              (relax_zrange : zrange -> option zrange)
              {t} (E : Expr t)
              (b_out : ZRange.type.interp t)
@@ -5000,27 +5000,27 @@ Module Compilers.
        then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
        else @inr _ (ZRange.type.option.interp t) b_computed.
 
-  Definition CheckedPartialReduceWithBounds1
+  Definition CheckedPartialEvaluateWithBounds1
              (relax_zrange : zrange -> option zrange)
              {s d} (e : Expr (s -> d))
              (b_in : ZRange.type.interp s)
              (b_out : ZRange.type.interp d)
     : Expr (s -> d) + ZRange.type.option.interp d
-    := dlet_nd E := PartialReduceWithBounds1 e b_in in
-             CheckPartialReduceWithBounds1 relax_zrange E b_in b_out.
+    := dlet_nd E := PartialEvaluateWithBounds1 e b_in in
+             CheckPartialEvaluateWithBounds1 relax_zrange E b_in b_out.
 
-  Definition CheckedPartialReduceWithBounds0
+  Definition CheckedPartialEvaluateWithBounds0
              (relax_zrange : zrange -> option zrange)
              {t} (e : Expr t)
              (b_out : ZRange.type.interp t)
     : Expr t + ZRange.type.option.interp t
-    := dlet_nd E := PartialReduce true e in
-             CheckPartialReduceWithBounds0 relax_zrange E b_out.
+    := dlet_nd E := PartialEvaluate true e in
+             CheckPartialEvaluateWithBounds0 relax_zrange E b_out.
 
   Axiom admit_pf : False.
   Local Notation admit := (match admit_pf with end).
 
-  Theorem CheckedPartialReduceWithBounds1_Correct
+  Theorem CheckedPartialEvaluateWithBounds1_Correct
           (relax_zrange : zrange -> option zrange)
           (Hrelax : forall r r' z, is_tighter_than_bool z r = true
                                    -> relax_zrange r = Some r'
@@ -5028,14 +5028,14 @@ Module Compilers.
           {s d} (e : Expr (s -> d))
           (b_in : ZRange.type.interp s)
           (b_out : ZRange.type.interp d)
-          E (HE : PartialReduceWithBounds1 e b_in = E)
-          rv (Hrv : CheckPartialReduceWithBounds1 relax_zrange E b_in b_out = inl rv)
+          E (HE : PartialEvaluateWithBounds1 e b_in = E)
+          rv (Hrv : CheckPartialEvaluateWithBounds1 relax_zrange E b_in b_out = inl rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by b_in arg = true),
       Interp rv arg = Interp e arg
       /\ ZRange.type.is_bounded_by b_out (Interp rv arg) = true.
   Proof.
-    cbv [CheckedPartialReduceWithBounds1 CheckPartialReduceWithBounds1 Let_In] in *;
+    cbv [CheckedPartialEvaluateWithBounds1 CheckPartialEvaluateWithBounds1 Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     intros arg Harg.
     split.
@@ -5046,19 +5046,19 @@ Module Compilers.
       exact admit. (* boundedness *) }
   Qed.
 
-  Theorem CheckedPartialReduceWithBounds0_Correct
+  Theorem CheckedPartialEvaluateWithBounds0_Correct
           (relax_zrange : zrange -> option zrange)
           (Hrelax : forall r r' z, is_tighter_than_bool z r = true
                                    -> relax_zrange r = Some r'
                                    -> is_tighter_than_bool z r' = true)
           {t} (e : Expr t)
           (b_out : ZRange.type.interp t)
-          E (HE : PartialReduce true e = E)
-          rv (Hrv : CheckPartialReduceWithBounds0 relax_zrange E b_out = inl rv)
+          E (HE : PartialEvaluate true e = E)
+          rv (Hrv : CheckPartialEvaluateWithBounds0 relax_zrange E b_out = inl rv)
     : Interp rv = Interp e
       /\ ZRange.type.is_bounded_by b_out (Interp rv) = true.
   Proof.
-    cbv [CheckedPartialReduceWithBounds0 CheckPartialReduceWithBounds0 Let_In] in *;
+    cbv [CheckedPartialEvaluateWithBounds0 CheckPartialEvaluateWithBounds0 Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     split.
     { exact admit. (* correctness of interp *) }
@@ -5262,7 +5262,7 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 (** TODO: FILES:
 - Uncurried expr + reification + list canonicalization
 - cps
-- partial reduction + DCE
+- partial evaluation + DCE
 - reassociation
 - indexed + bounds analysis + of phoas *)
 
@@ -5283,7 +5283,7 @@ Proof.
   let v := Reify ((fun x => 2^x) 255)%Z in
   pose v as E.
   vm_compute in E.
-  pose (PartialReduce false (canonicalize_list_recursion E)) as E'.
+  pose (PartialEvaluate false (canonicalize_list_recursion E)) as E'.
   vm_compute in E'.
   lazymatch (eval cbv delta [E'] in E') with
   | (fun var => AppIdent (ident.primitive ?v) TT) => idtac
@@ -5301,7 +5301,7 @@ Module test2.
                          (fun v => v)) in
     pose v as E.
     vm_compute in E.
-    pose (PartialReduce false (canonicalize_list_recursion E)) as E'.
+    pose (PartialEvaluate false (canonicalize_list_recursion E)) as E'.
     vm_compute in E'.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var : type -> Type =>
@@ -5310,7 +5310,7 @@ Module test2.
               expr_let x1 := (Var x0 * Var x0) in
               (Var x1, Var x1))%expr) => idtac
     end.
-    pose (PartialReduceWithBounds1 E' r[0~>10]%zrange) as E''.
+    pose (PartialEvaluateWithBounds1 E' r[0~>10]%zrange) as E''.
     lazy in E''.
     lazymatch (eval cbv delta [E''] in E'') with
     | (fun var : type -> Type =>
@@ -5334,7 +5334,7 @@ Module test3.
                         (z * z)) in
     pose v as E.
     vm_compute in E.
-    pose (PartialReduce false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
+    pose (PartialEvaluate false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
     vm_compute in E'.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var : type -> Type =>
@@ -5346,7 +5346,7 @@ Module test3.
               Var x3 * Var x3)%expr)
       => idtac
     end.
-    pose (PartialReduceWithBounds1 E' r[0~>10]%zrange) as E'''.
+    pose (PartialEvaluateWithBounds1 E' r[0~>10]%zrange) as E'''.
     lazy in E'''.
     lazymatch (eval cbv delta [E'''] in E''') with
     | (fun var : type -> Type =>
@@ -5371,10 +5371,10 @@ Module test4.
                         (xz :: xz :: nil)) in
     pose v as E.
     vm_compute in E.
-    pose (PartialReduce false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
+    pose (PartialEvaluate false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
     lazy in E'.
     clear E.
-    pose (PartialReduceWithBounds1 E' ([r[0~>10]%zrange],[r[0~>10]%zrange])) as E''.
+    pose (PartialEvaluateWithBounds1 E' ([r[0~>10]%zrange],[r[0~>10]%zrange])) as E''.
     lazy in E''.
     lazymatch (eval cbv delta [E''] in E'') with
     | (fun var : type -> Type =>
@@ -5398,7 +5398,7 @@ Module test5.
                         x) in
     pose v as E.
     vm_compute in E.
-    pose (ReassociateSmallConstants.Reassociate (2^8) (PartialReduce false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))))) as E'.
+    pose (ReassociateSmallConstants.Reassociate (2^8) (PartialEvaluate false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))))) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -5425,7 +5425,7 @@ Module test6.
     pose (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))) as E'.
     lazy in E'.
     clear E.
-    pose (PartialReduce false E') as E''.
+    pose (PartialEvaluate false E') as E''.
     lazy in E''.
     lazymatch eval cbv delta [E''] in E'' with
     | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), Var x)%expr
@@ -5448,7 +5448,7 @@ Ltac cache_reify _ :=
   let e := match RHS with context[expr.Interp _ ?e] => e end in
   let E := fresh "E" in
   set (E := e);
-  let E' := constr:(PartialReduce false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
+  let E' := constr:(PartialEvaluate false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
   let LHS := match goal with |- ?LHS = _ => LHS end in
   lazymatch LHS with
   | context LHS[@expr.Interp ?ident ?interp_ident ?t ?e]
@@ -5619,7 +5619,7 @@ Module Pipeline.
              (E : for_reification.Expr t)
   : ErrorT (Expr t)
     := let E := option_map
-                  (PartialReduce false)
+                  (PartialEvaluate false)
                   (CPS.CallFunWithIdContinuation_opt (CPS.Translate (canonicalize_list_recursion E))) in
        match E with
        | Some E => Success E
@@ -5638,13 +5638,13 @@ Module Pipeline.
              (E : Expr (s -> d))
              arg_bounds
   : Expr (s -> d)
-    := let E := PartialReduce true E in
+    := let E := PartialEvaluate true E in
        (* Note that DCE evaluates the expr with two different [var]
           arguments, and so will likely result in a pipeline that is
           2x slower *)
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := PartialReduceWithBounds1 E arg_bounds in
+       let E := PartialEvaluateWithBounds1 E arg_bounds in
        E.
 
   Definition CheckBoundsPipeline
@@ -5654,7 +5654,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
     : ErrorT (Expr (s -> d))
-    := let E := CheckPartialReduceWithBounds1 relax_zrange E arg_bounds out_bounds in
+    := let E := CheckPartialEvaluateWithBounds1 relax_zrange E arg_bounds out_bounds in
        let E := match E with
                 | inl v => Success v
                 | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some out_bounds))
@@ -5691,9 +5691,9 @@ Module Pipeline.
       /\ Interp rv arg = Interp e arg.
   Proof.
     cbv [BoundsPipeline BoundsPipelineNoCheck CheckBoundsPipeline Let_In] in *; subst E;
-      edestruct (CheckPartialReduceWithBounds1 _ _ _ _) eqn:H.
+      edestruct (CheckPartialEvaluateWithBounds1 _ _ _ _) eqn:H.
     inversion Hrv; subst.
-    { intros; eapply CheckedPartialReduceWithBounds1_Correct in H; [ | eassumption || reflexivity.. ].
+    { intros; eapply CheckedPartialEvaluateWithBounds1_Correct in H; [ | eassumption || reflexivity.. ].
       destruct H as [H0 H1].
       split; [ exact H1 | rewrite H0 ].
       exact admit. (* interp correctness *) }
@@ -5777,13 +5777,13 @@ Module Pipeline.
              {t}
              (e : Expr t)
   : Expr t
-    := let E := PartialReduce true e in
+    := let E := PartialEvaluate true e in
        (* Note that DCE evaluates the expr with two different [var]
           arguments, and so will likely result in a pipeline that is
           2x slower *)
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := PartialReduce true E in
+       let E := PartialEvaluate true E in
        E.
 
   Definition CheckBoundsPipelineConst
@@ -5792,7 +5792,7 @@ Module Pipeline.
              (E : Expr t)
              bounds
   : ErrorT (Expr t)
-    := let E := CheckPartialReduceWithBounds0 relax_zrange E bounds in
+    := let E := CheckPartialEvaluateWithBounds0 relax_zrange E bounds in
        let E := match E with
                 | inl v => Success v
                 | inr b => Error (Computed_bounds_are_not_tight_enough b (ZRange.type.option.Some bounds))
@@ -5825,9 +5825,9 @@ Module Pipeline.
       /\ Interp rv = Interp e.
   Proof.
     cbv [BoundsPipelineConst CheckBoundsPipelineConst BoundsPipelineConstNoCheck Let_In] in *;
-      edestruct (CheckPartialReduceWithBounds0 _ _ _) eqn:H.
+      edestruct (CheckPartialEvaluateWithBounds0 _ _ _) eqn:H.
     inversion Hrv; subst.
-    { intros; eapply CheckedPartialReduceWithBounds0_Correct in H; [ | eassumption || reflexivity.. ].
+    { intros; eapply CheckedPartialEvaluateWithBounds0_Correct in H; [ | eassumption || reflexivity.. ].
       destruct H as [H0 H1].
       split; [ exact H1 | rewrite H0 ].
       exact admit. (* interp correctness *) }
