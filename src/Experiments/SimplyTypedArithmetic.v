@@ -5187,7 +5187,7 @@ Module Compilers.
       := fun var => eliminate_dead (ComputeLive e) (e _).
   End DeadCodeElimination.
 
-  Module NoBrainer1.
+  Module Subst01.
     Local Notation PositiveMap_incr idx m
       := (PositiveMap.add idx (match PositiveMap.find idx m with
                                | Some n => S n
@@ -5228,22 +5228,22 @@ Module Compilers.
     Section with_var.
       Context {var : type -> Type}
               (live : PositiveMap.t nat).
-      Fixpoint nobrainer1' {t} (e : @expr (@expr var) t) (cur_idx : positive)
+      Fixpoint subst01' {t} (e : @expr (@expr var) t) (cur_idx : positive)
         : positive * @expr var t
         := match e with
            | Var t v => (cur_idx, v)
            | TT => (cur_idx, TT)
            | AppIdent s d idc args
              => let default _
-                    := let default := @nobrainer1' _ args cur_idx in
+                    := let default := @subst01' _ args cur_idx in
                        (fst default, AppIdent idc (snd default)) in
                 match args in expr.expr t return ident.ident t d -> (unit -> positive * expr d) -> positive * expr d with
                 | Pair A B x y
                   => match y in expr.expr Y return ident.ident (A * Y) d -> (unit -> positive * expr d) -> positive * expr d with
                      | Abs s' d' f
                        => fun idc
-                          => let '(idx, x') := @nobrainer1' A x cur_idx in
-                             let f' := fun v => snd (@nobrainer1' _ (f v) (Pos.succ idx)) in
+                          => let '(idx, x') := @subst01' A x cur_idx in
+                             let f' := fun v => snd (@subst01' _ (f v) (Pos.succ idx)) in
                              match idc in ident.ident s d
                                    return (match s return Type with
                                            | A * _ => expr A
@@ -5271,24 +5271,24 @@ Module Compilers.
                 | _ => fun _ default => default tt
                 end idc default
            | App s d f x
-             => let '(idx, f') := @nobrainer1' _ f cur_idx in
-                let '(idx, x') := @nobrainer1' _ x idx in
+             => let '(idx, f') := @subst01' _ f cur_idx in
+                let '(idx, x') := @subst01' _ x idx in
                 (idx, App f' x')
            | Pair A B a b
-             => let '(idx, a') := @nobrainer1' A a cur_idx in
-                let '(idx, b') := @nobrainer1' B b idx in
+             => let '(idx, a') := @subst01' A a cur_idx in
+                let '(idx, b') := @subst01' B b idx in
                 (idx, Pair a' b')
            | Abs s d f
-             => (cur_idx, Abs (fun v => snd (@nobrainer1' _ (f (Var v)) (Pos.succ cur_idx))))
+             => (cur_idx, Abs (fun v => snd (@subst01' _ (f (Var v)) (Pos.succ cur_idx))))
            end.
 
-      Definition nobrainer1 {t} e : expr t
-        := snd (@nobrainer1' t e 1).
+      Definition subst01 {t} e : expr t
+        := snd (@subst01' t e 1).
     End with_var.
 
-    Definition NoBrainer1 {t} (e : Expr t) : Expr t
-      := fun var => nobrainer1 (ComputeLiveCounts e) (e _).
-  End NoBrainer1.
+    Definition Subst01 {t} (e : Expr t) : Expr t
+      := fun var => subst01 (ComputeLiveCounts e) (e _).
+  End Subst01.
 
   Module GeneralizeVar.
     (** In both lazy and cbv evaluation strategies, reduction under
@@ -5657,7 +5657,7 @@ Module test7.
     pose (canonicalize_list_recursion E) as E'.
     lazy in E'.
     clear E.
-    pose (NoBrainer1.NoBrainer1 (DeadCodeElimination.EliminateDead E')) as E''.
+    pose (Subst01.Subst01 (DeadCodeElimination.EliminateDead E')) as E''.
     lazy in E''.
     lazymatch eval cbv delta [E''] in E'' with
     | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), expr_let v0 := Var x + Var x in Var v0 + Var v0)%expr
@@ -5887,7 +5887,7 @@ Module Pipeline.
 
   Definition BoundsPipelineNoCheck
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              {s d}
              (E : Expr (s -> d))
              arg_bounds
@@ -5902,7 +5902,7 @@ Module Pipeline.
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
-       let E := if with_nobrainer1 then NoBrainer1.NoBrainer1 E else E in
+       let E := if with_subst01 then Subst01.Subst01 E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
        let E := PartialEvaluateWithBounds1 E arg_bounds in
        E.
@@ -5923,19 +5923,19 @@ Module Pipeline.
 
   Definition BoundsPipeline
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              {s d}
              (E : Expr (s -> d))
              arg_bounds
              out_bounds
   : ErrorT (Expr (s -> d))
-    := let E := BoundsPipelineNoCheck (*with_dead_code_elimination*) with_nobrainer1 E arg_bounds in
+    := let E := BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 E arg_bounds in
        CheckBoundsPipeline relax_zrange E arg_bounds out_bounds.
 
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -5945,7 +5945,7 @@ Module Pipeline.
              out_bounds
              E
              rv
-             (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_nobrainer1 e arg_bounds = E)
+             (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = E)
              (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
@@ -5975,7 +5975,7 @@ Module Pipeline.
 
   Lemma BoundsPipeline_correct_trans
         (with_dead_code_elimination : bool := true)
-        (with_nobrainer1 : bool)
+        (with_subst01 : bool)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -5989,7 +5989,7 @@ Module Pipeline.
                   (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
             Interp e arg = InterpE arg)
         rv E
-        (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_nobrainer1 e arg_bounds = E)
+        (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = E)
         (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
@@ -5999,7 +5999,7 @@ Module Pipeline.
 
   Definition BoundsPipeline_full
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              {s d}
              (E : for_reification.Expr (s -> d))
@@ -6008,7 +6008,7 @@ Module Pipeline.
   : ErrorT (Expr (s -> d))
     := match PrePipeline E with
        | Success E => @BoundsPipeline
-                        (*with_dead_code_elimination*) with_nobrainer1
+                        (*with_dead_code_elimination*) with_subst01
                         relax_zrange
                         s d E arg_bounds out_bounds
        | Error m => Error m
@@ -6016,7 +6016,7 @@ Module Pipeline.
 
   Lemma BoundsPipeline_full_correct
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6025,7 +6025,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
              rv
-             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_nobrainer1 relax_zrange E arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_subst01 relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
       ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
@@ -6039,7 +6039,7 @@ Module Pipeline.
 
   Definition BoundsPipelineConstNoCheck
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              {t}
              (e : Expr t)
   : Expr t
@@ -6053,7 +6053,7 @@ Module Pipeline.
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
-       let E := if with_nobrainer1 then NoBrainer1.NoBrainer1 E else E in
+       let E := if with_subst01 then Subst01.Subst01 E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
        let E := PartialEvaluate true E in
        E.
@@ -6073,18 +6073,18 @@ Module Pipeline.
 
   Definition BoundsPipelineConst
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              {t}
              (E : Expr t)
              bounds
   : ErrorT (Expr t)
-    := let E := BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_nobrainer1 E in
+    := let E := BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 E in
        CheckBoundsPipelineConst relax_zrange E bounds.
 
   Lemma BoundsPipelineConst_correct
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6093,7 +6093,7 @@ Module Pipeline.
              bounds
              rv
              E
-             (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_nobrainer1 e = E)
+             (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = E)
              (Hrv : CheckBoundsPipelineConst relax_zrange E bounds = Success rv)
     : ZRange.type.is_bounded_by bounds (Interp rv) = true
       /\ Interp rv = Interp e.
@@ -6118,7 +6118,7 @@ Module Pipeline.
 
   Lemma BoundsPipelineConst_correct_trans
         (with_dead_code_elimination : bool := true)
-        (with_nobrainer1 : bool)
+        (with_subst01 : bool)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -6130,7 +6130,7 @@ Module Pipeline.
         (InterpE_correct : Interp e = InterpE)
         rv
         E
-        (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_nobrainer1 e = E)
+        (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = E)
         (Hrv : CheckBoundsPipelineConst relax_zrange E out_bounds = Success rv)
     : BoundsPipelineConst_correct_transT out_bounds InterpE rv.
   Proof.
@@ -6140,7 +6140,7 @@ Module Pipeline.
 
   Definition BoundsPipelineConst_full
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              {t}
              (E : for_reification.Expr t)
@@ -6148,7 +6148,7 @@ Module Pipeline.
   : ErrorT (Expr t)
     := match PrePipeline E with
        | Success E => @BoundsPipelineConst
-                        (*with_dead_code_elimination*) with_nobrainer1
+                        (*with_dead_code_elimination*) with_subst01
                         relax_zrange
                         t E out_bounds
        | Error m => Error m
@@ -6156,7 +6156,7 @@ Module Pipeline.
 
   Lemma BoundsPipelineConst_full_correct
              (with_dead_code_elimination : bool := true)
-             (with_nobrainer1 : bool)
+             (with_subst01 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6164,7 +6164,7 @@ Module Pipeline.
              (E : for_reification.Expr t)
              out_bounds
              rv
-             (Hrv : BoundsPipelineConst_full (*with_dead_code_elimination*) with_nobrainer1 relax_zrange E out_bounds = Success rv)
+             (Hrv : BoundsPipelineConst_full (*with_dead_code_elimination*) with_subst01 relax_zrange E out_bounds = Success rv)
     : ZRange.type.is_bounded_by out_bounds (Interp rv) = true
       /\ Interp rv = for_reification.Interp E.
   Proof.
@@ -7414,7 +7414,7 @@ Module MontgomeryReduction.
     Notation BoundsPipeline_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (type.reify_type_of op%function)) E Hrop HE
           => @Pipeline.BoundsPipeline_correct_trans
-               false (* nobrainer1 *)
+               false (* subst01 *)
                relax_zrange
                (relax_zrange_gen_good _)
                _ _
