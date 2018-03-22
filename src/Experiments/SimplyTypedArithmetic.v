@@ -5376,7 +5376,7 @@ Module Compilers.
   End GeneralizeVar.
 
   Module ReassociateSmallConstants.
-      Import Compilers.Uncurried.expr.default.
+    Import Compilers.Uncurried.expr.default.
 
     Section with_var.
       Context (max_const_val : Z)
