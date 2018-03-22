@@ -5291,6 +5291,18 @@ Module Compilers.
   End NoBrainer1.
 
   Module GeneralizeVar.
+    (** In both lazy and cbv evaluation strategies, reduction under
+        lambdas is only done at the very end.  This means that if we
+        have a computation which returns a PHOAS syntax tree, and we
+        plug in two different values for [var], the computation is run
+        twice.  This module provides a way of computing a
+        representation of terms which does not suffer from this issue.
+        By computing a flat representation, and then going back to
+        PHOAS, the cbv strategy will fully compute the preceeding
+        PHOAS passes only once, and the lazy strategy will share
+        computation among the various uses of [var] (because there are
+        no lambdas to get blocked on) and thus will also compute the
+        preceeding PHOAS passes only once. *)
     Module Flat.
       Inductive expr : type -> Set :=
       | Var (t : type) (n : positive) : expr t
