@@ -12,7 +12,7 @@ mkdir -p "${CACHE_DIR}"
 make "$@" -j2 TIMED=1 2>&1 | tee -a time-of-build.log
 python "./etc/coq-scripts/timing/make-one-time-file.py" "time-of-build.log" "time-of-build-pretty.log" || exit $?
 rm -f "${CUR_ARCHIVE}"
-tar -czf "${CUR_ARCHIVE}" time-of-build.log src bbv coqprime
+tar -czf "${CUR_ARCHIVE}" time-of-build.log src bbv coqprime || exit $?
 
 cat time-of-build-pretty.log
 make "$@" -j2 TIMED=1 || exit $?
