@@ -5371,7 +5371,7 @@ Module Compilers.
     Definition FromFlat {t} (e : Flat.expr t) : Expr t
       := let e' := @from_flat t e in
          fun var => e' var (PositiveMap.empty _).
-    Definition GeneralizeVar {t} (e : @expr _ t) : Expr t
+    Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
       := FromFlat (to_flat e).
   End GeneralizeVar.
 
