@@ -4087,6 +4087,23 @@ Module Compilers.
            | type.list A => @nil (type.interp A)
            end.
     End type.
+
+    Module expr.
+      Section with_var.
+        Context {var : type -> Type}.
+        Fixpoint default {t : type} : @expr var t
+          := match t with
+             | type.type_primitive x
+               => AppIdent (ident.primitive type.primitive.default) TT
+             | type.prod A B
+               => (@default A, @default B)
+             | type.arrow s d => Abs (fun _ => @default d)
+             | type.list A => AppIdent ident.nil TT
+             end.
+      End with_var.
+
+      Definition Default {t} : Expr t := fun _ => default.
+    End expr.
   End DefaultValue.
 
   Module partial.
@@ -5066,7 +5083,6 @@ Module Compilers.
       exact admit. (* boundedness *) }
   Qed.
 
-
   Module DeadCodeElimination.
     Fixpoint compute_live' {t} (e : @expr (fun _ => PositiveSet.t) t) (cur_idx : positive)
     : positive * PositiveSet.t
@@ -5185,7 +5201,7 @@ Module Compilers.
     Fixpoint compute_live_counts' {t} (e : @expr (fun _ => positive) t) (cur_idx : positive)
       : positive * PositiveMap.t nat
       := match e with
-         | Var t v => (cur_idx, PositiveMap_incr cur_idx (PositiveMap.empty _))
+         | Var t v => (cur_idx, PositiveMap_incr v (PositiveMap.empty _))
          | TT => (cur_idx, PositiveMap.empty _)
          | AppIdent s d idc args
            => @compute_live_counts' _ args cur_idx
@@ -5213,11 +5229,12 @@ Module Compilers.
            | Var t v => (cur_idx, v)
            | TT => (cur_idx, TT)
            | AppIdent s d idc args
-             => let default := @nobrainer1' _ args cur_idx in
-                let default := (fst default, AppIdent idc (snd default)) in
-                match args in expr.expr t return ident.ident t d -> positive * expr d -> positive * expr d with
+             => let default _
+                    := let default := @nobrainer1' _ args cur_idx in
+                       (fst default, AppIdent idc (snd default)) in
+                match args in expr.expr t return ident.ident t d -> (unit -> positive * expr d) -> positive * expr d with
                 | Pair A B x y
-                  => match y in expr.expr Y return ident.ident (A * Y) d -> positive * expr d -> positive * expr d with
+                  => match y in expr.expr Y return ident.ident (A * Y) d -> (unit -> positive * expr d) -> positive * expr d with
                      | Abs s' d' f
                        => fun idc
                           => let '(idx, x') := @nobrainer1' A x cur_idx in
@@ -5231,7 +5248,7 @@ Module Compilers.
                                               | _ * (s -> d) => (expr s -> expr d)%type
                                               | _ => unit
                                               end%ctype
-                                           -> positive * expr d
+                                           -> (unit -> positive * expr d)
                                            -> positive * expr d)
                              with
                              | ident.Let_In _ _
@@ -5242,11 +5259,11 @@ Module Compilers.
                                         end
                                      then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
                                      else (Pos.succ idx, f' x')
-                             | _ => fun _ _ default => default
+                             | _ => fun _ _ default => default tt
                              end x' f'
-                     | _ => fun _ default => default
+                     | _ => fun _ default => default tt
                      end
-                | _ => fun _ default => default
+                | _ => fun _ default => default tt
                 end idc default
            | App s d f x
              => let '(idx, f') := @nobrainer1' _ f cur_idx in
@@ -5268,8 +5285,82 @@ Module Compilers.
       := fun var => nobrainer1 (ComputeLiveCounts e) (e _).
   End NoBrainer1.
 
+  Module GeneralizeVar.
+    Module Flat.
+      Inductive expr : type -> Set :=
+      | Var (t : type) (n : positive) : expr t
+      | TT : expr type.unit
+      | AppIdent {s d} (idc : ident s d) (arg : expr s) : expr d
+      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
+      | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
+      | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d).
+    End Flat.
+
+    Definition ERROR {T} (v : T) : T := v.
+    Global Opaque ERROR.
+
+    Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
+             (cur_idx : PositiveMap.key)
+      : Flat.expr t
+      := match e in expr.expr t return Flat.expr t with
+         | Var t v => Flat.Var t v
+         | TT => Flat.TT
+         | AppIdent s d idc args
+           => Flat.AppIdent idc (@to_flat' _ args cur_idx)
+         | App s d f x => Flat.App
+                            (@to_flat' _ f cur_idx)
+                            (@to_flat' _ x cur_idx)
+         | Pair A B a b => Flat.Pair
+                             (@to_flat' _ a cur_idx)
+                             (@to_flat' _ b cur_idx)
+         | Abs s d f
+           => Flat.Abs s cur_idx
+                       (@to_flat'
+                          d (f cur_idx)
+                          (Pos.succ cur_idx))
+         end.
+
+    Fixpoint from_flat {t} (e : Flat.expr t)
+      : forall var, PositiveMap.t { t : type & var t } -> @expr var t
+      := match e in Flat.expr t return forall var, _ -> expr t with
+         | Flat.Var t v
+           => fun var ctx
+              => match (tv <- PositiveMap.find v ctx;
+                          type.try_transport var _ _ (projT2 tv))%option with
+                 | Some v => Var v
+                 | None => ERROR DefaultValue.expr.default
+                 end
+         | Flat.TT => fun _ _ => TT
+         | Flat.AppIdent s d idc args
+           => let args' := @from_flat _ args in
+              fun var ctx => AppIdent idc (args' var ctx)
+         | Flat.App s d f x
+           => let f' := @from_flat _ f in
+              let x' := @from_flat _ x in
+              fun var ctx => App (f' var ctx) (x' var ctx)
+         | Flat.Pair A B a b
+           => let a' := @from_flat _ a in
+              let b' := @from_flat _ b in
+              fun var ctx => Pair (a' var ctx) (b' var ctx)
+         | Flat.Abs s cur_idx d f
+           => let f' := @from_flat d f in
+              fun var ctx
+              => Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
+         end.
+
+    Definition to_flat {t} (e : expr t) : Flat.expr t
+      := to_flat' e 1%positive.
+    Definition ToFlat {t} (E : Expr t) : Flat.expr t
+      := to_flat (E _).
+    Definition FromFlat {t} (e : Flat.expr t) : Expr t
+      := let e' := @from_flat t e in
+         fun var => e' var (PositiveMap.empty _).
+    Definition GeneralizeVar {t} (e : @expr _ t) : Expr t
+      := FromFlat (to_flat e).
+  End GeneralizeVar.
+
   Module ReassociateSmallConstants.
-    Import Compilers.Uncurried.expr.default.
+      Import Compilers.Uncurried.expr.default.
 
     Section with_var.
       Context (max_const_val : Z)
@@ -5550,7 +5641,7 @@ Module test7.
     pose (canonicalize_list_recursion E) as E'.
     lazy in E'.
     clear E.
-    pose (NoBrainer1.NoBrainer1 E') as E''.
+    pose (NoBrainer1.NoBrainer1 (DeadCodeElimination.EliminateDead E')) as E''.
     lazy in E''.
     lazymatch eval cbv delta [E''] in E'' with
     | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), expr_let v0 := Var x + Var x in Var v0 + Var v0)%expr
@@ -5559,6 +5650,26 @@ Module test7.
     exact I.
   Qed.
 End test7.
+Module test8.
+  Example test8 : True.
+  Proof.
+    let v := Reify (fun y : Z
+                    => dlet_nd x := y + y in
+                        dlet_nd z := x in
+                        dlet_nd z' := z in
+                        dlet_nd z'' := z in
+                        z'' + z'') in
+    pose v as E.
+    vm_compute in E.
+    pose (canonicalize_list_recursion E) as E'.
+    lazy in E'.
+    clear E.
+    pose (GeneralizeVar.GeneralizeVar (E' _)) as E''.
+    lazy in E''.
+    unify E' E''.
+    exact I.
+  Qed.
+End test8.
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
 Ltac cache_reify _ :=
@@ -5717,6 +5828,7 @@ Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipel
 Hint Extern 1 (_ = expanding_id _ _) => simple apply id_gen_correct : reify_gen_cache.
 
 Module Pipeline.
+  Import GeneralizeVar.
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.option.interp t)
@@ -5758,16 +5870,23 @@ Module Pipeline.
   Admitted.
 
   Definition BoundsPipelineNoCheck
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              {s d}
              (E : Expr (s -> d))
              arg_bounds
   : Expr (s -> d)
     := let E := PartialEvaluate true E in
        (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so will likely result in a pipeline that is
-          2x slower *)
+          arguments, and so results in a pipeline that is 2x slower
+          unless we pass through a uniformly concrete [var] type
+          first *)
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
+       let E := if with_nobrainer1 then NoBrainer1.NoBrainer1 E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
        let E := PartialEvaluateWithBounds1 E arg_bounds in
        E.
@@ -5787,18 +5906,20 @@ Module Pipeline.
        E.
 
   Definition BoundsPipeline
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              {s d}
              (E : Expr (s -> d))
              arg_bounds
              out_bounds
   : ErrorT (Expr (s -> d))
-    := let E := BoundsPipelineNoCheck with_dead_code_elimination E arg_bounds in
+    := let E := BoundsPipelineNoCheck (*with_dead_code_elimination*) with_nobrainer1 E arg_bounds in
        CheckBoundsPipeline relax_zrange E arg_bounds out_bounds.
 
   Lemma BoundsPipeline_correct
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -5808,7 +5929,7 @@ Module Pipeline.
              out_bounds
              E
              rv
-             (HE : BoundsPipelineNoCheck with_dead_code_elimination e arg_bounds = E)
+             (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_nobrainer1 e arg_bounds = E)
              (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
@@ -5837,7 +5958,8 @@ Module Pipeline.
       /\ Interp rv arg = InterpE arg.
 
   Lemma BoundsPipeline_correct_trans
-        (with_dead_code_elimination : bool)
+        (with_dead_code_elimination : bool := true)
+        (with_nobrainer1 : bool)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -5851,7 +5973,7 @@ Module Pipeline.
                   (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
             Interp e arg = InterpE arg)
         rv E
-        (HE : BoundsPipelineNoCheck with_dead_code_elimination e arg_bounds = E)
+        (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_nobrainer1 e arg_bounds = E)
         (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
@@ -5860,7 +5982,8 @@ Module Pipeline.
   Qed.
 
   Definition BoundsPipeline_full
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              {s d}
              (E : for_reification.Expr (s -> d))
@@ -5869,14 +5992,15 @@ Module Pipeline.
   : ErrorT (Expr (s -> d))
     := match PrePipeline E with
        | Success E => @BoundsPipeline
-                        with_dead_code_elimination
+                        (*with_dead_code_elimination*) with_nobrainer1
                         relax_zrange
                         s d E arg_bounds out_bounds
        | Error m => Error m
        end.
 
   Lemma BoundsPipeline_full_correct
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -5885,7 +6009,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
              rv
-             (Hrv : BoundsPipeline_full with_dead_code_elimination relax_zrange E arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_nobrainer1 relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
       ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
@@ -5898,15 +6022,22 @@ Module Pipeline.
   Qed.
 
   Definition BoundsPipelineConstNoCheck
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              {t}
              (e : Expr t)
   : Expr t
     := let E := PartialEvaluate true e in
        (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so will likely result in a pipeline that is
-          2x slower *)
+          arguments, and so results in a pipeline that is 2x slower
+          unless we pass through a uniformly concrete [var] type
+          first *)
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
+       let E := if with_nobrainer1 then NoBrainer1.NoBrainer1 E else E in
        let E := ReassociateSmallConstants.Reassociate (2^8) E in
        let E := PartialEvaluate true E in
        E.
@@ -5925,17 +6056,19 @@ Module Pipeline.
        E.
 
   Definition BoundsPipelineConst
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              {t}
              (E : Expr t)
              bounds
   : ErrorT (Expr t)
-    := let E := BoundsPipelineConstNoCheck with_dead_code_elimination E in
+    := let E := BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_nobrainer1 E in
        CheckBoundsPipelineConst relax_zrange E bounds.
 
   Lemma BoundsPipelineConst_correct
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -5944,7 +6077,7 @@ Module Pipeline.
              bounds
              rv
              E
-             (HE : BoundsPipelineConstNoCheck with_dead_code_elimination e = E)
+             (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_nobrainer1 e = E)
              (Hrv : CheckBoundsPipelineConst relax_zrange E bounds = Success rv)
     : ZRange.type.is_bounded_by bounds (Interp rv) = true
       /\ Interp rv = Interp e.
@@ -5968,7 +6101,8 @@ Module Pipeline.
        /\ Interp rv = InterpE.
 
   Lemma BoundsPipelineConst_correct_trans
-        (with_dead_code_elimination : bool)
+        (with_dead_code_elimination : bool := true)
+        (with_nobrainer1 : bool)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -5980,7 +6114,7 @@ Module Pipeline.
         (InterpE_correct : Interp e = InterpE)
         rv
         E
-        (HE : BoundsPipelineConstNoCheck with_dead_code_elimination e = E)
+        (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_nobrainer1 e = E)
         (Hrv : CheckBoundsPipelineConst relax_zrange E out_bounds = Success rv)
     : BoundsPipelineConst_correct_transT out_bounds InterpE rv.
   Proof.
@@ -5989,7 +6123,8 @@ Module Pipeline.
   Qed.
 
   Definition BoundsPipelineConst_full
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              {t}
              (E : for_reification.Expr t)
@@ -5997,14 +6132,15 @@ Module Pipeline.
   : ErrorT (Expr t)
     := match PrePipeline E with
        | Success E => @BoundsPipelineConst
-                        with_dead_code_elimination
+                        (*with_dead_code_elimination*) with_nobrainer1
                         relax_zrange
                         t E out_bounds
        | Error m => Error m
        end.
 
   Lemma BoundsPipelineConst_full_correct
-             (with_dead_code_elimination : bool)
+             (with_dead_code_elimination : bool := true)
+             (with_nobrainer1 : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6012,7 +6148,7 @@ Module Pipeline.
              (E : for_reification.Expr t)
              out_bounds
              rv
-             (Hrv : BoundsPipelineConst_full with_dead_code_elimination relax_zrange E out_bounds = Success rv)
+             (Hrv : BoundsPipelineConst_full (*with_dead_code_elimination*) with_nobrainer1 relax_zrange E out_bounds = Success rv)
     : ZRange.type.is_bounded_by out_bounds (Interp rv) = true
       /\ Interp rv = for_reification.Interp E.
   Proof.
@@ -6167,20 +6303,20 @@ Section rcarry_mul.
 
   Notation BoundsPipeline rop in_bounds out_bounds
     := (Pipeline.BoundsPipeline
-          false
+          (*false*) true
           relax_zrange
           rop%Expr in_bounds out_bounds).
 
   Notation BoundsPipelineConst rop out_bounds
     := (Pipeline.BoundsPipelineConst
-          false
+          (*false*) true
           relax_zrange
           rop%Expr out_bounds).
 
   Notation BoundsPipeline_correct in_bounds out_bounds op
     := (fun rv (rop : Expr (type.reify_type_of op%function)) E Hrop HE
         => @Pipeline.BoundsPipeline_correct_trans
-             false
+             (*false*) true
              relax_zrange
              (relax_zrange_gen_good _)
              _ _
@@ -6194,7 +6330,7 @@ Section rcarry_mul.
   Notation BoundsPipelineConst_correct out_bounds op
     := (fun rv (rop : Expr (type.reify_type_of op)) E Hrop HE
         => @Pipeline.BoundsPipelineConst_correct_trans
-             false
+             (*false*) true
              relax_zrange
              (relax_zrange_gen_good _)
              _
@@ -6727,62 +6863,44 @@ Module X25519_64.
   Print base_51_carry_mul.
 (*base_51_carry_mul =
 fun var : type -> Type =>
-(λ v : var
+(λ x : var
          (type.list (type.type_primitive type.Z) *
           type.list (type.type_primitive type.Z))%ctype,
- expr_let v0 := v₁ [[4]] *₁₂₈ (19 * (uint64)(v₂[[4]])) in
- expr_let v1 := v₁ [[4]] *₁₂₈ (19 * (uint64)(v₂[[3]])) in
- expr_let v2 := v₁ [[4]] *₁₂₈ (19 * (uint64)(v₂[[2]])) in
- expr_let v3 := v₁ [[4]] *₁₂₈ (19 * (uint64)(v₂[[1]])) in
- expr_let v4 := v₁ [[3]] *₁₂₈ (19 * (uint64)(v₂[[4]])) in
- expr_let v5 := v₁ [[3]] *₁₂₈ (19 * (uint64)(v₂[[3]])) in
- expr_let v6 := v₁ [[3]] *₁₂₈ (19 * (uint64)(v₂[[2]])) in
- expr_let v7 := v₁ [[2]] *₁₂₈ (19 * (uint64)(v₂[[4]])) in
- expr_let v8 := v₁ [[2]] *₁₂₈ (19 * (uint64)(v₂[[3]])) in
- expr_let v9 := v₁ [[1]] *₁₂₈ (19 * (uint64)(v₂[[4]])) in
- expr_let v10 := v₁ [[4]] *₁₂₈ v₂ [[0]] in
- expr_let v11 := v₁ [[3]] *₁₂₈ v₂ [[1]] in
- expr_let v12 := v₁ [[3]] *₁₂₈ v₂ [[0]] in
- expr_let v13 := v₁ [[2]] *₁₂₈ v₂ [[2]] in
- expr_let v14 := v₁ [[2]] *₁₂₈ v₂ [[1]] in
- expr_let v15 := v₁ [[2]] *₁₂₈ v₂ [[0]] in
- expr_let v16 := v₁ [[1]] *₁₂₈ v₂ [[3]] in
- expr_let v17 := v₁ [[1]] *₁₂₈ v₂ [[2]] in
- expr_let v18 := v₁ [[1]] *₁₂₈ v₂ [[1]] in
- expr_let v19 := v₁ [[1]] *₁₂₈ v₂ [[0]] in
- expr_let v20 := v₁ [[0]] *₁₂₈ v₂ [[4]] in
- expr_let v21 := v₁ [[0]] *₁₂₈ v₂ [[3]] in
- expr_let v22 := v₁ [[0]] *₁₂₈ v₂ [[2]] in
- expr_let v23 := v₁ [[0]] *₁₂₈ v₂ [[1]] in
- expr_let v24 := v₁ [[0]] *₁₂₈ v₂ [[0]] in
- expr_let v25 := v24 +₁₂₈ (v9 +₁₂₈ (v8 +₁₂₈ (v6 +₁₂₈ v3))) in
- expr_let v26 := (uint64)(v25 >> 51) in
- expr_let v27 := ((uint64)(v25) & 2251799813685247) in
- expr_let v28 := v20 +₁₂₈ (v16 +₁₂₈ (v13 +₁₂₈ (v11 +₁₂₈ v10))) in
- expr_let v29 := v21 +₁₂₈ (v17 +₁₂₈ (v14 +₁₂₈ (v12 +₁₂₈ v0))) in
- expr_let v30 := v22 +₁₂₈ (v18 +₁₂₈ (v15 +₁₂₈ (v4 +₁₂₈ v1))) in
- expr_let v31 := v23 +₁₂₈ (v19 +₁₂₈ (v7 +₁₂₈ (v5 +₁₂₈ v2))) in
- expr_let v32 := v26 +₁₂₈ v31 in
- expr_let v33 := (uint64)(v32 >> 51) in
- expr_let v34 := ((uint64)(v32) & 2251799813685247) in
- expr_let v35 := v33 +₁₂₈ v30 in
- expr_let v36 := (uint64)(v35 >> 51) in
- expr_let v37 := ((uint64)(v35) & 2251799813685247) in
- expr_let v38 := v36 +₁₂₈ v29 in
- expr_let v39 := (uint64)(v38 >> 51) in
- expr_let v40 := ((uint64)(v38) & 2251799813685247) in
- expr_let v41 := v39 +₁₂₈ v28 in
- expr_let v42 := (uint64)(v41 >> 51) in
- expr_let v43 := ((uint64)(v41) & 2251799813685247) in
- expr_let v44 := 19 *₆₄ v42 in
- expr_let v45 := v27 +₆₄ v44 in
- expr_let v46 := (uint64)(v45 >> 51) in
- expr_let v47 := ((uint64)(v45) & 2251799813685247) in
- expr_let v48 := v46 +₆₄ v34 in
- expr_let v49 := (uint64)(v48 >> 51) in
- expr_let v50 := ((uint64)(v48) & 2251799813685247) in
- expr_let v51 := v49 +₆₄ v37 in
- v47 :: v50 :: v51 :: v40 :: v43 :: [])%expr
+ expr_let x0 := x₁ [[0]] *₁₂₈ x₂ [[0]] +₁₂₈
+                (x₁ [[1]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
+                 (x₁ [[2]] *₁₂₈ (19 * (uint64)(x₂[[3]])) +₁₂₈
+                  (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[2]])) +₁₂₈
+                   x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[1]]))))) in
+ expr_let x1 := (uint64)(x0 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[1]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[0]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
+                   (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[3]])) +₁₂₈
+                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[2]])))))) in
+ expr_let x2 := (uint64)(x1 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[2]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[1]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ x₂ [[0]] +₁₂₈
+                   (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
+                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[3]])))))) in
+ expr_let x3 := (uint64)(x2 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[3]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[2]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ x₂ [[1]] +₁₂₈
+                   (x₁ [[3]] *₁₂₈ x₂ [[0]] +₁₂₈
+                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[4]])))))) in
+ expr_let x4 := (uint64)(x3 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[4]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[3]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ x₂ [[2]] +₁₂₈
+                   (x₁ [[3]] *₁₂₈ x₂ [[1]] +₁₂₈ x₁ [[4]] *₁₂₈ x₂ [[0]])))) in
+ expr_let x5 := ((uint64)(x0) & 2251799813685247) +₆₄ 19 *₆₄ (uint64)(x4 >> 51) in
+ expr_let x6 := (uint64)(x5 >> 51) +₆₄ ((uint64)(x1) & 2251799813685247) in
+ ((uint64)(x5) & 2251799813685247)
+ :: ((uint64)(x6) & 2251799813685247)
+    :: (uint64)(x6 >> 51) +₆₄ ((uint64)(x2) & 2251799813685247)
+       :: ((uint64)(x3) & 2251799813685247)
+          :: ((uint64)(x4) & 2251799813685247) :: [])%expr
      : Expr
          (type.list (type.type_primitive type.Z) *
           type.list (type.type_primitive type.Z) ->
@@ -7280,7 +7398,7 @@ Module MontgomeryReduction.
     Notation BoundsPipeline_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (type.reify_type_of op%function)) E Hrop HE
           => @Pipeline.BoundsPipeline_correct_trans
-               true (* DCE *)
+               false (* nobrainer1 *)
                relax_zrange
                (relax_zrange_gen_good _)
                _ _
