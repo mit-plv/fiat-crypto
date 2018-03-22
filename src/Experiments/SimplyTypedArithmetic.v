@@ -27,6 +27,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Import ListNotations. Local Open Scope Z_scope.
@@ -6322,21 +6323,16 @@ Ltac do_inline_cache_reify do_if_not_cached :=
 Ltac vm_compute_lhs_reflexivity :=
   lazymatch goal with
   | [ |- ?LHS = ?RHS ]
-    => is_evar RHS;
-       let x := (eval vm_compute in LHS) in
+    => let x := (eval vm_compute in LHS) in
        unify RHS x;
        vm_cast_no_check (eq_refl x)
   end.
-(* TODO: MOVE ME *)
-Ltac transitivity_vm_compute_lhs :=
-  etransitivity; [ | lazy ];
-  [ vm_compute_lhs_reflexivity | ].
 
 Ltac solve_rop' rop_correct do_if_not_cached machine_wordsizev :=
   eapply rop_correct with (machine_wordsize:=machine_wordsizev);
   [ do_inline_cache_reify do_if_not_cached
   | vm_compute_lhs_reflexivity (*lazy; reflexivity*)
-  | transitivity_vm_compute_lhs; reflexivity (* lazy; reflexivity *) ].
+  | subst_evars; vm_compute_lhs_reflexivity (* lazy; reflexivity *) ].
 Ltac solve_rop_nocache rop_correct :=
   solve_rop' rop_correct ltac:(fun _ => idtac).
 Ltac solve_rop rop_correct :=
