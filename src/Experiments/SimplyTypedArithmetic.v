@@ -5136,8 +5136,8 @@ Module Compilers.
            | TT => (cur_idx, TT)
            | AppIdent s d idc args
              => let default _
-                    := let default := @eliminate_dead' _ args cur_idx in
-                       (fst default, AppIdent idc (snd default)) in
+                    := let default' := @eliminate_dead' _ args cur_idx in
+                       (fst default', AppIdent idc (snd default')) in
                 match args in expr.expr t return ident.ident t d -> (unit -> positive * expr d) -> positive * expr d with
                 | Pair A B x y
                   => match y in expr.expr Y return ident.ident (A * Y) d -> (unit -> positive * expr d) -> positive * expr d with
