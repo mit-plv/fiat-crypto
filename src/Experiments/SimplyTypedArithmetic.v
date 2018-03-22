@@ -4378,7 +4378,7 @@ Module Compilers.
                => fun (true_case_false_case_b : data ((type.unit -> T) * (type.unit -> T) * type.bool) * expr ((type.unit -> T) * (type.unit -> T) * type.bool) + (data ((type.unit -> T) * (type.unit -> T)) * expr ((type.unit -> T) * (type.unit -> T)) + (_ + Datatypes.unit -> value var T) * (_ + Datatypes.unit -> value var T)) * (data type.bool * expr type.bool + bool))
                   => match true_case_false_case_b with
                      | inr (inr (true_case, false_case), inr b)
-                       => @bool_rect (fun _ => value var T) (true_case (inr tt)) (false_case (inr tt)) b
+                       => if b then true_case (inr tt) else false_case (inr tt)
                      | _ => default_interp idc true_case_false_case_b
                      end
              | ident.nat_rect P as idc
@@ -4454,14 +4454,14 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr x, y), z)
-                       => let default := default_interp (ident.Z.add_get_carry_concrete x) (inr (y, z)) in
+                       => let default _ := default_interp (ident.Z.add_get_carry_concrete x) (inr (y, z)) in
                           match (y, z) with
                           | (inr xx, inl e)
                           | (inl e, inr xx)
                             => if Z.eqb xx 0
                                then inr (inl e, inr 0%Z)
-                               else default
-                          | _ => default
+                               else default tt
+                          | _ => default tt
                           end
                      | _ => default_interp idc x_y_z
                      end
@@ -4500,7 +4500,7 @@ Module Compilers.
                      end
              | ident.Z.add_get_carry_concrete _ as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default := default_interp idc x_y in
+                  => let default _ := default_interp idc x_y in
                      match x_y return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr x, inr y) =>
                        let result := ident.interp idc (x, y) in
@@ -4509,8 +4509,8 @@ Module Compilers.
                      | inr (inl e, inr x) =>
                        if Z.eqb x 0%Z
                        then inr (inl e, inr 0%Z)
-                       else default
-                     | _ => default
+                       else default tt
+                     | _ => default tt
                      end
              | ident.Z.add_with_get_carry_concrete _ as idc
                => fun (x_y_z :  (_ * expr (type.Z * type.Z * type.Z) +
@@ -4566,115 +4566,114 @@ Module Compilers.
                      end
              | ident.Z_div as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default := default_interp idc x_y in
+                  => let default _ := default_interp idc x_y in
                      match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (x, inr y)
                        => if Z.eqb y (2^Z.log2 y)
                           then default_interp (ident.Z.shiftr (Z.log2 y)) x
-                          else default
-                     | _ => default
+                          else default tt
+                     | _ => default tt
                      end
              | ident.Z_modulo as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default := default_interp idc x_y in
+                  => let default _ := default_interp idc x_y in
                      match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (x, inr y)
                        => if Z.eqb y (2^Z.log2 y)
                           then default_interp (ident.Z.land (y-1)) x
-                          else default
-                     | _ => default
+                          else default tt
+                     | _ => default tt
                      end
              | ident.Z_mul as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default := default_interp idc x_y in
+                  => let default _ := default_interp idc x_y in
                      match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (inr x, inl (data, e) as y)
                      | inr (inl (data, e) as y, inr x)
-                       => let data' := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
+                       => let data' _ := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
                           if Z.eqb x 0
                           then inr 0%Z
                           else if Z.eqb x 1
                                then y
                                else if Z.eqb x (-1)
-                                    then inl (data', AppIdent ident.Z.opp (expr.reify (t:=type.Z) y))
+                                    then inl (data' tt, AppIdent ident.Z.opp (expr.reify (t:=type.Z) y))
                                     else if Z.eqb x (2^Z.log2 x)
-                                         then inl (data',
+                                         then inl (data' tt,
                                                    AppIdent (ident.Z.shiftl (Z.log2 x)) (expr.reify (t:=type.Z) y))
-                                         else inl (data',
+                                         else inl (data' tt,
                                                    AppIdent idc (ident.primitive (t:=type.Z) x @@ TT, expr.reify (t:=type.Z) y))
                      | inr (inl (dataa, a), inl (datab, b))
                        => inl (ZRange.ident.option.interp idc (dataa, datab),
                                AppIdent idc (a, b))
-                     | inl _ => default
+                     | inl _ => default tt
                      end
              | ident.Z_add as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default0 := AppIdent idc (expr.reify (t:=_*_) x_y) in
-                     let default := expr.reflect default0 in
+                  => let default0 _ := AppIdent idc (expr.reify (t:=_*_) x_y) in
+                     let default _ := expr.reflect (default0 tt) in
                      match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (inr x, inl (data, e) as y)
                      | inr (inl (data, e) as y, inr x)
-                       => let data' := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
+                       => let data' _ := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
                           if Z.eqb x 0
                           then y
-                          else inl (data', match invert_Z_opp e with
-                                           | Some e => AppIdent
-                                                         ident.Z.sub
-                                                         (ident.primitive (t:=type.Z) x @@ TT,
-                                                          e)
-                                           | None => default0
-                                           end)
+                          else inl (data' tt,
+                                    match invert_Z_opp e with
+                                    | Some e => AppIdent
+                                                  ident.Z.sub
+                                                  (ident.primitive (t:=type.Z) x @@ TT,
+                                                   e)
+                                    | None => default0 tt
+                                    end)
                      | inr (inl (dataa, a), inl (datab, b))
-                       => let data' := ZRange.ident.option.interp idc (dataa, datab) in
-                          match invert_Z_opp a, invert_Z_opp b with
-                          | Some a, Some b
-                            => inl (data',
-                                    AppIdent
+                       => inl (ZRange.ident.option.interp idc (dataa, datab),
+                               match invert_Z_opp a, invert_Z_opp b with
+                               | Some a, Some b
+                                 => AppIdent
                                       ident.Z.opp
-                                      (idc @@ (a, b)))
-                          | Some a, None
-                            => inl (data', AppIdent ident.Z.sub (b, a))
-                          | None, Some b
-                            => inl (data', AppIdent ident.Z.sub (a, b))
-                          | None, None => inl (data', default0)
-                          end
-                     | inl _ => default
+                                      (idc @@ (a, b))
+                               | Some a, None
+                                 => AppIdent ident.Z.sub (b, a)
+                               | None, Some b
+                                 => AppIdent ident.Z.sub (a, b)
+                               | None, None => default0 tt
+                               end)
+                     | inl _ => default tt
                      end
              | ident.Z_sub as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default0 := AppIdent idc (expr.reify (t:=_*_) x_y) in
-                     let default := expr.reflect default0 in
+                  => let default0 _ := AppIdent idc (expr.reify (t:=_*_) x_y) in
+                     let default _ := expr.reflect (default0 tt) in
                      match x_y return _ * expr _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
                      | inr (inr x, inl (data, e))
-                       => let data' := ZRange.ident.option.interp idc (Some r[x~>x]%zrange, data) in
+                       => let data' _ := ZRange.ident.option.interp idc (Some r[x~>x]%zrange, data) in
                           if Z.eqb x 0
-                          then inl (data, AppIdent ident.Z.opp e)
-                          else inl (data, default0)
+                          then inl (data' tt, AppIdent ident.Z.opp e)
+                          else inl (data' tt, default0 tt)
                      | inr (inl (data, e), inr x)
-                       => let data' := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
+                       => let data' _ := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
                           if Z.eqb x 0
-                          then inl (data', e)
-                          else inl (data', default0)
+                          then inl (data' tt, e)
+                          else inl (data' tt, default0 tt)
                      | inr (inl (dataa, a), inl (datab, b))
-                       => let data' := ZRange.ident.option.interp idc (dataa, datab) in
-                          match invert_Z_opp a, invert_Z_opp b with
-                          | Some a, Some b
-                            => inl (data',
-                                    AppIdent
+                       => inl (ZRange.ident.option.interp idc (dataa, datab),
+                               match invert_Z_opp a, invert_Z_opp b with
+                               | Some a, Some b
+                                 => AppIdent
                                       ident.Z.opp
-                                      (idc @@ (a, b)))
-                          | Some a, None
-                            => inl (data', AppIdent ident.Z.add (b, a))
-                          | None, Some b
-                            => inl (data', AppIdent ident.Z.add (a, b))
-                          | None, None => inl (data', default0)
-                          end
-                     | inl _ => default
+                                      (idc @@ (a, b))
+                               | Some a, None
+                                 => AppIdent ident.Z.add (b, a)
+                               | None, Some b
+                                 => AppIdent ident.Z.add (a, b)
+                               | None, None => default0 tt
+                               end)
+                     | inl _ => default tt
                      end
              | ident.Z_zselect as idc
              | ident.Z_add_modulo as idc
@@ -5075,7 +5074,7 @@ Module Compilers.
          | Var t v => (cur_idx, v)
          | TT => (cur_idx, PositiveSet.empty)
          | AppIdent s d idc args
-           => let default := @compute_live' _ args cur_idx in
+           => let default _ := @compute_live' _ args cur_idx in
               match args in expr.expr t return ident.ident t d -> _ with
               | Pair A B x (Abs s d f)
                 => fun idc
@@ -5084,9 +5083,9 @@ Module Compilers.
                         => let '(idx, live) := @compute_live' A x cur_idx in
                            let '(_, live) := @compute_live' _ (f (PositiveSet.add idx live)) (Pos.succ idx) in
                            (Pos.succ idx, live)
-                      | _ => default
+                      | _ => default tt
                       end
-              | _ => fun _ => default
+              | _ => fun _ => default tt
               end idc
          | App s d f x
            => let '(idx, live1) := @compute_live' _ f cur_idx in
@@ -5114,11 +5113,12 @@ Module Compilers.
            | Var t v => (cur_idx, v)
            | TT => (cur_idx, TT)
            | AppIdent s d idc args
-             => let default := @eliminate_dead' _ args cur_idx in
-                let default := (fst default, AppIdent idc (snd default)) in
-                match args in expr.expr t return ident.ident t d -> positive * expr d -> positive * expr d with
+             => let default _
+                    := let default := @eliminate_dead' _ args cur_idx in
+                       (fst default, AppIdent idc (snd default)) in
+                match args in expr.expr t return ident.ident t d -> (unit -> positive * expr d) -> positive * expr d with
                 | Pair A B x y
-                  => match y in expr.expr Y return ident.ident (A * Y) d -> positive * expr d -> positive * expr d with
+                  => match y in expr.expr Y return ident.ident (A * Y) d -> (unit -> positive * expr d) -> positive * expr d with
                      | Abs s' d' f
                        => fun idc
                           => let '(idx, x') := @eliminate_dead' A x cur_idx in
@@ -5132,7 +5132,7 @@ Module Compilers.
                                               | _ * (s -> d) => (expr s -> expr d)%type
                                               | _ => unit
                                               end%ctype
-                                           -> positive * expr d
+                                           -> (unit -> positive * expr d)
                                            -> positive * expr d)
                              with
                              | ident.Let_In _ _
@@ -5140,11 +5140,11 @@ Module Compilers.
                                   => if PositiveSet.mem idx live
                                      then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
                                      else (Pos.succ idx, f' (OUGHT_TO_BE_UNUSED x' (Pos.succ idx, PositiveSet.elements live)))
-                             | _ => fun _ _ default => default
+                             | _ => fun _ _ default => default tt
                              end x' f'
-                     | _ => fun _ default => default
+                     | _ => fun _ default => default tt
                      end
-                | _ => fun _ default => default
+                | _ => fun _ default => default tt
                 end idc default
            | App s d f x
              => let '(idx, f') := @eliminate_dead' _ f cur_idx in
@@ -6318,11 +6318,25 @@ Ltac do_inline_cache_reify do_if_not_cached :=
     cache_reify (); exact admit
   | .. ].
 
+(* TODO: MOVE ME *)
+Ltac vm_compute_lhs_reflexivity :=
+  lazymatch goal with
+  | [ |- ?LHS = ?RHS ]
+    => is_evar RHS;
+       let x := (eval vm_compute in LHS) in
+       unify RHS x;
+       vm_cast_no_check (eq_refl x)
+  end.
+(* TODO: MOVE ME *)
+Ltac transitivity_vm_compute_lhs :=
+  etransitivity; [ | lazy ];
+  [ vm_compute_lhs_reflexivity | ].
+
 Ltac solve_rop' rop_correct do_if_not_cached machine_wordsizev :=
   eapply rop_correct with (machine_wordsize:=machine_wordsizev);
   [ do_inline_cache_reify do_if_not_cached
-  | lazy; reflexivity
-  | lazy; reflexivity ].
+  | vm_compute_lhs_reflexivity (*lazy; reflexivity*)
+  | transitivity_vm_compute_lhs; reflexivity (* lazy; reflexivity *) ].
 Ltac solve_rop_nocache rop_correct :=
   solve_rop' rop_correct ltac:(fun _ => idtac).
 Ltac solve_rop rop_correct :=
