@@ -7184,30 +7184,41 @@ Module Montgomery256.
   Set Printing Width 100000.
 
   Print montred256.
-  (*montred256 = fun var : type -> Type => λ v : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
-             expr_let v0 := (uint128)(v₁ >> 128) in
-             expr_let v1 := ((uint128)(v₁) & 340282366920938463463374607431768211455) in
-             expr_let v2 := ((uint128)(79228162514264337593543950337 *₂₅₆ v0) & 340282366920938463463374607431768211455) in
-             expr_let v3 := ((uint128)(340282366841710300986003757985643364352 *₂₅₆ v1) & 340282366920938463463374607431768211455) in
-             expr_let v4 := ADD_256 ((uint256)(v3 << 128), (uint256)(v2 << 128)) in
-             expr_let v5 := ADD_256 (79228162514264337593543950337 *₂₅₆ v1, v4₁) in
-             expr_let v6 := (uint128)(v5₁ >> 128) in
-             expr_let v7 := ((uint128)(v5₁) & 340282366920938463463374607431768211455) in
-             expr_let v8 := (uint128)(79228162514264337593543950335 *₂₅₆ v6 >> 128) in
-             expr_let v9 := ((uint128)(79228162514264337593543950335 *₂₅₆ v6) & 340282366920938463463374607431768211455) in
-             expr_let v10 := (uint128)(340282366841710300967557013911933812736 *₂₅₆ v7 >> 128) in
-             expr_let v11 := ((uint128)(340282366841710300967557013911933812736 *₂₅₆ v7) & 340282366920938463463374607431768211455) in
-             expr_let v12 := ADD_256 ((uint256)(v11 << 128), (uint256)(v9 << 128)) in
-             expr_let v13 := ADD_256 (79228162514264337593543950335 *₂₅₆ v7, v12₁) in
-             expr_let v14 := v13₂ +₁₂₈ v12₂ in
-             expr_let v15 := ADD_256 (v8, 340282366841710300967557013911933812736 *₂₅₆ v6) in
-             expr_let v16 := ADD_256 (v10, v15₁) in
-             expr_let v17 := ADD_256 (v14, v16₁) in
-             expr_let v18 := ADD_256 (v₁, v13₁) in
-             expr_let v19 := ADDC_256 (v18₂, v₂, v17₁) in
-             expr_let v20 := SELC (v19₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
-             expr_let v21 := Z.cast uint256 @@ (fst @@ SUB_256 (v19₁, v20)) in
-             ADDM (v21, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951)
+  (*montred256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
+             expr_let x0 := (uint128)(x₁ >> 128) in
+             expr_let x1 := ((uint128)(x₁) & 340282366920938463463374607431768211455) in
+             expr_let x2 := 79228162514264337593543950337 *₂₅₆ x0 in
+             expr_let x3 := ((uint128)(x2) & 340282366920938463463374607431768211455) in
+             expr_let x4 := 340282366841710300986003757985643364352 *₂₅₆ x1 in
+             expr_let x5 := ((uint128)(x4) & 340282366920938463463374607431768211455) in
+             expr_let x6 := (uint256)(x5 << 128) in
+             expr_let x7 := (uint256)(x3 << 128) in
+             expr_let x8 := 79228162514264337593543950337 *₂₅₆ x1 in
+             expr_let x9 := ADD_256 (x6, x7) in
+             expr_let x10 := ADD_256 (x8, x9₁) in
+             expr_let x11 := (uint128)(x10₁ >> 128) in
+             expr_let x12 := ((uint128)(x10₁) & 340282366920938463463374607431768211455) in
+             expr_let x13 := 79228162514264337593543950335 *₂₅₆ x11 in
+             expr_let x14 := (uint128)(x13 >> 128) in
+             expr_let x15 := ((uint128)(x13) & 340282366920938463463374607431768211455) in
+             expr_let x16 := 340282366841710300967557013911933812736 *₂₅₆ x12 in
+             expr_let x17 := (uint128)(x16 >> 128) in
+             expr_let x18 := ((uint128)(x16) & 340282366920938463463374607431768211455) in
+             expr_let x19 := (uint256)(x18 << 128) in
+             expr_let x20 := (uint256)(x15 << 128) in
+             expr_let x21 := 79228162514264337593543950335 *₂₅₆ x12 in
+             expr_let x22 := ADD_256 (x19, x20) in
+             expr_let x23 := ADD_256 (x21, x22₁) in
+             expr_let x24 := x23₂ +₁₂₈ x22₂ in
+             expr_let x25 := 340282366841710300967557013911933812736 *₂₅₆ x11 in
+             expr_let x26 := ADD_256 (x14, x25) in
+             expr_let x27 := ADD_256 (x17, x26₁) in
+             expr_let x28 := ADD_256 (x24, x27₁) in
+             expr_let x29 := ADD_256 (x₁, x23₁) in
+             expr_let x30 := ADDC_256 (x29₂, x₂, x28₁) in
+             expr_let x31 := SELC (x30₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
+             expr_let x32 := Z.cast uint256 @@ (fst @@ SUB_256 (x30₁, x31)) in
+             ADDM (x32, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951)
      : Expr (type.type_primitive type.Z * type.type_primitive type.Z -> type.type_primitive type.Z)
 *)
 End Montgomery256.
@@ -7313,29 +7324,40 @@ Local Open Scope expr_scope.
 
 Print Montgomery256.montred256.
 (*
-c.ShiftR($v0, $v_lo, 128);
-c.Lower128($v1, $v_lo);
-c.Lower128($v2, Lower128{RegPinv} * $v0);
-c.Lower128($v3, RegPinv >> 128 * $v1);
-c.Add256($v4, ($v3 << 128), ($v2 << 128));
-c.Add256($v5, Lower128{RegPinv} * $v1, $v4_lo);
-c.ShiftR($v6, $v5_lo, 128);
-c.Lower128($v7, $v5_lo);
-c.ShiftR($v8, Lower128{RegMod} * $v6, 128);
-c.Lower128($v9, Lower128{RegMod} * $v6);
-c.ShiftR($v10, RegMod << 128 * $v7, 128);
-c.Lower128($v11, RegMod << 128 * $v7);
-c.Add256($v12, ($v11 << 128), ($v9 << 128));
-c.Add256($v13, Lower128{RegMod} * $v7, $v12_lo);
-c.Add64($v14, $v13_hi, $v12_hi);
-c.Add256($v15, $v8, RegMod << 128 * $v6);
-c.Add256($v16, $v10, $v15_lo);
-c.Add256($v17, $v14, $v16_lo);
-c.Add256($v18, $v_lo, $v13_lo);
-c.Addc($v19, $v_hi, $v17_lo);
-c.Selc($v20,RegZero, RegMod);
-c.Sub($v21, $v19_lo, $v20);
-c.AddM($ret, $v21, RegZero, RegMod);
+c.ShiftR($x0, $x_lo, 128);
+c.Lower128($x1, $x_lo);
+c.Mul128x128($x2, Lower128{RegPinv}, $x0);
+c.Lower128($x3, $x2);
+c.Mul128x128($x4, RegPinv >> 128, $x1);
+c.Lower128($x5, $x4);
+c.ShiftL($x6, $x5, 128);
+c.ShiftL($x7, $x3, 128);
+c.Mul128x128($x8, Lower128{RegPinv}, $x1);
+c.Add256($x9, $x6, $x7);
+c.Add256($x10, $x8, $x9_lo);
+c.ShiftR($x11, $x10_lo, 128);
+c.Lower128($x12, $x10_lo);
+c.Mul128x128($x13, Lower128{RegMod}, $x11);
+c.ShiftR($x14, $x13, 128);
+c.Lower128($x15, $x13);
+c.Mul128x128($x16, RegMod << 128, $x12);
+c.ShiftR($x17, $x16, 128);
+c.Lower128($x18, $x16);
+c.ShiftL($x19, $x18, 128);
+c.ShiftL($x20, $x15, 128);
+c.Mul128x128($x21, Lower128{RegMod}, $x12);
+c.Add256($x22, $x19, $x20);
+c.Add256($x23, $x21, $x22_lo);
+c.Add64($x24, $x23_hi, $x22_hi);
+c.Mul128x128($x25, RegMod << 128, $x11);
+c.Add256($x26, $x14, $x25);
+c.Add256($x27, $x17, $x26_lo);
+c.Add256($x28, $x24, $x27_lo);
+c.Add256($x29, $x_lo, $x23_lo);
+c.Addc($x30, $x_hi, $x28_lo);
+c.Selc($x31,RegZero, RegMod);
+c.Sub($x32, $x30_lo, $x31);
+c.AddM($ret, $x32, RegZero, RegMod);
      : Expr
          (type.type_primitive type.Z * type.type_primitive type.Z ->
           type.type_primitive type.Z)
