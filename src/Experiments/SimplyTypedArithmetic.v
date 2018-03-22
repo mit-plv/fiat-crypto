@@ -5259,11 +5259,11 @@ Module Compilers.
                              | ident.Let_In _ _
                                => fun x' f' _
                                   => if match PositiveMap.find idx live with
-                                        | Some n => (1 <? n)%nat
-                                        | None => false
+                                        | Some n => (n <=? 1)%nat
+                                        | None => true
                                         end
-                                     then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
-                                     else (Pos.succ idx, f' x')
+                                     then (Pos.succ idx, f' x')
+                                     else (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
                              | _ => fun _ _ default => default tt
                              end x' f'
                      | _ => fun _ default => default tt
