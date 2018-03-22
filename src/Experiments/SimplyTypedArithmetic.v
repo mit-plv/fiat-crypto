@@ -5166,6 +5166,108 @@ Module Compilers.
       := fun var => eliminate_dead (ComputeLive e) (e _).
   End DeadCodeElimination.
 
+  Module NoBrainer1.
+    Local Notation PositiveMap_incr idx m
+      := (PositiveMap.add idx (match PositiveMap.find idx m with
+                               | Some n => S n
+                               | None => S O
+                               end) m).
+    Local Notation PositiveMap_union m1 m2
+      := (PositiveMap.map2
+            (fun c1 c2
+             => match c1, c2 with
+                | Some n1, Some n2 => Some (n1 + n2)%nat
+                | Some n, None
+                | None, Some n
+                  => Some n
+                | None, None => None
+                end) m1 m2).
+    Fixpoint compute_live_counts' {t} (e : @expr (fun _ => positive) t) (cur_idx : positive)
+      : positive * PositiveMap.t nat
+      := match e with
+         | Var t v => (cur_idx, PositiveMap_incr cur_idx (PositiveMap.empty _))
+         | TT => (cur_idx, PositiveMap.empty _)
+         | AppIdent s d idc args
+           => @compute_live_counts' _ args cur_idx
+         | App s d f x
+           => let '(idx, live1) := @compute_live_counts' _ f cur_idx in
+              let '(idx, live2) := @compute_live_counts' _ x idx in
+              (idx, PositiveMap_union live1 live2)
+         | Pair A B a b
+           => let '(idx, live1) := @compute_live_counts' A a cur_idx in
+              let '(idx, live2) := @compute_live_counts' B b idx in
+              (idx, PositiveMap_union live1 live2)
+         | Abs s d f
+           => let '(idx, live) := @compute_live_counts' _ (f cur_idx) (Pos.succ cur_idx) in
+              (cur_idx, live)
+         end.
+    Definition compute_live_counts {t} e : PositiveMap.t _ := snd (@compute_live_counts' t e 1).
+    Definition ComputeLiveCounts {t} (e : Expr t) := compute_live_counts (e _).
+
+    Section with_var.
+      Context {var : type -> Type}
+              (live : PositiveMap.t nat).
+      Fixpoint nobrainer1' {t} (e : @expr (@expr var) t) (cur_idx : positive)
+        : positive * @expr var t
+        := match e with
+           | Var t v => (cur_idx, v)
+           | TT => (cur_idx, TT)
+           | AppIdent s d idc args
+             => let default := @nobrainer1' _ args cur_idx in
+                let default := (fst default, AppIdent idc (snd default)) in
+                match args in expr.expr t return ident.ident t d -> positive * expr d -> positive * expr d with
+                | Pair A B x y
+                  => match y in expr.expr Y return ident.ident (A * Y) d -> positive * expr d -> positive * expr d with
+                     | Abs s' d' f
+                       => fun idc
+                          => let '(idx, x') := @nobrainer1' A x cur_idx in
+                             let f' := fun v => snd (@nobrainer1' _ (f v) (Pos.succ idx)) in
+                             match idc in ident.ident s d
+                                   return (match s return Type with
+                                           | A * _ => expr A
+                                           | _ => unit
+                                           end%ctype
+                                           -> match s return Type with
+                                              | _ * (s -> d) => (expr s -> expr d)%type
+                                              | _ => unit
+                                              end%ctype
+                                           -> positive * expr d
+                                           -> positive * expr d)
+                             with
+                             | ident.Let_In _ _
+                               => fun x' f' _
+                                  => if match PositiveMap.find idx live with
+                                        | Some n => (1 <? n)%nat
+                                        | None => false
+                                        end
+                                     then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
+                                     else (Pos.succ idx, f' x')
+                             | _ => fun _ _ default => default
+                             end x' f'
+                     | _ => fun _ default => default
+                     end
+                | _ => fun _ default => default
+                end idc default
+           | App s d f x
+             => let '(idx, f') := @nobrainer1' _ f cur_idx in
+                let '(idx, x') := @nobrainer1' _ x idx in
+                (idx, App f' x')
+           | Pair A B a b
+             => let '(idx, a') := @nobrainer1' A a cur_idx in
+                let '(idx, b') := @nobrainer1' B b idx in
+                (idx, Pair a' b')
+           | Abs s d f
+             => (cur_idx, Abs (fun v => snd (@nobrainer1' _ (f (Var v)) (Pos.succ cur_idx))))
+           end.
+
+      Definition nobrainer1 {t} e : expr t
+        := snd (@nobrainer1' t e 1).
+    End with_var.
+
+    Definition NoBrainer1 {t} (e : Expr t) : Expr t
+      := fun var => nobrainer1 (ComputeLiveCounts e) (e _).
+  End NoBrainer1.
+
   Module ReassociateSmallConstants.
     Import Compilers.Uncurried.expr.default.
 
@@ -5434,6 +5536,29 @@ Module test6.
     exact I.
   Qed.
 End test6.
+Module test7.
+  Example test7 : True.
+  Proof.
+    let v := Reify (fun y : Z
+                    => dlet_nd x := y + y in
+                        dlet_nd z := x in
+                        dlet_nd z' := z in
+                        dlet_nd z'' := z in
+                        z'' + z'') in
+    pose v as E.
+    vm_compute in E.
+    pose (canonicalize_list_recursion E) as E'.
+    lazy in E'.
+    clear E.
+    pose (NoBrainer1.NoBrainer1 E') as E''.
+    lazy in E''.
+    lazymatch eval cbv delta [E''] in E'' with
+    | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), expr_let v0 := Var x + Var x in Var v0 + Var v0)%expr
+      => idtac
+    end.
+    exact I.
+  Qed.
+End test7.
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
 Ltac cache_reify _ :=
