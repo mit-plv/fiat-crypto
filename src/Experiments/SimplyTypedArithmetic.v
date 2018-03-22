@@ -5313,8 +5313,7 @@ Module Compilers.
       | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d).
     End Flat.
 
-    Definition ERROR {T} (v : T) : T := v.
-    Global Opaque ERROR.
+    Definition ERROR {T} (v : T) : T. exact v. Qed.
 
     Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
              (cur_idx : PositiveMap.key)
