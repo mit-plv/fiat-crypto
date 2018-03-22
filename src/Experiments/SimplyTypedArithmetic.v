@@ -4069,6 +4069,11 @@ Module Compilers.
   End ZRange.
 
   Module DefaultValue.
+    (** This module provides "default" inhabitants for the
+        interpretation of PHOAS types and for the PHOAS [expr] type.
+        These values are used for things like [nth_default] and in
+        other places where we need to provide a dummy value in cases
+        that will never actually be reached in correctly used code. *)
     Module type.
       Module primitive.
         Definition default {t : type.primitive} : type.interp t
