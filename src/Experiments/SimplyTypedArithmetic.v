@@ -6009,39 +6009,20 @@ Section rcarry_mul.
 
   Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
   Let idxs := (seq 0 n ++ [0; 1])%list%nat.
+  Let coef := 2.
   Let upperbound_tight := (2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z.
-  Let upperbound_loose := (3 * upperbound_tight)%Z.
-  Let f_bounds_tight := List.repeat r[0~>upperbound_tight]%zrange n.
-  Let f_bounds_loose := List.repeat r[0~>upperbound_loose]%zrange n.
   Let prime_bound : ZRange.type.interp (type.Z)
     := r[0~>(s - Associational.eval c - 1)]%zrange.
 
   Definition relax_zrange_of_machine_wordsize
     := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z.
-  Local Arguments relax_zrange_of_machine_wordsize / .
 
   Let rw := rweight limbwidth.
-  Let rs := GallinaReify.Reify s.
-  Let rc := GallinaReify.Reify c.
-  Let rn := GallinaReify.Reify n.
-  Let ridxs := GallinaReify.Reify idxs.
-  Let rlen_c := GallinaReify.Reify (List.length c).
-  Let rlen_idxs := GallinaReify.Reify (List.length idxs).
-  Let rcoef := GallinaReify.Reify 2.
   Let relax_zrange := relax_zrange_of_machine_wordsize.
   Let tight_bounds : ZRange.type.interp (type.list type.Z)
-    := f_bounds_tight.
-  Let tight2_bounds : ZRange.type.interp (type.list type.Z * type.list type.Z)
-    := (tight_bounds, tight_bounds).
+    := List.repeat r[0~>upperbound_tight]%zrange n.
   Let loose_bounds : ZRange.type.interp (type.list type.Z)
-    := f_bounds_loose.
-  Let loose2_bounds : ZRange.type.interp (type.list type.Z * type.list type.Z)
-    := (loose_bounds, loose_bounds).
-
-  Let relax_zrange_good
-    : forall r r' z : zrange,
-      (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
-    := relax_zrange_gen_good _.
+    := List.repeat r[0 ~> 3*upperbound_tight]%zrange n.
 
   Definition check_args {T} (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
@@ -6057,26 +6038,6 @@ Section rcarry_mul.
                            then Pipeline.Error (Pipeline.Value_not_lt "0 < machine_wordsize" 0 machine_wordsize)
                            else res.
 
-  Local Ltac t_solve_interp :=
-    try solve [ reflexivity
-              | cbn -[reify_list];
-                try (rewrite interp_reify_list, map_map; cbn;
-                     erewrite map_ext with (g:=id), map_id; try reflexivity);
-                try (intros []; reflexivity) ].
-  Lemma Interp_rs : Interp rs = s. Proof. reflexivity. Qed.
-  Lemma Interp_rc : Interp rc = c. Proof. t_solve_interp. Qed.
-  Lemma Interp_rn : Interp rn = n. Proof. reflexivity. Qed.
-  Lemma Interp_ridxs : Interp ridxs = idxs. Proof. t_solve_interp. Qed.
-
-  Hint Rewrite @Interp_APP : interp_correct.
-  Hint Rewrite Interp_rs Interp_rc Interp_rn Interp_ridxs : interp_correct.
-  Hint Rewrite carry_mul_gen_correct carry_gen_correct id_gen_correct add_gen_correct sub_gen_correct opp_gen_correct encode_gen_correct zero_gen_correct one_gen_correct : interp_correct.
-
-  Local Ltac do_interp_correct :=
-    intros; repeat autorewrite with interp_correct; reflexivity.
-
-  Notation type_of := ((fun T (_ : T) => T) _).
-  Notation type_of_strip_arrow := ((fun s (d : Prop) (_ : s -> d) => d) _ _).
   Notation type_of_strip_5arrow := ((fun (d : Prop) (_ : forall A B C D E, d) => d) _).
 
   Notation BoundsPipeline rop in_bounds out_bounds
@@ -6096,7 +6057,7 @@ Section rcarry_mul.
         => @Pipeline.BoundsPipeline_correct_trans
              false
              relax_zrange
-             relax_zrange_good
+             (relax_zrange_gen_good _)
              _ _
              rop
              in_bounds
@@ -6110,7 +6071,7 @@ Section rcarry_mul.
         => @Pipeline.BoundsPipelineConst_correct_trans
              false
              relax_zrange
-             relax_zrange_good
+             (relax_zrange_gen_good _)
              _
              rop%Expr
              out_bounds
@@ -6122,7 +6083,7 @@ Section rcarry_mul.
   Definition rcarry_mul
     := BoundsPipeline
          (carry_mul_gen
-            @ rw @ rs @ rc @ rn @ rlen_c @ ridxs @ rlen_idxs)
+            @ rw @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify (length c) @ GallinaReify.Reify idxs @ GallinaReify.Reify (length idxs))
          (loose_bounds, loose_bounds)
          tight_bounds.
 
@@ -6130,13 +6091,13 @@ Section rcarry_mul.
     := BoundsPipeline_correct
          (loose_bounds, loose_bounds)
          tight_bounds
-         (carry_mulmod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
+         (carry_mulmod (Interp rw) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rcarry_correct
     := BoundsPipeline_correct
          loose_bounds
          tight_bounds
-         (carrymod (Interp rw) s c n (Interp rlen_c) idxs (Interp rlen_idxs)).
+         (carrymod (Interp rw) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
@@ -6154,29 +6115,29 @@ Section rcarry_mul.
     := BoundsPipeline_correct
          (tight_bounds, tight_bounds)
          loose_bounds
-         (submod (Interp rw) s c n (Interp rlen_c) (Interp rcoef)).
+         (submod (Interp rw) s c n (List.length c) coef).
 
   Definition ropp_correct
     := BoundsPipeline_correct
          tight_bounds
          loose_bounds
-         (oppmod (Interp rw) s c n (Interp rlen_c) (Interp rcoef)).
+         (oppmod (Interp rw) s c n (List.length c) coef).
 
   Definition rencode_correct
     := BoundsPipeline_correct
          prime_bound
          tight_bounds
-         (encodemod (Interp rw) s c n (Interp rlen_c)).
+         (encodemod (Interp rw) s c n (List.length c)).
 
   Definition rzero_correct
     := BoundsPipelineConst_correct
          tight_bounds
-         (zeromod (Interp rw) s c n (Interp rlen_c)).
+         (zeromod (Interp rw) s c n (List.length c)).
 
   Definition rone_correct
     := BoundsPipelineConst_correct
          tight_bounds
-         (onemod (Interp rw) s c n (Interp rlen_c)).
+         (onemod (Interp rw) s c n (List.length c)).
 
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
   Definition rcarry_mul_correctT rv : Prop
@@ -6233,10 +6194,6 @@ Section rcarry_mul.
         /\ s <> 0
         /\ 0 < machine_wordsize
         /\ n <> 0%nat
-        /\ List.length (Interp ridxs) = Interp rlen_idxs
-        /\ List.length (Interp rc) = Interp rlen_c
-        /\ List.length idxs = Interp rlen_idxs
-        /\ List.length c = Interp rlen_c
         /\ List.length tight_bounds = n
         /\ List.length loose_bounds = n
         /\ forall i, Interp rw (S i) / Interp rw i <> 0.
@@ -6269,23 +6226,7 @@ Section rcarry_mul.
       { use_curve_good_t. }
       { use_curve_good_t. }
       { use_curve_good_t. }
-      { use_curve_good_t. }
-      { use_curve_good_t. }
-      { use_curve_good_t. }
-      { use_curve_good_t. }
     Qed.
-
-    Local Lemma m_eq : Z.pos m = s - Associational.eval c.
-    Proof. apply use_curve_good. Qed.
-
-    Local Lemma sc_pos : 0 < s - Associational.eval c.
-    Proof. pose proof use_curve_good; destruct_head'_and; lia. Qed.
-
-    Local Lemma length_tight_bounds : List.length tight_bounds = n.
-    Proof. apply use_curve_good. Qed.
-
-    Local Lemma length_loose_bounds : List.length loose_bounds = n.
-    Proof. apply use_curve_good. Qed.
 
     Definition GoodT : Prop
       := @Ring.GoodT
@@ -6318,6 +6259,7 @@ Section rcarry_mul.
                      | progress cbv [onemod zeromod]
                      | match goal with
                        | [ |- ?x = ?x ] => reflexivity
+                       | [ |- ?x = ?ev ] => is_evar ev; reflexivity
                        end ].
     Qed.
   End make_ring.
@@ -7188,11 +7130,6 @@ Module MontgomeryReduction.
     Let rw_half := rweight (machine_wordsize / 2).
     Let relax_zrange := relax_zrange_of_machine_wordsize.
 
-    Let relax_zrange_good
-      : forall r r' z : zrange,
-        (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true
-      := relax_zrange_gen_good _.
-
     Definition check_args {T} (res : Pipeline.ErrorT T)
       : Pipeline.ErrorT T
       := if (N =? 0)%Z
@@ -7206,7 +7143,7 @@ Module MontgomeryReduction.
           => @Pipeline.BoundsPipeline_correct_trans
                true (* DCE *)
                relax_zrange
-               relax_zrange_good
+               (relax_zrange_gen_good _)
                _ _
                rop
                in_bounds
