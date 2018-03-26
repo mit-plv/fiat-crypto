@@ -199,6 +199,8 @@ while it is expected to have type
       specialize_by assumption; break_match_hyps; [contradiction|eauto].
   Qed.
 
+  (* Completeness proof *)
+
   Definition iterations_required fuel s : option nat :=
     nat_rect _ None
              (fun n r =>
@@ -211,48 +213,17 @@ while it is expected to have type
                   end
                 end
              ) fuel.
-  
-  Lemma iterations_required_sufficient fuel s n
-        (H:iterations_required fuel s = Some n)
-    : exists b, loop n s = inr b /\ n <> 0.
-  Proof.
-    induction fuel; [cbv in H; inversion H|].
-    change (iterations_required (S fuel) s)
-      with (match iterations_required fuel s with
-            | None => match loop (S fuel) s with
-                      | inl _ => None
-                      | inr _ => Some (S fuel)
-                      end
-            | Some _ => iterations_required fuel s
-            end) in *.
-    destruct (iterations_required fuel s) eqn:?; inversion_option; [ solve[eauto] |].
-    destruct (loop (S fuel) s) eqn:HH; inversion_option; []; subst.
-    rewrite HH; eauto.
-  Qed.
 
-  Lemma iterations_required_le_fuel fuel s n
-        (H:iterations_required fuel s = Some n) : 1 <= n <= fuel.
-  Proof.
-    revert H; revert n; revert s; induction fuel; intros.
-    { cbv in H. inversion H. }
-    change (iterations_required (S fuel) s)
-      with (match iterations_required fuel s with
-            | None => match loop (S fuel) s with
-                      | inl _ => None
-                      | inr _ => Some (S fuel)
-                      end
-            | Some _ => iterations_required fuel s
-            end) in *.
-    destruct (iterations_required fuel s) eqn:HH; inversion_option; subst.
-    { specialize (IHfuel _ _ HH); lia. }
-    { destruct (loop (S fuel) s) eqn:?; inversion_option; []; lia. }
-  Qed.
-
-  Lemma iterations_required_tight fuel s (H : iterations_required fuel s = None)
-    : forall n b, n <= fuel -> loop n s <> inr b.
+  Lemma iterations_required_correct fuel s :
+    (forall m, iterations_required fuel s = Some m ->
+               1 <= m <= fuel /\
+      exists b, forall n, (n < m -> exists a, loop n s = inl a) /\ (m <= n -> loop n s = inr b))
+      /\
+    (iterations_required fuel s = None -> forall n, n <= fuel -> exists a, loop n s = inl a).
   Proof.
     induction fuel; intros.
-    { replace n with 0 by lia. cbn. congruence. }
+    { cbn. split; intros; inversion_option.
+      replace n with 0 by lia. rewrite loop_fuel_0. eauto. }
     { change (iterations_required (S fuel) s)
         with (match iterations_required fuel s with
               | None => match loop (S fuel) s with
@@ -261,81 +232,46 @@ while it is expected to have type
                         end
               | Some _ => iterations_required fuel s
               end) in *.
-      destruct (iterations_required fuel s) eqn:Hp; [inversion H|].
-      specialize (IHfuel eq_refl n b).
-      destruct (Compare_dec.le_le_S_dec n fuel); [solve [eauto]|].
-      replace n with (S fuel) in * by lia.
-      destruct (loop (S fuel) s); congruence. }
+      destruct (iterations_required fuel s) in *.
+      { split; intros; inversion_option; subst.
+        destruct (proj1 IHfuel _ eq_refl); split; [lia|assumption]. }
+      { destruct (loop (S fuel) s) eqn:HSf; split; intros; inversion_option; subst.
+        { intros. destruct (PeanoNat.Nat.eq_dec n (S fuel)); subst; eauto; [].
+          assert (n <= fuel) by lia. eapply IHfuel; congruence. }
+        { split; [lia|].
+          exists b; intros; split; intros.
+          { eapply IHfuel; congruence || lia. }
+          { eapply PeanoNat.Nat.le_exists_sub in H; destruct H as [?[]]; subst.
+            eauto using loop_fuel_add_stable. } } } }
   Qed.
-  
-  Lemma iterations_required_step fuel s s' n n'
-        (Hs : iterations_required (S fuel) s = Some n)
-        (Hs': iterations_required fuel s' = Some n')
+
+  Lemma iterations_required_step fuel s s' n
+        (Hs : iterations_required fuel s = Some n)
         (Hstep : body s = inl s')
-    : n = S n'.
+    : exists n', iterations_required fuel s' = Some n' /\ n = S n'.
   Proof.
-  Admitted.
-
-  Lemma iterations_required_complete fuel s b (H:loop fuel s = inr b) :
-    exists n, iterations_required fuel s = Some n /\ loop n s = inr b.
-  Proof.
-    induction fuel.
-    { rewrite loop_fuel_0 in H; inversion H. }
-    { change (iterations_required (S fuel) s)
-        with (match iterations_required fuel s with
-              | None => match loop (S fuel) s with
-                        | inl _ => None
-                        | inr _ => Some (S fuel)
-                        end
-              | Some _ => iterations_required fuel s
-              end) in *.
-      rewrite (loop_fuel_S_last fuel s).
-      destruct (loop fuel s) eqn:Heqs.
-      { pose proof H as HH.
-        rewrite loop_fuel_S_last, Heqs in HH; rewrite HH.
-        destruct (iterations_required fuel s) eqn:HX; [|solve [eauto]].
-        apply iterations_required_sufficient in HX; destruct HX as [x [Hx _]].
-        rewrite <-(loop_fuel_irrelevant _ _ _ _ _ Hx H); eauto. }
-      { destruct IHfuel as [? [Hx1 Hx2]].
-        { rewrite <-(loop_fuel_irrelevant _ _ _ _ _ Heqs H); eauto. }
-        { rewrite Hx1; eauto. } } }
+    eapply iterations_required_correct in Hs.
+    destruct Hs as [Hn [b Hs]].
+    destruct n as [|n]; [pose proof (proj2 (Hs 0) ltac:(lia)) as Hx; inversion Hx|].
+    exists n; split; [|reflexivity].
+    pose proof (proj2 (Hs (S n)) ltac:(lia)) as H.
+    rewrite loop_fuel_S_first, Hstep in H.
+    destruct (iterations_required fuel s') as [x|] eqn:Hs' in *; [f_equal|exfalso].
+    { eapply iterations_required_correct in Hs'; destruct Hs' as [Hx Hs'].
+      destruct Hs' as [b' Hs'].
+      destruct (Compare_dec.le_lt_dec n x) as [Hc|Hc].
+      { destruct (Compare_dec.le_lt_dec x n) as [Hc'|Hc']; try lia; [].
+        destruct (proj1 (Hs' n) Hc'); congruence. }
+      { destruct (proj1 (Hs (S x)) ltac:(lia)) as [? HX].
+        rewrite loop_fuel_S_first, Hstep in HX.
+        pose proof (proj2 (Hs' x) ltac:(lia)).
+        congruence. } }
+    { eapply iterations_required_correct in Hs'; [|exact (ltac:(lia) : n <= fuel)].
+      destruct Hs'.
+      congruence. }
   Qed.
 
-  Definition universal_measure f s :=
-    match iterations_required f s with
-    | None => 0
-    | Some s => pred s
-    end.
-
-  Lemma universal_measure_complete fuel s b (H:loop fuel s = inr b) :
-    loop (S (universal_measure fuel s)) s = inr b.
-  Proof.
-    cbv [universal_measure].
-    destruct (iterations_required fuel s) as [n|] eqn:Heqn.
-    { destruct (iterations_required_sufficient fuel s _ Heqn) as [c [Hc Hnz]].
-      rewrite PeanoNat.Nat.succ_pred by assumption.
-      rewrite (loop_fuel_irrelevant _ _ _ _ _ H Hc); assumption. }
-    { destruct(iterations_required_complete _ _ _ H) as [n [Hn _]];
-        congruence. }
-  Qed.
-
-  Lemma universal_measure_lt_fuel f s b (H:loop f s = inr b) : universal_measure f s < f.
-  Proof.
-    cbv [universal_measure].
-    destruct (iterations_required f s) as [n|] eqn:Hn.
-    { pose proof iterations_required_le_fuel f s _ Hn; lia. }
-    { destruct (iterations_required_complete f s b H) as [?[]]; congruence. }
-  Qed.
-
-  Lemma universal_measure_step fuel b s s'
-        (Hs : loop (S (universal_measure fuel s)) s = inr b)
-        (Hs': loop (universal_measure fuel s) s' = inr b)
-        (Hstep : body s = inl s')
-    : universal_measure fuel s = S (universal_measure fuel s').
-  Proof.
-  Admitted.
-
-  Lemma inveriant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
+  Lemma invariant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
         : exists inv measure,
           inv s0
           /\ (forall s s', body s = inl s' -> inv s -> inv s')
@@ -343,25 +279,66 @@ while it is expected to have type
           /\ (forall s s', body s = inl s' -> inv s -> measure s' < measure s)
           /\ measure s0 < f.
   Proof.
-    exists (fun s => match loop (S (universal_measure f s)) s with
+    set (measure f s :=
+           match iterations_required f s with
+           | None => 0
+           | Some s => pred s
+           end).
+    exists (fun s => match loop (S (measure f s)) s with
                      | inl a => False
                      | inr r => r = b end).
-    exists (universal_measure f).
+    exists (measure f).
     repeat split.
-    { rewrite (universal_measure_complete _ _ _ H); reflexivity. }
+    { cbv [measure].
+      destruct (iterations_required f s0) eqn:Hs0; [|exfalso].
+      { eapply iterations_required_correct in Hs0.
+        destruct Hs0 as [? [? Hs0]].
+        replace (S (Nat.pred n)) with n by lia.
+        pose proof (proj2 (Hs0 n) ltac:(lia)) as HH; rewrite HH.
+        exact (loop_fuel_irrelevant _ _ _ _ _ HH H). }
+      { eapply iterations_required_correct in Hs0; [|reflexivity].
+        destruct_head'_ex; congruence. } }
     { intros s s' Hstep Hinv.
-      destruct (loop (S (universal_measure f s)) s) eqn:Hs; [contradiction|subst].
-      pose proof Hs as Hss.
+      destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
+      cbv [measure] in *.
+      destruct (iterations_required f s) eqn:Hs' in *; [|cbv in Hs; congruence].
+      destruct (iterations_required_step _ _ s' _ Hs' Hstep) as [? [HA ?]]; subst.
+      rewrite HA.
+      destruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
+      pose proof (HE' ltac:(constructor)) as HE; clear HE'.
+      replace (S (Nat.pred (S x))) with (S x) in * by lia.
       rewrite loop_fuel_S_first, Hstep in Hs.
-      rewrite <-(universal_measure_step _ _ _ _ Hss Hs Hstep), Hs; reflexivity. }
+      replace (S (Nat.pred x)) with x in * by lia; rewrite HE.
+      exact (loop_fuel_irrelevant _ _ _ _ _ HE Hs). }
     { intros s c Hstep Hinv.
-      rewrite loop_fuel_S_first, Hstep in Hinv; congruence. }
+      destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
+      change (loop 1 s = inr c) in Hstep.
+      rewrite (loop_fuel_irrelevant _ _ _ _ _ Hstep Hs); exact HP. }
     { intros s s' Hstep Hinv.
-      destruct (loop (S (universal_measure f s)) s) eqn:Hf; [contradiction|].
-      pose proof Hf as Hff.
-      rewrite loop_fuel_S_first, Hstep in Hf.
-      rewrite (universal_measure_step _ _ _ _ Hff Hf Hstep); lia. }
-    { exact (universal_measure_lt_fuel f s0 b H). }
+      destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
+      cbv [measure] in *.
+      destruct (iterations_required f s) eqn:Hs' in *; [|cbv in Hs; congruence].
+      destruct (iterations_required_step _ _ s' _ Hs' Hstep) as [? [HA ?]]; subst.
+      rewrite HA.
+      apply iterations_required_correct in HA; lia. }
+    { cbv [measure].
+      destruct (iterations_required f s0 ) eqn:Hs;
+        eapply iterations_required_correct in Hs; [lia| | exact (ltac:(lia): f <= f) ].
+      destruct_head'_ex; congruence. }
+  Qed.
+
+  Lemma invariant_iff f s0 P :
+    (exists b, loop f s0 = inr b /\ P b)
+    <->
+    (exists inv measure,
+        inv s0
+        /\ (forall s s', body s = inl s' -> inv s -> inv s')
+        /\ (forall s s', body s = inr s' -> inv s -> P s')
+        /\ (forall s s', body s = inl s' -> inv s -> measure s' < measure s)
+        /\ measure s0 < f).
+  Proof.
+    repeat (intros || split || destruct_head'_ex || destruct_head'_and);
+      eauto using invariant_complete, by_invariant.
   Qed.
 
   Lemma partial_by_invariant P inv f s0
