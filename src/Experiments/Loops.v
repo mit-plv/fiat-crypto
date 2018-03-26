@@ -98,17 +98,17 @@ Module Import core.
                end.
     Qed.
 
-    Lemma loop_fuel_0 s : loop 0 s = body s.
+    Local Lemma loop_fuel_0 s : loop 0 s = body s.
     Proof. cbv; break_match; reflexivity. Qed.
 
-    Lemma loop_fuel_S_first n s : loop (S n) s =
+    Local Lemma loop_fuel_S_first n s : loop (S n) s =
                                   match body s with
                                   | inl a => loop n a
                                   | inr b => inr b
                                   end.
     Proof. reflexivity. Qed.
 
-    Lemma loop_fuel_S_last n s : loop (S n) s =
+    Local Lemma loop_fuel_S_last n s : loop (S n) s =
                                  match loop n s with
                                  | inl a => body a
                                  | inr b => loop n s
@@ -119,7 +119,7 @@ Module Import core.
       { destruct (body s); cbn; rewrite <-?IHn; reflexivity. }
     Qed.
 
-    Lemma loop_fuel_S_stable n s b (H : loop n s = inr b) : loop (S n) s = inr b.
+    Local Lemma loop_fuel_S_stable n s b (H : loop n s = inr b) : loop (S n) s = inr b.
     Proof.
       revert H; revert b; revert s; induction n; intros ? ? H.
       { cbn [loop nat_rect] in *; break_match_hyps; congruence_sum; congruence. }
@@ -127,7 +127,7 @@ Module Import core.
         break_match; congruence_sum; reflexivity. }
     Qed.
 
-    Lemma loop_fuel_add_stable n m s b (H : loop n s = inr b) : loop (m+n) s = inr b.
+    Local Lemma loop_fuel_add_stable n m s b (H : loop n s = inr b) : loop (m+n) s = inr b.
     Proof.
       induction m; intros.
       { rewrite PeanoNat.Nat.add_0_l. assumption. }
@@ -148,7 +148,7 @@ Module Import core.
         { erewrite loop_fuel_S_stable by eassumption. congruence. } }
     Qed.
 
-    Lemma by_invariant_fuel' (inv P:_->Prop) measure f s0
+    Local Lemma by_invariant_fuel' (inv:_->Prop) measure P f s0
           (init : inv s0 /\ measure s0 <= f)
           (step : forall s, inv s -> match body s with
                                      | inl s' => inv s' /\ measure s' < measure s
@@ -167,7 +167,7 @@ Module Import core.
         exact (IHf a ltac:(split; (assumption || lia))). }
     Qed.
 
-    Lemma by_invariant_fuel (inv P:_->Prop) measure f s0
+    Lemma by_invariant_fuel (inv:_->Prop) measure P f s0
           (init : inv s0 /\ measure s0 <= f)
           (step : forall s, inv s -> match body s with
                                      | inl s' => inv s' /\ measure s' < measure s
@@ -175,11 +175,11 @@ Module Import core.
                                      end)
       : exists b, loop f s0 = inr b /\ P b.
     Proof.
-      pose proof (by_invariant_fuel' inv P measure f s0);
+      pose proof (by_invariant_fuel' inv measure P f s0);
         specialize_by assumption; break_match_hyps; [contradiction|eauto].
     Qed.
 
-    Lemma by_invariant (inv P:_->Prop) measure s0
+    Lemma by_invariant (inv:_->Prop) measure P s0
           (init : inv s0)
           (step : forall s, inv s -> match body s with
                                      | inl s' => inv s' /\ measure s' < measure s
@@ -257,7 +257,7 @@ Module Import core.
         rewrite loop_fuel_S_last, H in Hs'; congruence. }
     Qed.
 
-    Lemma invariant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
+    Local Lemma invariant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
       : exists inv measure,
         (inv s0 /\ measure s0 <= f)
         /\ forall s, inv s -> match body s with
@@ -294,7 +294,7 @@ Module Import core.
           rewrite (loop_fuel_irrelevant _ _ _ _ _ HH Hs); congruence. } }
     Qed.
 
-    Lemma invariant_iff f s0 P :
+    Lemma invariant_iff P f s0 :
       (exists b, loop f s0 = inr b /\ P b)
       <->
       (exists inv measure,
@@ -308,6 +308,13 @@ Module Import core.
         eauto using invariant_complete, by_invariant_fuel.
     Qed.
   End Loops.
+
+  Global Arguments loop_cps_ok {A B body body_cps}.
+  Global Arguments loop_cps2_ok {A B body body_cps2}.
+  Global Arguments by_invariant_fuel {A B body} inv measure P.
+  Global Arguments by_invariant {A B body} inv measure P.
+  Global Arguments invariant_iff {A B body} P f s0.
+  Global Arguments iterations_required_correct {A B body} fuel s.
 End core.
 
 Module default.
@@ -319,7 +326,7 @@ Module default.
       | inr s => s
       end.
 
-    Lemma by_invariant_fuel inv (P:_->Prop) measure f s0
+    Lemma by_invariant_fuel inv measure (P:_->Prop) f s0
           (init : inv s0 /\ measure s0 <= f)
           (step: forall s, inv s -> match body s with
                                     | inl s' => inv s' /\ measure s' < measure s
@@ -327,12 +334,12 @@ Module default.
                                     end)
       : P (loop f s0).
     Proof.
-      edestruct (by_invariant_fuel body inv P measure f s0) as [x [HA HB]]; eauto; [].
+      edestruct (by_invariant_fuel (body:=body) inv measure P f s0) as [x [HA HB]]; eauto; [].
       apply (f_equal (fun r : A + B => match r with inl s => default | inr s => s end)) in HA.
       cbv [loop]; break_match; congruence.
     Qed.
 
-    Lemma by_invariant (inv P:_->Prop) measure s0
+    Lemma by_invariant (inv:_->Prop) measure P s0
           (init : inv s0)
           (step: forall s, inv s -> match body s with
                                     | inl s' => inv s' /\ measure s' < measure s
@@ -341,6 +348,8 @@ Module default.
       : P (loop (measure s0) s0).
     Proof. eapply by_invariant_fuel; eauto. Qed.
   End Default.
+  Global Arguments by_invariant_fuel {A B default body} inv measure P.
+  Global Arguments by_invariant {A B default body} inv measure P.
 End default.
 
 Module silent.
@@ -352,7 +361,7 @@ Module silent.
       | inr s => s
       end.
 
-    Lemma by_invariant_fuel inv (P:_->Prop) measure f s0
+    Lemma by_invariant_fuel inv measure (P:_->Prop) f s0
           (init : inv s0 /\ measure s0 <= f)
           (step: forall s, inv s -> match body s with
                                     | inl s' => inv s' /\ measure s' < measure s
@@ -360,12 +369,12 @@ Module silent.
                                     end)
       : P (loop f s0).
     Proof.
-      edestruct (by_invariant_fuel body inv P measure f s0) as [x [A B]]; eauto; [].
+      edestruct (by_invariant_fuel (body:=body) inv measure P f s0) as [x [A B]]; eauto; [].
       apply (f_equal (fun r : state + state => match r with inl s => s | inr s => s end)) in A.
       cbv [loop]; break_match; congruence.
     Qed.
 
-    Lemma by_invariant (inv P:_->Prop) measure s0
+    Lemma by_invariant (inv:_->Prop) measure P s0
           (init : inv s0)
           (step: forall s, inv s -> match body s with
                                     | inl s' => inv s' /\ measure s' < measure s
@@ -374,6 +383,9 @@ Module silent.
       : P (loop (measure s0) s0).
     Proof. eapply by_invariant_fuel; eauto. Qed.
   End Silent.
+
+  Global Arguments by_invariant_fuel {state body} inv measure P.
+  Global Arguments by_invariant {state body} inv measure P.
 End silent.
 
 Module while.
@@ -406,7 +418,7 @@ Module while.
                end.
     Qed.
 
-    Lemma by_invariant_fuel inv P measure f s0
+    Lemma by_invariant_fuel inv measure P f s0
           (init : inv s0 /\ measure s0 <= f)
           (step : forall s, inv s -> if test s
                                      then inv (body s) /\ measure (body s) < measure s
@@ -418,7 +430,7 @@ Module while.
       specialize (step s H); destruct (test s); eauto.
     Qed.
 
-    Lemma by_invariant (inv P:_->Prop) measure s0
+    Lemma by_invariant (inv:_->Prop) measure P s0
           (init : inv s0)
           (step : forall s, inv s -> if test s
                                      then inv (body s) /\ measure (body s) < measure s
@@ -454,6 +466,8 @@ Module while.
                end.
     Qed.
   End While.
+  Global Arguments by_invariant_fuel {state test body} inv measure P.
+  Global Arguments by_invariant {state test body} inv measure P.
 End while.
 Notation while := while.while.
 
@@ -462,3 +476,51 @@ Definition for2 {state} (test : state -> bool) (increment body : state -> state)
 
 Definition for3 {state} init test increment body fuel :=
   @for2 state test increment body fuel init.
+
+(* TODO: we probably want notations for these. here are some ideas: *)
+
+(* notation for core.loop_cps2:
+  loop '(state1, state2, ...) := init
+    decreasing measure {{
+    continue:
+      body
+  }} break;
+  cont
+where
+  continue, break are binders (for continuations passed by core.loop_cps2)
+  state1, state2 are binders for tuple fields
+  measure is a function of state1, state2, ... (or the tuple bound by them)
+  body is a function of continue_label, state1, state2, ...
+  cont is the contiuation passed to core.loop_cps2
+  "loop" and "decreasing" are delimiters
+*)
+
+(* notation for while.while_cps:
+  
+  loop '(state1, state2, ...) := init
+  while test
+  decreasing measure {{
+    continue:
+      body
+  }};
+  cont
+where
+  state1, state2, continue are binders
+  body is a function of all of them
+  test and measure are functions of state1, state2 (or the tuple bound by them)
+  "loop", "while" and "decreasing" are delimiters
+  cont is a continuation to the entire loop
+ *)
+
+
+(* idea for notation for some for-like loop:
+loop '(state1, state2) := init
+for (i := 0; i <? n; i+1) {{
+  continue:
+    body
+}};
+cont
+
+where the first i is a binder for all uses of i, and the test and increment are parsed as functions of some argument *)
+
+(* ideally it should be possible to explicitly indicate the type of the loop state somewhere, in all these examples *)
