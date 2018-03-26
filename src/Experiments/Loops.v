@@ -167,32 +167,27 @@ while it is expected to have type
   Qed.
 
   Lemma by_invariant' (inv P:_->Prop) measure f s0
-          (inv_init : inv s0)
-          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
+          (inv_init : inv s0 /\ measure s0 < f)
+          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s' /\ measure s' < measure s)
           (inv_break : forall s s', body s = inr s' -> inv s -> P s')
-          (measure_decreases : forall s s', body s = inl s' -> inv s -> measure s' < measure s)
-          (measure_fuel : measure s0 < f)
     : match loop f s0 with
       | inl a => False
       | inr s => P s
       end.
   Proof.
-    revert dependent s0; induction f; intros.
+    revert dependent s0; induction f; intros; destruct_head'_and.
     { exfalso; lia. }
     { rewrite loop_fuel_S_first.
       destruct (body s0) eqn:Hs0a; [|solve [eauto] ].
       specialize (IHf a).
-      specialize (inv_continue s0 a Hs0a inv_init).
-      specialize (measure_decreases s0 a).
-      specialize_by (assumption || lia); auto. }
+      destruct (inv_continue s0 a Hs0a ltac:(assumption)).
+      specialize_by (split; (auto || lia)); auto. }
   Qed.
 
   Lemma by_invariant (inv P:_->Prop) measure f s0
-          (inv_init : inv s0)
-          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s')
+          (inv_init : inv s0 /\ measure s0 < f)
+          (inv_continue : forall s s', body s = inl s' -> inv s -> inv s' /\ measure s' < measure s)
           (inv_break : forall s s', body s = inr s' -> inv s -> P s')
-          (measure_decreases : forall s s', body s = inl s' -> inv s -> measure s' < measure s)
-          (measure_fuel : measure s0 < f)
     : exists b, loop f s0 = inr b /\ P b.
   Proof.
     pose proof (by_invariant' inv P measure f s0);
@@ -273,11 +268,9 @@ while it is expected to have type
 
   Lemma invariant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
         : exists inv measure,
-          inv s0
-          /\ (forall s s', body s = inl s' -> inv s -> inv s')
-          /\ (forall s s', body s = inr s' -> inv s -> P s')
-          /\ (forall s s', body s = inl s' -> inv s -> measure s' < measure s)
-          /\ measure s0 < f.
+          (inv s0 /\ measure s0 < f)
+          /\ (forall s s', body s = inl s' -> inv s -> inv s' /\ measure s' < measure s)
+          /\ (forall s s', body s = inr s' -> inv s -> P s').
   Proof.
     set (measure f s :=
            match iterations_required f s with
@@ -287,17 +280,15 @@ while it is expected to have type
     exists (fun s => match loop (S (measure f s)) s with
                      | inl a => False
                      | inr r => r = b end).
-    exists (measure f).
-    repeat split.
+    exists (measure f); split; [ |repeat match goal with |- _ /\ _ => split end..].
     { cbv [measure].
-      destruct (iterations_required f s0) eqn:Hs0; [|exfalso].
-      { eapply iterations_required_correct in Hs0.
-        destruct Hs0 as [? [? Hs0]].
-        replace (S (Nat.pred n)) with n by lia.
-        pose proof (proj2 (Hs0 n) ltac:(lia)) as HH; rewrite HH.
-        exact (loop_fuel_irrelevant _ _ _ _ _ HH H). }
-      { eapply iterations_required_correct in Hs0; [|reflexivity].
-        destruct_head'_ex; congruence. } }
+      destruct (iterations_required f s0) eqn:Hs0;
+        eapply iterations_required_correct in Hs0;
+          [ .. | exact (ltac:(lia):f <= f)]; [|destruct_head'_ex; congruence].
+      destruct Hs0 as [? [? Hs0]].
+      replace (S (Nat.pred n)) with n by lia.
+      pose proof (proj2 (Hs0 n) ltac:(lia)) as HH; rewrite HH.
+      split; [exact (loop_fuel_irrelevant _ _ _ _ _ HH H) | lia]. }
     { intros s s' Hstep Hinv.
       destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
       cbv [measure] in *.
@@ -306,6 +297,7 @@ while it is expected to have type
       rewrite HA.
       destruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
       pose proof (HE' ltac:(constructor)) as HE; clear HE'.
+      split; [|lia].
       replace (S (Nat.pred (S x))) with (S x) in * by lia.
       rewrite loop_fuel_S_first, Hstep in Hs.
       replace (S (Nat.pred x)) with x in * by lia; rewrite HE.
@@ -314,28 +306,15 @@ while it is expected to have type
       destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
       change (loop 1 s = inr c) in Hstep.
       rewrite (loop_fuel_irrelevant _ _ _ _ _ Hstep Hs); exact HP. }
-    { intros s s' Hstep Hinv.
-      destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
-      cbv [measure] in *.
-      destruct (iterations_required f s) eqn:Hs' in *; [|cbv in Hs; congruence].
-      destruct (iterations_required_step _ _ s' _ Hs' Hstep) as [? [HA ?]]; subst.
-      rewrite HA.
-      apply iterations_required_correct in HA; lia. }
-    { cbv [measure].
-      destruct (iterations_required f s0 ) eqn:Hs;
-        eapply iterations_required_correct in Hs; [lia| | exact (ltac:(lia): f <= f) ].
-      destruct_head'_ex; congruence. }
   Qed.
 
   Lemma invariant_iff f s0 P :
     (exists b, loop f s0 = inr b /\ P b)
     <->
     (exists inv measure,
-        inv s0
-        /\ (forall s s', body s = inl s' -> inv s -> inv s')
-        /\ (forall s s', body s = inr s' -> inv s -> P s')
-        /\ (forall s s', body s = inl s' -> inv s -> measure s' < measure s)
-        /\ measure s0 < f).
+        (inv s0 /\ measure s0 < f)
+        /\ (forall s s', body s = inl s' -> inv s -> inv s' /\ measure s' < measure s)
+        /\ (forall s s', body s = inr s' -> inv s -> P s')).
   Proof.
     repeat (intros || split || destruct_head'_ex || destruct_head'_and);
       eauto using invariant_complete, by_invariant.
