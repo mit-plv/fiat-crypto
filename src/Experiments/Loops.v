@@ -26,75 +26,47 @@ Ltac forward_by H t :=
 Section Loops.
   Context {A B : Type} (body : A -> A + B).
 
-  Definition loop (fuel : nat) (s : A) : A + B :=
-    nat_rect _ (inl s)
-             (fun _ s =>
-                match s with
-                | inl a => body a
-                | inr b => s
-                end
-             ) fuel.
+  Fixpoint loop (fuel : nat) (s : A) {struct fuel} : A + B :=
+    match fuel with
+    | O => inl s
+    | S fuel' =>
+      let s := body s in
+      match s with
+      | inl a => loop fuel' a
+      | inr b => inr b
+      end
+    end.
 
   Context (body_cps : A ~> A + B).
-(* WHY does the following not work?
-Set Printing Universes.
-Check (nat_rect (fun _ => forall R, (A+B -> R)->R)
-                (fun R ret => ret (inl s))
-                (fun _ recurse =>
-                   recurse (forall R, (A + B -> R) -> R)
-                           (fun s R ret =>
-                              match s with
-                              | inl a =>
-                                s' <- body_cps a;
-                                ret s'
-                              | inr b => ret (inr b)
-                              end
-                ))
-                fuel).
-The term
- "recurse (~> A + B)
-    (fun (s : A + B) (R : Type@{Top.1376}) (ret : A + B -> R) =>
-     match s with
-     | inl a => s' <- body_cps a;
-                ret s'
-     | inr b => ret (inr b)
-     end)" has type "forall (R : Type@{Top.1376}) (_ : forall _ : sum A B, R), R"
-while it is expected to have type
- "forall (R : Type@{Top.1374}) (_ : forall _ : sum A B, R), R"
-(universe inconsistency: Cannot enforce Top.1374 <= Top.1376 because Top.1376
-< Top.1375 <= Top.1374). *)
-  Definition loop_cps (fuel : nat) (s : A) : ~> A+B :=
-    nat_rect (fun _ => forall R, (A + B -> R) -> R)
-             (fun R ret => ret (inl s))
-             (fun _ recurse R =>
-                recurse ((A + B -> R) -> R)
-                        (fun s ret =>
-                           match s with
-                           | inl a =>
-                             s' <- body_cps a;
-                               ret s'
-                           | inr b => ret (inr b)
-                           end
-             )) fuel.
+
+  Fixpoint loop_cps (fuel : nat) (s : A) {struct fuel} :~> A + B :=
+    match fuel with
+    | O => return (inl s)
+    | S fuel' =>
+      s <- body_cps s;
+        match s with
+        | inl a => loop_cps fuel' a
+        | inr b => return (inr b)
+        end
+    end.
 
   Context (body_cps_ok : forall s {R} f, body_cps s R f = f (body s)).
   Lemma loop_cps_ok n s {R} f : loop_cps n s R f = f (loop n s).
   Proof.
-    revert f; revert R; revert s; induction n; [reflexivity|].
-    simpl loop; simpl loop_cps; intros. (* FIXME: unsimpl *)
-    rewrite IHn; break_match; [|reflexivity].
-    cbv [cpscall]; rewrite body_cps_ok; reflexivity.
+    revert f; revert R; revert s; induction n; [reflexivity|]; cbn; intros.
+    cbv [cpscall cpsreturn]; rewrite body_cps_ok;
+      break_match; rewrite ?IHn; reflexivity.
   Qed.
 
   Context (body_cps2 : A -> forall {R}, (A -> R) -> (B -> R) -> R).
-  Definition loop_cps2 (fuel : nat) (s : A) :
-    forall {R} (timeout : A -> R) (ret : B -> R), R :=
-    nat_rect (fun _ => forall R, (A -> R) -> (B -> R) -> R)
-             (fun R continue break => continue s)
-             (fun _ recurse R continue break =>
-                recurse R (fun a => body_cps2 a R continue break) break
-             )
-             fuel.
+  Fixpoint loop_cps2 (fuel : nat) (s : A) {R} (timeout:A->R) (ret:B->R) {struct fuel} : R :=
+    match fuel with
+    | O => timeout s
+    | S fuel' =>
+      body_cps2 s R
+                (fun a => @loop_cps2 fuel' a R timeout ret)
+                (fun b => ret b)
+    end.
 
   Context (body_cps2_ok : forall s {R} continue break,
               body_cps2 s R continue break =
@@ -102,27 +74,21 @@ while it is expected to have type
               | inl a => continue a
               | inr b => break b
               end).
-  Lemma loop_cps2_ok n s {R} timeout ret :
+  Lemma loop_cps2_ok n s {R} (timeout ret : _ -> R) :
     @loop_cps2 n s R timeout ret =
     match loop n s with
     | inl a => timeout a
     | inr b => ret b
     end.
   Proof.
-    revert ret; revert timeout; revert R; revert s; induction n;
-      [intros; reflexivity|].
-    simpl loop; simpl loop_cps2; intros. (* FIXME: unsimpl *)
-    repeat (rewrite IHn || rewrite body_cps2_ok || break_match || congruence).
+    revert ret; revert timeout; revert R; revert s;
+      induction n; intros; cbn; [reflexivity|].
+    rewrite body_cps2_ok.
+    destruct (body s); [|reflexivity].
+    rewrite IHn. reflexivity.
   Qed.
 
   Lemma loop_fuel_0 s : loop 0 s = inl s.
-  Proof. reflexivity. Qed.
-
-  Lemma loop_fuel_S_last n s : loop (S n) s =
-                          match loop n s with
-                          | inl a => body a
-                          | inr b => loop n s
-                          end.
   Proof. reflexivity. Qed.
 
   Lemma loop_fuel_S_first n s : loop (S n) s =
@@ -130,11 +96,17 @@ while it is expected to have type
                                 | inl a => loop n a
                                 | inr b => inr b
                                 end.
+  Proof. reflexivity. Qed.
+
+  Lemma loop_fuel_S_last n s : loop (S n) s =
+                          match loop n s with
+                          | inl a => body a
+                          | inr b => loop n s
+                          end.
   Proof.
-    revert s; induction n; intros s.
-    { break_match; rewrite ?loop_fuel_S_last, ?loop_fuel_0; congruence. }
-    { rewrite loop_fuel_S_last, IHn.
-      destruct (body s) eqn:?; [rewrite loop_fuel_S_last; reflexivity | reflexivity]. }
+    revert s; induction n; cbn; intros s.
+    { break_match; reflexivity. }
+    { destruct (body s); cbn; rewrite <-?IHn; reflexivity. }
   Qed.
 
   Lemma loop_fuel_S_stable n s b (H : loop n s = inr b) : loop (S n) s = inr b.
@@ -292,7 +264,8 @@ while it is expected to have type
     { intros s s' Hstep Hinv.
       destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
       cbv [measure] in *.
-      destruct (iterations_required f s) eqn:Hs' in *; [|cbv in Hs; congruence].
+      destruct (iterations_required f s) eqn:Hs' in *;
+       [|rewrite loop_fuel_S_last in Hs; cbv in Hs; congruence].
       destruct (iterations_required_step _ _ s' _ Hs' Hstep) as [? [HA ?]]; subst.
       rewrite HA.
       destruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
@@ -304,8 +277,8 @@ while it is expected to have type
       exact (loop_fuel_irrelevant _ _ _ _ _ HE Hs). }
     { intros s c Hstep Hinv.
       destruct (loop (S (measure f s)) s) eqn:Hs; [contradiction|subst].
-      change (loop 1 s = inr c) in Hstep.
-      rewrite (loop_fuel_irrelevant _ _ _ _ _ Hstep Hs); exact HP. }
+      assert (HH: loop 1 s = inr c) by (cbn; rewrite Hstep; reflexivity).
+      rewrite (loop_fuel_irrelevant _ _ _ _ _ HH Hs); exact HP. }
   Qed.
 
   Lemma invariant_iff f s0 P :
@@ -378,132 +351,63 @@ while it is expected to have type
     { intros; eapply by_invariant_inr_complete; eauto. }
     { intros [? [?[]]]; eapply by_invariant_inr; eauto. }
   Qed.
-
-  (*
-WIP WIP
-  
-  Fixpoint loop' (fuel : nat) (s : A) {struct fuel} : A + B :=
-    match fuel with
-    | O => inl s
-    | S fuel' =>
-      match body s with
-      | inl s => loop' fuel' s
-      | inr b => inr b
-      end end.
-
-  Fixpoint loop'_cps (fuel : nat) (s : A) {struct fuel} : ~> A + B :=
-    match fuel with
-    | O => return (inl s)
-    | S fuel' =>
-      s_b <- body_cps s;
-        match s_b with
-        | inl s => loop'_cps fuel' s
-        | inr b => return (inr b)
-        end
-    end.
-    
-  
-  Lemma loop_break_step fuel start state :
-    (body start = inl state) ->
-    loop fuel start = inr state.
-  Proof.
-    destruct fuel; simpl loop; break_match; intros; congruence.
-  Qed.
-
-  Lemma loop_continue_step fuel start state :
-    (body start = inr state) ->
-    loop fuel start =
-    match fuel with | O => inl state | S fuel' => loop fuel' state end.
-  Proof.
-    destruct fuel; simpl loop; break_match; intros; congruence.
-  Qed.
-
-  (* TODO: provide [invariant state] to proofs of this *)
-  Definition progress (measure : continue_state -> nat) :=
-    forall state state', body state = inr state' -> measure state' < measure state.
-  Definition terminates fuel start := forall l, loop fuel start <> inl l.
-  Lemma terminates_by_measure measure (H : progress measure) :
-    forall fuel start, measure start <= fuel -> terminates fuel start.
-  Proof.
-    induction fuel; intros;
-      repeat match goal with
-             | _ => solve [ congruence | lia ]
-             | _ => progress cbv [progress terminates] in *
-             | _ => progress cbn [loop]
-             | _ => progress break_match
-             | H : forall _ _, body _ = inr _ -> _ , Heq : body _ = inr _ |- _ => specialize (H _ _ Heq)
-             | _ => eapply IHfuel
-    end.
-  Qed.
-
-  Definition loop_default fuel start default
-    : break_state :=
-    sum_rect
-      (fun _ => break_state)
-      (fun _ => default)
-      (fun result => result)
-      (loop fuel start).
-
-  Lemma loop_default_eq fuel start default
-        (Hterm : terminates fuel start) :
-    loop fuel start = inr (loop_default fuel start default).
-  Proof.
-    cbv [terminates loop_default sum_rect] in *; break_match; congruence.
-  Qed.
 End Loops.
 
-Definition by_invariant {continue_state break_state body fuel start default}
-           invariant measure P invariant_start invariant_continue invariant_break le_start progress 
-  := proj2 (@invariant_iff continue_state break_state body fuel start default (terminates_by_measure body measure progress fuel start le_start) P)
-           (ex_intro _ invariant (conj invariant_start (conj invariant_continue invariant_break))).
-Arguments terminates_by_measure {_ _ _}.
-                 
+Module silent.
+  Section Silent.
+    Context {state} (body : state -> state + state).
+    Definition loop fuel s : state :=
+      match loop body fuel s with
+      | inl s => s
+      | inr s => s
+      end.
+
+    Lemma by_invariant inv (P:_->Prop) measure f s0
+          (init : inv s0 /\ measure s0 < f)
+          (step : forall s s' : state,
+              body s = inl s' -> inv s -> inv s' /\ measure s' < measure s)
+          (fini: forall s s' : state, body s = inr s' -> inv s -> P s')
+      : P (loop f s0).
+    Proof.
+      edestruct (by_invariant body inv P measure f s0) as [x [A B]]; eauto; [].
+      apply (f_equal (fun r : state + state => match r with inl s => s | inr s => s end)) in A.
+      cbv [loop]; break_match; congruence.
+    Qed.
+  End Silent.
+End silent.
+
 Module while.
   Section While.
     Context {state}
             (test : state -> bool)
             (body : state -> state).
 
-    Fixpoint while (fuel: nat) (s : state) {struct fuel} : state :=
-      if test s
-      then
-        let s := body s in
-        match fuel with
-        | O => s
-        | S fuel' => while fuel' s
-        end
-      else s.
+    Fixpoint while f s :=
+      match f with
+      | O => s
+      | S f =>
+        if test s
+        then while f (body s)
+        else s
+      end.
 
     Section AsLoop.
-      Local Definition lbody := fun s => if test s then inr (body s) else inl s.
+      Local Definition lbody := fun s => if test s then inl (body s) else inr s.
 
-      Lemma eq_loop : forall fuel start, while fuel start = loop_default lbody fuel start (while fuel start).
+      Lemma eq_loop f s : while f s = sum_rect (fun _ => _) id id (loop lbody f s).
       Proof.
-        induction fuel; intros;
-          cbv [lbody loop_default sum_rect id] in *;
-          cbn [while loop]; [|rewrite IHfuel]; break_match; auto.
+        revert s; induction f; intros s; [reflexivity|].
+        { cbv [lbody sum_rect id] in *; cbn in *.
+          rewrite IHf; break_innermost_match; reflexivity. }
       Qed.
 
-      Lemma by_invariant fuel start 
-            (invariant : state -> Prop) (measure : state -> nat) (P : state -> Prop)
-            (_: invariant start)
-            (_: forall s, invariant s -> if test s then invariant (body s) else P s)
-            (_: measure start <= fuel)
-            (_: forall s, if test s then measure (body s) < measure s else True)
-        : P (while fuel start).
+      Lemma by_invariant inv P measure f s0
+            (init : inv s0 /\ measure s0 < f)
+            (step : forall s, if test s
+                              then inv s -> inv (body s) /\ measure (body s) < measure s
+                              else P (body s))
+        : P (while f s0).
       Proof.
-        rewrite eq_loop; cbv [lbody].
-        eapply (by_invariant invariant measure);
-          repeat match goal with
-                 | [ H : forall s, invariant s -> _, G: invariant ?s |- _ ] => unique pose proof (H _ G)
-                 | [ H : forall s, if ?f s then _ else _, G: ?f ?s = _ |- _ ] => unique pose proof (H s)
-                 | _ => solve [ trivial | congruence ]
-                 | _ => progress cbv [progress]
-                 | _ => progress intros
-                 | _ => progress subst
-                 | _ => progress inversion_sum
-                 | _ => progress break_match_hyps (* FIXME: this must be last? *)
-                 end.
       Qed.
     End AsLoop.
   End While.
