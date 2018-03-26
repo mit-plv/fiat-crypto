@@ -240,7 +240,6 @@ src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Jacobian.v
 src/Curves/Weierstrass/Projective.v
-src/Experiments/Loops.v
 src/Experiments/SimplyTypedArithmetic.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
@@ -6465,6 +6464,7 @@ src/Util/LetIn.v
 src/Util/LetInMonad.v
 src/Util/ListUtil.v
 src/Util/Logic.v
+src/Util/Loops.v
 src/Util/NUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
