@@ -1543,6 +1543,9 @@ Module Compilers.
             => reify_rec (match Datatypes.fst x, Datatypes.snd x return _ with
                           | a, b => f
                           end)
+          | match ?x with nil => ?N | cons a b => @?C a b end
+            => let T := type of term in
+               reify_rec (@list_case _ (fun _ => T) N C x)
           | let x := ?a in @?b x
             => let A := type of a in
                let B := lazymatch type of b with forall x, @?B x => B end in
@@ -1673,6 +1676,7 @@ Module Compilers.
           | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
           | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
           | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
+          | list_case {A P} : ident ((unit -> P) * (A * list A -> P) * list A) P
           | pred : ident nat nat
           | List_length {T} : ident (list T) nat
           | List_seq : ident (nat * nat) (list nat)
@@ -1738,6 +1742,7 @@ Module Compilers.
                | bool_rect T => curry3 (fun t f => @Datatypes.bool_rect (fun _ => type.interp T) (t tt) (f tt))
                | nat_rect P => curry3_2 (fun O_case => @Datatypes.nat_rect (fun _ => type.interp P) (O_case tt))
                | list_rect A P => curry3_3 (fun N_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt))
+               | list_case A P => curry3_2 (fun N_case => @ListUtil.list_case (type.interp A) (fun _ => type.interp P) (N_case tt))
                | pred => Nat.pred
                | List_length T => @List.length (type.interp T)
                | List_seq => curry2 List.seq
@@ -1819,6 +1824,18 @@ Module Compilers.
                              ls)
             | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil ?PS ?ls
               => let dummy := match goal with _ => fail 1 "list_rect successor case is not syntactically a function of three arguments:" PS end in
+                 constr:(I : I)
+            | @ListUtil.list_case ?A (fun _ => ?T) ?Pnil (fun a tl => ?PS) ?ls
+              => let rA := type.reify A in
+                 let rT := type.reify T in
+                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
+                 mkAppIdent (@ident.list_case rA rT)
+                            ((fun _ : Datatypes.unit => Pnil),
+                             (fun pat : A * Datatypes.list A
+                              => let '(a, tl) := pat in PS),
+                             ls)
+            | @ListUtil.list_case ?A (fun _ => ?T) ?Pnil ?PS ?ls
+              => let dummy := match goal with _ => fail 1 "list_case successor case is not syntactically a function of two arguments:" PS end in
                  constr:(I : I)
             | Nat.pred ?x => mkAppIdent ident.pred x
             | @List.length ?A ?x =>
@@ -2352,6 +2369,20 @@ Module Compilers.
                => AppIdent ident.Z.zselect
              | for_reification.ident.Z_add_modulo
                => AppIdent ident.Z.add_modulo
+             | for_reification.ident.list_case A P
+               => ltac:(
+                    let v := reify
+                               (@expr var)
+                               (fun '((Pnil, Pcons, ls)
+                                      : (unit -> type.interp P)
+                                        * (type.interp A * list (type.interp A) -> type.interp P)
+                                        * (list (type.interp A)))
+                                => list_rect
+                                     (fun _ => type.interp P)
+                                     (Pnil tt)
+                                     (fun x xs _ => Pcons (x, xs))
+                                     ls) in
+                    let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_length A
                => ltac:(
                     let v := reify
