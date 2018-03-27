@@ -25,6 +25,7 @@ Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SubstEvars.
@@ -685,8 +686,7 @@ Module Saturated.
       Proof.
         cbv [sat_mul]; induction p; [reflexivity|].
         repeat match goal with
-               | _ => progress (autorewrite with push_eval in * )
-               | _ => progress simpl flat_map
+               | _ => progress (autorewrite with push_flat_map push_eval in * )
                | _ => rewrite IHp
                | _ => ring_simplify; omega
                end.
@@ -705,10 +705,7 @@ Module Saturated.
 
     Lemma div_step a b c d : 0 < a -> 0 < b ->
                              (c / a + d) / b = (a * d + c) / (a * b).
-    Proof.
-      intros. rewrite <- Z.div_add' by omega.
-      autorewrite with pull_Zdiv. repeat (f_equal; try ring ).
-    Qed.
+    Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
 
     Lemma add_mod_div_multiple a b n m:
       n > 0 ->
@@ -830,7 +827,7 @@ Module Columns.
       Ltac push_fast :=
         repeat match goal with
                | _ => progress cbv [Let_In]
-               | |- context [list_rect _ _ _ ?ls] => rewrite list_rect_to_match; destruct ls
+               | |- context [list_rect _ _ _ ?ls] => rewrite single_list_rect_to_match; destruct ls
                | _ => progress (unfold flatten_step in *; fold flatten_step in * )
                | _ => rewrite Nat.add_1_r
                | _ => rewrite Z.mul_div_eq_full by (auto; omega)
@@ -1275,7 +1272,7 @@ Module Rows.
                           (eval nm (row1' ++ row1) + eval nm (row2' ++ row2))
                           (weight nm).
         Proof.
-          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push.
+          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push; [].
           rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
           apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length in *; try omega.
           eapply is_div_mod_step with (x := x1 + x2); try eassumption; push.
@@ -1318,7 +1315,7 @@ Module Rows.
                       nth_default 0 (fst (sum_rows' start_state row1 row2)) i
                       = ((eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) mod (weight (S i))) / (weight i).
         Proof.
-          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push.
+          induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push; [].
           
           rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
           apply IHrow1; clear IHrow1; push;
