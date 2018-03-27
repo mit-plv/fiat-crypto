@@ -11,6 +11,15 @@ Require Export Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 
+Definition list_case
+           {A} (P : list A -> Type) (N : P nil) (C : forall x xs, P (cons x xs))
+           (ls : list A)
+  : P ls
+  := match ls return P ls with
+     | nil => N
+     | cons x xs => C x xs
+     end.
+
 Create HintDb distr_length discriminated.
 Create HintDb simpl_set_nth discriminated.
 Create HintDb simpl_update_nth discriminated.
