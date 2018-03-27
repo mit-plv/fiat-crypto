@@ -5759,7 +5759,7 @@ Ltac cache_reify _ :=
   let e := match RHS with context[expr.Interp _ ?e] => e end in
   let E := fresh "E" in
   set (E := e);
-  let E' := constr:(PartialEvaluate false (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) in
+  let E' := constr:(canonicalize_list_recursion E) in
   let LHS := match goal with |- ?LHS = _ => LHS end in
   lazymatch LHS with
   | context LHS[@expr.Interp ?ident ?interp_ident ?t ?e]
@@ -5929,17 +5929,10 @@ Module Pipeline.
   Definition PrePipeline
              {t}
              (E : for_reification.Expr t)
-  : ErrorT (Expr t)
-    := let E := option_map
-                  (PartialEvaluate false)
-                  (CPS.CallFunWithIdContinuation_opt (CPS.Translate (canonicalize_list_recursion E))) in
-       match E with
-       | Some E => Success E
-       | None => Error (Type_too_complicated_for_cps t)
-       end.
+    : Expr t
+    := canonicalize_list_recursion E.
 
-  Lemma PrePipeline_correct {t} E v
-        (H : @PrePipeline t E = Success v)
+  Lemma PrePipeline_correct {t} (E : for_reification.Expr t) v
     : expr.Interp (@ident.interp) v =
       expr.Interp (@for_reification.ident.interp) E.
   Admitted.
@@ -5950,21 +5943,27 @@ Module Pipeline.
              {s d}
              (E : Expr (s -> d))
              arg_bounds
-  : Expr (s -> d)
-    := let E := PartialEvaluate true E in
-       (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so results in a pipeline that is 2x slower
-          unless we pass through a uniformly concrete [var] type
-          first *)
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_subst01 then Subst01.Subst01 E else E in
-       let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := PartialEvaluateWithBounds1 E arg_bounds in
-       E.
+  : ErrorT (Expr (s -> d))
+    := let E := CPS.CallFunWithIdContinuation_opt (CPS.Translate E) in
+       match E with
+       | Some E
+         => (let E := PartialEvaluate true E in
+             (* Note that DCE evaluates the expr with two different
+                [var] arguments, and so results in a pipeline that is
+                2x slower unless we pass through a uniformly concrete
+                [var] type first *)
+             dlet_nd e := ToFlat E in
+             let E := FromFlat e in
+             let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+             dlet_nd e := ToFlat E in
+             let E := FromFlat e in
+             let E := if with_subst01 then Subst01.Subst01 E else E in
+             let E := ReassociateSmallConstants.Reassociate (2^8) E in
+             let E := PartialEvaluateWithBounds1 E arg_bounds in
+             Success E)
+       | None => Error (Type_too_complicated_for_cps (s -> d))
+       end.
+
 
   Definition CheckBoundsPipeline
              relax_zrange
@@ -5990,7 +5989,10 @@ Module Pipeline.
              out_bounds
   : ErrorT (Expr (s -> d))
     := let E := BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 E arg_bounds in
-       CheckBoundsPipeline relax_zrange E arg_bounds out_bounds.
+       match E with
+       | Success E => CheckBoundsPipeline relax_zrange E arg_bounds out_bounds
+       | Error err => Error err
+       end.
 
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
@@ -6004,21 +6006,26 @@ Module Pipeline.
              out_bounds
              E
              rv
-             (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = E)
+             (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = Success E)
              (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
       ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
       /\ Interp rv arg = Interp e arg.
   Proof.
-    cbv [BoundsPipeline BoundsPipelineNoCheck CheckBoundsPipeline Let_In] in *; subst E;
-      edestruct (CheckPartialEvaluateWithBounds1 _ _ _ _) eqn:H.
-    inversion Hrv; subst.
-    { intros; eapply CheckedPartialEvaluateWithBounds1_Correct in H; [ | eassumption || reflexivity.. ].
+    cbv [BoundsPipeline BoundsPipelineNoCheck CheckBoundsPipeline Let_In] in *;
+      repeat match goal with
+             | [ H : match ?x with _ => _ end = Success _ |- _ ]
+               => destruct x eqn:?; cbv beta iota in H; [ | congruence ];
+                    let H' := fresh in
+                    inversion H as [H']; clear H; rename H' into H
+             end;
+      edestruct (CheckPartialEvaluateWithBounds1 _ _ _ _) eqn:H;
+      inversion_sum; subst.
+    { intros; eapply CheckedPartialEvaluateWithBounds1_Correct in H; [ | eassumption || (try reflexivity).. ].
       destruct H as [H0 H1].
       split; [ exact H1 | rewrite H0 ].
       exact admit. (* interp correctness *) }
-    { congruence. }
   Qed.
 
   Definition BoundsPipeline_correct_transT
@@ -6048,7 +6055,7 @@ Module Pipeline.
                   (Harg : ZRange.type.is_bounded_by arg_bounds arg = true),
             Interp e arg = InterpE arg)
         rv E
-        (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = E)
+        (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = Success E)
         (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
@@ -6065,13 +6072,12 @@ Module Pipeline.
              arg_bounds
              out_bounds
   : ErrorT (Expr (s -> d))
-    := match PrePipeline E with
-       | Success E => @BoundsPipeline
-                        (*with_dead_code_elimination*) with_subst01
-                        relax_zrange
-                        s d E arg_bounds out_bounds
-       | Error m => Error m
-       end.
+    := let E := PrePipeline E in
+       @BoundsPipeline
+         (*with_dead_code_elimination*)
+         with_subst01
+         relax_zrange
+         s d E arg_bounds out_bounds.
 
   Lemma BoundsPipeline_full_correct
              (with_dead_code_elimination : bool := true)
@@ -6090,10 +6096,10 @@ Module Pipeline.
       ZRange.type.is_bounded_by out_bounds (Interp rv arg) = true
       /\ Interp rv arg = for_reification.Interp E arg.
   Proof.
-    cbv [BoundsPipeline_full] in *.
-    destruct (PrePipeline E) eqn:Hpre; [ | congruence ].
-    eapply BoundsPipeline_correct_trans; [ eassumption | | reflexivity | eassumption ].
-    intros; erewrite PrePipeline_correct; [ reflexivity | eassumption ].
+    cbv [BoundsPipeline_full BoundsPipeline] in *.
+    break_innermost_match_hyps; [ | congruence ].
+    eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption | eassumption ].
+    intros; erewrite PrePipeline_correct; reflexivity.
   Qed.
 
   Definition BoundsPipelineConstNoCheck
@@ -6101,21 +6107,27 @@ Module Pipeline.
              (with_subst01 : bool)
              {t}
              (e : Expr t)
-  : Expr t
-    := let E := PartialEvaluate true e in
-       (* Note that DCE evaluates the expr with two different [var]
-          arguments, and so results in a pipeline that is 2x slower
-          unless we pass through a uniformly concrete [var] type
-          first *)
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_subst01 then Subst01.Subst01 E else E in
-       let E := ReassociateSmallConstants.Reassociate (2^8) E in
-       let E := PartialEvaluate true E in
-       E.
+  : ErrorT (Expr t)
+    := let E := CPS.CallFunWithIdContinuation_opt (CPS.Translate e) in
+       match E with
+       | Some E
+         => (let E := PartialEvaluate true E in
+             (* Note that DCE evaluates the expr with two different
+                [var] arguments, and so results in a pipeline that is
+                2x slower unless we pass through a uniformly concrete
+                [var] type first *)
+             dlet_nd e := ToFlat E in
+             let E := FromFlat e in
+             let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+             dlet_nd e := ToFlat E in
+             let E := FromFlat e in
+             let E := if with_subst01 then Subst01.Subst01 E else E in
+             let E := ReassociateSmallConstants.Reassociate (2^8) E in
+             let E := PartialEvaluate true E in
+             Success E)
+       | None => Error (Type_too_complicated_for_cps t)
+       end.
+
 
   Definition CheckBoundsPipelineConst
              relax_zrange
@@ -6139,7 +6151,10 @@ Module Pipeline.
              bounds
   : ErrorT (Expr t)
     := let E := BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 E in
-       CheckBoundsPipelineConst relax_zrange E bounds.
+       match E with
+       | Success E => CheckBoundsPipelineConst relax_zrange E bounds
+       | Error err => Error err
+       end.
 
   Lemma BoundsPipelineConst_correct
              (with_dead_code_elimination : bool := true)
@@ -6152,19 +6167,24 @@ Module Pipeline.
              bounds
              rv
              E
-             (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = E)
+             (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = Success E)
              (Hrv : CheckBoundsPipelineConst relax_zrange E bounds = Success rv)
     : ZRange.type.is_bounded_by bounds (Interp rv) = true
       /\ Interp rv = Interp e.
   Proof.
     cbv [BoundsPipelineConst CheckBoundsPipelineConst BoundsPipelineConstNoCheck Let_In] in *;
-      edestruct (CheckPartialEvaluateWithBounds0 _ _ _) eqn:H.
-    inversion Hrv; subst.
+      repeat match goal with
+             | [ H : match ?x with _ => _ end = Success _ |- _ ]
+               => destruct x eqn:?; cbv beta iota in H; [ | congruence ];
+                    let H' := fresh in
+                    inversion H as [H']; clear H; rename H' into H
+             end;
+      destruct (CheckPartialEvaluateWithBounds0 _ _ _) eqn:H;
+      inversion_sum; subst.
     { intros; eapply CheckedPartialEvaluateWithBounds0_Correct in H; [ | eassumption || reflexivity.. ].
       destruct H as [H0 H1].
       split; [ exact H1 | rewrite H0 ].
       exact admit. (* interp correctness *) }
-    { congruence. }
   Qed.
 
   Definition BoundsPipelineConst_correct_transT
@@ -6189,7 +6209,7 @@ Module Pipeline.
         (InterpE_correct : Interp e = InterpE)
         rv
         E
-        (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = E)
+        (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = Success E)
         (Hrv : CheckBoundsPipelineConst relax_zrange E out_bounds = Success rv)
     : BoundsPipelineConst_correct_transT out_bounds InterpE rv.
   Proof.
@@ -6205,13 +6225,12 @@ Module Pipeline.
              (E : for_reification.Expr t)
              out_bounds
   : ErrorT (Expr t)
-    := match PrePipeline E with
-       | Success E => @BoundsPipelineConst
-                        (*with_dead_code_elimination*) with_subst01
-                        relax_zrange
-                        t E out_bounds
-       | Error m => Error m
-       end.
+    := let E := PrePipeline E in
+       @BoundsPipelineConst
+         (*with_dead_code_elimination*)
+         with_subst01
+         relax_zrange
+         t E out_bounds.
 
   Lemma BoundsPipelineConst_full_correct
              (with_dead_code_elimination : bool := true)
@@ -6227,10 +6246,10 @@ Module Pipeline.
     : ZRange.type.is_bounded_by out_bounds (Interp rv) = true
       /\ Interp rv = for_reification.Interp E.
   Proof.
-    cbv [BoundsPipelineConst_full] in *.
-    destruct (PrePipeline E) eqn:Hpre; [ | congruence ].
-    eapply BoundsPipelineConst_correct_trans; [ eassumption | | reflexivity | eassumption ].
-    intros; erewrite PrePipeline_correct; [ reflexivity | eassumption ].
+    cbv [BoundsPipelineConst_full BoundsPipelineConst] in *.
+    break_innermost_match_hyps; [ | congruence ].
+    eapply BoundsPipelineConst_correct_trans; [ eassumption | | eassumption | eassumption ].
+    intros; erewrite PrePipeline_correct; reflexivity.
   Qed.
 End Pipeline.
 
