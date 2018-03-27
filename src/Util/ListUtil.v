@@ -1879,7 +1879,7 @@ Ltac expand_lists _ :=
     end;
     subst v; reflexivity ].
 
-Lemma list_rect_to_match A (P:list A -> Type) (Pnil: P nil) (PS: forall a tl, P (a :: tl)) ls :
+Lemma single_list_rect_to_match A (P:list A -> Type) (Pnil: P nil) (PS: forall a tl, P (a :: tl)) ls :
   @list_rect A P Pnil (fun a tl _ => PS a tl) ls = match ls with
                                                    | cons a tl => PS a tl
                                                    | nil => Pnil
