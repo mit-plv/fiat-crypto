@@ -424,9 +424,13 @@ End Positional. End Positional.
 
 Section mod_ops.
   Import Positional.
-  Context (weight : nat -> Z)
-          (weight_0 : weight 0%nat = 1)
-          (weight_nz : forall i, weight i <> 0)
+  Local Coercion Z.of_nat : nat >-> Z.
+  Local Coercion QArith_base.inject_Z : Z >-> Q.
+  (* Design constraints:
+     - inputs must be [Z] (b/c reification does not support Q)
+     - internal structure must not match on the arguments (b/c reification does not support [positive]) *)
+  Context (limbwidth_num limbwidth_den : Z)
+          (limbwidth_good : 0 < limbwidth_den <= limbwidth_num)
           (s : Z)
           (c : list (Z*Z))
           (n : nat)
@@ -436,8 +440,60 @@ Section mod_ops.
           (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
           (Hn_nz : n <> 0%nat)
           (Hc : length c = len_c)
-          (Hidxs : length idxs = len_idxs)
-          (Hw_div_nz : forall i : nat, weight (S i) / weight i <> 0).
+          (Hidxs : length idxs = len_idxs).
+  Definition weight (i : nat)
+    := 2^(-(-(limbwidth_num * i) / limbwidth_den)).
+
+  Local Ltac Q_cbv :=
+    cbv [Qceiling inject_Z Qle Qfloor Qdiv Qnum Qden Qmult Qinv Qopp].
+
+  Local Lemma weight_ZQ_correct i
+        (limbwidth := (limbwidth_num / limbwidth_den)%Q)
+    : weight i = 2^Qceiling(limbwidth*i).
+  Proof.
+    clear -limbwidth_good.
+    cbv [limbwidth weight]; Q_cbv.
+    destruct limbwidth_num, limbwidth_den, i; try reflexivity;
+      repeat rewrite ?Pos.mul_1_l, ?Pos.mul_1_r, ?Z.mul_0_l, ?Zdiv_0_l, ?Zdiv_0_r, ?Z.mul_1_l, ?Z.mul_1_r, <- ?Z.opp_eq_mul_m1, ?Pos2Z.opp_pos;
+      try reflexivity; try lia.
+  Qed.
+
+  Lemma weight_0 : weight 0 = 1.
+  Proof.
+    clear.
+    cbv [weight Z.of_nat]; autorewrite with zsimplify_fast; reflexivity.
+  Qed.
+  Local Hint Immediate weight_0.
+
+  Local Ltac t_weight_with lem :=
+    clear -limbwidth_good;
+    intros; rewrite !weight_ZQ_correct;
+    apply lem;
+    try omega; Q_cbv; destruct limbwidth_den; cbn; try lia.
+
+  Local Lemma weight_nz : forall i, weight i <> 0.
+  Proof. t_weight_with (@pow_ceil_mul_nat_nonzero 2). Qed.
+  Local Hint Immediate weight_nz.
+
+  Local Lemma weight_div_nz : forall i : nat, weight (S i) / weight i <> 0.
+  Proof. t_weight_with (@pow_ceil_mul_nat_divide_nonzero 2). Qed.
+  Local Hint Immediate weight_div_nz.
+
+  (* lemmas for montred *)
+  Local Lemma weight_divides : forall i, weight (S i) / weight i > 0.
+  Proof. t_weight_with (@pow_ceil_mul_nat_divide 2). Qed.
+  Local Lemma weight_positive : forall i, weight i > 0.
+  Proof. t_weight_with (@pow_ceil_mul_nat_pos 2). Qed.
+  Local Lemma weight_multiples : forall i, weight (S i) mod weight i = 0.
+  Proof. t_weight_with (@pow_ceil_mul_nat_multiples 2). Qed.
+  Local Lemma weight_1_gt_1 : weight 1 > 1.
+  Proof.
+    clear -limbwidth_good.
+    cut (1 < weight 1); [ lia | ].
+    cbv [weight Z.of_nat]; autorewrite with zsimplify_fast.
+    apply Z.pow_gt_1; [ omega | ].
+    Z.div_mod_to_quot_rem; nia.
+  Qed.
 
   Derive carry_mulmod
          SuchThat (forall (fg : list Z * list Z)
@@ -484,7 +540,7 @@ Section mod_ops.
          As eval_addmod.
   Proof.
     intros.
-    rewrite <-eval_add by assumption.
+    rewrite <-eval_add by auto.
     eapply f_equal2; [|trivial]. eapply f_equal.
     expand_lists ().
     subst f g addmod; reflexivity.
@@ -1047,9 +1103,7 @@ Module Ring.
   Qed.
 
   Section ring_goal.
-    Context (weight : nat -> Z)
-            (weight_0 : weight 0%nat = 1)
-            (weight_nz : forall i, weight i <> 0)
+    Context (limbwidth_num limbwidth_den : Z)
             (n : nat)
             (s : Z)
             (c : list (Z * Z))
@@ -1057,6 +1111,7 @@ Module Ring.
             (length_tight_bounds : length tight_bounds = n)
             (loose_bounds : list zrange)
             (length_loose_bounds : length loose_bounds = n).
+    Local Notation weight := (weight limbwidth_num limbwidth_den).
     Local Notation eval := (Positional.eval weight n).
     Let prime_bound : zrange
       := r[0~>(s - Associational.eval c - 1)]%zrange.
@@ -5782,7 +5837,7 @@ Ltac cache_reify _ :=
 Create HintDb reify_gen_cache.
 
 Derive carry_mul_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (fg : list Z * list Z)
                         (n : nat)
                         (s : Z)
@@ -5791,14 +5846,14 @@ Derive carry_mul_gen
                         (idxs : list nat)
                         (len_idxs : nat),
                     Interp (t:=type.reify_type_of carry_mulmod)
-                           carry_mul_gen w s c n len_c idxs len_idxs fg
-                    = carry_mulmod w s c n len_c idxs len_idxs fg)
+                           carry_mul_gen limbwidth_num limbwidth_den s c n len_c idxs len_idxs fg
+                    = carry_mulmod limbwidth_num limbwidth_den s c n len_c idxs len_idxs fg)
        As carry_mul_gen_correct.
 Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
-Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
 
 Derive carry_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (f : list Z)
                         (n : nat)
                         (s : Z)
@@ -5807,38 +5862,38 @@ Derive carry_gen
                         (idxs : list nat)
                         (len_idxs : nat),
                     Interp (t:=type.reify_type_of carrymod)
-                           carry_gen w s c n len_c idxs len_idxs f
-                    = carrymod w s c n len_c idxs len_idxs f)
+                           carry_gen limbwidth_num limbwidth_den s c n len_c idxs len_idxs f
+                    = carrymod limbwidth_num limbwidth_den s c n len_c idxs len_idxs f)
        As carry_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
 
 Derive encode_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (v : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
                         (len_c : nat),
                     Interp (t:=type.reify_type_of encodemod)
-                           encode_gen w s c n len_c v
-                    = encodemod w s c n len_c v)
+                           encode_gen limbwidth_num limbwidth_den s c n len_c v
+                    = encodemod limbwidth_num limbwidth_den s c n len_c v)
        As encode_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = encodemod _ _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
 
 Derive add_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (fg : list Z * list Z)
                         (n : nat),
                     Interp (t:=type.reify_type_of addmod)
-                           add_gen w n fg
-                    = addmod w n fg)
+                           add_gen limbwidth_num limbwidth_den n fg
+                    = addmod limbwidth_num limbwidth_den n fg)
        As add_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = addmod _ _ _) => simple apply add_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = addmod _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
 Derive sub_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
@@ -5846,14 +5901,14 @@ Derive sub_gen
                         (coef : Z)
                         (fg : list Z * list Z),
                     Interp (t:=type.reify_type_of submod)
-                           sub_gen w s c n len_c coef fg
-                    = submod w s c n len_c coef fg)
+                           sub_gen limbwidth_num limbwidth_den s c n len_c coef fg
+                    = submod limbwidth_num limbwidth_den s c n len_c coef fg)
        As sub_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = submod _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
 
 Derive opp_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
@@ -5861,40 +5916,40 @@ Derive opp_gen
                         (coef : Z)
                         (f : list Z),
                     Interp (t:=type.reify_type_of oppmod)
-                           opp_gen w s c n len_c coef f
-                    = oppmod w s c n len_c coef f)
+                           opp_gen limbwidth_num limbwidth_den s c n len_c coef f
+                    = oppmod limbwidth_num limbwidth_den s c n len_c coef f)
        As opp_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
 
-Definition zeromod w n s c len_c := encodemod w n s c len_c 0.
-Definition onemod w n s c len_c := encodemod w n s c len_c 1.
+Definition zeromod limbwidth_num limbwidth_den n s c len_c := encodemod limbwidth_num limbwidth_den n s c len_c 0.
+Definition onemod limbwidth_num limbwidth_den n s c len_c := encodemod limbwidth_num limbwidth_den n s c len_c 1.
 
 Derive zero_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
                         (len_c : nat),
                     Interp (t:=type.reify_type_of zeromod)
-                           zero_gen w s c n len_c
-                    = zeromod w s c n len_c)
+                           zero_gen limbwidth_num limbwidth_den s c n len_c
+                    = zeromod limbwidth_num limbwidth_den s c n len_c)
        As zero_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = zeromod _ _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
 
 Derive one_gen
-       SuchThat (forall (w : nat -> Z)
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
                         (len_c : nat),
                     Interp (t:=type.reify_type_of onemod)
-                           one_gen w s c n len_c
-                    = onemod w s c n len_c)
+                           one_gen limbwidth_num limbwidth_den s c n len_c
+                    = onemod limbwidth_num limbwidth_den s c n len_c)
        As one_gen_correct.
 Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = onemod _ _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
 
 Derive id_gen
        SuchThat (forall (n : nat)
@@ -6304,61 +6359,6 @@ Proof.
 Qed.
 
 
-(** TODO: Move me? *)
-Definition app_and_maybe_cancel {s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
-  := (fun var
-      => let f' := (match f _ in expr.expr t return option match t with
-                                                           | (s -> d)%ctype => expr s -> expr d
-                                                           | _ => unit
-                                                           end with
-                    | Abs s d f => Some f
-                    | _ => None
-                    end) in
-         match f' with
-         | Some f => unexpr (f (x _))
-         | None => f var @ x var
-         end%expr).
-
-Derive rweight
-       SuchThat (forall (limbwidth : Q)
-                        (i : nat),
-                    Interp (t:=(type.nat -> type.Z)%ctype) (rweight limbwidth) i
-                    = 2^Qceiling(limbwidth*i))
-       As Interp_rweight.
-Proof.
-  intros; destruct limbwidth as [n d].
-  cbv [Qceiling Qfloor Qopp Qnum Qdiv Qplus inject_Z Qmult Qinv Qden].
-  rewrite Pos.mul_1_r.
-  remember (Z.pos d) as dz.
-  etransitivity.
-  Focus 2.
-  { repeat match goal with H : _ |- _ => clear H end.
-    revert n dz i.
-    lazymatch goal with
-    | [ |- forall a b c, ?ev = @?RHS a b c ]
-      => refine (fun a b c => f_equal (fun F => F a b c) (_ : _ = RHS));
-           clear a b c
-    end.
-    Reify_rhs ().
-    reflexivity. }
-  Unfocus.
-  cbv beta.
-  let E := lazymatch goal with | [ |- _ = expr.Interp _ ?E ?n ?dz ?i ] => E end in
-  let E := constr:(app_and_maybe_cancel
-                     (app_and_maybe_cancel
-                        (canonicalize_list_recursion E)
-                        (GallinaReify.Reify n))
-                     (GallinaReify.Reify dz)) in
-  let E := (eval vm_compute in E) in
-  transitivity (Interp E i);
-    [
-    | lazy [expr.Interp expr.interp for_reification.ident.interp ident.interp]; reflexivity ].
-  subst dz rweight.
-  set (q := n # d).
-  change n with (Qnum q); change d with (Qden q); clearbody q; clear.
-  reflexivity.
-Qed.
-
 (** XXX TODO: Translate Jade's python script *)
 Section rcarry_mul.
   Context (n : nat)
@@ -6376,7 +6376,6 @@ Section rcarry_mul.
   Definition relax_zrange_of_machine_wordsize
     := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z.
 
-  Let rw := rweight limbwidth.
   Let relax_zrange := relax_zrange_of_machine_wordsize.
   Let tight_bounds : ZRange.type.interp (type.list type.Z)
     := List.repeat r[0~>upperbound_tight]%zrange n.
@@ -6442,7 +6441,7 @@ Section rcarry_mul.
   Definition rcarry_mul
     := BoundsPipeline
          (carry_mul_gen
-            @ rw @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify (length c) @ GallinaReify.Reify idxs @ GallinaReify.Reify (length idxs))
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify (length c) @ GallinaReify.Reify idxs @ GallinaReify.Reify (length idxs))
          (loose_bounds, loose_bounds)
          tight_bounds.
 
@@ -6450,13 +6449,13 @@ Section rcarry_mul.
     := BoundsPipeline_correct
          (loose_bounds, loose_bounds)
          tight_bounds
-         (carry_mulmod (Interp rw) s c n (List.length c) idxs (List.length idxs)).
+         (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rcarry_correct
     := BoundsPipeline_correct
          loose_bounds
          tight_bounds
-         (carrymod (Interp rw) s c n (List.length c) idxs (List.length idxs)).
+         (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
@@ -6468,35 +6467,35 @@ Section rcarry_mul.
     := BoundsPipeline_correct
          (tight_bounds, tight_bounds)
          loose_bounds
-         (addmod (Interp rw) n).
+         (addmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
   Definition rsub_correct
     := BoundsPipeline_correct
          (tight_bounds, tight_bounds)
          loose_bounds
-         (submod (Interp rw) s c n (List.length c) coef).
+         (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
 
   Definition ropp_correct
     := BoundsPipeline_correct
          tight_bounds
          loose_bounds
-         (oppmod (Interp rw) s c n (List.length c) coef).
+         (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
 
   Definition rencode_correct
     := BoundsPipeline_correct
          prime_bound
          tight_bounds
-         (encodemod (Interp rw) s c n (List.length c)).
+         (encodemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   Definition rzero_correct
     := BoundsPipelineConst_correct
          tight_bounds
-         (zeromod (Interp rw) s c n (List.length c)).
+         (zeromod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   Definition rone_correct
     := BoundsPipelineConst_correct
          tight_bounds
-         (onemod (Interp rw) s c n (List.length c)).
+         (onemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
   Definition rcarry_mul_correctT rv : Prop
@@ -6546,8 +6545,6 @@ Section rcarry_mul.
 
     Lemma use_curve_good
       : Z.pos m = s - Associational.eval c
-        /\ (Interp rw 0%nat = 1)
-        /\ (forall i, Interp rw i <> 0)
         /\ Z.pos m <> 0
         /\ s - Associational.eval c <> 0
         /\ s <> 0
@@ -6555,7 +6552,7 @@ Section rcarry_mul.
         /\ n <> 0%nat
         /\ List.length tight_bounds = n
         /\ List.length loose_bounds = n
-        /\ forall i, Interp rw (S i) / Interp rw i <> 0.
+        /\ 0 < Qden limbwidth <= Qnum limbwidth.
     Proof.
       clear -curve_good.
       cbv [check_args] in curve_good.
@@ -6564,12 +6561,8 @@ Section rcarry_mul.
       Z.ltb_to_lt.
       rewrite Qle_bool_iff in *.
       rewrite NPeano.Nat.eqb_neq in *.
-      generalize (@pow_ceil_mul_nat_divide_nonzero 2 limbwidth).
-      generalize (@pow_ceil_mul_nat_nonzero 2 limbwidth).
       intros.
-      cbv [Qle] in *; cbn [Qnum Qden] in *.
-      cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *.
-      cbn [Qnum Qden] in *.
+      cbv [Qnum Qden limbwidth Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *.
       rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.
       specialize_by lia.
       repeat match goal with H := _ |- _ => subst H end.
@@ -6584,12 +6577,12 @@ Section rcarry_mul.
       { use_curve_good_t. }
       { use_curve_good_t. }
       { use_curve_good_t. }
-      { use_curve_good_t. }
     Qed.
 
     Definition GoodT : Prop
       := @Ring.GoodT
-           (Interp rw)
+           (Qnum limbwidth)
+           (Z.pos (Qden limbwidth))
            n s c
            tight_bounds
            (Interp rrelaxv)
@@ -6614,6 +6607,7 @@ Section rcarry_mul.
                      | intros; apply eval_oppmod
                      | intros; apply eval_encodemod
                      | eassumption
+                     | apply conj
                      | progress intros
                      | progress cbv [onemod zeromod]
                      | match goal with
@@ -7361,19 +7355,43 @@ Module MontgomeryReduction.
     Context (HN_range : 0 <= N < R) (HN'_range : 0 <= N' < R) (HN_nz : N <> 0) (R_gt_1 : R > 1)
             (N'_good : Z.equiv_modulo R (N*N') (-1)) (R'_good: Z.equiv_modulo N (R*R') 1).
 
-    Context (w w_half : nat -> Z).
-    Context (w_half_sq : forall i, (w_half i) * (w_half i) = w i).
-    Context (w_half_0 : w_half 0%nat = 1)
-            (w_half_nonzero : forall i, w_half i <> 0)
-            (w_half_positive : forall i, w_half i > 0)
-            (w_half_multiples : forall i, w_half (S i) mod w_half i = 0)
-            (w_half_divides : forall i : nat, w_half (S i) / w_half i > 0).
-    Context (w_0 : w 0%nat = 1)
-            (w_nonzero : forall i, w i <> 0)
-            (w_positive : forall i, w i > 0)
-            (w_multiples : forall i, w (S i) mod w i = 0)
-            (w_divides : forall i : nat, w (S i) / w i > 0).
-    Context (w_1_gt1 : w 1 > 1) (w_half_1_gt1 : w_half 1 > 1).
+    Context (Zlog2R : Z).
+    Let w : nat -> Z := weight Zlog2R 1.
+    Let w_half : nat -> Z := weight (Zlog2R / 2) 1.
+    Context (R_square : 2 * (Zlog2R / 2) = Zlog2R)
+            (R_big_enough : 2 <= Zlog2R)
+            (R_two_pow : 2^Zlog2R = R).
+    Local Lemma w_half_sq : forall i, (w_half i) * (w_half i) = w i.
+    Proof.
+      cbv [w_half w weight]; intro.
+      autorewrite with pull_Zpow zsimplify.
+      rewrite Z.mul_assoc, R_square.
+      reflexivity.
+    Qed.
+    Local Lemma log2R_good : 0 < 1 <= Zlog2R.
+    Proof. clear -R_big_enough; lia. Qed.
+    Local Lemma half_log2R_good : 0 < 1 <= Zlog2R / 2.
+    Proof. clear -R_big_enough; Z.div_mod_to_quot_rem; nia. Qed.
+    Let w_half_0 : w_half 0%nat = 1 := weight_0 _ _.
+    Let w_half_nonzero : forall i, w_half i <> 0
+      := weight_nz _ _ half_log2R_good.
+    Let w_half_positive : forall i, w_half i > 0
+      := weight_positive _ _ half_log2R_good.
+    Let w_half_multiples : forall i, w_half (S i) mod w_half i = 0
+      := weight_multiples _ _ half_log2R_good.
+    Let w_half_divides : forall i : nat, w_half (S i) / w_half i > 0
+      := weight_divides _ _ half_log2R_good.
+    Let w_0 : w 0%nat = 1 := weight_0 _ _.
+    Let w_nonzero : forall i, w i <> 0
+      := weight_nz _ _ log2R_good.
+    Let w_positive : forall i, w i > 0
+      := weight_positive _ _ log2R_good.
+    Let w_multiples : forall i, w (S i) mod w i = 0
+      := weight_multiples _ _ log2R_good.
+    Let w_divides : forall i : nat, w (S i) / w i > 0
+      := weight_divides _ _ log2R_good.
+    Let w_1_gt1 : w 1 > 1 := weight_1_gt_1 _ _ log2R_good.
+    Let w_half_1_gt1 : w_half 1 > 1 := weight_1_gt_1 _ _ half_log2R_good.
     Context (n:nat) (Hn: n = 2%nat).
 
     Definition montred' (lo_hi : (Z * Z)) :=
@@ -7385,7 +7403,12 @@ Module MontgomeryReduction.
       dlet_nd lo'' := fst (Z.sub_get_borrow_full R (fst hi'_carry) y') in
       Z.add_modulo lo'' 0 N.
 
-    Context (Hw : forall i, w i = R ^ Z.of_nat i).
+    Local Lemma Hw : forall i, w i = R ^ Z.of_nat i.
+    Proof.
+      clear -R_two_pow R_big_enough; cbv [w weight]; intro.
+      autorewrite with zsimplify.
+      rewrite Z.pow_mul_r, R_two_pow by omega; reflexivity.
+    Qed.
 
     Local Ltac solve_range :=
       repeat match goal with
@@ -7453,16 +7476,16 @@ Module MontgomeryReduction.
 
   Derive montred_gen
          SuchThat (forall (N R N' : Z)
-                          (w w_half : nat -> Z)
+                          (Zlog2R : Z)
                           (n: nat)
                           (lo_hi : Z * Z),
                       Interp (t:=type.reify_type_of montred')
-                             montred_gen N R N' w w_half n lo_hi
-                      = montred' N R N' w w_half n lo_hi)
+                             montred_gen N R N' Zlog2R n lo_hi
+                      = montred' N R N' Zlog2R n lo_hi)
          As montred_gen_correct.
   Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
   Module Export ReifyHints.
-    Global Hint Extern 1 (_ = montred' _ _ _ _ _ _ _) => simple apply montred_gen_correct : reify_gen_cache.
+    Global Hint Extern 1 (_ = montred' _ _ _ _ _ _) => simple apply montred_gen_correct : reify_gen_cache.
   End ReifyHints.
 
   Section rmontred.
@@ -7476,8 +7499,6 @@ Module MontgomeryReduction.
       := relax_zrange_gen [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize; 4 * machine_wordsize]%Z.
     Local Arguments relax_zrange_of_machine_wordsize / .
 
-    Let rw := rweight machine_wordsize.
-    Let rw_half := rweight (machine_wordsize / 2).
     Let relax_zrange := relax_zrange_of_machine_wordsize.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
@@ -7506,7 +7527,7 @@ Module MontgomeryReduction.
       := BoundsPipeline_correct
            (bound, bound)
            bound
-           (montred' N R N' (Interp rw) (Interp rw_half) 2).
+           (montred' N R N' (Z.log2 R) 2).
 
     Notation type_of_strip_5arrow := ((fun (d : Prop) (_ : forall A B C D E, d) => d) _).
     Definition rmontred_correctT rv : Prop
