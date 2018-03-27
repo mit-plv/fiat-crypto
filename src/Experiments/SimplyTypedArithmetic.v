@@ -5718,6 +5718,33 @@ Module test8.
     exact I.
   Qed.
 End test8.
+Module test9.
+  Example test9 : True.
+  Proof.
+    let v := Reify (fun y : list Z => (hd 0%Z y, tl y)) in
+    pose v as E.
+    vm_compute in E.
+    pose (PartialEvaluate true (canonicalize_list_recursion E)) as E'.
+    lazy in E'.
+    clear E.
+    lazymatch (eval cbv delta [E'] in E') with
+    | (fun var
+       => (λ x,
+           (ident.list_rect
+              @@
+              ((λ _, ident.primitive 0%Z @@ TT),
+               (λ x0, ident.fst @@ (ident.fst @@ Var x0)),
+               Var x),
+            ident.list_rect
+              @@
+              ((λ _, ident.nil @@ TT),
+               (λ x0, ident.snd @@ (ident.fst @@ Var x0)),
+               Var x)))%expr)
+      => idtac
+    end.
+    exact I.
+  Qed.
+End test9.
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
 Ltac cache_reify _ :=
