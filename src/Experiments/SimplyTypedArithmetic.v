@@ -420,118 +420,122 @@ Module Positional. Section Positional.
   End sub.
   Hint Rewrite @eval_opp @eval_sub : push_eval.
   Hint Rewrite @length_sub @length_opp : distr_length.
-
-  Section mod_ops.
-    Context (s : Z)
-            (c : list (Z*Z))
-            (n : nat)
-            (len_c : nat)
-            (idxs : list nat)
-            (len_idxs : nat)
-            (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
-            (Hn_nz : n <> 0%nat)
-            (Hc : length c = len_c)
-            (Hidxs : length idxs = len_idxs)
-            (Hw_div_nz : forall i : nat, weight (S i) / weight i <> 0).
-
-    Derive carry_mulmod
-           SuchThat (forall (fg : list Z * list Z)
-                            (f := fst fg) (g := snd fg)
-                            (Hf : length f = n)
-                            (Hg : length g = n),
-                        (eval n (carry_mulmod fg)) mod (s - Associational.eval c)
-                        = (eval n f * eval n g) mod (s - Associational.eval c))
-           As eval_carry_mulmod.
-    Proof.
-      intros.
-      rewrite <-eval_mulmod with (s:=s) (c:=c) by auto.
-      etransitivity;
-        [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
-            by auto; reflexivity ].
-      eapply f_equal2; [|trivial]. eapply f_equal.
-      expand_lists ().
-      subst f g carry_mulmod; reflexivity.
-    Qed.
-
-    Derive carrymod
-           SuchThat (forall (f : list Z)
-                            (Hf : length f = n),
-                        (eval n (carrymod f)) mod (s - Associational.eval c)
-                        = (eval n f) mod (s - Associational.eval c))
-           As eval_carrymod.
-    Proof.
-      intros.
-      etransitivity;
-        [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
-            by auto; reflexivity ].
-      eapply f_equal2; [|trivial]. eapply f_equal.
-      expand_lists ().
-      subst carrymod; reflexivity.
-    Qed.
-
-    Derive addmod
-           SuchThat (forall (fg: list Z * list Z)
-                            (f := fst fg) (g := snd fg)
-                            (Hf : length f = n)
-                            (Hg : length g = n),
-                        (eval n (addmod fg)) mod (s - Associational.eval c)
-                        = (eval n f + eval n g) mod (s - Associational.eval c))
-           As eval_addmod.
-    Proof.
-      intros.
-      rewrite <-eval_add by assumption.
-      eapply f_equal2; [|trivial]. eapply f_equal.
-      expand_lists ().
-      subst f g addmod; reflexivity.
-    Qed.
-
-    Derive submod
-           SuchThat (forall (coef:Z)
-                            (fg: list Z * list Z)
-                            (f := fst fg) (g := snd fg)
-                            (Hf : length f = n)
-                            (Hg : length g = n),
-                        (eval n (submod coef fg)) mod (s - Associational.eval c)
-                        = (eval n f - eval n g) mod (s - Associational.eval c))
-           As eval_submod.
-    Proof.
-      intros.
-      rewrite <-eval_sub with (coef:=coef) by auto.
-      eapply f_equal2; [|trivial]. eapply f_equal.
-      expand_lists ().
-      subst f g submod; reflexivity.
-    Qed.
-
-    Derive oppmod
-           SuchThat (forall (coef:Z)
-                            (f: list Z)
-                            (Hf : length f = n),
-                        (eval n (oppmod coef f)) mod (s - Associational.eval c)
-                        = (- eval n f) mod (s - Associational.eval c))
-           As eval_oppmod.
-    Proof.
-      intros.
-      rewrite <-eval_opp with (coef:=coef) by auto.
-      eapply f_equal2; [|trivial]. eapply f_equal.
-      expand_lists ().
-      subst oppmod; reflexivity.
-    Qed.
-
-    Derive encodemod
-           SuchThat (forall (f:Z),
-                        (eval n (encodemod f)) mod (s - Associational.eval c)
-                        = f mod (s - Associational.eval c))
-           As eval_encodemod.
-    Proof.
-      intros.
-      etransitivity.
-      2:rewrite <-@eval_encode with (n:=n) by auto; reflexivity.
-      eapply f_equal2; [|trivial]. eapply f_equal.
-      expand_lists ().
-      subst encodemod; reflexivity.
-    Qed.
-  End mod_ops.
 End Positional. End Positional.
+
+Section mod_ops.
+  Import Positional.
+  Context (weight : nat -> Z)
+          (weight_0 : weight 0%nat = 1)
+          (weight_nz : forall i, weight i <> 0)
+          (s : Z)
+          (c : list (Z*Z))
+          (n : nat)
+          (len_c : nat)
+          (idxs : list nat)
+          (len_idxs : nat)
+          (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
+          (Hn_nz : n <> 0%nat)
+          (Hc : length c = len_c)
+          (Hidxs : length idxs = len_idxs)
+          (Hw_div_nz : forall i : nat, weight (S i) / weight i <> 0).
+
+  Derive carry_mulmod
+         SuchThat (forall (fg : list Z * list Z)
+                          (f := fst fg) (g := snd fg)
+                          (Hf : length f = n)
+                          (Hg : length g = n),
+                      (eval weight n (carry_mulmod fg)) mod (s - Associational.eval c)
+                      = (eval weight n f * eval weight n g) mod (s - Associational.eval c))
+         As eval_carry_mulmod.
+  Proof.
+    intros.
+    rewrite <-eval_mulmod with (s:=s) (c:=c) by auto.
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    expand_lists ().
+    subst f g carry_mulmod; reflexivity.
+  Qed.
+
+  Derive carrymod
+         SuchThat (forall (f : list Z)
+                          (Hf : length f = n),
+                      (eval weight n (carrymod f)) mod (s - Associational.eval c)
+                      = (eval weight n f) mod (s - Associational.eval c))
+         As eval_carrymod.
+  Proof.
+    intros.
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    expand_lists ().
+    subst carrymod; reflexivity.
+  Qed.
+
+  Derive addmod
+         SuchThat (forall (fg: list Z * list Z)
+                          (f := fst fg) (g := snd fg)
+                          (Hf : length f = n)
+                          (Hg : length g = n),
+                      (eval weight n (addmod fg)) mod (s - Associational.eval c)
+                      = (eval weight n f + eval weight n g) mod (s - Associational.eval c))
+         As eval_addmod.
+  Proof.
+    intros.
+    rewrite <-eval_add by assumption.
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    expand_lists ().
+    subst f g addmod; reflexivity.
+  Qed.
+
+  Derive submod
+         SuchThat (forall (coef:Z)
+                          (fg: list Z * list Z)
+                          (f := fst fg) (g := snd fg)
+                          (Hf : length f = n)
+                          (Hg : length g = n),
+                      (eval weight n (submod coef fg)) mod (s - Associational.eval c)
+                      = (eval weight n f - eval weight n g) mod (s - Associational.eval c))
+         As eval_submod.
+  Proof.
+    intros.
+    rewrite <-eval_sub with (coef:=coef) by auto.
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    expand_lists ().
+    subst f g submod; reflexivity.
+  Qed.
+
+  Derive oppmod
+         SuchThat (forall (coef:Z)
+                          (f: list Z)
+                          (Hf : length f = n),
+                      (eval weight n (oppmod coef f)) mod (s - Associational.eval c)
+                      = (- eval weight n f) mod (s - Associational.eval c))
+         As eval_oppmod.
+  Proof.
+    intros.
+    rewrite <-eval_opp with (coef:=coef) by auto.
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    expand_lists ().
+    subst oppmod; reflexivity.
+  Qed.
+
+  Derive encodemod
+         SuchThat (forall (f:Z),
+                      (eval weight n (encodemod f)) mod (s - Associational.eval c)
+                      = f mod (s - Associational.eval c))
+         As eval_encodemod.
+  Proof.
+    intros.
+    etransitivity.
+    2:rewrite <-@eval_encode with (weight:=weight) (n:=n) by auto; reflexivity.
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    expand_lists ().
+    subst encodemod; reflexivity.
+  Qed.
+End mod_ops.
 
 Module BaseConversion.
   Import Positional.
