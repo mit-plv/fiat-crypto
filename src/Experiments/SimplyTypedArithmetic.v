@@ -2259,8 +2259,6 @@ Module Compilers.
           | List_partition {A} : ident ((A -> bool) * list A) (list A * list A)
           | List_app {A} : ident (list A * list A) (list A)
           | List_rev {A} : ident (list A) (list A)
-          | List_tl {A} : ident (list A) (list A)
-          | List_hd {A} : ident (A * list A) A
           | List_fold_right {A B} : ident ((B * A -> A) * A * list B) A
           | List_update_nth {T} : ident (nat * (T -> T) * list T) (list T)
           | List_nth_default {T} : ident (T * list T * nat) T
@@ -2329,8 +2327,6 @@ Module Compilers.
                | List_partition A => curry2 (@List.partition (type.interp A))
                | List_app A => curry2 (@List.app (type.interp A))
                | List_rev A => @List.rev (type.interp A)
-               | List_tl A => @List.tl (type.interp A)
-               | List_hd A => curry2 (@List.hd (type.interp A))
                | List_fold_right A B => curry3_1 (@List.fold_right (type.interp A) (type.interp B))
                | List_update_nth T => curry3 (@update_nth (type.interp T))
                | List_nth_default T => curry3 (@List.nth_default (type.interp T))
@@ -2453,12 +2449,6 @@ Module Compilers.
             | @List.rev ?A ?ls
               => let rA := type.reify A in
                  mkAppIdent (@ident.List_rev rA) ls
-            | @List.tl ?A ?ls
-              => let rA := type.reify A in
-                 mkAppIdent (@ident.List_tl rA) ls
-            | @List.hd ?A ?x ?ls
-              => let rA := type.reify A in
-                 mkAppIdent (@ident.List_hd rA) (x, ls)
             | @List.fold_right ?A ?B (fun b a => ?f) ?a0 ?ls
               => let rA := type.reify A in
                  let rB := type.reify B in
@@ -2513,8 +2503,6 @@ Module Compilers.
             Notation partition := List_partition.
             Notation app := List_app.
             Notation rev := List_rev.
-            Notation tl := List_tl.
-            Notation hd := List_hd.
             Notation fold_right := List_fold_right.
             Notation update_nth := List_update_nth.
             Notation nth_default := List_nth_default.
@@ -3091,28 +3079,6 @@ Module Compilers.
                                      nil
                                      (fun x l' rev_l' => List_app rev_l' [x])
                                      ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_tl A
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun ls
-                                => list_rect
-                                     (fun _ => list (type.interp A))
-                                     nil
-                                     (fun _ l' _ => l')
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_hd A
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun (xls : type.interp A * list (type.interp A))
-                                => list_rect
-                                     (fun _ => type.interp A)
-                                     (fst xls)
-                                     (fun x _ _ => x)
-                                     (snd xls)) in
                     let v := app_and_maybe_cancel v in exact v)
              | for_reification.ident.List_fold_right A B
                => ltac:(
@@ -5271,19 +5237,19 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z, a) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr (inr x, y), z), a)
-                       => let default_with_carry := default_interp (ident.Z.add_with_get_carry_concrete x) (inr (inr (y, z), a)) in
-                          let default_no_carry := default_interp (ident.Z.add_get_carry_concrete x) (inr (z,a)) in
-                          let default := match y with
-                                         | inr xx => if Z.eqb xx 0 then default_no_carry else default_with_carry
-                                         | _ => default_with_carry
+                       => let default_with_carry _ := default_interp (ident.Z.add_with_get_carry_concrete x) (inr (inr (y, z), a)) in
+                          let default_no_carry _ := default_interp (ident.Z.add_get_carry_concrete x) (inr (z,a)) in
+                          let default a := match y with
+                                         | inr xx => if Z.eqb xx 0 then default_no_carry a else default_with_carry a
+                                         | _ => default_with_carry a
                                          end in
                           match (z,a) with
                           | (inr xx, inl e)
                           | (inl e, inr xx)
                             => if Z.eqb xx 0
                                then inr (inl e, inr 0%Z)
-                               else default
-                          | _ => default
+                               else default tt
+                          | _ => default tt
                           end
                      | _ => default_interp idc x_y_z_a
                      end
@@ -5367,9 +5333,9 @@ Module Compilers.
              | ident.Nat_sub as idc
              | ident.Nat_mul as idc
              | ident.Nat_max as idc
-             | ident.Z_pow as idc
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
+             | ident.Z_pow as idc
                => fun (x_y : data (_ * _) * expr (_ * _) + (_ + type.interp _) * (_ + type.interp _))
                   => match x_y return _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
