@@ -4231,6 +4231,91 @@ Module Compilers.
     End expr.
   End DefaultValue.
 
+  Module GeneralizeVar.
+    (** In both lazy and cbv evaluation strategies, reduction under
+        lambdas is only done at the very end.  This means that if we
+        have a computation which returns a PHOAS syntax tree, and we
+        plug in two different values for [var], the computation is run
+        twice.  This module provides a way of computing a
+        representation of terms which does not suffer from this issue.
+        By computing a flat representation, and then going back to
+        PHOAS, the cbv strategy will fully compute the preceeding
+        PHOAS passes only once, and the lazy strategy will share
+        computation among the various uses of [var] (because there are
+        no lambdas to get blocked on) and thus will also compute the
+        preceeding PHOAS passes only once. *)
+    Module Flat.
+      Inductive expr : type -> Set :=
+      | Var (t : type) (n : positive) : expr t
+      | TT : expr type.unit
+      | AppIdent {s d} (idc : ident s d) (arg : expr s) : expr d
+      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
+      | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
+      | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d).
+    End Flat.
+
+    Definition ERROR {T} (v : T) : T. exact v. Qed.
+
+    Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
+             (cur_idx : PositiveMap.key)
+      : Flat.expr t
+      := match e in expr.expr t return Flat.expr t with
+         | Var t v => Flat.Var t v
+         | TT => Flat.TT
+         | AppIdent s d idc args
+           => Flat.AppIdent idc (@to_flat' _ args cur_idx)
+         | App s d f x => Flat.App
+                            (@to_flat' _ f cur_idx)
+                            (@to_flat' _ x cur_idx)
+         | Pair A B a b => Flat.Pair
+                             (@to_flat' _ a cur_idx)
+                             (@to_flat' _ b cur_idx)
+         | Abs s d f
+           => Flat.Abs s cur_idx
+                       (@to_flat'
+                          d (f cur_idx)
+                          (Pos.succ cur_idx))
+         end.
+
+    Fixpoint from_flat {t} (e : Flat.expr t)
+      : forall var, PositiveMap.t { t : type & var t } -> @expr var t
+      := match e in Flat.expr t return forall var, _ -> expr t with
+         | Flat.Var t v
+           => fun var ctx
+              => match (tv <- PositiveMap.find v ctx;
+                          type.try_transport var _ _ (projT2 tv))%option with
+                 | Some v => Var v
+                 | None => ERROR DefaultValue.expr.default
+                 end
+         | Flat.TT => fun _ _ => TT
+         | Flat.AppIdent s d idc args
+           => let args' := @from_flat _ args in
+              fun var ctx => AppIdent idc (args' var ctx)
+         | Flat.App s d f x
+           => let f' := @from_flat _ f in
+              let x' := @from_flat _ x in
+              fun var ctx => App (f' var ctx) (x' var ctx)
+         | Flat.Pair A B a b
+           => let a' := @from_flat _ a in
+              let b' := @from_flat _ b in
+              fun var ctx => Pair (a' var ctx) (b' var ctx)
+         | Flat.Abs s cur_idx d f
+           => let f' := @from_flat d f in
+              fun var ctx
+              => Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
+         end.
+
+    Definition to_flat {t} (e : expr t) : Flat.expr t
+      := to_flat' e 1%positive.
+    Definition ToFlat {t} (E : Expr t) : Flat.expr t
+      := to_flat (E _).
+    Definition FromFlat {t} (e : Flat.expr t) : Expr t
+      := let e' := @from_flat t e in
+         fun var => e' var (PositiveMap.empty _).
+    Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
+      := FromFlat (to_flat e).
+  End GeneralizeVar.
+
   Module partial.
     Notation data := ZRange.type.option.interp.
     Section value.
@@ -5147,7 +5232,9 @@ Module Compilers.
              (b_in : ZRange.type.option.interp s)
              (b_out : ZRange.type.option.interp d)
     : Expr (s -> d) + ZRange.type.option.interp d
-    := dlet_nd E := PartialEvaluateWithBounds1 e b_in in
+    := let E := PartialEvaluateWithBounds1 e b_in in
+       dlet_nd e := GeneralizeVar.ToFlat E in
+             let E := GeneralizeVar.FromFlat e in
              CheckPartialEvaluateWithBounds1 relax_zrange E b_in b_out.
 
   Definition CheckedPartialEvaluateWithBounds0
@@ -5155,7 +5242,9 @@ Module Compilers.
              {t} (e : Expr t)
              (b_out : ZRange.type.option.interp t)
     : Expr t + ZRange.type.option.interp t
-    := dlet_nd E := PartialEvaluate true e in
+    := let E := PartialEvaluate true e in
+       dlet_nd e := GeneralizeVar.ToFlat E in
+             let E := GeneralizeVar.FromFlat e in
              CheckPartialEvaluateWithBounds0 relax_zrange E b_out.
 
   Axiom admit_pf : False.
@@ -5169,8 +5258,7 @@ Module Compilers.
           {s d} (e : Expr (s -> d))
           (b_in : ZRange.type.option.interp s)
           (b_out : ZRange.type.option.interp d)
-          E (HE : PartialEvaluateWithBounds1 e b_in = E)
-          rv (Hrv : CheckPartialEvaluateWithBounds1 relax_zrange E b_in b_out = inl rv)
+          rv (Hrv : CheckedPartialEvaluateWithBounds1 relax_zrange e b_in b_out = inl rv)
     : forall arg
              (Harg : ZRange.type.option.is_bounded_by b_in arg = true),
       Interp rv arg = Interp e arg
@@ -5194,8 +5282,7 @@ Module Compilers.
                                    -> is_tighter_than_bool z r' = true)
           {t} (e : Expr t)
           (b_out : ZRange.type.option.interp t)
-          E (HE : PartialEvaluate true e = E)
-          rv (Hrv : CheckPartialEvaluateWithBounds0 relax_zrange E b_out = inl rv)
+          rv (Hrv : CheckedPartialEvaluateWithBounds0 relax_zrange e b_out = inl rv)
     : Interp rv = Interp e
       /\ ZRange.type.option.is_bounded_by b_out (Interp rv) = true.
   Proof.
@@ -5409,91 +5496,6 @@ Module Compilers.
     Definition Subst01 {t} (e : Expr t) : Expr t
       := fun var => subst01 (ComputeLiveCounts e) (e _).
   End Subst01.
-
-  Module GeneralizeVar.
-    (** In both lazy and cbv evaluation strategies, reduction under
-        lambdas is only done at the very end.  This means that if we
-        have a computation which returns a PHOAS syntax tree, and we
-        plug in two different values for [var], the computation is run
-        twice.  This module provides a way of computing a
-        representation of terms which does not suffer from this issue.
-        By computing a flat representation, and then going back to
-        PHOAS, the cbv strategy will fully compute the preceeding
-        PHOAS passes only once, and the lazy strategy will share
-        computation among the various uses of [var] (because there are
-        no lambdas to get blocked on) and thus will also compute the
-        preceeding PHOAS passes only once. *)
-    Module Flat.
-      Inductive expr : type -> Set :=
-      | Var (t : type) (n : positive) : expr t
-      | TT : expr type.unit
-      | AppIdent {s d} (idc : ident s d) (arg : expr s) : expr d
-      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
-      | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
-      | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d).
-    End Flat.
-
-    Definition ERROR {T} (v : T) : T. exact v. Qed.
-
-    Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
-             (cur_idx : PositiveMap.key)
-      : Flat.expr t
-      := match e in expr.expr t return Flat.expr t with
-         | Var t v => Flat.Var t v
-         | TT => Flat.TT
-         | AppIdent s d idc args
-           => Flat.AppIdent idc (@to_flat' _ args cur_idx)
-         | App s d f x => Flat.App
-                            (@to_flat' _ f cur_idx)
-                            (@to_flat' _ x cur_idx)
-         | Pair A B a b => Flat.Pair
-                             (@to_flat' _ a cur_idx)
-                             (@to_flat' _ b cur_idx)
-         | Abs s d f
-           => Flat.Abs s cur_idx
-                       (@to_flat'
-                          d (f cur_idx)
-                          (Pos.succ cur_idx))
-         end.
-
-    Fixpoint from_flat {t} (e : Flat.expr t)
-      : forall var, PositiveMap.t { t : type & var t } -> @expr var t
-      := match e in Flat.expr t return forall var, _ -> expr t with
-         | Flat.Var t v
-           => fun var ctx
-              => match (tv <- PositiveMap.find v ctx;
-                          type.try_transport var _ _ (projT2 tv))%option with
-                 | Some v => Var v
-                 | None => ERROR DefaultValue.expr.default
-                 end
-         | Flat.TT => fun _ _ => TT
-         | Flat.AppIdent s d idc args
-           => let args' := @from_flat _ args in
-              fun var ctx => AppIdent idc (args' var ctx)
-         | Flat.App s d f x
-           => let f' := @from_flat _ f in
-              let x' := @from_flat _ x in
-              fun var ctx => App (f' var ctx) (x' var ctx)
-         | Flat.Pair A B a b
-           => let a' := @from_flat _ a in
-              let b' := @from_flat _ b in
-              fun var ctx => Pair (a' var ctx) (b' var ctx)
-         | Flat.Abs s cur_idx d f
-           => let f' := @from_flat d f in
-              fun var ctx
-              => Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
-         end.
-
-    Definition to_flat {t} (e : expr t) : Flat.expr t
-      := to_flat' e 1%positive.
-    Definition ToFlat {t} (E : Expr t) : Flat.expr t
-      := to_flat (E _).
-    Definition FromFlat {t} (e : Flat.expr t) : Expr t
-      := let e' := @from_flat t e in
-         fun var => e' var (PositiveMap.empty _).
-    Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
-      := FromFlat (to_flat e).
-  End GeneralizeVar.
 
   Module ReassociateSmallConstants.
     Import Compilers.Uncurried.expr.default.
@@ -6025,47 +6027,36 @@ Module Pipeline.
       expr.Interp (@for_reification.ident.interp) E.
   Admitted.
 
-  Definition BoundsPipelineNoCheck
+  Definition BoundsPipeline_0_or_1
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
-             {s d}
-             (E : Expr (s -> d))
-             arg_bounds
-  : ErrorT (Expr (s -> d))
+             {t}
+             (E : Expr t)
+             {t'}
+             (CheckedPartialEvaluateWithBounds : _ -> _ -> _ + partial.data t')
+             out_bounds
+  : ErrorT (Expr t)
     := let E := CPS.CallFunWithIdContinuation_opt (CPS.Translate E) in
        match E with
        | Some E
-         => (let E := PartialEvaluate true E in
-             (* Note that DCE evaluates the expr with two different
-                [var] arguments, and so results in a pipeline that is
-                2x slower unless we pass through a uniformly concrete
-                [var] type first *)
-             dlet_nd e := ToFlat E in
-             let E := FromFlat e in
-             let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-             dlet_nd e := ToFlat E in
-             let E := FromFlat e in
-             let E := if with_subst01 then Subst01.Subst01 E else E in
-             let E := ReassociateSmallConstants.Reassociate (2^8) E in
-             let E := PartialEvaluateWithBounds1 E arg_bounds in
-             Success E)
-       | None => Error (Type_too_complicated_for_cps (s -> d))
+         => (let E := CheckedPartialEvaluateWithBounds E out_bounds in
+             match E with
+             | inl E
+               => ((* Note that DCE evaluates the expr with two
+                      different [var] arguments, and so results in a
+                      pipeline that is 2x slower unless we pass
+                      through a uniformly concrete [var] type first *)
+                 let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+                 dlet_nd e := ToFlat E in
+                 let E := FromFlat e in
+                 let E := if with_subst01 then Subst01.Subst01 E else E in
+                 (*let E := ReassociateSmallConstants.Reassociate (2^8) E in*)
+                 Success E)
+             | inr b
+               => Error (Computed_bounds_are_not_tight_enough b out_bounds)
+             end)
+       | None => Error (Type_too_complicated_for_cps t)
        end.
-
-
-  Definition CheckBoundsPipeline
-             relax_zrange
-             {s d}
-             (E : Expr (s -> d))
-             arg_bounds
-             out_bounds
-    : ErrorT (Expr (s -> d))
-    := let E := CheckPartialEvaluateWithBounds1 relax_zrange E arg_bounds out_bounds in
-       let E := match E with
-                | inl v => Success v
-                | inr b => Error (Computed_bounds_are_not_tight_enough b out_bounds)
-                end in
-       E.
 
   Definition BoundsPipeline
              (with_dead_code_elimination : bool := true)
@@ -6075,12 +6066,28 @@ Module Pipeline.
              (E : Expr (s -> d))
              arg_bounds
              out_bounds
-  : ErrorT (Expr (s -> d))
-    := let E := BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 E arg_bounds in
-       match E with
-       | Success E => CheckBoundsPipeline relax_zrange E arg_bounds out_bounds
-       | Error err => Error err
-       end.
+    : ErrorT (Expr (s -> d))
+    := BoundsPipeline_0_or_1
+         (*with_dead_code_elimination*)
+         with_subst01
+         E
+         (fun E => CheckedPartialEvaluateWithBounds1 relax_zrange E arg_bounds)
+         out_bounds.
+
+  Definition BoundsPipelineConst
+             (with_dead_code_elimination : bool := true)
+             (with_subst01 : bool)
+             relax_zrange
+             {t}
+             (E : Expr t)
+             out_bounds
+    : ErrorT (Expr t)
+    := BoundsPipeline_0_or_1
+         (*with_dead_code_elimination*)
+         with_subst01
+         E
+         (fun E => CheckedPartialEvaluateWithBounds0 relax_zrange E)
+         out_bounds.
 
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
@@ -6092,28 +6099,34 @@ Module Pipeline.
              (e : Expr (s -> d))
              arg_bounds
              out_bounds
-             E
              rv
-             (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = Success E)
-             (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
       /\ Interp rv arg = Interp e arg.
   Proof.
-    cbv [BoundsPipeline BoundsPipelineNoCheck CheckBoundsPipeline Let_In] in *;
+    cbv [BoundsPipeline BoundsPipeline_0_or_1 Let_In] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
                => destruct x eqn:?; cbv beta iota in H; [ | congruence ];
                     let H' := fresh in
                     inversion H as [H']; clear H; rename H' into H
-             end;
-      edestruct (CheckPartialEvaluateWithBounds1 _ _ _ _) eqn:H;
-      inversion_sum; subst.
-    { intros; eapply CheckedPartialEvaluateWithBounds1_Correct in H; [ | eassumption || (try reflexivity).. ].
-      destruct H as [H0 H1].
-      split; [ exact H1 | rewrite H0 ].
-      exact admit. (* interp correctness *) }
+             end.
+    { intros;
+        match goal with
+        | [ H : _ = _ |- _ ]
+          => eapply CheckedPartialEvaluateWithBounds1_Correct in H;
+               [ destruct H as [H0 H1] | .. ]
+        end;
+        [
+        | eassumption || (try reflexivity).. ].
+      refine (let H' := admit (* interp correctness *) in
+              conj _ (eq_trans H' _));
+        clearbody H'.
+      { rewrite H'; eassumption. }
+      { rewrite H0.
+        exact admit. (* interp correctness *) } }
   Qed.
 
   Definition BoundsPipeline_correct_transT
@@ -6142,9 +6155,8 @@ Module Pipeline.
          : forall arg
                   (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
             Interp e arg = InterpE arg)
-        rv E
-        (HE : BoundsPipelineNoCheck (*with_dead_code_elimination*) with_subst01 e arg_bounds = Success E)
-        (Hrv : CheckBoundsPipeline relax_zrange E arg_bounds out_bounds = Success rv)
+        rv
+        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
@@ -6184,65 +6196,10 @@ Module Pipeline.
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
       /\ Interp rv arg = for_reification.Interp E arg.
   Proof.
-    cbv [BoundsPipeline_full BoundsPipeline] in *.
-    break_innermost_match_hyps; [ | congruence ].
-    eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption | eassumption ].
+    cbv [BoundsPipeline_full] in *.
+    eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption.. ].
     intros; erewrite PrePipeline_correct; reflexivity.
   Qed.
-
-  Definition BoundsPipelineConstNoCheck
-             (with_dead_code_elimination : bool := true)
-             (with_subst01 : bool)
-             {t}
-             (e : Expr t)
-  : ErrorT (Expr t)
-    := let E := CPS.CallFunWithIdContinuation_opt (CPS.Translate e) in
-       match E with
-       | Some E
-         => (let E := PartialEvaluate true E in
-             (* Note that DCE evaluates the expr with two different
-                [var] arguments, and so results in a pipeline that is
-                2x slower unless we pass through a uniformly concrete
-                [var] type first *)
-             dlet_nd e := ToFlat E in
-             let E := FromFlat e in
-             let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-             dlet_nd e := ToFlat E in
-             let E := FromFlat e in
-             let E := if with_subst01 then Subst01.Subst01 E else E in
-             let E := ReassociateSmallConstants.Reassociate (2^8) E in
-             let E := PartialEvaluate true E in
-             Success E)
-       | None => Error (Type_too_complicated_for_cps t)
-       end.
-
-
-  Definition CheckBoundsPipelineConst
-             relax_zrange
-             {t}
-             (E : Expr t)
-             bounds
-  : ErrorT (Expr t)
-    := let E := CheckPartialEvaluateWithBounds0 relax_zrange E bounds in
-       let E := match E with
-                | inl v => Success v
-                | inr b => Error (Computed_bounds_are_not_tight_enough b bounds)
-                end in
-       E.
-
-  Definition BoundsPipelineConst
-             (with_dead_code_elimination : bool := true)
-             (with_subst01 : bool)
-             relax_zrange
-             {t}
-             (E : Expr t)
-             bounds
-  : ErrorT (Expr t)
-    := let E := BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 E in
-       match E with
-       | Success E => CheckBoundsPipelineConst relax_zrange E bounds
-       | Error err => Error err
-       end.
 
   Lemma BoundsPipelineConst_correct
              (with_dead_code_elimination : bool := true)
@@ -6254,25 +6211,31 @@ Module Pipeline.
              (e : Expr d)
              bounds
              rv
-             E
-             (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = Success E)
-             (Hrv : CheckBoundsPipelineConst relax_zrange E bounds = Success rv)
+             (Hrv : BoundsPipelineConst (*with_dead_code_elimination*) with_subst01 relax_zrange e bounds = Success rv)
     : ZRange.type.option.is_bounded_by bounds (Interp rv) = true
       /\ Interp rv = Interp e.
   Proof.
-    cbv [BoundsPipelineConst CheckBoundsPipelineConst BoundsPipelineConstNoCheck Let_In] in *;
+    cbv [BoundsPipelineConst BoundsPipeline_0_or_1 Let_In] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
                => destruct x eqn:?; cbv beta iota in H; [ | congruence ];
                     let H' := fresh in
                     inversion H as [H']; clear H; rename H' into H
-             end;
-      destruct (CheckPartialEvaluateWithBounds0 _ _ _) eqn:H;
-      inversion_sum; subst.
-    { intros; eapply CheckedPartialEvaluateWithBounds0_Correct in H; [ | eassumption || reflexivity.. ].
-      destruct H as [H0 H1].
-      split; [ exact H1 | rewrite H0 ].
-      exact admit. (* interp correctness *) }
+             end.
+    { intros;
+        match goal with
+        | [ H : _ = _ |- _ ]
+          => eapply CheckedPartialEvaluateWithBounds0_Correct in H;
+               [ destruct H as [H0 H1] | .. ]
+        end;
+        [
+        | eassumption || (try reflexivity).. ].
+      refine (let H' := admit (* interp correctness *) in
+              conj _ (eq_trans H' _));
+        clearbody H'.
+      { rewrite H'; eassumption. }
+      { rewrite H0.
+        exact admit. (* interp correctness *) } }
   Qed.
 
   Definition BoundsPipelineConst_correct_transT
@@ -6296,9 +6259,7 @@ Module Pipeline.
         (InterpE : type.interp t)
         (InterpE_correct : Interp e = InterpE)
         rv
-        E
-        (HE : BoundsPipelineConstNoCheck (*with_dead_code_elimination*) with_subst01 e = Success E)
-        (Hrv : CheckBoundsPipelineConst relax_zrange E out_bounds = Success rv)
+        (Hrv : BoundsPipelineConst (*with_dead_code_elimination*) with_subst01 relax_zrange e out_bounds = Success rv)
     : BoundsPipelineConst_correct_transT out_bounds InterpE rv.
   Proof.
     rewrite <- InterpE_correct.
@@ -6334,9 +6295,8 @@ Module Pipeline.
     : ZRange.type.option.is_bounded_by out_bounds (Interp rv) = true
       /\ Interp rv = for_reification.Interp E.
   Proof.
-    cbv [BoundsPipelineConst_full BoundsPipelineConst] in *.
-    break_innermost_match_hyps; [ | congruence ].
-    eapply BoundsPipelineConst_correct_trans; [ eassumption | | eassumption | eassumption ].
+    cbv [BoundsPipelineConst_full] in *.
+    eapply BoundsPipelineConst_correct_trans; [ eassumption | | eassumption.. ].
     intros; erewrite PrePipeline_correct; reflexivity.
   Qed.
 End Pipeline.
@@ -6425,7 +6385,7 @@ Section rcarry_mul.
                            then Pipeline.Error (Pipeline.Value_not_lt "0 < machine_wordsize" 0 machine_wordsize)
                            else res.
 
-  Notation type_of_strip_5arrow := ((fun (d : Prop) (_ : forall A B C D E, d) => d) _).
+  Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
   Notation BoundsPipeline rop in_bounds out_bounds
     := (Pipeline.BoundsPipeline
@@ -6440,7 +6400,7 @@ Section rcarry_mul.
           rop%Expr out_bounds).
 
   Notation BoundsPipeline_correct in_bounds out_bounds op
-    := (fun rv (rop : Expr (type.reify_type_of op%function)) E Hrop HE
+    := (fun rv (rop : Expr (type.reify_type_of op%function)) Hrop
         => @Pipeline.BoundsPipeline_correct_trans
              (*false*) true
              relax_zrange
@@ -6450,11 +6410,11 @@ Section rcarry_mul.
              in_bounds
              out_bounds
              op
-             Hrop rv E HE)
+             Hrop rv)
          (only parsing).
 
   Notation BoundsPipelineConst_correct out_bounds op
-    := (fun rv (rop : Expr (type.reify_type_of op)) E Hrop HE
+    := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
         => @Pipeline.BoundsPipelineConst_correct_trans
              (*false*) true
              relax_zrange
@@ -6463,7 +6423,7 @@ Section rcarry_mul.
              rop%Expr
              out_bounds
              op
-             Hrop rv E HE)
+             Hrop rv)
          (only parsing).
 
   (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
@@ -6528,23 +6488,23 @@ Section rcarry_mul.
 
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
   Definition rcarry_mul_correctT rv : Prop
-    := type_of_strip_5arrow (@rcarry_mul_correct rv).
+    := type_of_strip_3arrow (@rcarry_mul_correct rv).
   Definition rcarry_correctT rv : Prop
-    := type_of_strip_5arrow (@rcarry_correct rv).
+    := type_of_strip_3arrow (@rcarry_correct rv).
   Definition rrelax_correctT rv : Prop
-    := type_of_strip_5arrow (@rrelax_correct rv).
+    := type_of_strip_3arrow (@rrelax_correct rv).
   Definition radd_correctT rv : Prop
-    := type_of_strip_5arrow (@radd_correct rv).
+    := type_of_strip_3arrow (@radd_correct rv).
   Definition rsub_correctT rv : Prop
-    := type_of_strip_5arrow (@rsub_correct rv).
+    := type_of_strip_3arrow (@rsub_correct rv).
   Definition ropp_correctT rv : Prop
-    := type_of_strip_5arrow (@ropp_correct rv).
+    := type_of_strip_3arrow (@ropp_correct rv).
   Definition rencode_correctT rv : Prop
-    := type_of_strip_5arrow (@rencode_correct rv).
+    := type_of_strip_3arrow (@rencode_correct rv).
   Definition rzero_correctT rv : Prop
-    := type_of_strip_5arrow (@rzero_correct rv).
+    := type_of_strip_3arrow (@rzero_correct rv).
   Definition rone_correctT rv : Prop
-    := type_of_strip_5arrow (@rone_correct rv).
+    := type_of_strip_3arrow (@rone_correct rv).
 
   Section make_ring.
     Let m : positive := Z.to_pos (s - Associational.eval c).
@@ -6712,7 +6672,6 @@ Ltac vm_compute_lhs_reflexivity :=
 Ltac solve_rop' rop_correct do_if_not_cached machine_wordsizev :=
   eapply rop_correct with (machine_wordsize:=machine_wordsizev);
   [ do_inline_cache_reify do_if_not_cached
-  | vm_compute_lhs_reflexivity (*lazy; reflexivity*)
   | subst_evars; vm_compute_lhs_reflexivity (* lazy; reflexivity *) ].
 Ltac solve_rop_nocache rop_correct :=
   solve_rop' rop_correct ltac:(fun _ => idtac).
@@ -7539,7 +7498,7 @@ Module MontgomeryReduction.
               else res.
 
     Notation BoundsPipeline_correct in_bounds out_bounds op
-      := (fun rv (rop : Expr (type.reify_type_of op%function)) E Hrop HE
+      := (fun rv (rop : Expr (type.reify_type_of op%function)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
                false (* subst01 *)
                relax_zrange
@@ -7549,7 +7508,7 @@ Module MontgomeryReduction.
                in_bounds
                out_bounds
                op
-               Hrop rv E HE)
+               Hrop rv)
            (only parsing).
 
     Definition rmontred_correct
@@ -7558,9 +7517,9 @@ Module MontgomeryReduction.
            bound
            (montred' N R N' (Z.log2 R) 2).
 
-    Notation type_of_strip_5arrow := ((fun (d : Prop) (_ : forall A B C D E, d) => d) _).
+    Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
     Definition rmontred_correctT rv : Prop
-      := type_of_strip_5arrow (@rmontred_correct rv).
+      := type_of_strip_3arrow (@rmontred_correct rv).
   End rmontred.
 End MontgomeryReduction.
 
