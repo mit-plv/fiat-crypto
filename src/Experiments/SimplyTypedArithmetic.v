@@ -6039,19 +6039,21 @@ Module Pipeline.
     := let E := CPS.CallFunWithIdContinuation_opt (CPS.Translate E) in
        match E with
        | Some E
-         => (let E := CheckedPartialEvaluateWithBounds E out_bounds in
+         => (let E := PartialEvaluate false E in
+             (* Note that DCE evaluates the expr with two different
+                [var] arguments, and so results in a pipeline that is
+                2x slower unless we pass through a uniformly concrete
+                [var] type first *)
+             dlet_nd e := ToFlat E in
+             let E := FromFlat e in
+             let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+             dlet_nd e := ToFlat E in
+             let E := FromFlat e in
+             let E := if with_subst01 then Subst01.Subst01 E else E in
+             let E := ReassociateSmallConstants.Reassociate (2^8) E in
+             let E := CheckedPartialEvaluateWithBounds E out_bounds in
              match E with
-             | inl E
-               => ((* Note that DCE evaluates the expr with two
-                      different [var] arguments, and so results in a
-                      pipeline that is 2x slower unless we pass
-                      through a uniformly concrete [var] type first *)
-                 let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-                 dlet_nd e := ToFlat E in
-                 let E := FromFlat e in
-                 let E := if with_subst01 then Subst01.Subst01 E else E in
-                 (*let E := ReassociateSmallConstants.Reassociate (2^8) E in*)
-                 Success E)
+             | inl E => Success E
              | inr b
                => Error (Computed_bounds_are_not_tight_enough b out_bounds)
              end)
@@ -6941,50 +6943,41 @@ fun var : type -> Type =>
 (λ x : var
          (type.list (type.type_primitive type.Z) *
           type.list (type.type_primitive type.Z))%ctype,
- expr_let x0 := Z.cast uint128 @@ (x₁ [[0]] *₁₂₈ x₂ [[0]]) +₁₂₈
-                (Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[1]] *₁₂₈ x₂ [[4]])) +₁₂₈
-                 (Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[2]] *₁₂₈ x₂ [[3]])) +₁₂₈
-                  (Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[3]] *₁₂₈ x₂ [[2]])) +₁₂₈
-                   Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[4]] *₁₂₈ x₂ [[1]]))))) in
- expr_let x1 := Z.cast uint64 @@ (uint64)(x0 >> 51) +₁₂₈
-                Z.cast uint128 @@
-                (Z.cast uint128 @@ (x₁ [[0]] *₁₂₈ x₂ [[1]]) +₁₂₈
-                 (Z.cast uint128 @@ (x₁ [[1]] *₁₂₈ x₂ [[0]]) +₁₂₈
-                  (Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[2]] *₁₂₈ x₂ [[4]])) +₁₂₈
-                   (Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[3]] *₁₂₈ x₂ [[3]])) +₁₂₈
-                    Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[4]] *₁₂₈ x₂ [[2]])))))) in
- expr_let x2 := Z.cast uint64 @@ (uint64)(x1 >> 51) +₁₂₈
-                Z.cast uint128 @@
-                (Z.cast uint128 @@ (x₁ [[0]] *₁₂₈ x₂ [[2]]) +₁₂₈
-                 (Z.cast uint128 @@ (x₁ [[1]] *₁₂₈ x₂ [[1]]) +₁₂₈
-                  (Z.cast uint128 @@ (x₁ [[2]] *₁₂₈ x₂ [[0]]) +₁₂₈
-                   (Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[3]] *₁₂₈ x₂ [[4]])) +₁₂₈
-                    Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[4]] *₁₂₈ x₂ [[3]])))))) in
- expr_let x3 := Z.cast uint64 @@ (uint64)(x2 >> 51) +₁₂₈
-                Z.cast uint128 @@
-                (Z.cast uint128 @@ (x₁ [[0]] *₁₂₈ x₂ [[3]]) +₁₂₈
-                 (Z.cast uint128 @@ (x₁ [[1]] *₁₂₈ x₂ [[2]]) +₁₂₈
-                  (Z.cast uint128 @@ (x₁ [[2]] *₁₂₈ x₂ [[1]]) +₁₂₈
-                   (Z.cast uint128 @@ (x₁ [[3]] *₁₂₈ x₂ [[0]]) +₁₂₈
-                    Z.cast uint128 @@ (19 *₁₂₈ (x₁ [[4]] *₁₂₈ x₂ [[4]])))))) in
- expr_let x4 := Z.cast uint64 @@ (uint64)(x3 >> 51) +₁₂₈
-                Z.cast uint128 @@
-                (Z.cast uint128 @@ (x₁ [[0]] *₁₂₈ x₂ [[4]]) +₁₂₈
-                 (Z.cast uint128 @@ (x₁ [[1]] *₁₂₈ x₂ [[3]]) +₁₂₈
-                  (Z.cast uint128 @@ (x₁ [[2]] *₁₂₈ x₂ [[2]]) +₁₂₈
-                   (Z.cast uint128 @@ (x₁ [[3]] *₁₂₈ x₂ [[1]]) +₁₂₈
-                    Z.cast uint128 @@ (x₁ [[4]] *₁₂₈ x₂ [[0]]))))) in
- expr_let x5 := Z.cast uint64 @@ ((uint64)(x0) & 2251799813685247) +₆₄
-                Z.cast uint64 @@ (19 *₆₄ Z.cast uint64 @@ (uint64)(x4 >> 51)) in
- expr_let x6 := Z.cast uint64 @@ (uint64)(x5 >> 51) +₆₄
-                Z.cast uint64 @@ ((uint64)(x1) & 2251799813685247) in
- Z.cast uint64 @@ ((uint64)(x5) & 2251799813685247)
- :: Z.cast uint64 @@ ((uint64)(x6) & 2251799813685247)
-    :: Z.cast uint64 @@
-       (Z.cast uint64 @@ (uint64)(x6 >> 51) +₆₄
-        Z.cast uint64 @@ ((uint64)(x2) & 2251799813685247))
-       :: Z.cast uint64 @@ ((uint64)(x3) & 2251799813685247)
-          :: Z.cast uint64 @@ ((uint64)(x4) & 2251799813685247) :: [])%expr
+ expr_let x0 := x₁ [[0]] *₁₂₈ x₂ [[0]] +₁₂₈
+                (x₁ [[1]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
+                 (x₁ [[2]] *₁₂₈ (19 * (uint64)(x₂[[3]])) +₁₂₈
+                  (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[2]])) +₁₂₈
+                   x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[1]]))))) in
+ expr_let x1 := (uint64)(x0 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[1]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[0]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
+                   (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[3]])) +₁₂₈
+                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[2]])))))) in
+ expr_let x2 := (uint64)(x1 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[2]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[1]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ x₂ [[0]] +₁₂₈
+                   (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
+                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[3]])))))) in
+ expr_let x3 := (uint64)(x2 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[3]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[2]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ x₂ [[1]] +₁₂₈
+                   (x₁ [[3]] *₁₂₈ x₂ [[0]] +₁₂₈
+                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[4]])))))) in
+ expr_let x4 := (uint64)(x3 >> 51) +₁₂₈
+                (x₁ [[0]] *₁₂₈ x₂ [[4]] +₁₂₈
+                 (x₁ [[1]] *₁₂₈ x₂ [[3]] +₁₂₈
+                  (x₁ [[2]] *₁₂₈ x₂ [[2]] +₁₂₈
+                   (x₁ [[3]] *₁₂₈ x₂ [[1]] +₁₂₈ x₁ [[4]] *₁₂₈ x₂ [[0]])))) in
+ expr_let x5 := ((uint64)(x0) & 2251799813685247) +₆₄ 19 *₆₄ (uint64)(x4 >> 51) in
+ expr_let x6 := (uint64)(x5 >> 51) +₆₄ ((uint64)(x1) & 2251799813685247) in
+ ((uint64)(x5) & 2251799813685247)
+ :: ((uint64)(x6) & 2251799813685247)
+    :: (uint64)(x6 >> 51) +₆₄ ((uint64)(x2) & 2251799813685247)
+       :: ((uint64)(x3) & 2251799813685247)
+          :: ((uint64)(x4) & 2251799813685247) :: [])%expr
      : Expr
          (type.list (type.type_primitive type.Z) *
           type.list (type.type_primitive type.Z) ->
