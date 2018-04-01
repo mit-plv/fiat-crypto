@@ -6875,6 +6875,23 @@ Goal False.
 Abort.
 *)
 
+
+Time Compute
+     (Pipeline.BoundsPipeline_full
+        true (relax_zrange_gen [64; 128])
+        ltac:(let r := Reify (to_associational (weight 51 1) 5) in
+              exact r)
+               ZRange.type.option.None ZRange.type.option.None).
+
+(* N.B. When the uncurrying PR lands, we will no longer need to
+   manually uncurry this function example before reification *)
+Time Compute
+     (Pipeline.BoundsPipeline_full
+        true (relax_zrange_gen [64; 128])
+        ltac:(let r := Reify (fun '(x, y) => scmul (weight 51 1) 5 x y) in
+              exact r)
+               ZRange.type.option.None ZRange.type.option.None).
+
 Module X25519_64.
   Definition n := 5%nat.
   Definition s := 2^255.
