@@ -3388,16 +3388,6 @@ Module Compilers.
 
       Definition uncurry (t : type) : type
         := type.arrow (uncurried_domain t) (type.final_codomain t).
-
-      Section with_var.
-        Context (var : type -> Type).
-        Fixpoint value (t : type)
-          := match t with
-             | type.arrow s d
-               => value s -> value d
-             | t => @expr var t
-             end.
-      End with_var.
     End type.
 
     Fixpoint app_curried {t : type}
@@ -3425,130 +3415,35 @@ Module Compilers.
          end.
 
     Module expr.
-      Section reify_reflect.
-        Context {var : type -> Type}.
-        Fixpoint reify {t}
-          : type.value var t -> @expr var t
-          := match t with
-             | type.arrow s d
-               => fun f => Abs (fun v => @reify d (f (@reflect s (Var v))))
-             | _
-               => fun e => e
-             end%expr
-        with reflect {t}
-             : @expr var t -> type.value var t
-          := match t with
-             | type.arrow s d
-               => fun e (v : type.value _ s) => @reflect d (e @ (@reify s v))
-             | _
-               => fun e => e
-             end%expr.
-      End reify_reflect.
-
       Section with_var.
         Context {var : type -> Type}.
 
-        Definition reassociate_uncurried_domain_r_to_l {s s' d'}
-          : @expr var (type.uncurried_domain (s -> s' -> d'))
-            -> @expr var (type.uncurried_domain (s * s' -> d'))
-          := match d'
-                   return (expr (type.uncurried_domain (s -> s' -> d'))
-                           -> expr (type.uncurried_domain (s * s' -> d')))
-             with
-             | type.arrow _ _ as d'
-               => fun (e : expr (s * (s' * type.uncurried_domain d')))
-                  => let '(e, e') := invert_or_expand_Pair e in
-                     let '(e', e'') := invert_or_expand_Pair e' in
-                     (e, e', e'')%expr
-             | _
-               => fun e => e
-             end%core%expr.
-
-        Definition reassociate_uncurried_domain_l_to_r {s s' d'}
-          : @expr var (type.uncurried_domain (s * s' -> d'))
-            -> @expr var (type.uncurried_domain (s -> s' -> d'))
-          := match d'
-                   return (expr (type.uncurried_domain (s * s' -> d'))
-                           -> expr (type.uncurried_domain (s -> s' -> d')))
-             with
-             | type.arrow _ _ as d'
-               => fun (e : expr ((s * s') * type.uncurried_domain d'))
-                  => let '(e, e'') := invert_or_expand_Pair e in
-                     let '(e, e') := invert_or_expand_Pair e in
-                     (e, (e', e''))%expr
-             | _
-               => fun e => e
-             end%core%expr.
-
-        Fixpoint uncurried_abs {s d}
-          : (type.value var s -> type.value var d)
-            -> @expr var (type.uncurried_domain (type.arrow s d))
-            -> @expr var (type.final_codomain d)
-          := match d with
-             | type.arrow s' d'
-               => fun f x
-                  => @uncurried_abs
-                       (s * s')%ctype d'
-                       (fun xy
-                        => let '(x, y) := invert_or_expand_Pair xy in
-                           f (reflect x) (reflect y))
-                       (reassociate_uncurried_domain_r_to_l x)
-             | _
-               => fun f x => f (reflect x)
-             end%core%expr.
-
-        Fixpoint uncurried_app_to_value {s d}
-          : (@expr var (type.uncurried_domain (type.arrow s d))
-             -> @expr var (type.final_codomain d))
-            -> type.value var s
-            -> type.value var d
-          := match d with
-             | type.arrow s' d'
-               => fun f x (y : type.value var s')
-                  => @uncurried_app_to_value
-                       (s * s')%ctype d'
-                       (fun x' => f (reassociate_uncurried_domain_l_to_r x'))
-                       (reify x, reify y)
-             | _
-               => fun f x
-                  => f (reify x)
+        Fixpoint uncurry {t}
+          : @expr var t -> @expr var (type.uncurry t)
+          := match t return expr t -> expr (type.uncurry t) with
+             | type.arrow s d
+               => fun e
+                  => let f := fun v
+                              => @uncurry
+                                   d
+                                   match invert_Abs e with
+                                   | Some f => f v
+                                   | None => e @ Var v
+                                   end%expr in
+                     match d return (var s -> expr (type.uncurry d)) -> expr (type.uncurry (s -> d)) with
+                     | type.arrow _ _ as d
+                       => fun f
+                          => Abs (fun sdv
+                                  => Abs f @ (ident.fst @@ Var sdv) @ (ident.snd @@ Var sdv))
+                     | _
+                       => fun f
+                          => Abs (fun sv => f sv @ TT)
+                     end f
+             | type.type_primitive _
+             | type.prod _ _
+             | type.list _
+               => fun e => Abs (fun _ => e)
              end%expr.
-
-        Definition uncurry_value {s d} (f : type.value var (s -> d))
-                   (x : type.value var s)
-          : type.value var d
-          := uncurried_app_to_value
-               (fun x' => Abs (fun v => uncurried_abs f (Var v)) @ x')%expr
-               x.
-
-        (** N.B. We only uncurry things when we hit an application of
-                 a lambda; everything else is untouched. *)
-        Fixpoint uncurry' {t} (e : @expr (type.value var) t) : type.value var t
-          := match e in expr.expr t return type.value var t with
-             | Var t v => v
-             | TT => TT
-             | AppIdent s d idc args
-               => reflect (AppIdent idc (reify (@uncurry' _ args)))
-             | App s d f x
-               => let f' := @uncurry' _ f in
-                  let x' := @uncurry' _ x in
-                  match invert_Abs f with
-                  | Some _ => uncurry_value f' x'
-                  | None => f' x'
-                  end
-             | Pair A B a b
-               => Pair (reify (@uncurry' A a)) (reify (@uncurry' B b))
-             | Abs s d f
-               => fun v : type.value var s => @uncurry' d (f v)
-             end.
-
-        Definition uncurry {t} (e : @expr (type.value var) t)
-          : @expr var (type.uncurry t)
-          := Abs (fun v : var (type.uncurried_domain t)
-                  => match t return type.value var t -> expr (type.uncurried_domain t) -> expr (type.final_codomain t) with
-                     | type.arrow _ _ => uncurried_abs
-                     | _ => fun e _ => e
-                     end (uncurry' e) (Var v)).
       End with_var.
 
       Definition Uncurry {t} (e : Expr t) : Expr (type.uncurry t)
@@ -6302,7 +6197,7 @@ Module test10.
     let v := Reify (fun (f : Z -> Z -> Z) x y => f (x + y) (x * y))%Z in
     pose v as E.
     vm_compute in E.
-    pose (Uncurry.expr.Uncurry (PartialEvaluate true (canonicalize_list_recursion E))) as E'.
+    pose (PartialEvaluate true (Uncurry.expr.Uncurry (PartialEvaluate true (canonicalize_list_recursion E)))) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -6322,17 +6217,13 @@ Module test11.
     let v := Reify (fun x y => (fun f a b => f a b) (fun a b => a + b) (x + y) (x * y))%Z in
     pose v as E.
     vm_compute in E.
-    pose (Uncurry.expr.Uncurry (canonicalize_list_recursion E)) as E'.
+    pose (PartialEvaluate true (Uncurry.expr.Uncurry (canonicalize_list_recursion E))) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
-        (λ v,
-         (λ v0,
-          ident.fst @@ Var v0 @ (ident.fst @@ (ident.snd @@ Var v0)) @
-          (ident.snd @@ (ident.snd @@ Var v0))) @
-         ((λ v0' v1, Var v0' + Var v1),
-          (ident.fst @@ Var v + ident.snd @@ Var v, ident.fst @@ Var v * ident.snd @@ Var v)))%expr)
+         (λ x,
+          ident.fst @@ Var x + ident.snd @@ Var x + ident.fst @@ Var x * ident.snd @@ Var x)%expr)
       => idtac
     end.
     constructor.
