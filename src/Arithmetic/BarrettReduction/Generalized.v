@@ -136,5 +136,97 @@ Section barrett.
       { symmetry; apply (Zmod_unique a n (q + 1)); subst r; lia. }
       { symmetry; apply (Zmod_unique a n (q + 2)); subst r; lia. }
     Qed.
+
+    Section StrongerBounds.
+      Context (n_good : b ^ offset * (b^(2*k) mod n) <= b ^ (k+offset) - m) (a_good : a < n * b ^ k).
+
+      Lemma helper_1 : b ^ (2 * k) * ((a / n) - 1) <= m * (n * (a / n) - b ^ (k - offset)).
+      Proof.
+        autorewrite with push_Zmul. ring_simplify.
+        replace (a / n * m * n) with (m * n * (a / n)) by ring.
+        assert (a/n < b ^ k) by auto using Z.div_lt_upper_bound with zarith.
+        assert (b ^ (2 * k) - m * n = b ^ (2 * k) mod n) by (subst m; rewrite Z.mul_div_eq'; auto with zarith).
+        assert (0 < b ^ (k - offset)) by auto with zarith.
+        assert (b ^ (2*k) = b ^ (k - offset) * b ^ (k + offset)) by (rewrite <-Z.pow_add_r; auto with zarith).
+        pose proof (Z.mod_pos_bound (b ^ (2*k)) n ltac:(lia)).
+        match goal with |- ?x * (a/n) - ?c <= ?d * (a/n) - ?e =>
+                        assert ((b ^ k) * (x - d) <= c  - e); [|nia] end.
+        replace (b ^ k) with (b ^ (k - offset) * b ^ offset) by (rewrite <-Z.pow_add_r; auto with zarith).
+        nia.
+      Qed.
+
+      Lemma helper_2 : n * (a / n) - b ^ (k - offset) < b ^ (k - offset) * (a / b ^ (k - offset)).
+      Proof.
+        rewrite !Z.mul_div_eq by auto using Z.lt_gt with zarith.
+        pose proof (Z.mod_pos_bound a n ltac:(omega)).
+        pose proof (Z.mod_pos_bound a (b ^ (k - offset)) ltac:(auto with zarith)).
+        lia.
+      Qed.
+
+      Let epsilon := (a / n) * b ^ (k+offset) - (a / b ^ (k - offset)) * m.
+
+      Lemma q_epsilon : q = (a / n) + (- epsilon) / b ^ (k + offset).
+      Proof.
+        subst q. subst epsilon.
+        rewrite Z.opp_sub_distr.
+        rewrite <-Z.mul_opp_l.
+        rewrite Z.div_add_l by auto with zarith.
+        ring_simplify. f_equal; ring.
+      Qed.
+
+      Lemma epsilon_lower : - b ^ (k + offset) < epsilon.
+      Proof.
+        pose proof q_epsilon as Hq_epsilon.
+        rewrite (proj2_sig q_nice) in Hq_epsilon.
+        apply Z.opp_lt_mono. rewrite Z.opp_involutive.
+        apply Z.div_le_zero; auto with zarith.
+        destruct (proj1_sig q_nice) as [ [|] [|]]; cbn [fst snd] in *; omega.
+      Qed.
+
+      Lemma m_pos : 0 < m.
+      Proof.
+        subst m. Z.zero_bounds.
+        split; auto with zarith.
+        transitivity (b ^ k); auto with zarith.
+      Qed.
+
+      Lemma epsilon_bound : epsilon < b ^ (k + offset).
+      Proof.
+        subst epsilon. pose proof helper_1. pose proof helper_2. pose proof m_pos.
+        replace (b ^ (2 * k)) with (b^(k - offset) * b ^ (k + offset)) in *
+          by (rewrite <-Z.pow_add_r; auto with zarith).
+        apply Z.mul_lt_mono_pos_l with (p:=b^(k-offset)); auto with zarith.
+        nia.
+      Qed.
+
+      Lemma q_nice_strong : { b : bool | q = a / n + if b then -1 else 0}.
+      Proof.
+        exists (0 <? epsilon).
+        rewrite q_epsilon.
+        apply Z.add_cancel_l.
+        pose proof epsilon_bound. pose proof epsilon_lower.
+        break_match; Z.ltb_to_lt.
+        { rewrite Z.div_opp_l_complete by auto with zarith.
+          rewrite Z.div_small, Z.mod_small by auto with zarith.
+          break_match; omega. }
+        { rewrite Z.div_small; auto with zarith. }
+      Qed.
+
+      Lemma q_bound : a / n - 1 <= q.
+      Proof.
+        rewrite (proj2_sig q_nice_strong).
+        break_match; omega.
+      Qed.
+
+      Lemma r_small_strong : r < 2 * n.
+      Proof.
+        Hint Rewrite (Z.mul_div_eq' a n) using lia : zstrip_div.
+        assert (a mod n < n) by auto with zarith lia.
+        unfold r.
+        apply Z.le_lt_trans with (m:= a - (a / n - 1) * n); [pose proof q_bound; nia | ].
+        autorewrite with push_Zmul zsimplify zstrip_div.
+        auto with lia.
+      Qed.
+    End StrongerBounds.
   End barrett_algorithm.
 End barrett.
