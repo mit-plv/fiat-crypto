@@ -159,4 +159,10 @@ Module Z.
     intros. rewrite Z.add_comm, div_add_mod_cond_l by auto. repeat (f_equal; try ring).
   Qed.
 
+  Lemma div_le_zero x y : 0 < y -> x / y <= 0 -> x < y.
+  Proof.
+    clear. intros.
+    apply Z.nle_gt; intro.
+    pose proof (Z.div_str_pos x y ltac:(lia)). lia.
+  Qed.
 End Z.
