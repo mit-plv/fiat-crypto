@@ -145,7 +145,10 @@ Section barrett.
         autorewrite with push_Zmul. ring_simplify.
         replace (a / n * m * n) with (m * n * (a / n)) by ring.
         assert (a/n < b ^ k) by auto using Z.div_lt_upper_bound with zarith.
-        assert (b ^ (2 * k) - m * n = b ^ (2 * k) mod n) by (subst m; rewrite Z.mul_div_eq'; auto with zarith).
+        assert (b ^ (2 * k) - m * n = b ^ (2 * k) mod n).
+        { subst m.
+          rewrite Z.mul_div_eq' by (auto using Z.lt_gt with zarith).
+          auto with zarith. }
         assert (0 < b ^ (k - offset)) by auto with zarith.
         assert (b ^ (2*k) = b ^ (k - offset) * b ^ (k + offset)) by (rewrite <-Z.pow_add_r; auto with zarith).
         pose proof (Z.mod_pos_bound (b ^ (2*k)) n ltac:(lia)).
