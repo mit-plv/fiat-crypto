@@ -967,6 +967,13 @@ Module Columns.
                | _ => congruence
                end.
       Qed.
+
+      Lemma from_associational_step n t p :
+        from_associational n (t :: p) =
+        cons_to_nth (fst (Positional.place weight t (Nat.pred n)))
+                    (snd (Positional.place weight t (Nat.pred n)))
+                    (from_associational n p).
+      Proof. reflexivity. Qed.
     End FromAssociational.
 
     Section mul.
@@ -1202,13 +1209,6 @@ Module Rows.
         In_cases; subst; auto using length0_nil.
       Qed.
 
-      Lemma Columns_from_associational_step n t p :
-        Columns.from_associational weight n (t :: p) =
-        Columns.cons_to_nth (fst (Positional.place weight t (Nat.pred n)))
-                            (snd (Positional.place weight t (Nat.pred n)))
-                            (Columns.from_associational weight n p).
-      Admitted.
-
       Lemma max_column_size_Columns_from_associational n p :
         n <> 0%nat -> p <> nil ->
         max_column_size (Columns.from_associational weight n p) <> 0%nat.
@@ -1216,7 +1216,7 @@ Module Rows.
         intros.
         rewrite max_column_size_zero_iff.
         intro. destruct p; [congruence | ].
-        rewrite Columns_from_associational_step in *.
+        rewrite Columns.from_associational_step in *.
         cbv [Columns.cons_to_nth] in *.
         match goal with H : forall c, In c (update_nth ?n ?f ?ls) -> _ |- _ =>
                         assert (n < length (update_nth n f ls))%nat;
