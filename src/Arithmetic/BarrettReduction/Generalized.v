@@ -210,7 +210,6 @@ Section barrett.
         autorewrite with push_Zmul zsimplify zstrip_div.
         auto with lia.
       Qed.
-      (* TODO: remove this comment *)
     End StrongerBounds.
   End barrett_algorithm.
 End barrett.
