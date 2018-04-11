@@ -165,4 +165,26 @@ Module Z.
     apply Z.nle_gt; intro.
     pose proof (Z.div_str_pos x y ltac:(lia)). lia.
   Qed.
+
+  Lemma div_between_full n a b :
+    0 < b -> n * b <= a < (1 + n) * b ->
+    a / b = n.
+  Proof.
+    intros.
+    pose proof (Z.div_le_lower_bound a b n ltac:(lia) ltac:(lia)).
+    pose proof (Z.div_lt_upper_bound a b (n+1) ltac:(lia) ltac:(lia)).
+    lia.
+  Qed.
+
+  Lemma mod_small_n_neg n a b : n < 0 -> 0 < b -> n * b <= a < (1 + n) * b ->
+                                a mod b = a - n * b.
+  Proof.
+    intros. rewrite Z.mod_eq, div_between_full with (n:=n) by omega. ring.
+  Qed.
+
+  Lemma div_div_comm : forall x y z,  0 < y -> 0 < z -> x / y / z = x / z / y.
+  Proof.
+    intros; rewrite !Z.div_div by omega.
+    f_equal; ring.
+  Qed.
 End Z.
