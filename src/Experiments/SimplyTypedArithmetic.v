@@ -5189,13 +5189,16 @@ Module Compilers.
                                          | inr xx => if Z.eqb xx 0 then default_no_carry a else default_with_carry a
                                          | _ => default_with_carry a
                                          end in
-                          match (z,a) with
-                          | (inr xx, inl e)
-                          | (inl e, inr xx)
-                            => if Z.eqb xx 0
-                               then inr (inl e, inr 0%Z)
-                               else default tt
-                          | _ => default tt
+                          match y,z,a with
+                          | inr yy, inr xx, inl e
+                          | inr yy, inl e, inr xx
+                            =>
+                            if Z.eqb yy 0
+                            then if Z.eqb xx 0
+                                 then inr (inl e, inr 0%Z)
+                                 else default_no_carry tt
+                            else default_with_carry tt
+                          | _,_,_ => default tt
                           end
                      | _ => default_interp idc x_y_z_a
                      end
