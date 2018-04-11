@@ -12,6 +12,9 @@ Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
 Require Import Crypto.Algebra.Ring.
 Require Import Crypto.Algebra.SubsetoidRing.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
+Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
+Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -31,10 +34,13 @@ Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
+Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -7748,10 +7754,6 @@ End X25519_32.
 *)
 
 
-Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
-Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
-
 Module BarrettReduction.
   (* TODO : generalize to multi-word and operate on (list Z) instead of T; maybe stop taking ops as context variables *)
   Section Generic.
@@ -8209,12 +8211,6 @@ Module BarrettReduction.
     End Defn.
   End BarrettReduction.
 End BarrettReduction.
-
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Tactics.
-Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
 
 Module MontgomeryReduction.
   Section MontRed'.
