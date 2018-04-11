@@ -2501,6 +2501,7 @@ Module Compilers.
           | Z_of_nat : ident nat Z
           | Z_mul_split : ident (Z * Z * Z) (Z * Z)
           | Z_add_get_carry : ident (Z * Z * Z) (Z * Z)
+          | Z_add_with_carry : ident (Z * Z * Z) Z
           | Z_add_with_get_carry : ident (Z * Z * Z * Z) (Z * Z)
           | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
           | Z_sub_with_get_borrow : ident (Z * Z * Z * Z) (Z * Z)
@@ -2572,6 +2573,7 @@ Module Compilers.
                | Z_of_nat => Z.of_nat
                | Z_mul_split => curry3 Z.mul_split
                | Z_add_get_carry => curry3 Z.add_get_carry_full
+               | Z_add_with_carry => curry3 Z.add_with_carry
                | Z_add_with_get_carry => curry4 Z.add_with_get_carry_full
                | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
                | Z_sub_with_get_borrow => curry4 Z.sub_with_get_borrow_full
@@ -2708,6 +2710,7 @@ Module Compilers.
             | Z.of_nat ?x => mkAppIdent ident.Z_of_nat x
             | Z.mul_split ?x ?y ?z => mkAppIdent ident.Z_mul_split (x, y, z)
             | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
+            | Z.add_with_carry ?x ?y ?z => mkAppIdent ident.Z_add_with_carry (x, y, z)
             | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
             | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
             | Z.sub_with_get_borrow_full ?x ?y ?z ?a => mkAppIdent ident.Z_sub_with_get_borrow (x, y, z, a)
@@ -2757,6 +2760,7 @@ Module Compilers.
             Notation of_nat := Z_of_nat.
             Notation mul_split := Z_mul_split.
             Notation add_get_carry := Z_add_get_carry.
+            Notation add_with_carry := Z_add_with_carry.
             Notation add_with_get_carry := Z_add_with_get_carry.
             Notation sub_get_borrow := Z_sub_get_borrow.
             Notation sub_with_get_borrow := Z_sub_with_get_borrow.
@@ -2844,6 +2848,7 @@ Module Compilers.
           | Z_mul_split_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
           | Z_add_get_carry : ident (Z * Z * Z) (Z * Z)
           | Z_add_get_carry_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
+          | Z_add_with_carry : ident (Z * Z * Z) Z
           | Z_add_with_get_carry : ident (Z * Z * Z * Z) (Z * Z)
           | Z_add_with_get_carry_concrete (s:BinInt.Z) : ident (Z * Z * Z) (Z * Z)
           | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
@@ -2927,6 +2932,7 @@ Module Compilers.
                  | Z_mul_split_concrete s => curry2 (Z.mul_split s)
                  | Z_add_get_carry => curry3 Z.add_get_carry_full
                  | Z_add_get_carry_concrete s => curry2 (Z.add_get_carry s)
+                 | Z_add_with_carry => curry3 Z.add_with_carry
                  | Z_add_with_get_carry => curry4 Z.add_with_get_carry_full
                  | Z_add_with_get_carry_concrete s => curry3 (Z.add_with_get_carry s)
                  | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
@@ -3034,6 +3040,7 @@ Module Compilers.
             | Z.of_nat ?x => mkAppIdent ident.Z_of_nat x
             | Z.mul_split ?x ?y ?z => mkAppIdent ident.Z_mul_split (x, y, z)
             | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
+            | Z.add_with_carry ?x ?y ?z => mkAppIdent ident.Z_add_with_carry (x, y, z)
             | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
             | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
             | Z.sub_with_get_borrow_full ?x ?y ?z ?a => mkAppIdent ident.Z_sub_with_get_borrow (x, y, z, a)
@@ -3078,6 +3085,7 @@ Module Compilers.
             Notation mul_split_concrete := Z_mul_split_concrete.
             Notation add_get_carry := Z_add_get_carry.
             Notation add_get_carry_concrete := Z_add_get_carry_concrete.
+            Notation add_with_carry := Z_add_with_carry.
             Notation add_with_get_carry := Z_add_with_get_carry.
             Notation add_with_get_carry_concrete := Z_add_with_get_carry_concrete.
             Notation sub_get_borrow := Z_sub_get_borrow.
@@ -3211,6 +3219,8 @@ Module Compilers.
                => AppIdent ident.Z.mul_split
              | for_reification.ident.Z_add_get_carry
                => AppIdent ident.Z.add_get_carry
+             | for_reification.ident.Z_add_with_carry
+               => AppIdent ident.Z.add_with_carry
              | for_reification.ident.Z_add_with_get_carry
                => AppIdent ident.Z.add_with_get_carry
              | for_reification.ident.Z_sub_get_borrow
@@ -4074,6 +4084,7 @@ Module Compilers.
                   | ident.Z_of_nat as idc
                   | ident.Z_mul_split as idc
                   | ident.Z_add_get_carry as idc
+                  | ident.Z_add_with_carry as idc
                   | ident.Z_add_with_get_carry as idc
                   | ident.Z_sub_with_get_borrow as idc
                   | ident.Z_sub_get_borrow as idc
@@ -4321,6 +4332,7 @@ Module Compilers.
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ (type.Z * type.Z))
                             @@ (ident.fst @@ (Var xyk)))
+                | ident.Z_add_with_carry as idc
                 | ident.Z_zselect as idc
                 | ident.Z_add_modulo as idc
                   => λ (xyk :
@@ -4780,6 +4792,15 @@ Module Compilers.
                             (t:=(type.Z*type.Z)%ctype)
                             (ZRange.split_bounds (ZRange.four_corners BinInt.Z.add x y) split_at)
                      | Some _, None | None, Some _ | None, None => type.option.None
+                     end
+             | ident.Z_add_with_carry
+               => fun '((x, y, z) : option zrange * option zrange * option zrange)
+                  => match x, y, z with
+                     | Some x, Some y, Some z
+                       => type.option.Some
+                            (t:=type.Z)
+                            (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
+                     | _, _, _ => type.option.None
                      end
              | ident.Z_add_with_get_carry_concrete split_at
                => fun '((x, y, z) : option zrange * option zrange * option zrange)
@@ -5317,7 +5338,19 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr x, y), z)
-                       => default_interp (ident.Z.mul_split_concrete x) (inr (y, z))
+                       => let default _ := default_interp (ident.Z.mul_split_concrete x) (inr (y, z)) in
+                          match (y, z) with
+                          | (inr xx, inl (data, e) as y)
+                          | (inl (data, e) as y, inr xx)
+                            => if Z.eqb xx 0
+                               then inr (inr 0%Z, inr 0%Z)
+                               else if Z.eqb xx 1
+                                    then inr (y, inr 0%Z)
+                                    else if Z.eqb xx (-1)
+                                         then inr (inl (data, AppIdent ident.Z.opp (expr.reify (t:=type.Z) y)), inr 0%Z)
+                                         else default tt
+                          | _ => default tt
+                          end
                      | _ => default_interp idc x_y_z
                      end
              | ident.Z_rshi as idc
@@ -5356,6 +5389,15 @@ Module Compilers.
                           end
                      | _ => default_interp idc x_y_z
                      end
+             | ident.Z_add_with_carry as idc
+               => fun (x_y_z :  (_ * expr (type.Z * type.Z * type.Z) +
+                                 (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
+                  => match x_y_z return ( _ * expr _ + type.interp _) with
+                     | inr (inr (inr x, inr y), inr z) => inr (ident.interp idc (x, y, z))
+                     | inr (inr (inr x, y), z)
+                       => if Z.eqb x 0 then default_interp (ident.Z.add) (inr (y,z)) else default_interp idc x_y_z
+                     | _ => default_interp idc x_y_z
+                     end
              | ident.Z_add_with_get_carry as idc
                => fun (x_y_z_a : (_ * expr (_ * _ * _ * _) +
                                   (_ * expr (_ * _ * _) +
@@ -5366,23 +5408,30 @@ Module Compilers.
                        let result := ident.interp idc (x, y, z, a) in
                        inr (inr (fst result), inr (snd result))
                      | inr (inr (inr (inr x, y), z), a)
-                       => let default_with_carry _ := default_interp (ident.Z.add_with_get_carry_concrete x) (inr (inr (y, z), a)) in
-                          let default_no_carry _ := default_interp (ident.Z.add_get_carry_concrete x) (inr (z,a)) in
-                          let default a := match y with
-                                         | inr xx => if Z.eqb xx 0 then default_no_carry a else default_with_carry a
-                                         | _ => default_with_carry a
-                                         end in
-                          match y,z,a with
-                          | inr yy, inr xx, inl e
-                          | inr yy, inl e, inr xx
-                            =>
-                            if Z.eqb yy 0
+                       =>
+                       let default _ := default_interp (ident.Z.add_with_get_carry_concrete x) (inr (inr (y, z), a)) in
+                       let default_add _ := default_interp (ident.Z.add_get_carry_concrete x) (inr (z,a)) in
+                       let default_adx _ := default_interp (ident.Z.add_with_carry) (inr (inr (y, z), a)) in
+                       match y, z, a with
+                       | inr cc, inr xx, inl e
+                       | inr cc, inl e, inr xx
+                         => if Z.eqb cc 0
                             then if Z.eqb xx 0
                                  then inr (inl e, inr 0%Z)
-                                 else default_no_carry tt
-                            else default_with_carry tt
-                          | _,_,_ => default tt
-                          end
+                                 else default_add tt (* carry = 0: ADC x y -> ADD x y *)
+                            else default tt
+                       | inr cc, inl xx, inl yy
+                         => if Z.eqb cc 0
+                            then default_add tt (* carry = 0: ADC x y -> ADD x y *)
+                            else default tt
+                       | inl _, inr xx, inr yy
+                         => if Z.eqb xx 0
+                            then if Z.eqb yy 0
+                                 then inr (default_adx tt, inr 0%Z) (* ADC 0 0 -> (ADX 0 0, 0) *)
+                                 else default tt
+                            else default tt
+                        | _, _, _ => default tt
+                       end
                      | _ => default_interp idc x_y_z_a
                      end
              | ident.Z_sub_get_borrow as idc
@@ -8489,7 +8538,6 @@ Module P192_64.
          As mulmod_correct.
   Proof. Time solve_rmulmod machine_wordsize. Time Qed.
 
-  Print mulmod.
   Import PrintingNotations.
   Open Scope expr_scope.
   Set Printing Width 100000.
@@ -8501,9 +8549,12 @@ Module P192_64.
     (Z.cast2 (uint64, bool)%core @@ (Z.add_get_carry_concrete 18446744073709551616 @@ (x , y)))%expr (at level 50) : expr_scope.
   Local Notation "'adc64' '(' c ',' x ',' y ')'" :=
     (Z.cast2 (uint64, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (c, x , y)))%expr (at level 50) : expr_scope.
+  Local Notation "'adx64' '(' c ',' x ',' y ')'" :=
+    (Z.cast bool @@ (Z.add_with_carry @@ (c, x , y)))%expr (at level 50) : expr_scope.
   
   Print mulmod.
-  (*
+(*
+mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive type.Z) * type.list (type.type_primitive type.Z))%ctype,
          expr_let x0 := mul64 ((uint64)(x₁[[2]]), (uint64)(x₂[[2]])) in
          expr_let x1 := mul64 ((uint64)(x₁[[2]]), (uint64)(x₂[[1]])) in
          expr_let x2 := mul64 ((uint64)(x₁[[2]]), (uint64)(x₂[[0]])) in
@@ -8513,83 +8564,71 @@ Module P192_64.
          expr_let x6 := mul64 ((uint64)(x₁[[0]]), (uint64)(x₂[[2]])) in
          expr_let x7 := mul64 ((uint64)(x₁[[0]]), (uint64)(x₂[[1]])) in
          expr_let x8 := mul64 ((uint64)(x₁[[0]]), (uint64)(x₂[[0]])) in
-         expr_let _ := mul64 (1, x0₂) in
-         expr_let _ := mul64 (1, x0₁) in
-         expr_let _ := mul64 (1, x1₂) in
-         expr_let _ := mul64 (1, x1₁) in
-         expr_let _ := mul64 (1, x2₂) in
-         expr_let _ := mul64 (1, x3₂) in
-         expr_let _ := mul64 (1, x3₁) in
-         expr_let _ := mul64 (1, x4₂) in
-         expr_let _ := mul64 (1, x6₂) in
-         expr_let _ := mul64 (1, x0₂) in
-         expr_let _ := mul64 (1, x0₁) in
-         expr_let _ := mul64 (1, x1₂) in
-         expr_let _ := mul64 (1, x1₁) in
-         expr_let _ := mul64 (1, x2₂) in
-         expr_let _ := mul64 (1, x3₂) in
-         expr_let _ := mul64 (1, x3₁) in
-         expr_let _ := mul64 (1, x4₂) in
-         expr_let _ := mul64 (1, x6₂) in
-         expr_let x27 := mul64 (1, x0₂) in
-         expr_let x28 := mul64 (1, x0₁) in
-         expr_let x29 := mul64 (1, x1₂) in
-         expr_let x30 := mul64 (1, x1₁) in
-         expr_let x31 := mul64 (1, x2₂) in
-         expr_let x32 := mul64 (1, x3₂) in
-         expr_let x33 := mul64 (1, x3₁) in
-         expr_let x34 := mul64 (1, x4₂) in
-         expr_let x35 := mul64 (1, x6₂) in
-         expr_let x36 := mul64 (1, x0₂) in
-         expr_let x37 := mul64 (1, x0₁) in
-         expr_let x38 := mul64 (1, x1₂) in
-         expr_let x39 := mul64 (1, x1₁) in
-         expr_let x40 := mul64 (1, x2₂) in
-         expr_let x41 := mul64 (1, x3₂) in
-         expr_let x42 := mul64 (1, x3₁) in
-         expr_let x43 := mul64 (1, x4₂) in
-         expr_let x44 := mul64 (1, x6₂) in
-         expr_let x45 := add64 (x35₁, x8₁) in
-         expr_let x46 := adc64 (x45₂, x7₁, x8₂) in
-         expr_let x47 := adc64 (x46₂, x6₁, x7₂) in
-         expr_let x48 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x47₂, x38₂, x41₂)) in
-         expr_let x49 := add64 (x34₁, x45₁) in
-         expr_let x50 := adc64 (x49₂, x5₁, x46₁) in
-         expr_let x51 := adc64 (x50₂, x5₂, x47₁) in
-         expr_let x52 := adc64 (x51₂, x37₂, x48₁) in
-         expr_let x53 := add64 (x33₁, x49₁) in
-         expr_let x54 := adc64 (x53₂, x44₁, x50₁) in
-         expr_let x55 := adc64 (x54₂, x4₁, x51₁) in
-         expr_let x56 := adc64 (x55₂, x36₁, x52₁) in
-         expr_let x57 := add64 (x31₁, x53₁) in
-         expr_let x58 := adc64 (x57₂, x43₁, x54₁) in
-         expr_let x59 := adc64 (x58₂, x2₁, x55₁) in
-         expr_let x60 := adc64 (x59₂, x27₂, x56₁) in
-         expr_let x61 := add64 (x30₁, x57₁) in
-         expr_let x62 := adc64 (x61₂, x42₁, x58₁) in
-         expr_let x63 := adc64 (x62₂, x44₂, x59₁) in
-         expr_let x64 := add64 (x40₁, x62₁) in
-         expr_let x65 := adc64 (x64₂, x43₂, x63₁) in
-         expr_let x66 := add64 (x39₁, x64₁) in
-         expr_let x67 := adc64 (x66₂, x42₂, x65₁) in
-         expr_let x68 := add64 (x35₂, x66₁) in
-         expr_let x69 := adc64 (x68₂, x41₁, x67₁) in
-         expr_let x70 := add64 (x34₂, x68₁) in
-         expr_let x71 := adc64 (x70₂, x40₂, x69₁) in
-         expr_let x72 := add64 (x33₂, x70₁) in
-         expr_let x73 := adc64 (x72₂, x39₂, x71₁) in
-         expr_let x74 := add64 (x32₁, x72₁) in
-         expr_let x75 := adc64 (x74₂, x38₁, x73₁) in
-         expr_let x76 := add64 (x31₂, x74₁) in
-         expr_let x77 := adc64 (x76₂, x37₁, x75₁) in
-         expr_let x78 := add64 (x30₂, x76₁) in
-         expr_let x79 := adc64 (x78₂, x32₂, x77₁) in
-         expr_let x80 := add64 (x29₁, x78₁) in
-         expr_let x81 := adc64 (x80₂, x29₂, x79₁) in
-         expr_let x82 := add64 (x28₁, x80₁) in
-         expr_let x83 := adc64 (x82₂, x28₂, x81₁) in
-         expr_let x84 := add64 (x27₁, x83₁) in
-         (x61₁ :: x82₁ :: x84₁ :: x60₁ :: x36₂ :: 0 :: [], 0)
+         expr_let x9 := add64 (x6₂, x8₁) in
+         expr_let x10 := adc64 (x9₂, x7₁, x8₂) in
+         expr_let x11 := adc64 (x10₂, x6₁, x7₂) in
+         expr_let x12 := adx64 (x11₂, 0, 0) in
+         expr_let x13 := add64 (x4₂, x9₁) in
+         expr_let x14 := adc64 (x13₂, x5₁, x10₁) in
+         expr_let x15 := adc64 (x14₂, x5₂, x11₁) in
+         expr_let x16 := adc64 (x15₂, 0, x12) in
+         expr_let x17 := adx64 (x16₂, 0, 0) in
+         expr_let x18 := add64 (x3₁, x13₁) in
+         expr_let x19 := adc64 (x18₂, x6₂, x14₁) in
+         expr_let x20 := adc64 (x19₂, x4₁, x15₁) in
+         expr_let x21 := adc64 (x20₂, x0₂, x16₁) in
+         expr_let x22 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x21₂, 0, x17)) in
+         expr_let x23 := adx64 (x22₂, 0, 0) in
+         expr_let x24 := add64 (x2₂, x18₁) in
+         expr_let x25 := adc64 (x24₂, x4₂, x19₁) in
+         expr_let x26 := adc64 (x25₂, x2₁, x20₁) in
+         expr_let x27 := adc64 (x26₂, 0, x21₁) in
+         expr_let x28 := adc64 (x27₂, 0, x22₁) in
+         expr_let x29 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x28₂, 0, x23)) in
+         expr_let x30 := add64 (x1₁, x24₁) in
+         expr_let x31 := adc64 (x30₂, x3₁, x25₁) in
+         expr_let x32 := adc64 (x31₂, 0, x26₁) in
+         expr_let x33 := adc64 (x32₂, 0, x27₁) in
+         expr_let x34 := adc64 (x33₂, 0, x28₁) in
+         expr_let x35 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x34₂, 0, x29₁)) in
+         expr_let x36 := add64 (x2₂, x31₁) in
+         expr_let x37 := adc64 (x36₂, 0, x32₁) in
+         expr_let x38 := adc64 (x37₂, 0, x33₁) in
+         expr_let x39 := adc64 (x38₂, 0, x34₁) in
+         expr_let x40 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x39₂, 0, x35₁)) in
+         expr_let x41 := add64 (x1₁, x36₁) in
+         expr_let x42 := adc64 (x41₂, 0, x37₁) in
+         expr_let x43 := adc64 (x42₂, 0, x38₁) in
+         expr_let x44 := adc64 (x43₂, 0, x39₁) in
+         expr_let x45 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x44₂, 0, x40₁)) in
+         expr_let x46 := add64 (x3₂, x42₁) in
+         expr_let x47 := adc64 (x46₂, 0, x43₁) in
+         expr_let x48 := adc64 (x47₂, 0, x44₁) in
+         expr_let x49 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x48₂, 0, x45₁)) in
+         expr_let x50 := add64 (x3₂, x41₁) in
+         expr_let x51 := adc64 (x50₂, x1₂, x46₁) in
+         expr_let x52 := adc64 (x51₂, 0, x47₁) in
+         expr_let x53 := adc64 (x52₂, 0, x48₁) in
+         expr_let x54 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x53₂, 0, x49₁)) in
+         expr_let x55 := add64 (x0₁, x51₁) in
+         expr_let x56 := adc64 (x55₂, 0, x52₁) in
+         expr_let x57 := adc64 (x56₂, 0, x53₁) in
+         expr_let x58 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x57₂, 0, x54₁)) in
+         expr_let x59 := add64 (x1₂, x50₁) in
+         expr_let x60 := adc64 (x59₂, 0, x55₁) in
+         expr_let x61 := adc64 (x60₂, 0, x56₁) in
+         expr_let x62 := adc64 (x61₂, 0, x57₁) in
+         expr_let x63 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x62₂, 0, x58₁)) in
+         expr_let x64 := add64 (x0₁, x59₁) in
+         expr_let x65 := adc64 (x64₂, 0, x60₁) in
+         expr_let x66 := adc64 (x65₂, 0, x61₁) in
+         expr_let x67 := adc64 (x66₂, 0, x62₁) in
+         expr_let x68 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x67₂, 0, x63₁)) in
+         expr_let x69 := add64 (x0₂, x65₁) in
+         expr_let x70 := adc64 (x69₂, 0, x66₁) in
+         expr_let x71 := adc64 (x70₂, 0, x67₁) in
+         expr_let x72 := Z.cast2 (bool, bool)%core @@ (Z.add_with_get_carry_concrete 18446744073709551616 @@ (x71₂, 0, x68₁)) in
+         (x30₁ :: x64₁ :: x69₁ :: x70₁ :: x71₁ :: x72₁ :: [], Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (Z.cast bool @@ (x29₂ + x35₂) + x40₂) + x45₂) + x49₂) + x54₂) + x58₂) + x63₂) + x68₂) + x72₂))
      : Expr (type.uncurry (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) * type.type_primitive type.Z))
 *)
 
