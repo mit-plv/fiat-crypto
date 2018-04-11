@@ -6686,6 +6686,7 @@ Module Pipeline.
   Definition BoundsPipeline
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (reassociate : bool)
              relax_zrange
              {t}
              (E : Expr t)
@@ -6707,7 +6708,7 @@ Module Pipeline.
              dlet_nd e := ToFlat E in
              let E := FromFlat e in
              let E := if with_subst01 then Subst01.Subst01 E else E in
-             let E := ReassociateSmallConstants.Reassociate (2^8) E in
+             let E := if reassociate then ReassociateSmallConstants.Reassociate (2^8) E else E in
              let E := CheckedPartialEvaluateWithBounds1 relax_zrange E arg_bounds out_bounds in
              match E with
              | inl E => Success E
@@ -6720,6 +6721,7 @@ Module Pipeline.
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (reassociate : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6728,7 +6730,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
              rv
-             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 reassociate relax_zrange e arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
@@ -6771,6 +6773,7 @@ Module Pipeline.
   Lemma BoundsPipeline_correct_trans
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
+        (reassociate : bool)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -6784,7 +6787,7 @@ Module Pipeline.
                   (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
             app_curried (Interp e) arg = app_curried InterpE arg)
         rv
-        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
+        (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 reassociate relax_zrange e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
@@ -6794,6 +6797,7 @@ Module Pipeline.
   Definition BoundsPipeline_full
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (reassociate : bool)
              relax_zrange
              {t}
              (E : for_reification.Expr t)
@@ -6804,12 +6808,14 @@ Module Pipeline.
        @BoundsPipeline
          (*with_dead_code_elimination*)
          with_subst01
+         reassociate
          relax_zrange
          t E arg_bounds out_bounds.
 
   Lemma BoundsPipeline_full_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (reassociate : bool)
              relax_zrange
              (Hrelax : forall r r' z : zrange,
                  (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
@@ -6818,7 +6824,7 @@ Module Pipeline.
              arg_bounds
              out_bounds
              rv
-             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_subst01 relax_zrange E arg_bounds out_bounds = Success rv)
+             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_subst01 reassociate relax_zrange E arg_bounds out_bounds = Success rv)
     : forall arg
              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
       ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
@@ -6919,16 +6925,19 @@ Section rcarry_mul.
 
   Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
-  Notation BoundsPipeline rop in_bounds out_bounds
+  (* N.B. Reassocation of small constants is desired for rcarry_mul,
+     but it messes up the associativity of balance in [sub] if we do
+     it in [sub] *)
+  Notation BoundsPipeline reassociate rop in_bounds out_bounds
     := (Pipeline.BoundsPipeline
-          (*false*) true
+          (*false*) true reassociate
           relax_zrange
           rop%Expr in_bounds out_bounds).
 
-  Notation BoundsPipeline_correct in_bounds out_bounds op
+  Notation BoundsPipeline_correct reassociate in_bounds out_bounds op
     := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
         => @Pipeline.BoundsPipeline_correct_trans
-             (*false*) true
+             (*false*) true reassociate
              relax_zrange
              (relax_zrange_gen_good _)
              _
@@ -6942,6 +6951,7 @@ Section rcarry_mul.
   (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
   Definition rcarry_mul
     := BoundsPipeline
+         true
          (carry_mul_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify (length c) @ GallinaReify.Reify idxs @ GallinaReify.Reify (length idxs))
          (Some loose_bounds, Some loose_bounds)
@@ -6949,54 +6959,63 @@ Section rcarry_mul.
 
   Definition rcarry_mul_correct
     := BoundsPipeline_correct
+         true
          (Some loose_bounds, Some loose_bounds)
          (Some tight_bounds)
          (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rcarry_correct
     := BoundsPipeline_correct
+         true
          (Some loose_bounds)
          (Some tight_bounds)
          (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
+         false
          (Some tight_bounds)
          (Some loose_bounds)
          (expanding_id n).
 
   Definition radd_correct
     := BoundsPipeline_correct
+         false
          (Some tight_bounds, Some tight_bounds)
          (Some loose_bounds)
          (addmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
   Definition rsub_correct
     := BoundsPipeline_correct
+         false
          (Some tight_bounds, Some tight_bounds)
          (Some loose_bounds)
          (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
 
   Definition ropp_correct
     := BoundsPipeline_correct
+         false
          (Some tight_bounds)
          (Some loose_bounds)
          (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
 
   Definition rencode_correct
     := BoundsPipeline_correct
+         false
          prime_bound
          (Some tight_bounds)
          (encodemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   Definition rzero_correct
     := BoundsPipeline_correct
+         false
          tt
          (Some tight_bounds)
          (zeromod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
 
   Definition rone_correct
     := BoundsPipeline_correct
+         false
          tt
          (Some tight_bounds)
          (onemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
@@ -7404,7 +7423,7 @@ Abort.
 
 Time Compute
      (Pipeline.BoundsPipeline_full
-        true (relax_zrange_gen [64; 128])
+        true false (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (to_associational (weight 51 1) 5) in
               exact r)
                ZRange.type.option.None ZRange.type.option.None).
@@ -7413,7 +7432,7 @@ Time Compute
    manually uncurry this function example before reification *)
 Time Compute
      (Pipeline.BoundsPipeline_full
-        true (relax_zrange_gen [64; 128])
+        true false (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (fun '(x, y) => scmul (weight 51 1) 5 x y) in
               exact r)
                ZRange.type.option.None ZRange.type.option.None).
@@ -7524,6 +7543,24 @@ fun var : type -> Type =>
          (type.uncurry
             (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z)))
 *)
+  Print base_51_sub.
+  (*
+base_51_sub =
+fun var : type -> Type =>
+(λ x : var
+         (type.list (type.type_primitive type.Z) *
+          type.list (type.type_primitive type.Z))%ctype,
+ (4503599627370458 + (uint64)(x₁[[0]])) -₆₄ x₂ [[0]]
+ :: (4503599627370494 + (uint64)(x₁[[1]])) -₆₄ x₂ [[1]]
+    :: (4503599627370494 + (uint64)(x₁[[2]])) -₆₄ x₂ [[2]]
+       :: (4503599627370494 + (uint64)(x₁[[3]])) -₆₄ x₂ [[3]]
+          :: (4503599627370494 + (uint64)(x₁[[4]])) -₆₄ x₂ [[4]] :: [])%expr
+     : Expr
+         (type.uncurry
+            (type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z)))
+*)
 End X25519_64.
 
 (** TODO: factor out bounds analysis pipeline as a single definition / proof *)
@@ -7541,334 +7578,172 @@ Module X25519_32.
   Definition c := [(1, 19)].
   Definition machine_wordsize := 32.
 
+  Derive base_25p5_sub
+         SuchThat (rsub_correctT n s c machine_wordsize base_25p5_sub)
+         As base_25p5_sub_correct.
+  Proof. Time solve_rsub machine_wordsize. Time Qed.
+
   Derive base_25p5_carry_mul
          SuchThat (rcarry_mul_correctT n s c machine_wordsize base_25p5_carry_mul)
          As base_25p5_carry_mul_correct.
   Proof. Time solve_rcarry_mul machine_wordsize. Time Qed.
 
   Import PrintingNotations.
-  Set Printing Width 80.
   Print base_25p5_carry_mul.
 (*
 base_25p5_carry_mul =
 fun var : type -> Type =>
-(λ v : var
+(λ x : var
          (type.list (type.type_primitive type.Z) *
           type.list (type.type_primitive type.Z))%ctype,
- expr_let v0 := (uint64)(v₁ [[0]] *₆₄ v₂ [[0]] +₆₄
-                         (Z.cast uint64 @@
-                          (Z.shiftl 1 @@
-                           (v₁ [[1]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                          (v₁ [[2]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                           (Z.cast uint64 @@
-                            (Z.shiftl 1 @@
-                             (v₁ [[3]] *₆₄ (19 * (uint32)(v₂[[7]])))) +₆₄
-                            (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                             (Z.cast uint64 @@
-                              (Z.shiftl 1 @@
-                               (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[5]])))) +₆₄
-                              (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[4]])) +₆₄
-                               (Z.cast uint64 @@
-                                (Z.shiftl 1 @@
-                                 (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[3]])))) +₆₄
-                                (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[2]])) +₆₄
-                                 Z.cast uint64 @@
-                                 (Z.shiftl 1 @@
-                                  (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[1]])))))))))))) >> 26) in
- expr_let v1 := ((uint32)(v₁ [[0]] *₆₄ v₂ [[0]] +₆₄
-                          (Z.cast uint64 @@
-                           (Z.shiftl 1 @@
-                            (v₁ [[1]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                           (v₁ [[2]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                            (Z.cast uint64 @@
-                             (Z.shiftl 1 @@
-                              (v₁ [[3]] *₆₄ (19 * (uint32)(v₂[[7]])))) +₆₄
-                             (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                              (Z.cast uint64 @@
-                               (Z.shiftl 1 @@
-                                (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[5]])))) +₆₄
-                               (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[4]])) +₆₄
-                                (Z.cast uint64 @@
-                                 (Z.shiftl 1 @@
-                                  (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[3]])))) +₆₄
-                                 (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[2]])) +₆₄
-                                  Z.cast uint64 @@
-                                  (Z.shiftl 1 @@
-                                   (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[1]]))))))))))))) & 67108863) in
- expr_let v2 := (uint64)((uint64)(v0) +₆₄
-                         (v₁ [[0]] *₆₄ v₂ [[1]] +₆₄
-                          (v₁ [[1]] *₆₄ v₂ [[0]] +₆₄
-                           (v₁ [[2]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                            (v₁ [[3]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                             (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[7]])) +₆₄
-                              (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                               (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[5]])) +₆₄
-                                (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[4]])) +₆₄
-                                 (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[3]])) +₆₄
-                                  v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[2]]))))))))))) >> 25) in
- expr_let v3 := ((uint32)((uint64)(v0) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[1]] +₆₄
-                           (v₁ [[1]] *₆₄ v₂ [[0]] +₆₄
-                            (v₁ [[2]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                             (v₁ [[3]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                              (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[7]])) +₆₄
-                               (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[5]])) +₆₄
-                                 (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[4]])) +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[3]])) +₆₄
-                                   v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[2]])))))))))))) & 33554431) in
- expr_let v4 := (uint64)((uint64)(v2) +₆₄
-                         (v₁ [[0]] *₆₄ v₂ [[2]] +₆₄
-                          (Z.cast uint64 @@
-                           (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[1]])) +₆₄
-                           (v₁ [[2]] *₆₄ v₂ [[0]] +₆₄
-                            (Z.cast uint64 @@
-                             (Z.shiftl 1 @@
-                              (v₁ [[3]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                             (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                              (Z.cast uint64 @@
-                               (Z.shiftl 1 @@
-                                (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[7]])))) +₆₄
-                               (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                (Z.cast uint64 @@
-                                 (Z.shiftl 1 @@
-                                  (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[5]])))) +₆₄
-                                 (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[4]])) +₆₄
-                                  Z.cast uint64 @@
-                                  (Z.shiftl 1 @@
-                                   (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[3]]))))))))))))) >> 26) in
- expr_let v5 := ((uint32)((uint64)(v2) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[2]] +₆₄
-                           (Z.cast uint64 @@
-                            (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[1]])) +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[0]] +₆₄
-                             (Z.cast uint64 @@
-                              (Z.shiftl 1 @@
-                               (v₁ [[3]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                              (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                               (Z.cast uint64 @@
-                                (Z.shiftl 1 @@
-                                 (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[7]])))) +₆₄
-                                (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                 (Z.cast uint64 @@
-                                  (Z.shiftl 1 @@
-                                   (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[5]])))) +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[4]])) +₆₄
-                                   Z.cast uint64 @@
-                                   (Z.shiftl 1 @@
-                                    (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[3]])))))))))))))) & 67108863) in
- expr_let v6 := (uint64)((uint64)(v4) +₆₄
-                         (v₁ [[0]] *₆₄ v₂ [[3]] +₆₄
-                          (v₁ [[1]] *₆₄ v₂ [[2]] +₆₄
-                           (v₁ [[2]] *₆₄ v₂ [[1]] +₆₄
-                            (v₁ [[3]] *₆₄ v₂ [[0]] +₆₄
-                             (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                              (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                               (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[7]])) +₆₄
-                                (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                 (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[5]])) +₆₄
-                                  v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[4]]))))))))))) >> 25) in
- expr_let v7 := ((uint32)((uint64)(v4) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[3]] +₆₄
-                           (v₁ [[1]] *₆₄ v₂ [[2]] +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[1]] +₆₄
-                             (v₁ [[3]] *₆₄ v₂ [[0]] +₆₄
-                              (v₁ [[4]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                               (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[7]])) +₆₄
-                                 (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[5]])) +₆₄
-                                   v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[4]])))))))))))) & 33554431) in
- expr_let v8 := (uint64)((uint64)(v6) +₆₄
-                         (v₁ [[0]] *₆₄ v₂ [[4]] +₆₄
-                          (Z.cast uint64 @@
-                           (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[3]])) +₆₄
-                           (v₁ [[2]] *₆₄ v₂ [[2]] +₆₄
-                            (Z.cast uint64 @@
-                             (Z.shiftl 1 @@ (v₁ [[3]] *₆₄ v₂ [[1]])) +₆₄
-                             (v₁ [[4]] *₆₄ v₂ [[0]] +₆₄
-                              (Z.cast uint64 @@
-                               (Z.shiftl 1 @@
-                                (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                               (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                (Z.cast uint64 @@
-                                 (Z.shiftl 1 @@
-                                  (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[7]])))) +₆₄
-                                 (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                  Z.cast uint64 @@
-                                  (Z.shiftl 1 @@
-                                   (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[5]]))))))))))))) >> 26) in
- expr_let v9 := ((uint32)((uint64)(v6) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[4]] +₆₄
-                           (Z.cast uint64 @@
-                            (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[3]])) +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[2]] +₆₄
-                             (Z.cast uint64 @@
-                              (Z.shiftl 1 @@ (v₁ [[3]] *₆₄ v₂ [[1]])) +₆₄
-                              (v₁ [[4]] *₆₄ v₂ [[0]] +₆₄
-                               (Z.cast uint64 @@
-                                (Z.shiftl 1 @@
-                                 (v₁ [[5]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                                (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                 (Z.cast uint64 @@
-                                  (Z.shiftl 1 @@
-                                   (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[7]])))) +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[6]])) +₆₄
-                                   Z.cast uint64 @@
-                                   (Z.shiftl 1 @@
-                                    (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[5]])))))))))))))) & 67108863) in
- expr_let v10 := (uint64)((uint64)(v8) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[5]] +₆₄
-                           (v₁ [[1]] *₆₄ v₂ [[4]] +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[3]] +₆₄
-                             (v₁ [[3]] *₆₄ v₂ [[2]] +₆₄
-                              (v₁ [[4]] *₆₄ v₂ [[1]] +₆₄
-                               (v₁ [[5]] *₆₄ v₂ [[0]] +₆₄
-                                (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                                 (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[7]])) +₆₄
-                                   v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[6]]))))))))))) >> 25) in
- expr_let v11 := ((uint32)((uint64)(v8) +₆₄
-                           (v₁ [[0]] *₆₄ v₂ [[5]] +₆₄
-                            (v₁ [[1]] *₆₄ v₂ [[4]] +₆₄
-                             (v₁ [[2]] *₆₄ v₂ [[3]] +₆₄
-                              (v₁ [[3]] *₆₄ v₂ [[2]] +₆₄
-                               (v₁ [[4]] *₆₄ v₂ [[1]] +₆₄
-                                (v₁ [[5]] *₆₄ v₂ [[0]] +₆₄
-                                 (v₁ [[6]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                                  (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                   (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[7]])) +₆₄
-                                    v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[6]])))))))))))) & 33554431) in
- expr_let v12 := (uint64)((uint64)(v10) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[6]] +₆₄
-                           (Z.cast uint64 @@
-                            (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[5]])) +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[4]] +₆₄
-                             (Z.cast uint64 @@
-                              (Z.shiftl 1 @@ (v₁ [[3]] *₆₄ v₂ [[3]])) +₆₄
-                              (v₁ [[4]] *₆₄ v₂ [[2]] +₆₄
-                               (Z.cast uint64 @@
-                                (Z.shiftl 1 @@ (v₁ [[5]] *₆₄ v₂ [[1]])) +₆₄
-                                (v₁ [[6]] *₆₄ v₂ [[0]] +₆₄
-                                 (Z.cast uint64 @@
-                                  (Z.shiftl 1 @@
-                                   (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                   Z.cast uint64 @@
-                                   (Z.shiftl 1 @@
-                                    (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[7]]))))))))))))) >> 26) in
- expr_let v13 := ((uint32)((uint64)(v10) +₆₄
-                           (v₁ [[0]] *₆₄ v₂ [[6]] +₆₄
-                            (Z.cast uint64 @@
-                             (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[5]])) +₆₄
-                             (v₁ [[2]] *₆₄ v₂ [[4]] +₆₄
-                              (Z.cast uint64 @@
-                               (Z.shiftl 1 @@ (v₁ [[3]] *₆₄ v₂ [[3]])) +₆₄
-                               (v₁ [[4]] *₆₄ v₂ [[2]] +₆₄
-                                (Z.cast uint64 @@
-                                 (Z.shiftl 1 @@ (v₁ [[5]] *₆₄ v₂ [[1]])) +₆₄
-                                 (v₁ [[6]] *₆₄ v₂ [[0]] +₆₄
-                                  (Z.cast uint64 @@
-                                   (Z.shiftl 1 @@
-                                    (v₁ [[7]] *₆₄ (19 * (uint32)(v₂[[9]])))) +₆₄
-                                   (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[8]])) +₆₄
-                                    Z.cast uint64 @@
-                                    (Z.shiftl 1 @@
-                                     (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[7]])))))))))))))) & 67108863) in
- expr_let v14 := (uint64)((uint64)(v12) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[7]] +₆₄
-                           (v₁ [[1]] *₆₄ v₂ [[6]] +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[5]] +₆₄
-                             (v₁ [[3]] *₆₄ v₂ [[4]] +₆₄
-                              (v₁ [[4]] *₆₄ v₂ [[3]] +₆₄
-                               (v₁ [[5]] *₆₄ v₂ [[2]] +₆₄
-                                (v₁ [[6]] *₆₄ v₂ [[1]] +₆₄
-                                 (v₁ [[7]] *₆₄ v₂ [[0]] +₆₄
-                                  (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                                   v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[8]]))))))))))) >> 25) in
- expr_let v15 := ((uint32)((uint64)(v12) +₆₄
-                           (v₁ [[0]] *₆₄ v₂ [[7]] +₆₄
-                            (v₁ [[1]] *₆₄ v₂ [[6]] +₆₄
-                             (v₁ [[2]] *₆₄ v₂ [[5]] +₆₄
-                              (v₁ [[3]] *₆₄ v₂ [[4]] +₆₄
-                               (v₁ [[4]] *₆₄ v₂ [[3]] +₆₄
-                                (v₁ [[5]] *₆₄ v₂ [[2]] +₆₄
-                                 (v₁ [[6]] *₆₄ v₂ [[1]] +₆₄
-                                  (v₁ [[7]] *₆₄ v₂ [[0]] +₆₄
-                                   (v₁ [[8]] *₆₄ (19 * (uint32)(v₂[[9]])) +₆₄
-                                    v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[8]])))))))))))) & 33554431) in
- expr_let v16 := (uint64)((uint64)(v14) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[8]] +₆₄
-                           (Z.cast uint64 @@
-                            (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[7]])) +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[6]] +₆₄
-                             (Z.cast uint64 @@
-                              (Z.shiftl 1 @@ (v₁ [[3]] *₆₄ v₂ [[5]])) +₆₄
-                              (v₁ [[4]] *₆₄ v₂ [[4]] +₆₄
-                               (Z.cast uint64 @@
-                                (Z.shiftl 1 @@ (v₁ [[5]] *₆₄ v₂ [[3]])) +₆₄
-                                (v₁ [[6]] *₆₄ v₂ [[2]] +₆₄
-                                 (Z.cast uint64 @@
-                                  (Z.shiftl 1 @@ (v₁ [[7]] *₆₄ v₂ [[1]])) +₆₄
-                                  (v₁ [[8]] *₆₄ v₂ [[0]] +₆₄
-                                   Z.cast uint64 @@
-                                   (Z.shiftl 1 @@
-                                    (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[9]]))))))))))))) >> 26) in
- expr_let v17 := ((uint32)((uint64)(v14) +₆₄
-                           (v₁ [[0]] *₆₄ v₂ [[8]] +₆₄
-                            (Z.cast uint64 @@
-                             (Z.shiftl 1 @@ (v₁ [[1]] *₆₄ v₂ [[7]])) +₆₄
-                             (v₁ [[2]] *₆₄ v₂ [[6]] +₆₄
-                              (Z.cast uint64 @@
-                               (Z.shiftl 1 @@ (v₁ [[3]] *₆₄ v₂ [[5]])) +₆₄
-                               (v₁ [[4]] *₆₄ v₂ [[4]] +₆₄
-                                (Z.cast uint64 @@
-                                 (Z.shiftl 1 @@ (v₁ [[5]] *₆₄ v₂ [[3]])) +₆₄
-                                 (v₁ [[6]] *₆₄ v₂ [[2]] +₆₄
-                                  (Z.cast uint64 @@
-                                   (Z.shiftl 1 @@ (v₁ [[7]] *₆₄ v₂ [[1]])) +₆₄
-                                   (v₁ [[8]] *₆₄ v₂ [[0]] +₆₄
-                                    Z.cast uint64 @@
-                                    (Z.shiftl 1 @@
-                                     (v₁ [[9]] *₆₄ (19 * (uint32)(v₂[[9]])))))))))))))) & 67108863) in
- expr_let v18 := (uint64)((uint64)(v16) +₆₄
-                          (v₁ [[0]] *₆₄ v₂ [[9]] +₆₄
-                           (v₁ [[1]] *₆₄ v₂ [[8]] +₆₄
-                            (v₁ [[2]] *₆₄ v₂ [[7]] +₆₄
-                             (v₁ [[3]] *₆₄ v₂ [[6]] +₆₄
-                              (v₁ [[4]] *₆₄ v₂ [[5]] +₆₄
-                               (v₁ [[5]] *₆₄ v₂ [[4]] +₆₄
-                                (v₁ [[6]] *₆₄ v₂ [[3]] +₆₄
-                                 (v₁ [[7]] *₆₄ v₂ [[2]] +₆₄
-                                  (v₁ [[8]] *₆₄ v₂ [[1]] +₆₄
-                                   v₁ [[9]] *₆₄ v₂ [[0]]))))))))) >> 25) in
- expr_let v19 := ((uint32)((uint64)(v16) +₆₄
-                           (v₁ [[0]] *₆₄ v₂ [[9]] +₆₄
-                            (v₁ [[1]] *₆₄ v₂ [[8]] +₆₄
-                             (v₁ [[2]] *₆₄ v₂ [[7]] +₆₄
-                              (v₁ [[3]] *₆₄ v₂ [[6]] +₆₄
-                               (v₁ [[4]] *₆₄ v₂ [[5]] +₆₄
-                                (v₁ [[5]] *₆₄ v₂ [[4]] +₆₄
-                                 (v₁ [[6]] *₆₄ v₂ [[3]] +₆₄
-                                  (v₁ [[7]] *₆₄ v₂ [[2]] +₆₄
-                                   (v₁ [[8]] *₆₄ v₂ [[1]] +₆₄
-                                    v₁ [[9]] *₆₄ v₂ [[0]])))))))))) & 33554431) in
- expr_let v20 := (uint32)((uint32)(v1) +₆₄ 19 *₆₄ (uint64)(v18) >> 26) in
- expr_let v21 := ((uint32)((uint32)(v1) +₆₄ 19 *₆₄ (uint64)(v18)) & 67108863) in
- expr_let v22 := (uint32)((uint32)(v20) +₃₂ (uint32)(v3) >> 25) in
- expr_let v23 := ((uint32)((uint32)(v20) +₃₂ (uint32)(v3)) & 33554431) in
- (uint32)(v21)
- :: (uint32)(v23)
-    :: (uint32)(v22) +₃₂ (uint32)(v5)
-       :: (uint32)(v7)
-          :: (uint32)(v9)
-             :: (uint32)(v11)
-                :: (uint32)(v13)
-                   :: (uint32)(v15) :: (uint32)(v17) :: (uint32)(v19) :: [])%expr
+ expr_let x0 := x₁ [[0]] *₆₄ x₂ [[0]] +₆₄
+                ((uint64)(x₁ [[1]] *₆₄ (19 * (uint32)(x₂[[9]])) << 1) +₆₄
+                 (x₁ [[2]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                  ((uint64)(x₁ [[3]] *₆₄ (19 * (uint32)(x₂[[7]])) << 1) +₆₄
+                   (x₁ [[4]] *₆₄ (19 * (uint32)(x₂[[6]])) +₆₄
+                    ((uint64)(x₁ [[5]] *₆₄ (19 * (uint32)(x₂[[5]])) << 1) +₆₄
+                     (x₁ [[6]] *₆₄ (19 * (uint32)(x₂[[4]])) +₆₄
+                      ((uint64)(x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[3]])) << 1) +₆₄
+                       (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[2]])) +₆₄
+                        (uint64)(x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[1]])) << 1))))))))) in
+ expr_let x1 := (uint64)(x0 >> 26) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[1]] +₆₄
+                 (x₁ [[1]] *₆₄ x₂ [[0]] +₆₄
+                  (x₁ [[2]] *₆₄ (19 * (uint32)(x₂[[9]])) +₆₄
+                   (x₁ [[3]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                    (x₁ [[4]] *₆₄ (19 * (uint32)(x₂[[7]])) +₆₄
+                     (x₁ [[5]] *₆₄ (19 * (uint32)(x₂[[6]])) +₆₄
+                      (x₁ [[6]] *₆₄ (19 * (uint32)(x₂[[5]])) +₆₄
+                       (x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[4]])) +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[3]])) +₆₄
+                         x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[2]]))))))))))) in
+ expr_let x2 := (uint64)(x1 >> 25) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[2]] +₆₄
+                 ((uint64)(x₁ [[1]] *₆₄ x₂ [[1]] << 1) +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[0]] +₆₄
+                   ((uint64)(x₁ [[3]] *₆₄ (19 * (uint32)(x₂[[9]])) << 1) +₆₄
+                    (x₁ [[4]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                     ((uint64)(x₁ [[5]] *₆₄ (19 * (uint32)(x₂[[7]])) << 1) +₆₄
+                      (x₁ [[6]] *₆₄ (19 * (uint32)(x₂[[6]])) +₆₄
+                       ((uint64)(x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[5]])) << 1) +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[4]])) +₆₄
+                         (uint64)(x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[3]])) << 1)))))))))) in
+ expr_let x3 := (uint64)(x2 >> 26) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[3]] +₆₄
+                 (x₁ [[1]] *₆₄ x₂ [[2]] +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[1]] +₆₄
+                   (x₁ [[3]] *₆₄ x₂ [[0]] +₆₄
+                    (x₁ [[4]] *₆₄ (19 * (uint32)(x₂[[9]])) +₆₄
+                     (x₁ [[5]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                      (x₁ [[6]] *₆₄ (19 * (uint32)(x₂[[7]])) +₆₄
+                       (x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[6]])) +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[5]])) +₆₄
+                         x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[4]]))))))))))) in
+ expr_let x4 := (uint64)(x3 >> 25) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[4]] +₆₄
+                 ((uint64)(x₁ [[1]] *₆₄ x₂ [[3]] << 1) +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[2]] +₆₄
+                   ((uint64)(x₁ [[3]] *₆₄ x₂ [[1]] << 1) +₆₄
+                    (x₁ [[4]] *₆₄ x₂ [[0]] +₆₄
+                     ((uint64)(x₁ [[5]] *₆₄ (19 * (uint32)(x₂[[9]])) << 1) +₆₄
+                      (x₁ [[6]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                       ((uint64)(x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[7]])) << 1) +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[6]])) +₆₄
+                         (uint64)(x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[5]])) << 1)))))))))) in
+ expr_let x5 := (uint64)(x4 >> 26) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[5]] +₆₄
+                 (x₁ [[1]] *₆₄ x₂ [[4]] +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[3]] +₆₄
+                   (x₁ [[3]] *₆₄ x₂ [[2]] +₆₄
+                    (x₁ [[4]] *₆₄ x₂ [[1]] +₆₄
+                     (x₁ [[5]] *₆₄ x₂ [[0]] +₆₄
+                      (x₁ [[6]] *₆₄ (19 * (uint32)(x₂[[9]])) +₆₄
+                       (x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[7]])) +₆₄
+                         x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[6]]))))))))))) in
+ expr_let x6 := (uint64)(x5 >> 25) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[6]] +₆₄
+                 ((uint64)(x₁ [[1]] *₆₄ x₂ [[5]] << 1) +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[4]] +₆₄
+                   ((uint64)(x₁ [[3]] *₆₄ x₂ [[3]] << 1) +₆₄
+                    (x₁ [[4]] *₆₄ x₂ [[2]] +₆₄
+                     ((uint64)(x₁ [[5]] *₆₄ x₂ [[1]] << 1) +₆₄
+                      (x₁ [[6]] *₆₄ x₂ [[0]] +₆₄
+                       ((uint64)(x₁ [[7]] *₆₄ (19 * (uint32)(x₂[[9]])) << 1) +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[8]])) +₆₄
+                         (uint64)(x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[7]])) << 1)))))))))) in
+ expr_let x7 := (uint64)(x6 >> 26) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[7]] +₆₄
+                 (x₁ [[1]] *₆₄ x₂ [[6]] +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[5]] +₆₄
+                   (x₁ [[3]] *₆₄ x₂ [[4]] +₆₄
+                    (x₁ [[4]] *₆₄ x₂ [[3]] +₆₄
+                     (x₁ [[5]] *₆₄ x₂ [[2]] +₆₄
+                      (x₁ [[6]] *₆₄ x₂ [[1]] +₆₄
+                       (x₁ [[7]] *₆₄ x₂ [[0]] +₆₄
+                        (x₁ [[8]] *₆₄ (19 * (uint32)(x₂[[9]])) +₆₄
+                         x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[8]]))))))))))) in
+ expr_let x8 := (uint64)(x7 >> 25) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[8]] +₆₄
+                 ((uint64)(x₁ [[1]] *₆₄ x₂ [[7]] << 1) +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[6]] +₆₄
+                   ((uint64)(x₁ [[3]] *₆₄ x₂ [[5]] << 1) +₆₄
+                    (x₁ [[4]] *₆₄ x₂ [[4]] +₆₄
+                     ((uint64)(x₁ [[5]] *₆₄ x₂ [[3]] << 1) +₆₄
+                      (x₁ [[6]] *₆₄ x₂ [[2]] +₆₄
+                       ((uint64)(x₁ [[7]] *₆₄ x₂ [[1]] << 1) +₆₄
+                        (x₁ [[8]] *₆₄ x₂ [[0]] +₆₄
+                         (uint64)(x₁ [[9]] *₆₄ (19 * (uint32)(x₂[[9]])) << 1)))))))))) in
+ expr_let x9 := (uint64)(x8 >> 26) +₆₄
+                (x₁ [[0]] *₆₄ x₂ [[9]] +₆₄
+                 (x₁ [[1]] *₆₄ x₂ [[8]] +₆₄
+                  (x₁ [[2]] *₆₄ x₂ [[7]] +₆₄
+                   (x₁ [[3]] *₆₄ x₂ [[6]] +₆₄
+                    (x₁ [[4]] *₆₄ x₂ [[5]] +₆₄
+                     (x₁ [[5]] *₆₄ x₂ [[4]] +₆₄
+                      (x₁ [[6]] *₆₄ x₂ [[3]] +₆₄
+                       (x₁ [[7]] *₆₄ x₂ [[2]] +₆₄
+                        (x₁ [[8]] *₆₄ x₂ [[1]] +₆₄ x₁ [[9]] *₆₄ x₂ [[0]]))))))))) in
+ expr_let x10 := ((uint32)(x0) & 67108863) +₆₄ 19 *₆₄ (uint64)(x9 >> 25) in
+ expr_let x11 := (uint32)(x10 >> 26) +₃₂ ((uint32)(x1) & 33554431) in
+ ((uint32)(x10) & 67108863)
+ :: ((uint32)(x11) & 33554431)
+    :: (uint32)(x11 >> 25) +₃₂ ((uint32)(x2) & 67108863)
+       :: ((uint32)(x3) & 33554431)
+          :: ((uint32)(x4) & 67108863)
+             :: ((uint32)(x5) & 33554431)
+                :: ((uint32)(x6) & 67108863)
+                   :: ((uint32)(x7) & 33554431)
+                      :: ((uint32)(x8) & 67108863)
+                         :: ((uint32)(x9) & 33554431) :: [])%expr
      : Expr
+         (type.uncurry
+            (type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z)))
+ *)
+  Print base_25p5_sub.
+  (*
+base_25p5_sub =
+fun var : type -> Type =>
+(λ x : var
          (type.list (type.type_primitive type.Z) *
-          type.list (type.type_primitive type.Z) ->
-          type.list (type.type_primitive type.Z))
+          type.list (type.type_primitive type.Z))%ctype,
+ (134217690 + (uint32)(x₁[[0]])) -₃₂ x₂ [[0]]
+ :: (67108862 + (uint32)(x₁[[1]])) -₃₂ x₂ [[1]]
+    :: (134217726 + (uint32)(x₁[[2]])) -₃₂ x₂ [[2]]
+       :: (67108862 + (uint32)(x₁[[3]])) -₃₂ x₂ [[3]]
+          :: (134217726 + (uint32)(x₁[[4]])) -₃₂ x₂ [[4]]
+             :: (67108862 + (uint32)(x₁[[5]])) -₃₂ x₂ [[5]]
+                :: (134217726 + (uint32)(x₁[[6]])) -₃₂ x₂ [[6]]
+                   :: (67108862 + (uint32)(x₁[[7]])) -₃₂ x₂ [[7]]
+                      :: (134217726 + (uint32)(x₁[[8]])) -₃₂ x₂ [[8]]
+                         :: (67108862 + (uint32)(x₁[[9]])) -₃₂ x₂ [[9]] :: [])%expr
+     : Expr
+         (type.uncurry
+            (type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z)))
 *)
 End X25519_32.
 *)
@@ -8460,6 +8335,7 @@ Module MontgomeryReduction.
       := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
                false (* subst01 *)
+               false (* small constant reassociation *)
                relax_zrange
                (relax_zrange_gen_good _)
                _
