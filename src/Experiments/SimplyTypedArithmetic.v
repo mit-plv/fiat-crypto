@@ -20039,7 +20039,7 @@ end
                    end
            | base.type.list base.type.Z
              => fun '(n, r, len) e
-                => (ls <- arith_expr_of_base_PHOAS e (Some (List.repeat r len));
+                => (ls <- arith_expr_of_base_PHOAS e (Some (repeat r len));
                       List.fold_right
                         (fun a b
                          => match b with
@@ -20998,16 +20998,244 @@ Module Pipeline.
       (syntax_tree : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
   | Bounds_analysis_failed
   | Type_too_complicated_for_cps (t : type)
-  | Value_not_le (descr : string) {T'} (lhs rhs : T')
-  | Value_not_lt (descr : string) {T'} (lhs rhs : T')
-  | Values_not_provably_distinct (descr : string) {T'} (lhs rhs : T')
-  | Values_not_provably_equal (descr : string) {T'} (lhs rhs : T')
+  | Value_not_leZ (descr : string) (lhs rhs : Z)
+  | Value_not_leQ (descr : string) (lhs rhs : Q)
+  | Value_not_ltZ (descr : string) (lhs rhs : Z)
+  | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
+  | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Stringification_failed.
 
   Inductive ErrorT {T} :=
   | Success (v : T)
   | Error (msg : ErrorMessage).
   Global Arguments ErrorT : clear implicits.
+
+  Section show.
+    Local Open Scope string_scope.
+    Class Show T := show : bool (* parens *) -> T -> string.
+    Global Instance: Show unit := fun _ _ => "tt".
+    Definition maybe_wrap_parens (parens : bool) (s : string)
+      := if parens then "(" ++ s ++ ")" else s.
+    Global Instance show_option {T} `{Show T} : Show (option T)
+      := fun p v
+         => match v with
+            | Some v
+              => maybe_wrap_parens
+                   p
+                   ("Some " ++ show true v)
+            | None => "None"
+            end.
+    Global Instance show_positive : Show positive
+      := fun _ p
+         => decimal_string_of_pos p.
+    Global Instance show_N : Show N
+      := fun _ n
+         => match n with
+            | N0 => "0"
+            | Npos p => show false p
+            end.
+    Global Instance show_bool : Show bool
+      := fun _ b => if b then "true" else "false".
+    Global Instance show_nat : Show nat
+      := fun _ n => show false (N.of_nat n).
+    Global Instance show_Z : Show Z
+      := fun _ z
+         => match z with
+            | Zneg p => "-" ++ show false p
+            | Z0 => "0"
+            | Zpos p => show false p
+            end.
+    Global Instance show_Q : Show Q
+      := fun parens q
+         => if (Qden q =? 1)%positive
+            then show parens (Qnum q)
+            else maybe_wrap_parens
+                   parens
+                   (show true (Qnum q) ++ " / " ++ show true (Qden q)).
+    Definition show_positive_hex : Show positive
+      := fun _ p => HexString.of_pos p.
+    Definition show_Z_hex : Show Z
+      := fun _ z => HexString.of_Z z.
+    Global Instance show_zrange : Show zrange
+      := fun _ r
+         => "[" ++ show_Z_hex false (lower r) ++ " ~> " ++ show_Z_hex false (upper r) ++ "]".
+    Fixpoint show_list {T} {S : Show T} (ls : list T) : string
+      := match ls with
+         | nil => "[]"
+         | cons x xs => S true x ++ " :: " ++ show_list xs
+         end.
+    Global Instance: forall {T} `{Show T}, Show (list T)
+      := fun _ _ _ => show_list.
+    Global Instance show_pair {A B} `{Show A, Show B} : Show (A * B)
+      := fun _ '(a, b) => "(" ++ show false a ++ ", " ++ show true b ++ ")".
+    Definition show_prim_zrange_opt_interp {t:base.type.base}
+      : Show (ZRange.type.base.option.interp t)
+      := match t return Show (ZRange.type.base.option.interp t) with
+         | base.type.unit => _
+         | base.type.Z => _
+         | base.type.nat => _
+         | base.type.bool => _
+         end.
+    Global Existing Instance show_prim_zrange_opt_interp.
+    Fixpoint show_base_zrange_opt_interp {t} : Show (ZRange.type.base.option.interp t)
+      := fun parens
+         => match t return ZRange.type.base.option.interp t -> string with
+            | base.type.type_base t
+              => fun v : ZRange.type.base.option.interp t
+                 => @show_prim_zrange_opt_interp t parens v
+            | base.type.prod A B
+              => fun '(a, b)
+                 => "(" ++ @show_base_zrange_opt_interp A false a
+                        ++ ", " ++ @show_base_zrange_opt_interp B true b
+                        ++ ")"
+            | base.type.list A
+              => fun v : option (list (ZRange.type.option.interp A))
+                 => show parens v
+            end.
+    Global Existing Instance show_base_zrange_opt_interp.
+    Definition show_zrange_opt_interp {t} : Show (ZRange.type.option.interp t)
+      := fun parens
+         => match t return ZRange.type.option.interp t -> string with
+            | type.base t
+              => fun v : ZRange.type.base.option.interp t
+                 => show parens v
+            | type.arrow s d => fun _ => "λ"
+            end.
+    Global Existing Instance show_zrange_opt_interp.
+    Global Instance show_primitive_type : Show base.type.base
+      := fun p t
+         => match t with
+            | base.type.unit => "()"
+            | base.type.Z => "ℤ"
+            | base.type.nat => "ℕ"
+            | base.type.bool => "bool"
+            end.
+    Fixpoint show_base_type (p : bool) (t : base.type) : string
+      := match t with
+         | base.type.type_base x => show p x
+         | base.type.prod A B => maybe_wrap_parens p (show_base_type true A ++ " * " ++ show_base_type true B)
+         | base.type.list A => "list " ++ show_base_type true A
+         end.
+    Global Instance: Show base.type := show_base_type.
+    Fixpoint show_type (p : bool) (t : type) : string
+      := match t with
+         | type.base x => show p x
+         | type.arrow s d => maybe_wrap_parens p (show_type true s ++ " → " ++ show_type true d)
+         end.
+    Global Instance: Show type := show_type.
+    Fixpoint show_for_each_lhs_of_arrow {base_type} (f : type.type base_type -> Type) (show_f : forall t, Show (f t)) (t : type.type base_type) (p : bool) : type.for_each_lhs_of_arrow f t -> string
+      := match t return type.for_each_lhs_of_arrow f t -> string with
+         | type.base t => fun (tt : unit) => show p tt
+         | type.arrow s d
+           => fun '((x, xs) : f s * type.for_each_lhs_of_arrow f d)
+              => let _ : Show (f s) := show_f s in
+                 let _ : Show (type.for_each_lhs_of_arrow f d) := @show_for_each_lhs_of_arrow base_type f show_f d in
+                 show p (x, xs)
+         end.
+    Global Instance: forall {base_type f show_f t}, Show (type.for_each_lhs_of_arrow f t) := @show_for_each_lhs_of_arrow.
+
+    Local Notation NewLine := (String "010" "") (only parsing).
+
+    Fixpoint find_too_loose_base_bounds {t}
+      : ZRange.type.base.option.interp t -> ZRange.type.base.option.interp t-> bool * list (nat * nat) * list (zrange * zrange)
+      := match t return ZRange.type.base.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange) with
+         | base.type.unit
+           => fun 'tt 'tt => (false, nil, nil)
+         | base.type.nat
+         | base.type.bool
+           => fun _ _ => (false, nil, nil)
+         | base.type.Z
+           => fun a b
+              => match a, b with
+                 | None, None => (false, nil, nil)
+                 | Some _, None => (false, nil, nil)
+                 | None, Some _ => (true, nil, nil)
+                 | Some a, Some b
+                   => if is_tighter_than_bool a b
+                      then (false, nil, nil)
+                      else (false, nil, ((a, b)::nil))
+                 end
+         | base.type.prod A B
+           => fun '(ra, rb) '(ra', rb')
+              => let '(b1, lens1, ls1) := @find_too_loose_base_bounds A ra ra' in
+                 let '(b2, lens2, ls2) := @find_too_loose_base_bounds B rb rb' in
+                 (orb b1 b2, lens1 ++ lens2, ls1 ++ ls2)%list
+         | base.type.list A
+           => fun ls1 ls2
+              => match ls1, ls2 with
+                 | None, None
+                 | Some _, None
+                   => (false, nil, nil)
+                 | None, Some _
+                   => (true, nil, nil)
+                 | Some ls1, Some ls2
+                   => List.fold_right
+                        (fun '(b, len, err) '(bs, lens, errs)
+                         => (orb b bs, len ++ lens, err ++ errs)%list)
+                        (false,
+                         (if (List.length ls1 =? List.length ls2)%nat
+                          then nil
+                          else ((List.length ls1, List.length ls2)::nil)),
+                         nil)
+                        (List.map
+                           (fun '(a, b) => @find_too_loose_base_bounds A a b)
+                           (List.combine ls1 ls2))
+                 end
+         end.
+
+    Definition find_too_loose_bounds {t}
+      : ZRange.type.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange)
+      := match t with
+         | type.arrow s d => fun _ _ => (false, nil, nil)
+         | type.base t => @find_too_loose_base_bounds t
+         end.
+    Definition explain_too_loose_bounds {t} (b1 b2 : ZRange.type.option.interp t)
+      : string
+      := let '(none_some, lens, bs) := find_too_loose_bounds b1 b2 in
+         ToString.C.join
+           NewLine
+           ((if none_some then "Found None where Some was expected"::nil else nil)
+              ++ (List.map
+                    (A:=nat*nat)
+                    (fun '(l1, l2) => "Found a list of length " ++ show false l1 ++ " where a list of length " ++ show false l2 ++ " was expected.")
+                    lens)
+              ++ (List.map
+                    (A:=zrange*zrange)
+                    (fun '(b1, b2) => "The bounds " ++ show false b1 ++ " are looser than the expected bounds " ++ show false b2)
+                    bs)).
+
+    Global Instance show_ErrorMessage : Show ErrorMessage
+      := fun parens e
+         => maybe_wrap_parens
+              parens
+              match e with
+              | Computed_bounds_are_not_tight_enough t computed_bounds expected_bounds syntax_tree arg_bounds
+                => ("Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")." ++ NewLine)
+                     ++ (explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds ++ NewLine)
+                     ++ match ToString.C.ToFunctionString
+                                "f" syntax_tree None arg_bounds with
+                        | Some E_str
+                          => ("When doing bounds analysis on the syntax tree:" ++ NewLine)
+                               ++ E_str ++ NewLine
+                               ++ "with input bounds " ++ show true arg_bounds ++ "." ++ NewLine
+                        | None => "(Unprintible syntax tree used in bounds analysis)" ++ NewLine
+                        end
+              | Bounds_analysis_failed => "Bounds analysis failed."
+              | Type_too_complicated_for_cps t
+                => "Type too complicated for cps: " ++ show false t
+              | Value_not_leZ descr lhs rhs
+                => "Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs
+              | Value_not_leQ descr lhs rhs
+                => "Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs
+              | Value_not_ltZ descr lhs rhs
+                => "Value not < (" ++ descr ++ ") : expected " ++ show false lhs ++ " < " ++ show false rhs
+              | Values_not_provably_distinctZ descr lhs rhs
+                => "Values not provalby distinct (" ++ descr ++ ") : expected " ++ show true lhs ++ " ≠ " ++ show true rhs
+              | Values_not_provably_equalZ descr lhs rhs
+                => "Values not provalby equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs
+              | Stringification_failed => "Stringification failed"
+              end.
+  End show.
 
   Definition invert_result {T} (v : ErrorT T)
     := match v return match v with Success _ => T | _ => ErrorMessage end with
@@ -21252,15 +21480,15 @@ Section rcarry_mul.
   Definition check_args {T} (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
     := if negb (Qle_bool 1 limbwidth)%Q
-       then Pipeline.Error (Pipeline.Value_not_le "1 ≤ limbwidth" 1%Q limbwidth)
+       then Pipeline.Error (Pipeline.Value_not_leQ "1 ≤ limbwidth" 1%Q limbwidth)
        else if (negb (0 <? s - Associational.eval c))%Z
-            then Pipeline.Error (Pipeline.Value_not_lt "s - Associational.eval c ≤ 0" 0 (s - Associational.eval c))
+            then Pipeline.Error (Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 0" 0 (s - Associational.eval c))
             else if (s =? 0)%Z
-                 then Pipeline.Error (Pipeline.Values_not_provably_distinct "s ≠ 0" s 0)
+                 then Pipeline.Error (Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
                  else if (n =? 0)%nat
-                      then Pipeline.Error (Pipeline.Values_not_provably_distinct "n ≠ 0" n 0%nat)
+                      then Pipeline.Error (Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0%nat)
                       else if (negb (0 <? machine_wordsize))
-                           then Pipeline.Error (Pipeline.Value_not_lt "0 < machine_wordsize" 0 machine_wordsize)
+                           then Pipeline.Error (Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
                            else res.
 
   Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
@@ -21299,11 +21527,24 @@ Section rcarry_mul.
          (Some tight_bounds)
          (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
+  Definition rcarry
+    := BoundsPipeline
+         (carry_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
+         (Some loose_bounds, tt)
+         (Some tight_bounds).
+
   Definition rcarry_correct
     := BoundsPipeline_correct
          (Some loose_bounds, tt)
          (Some tight_bounds)
          (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
+
+  Definition rrelax
+    := BoundsPipeline
+         id_gen
+         (Some tight_bounds, tt)
+         (Some loose_bounds).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
@@ -21311,17 +21552,38 @@ Section rcarry_mul.
          (Some loose_bounds)
          (@id (list Z)).
 
+  Definition radd
+    := BoundsPipeline
+         (add_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
+         (Some tight_bounds, (Some tight_bounds, tt))
+         (Some loose_bounds).
+
   Definition radd_correct
     := BoundsPipeline_correct
          (Some tight_bounds, (Some tight_bounds, tt))
          (Some loose_bounds)
          (addmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
+  Definition rsub
+    := BoundsPipeline
+         (sub_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
+         (Some tight_bounds, (Some tight_bounds, tt))
+         (Some loose_bounds).
+
   Definition rsub_correct
     := BoundsPipeline_correct
          (Some tight_bounds, (Some tight_bounds, tt))
          (Some loose_bounds)
          (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n coef).
+
+  Definition ropp
+    := BoundsPipeline
+         (opp_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
+         (Some tight_bounds, tt)
+         (Some loose_bounds).
 
   Definition ropp_correct
     := BoundsPipeline_correct
@@ -21752,6 +22014,292 @@ Time Compute
               exact r)
                (None, (Some (repeat (@None _) 5), tt))
                ZRange.type.base.option.None).
+
+Module ForExtraction.
+  Definition parse_neg (s : string) : string * Z
+    := match s with
+       | String a b
+         => if Ascii.ascii_dec a "-"
+            then (b, -1)
+            else if Ascii.ascii_dec a "+"
+                 then (b, 1)
+                 else (s, 1)
+       | _ => (s, 1)
+       end.
+  Definition parse_N (s : string) : N
+    := DecimalHelpers.N.of_uint (DecimalHelpers.String.to_uint s).
+  Definition parse_Z (s : string) : Z
+    := let '(s, sgn) := parse_neg s in
+       sgn * Z.of_N (parse_N s).
+  Definition parse_nat (s : string) : nat
+    := N.to_nat (parse_N s).
+
+  Definition parse_n (n : string) : nat
+    := parse_nat n.
+
+  Definition parse_pow (s : string) : option Z
+    := let '(s, sgn) := parse_neg s in
+       match String.split "^" s with
+       | v::nil
+         => Some (sgn * parse_Z v)
+       | b::e::nil
+         => Some (sgn * parse_Z b ^ parse_Z e)
+       | _ => None
+       end.
+
+  Definition parse_mul (s : string) : option Z
+    := List.fold_right
+         (fun a b => (a <- a; b <- b; Some (Z.mul a b))%option)
+         (Some 1)
+         (List.map parse_pow (String.split "*" s)).
+
+  (** We take in [c] in the format [a,b;c,d;e,f;...] becoming the list
+    [[(a,b), (c,d), (e, f), ...]] *)
+  Definition parse_s (s : string) : option Z
+    := parse_mul s.
+  Definition parse_c (s : string) : option (list (Z * Z))
+    := List.fold_right
+         (fun ls rest
+          => (rest <- rest;
+                match ls with
+                | a::b::nil => (a <- parse_mul a; b <- parse_mul b; Some ((a, b)::rest))
+                | _ => None
+                end)%option)
+         (Some nil)
+         (List.map (String.split ",") (String.split ";" s)).
+
+  Definition parse_machine_wordsize (s : string) : Z
+    := parse_Z s.
+
+  Local Open Scope string_scope.
+  Local Notation NewLine := (String "010" "") (only parsing).
+
+  Definition SolinasPipelineLines
+             (n : string)
+             (s : string)
+             (c : string)
+             (machine_wordsize : string)
+    : list (string * Pipeline.ErrorT (list string)) + string
+    := let str_n := n in
+       let n : nat := parse_n n in
+       let str_machine_wordsize := machine_wordsize in
+       let str_c := c in
+       let str_s := s in
+       let machine_wordsize := parse_machine_wordsize machine_wordsize in
+       match parse_s s, parse_c c with
+       | None, None
+         => inr ("Could not parse s (" ++ s ++ ") nor c (" ++ c ++ ")")
+       | None, _
+         => inr ("Could not parse s (" ++ s ++ ")")
+       | _, None
+         => inr ("Could not parse c (" ++ c ++ ")")
+       | Some s, Some c
+         => let tight_bounds := Some (tight_bounds n s c) in
+            let loose_bounds := Some (loose_bounds n s c) in
+            let ToFunLines t name E arg_bounds
+                := (name,
+                    match E with
+                    | Pipeline.Success E
+                      => let E := @ToString.C.ToFunctionLines
+                                    name t E None arg_bounds in
+                         match E with
+                         | Some E => Pipeline.Success E
+                         | None => Pipeline.Error Pipeline.Stringification_failed
+                         end
+                    | Pipeline.Error err => Pipeline.Error err
+                    end) in
+            let header :=
+                ["/* Autogenerated */";
+                   "/* n = " ++ Pipeline.show false n ++ " (from """ ++ str_n ++ """) */";
+                   "/* s = " ++ Pipeline.show_Z_hex false s ++ " (from """ ++ str_s ++ """) */";
+                   "/* c = " ++ Pipeline.show false c ++ " (from """ ++ str_c ++ """) */";
+                   "/* machine_wordsize = " ++ Pipeline.show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """) */"] in
+            inl
+              [("check_args" ++ NewLine ++ ToString.C.join NewLine header,
+                check_args
+                  n s c machine_wordsize
+                  (Pipeline.Success header));
+                 (ToFunLines _ "fecarry_mul" (rcarry_mul n s c machine_wordsize) (loose_bounds, (loose_bounds, tt)));
+                 (ToFunLines _ "fecarry" (rcarry n s c machine_wordsize) (loose_bounds, tt));
+                 (ToFunLines _ "feadd" (radd n s c machine_wordsize) (tight_bounds, (tight_bounds, tt)));
+                 (ToFunLines _ "fesub" (rsub n s c machine_wordsize) (tight_bounds, (tight_bounds, tt)));
+                 (ToFunLines _ "feopp" (ropp n s c machine_wordsize) (tight_bounds, tt))]
+       end.
+
+  Definition CollectErrors
+             (res : list (string * Pipeline.ErrorT (list string)) + string)
+    : list (list string) + list string
+    := match res with
+       | inl res
+         => let header := hd "" (List.map (@fst _ _) res) in
+            let res :=
+                List.fold_right
+                  (fun '(name, res) rest
+                   => match res, rest with
+                      | Pipeline.Error err, rest
+                        => let cur := ("In " ++ name ++ ": " ++ Pipeline.show false err) in
+                           let rest := match rest with inl _ => nil | inr rest => rest end in
+                           inr (cur :: rest)
+                      | Pipeline.Success v, inr ls => inr ls
+                      | Pipeline.Success v, inl ls
+                        => inl (v :: ls)
+                      end)
+                  (inl nil)
+                  res in
+            match res with
+            | inl ls => inl ls
+            | inr err => inr (header::err)
+            end
+       | inr res
+         => inr (res::nil)
+       end.
+
+  Definition SolinasPipelineProcessedLines
+             (n : string)
+             (s : string)
+             (c : string)
+             (machine_wordsize : string)
+    : list string + string
+    := match CollectErrors (SolinasPipelineLines n s c machine_wordsize) with
+       | inl ls
+         => inl
+              (List.map (fun s => ToString.C.join NewLine s ++ NewLine ++ NewLine)
+                        ls)
+       | inr ls
+         => inr (ToString.C.join
+                   (NewLine ++ NewLine)
+                   ls)
+       end.
+
+  Definition SolinasPipeline
+             {A}
+             (n : string)
+             (s : string)
+             (c : string)
+             (machine_wordsize : string)
+             (success : list string -> A)
+             (error : string -> A)
+    : A
+    := match SolinasPipelineProcessedLines n s c machine_wordsize with
+       | inl s => success s
+       | inr s => error s
+       end.
+End ForExtraction.
+
+(*
+Require Import Coq.extraction.Extraction.
+Require Import Coq.extraction.ExtrOcamlBasic.
+Require Import Coq.extraction.ExtrOcamlString.
+
+Module OCaml.
+  Axiom printf_char : Ascii.ascii -> unit.
+  Axiom flush : unit -> unit.
+  Axiom string : Set.
+  Axiom int : Set.
+  Axiom List_init : forall A, int -> (int -> A) -> list A.
+  Axiom string_length : string -> int.
+  Axiom string_get : string -> int -> Ascii.ascii.
+  Axiom sys_argv : list string.
+  Axiom list_iter : forall A, (A -> unit) -> list A -> unit.
+  Axiom list_length : forall A, list A -> int.
+  Axiom string_init : int -> (int -> Ascii.ascii) -> string.
+  Axiom list_nth : forall A, list A -> int -> A.
+  Axiom raise_failure : forall A, string -> A.
+  Extract Constant printf_char =>
+  "fun c -> Printf.printf ""%c%!"" c".
+  Extract Constant flush =>
+  "fun () -> Printf.printf ""%!""".
+  Extract Inlined Constant string => "string".
+  Extract Inlined Constant int => "int".
+  Extract Inlined Constant List_init => "List.init".
+  Extract Inlined Constant string_length => "String.length".
+  Extract Inlined Constant string_get => "String.get".
+  Extract Constant sys_argv => "Array.to_list Sys.argv".
+  Extract Inlined Constant list_iter => "List.iter".
+  Extract Inlined Constant list_length => "List.length".
+  Extract Inlined Constant string_init => "String.init".
+  Extract Inlined Constant list_nth => "List.nth".
+  Extract Constant raise_failure => "fun x -> Printf.printf ""%s\n\n%!"" x; raise (Failure x)".
+
+  Definition string_of_Coq_string (s : String.string) : string
+    := let s := String.to_list s in
+       string_init
+         (list_length _ s)
+         (list_nth _ s).
+
+  Definition main : unit
+    := let argv := List.map
+                     (fun s => String.of_list
+                                 (List_init _ (string_length s) (string_get s)))
+                     sys_argv in
+       match argv with
+       | _::n::s::c::machine_wordsize::nil
+         => ForExtraction.SolinasPipeline
+              n s c machine_wordsize
+              (fun res => list_iter
+                            _
+                            (fun ls
+                             => list_iter _ printf_char (String.to_list ls))
+                            res)
+              (fun err => raise_failure _ (string_of_Coq_string err))
+       | nil => raise_failure _ (string_of_Coq_string "empty argv")
+       | prog::args
+         => raise_failure _ (string_of_Coq_string ("Expected arguments n, s, c, machine_wordsize, got " ++ Pipeline.show false (List.length args) ++ " arguments in " ++ prog))
+       end.
+End OCaml.
+
+Set Warnings Append "-extraction-opaque-accessed".
+Extraction Language OCaml.
+Redirect "/tmp/solinas.ml" Recursive Extraction OCaml.main.
+ *)
+
+Require Import Coq.extraction.Extraction.
+Require Import Coq.extraction.ExtrHaskellBasic.
+Require Import Coq.extraction.ExtrHaskellString.
+
+Module Haskell.
+  Axiom IO_unit : Set.
+  Axiom _IO : Set -> Set.
+  Axiom printf_string : string -> _IO unit.
+  Axiom getArgs : _IO (list string).
+  Axiom getProgName : _IO string.
+  Axiom raise_failure : forall A, string -> A.
+  Axiom _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B.
+  Axiom _IO_return : forall A : Set, A -> _IO A.
+  Axiom cast_io : _IO unit -> IO_unit.
+  Extract Constant printf_string =>
+  "\s -> Text.Printf.printf ""%s"" s".
+  Extract Constant _IO "a" => "GHC.Base.IO a".
+  Extract Inlined Constant getArgs => "System.Environment.getArgs".
+  Extract Inlined Constant getProgName => "System.Environment.getProgName".
+  Extract Constant raise_failure => "\x -> Prelude.error x".
+  Extract Inlined Constant _IO_bind => "(Prelude.>>=)".
+  Extract Inlined Constant _IO_return => "return".
+  Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
+  Extract Inlined Constant cast_io => "".
+
+  Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
+
+  Definition main : IO_unit
+    := cast_io
+         (argv <- getArgs;
+            prog <- getProgName;
+            match argv with
+            | n::s::c::machine_wordsize::nil
+              => ForExtraction.SolinasPipeline
+                   n s c machine_wordsize
+                   (fun res => printf_string
+                                 (ToString.C.join "" res))
+                   (fun err => raise_failure _ err)
+            | args
+              => raise_failure _ ("Expected arguments n, s, c, machine_wordsize, got " ++ Pipeline.show false (List.length args) ++ " arguments in " ++ prog)
+            end).
+End Haskell.
+
+Set Warnings Append "-extraction-opaque-accessed".
+Extraction Language Haskell.
+Redirect "/tmp/solinas.hs" Recursive Extraction Haskell.main.
+(* cat /tmp/solinas.hs.out | sed s'/import qualified Prelude/import qualified Prelude\nimport qualified Data.Bits\nimport qualified Data.Char\nimport qualified Text.Printf\nimport qualified System.Environment\n/g'  > ../../solinas.hs *)
 
 Module X25519_64.
   Definition n := 5%nat.
