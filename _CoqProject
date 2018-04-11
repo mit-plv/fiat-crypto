@@ -6567,6 +6567,7 @@ src/Util/ZRange/CornersMonotoneBounds.v
 src/Util/ZRange/Operations.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/AddModulo.v
+src/Util/ZUtil/CC.v
 src/Util/ZUtil/CPS.v
 src/Util/ZUtil/Definitions.v
 src/Util/ZUtil/Div.v
@@ -6582,6 +6583,7 @@ src/Util/ZUtil/Notations.v
 src/Util/ZUtil/Peano.v
 src/Util/ZUtil/Pow2Mod.v
 src/Util/ZUtil/Quot.v
+src/Util/ZUtil/Rshi.v
 src/Util/ZUtil/Sgn.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v

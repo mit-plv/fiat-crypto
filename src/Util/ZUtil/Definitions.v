@@ -13,6 +13,19 @@ Module Z.
   Definition add_modulo x y modulus :=
     if (modulus <=? x + y) then (x + y) - modulus else (x + y).
 
+  (* most significant bit *)
+  Definition cc_m s x := if dec (2 ^ (Z.log2 s) = s) then x >> (Z.log2 s - 1) else x / (s / 2).
+
+  (* least significant bit *)
+  Definition cc_l x := Z.land x (Z.ones 1).
+
+  (* two-register right shift *)
+  Definition rshi s hi lo n :=
+       let k := Z.log2 s in
+       if dec (2 ^ k = s)
+       then ((lo + (hi << k)) >> n) &' (Z.ones k)
+       else ((lo + hi * s) >> n) mod s.
+
   Definition get_carry (bitwidth : Z) (v : Z) : Z * Z
     := (v mod 2^bitwidth, v / 2^bitwidth).
   Definition add_with_carry (c : Z) (x y : Z) : Z
