@@ -966,6 +966,15 @@ Proof.
 Qed.
 Hint Rewrite @combine_nil_r : push_combine.
 
+Lemma combine_snoc {A B} xs : forall ys x y,
+    length xs = length ys ->
+    @combine A B (xs ++ (x :: nil)) (ys ++ (y :: nil)) = combine xs ys ++ ((x, y) :: nil).
+Proof.
+  induction xs; intros; destruct ys; distr_length; cbn;
+    try rewrite IHxs by omega; reflexivity.
+Qed.
+Hint Rewrite @combine_snoc using (solve [distr_length]) : push_combine.
+
 Lemma skipn_combine : forall {A B} n (xs:list A) (ys:list B),
   skipn n (combine xs ys) = combine (skipn n xs) (skipn n ys).
 Proof.
