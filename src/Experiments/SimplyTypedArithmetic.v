@@ -6885,7 +6885,10 @@ Section rcarry_mul.
   Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
   Let idxs := (seq 0 n ++ [0; 1])%list%nat.
   Let coef := 2.
-  Let upperbound_tight := (2^Qceiling limbwidth + 2^(Qceiling limbwidth - 3))%Z.
+  Let tight_upperbounds : list Z
+    := List.map
+         (fun v : Z => Qceiling (11/10 * v))
+         (encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c (s-1)).
   Let prime_bound : ZRange.type.option.interp (type.Z)
     := Some r[0~>(s - Associational.eval c - 1)]%zrange.
 
@@ -6894,9 +6897,9 @@ Section rcarry_mul.
 
   Let relax_zrange := relax_zrange_of_machine_wordsize.
   Let tight_bounds : list (ZRange.type.option.interp type.Z)
-    := List.repeat (Some r[0~>upperbound_tight]%zrange) n.
+    := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
   Let loose_bounds : list (ZRange.type.option.interp type.Z)
-    := List.repeat (Some r[0 ~> 3*upperbound_tight]%zrange) n.
+    := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
 
   Definition check_args {T} (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
@@ -7035,7 +7038,7 @@ Section rcarry_mul.
                    | lia
                    | rewrite interp_reify_list, ?map_map
                    | rewrite map_ext with (g:=id), map_id
-                   | rewrite repeat_length
+                   | progress distr_length
                    | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
                    | progress cbv [Qle] in *
                    | progress cbn -[reify_list] in *
@@ -7537,7 +7540,7 @@ Module X25519_32.
   Definition machine_wordsize := 32.
 
   Derive base_25p5_carry_mul
-         SuchThat (rcarry_mul_correctT n s c base_25p5_carry_mul)
+         SuchThat (rcarry_mul_correctT n s c machine_wordsize base_25p5_carry_mul)
          As base_25p5_carry_mul_correct.
   Proof. Time solve_rcarry_mul machine_wordsize. Time Qed.
 
