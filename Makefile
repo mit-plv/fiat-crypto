@@ -226,7 +226,8 @@ $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo src/Compilers/Z/CNotations
 
 $(DISPLAY_NON_JAVA_VO:.vo=.log) : %.log : %.v
 	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $< | sed s'/\r\n/\n/g' > $@.tmp && mv -f $@.tmp $@
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $< > $@.tmp
+	$(HIDE)sed s'/\r\n/\n/g' $@.tmp > $@ && rm -f $@.tmp
 
 DISPLAY_X25519_C64_VO := $(filter src/Specific/X25519/C64/%,$(DISPLAY_NON_JAVA_VO))
 DISPLAY_X25519_C32_VO := $(filter src/Specific/X25519/C32/%,$(DISPLAY_NON_JAVA_VO))
