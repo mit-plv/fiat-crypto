@@ -6133,21 +6133,6 @@ Module Compilers.
              => [e]
            end.
 
-      Fixpoint to_add_mul_list (e : @expr var type.Z) : list (list (@expr var type.Z))
-        := match e in expr.expr t return list (list (@expr var t)) with
-           | AppIdent s type.Z ident.Z_add (Pair type.Z type.Z x y)
-             => to_add_mul_list x ++ to_add_mul_list y
-           | AppIdent s type.Z ident.Z_mul (Pair type.Z type.Z x y)
-             => [to_mul_list x ++ to_mul_list y]
-           | Var _ _ as e
-           | TT as e
-           | App _ _ _ _ as e
-           | Abs _ _ _ as e
-           | Pair _ _ _ _ as e
-           | AppIdent _ _ _ _ as e
-             => [ [ e ] ]
-           end.
-
       Definition is_small_prim (e : @expr var type.Z) : bool
         := match e with
            | AppIdent _ _ (ident.primitive type.Z v) _
@@ -6157,12 +6142,9 @@ Module Compilers.
       Definition is_not_small_prim (e : @expr var type.Z) : bool
         := negb (is_small_prim e).
 
-      Definition reorder_add_mul_list (ls : list (list (@expr var type.Z)))
-        : list (list (@expr var type.Z))
-        := List.map
-             (fun ls
-              => filter is_not_small_prim ls ++ filter is_small_prim ls)
-             ls.
+      Definition reorder_mul_list (ls : list (@expr var type.Z))
+        : list (@expr var type.Z)
+        := filter is_not_small_prim ls ++ filter is_small_prim ls.
 
       Fixpoint of_mul_list (ls : list (@expr var type.Z)) : @expr var type.Z
         := match ls with
@@ -6171,15 +6153,6 @@ Module Compilers.
              => x
            | cons x xs
              => AppIdent ident.Z_mul (x, of_mul_list xs)
-           end.
-
-      Fixpoint of_add_mul_list (ls : list (list (@expr var type.Z))) : @expr var type.Z
-        := match ls with
-           | nil => AppIdent (ident.primitive (t:=type.Z) 0) TT
-           | cons x nil
-             => of_mul_list x
-           | cons x xs
-             => AppIdent ident.Z_add (of_mul_list x, of_add_mul_list xs)
            end.
 
       Fixpoint reassociate {t} (e : @expr var t) : @expr var t
@@ -6192,7 +6165,7 @@ Module Compilers.
            | App s d f x => App (@reassociate _ f) (@reassociate _ x)
            | Abs s d f => Abs (fun v => @reassociate _ (f v))
            | AppIdent s type.Z idc args
-             => of_add_mul_list (reorder_add_mul_list (to_add_mul_list (AppIdent idc (@reassociate s args))))
+             => of_mul_list (reorder_mul_list (to_mul_list (AppIdent idc (@reassociate s args))))
            | AppIdent s d idc args
              => AppIdent idc (@reassociate s args)
            end.
