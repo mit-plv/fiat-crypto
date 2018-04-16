@@ -7522,7 +7522,9 @@ fun var : type -> Type =>
           :: ((uint64)(x4) & 2251799813685247) :: [])%expr
      : Expr
          (type.uncurry
-            (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z)))
+            (type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z) ->
+             type.list (type.type_primitive type.Z)))
 *)
   Print base_51_sub.
   (*
