@@ -2422,8 +2422,11 @@ Module Compilers.
           | Z_add_get_carry : ident (Z * Z * Z) (Z * Z)
           | Z_add_with_get_carry : ident (Z * Z * Z * Z) (Z * Z)
           | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
+          | Z_sub_with_get_borrow : ident (Z * Z * Z * Z) (Z * Z)
           | Z_zselect : ident (Z * Z * Z) Z
           | Z_add_modulo : ident (Z * Z * Z) Z
+          | Z_rshi : ident (Z * Z * Z * Z) Z
+          | Z_cc_m : ident (Z * Z) Z
           .
 
           Notation curry0 f
@@ -2490,8 +2493,11 @@ Module Compilers.
                | Z_add_get_carry => curry3 Z.add_get_carry_full
                | Z_add_with_get_carry => curry4 Z.add_with_get_carry_full
                | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
+               | Z_sub_with_get_borrow => curry4 Z.sub_with_get_borrow_full
                | Z_zselect => curry3 Z.zselect
                | Z_add_modulo => curry3 Z.add_modulo
+               | Z_rshi => curry4 Z.rshi
+               | Z_cc_m => curry2 Z.cc_m
                end.
 
           Ltac reify
@@ -2623,8 +2629,11 @@ Module Compilers.
             | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
             | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
             | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
+            | Z.sub_with_get_borrow_full ?x ?y ?z ?a => mkAppIdent ident.Z_sub_with_get_borrow (x, y, z, a)
             | Z.zselect ?x ?y ?z => mkAppIdent ident.Z_zselect (x, y, z)
             | Z.add_modulo ?x ?y ?z => mkAppIdent ident.Z_add_modulo (x,y,z)
+            | Z.rshi ?x ?y ?z ?a => mkAppIdent ident.Z_rshi (x,y,z,a)
+            | Z.cc_m ?x ?y => mkAppIdent ident.Z_cc_m (x,y)
             | _
               => lazymatch term_is_primitive_const with
                  | true
@@ -2669,8 +2678,11 @@ Module Compilers.
             Notation add_get_carry := Z_add_get_carry.
             Notation add_with_get_carry := Z_add_with_get_carry.
             Notation sub_get_borrow := Z_sub_get_borrow.
+            Notation sub_with_get_borrow := Z_sub_with_get_borrow.
             Notation zselect := Z_zselect.
             Notation add_modulo := Z_add_modulo.
+            Notation rshi := Z_rshi.
+            Notation cc_m := Z_cc_m.
           End Z.
 
           Module Nat.
@@ -2755,8 +2767,14 @@ Module Compilers.
           | Z_add_with_get_carry_concrete (s:BinInt.Z) : ident (Z * Z * Z) (Z * Z)
           | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
           | Z_sub_get_borrow_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
+          | Z_sub_with_get_borrow : ident (Z * Z * Z * Z) (Z * Z)
+          | Z_sub_with_get_borrow_concrete (s:BinInt.Z) : ident (Z * Z * Z) (Z * Z)
           | Z_zselect : ident (Z * Z * Z) Z
           | Z_add_modulo : ident (Z * Z * Z) Z
+          | Z_rshi : ident (Z * Z * Z * Z) Z
+          | Z_rshi_concrete (s offset:BinInt.Z) : ident (Z * Z) Z
+          | Z_cc_m : ident (Z * Z) Z
+          | Z_cc_m_concrete (s:BinInt.Z) : ident Z Z
           | Z_cast (range : zrange) : ident Z Z
           | Z_cast2 (range : zrange * zrange) : ident (Z * Z) (Z * Z)
           .
@@ -2832,8 +2850,14 @@ Module Compilers.
                  | Z_add_with_get_carry_concrete s => curry3 (Z.add_with_get_carry s)
                  | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
                  | Z_sub_get_borrow_concrete s => curry2 (Z.sub_get_borrow s)
+                 | Z_sub_with_get_borrow => curry4 Z.sub_with_get_borrow_full
+                 | Z_sub_with_get_borrow_concrete s => curry3 (Z.sub_with_get_borrow s)
                  | Z_zselect => curry3 Z.zselect
                  | Z_add_modulo => curry3 Z.add_modulo
+                 | Z_rshi => curry4 Z.rshi
+                 | Z_rshi_concrete s n => curry2 (fun x y => Z.rshi s x y n)
+                 | Z_cc_m => curry2 Z.cc_m
+                 | Z_cc_m_concrete s => Z.cc_m s
                  | Z_cast r => cast r
                  | Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
                  end.
@@ -2931,8 +2955,11 @@ Module Compilers.
             | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
             | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
             | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
+            | Z.sub_with_get_borrow_full ?x ?y ?z ?a => mkAppIdent ident.Z_sub_with_get_borrow (x, y, z, a)
             | Z.zselect ?x ?y ?z => mkAppIdent ident.Z_zselect (x, y, z)
             | Z.add_modulo ?x ?y ?z => mkAppIdent ident.Z_add_modulo (x,y,z)
+            | Z.rshi ?x ?y ?z ?a => mkAppIdent ident.Z_rshi (x,y,z,a)
+            | Z.cc_m ?x ?y => mkAppIdent ident.Z_cc_m (x,y)
             | _
               => lazymatch term_is_primitive_const with
                  | true
@@ -2974,8 +3001,14 @@ Module Compilers.
             Notation add_with_get_carry_concrete := Z_add_with_get_carry_concrete.
             Notation sub_get_borrow := Z_sub_get_borrow.
             Notation sub_get_borrow_concrete := Z_sub_get_borrow_concrete.
+            Notation sub_with_get_borrow := Z_sub_with_get_borrow.
+            Notation sub_with_get_borrow_concrete := Z_sub_with_get_borrow_concrete.
             Notation zselect := Z_zselect.
             Notation add_modulo := Z_add_modulo.
+            Notation rshi := Z_rshi.
+            Notation rshi_concrete := Z_rshi_concrete.
+            Notation cc_m := Z_cc_m.
+            Notation cc_m_concrete := Z_cc_m_concrete.
             Notation cast := Z_cast.
             Notation cast2 := Z_cast2.
           End Z.
@@ -3101,10 +3134,16 @@ Module Compilers.
                => AppIdent ident.Z.add_with_get_carry
              | for_reification.ident.Z_sub_get_borrow
                => AppIdent ident.Z.sub_get_borrow
+             | for_reification.ident.Z_sub_with_get_borrow
+               => AppIdent ident.Z.sub_with_get_borrow
              | for_reification.ident.Z_zselect
                => AppIdent ident.Z.zselect
              | for_reification.ident.Z_add_modulo
                => AppIdent ident.Z.add_modulo
+             | for_reification.ident.Z_rshi
+               => AppIdent ident.Z.rshi
+             | for_reification.ident.Z_cc_m
+               => AppIdent ident.Z.cc_m
              | for_reification.ident.list_case A P
                => ltac:(
                     let v := reify
@@ -3953,9 +3992,12 @@ Module Compilers.
                   | ident.Z_mul_split as idc
                   | ident.Z_add_get_carry as idc
                   | ident.Z_add_with_get_carry as idc
+                  | ident.Z_sub_with_get_borrow as idc
                   | ident.Z_sub_get_borrow as idc
                   | ident.Z_zselect as idc
                   | ident.Z_add_modulo as idc
+                  | ident.Z_rshi as idc
+                  | ident.Z_cc_m as idc
                   | ident.Z_cast _ as idc
                   | ident.Z_cast2 _ as idc
                     => cps_of (Uncurried.expr.default.ident.interp idc)
@@ -3967,6 +4009,12 @@ Module Compilers.
                     => cps_of (curry3 (Z.add_with_get_carry s))
                   | ident.Z_sub_get_borrow_concrete s
                     => cps_of (curry2 (Z.sub_get_borrow s))
+                  | ident.Z_sub_with_get_borrow_concrete s
+                    => cps_of (curry3 (Z.sub_with_get_borrow s))
+                  | ident.Z_rshi_concrete s n
+                    => cps_of (curry2 (fun x y => Z.rshi s x y n))
+                  | ident.Z_cc_m_concrete s
+                    => cps_of (Z.cc_m s)
                   | ident.Let_In tx tC
                     => fun '((x, f) : (interp R (type.translate tx)
                                        * (interp R (type.translate tx) * (interp R (type.translate tC) -> R) -> R)))
@@ -4139,6 +4187,7 @@ Module Compilers.
                 | ident.Z_land _ as idc
                 | ident.Z_opp as idc
                 | ident.Z_cast _ as idc
+                | ident.Z.cc_m_concrete _ as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * (type.Z -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
@@ -4150,6 +4199,7 @@ Module Compilers.
                 | ident.Z_pow as idc
                 | ident.Z_div as idc
                 | ident.Z_modulo as idc
+                | ident.Z.cc_m as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * (type.Z -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
@@ -4172,10 +4222,17 @@ Module Compilers.
                 | ident.Z_add_get_carry as idc
                 | ident.Z_sub_get_borrow as idc
                 | ident.Z_add_with_get_carry_concrete _ as idc
+                | ident.Z_sub_with_get_borrow_concrete _ as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ (type.Z * type.Z))
+                            @@ (ident.fst @@ (Var xyk)))
+                | ident.Z_rshi_concrete _ _ as idc
+                  => λ (xyk :
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * (type.Z -> R))%ctype) ,
+                     (ident.snd @@ (Var xyk))
+                       @ ((idc : default.ident _ type.Z)
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Z_cast2 _ as idc
                 | ident.Z_mul_split_concrete _ as idc
@@ -4194,10 +4251,17 @@ Module Compilers.
                        @ ((idc : default.ident _ type.Z)
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Z_add_with_get_carry as idc
+                | ident.Z_sub_with_get_borrow as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ (type.Z * type.Z))
+                            @@ (ident.fst @@ (Var xyk)))
+                | ident.Z_rshi as idc
+                  => λ (xyk :
+                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * type.Z * (type.Z -> R))%ctype) ,
+                     (ident.snd @@ (Var xyk))
+                       @ ((idc : default.ident _ type.Z)
                             @@ (ident.fst @@ (Var xyk)))
                 end%expr
               end.
@@ -4569,7 +4633,10 @@ Module Compilers.
              | ident.Z_add_get_carry
              | ident.Z_add_with_get_carry
              | ident.Z_sub_get_borrow
+             | ident.Z_sub_with_get_borrow
              | ident.Z_modulo
+             | ident.Z_rshi
+             | ident.Z_cc_m
                => fun _ => type.option.None
              | ident.nil t => curry0 (Some (@nil (type.option.interp t)))
              | ident.cons t => curry2 (fun a => option_map (@Datatypes.cons (type.option.interp t) a))
@@ -4586,6 +4653,7 @@ Module Compilers.
              | ident.Z_shiftr _ as idc
              | ident.Z_shiftl _ as idc
              | ident.Z_opp as idc
+             | ident.Z_cc_m_concrete _ as idc
                => option_map (ZRange.two_corners (ident.interp idc))
              | ident.Z_land mask
                => option_map
@@ -4594,6 +4662,7 @@ Module Compilers.
              | ident.Z_add as idc
              | ident.Z_mul as idc
              | ident.Z_sub as idc
+             | ident.Z.rshi_concrete _ _ as idc
                => fun '((x, y) : option zrange * option zrange)
                   => match x, y with
                      | Some x, Some y
@@ -4653,6 +4722,17 @@ Module Compilers.
                             (t:=(type.Z*type.Z)%ctype)
                             (ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at)
                      | Some _, None | None, Some _ | None, None => type.option.None
+                     end
+             | ident.Z_sub_with_get_borrow_concrete split_at
+               => fun '((x, y, z) : option zrange * option zrange * option zrange)
+                  => match x, y, z with
+                     | Some x, Some y, Some z
+                       => type.option.Some
+                            (t:=(type.Z*type.Z)%ctype)
+                            (ZRange.split_bounds
+                               (ZRange.eight_corners (fun x y z => (x - y - z)%Z) x y z)
+                               split_at)
+                     | _, _, _ => type.option.None
                      end
              | ident.Z_zselect
                => fun '((x, y, z) : option zrange * option zrange * option zrange)
@@ -5160,6 +5240,25 @@ Module Compilers.
                        => default_interp (ident.Z.mul_split_concrete x) (inr (y, z))
                      | _ => default_interp idc x_y_z
                      end
+             | ident.Z_rshi as idc
+               => fun (x_y_z_a : (_ * expr (_ * _ * _ * _) +
+                                  (_ * expr (_ * _ * _) +
+                                   (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) *
+                                   (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
+                  => match x_y_z_a return _ * expr _ + type.interp _ with
+                     | inr (inr (inr (inr x, inr y), inr z), inr a) => inr (ident.interp idc (x, y, z, a))
+                     | inr (inr (inr (inr x, y), z), inr a)
+                       => default_interp (ident.Z.rshi_concrete x a) (inr (y, z))
+                     | _ => default_interp idc x_y_z_a
+                     end
+             | ident.Z_cc_m as idc
+               => fun (x_y : data (_ * _) * expr (_ * _) + (_ + type.interp _) * (_ + type.interp _))
+                  => match x_y return _ + type.interp _ with
+                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
+                     | inr (inr x, y)
+                       => default_interp (ident.Z.cc_m_concrete x) y
+                     | _ => default_interp idc x_y
+                     end
              | ident.Z_add_get_carry as idc
                => fun (x_y_z :  (_ * expr (type.Z * type.Z * type.Z) +
                                  (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
@@ -5219,6 +5318,19 @@ Module Compilers.
                        => default_interp (ident.Z.sub_get_borrow_concrete x) (inr (y, z))
                      | _ => default_interp idc x_y_z
                      end
+             | ident.Z_sub_with_get_borrow as idc
+               => fun (x_y_z_a : (_ * expr (_ * _ * _ * _) +
+                                  (_ * expr (_ * _ * _) +
+                                   (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) *
+                                   (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
+                  => match x_y_z_a return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
+                     | inr (inr (inr (inr x, inr y), inr z), inr a) =>
+                       let result := ident.interp idc (x, y, z, a) in
+                       inr (inr (fst result), inr (snd result))
+                     | inr (inr (inr (inr x, y), z), a)
+                       => default_interp (ident.Z.sub_with_get_borrow_concrete x) (inr (inr (y, z), a))
+                     | _ => default_interp idc x_y_z_a
+                     end
              | ident.Z_mul_split_concrete _ as idc
              | ident.Z.sub_get_borrow_concrete _ as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
@@ -5243,6 +5355,7 @@ Module Compilers.
                      | _ => default tt
                      end
              | ident.Z.add_with_get_carry_concrete _ as idc
+             | ident.Z.sub_with_get_borrow_concrete _ as idc
                => fun (x_y_z :  (_ * expr (type.Z * type.Z * type.Z) +
                                  (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
                   => match x_y_z return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
@@ -5277,6 +5390,7 @@ Module Compilers.
              | ident.Z_shiftr _ as idc
              | ident.Z_shiftl _ as idc
              | ident.Z_land _ as idc
+             | ident.Z_cc_m_concrete _ as idc
                => fun x : _ * expr _ + type.interp _
                   => match x return _ * expr _ + type.interp _ with
                      | inr x => inr (ident.interp idc x)
@@ -5291,6 +5405,7 @@ Module Compilers.
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
              | ident.Z_pow as idc
+             | ident.Z_rshi_concrete _ _ as idc
                => fun (x_y : data (_ * _) * expr (_ * _) + (_ + type.interp _) * (_ + type.interp _))
                   => match x_y return _ + type.interp _ with
                      | inr (inr x, inr y) => inr (ident.interp idc (x, y))
@@ -7231,9 +7346,13 @@ Module PrintingNotations.
   Notation "'ADD_256' ( x ,  y )" := (ident.Z.cast2 (uint256, bool)%core @@ (ident.Z.add_get_carry_concrete TwoPow256 @@ (x, y)))%expr : expr_scope.
   Notation "'ADD_128' ( x ,  y )" := (ident.Z.cast2 (uint128, bool)%core @@ (ident.Z.add_get_carry_concrete TwoPow256 @@ (x, y)))%expr : expr_scope.
   Notation "'ADDC_256' ( x ,  y ,  z )" := (ident.Z.cast2 (uint256, bool)%core @@ (ident.Z.add_with_get_carry_concrete TwoPow256 @@ (x, y, z)))%expr : expr_scope.
+  Notation "'ADDC_128' ( x ,  y ,  z )" := (ident.Z.cast2 (uint128, bool)%core @@ (ident.Z.add_with_get_carry_concrete TwoPow256 @@ (x, y, z)))%expr : expr_scope.
   Notation "'SUB_256' ( x ,  y )" := (ident.Z.cast2 (uint256, bool)%core @@ (ident.Z.sub_get_borrow_concrete TwoPow256 @@ (x, y)))%expr : expr_scope.
   Notation "'ADDM' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.add_modulo @@ (x, y, z)))%expr : expr_scope.
+  Notation "'RSHI' ( x ,  y ,  z )" := (ident.Z.cast _ @@ (ident.Z.rshi_concrete _ z @@ (x, y)))%expr : expr_scope.
   Notation "'SELC' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.zselect @@ (x, y, z)))%expr : expr_scope.
+  Notation "'SELM' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.zselect @@ (Z.cast bool @@ (Z.cc_m_concrete _ @@ x), y, z)))%expr : expr_scope.
+  Notation "'SELL' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.zselect @@ (Z.cast bool @@ (Z.land 1 @@ x), y, z)))%expr : expr_scope.
 End PrintingNotations.
 
 (*
@@ -7399,12 +7518,10 @@ fun var : type -> Type =>
        :: ((uint64)(x3) & 2251799813685247)
           :: ((uint64)(x4) & 2251799813685247) :: [])%expr
      : Expr
-         (type.list (type.type_primitive type.Z) *
-          type.list (type.type_primitive type.Z) ->
-          type.list (type.type_primitive type.Z))
+         (type.uncurry
+            (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z)))
 *)
 End X25519_64.
-
 
 (** TODO: factor out bounds analysis pipeline as a single definition / proof *)
 (** TODO: factor out apply one argument in the fst of a pair *)
@@ -7752,7 +7869,6 @@ fun var : type -> Type =>
 *)
 End X25519_32.
 *)
-
 
 Module BarrettReduction.
   (* TODO : generalize to multi-word and operate on (list Z) instead of T; maybe stop taking ops as context variables *)
@@ -8137,7 +8253,6 @@ Module BarrettReduction.
     Lemma cc_l_only_bit x s: 0 <= x < 2 * s -> Z.cc_l (x / s) = 0 <-> x < s.
     Proof.
       cbv [Z.cc_l]; intros.
-      rewrite Z.land_ones, Z.pow_1_r by omega.
       rewrite Z.div_between_0_if by omega.
       break_match; Z.ltb_to_lt; Z.rewrite_mod_small; omega.
     Qed.

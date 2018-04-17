@@ -17,7 +17,7 @@ Module Z.
   Definition cc_m s x := if dec (2 ^ (Z.log2 s) = s) then x >> (Z.log2 s - 1) else x / (s / 2).
 
   (* least significant bit *)
-  Definition cc_l x := Z.land x (Z.ones 1).
+  Definition cc_l x := x mod 2.
 
   (* two-register right shift *)
   Definition rshi s hi lo n :=
