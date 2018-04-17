@@ -1284,7 +1284,7 @@ Module Rows.
           fold_right (fun next (state : list Z * Z * nat) =>
                         let i := snd state in
                         let low_high' :=
-                            dlet_nd low_high := fst state in
+                            let low_high := fst state in
                             let low := fst low_high in
                             let high := snd low_high in
                           dlet_nd sum_carry := Z.add_with_get_carry_full (fw i) high (fst next) (snd next) in
