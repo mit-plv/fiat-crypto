@@ -7072,7 +7072,11 @@ Ltac vm_compute_lhs_reflexivity :=
   lazymatch goal with
   | [ |- ?LHS = ?RHS ]
     => let x := (eval vm_compute in LHS) in
-       unify RHS x;
+       (* we cannot use the unify tactic, which just gives "not
+          unifiable" as the error message, because we want to see the
+          terms that were not unifable.  See also
+          COQBUG(https://github.com/coq/coq/issues/7291) *)
+       let _unify := constr:(ltac:(reflexivity) : RHS = x) in
        vm_cast_no_check (eq_refl x)
   end.
 
