@@ -947,10 +947,10 @@ Module Columns.
       (* from_associational *)
       Definition from_associational n (p:list (Z*Z)) : list (list Z) :=
         List.fold_right (fun t ls =>
-                           let p := Positional.place weight t (pred n) in
+                           dlet_nd p := Positional.place weight t (pred n) in
                            cons_to_nth (fst p) (snd p) ls ) (nils n) p.
       Lemma length_from_associational n p : length (from_associational n p) = n.
-      Proof. cbv [from_associational]. apply fold_right_invariant; intros; distr_length. Qed.
+      Proof. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
       Hint Rewrite length_from_associational: distr_length.
       Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil):
         eval n (from_associational n p) = Associational.eval p.
@@ -1248,7 +1248,6 @@ Module Rows.
         Definition sum_rows' start_state (row1 row2 : list Z) : list Z * Z :=
           fold_right (fun next (state : list Z * Z) =>
                         let i := length (fst state) in (* length of output accumulator tells us the index of [next] *)
-                        dlet_nd next := next in (* makes the output correctly bind variables *)
                           dlet_nd sum_carry := Z.add_with_get_carry_full (fw i) (snd state) (fst next) (snd next) in
                           (fst state ++ [fst sum_carry], snd sum_carry)) start_state (rev (combine row1 row2)).
         Definition sum_rows := sum_rows' (nil,0).
@@ -7452,6 +7451,7 @@ Module X25519_64.
 
   Print Assumptions base_51_good.
   Import PrintingNotations.
+  Set Printing Width 80.
   Print base_51_carry_mul.
 (*base_51_carry_mul =
 fun var : type -> Type =>
@@ -8341,11 +8341,11 @@ montred256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * 
              expr_let x3 := ((uint128)(x2) & 340282366920938463463374607431768211455) in
              expr_let x4 := 340282366841710300986003757985643364352 *₂₅₆ x1 in
              expr_let x5 := ((uint128)(x4) & 340282366920938463463374607431768211455) in
-             expr_let x6 := (uint256)(x5 << 128) in
-             expr_let x7 := 79228162514264337593543950337 *₂₅₆ x1 in
-             expr_let x8 := ADD_256 (x6, x7) in
-             expr_let x9 := (uint256)(x3 << 128) in
-             expr_let x10 := ADD_256 (x9, x8₁) in
+             expr_let x6 := (uint256)(x3 << 128) in
+             expr_let x7 := (uint256)(x5 << 128) in
+             expr_let x8 := 79228162514264337593543950337 *₂₅₆ x1 in
+             expr_let x9 := ADD_256 (x7, x8) in
+             expr_let x10 := ADD_256 (x6, x9₁) in
              expr_let x11 := (uint128)(x10₁ >> 128) in
              expr_let x12 := ((uint128)(x10₁) & 340282366920938463463374607431768211455) in
              expr_let x13 := 79228162514264337593543950335 *₂₅₆ x11 in
@@ -8354,15 +8354,15 @@ montred256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * 
              expr_let x16 := 340282366841710300967557013911933812736 *₂₅₆ x12 in
              expr_let x17 := (uint128)(x16 >> 128) in
              expr_let x18 := ((uint128)(x16) & 340282366920938463463374607431768211455) in
-             expr_let x19 := (uint256)(x18 << 128) in
-             expr_let x20 := 79228162514264337593543950335 *₂₅₆ x12 in
-             expr_let x21 := ADD_256 (x19, x20) in
-             expr_let x22 := ADDC_256 (x21₂, x14, x17) in
-             expr_let x23 := (uint256)(x15 << 128) in
-             expr_let x24 := ADD_256 (x23, x21₁) in
-             expr_let x25 := 340282366841710300967557013911933812736 *₂₅₆ x11 in
-             expr_let x26 := ADDC_256 (x24₂, x25, x22₁) in
-             expr_let x27 := ADD_256 (x₁, x24₁) in
+             expr_let x19 := 340282366841710300967557013911933812736 *₂₅₆ x11 in
+             expr_let x20 := (uint256)(x15 << 128) in
+             expr_let x21 := (uint256)(x18 << 128) in
+             expr_let x22 := 79228162514264337593543950335 *₂₅₆ x12 in
+             expr_let x23 := ADD_256 (x21, x22) in
+             expr_let x24 := ADDC_256 (x23₂, x14, x17) in
+             expr_let x25 := ADD_256 (x20, x23₁) in
+             expr_let x26 := ADDC_256 (x25₂, x19, x24₁) in
+             expr_let x27 := ADD_256 (x₁, x25₁) in
              expr_let x28 := ADDC_256 (x27₂, x₂, x26₁) in
              expr_let x29 := SELC (x28₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
              expr_let x30 := Z.cast uint256 @@ (fst @@ SUB_256 (x28₁, x29)) in
@@ -8483,11 +8483,11 @@ c.Mul128x128($x2, Lower128{RegPinv}, $x0);
 c.Lower128($x3, $x2);
 c.Mul128x128($x4, RegPinv >> 128, $x1);
 c.Lower128($x5, $x4);
-c.ShiftL($x6, $x5, 128);
-c.Mul128x128($x7, Lower128{RegPinv}, $x1);
-c.Add256($x8, $x6, $x7);
-c.ShiftL($x9, $x3, 128);
-c.Add256($x10, $x9, $x8_lo);
+c.ShiftL($x6, $x3, 128);
+c.ShiftL($x7, $x5, 128);
+c.Mul128x128($x8, Lower128{RegPinv}, $x1);
+c.Add256($x9, $x7, $x8);
+c.Add256($x10, $x6, $x9_lo);
 c.ShiftR($x11, $x10_lo, 128);
 c.Lower128($x12, $x10_lo);
 c.Mul128x128($x13, Lower128{RegMod}, $x11);
@@ -8496,15 +8496,15 @@ c.Lower128($x15, $x13);
 c.Mul128x128($x16, RegMod >> 128, $x12);
 c.ShiftR($x17, $x16, 128);
 c.Lower128($x18, $x16);
-c.ShiftL($x19, $x18, 128);
-c.Mul128x128($x20, Lower128{RegMod}, $x12);
-c.Add256($x21, $x19, $x20);
-c.Addc($x22, $x14, $x17);
-c.ShiftL($x23, $x15, 128);
-c.Add256($x24, $x23, $x21_lo);
-c.Mul128x128($x25, RegMod >> 128, $x11);
-c.Addc($x26, $x25, $x22_lo);
-c.Add256($x27, $x_lo, $x24_lo);
+c.Mul128x128($x19, RegMod >> 128, $x11);
+c.ShiftL($x20, $x15, 128);
+c.ShiftL($x21, $x18, 128);
+c.Mul128x128($x22, Lower128{RegMod}, $x12);
+c.Add256($x23, $x21, $x22);
+c.Addc($x24, $x14, $x17);
+c.Add256($x25, $x20, $x23_lo);
+c.Addc($x26, $x19, $x24_lo);
+c.Add256($x27, $x_lo, $x25_lo);
 c.Addc($x28, $x_hi, $x26_lo);
 c.Selc($x29,RegZero, RegMod);
 c.Sub($x30, $x28_lo, $x29);
