@@ -5582,6 +5582,7 @@ Module Compilers.
                => fun '((x, f) : ZRange.type.option.interp tx * (ZRange.type.option.interp tx -> ZRange.type.option.interp tC))
                   => f x
              | ident.Z_cast range => fun _ => Some range
+             | ident.Z_cast2 (r1, r2) => fun _ => (Some r1, Some r2)
              | ident.primitive type.Z v
                => fun _ => Some r[v~>v]%zrange
              | ident.nil _ => fun _ => Some nil
