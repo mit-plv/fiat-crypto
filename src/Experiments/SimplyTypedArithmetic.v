@@ -5715,28 +5715,28 @@ Module Compilers.
              {s d} (E : Expr (s -> d))
              (b_in : ZRange.type.option.interp s)
              (b_out : ZRange.type.option.interp d)
-    : Expr (s -> d) + ZRange.type.option.interp d
+    : Expr (s -> d) + (ZRange.type.option.interp d * Expr (s -> d))
     := let b_computed := partial.bounds.expr.Extract E b_in in
        if ZRange.type.option.is_tighter_than b_computed b_out
        then @inl (Expr (s -> d)) _ (RelaxZRange.expr.Relax relax_zrange E)
-       else @inr _ (ZRange.type.option.interp d) b_computed.
+       else @inr _ (ZRange.type.option.interp d * Expr (s -> d)) (b_computed, E).
 
   Definition CheckPartialEvaluateWithBounds0
              (relax_zrange : zrange -> option zrange)
              {t} (E : Expr t)
              (b_out : ZRange.type.option.interp t)
-    : Expr t + ZRange.type.option.interp t
+    : Expr t + (ZRange.type.option.interp t * Expr t)
     := let b_computed := partial.bounds.expr.Extract E in
        if ZRange.type.option.is_tighter_than b_computed b_out
        then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
-       else @inr _ (ZRange.type.option.interp t) b_computed.
+       else @inr _ (ZRange.type.option.interp t * Expr t) (b_computed, E).
 
   Definition CheckedPartialEvaluateWithBounds1
              (relax_zrange : zrange -> option zrange)
              {s d} (e : Expr (s -> d))
              (b_in : ZRange.type.option.interp s)
              (b_out : ZRange.type.option.interp d)
-    : Expr (s -> d) + ZRange.type.option.interp d
+    : Expr (s -> d) + (ZRange.type.option.interp d * Expr (s -> d))
     := let E := PartialEvaluateWithBounds1 e b_in in
        dlet_nd e := GeneralizeVar.ToFlat E in
              let E := GeneralizeVar.FromFlat e in
@@ -5746,7 +5746,7 @@ Module Compilers.
              (relax_zrange : zrange -> option zrange)
              {t} (e : Expr t)
              (b_out : ZRange.type.option.interp t)
-    : Expr t + ZRange.type.option.interp t
+    : Expr t + (ZRange.type.option.interp t * Expr t)
     := let E := PartialEvaluate true e in
        dlet_nd e := GeneralizeVar.ToFlat E in
              let E := GeneralizeVar.FromFlat e in
@@ -6542,9 +6542,9 @@ Module Pipeline.
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.option.interp t)
+      {t'} (syntax_tree : Expr t')
   | Bounds_analysis_failed
   | Type_too_complicated_for_cps (t : type)
-  | Return_type_mismatch {T'} (found expected : T')
   | Value_not_le (descr : string) {T'} (lhs rhs : T')
   | Value_not_lt (descr : string) {T'} (lhs rhs : T')
   | Values_not_provably_distinct (descr : string) {T'} (lhs rhs : T')
@@ -6600,8 +6600,8 @@ Module Pipeline.
              let E := CheckedPartialEvaluateWithBounds1 relax_zrange E arg_bounds out_bounds in
              match E with
              | inl E => Success E
-             | inr b
-               => Error (Computed_bounds_are_not_tight_enough b out_bounds)
+             | inr (b, E)
+               => Error (Computed_bounds_are_not_tight_enough b out_bounds E)
              end)
        | None => Error (Type_too_complicated_for_cps t)
        end.
@@ -6626,7 +6626,7 @@ Module Pipeline.
     cbv [BoundsPipeline Let_In] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
-               => destruct x eqn:?; cbv beta iota in H; [ | congruence ];
+               => destruct x eqn:?; cbv beta iota in H; [ | destruct_head'_prod; congruence ];
                     let H' := fresh in
                     inversion H as [H']; clear H; rename H' into H
              end.
