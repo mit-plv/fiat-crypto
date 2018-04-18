@@ -4200,6 +4200,7 @@ Module Compilers.
                 | ident.Z_div as idc
                 | ident.Z_modulo as idc
                 | ident.Z.cc_m as idc
+                | ident.Z_rshi_concrete _ _ as idc
                   => λ (xyk :
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * (type.Z -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
@@ -4227,12 +4228,6 @@ Module Compilers.
                           (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
                      (ident.snd @@ (Var xyk))
                        @ ((idc : default.ident _ (type.Z * type.Z))
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_rshi_concrete _ _ as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * (type.Z -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.Z)
                             @@ (ident.fst @@ (Var xyk)))
                 | ident.Z_cast2 _ as idc
                 | ident.Z_mul_split_concrete _ as idc
@@ -5241,10 +5236,8 @@ Module Compilers.
                      | _ => default_interp idc x_y_z
                      end
              | ident.Z_rshi as idc
-               => fun (x_y_z_a : (_ * expr (_ * _ * _ * _) +
-                                  (_ * expr (_ * _ * _) +
-                                   (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) *
-                                   (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
+               => fun (x_y_z_a :
+                         (_ * expr (_ * _ * _ * _) + (_ * expr (_ * _ * _) + (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) *  (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
                   => match x_y_z_a return _ * expr _ + type.interp _ with
                      | inr (inr (inr (inr x, inr y), inr z), inr a) => inr (ident.interp idc (x, y, z, a))
                      | inr (inr (inr (inr x, y), z), inr a)
@@ -5319,14 +5312,11 @@ Module Compilers.
                      | _ => default_interp idc x_y_z
                      end
              | ident.Z_sub_with_get_borrow as idc
-               => fun (x_y_z_a : (_ * expr (_ * _ * _ * _) +
-                                  (_ * expr (_ * _ * _) +
-                                   (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) *
-                                   (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
+               => fun (x_y_z_a : (_ * expr (_ * _ * _ * _) + (_ * expr (_ * _ * _) + (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
                   => match x_y_z_a return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr (inr x, inr y), inr z), inr a) =>
-                       let result := ident.interp idc (x, y, z, a) in
-                       inr (inr (fst result), inr (snd result))
+                       let '(r, b) := ident.interp idc (x, y, z, a) in
+                       inr (inr r, inr b)
                      | inr (inr (inr (inr x, y), z), a)
                        => default_interp (ident.Z.sub_with_get_borrow_concrete x) (inr (inr (y, z), a))
                      | _ => default_interp idc x_y_z_a
@@ -5356,8 +5346,8 @@ Module Compilers.
                      end
              | ident.Z.add_with_get_carry_concrete _ as idc
              | ident.Z.sub_with_get_borrow_concrete _ as idc
-               => fun (x_y_z :  (_ * expr (type.Z * type.Z * type.Z) +
-                                 (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
+               => fun (x_y_z :
+                         (_ * expr (type.Z * type.Z * type.Z) + (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
                   => match x_y_z return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
                      | inr (inr (inr x, inr y), inr z) =>
                        let result := ident.interp idc (x, y, z) in
