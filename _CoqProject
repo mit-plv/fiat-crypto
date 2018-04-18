@@ -240,7 +240,6 @@ src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Jacobian.v
 src/Curves/Weierstrass/Projective.v
-src/Experiments/Loops.v
 src/Experiments/SimplyTypedArithmetic.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
@@ -6454,7 +6453,6 @@ src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FixedWordSizes.v
 src/Util/FixedWordSizesEquality.v
-src/Util/ForLoop.v
 src/Util/FsatzAutoLemmas.v
 src/Util/GlobalSettings.v
 src/Util/HList.v
@@ -6466,7 +6464,7 @@ src/Util/LetIn.v
 src/Util/LetInMonad.v
 src/Util/ListUtil.v
 src/Util/Logic.v
-src/Util/Loop.v
+src/Util/Loops.v
 src/Util/NUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
@@ -6496,10 +6494,6 @@ src/Util/Bool/Equality.v
 src/Util/Bool/IsTrue.v
 src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
-src/Util/ForLoop/Instances.v
-src/Util/ForLoop/InvariantFramework.v
-src/Util/ForLoop/Tests.v
-src/Util/ForLoop/Unrolling.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/Forall.v
 src/Util/Logic/ImplAnd.v

@@ -258,7 +258,7 @@ Module M.
     Local Notation montladder := (M.montladder(a24:=a24)(Fadd:=Fadd)(Fsub:=Fsub)(Fmul:=Fmul)(Fzero:=Fzero)(Fone:=Fone)(Finv:=Finv)(cswap:=fun b x y => if b then pair y x else pair x y)).
     Local Notation scalarmult := (@ScalarMult.scalarmult_ref Mpoint Madd M.zero Mopp).
 
-    Import Crypto.Experiments.Loops.
+    Import Crypto.Util.Loops.
     Import Coq.ZArith.BinInt.
 
     Lemma to_x_inv00 (HFinv:Finv 0 = 0) x z : to_x (pair x z) = x * Finv z.
@@ -281,34 +281,34 @@ Module M.
     Proof.
       cbv beta delta [M.montladder].
       (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
-      lazymatch goal with |- context [while ?t ?b ?l ?i] => pattern (while t b l i) end.
-      eapply (while.by_invariant
+      lazymatch goal with |- context [while ?t ?b ?l ?ii] => pattern (while t b l ii) end.
+      eapply (while.by_invariant_fuel
                 (fun '(x2, z2, x3, z3, swap, i) =>
                    (i < scalarbits)%Z /\
                    z2 = 0 /\
                    if dec (Logic.eq i (Z.pred scalarbits)) then x3 = 0 else z3 = 0)
-                (fun s => Z.to_nat (Z.succ (snd s))) (* decreasing measure *) ).
-      { (* invariant holds in the beginning *) cbn.
-        split; [lia|split;[reflexivity|t]]. }
+                (fun s => Z.to_nat (Z.succ (snd s)))).
+      { split.
+        (* invariant holds in the beginning *)
+        { cbn; split; [lia|split;[reflexivity|t]]. }
+        { (* fuel <= measure *) cbn. rewrite Z.succ_pred. reflexivity. } }
       { intros [ [ [ [ [x2 z2] x3] z3] swap] i] [Hi [Hz2 Hx3z3]].
         destruct (i >=? 0)%Z eqn:Hbranch; (* did the loop continue? *)
           rewrite Z.geb_ge_iff in Hbranch.
-        { (* if loop continued, invariant is preserved *)
-          destruct (dec (Logic.eq i (Z.pred scalarbits))).
-          { (* first loop iteration *)
-            cbv -[xzladderstep xorb Z.testbit Z.pred dec Z.lt];
-            destruct (xorb swap (Z.testbit n i));
-            split; [lia|t|lia|t]. }
-          { (* subsequent loop iterations *)
-            cbv -[xzladderstep xorb Z.testbit Z.pred dec Z.lt].
-            destruct (xorb swap (Z.testbit n i));
-              (split; [lia| split; [t| break_match;[lia|t]]]). } }
+        { split. (* if loop continued, invariant is preserved *)
+          { destruct (dec (Logic.eq i (Z.pred scalarbits))).
+            { (* first loop iteration *)
+              cbv -[xzladderstep xorb Z.testbit Z.pred dec Z.lt];
+                destruct (xorb swap (Z.testbit n i));
+                split; [lia|t|lia|t]. }
+            { (* subsequent loop iterations *)
+              cbv -[xzladderstep xorb Z.testbit Z.pred dec Z.lt].
+              destruct (xorb swap (Z.testbit n i));
+                (split; [lia| split; [t| break_match;[lia|t]]]). } }
+        { (* measure decreases *)
+          cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. } }
         { (* if loop exited, invariant implies postcondition *)
           break_match; break_match_hyps; setoid_subst_rel Feq; fsatz. } }
-      { (* fuel <= measure *) cbn. rewrite Z.succ_pred. reflexivity. }
-      { (* measure decreases *) intros [? i].
-        destruct (i >=? 0)%Z eqn:Hbranch;rewrite Z.geb_ge_iff in Hbranch; [|exact I].
-        cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
     Qed.
 
     Lemma montladder_correct_nz
@@ -325,7 +325,7 @@ Module M.
       cbv beta delta [M.montladder].
       (* [while.by_invariant] expects a goal like [?P (while _ _ _ _)], make it so: *)
       lazymatch goal with |- context [while ?t ?b ?l ?i] => pattern (while t b l i) end.
-      eapply (while.by_invariant
+      eapply (while.by_invariant_fuel
                 (fun '(x2, z2, x3, z3, swap, i) =>
                    (i >= -1)%Z /\
                    projective (pair x2 z2) /\
@@ -337,12 +337,15 @@ Module M.
                    eq q' (to_xz (scalarmult (Z.succ r) P)) /\
                    ladder_invariant point (scalarmult r P) (scalarmult (Z.succ r) P))
                 (fun s => Z.to_nat (Z.succ (snd s))) (* decreasing measure *) ).
-      { (* invariant holds in the beginning *) cbn.
-        rewrite ?Z.succ_pred, ?Z.lt_pow_2_shiftr, <-?Z.one_succ by tauto.
-        repeat split; [lia|t..]. }
+      { split; cbn.
+        { (* invariant holds in the beginning *)
+          rewrite ?Z.succ_pred, ?Z.lt_pow_2_shiftr, <-?Z.one_succ by tauto.
+          repeat split; [lia|t..]. }
+        { (* sufficient fuel *) rewrite Z.succ_pred. reflexivity. } }
       { intros [ [ [ [ [x2 z2] x3] z3] swap] i] [Hi [Hx2z2 [Hx3z3 [Hq [Hq' Hladder]]]]].
         destruct (i >=? 0)%Z eqn:Hbranch; (* did the loop continue? *)
           rewrite Z.geb_ge_iff in Hbranch.
+        split.
         { (* if loop continued, invariant is preserved *)
           let group _ := ltac:(repeat rewrite ?scalarmult_add_l, ?scalarmult_0_l, ?scalarmult_1_l, ?Hierarchy.left_identity, ?Hierarchy.right_identity, ?Hierarchy.associative, ?(Hierarchy.commutative _ P); reflexivity) in
           destruct (Z.testbit n i) eqn:Hbit in *;
@@ -373,16 +376,14 @@ Module M.
                      => refine (proj1 (Proper_ladder_invariant _ _ (reflexivity _)  _ _ _  _ _ _) (ladder_invariant_swap _ _ _ H)); group ()
                    | |- ?P => match type of P with Prop => split end
                    end. }
+        { (* measure decreases *)
+          cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
         { (* if loop exited, invariant implies postcondition *)
           destruct_head' @and; autorewrite with cancel_pair in *.
           replace i with ((-(1))%Z) in * by lia; clear Hi Hbranch.
           rewrite Z.succ_m1, Z.shiftr_0_r in *.
           destruct swap eqn:Hswap; rewrite <-!to_x_inv00 by assumption;
             eauto using projective_to_xz, proper_to_x_projective. } }
-      { (* fuel <= measure *) cbn. rewrite Z.succ_pred. reflexivity. }
-      { (* measure decreases *) intros [? i].
-        destruct (i >=? 0)%Z eqn:Hbranch;rewrite Z.geb_ge_iff in Hbranch; [|exact I].
-        cbv [Let_In]; break_match; cbn; rewrite Z.succ_pred; apply Znat.Z2Nat.inj_lt; lia. }
     Qed.
 
     (* Using montladder_correct_0 in the combined correctness theorem requires

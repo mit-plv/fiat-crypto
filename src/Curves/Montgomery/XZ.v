@@ -2,7 +2,7 @@ Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Experiments.Loops.
+Require Import Crypto.Util.Loops.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 
 Module M.
