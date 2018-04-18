@@ -66,10 +66,8 @@ Lemma option_rect_false_returns_true_iff
       (f:T->bool) {Proper_f:Proper(R==>eq)f} (o:option T) :
   option_rect (fun _ => bool) f false o = true <-> exists s:T, option_eq R o (Some s) /\ f s = true.
 Proof.
-  unfold option_rect; break_match; repeat intuition (destruct_head ex; eauto); [ | | congruence.. ].
+  unfold option_rect; break_match; repeat intuition (destruct_head ex; eauto); try discriminate.
   { repeat esplit; simpl; easy. }
-  { match goal with [H : f _ = true |- f _ = true ] =>
-                    solve [rewrite <- H; eauto] end. }
 Qed.
 
 Lemma option_rect_false_returns_true_iff_eq
