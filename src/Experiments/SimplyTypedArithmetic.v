@@ -6543,7 +6543,7 @@ Module Pipeline.
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.option.interp t)
-      {t'} (syntax_tree : Expr t')
+      {s} (syntax_tree : Expr (s -> t)) (arg_bounds : ZRange.type.option.interp s)
   | Bounds_analysis_failed
   | Type_too_complicated_for_cps (t : type)
   | Value_not_le (descr : string) {T'} (lhs rhs : T')
@@ -6602,7 +6602,7 @@ Module Pipeline.
              match E with
              | inl E => Success E
              | inr (b, E)
-               => Error (Computed_bounds_are_not_tight_enough b out_bounds E)
+               => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
              end)
        | None => Error (Type_too_complicated_for_cps t)
        end.
