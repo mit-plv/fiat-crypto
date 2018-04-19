@@ -431,7 +431,10 @@ Module Positional. Section Positional.
   End sub.
   Hint Rewrite @eval_opp @eval_sub : push_eval.
   Hint Rewrite @length_sub @length_opp : distr_length.
-End Positional. End Positional.
+End Positional.
+(* Hint Rewrite disappears after the end of a section *)
+Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp : distr_length.
+End Positional.
 
 Record weight_properties {weight : nat -> Z} :=
   {
