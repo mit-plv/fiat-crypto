@@ -133,7 +133,7 @@ specific: $(SPECIFIC_VO) coqprime
 non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
-lite-display: $(LITE_DISPLAY_VOFILES:Display.vo=.log) coqprime
+lite-display: $(LITE_DISPLAY_VOFILES:.vo=.log) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
