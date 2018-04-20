@@ -4762,7 +4762,9 @@ Module Compilers.
                      | Some x, Some y
                        => type.option.Some
                             (t:=(type.Z*type.Z)%ctype)
-                            (ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at)
+                            (let b := ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at in
+                             (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
+                             (fst b, ZRange.opp (snd b)))
                      | Some _, None | None, Some _ | None, None => type.option.None
                      end
              | ident.Z_sub_with_get_borrow_concrete split_at
@@ -4771,9 +4773,9 @@ Module Compilers.
                      | Some x, Some y, Some z
                        => type.option.Some
                             (t:=(type.Z*type.Z)%ctype)
-                            (ZRange.split_bounds
-                               (ZRange.eight_corners (fun x y z => (x - y - z)%Z) x y z)
-                               split_at)
+                            (let b := ZRange.split_bounds (ZRange.eight_corners (fun x y z => (x - y - z)%Z) x y z) split_at in
+                             (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
+                               (fst b, ZRange.opp (snd b)))
                      | _, _, _ => type.option.None
                      end
              | ident.Z_zselect
@@ -8290,19 +8292,6 @@ Module Barrett256.
   Definition M := (2^256-2^224+2^192+2^96-1).
   Definition machine_wordsize := 256.
 
-  (* TODO : why does this not bounds check?
-  Let F := Some r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935]%zrange.
-  Eval vm_compute in (
-     partial.bounds.expr.extract' (fun t : type => id)
-       (λ x : partial.data (type.type_primitive type.Z * type.type_primitive type.Z),
-             ident.Z.cast2
-                         (r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935]%zrange,
-                         r[0 ~> 1]%zrange)%core @@
-                       (ident.Z.add_get_carry_concrete
-                          115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-                        (ident.Z.cast r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935] @@
-                         (ident.fst @@ (Var x)), ident.primitive (t:=type.Z) 26959946667150639793205513449348445388433292963828203772348655992835 @@ TT ))) (F, F)).
- *)
   Derive barrett_red256
          SuchThat (BarrettReduction.rbarrett_red_correctT M machine_wordsize barrett_red256)
          As barrett_red256_correct.
@@ -8314,6 +8303,7 @@ Module Barrett256.
 
   Print barrett_red256.
   (* TODO: the ADD/ADDC instructions containing Z.opp should be translated to SUB/SUBB in partial evaluation *)
+  (* TODO: it is suspicious that this bounds-checks, given that the carries from the above-mentioned ADD/ADDC instructions could be negative *)
   (*
 barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
                  expr_let x0 := SELM (x₂, 0, 26959946667150639793205513449348445388433292963828203772348655992835) in
@@ -8356,8 +8346,8 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
                  expr_let x37 := ADDC_256 (x36₂, x27, x30) in
                  expr_let x38 := ADD_256 (x33, x36₁) in
                  expr_let x39 := ADDC_256 (x38₂, x32, x37₁) in
-                 expr_let x40 := ADD_256 (Z.opp @@ (fst @@ x38), x₁) in
-                 expr_let x41 := ADDC_256 (x40₂, Z.opp @@ (fst @@ x39), x₂) in
+                 expr_let x40 := Z.add_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (Z.opp @@ (fst @@ x38), x₁) in
+                 expr_let x41 := Z.add_with_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (x40₂, Z.opp @@ (fst @@ x39), x₂) in
                  expr_let x42 := SELL (x41₁, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
                  expr_let x43 := Z.cast uint256 @@ (fst @@ SUB_256 (x40₁, x42)) in
                  ADDM (x43, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951)
@@ -8744,8 +8734,10 @@ c.Add256($x36, $x34, $x35);
 c.Addc256($x37, $x36_hi, $x27, $x30);
 c.Add256($x38, $x33, $x36_lo);
 c.Addc256($x39, $x38_hi, $x32, $x37_lo);
-c.Add256($x40, Z.opp @@ $x38_lo, $x_lo);
-c.Addc256($x41, $x40_hi, Z.opp @@ $x39_lo, $x_hi);
+expr_let x40 := Z.add_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                (Z.opp @@ $x38_lo, $x_lo) in
+expr_let x41 := Z.add_with_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                ($x40_hi, Z.opp @@ $x39_lo, $x_hi) in
 c.Sell($x42, $x41_lo, RegZero, RegMod);
 c.Sub($x43, $x40_lo, $x42);
 c.AddM($ret, $x43, RegZero, RegMod);
