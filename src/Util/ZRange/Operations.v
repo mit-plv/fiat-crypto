@@ -84,7 +84,7 @@ Module ZRange.
     then if (0 <=? lower r)%Z
          then (r, {| lower := 0; upper := 0 |})
          else ( {| lower := 0; upper := split_at - 1 |},
-                {| lower := 0; upper := Z.max ( -(lower r / split_at)) (upper r / split_at) |} )
+                {| lower := lower r / split_at; upper := (upper r / split_at) |} )
     else ( {| lower := 0; upper := split_at - 1 |},
-           {| lower := 0; upper := Z.max ( -(lower r / split_at)) (upper r / split_at) |} ).
+           {| lower := lower r / split_at; upper := (upper r / split_at) |} ).
 End ZRange.
