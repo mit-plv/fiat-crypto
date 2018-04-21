@@ -1,5 +1,16 @@
 Require Import Crypto.Util.Notations.
 
+(** Notes:
+
+1. pattern out identifiers and types.
+   - type := arrow (_:type) (_:type) | type_base (_:base_type) -- the latter is a parameter
+   - literal is an identifier
+   - expr cases: var, abs, app, letin, ident -- ident is a parameter
+2. add prenex polymorphism for identifiers (type variables)
+   -
+   - ident is indexed by typecodes, perhaps cases: arrow | base | typevar
+*)
+
 Module type.
   Inductive type := nat | prod (A B : type) | arrow (s d : type).
 End type.
