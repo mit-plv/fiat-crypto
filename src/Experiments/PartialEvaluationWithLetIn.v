@@ -1,3 +1,4 @@
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 
 (** Notes:
@@ -15,6 +16,24 @@ Module type.
   Inductive type (base_type : Type) := base (t : base_type) | arrow (s d : type base_type).
   Global Arguments base {_}.
   Global Arguments arrow {_} s d.
+
+  Fixpoint for_each_lhs_of_arrow {base_type} (f : type base_type -> Type) (t : type base_type) : Type
+    := match t with
+       | base t => unit
+       | arrow s d => f s * @for_each_lhs_of_arrow _ f d
+       end.
+
+  Fixpoint interp {base_type} (base_interp : base_type -> Type) (t : type base_type) : Type
+    := match t with
+       | base t => base_interp t
+       | arrow s d => @interp _ base_interp s -> @interp _ base_interp d
+       end.
+
+  Fixpoint interpM {base_type} (M : Type -> Type) (base_interp : base_type -> Type) (t : type base_type) : Type
+    := match t with
+       | base t => base_interp t
+       | arrow s d => @interpM _ M base_interp s -> M (@interpM _ M base_interp d)
+       end.
 End type.
 Notation type := type.type.
 Delimit Scope etype_scope with etype.
@@ -28,6 +47,75 @@ Module base.
 End base.
 Bind Scope etype_scope with base.type.
 Infix "*" := base.type.prod : etype_scope.
+
+Module parametric.
+  Local Notation einterp := type.interp.
+  Module type.
+    Section subst.
+      Context {base_type_with_var base_type}
+              (base_subst : base_type_with_var -> base_type)
+              (base_interp : base_type_with_var -> Type)
+              (base_subst_interp : base_type -> Type)
+              (M : Type -> Type).
+
+      Fixpoint subst (t : type base_type_with_var) : type base_type
+        := match t with
+           | type.base t => type.base (base_subst t)
+           | type.arrow s d => type.arrow (subst s) (subst d)
+           end.
+
+      (* half_interp *)
+      Fixpoint interp (t : type base_type_with_var) : Type
+        := match t with
+           | type.base t => base_interp t
+           | type.arrow s d
+             => match s with
+                | type.arrow s' d' => type.interpM M base_subst_interp (subst s)
+                | type.base t => base_interp t
+                end -> interp d
+           end.
+    End subst.
+  End type.
+  Local Notation btype := base.type.type.
+  Local Notation bnat := base.type.nat.
+  Local Notation bprod := base.type.prod.
+  Module base.
+    Module type.
+      Inductive type := nat | prod (A B : type) | var_with_subst (subst : btype).
+
+      Fixpoint subst (t : type) : btype
+        := match t with
+           | nat => bnat
+           | prod A B => bprod (subst A) (subst B)
+           | var_with_subst s => s
+           end.
+
+      Section interp.
+        Context (base_interp : btype -> Type).
+
+        Fixpoint interp (t : type) : Type
+          := match t with
+             | nat => Datatypes.nat
+             | prod A B => interp A * interp B
+             | var_with_subst s => base_interp s
+             end%type.
+      End interp.
+    End type.
+    Notation type := type.type.
+  End base.
+
+  Definition subst (t : type base.type) : type btype
+    := type.subst base.type.subst t.
+
+  Definition half_interp (M : Type -> Type) (interp : btype -> Type) (t : type base.type) : Type
+    := type.interp base.type.subst (base.type.interp interp) interp M t.
+End parametric.
+Notation ptype := (type.type parametric.base.type).
+Delimit Scope ptype_scope with ptype.
+Notation "s -> d" := (type.arrow s%ptype d%ptype) : ptype_scope.
+Bind Scope ptype_scope with parametric.base.type.
+Infix "*" := parametric.base.type.prod : ptype_scope.
+Notation "# x" := (parametric.base.type.var_with_subst x) (at level 9, x at level 10, format "# x") : ptype_scope.
 
 Fixpoint upperboundT (t : base.type) : Type
   := match t with
@@ -60,7 +148,7 @@ Module expr.
     Notation "'λ' x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
     Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
     Notation "'$' x" := (Var x) (at level 9, format "'$' x") : expr_scope.
-    Notation "# x" := (Ident x) (at level 9, x at level 10, format "# x") : expr_scope.
+    Notation "### x" := (Ident x) (at level 9, x at level 10, format "### x") : expr_scope.
   End Notations.
 End expr.
 Import expr.Notations.
@@ -71,29 +159,38 @@ Module ident.
   Section with_base.
     Let type_base (x : base.type) : type := type.base x.
     Local Coercion type_base : base.type >-> type.
+    Let ptype_base (x : parametric.base.type) : ptype := type.base x.
+    Local Coercion ptype_base : parametric.base.type >-> ptype.
+
+    Inductive pident : ptype -> Type :=
+    | Literal (v : nat) : pident parametric.base.type.nat
+    | Plus : pident (parametric.base.type.nat -> parametric.base.type.nat -> parametric.base.type.nat)
+    | Pair {A B : base.type} : pident (#A -> #B -> #A * #B)%ptype
+    | Fst {A B} : pident (#A * #B -> #A)%ptype
+    | Snd {A B} : pident (#A * #B -> #B)%ptype
+    | Cast {T} (upper_bound : upperboundT T) : pident (#T -> #T)%ptype
+    .
 
     Inductive ident : type -> Type :=
-    | Literal (v : nat) : ident base.type.nat
-    | Plus : ident (base.type.nat -> base.type.nat -> base.type.nat)
-    | Pair {A B : base.type} : ident (A -> B -> A * B)
-    | Fst {A B} : ident (A * B -> A)
-    | Snd {A B} : ident (A * B -> B)
-    | Cast {T} (upper_bound : upperboundT T) : ident (T -> T)
-    .
+    | wrap {T} (idc : pident T) : ident (parametric.subst T).
   End with_base.
+  Global Coercion wrap : pident >-> ident.
 
   Module Export Notations.
     Delimit Scope ident_scope with ident.
     Bind Scope ident_scope with ident.
+    Bind Scope ident_scope with pident.
     Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
-    Notation "( x , y , .. , z )" := (expr.App (expr.App (expr.Ident Pair) .. (expr.App (expr.App (expr.Ident Pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
-    Notation "x + y" := (#Plus @ x @ y)%expr : expr_scope.
     Notation "## x" := (Literal x) (at level 9, x at level 10, format "## x") : ident_scope.
-    Notation "## x" := (expr.Ident (Literal x)) (at level 9, x at level 10, format "## x") : expr_scope.
+    Notation "## x" := (expr.Ident (wrap (Literal x))) (at level 9, x at level 10, format "## x") : expr_scope.
+    Notation "# x" := (expr.Ident (wrap x)) (at level 9, x at level 10, format "# x") : expr_scope.
+    Notation "( x , y , .. , z )" := (expr.App (expr.App (#Pair) .. (expr.App (expr.App (#Pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
+    Notation "x + y" := (#Plus @ x @ y)%expr : expr_scope.
   End Notations.
 End ident.
 Import ident.Notations.
 Notation ident := ident.ident.
+Notation pident := ident.pident.
 
 Module UnderLets.
   Section with_var.
@@ -138,17 +235,17 @@ Module partial.
     Local Notation expr := (@expr base_type ident).
     Local Notation UnderLets := (@UnderLets base_type ident var).
     Context (base_value : base_type -> Type)
-            (stateT' : base_type -> Type)
-            (annotate : forall t, stateT' t -> option (ident (t -> t)))
-            (intersect_state : forall A, stateT' A -> stateT' A -> stateT' A)
-            (bottom : forall A, stateT' A)
-            (state_of_base_value : forall t, base_value t -> stateT' t)
+            (abstract_domain' : base_type -> Type)
+            (annotate : forall t, abstract_domain' t -> option (ident (t -> t)))
+            (intersect_state : forall A, abstract_domain' A -> abstract_domain' A -> abstract_domain' A)
+            (bottom' : forall A, abstract_domain' A)
+            (abstraction_function : forall t, base_value t -> abstract_domain' t)
             (base_reify : forall t, base_value t -> @expr var t).
 
     Fixpoint value (t : type)
       := match t with
          | type.base t
-           => stateT' t * @expr var t + base_value t
+           => abstract_domain' t * @expr var t + base_value t
          | type.arrow s d
            => value s -> UnderLets (value d)
          end%type.
@@ -157,56 +254,59 @@ Module partial.
 
     Context (interp_ident : forall t, ident t -> value t).
 
-    Definition stateT (t : type)
+    Definition abstract_domain (t : type)
+      := type.interp abstract_domain' t.
+
+    Fixpoint bottom {t} : abstract_domain t
       := match t with
-         | type.base t => stateT' t
-         | type.arrow s d => unit
+         | type.base t => bottom' t
+         | type.arrow s d => fun _ => @bottom d
          end.
 
-    Fixpoint reify {t} : value t -> @expr var t
-      := match t return value t -> @expr var t with
-         | type.base t
-           => fun v
-              => match v with
-                 | inl (st, e)
-                   => match annotate _ st with
-                      | None => e
-                      | Some cst => #cst @ e
-                      end%expr
-                 | inr v => base_reify _ v
-                 end
-         | type.arrow s d
-           => fun f => λ x , (UnderLets.to_expr
-                                (fx <-- f (@reflect _ (expr.Var x));
-                                   Base (@reify _ fx)))
-         end%core%expr
-    with reflect {t} : @expr var t -> value t
-         := match t return @expr var t -> value t with
-            | type.base t
-              => fun e => inl (bottom _, e)
-            | type.arrow s d
-              => fun e v
-                 => Base (@reflect d (e @ (@reify s v)))%expr
-            end.
+    Fixpoint bottom_for_each_lhs_of_arrow {t} : type.for_each_lhs_of_arrow abstract_domain t
+      := match t return type.for_each_lhs_of_arrow abstract_domain t with
+         | type.base t => tt
+         | type.arrow s d => (bottom, @bottom_for_each_lhs_of_arrow d)
+         end.
 
-    Fixpoint state_of_value {t} : value t -> stateT t
-      := match t return value t -> stateT t with
+    Fixpoint state_of_value {t} : value t -> abstract_domain t
+      := match t return value t -> abstract_domain t with
          | type.base t
            => fun v
               => match v with
                  | inl (st, _) => st
-                 | inr n => state_of_base_value _ n
+                 | inr n => abstraction_function _ n
                  end
-         | type.arrow s d => fun _ => tt
+         | type.arrow s d => fun _ => bottom
          end.
 
-    Definition put_state {t} : stateT t -> @expr var t -> value t
-      := match t return stateT t -> expr t -> value t with
+    Fixpoint reify {t} : value t -> type.for_each_lhs_of_arrow abstract_domain t -> @expr var t
+      := match t return value t -> type.for_each_lhs_of_arrow abstract_domain t -> @expr var t with
          | type.base t
-           => fun st e => inl (st, e)
+           => fun v 'tt
+              => match v with
+                 | inl (st, e)
+                   => match annotate _ st with
+                      | None => e
+                      | Some cst => ###cst @ e
+                      end%expr
+                 | inr v => base_reify _ v
+                 end
          | type.arrow s d
-           => fun _ e => reflect e
-         end.
+           => fun f '(sv, dv)
+              => λ x , (UnderLets.to_expr
+                          (fx <-- f (@reflect _ (expr.Var x) sv);
+                             Base (@reify _ fx dv)))
+         end%core%expr
+    with reflect {t} : @expr var t -> abstract_domain t -> value t
+         := match t return @expr var t -> abstract_domain t -> value t with
+            | type.base t
+              => fun e st => inl (st, e)
+            | type.arrow s d
+              => fun e absf v
+                 => let stv := state_of_value v in
+                    Base (@reflect d (e @ (@reify s v bottom_for_each_lhs_of_arrow)) (absf stv))%expr
+            end.
 
     Fixpoint interp {t} (e : @expr value_with_lets t) : value_with_lets t
       := match e in expr.expr t return value_with_lets t with
@@ -217,28 +317,24 @@ Module partial.
            => (x' <-- @interp s x;
                  f' <-- @interp (s -> d)%etype f;
                  f' x')
-         | expr.LetIn A B x f
+         | expr.LetIn (type.arrow _ _) B x f
+           => (x' <-- @interp _ x;
+                 @interp _ (f (Base x')))
+         | expr.LetIn (type.base A) B x f
            => (x' <-- @interp _ x;
                  UnderLet
-                   (reify x')
+                   (reify x' tt)
                    (fun x'v
-                    => @interp _ (f (Base (put_state (state_of_value x') (expr.Var x'v))))))
+                    => @interp _ (f (Base (reflect (expr.Var x'v) (state_of_value x'))))))
          end%under_lets.
 
-    Definition eval {t} (e : @expr value_with_lets t) : expr t
-      := UnderLets.to_expr (e' <-- interp e; Base (reify e')).
+    Definition eval_with_bound {t} (e : @expr value_with_lets t)
+               (st : type.for_each_lhs_of_arrow abstract_domain t)
+      : expr t
+      := UnderLets.to_expr (e' <-- interp e; Base (reify e' st)).
 
-    Definition eval_with_bound {s d} (e : @expr value_with_lets (s -> d))
-               (st : stateT s)
-      : expr (s -> d)
-      := UnderLets.to_expr
-           (e' <-- interp e;
-              Base
-                (expr.Abs
-                   (fun x
-                    => UnderLets.to_expr
-                         (e'' <-- e' (put_state st (expr.Var x));
-                            Base (reify e''))))).
+    Definition eval {t} (e : @expr value_with_lets t) : expr t
+      := eval_with_bound e bottom_for_each_lhs_of_arrow.
   End with_var.
 
   Module ident.
@@ -249,53 +345,54 @@ Module partial.
       Context {var : type -> Type}.
       Local Notation expr := (@expr base.type ident).
       Local Notation UnderLets := (@UnderLets base.type ident var).
-      Context (stateT' : base.type -> Type)
-              (annotate : forall t, stateT' t -> option (ident (t -> t)))
-              (add_state : stateT' base.type.nat -> stateT' base.type.nat -> stateT' base.type.nat)
-              (fst_state : forall A B, stateT' (base.type.prod A B) -> stateT' A)
-              (snd_state : forall A B, stateT' (base.type.prod A B) -> stateT' B)
-              (state_of_literal : nat -> stateT' base.type.nat)
-              (pair_state : forall A B, stateT' A -> stateT' B -> stateT' (base.type.prod A B))
-              (intersect_state : forall A, stateT' A -> stateT' A -> stateT' A)
-              (update_literal_with_state : stateT' base.type.nat -> nat -> nat)
-              (state_of_upperbound : forall T, upperboundT T -> stateT' T)
-              (bottom : forall A, stateT' A).
+      Context (abstract_domain' : base.type -> Type).
+      Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
+      Context (annotate : forall t, abstract_domain' t -> option (ident (t -> t)))
+              (abstract_interp_ident : forall t, pident t -> type.interp abstract_domain' (parametric.subst t))
+              (intersect_state : forall A, abstract_domain' A -> abstract_domain' A -> abstract_domain' A)
+              (update_literal_with_state : abstract_domain' base.type.nat -> nat -> nat)
+              (state_of_upperbound : forall T, upperboundT T -> abstract_domain' T)
+              (bottom' : forall A, abstract_domain' A).
 
       Fixpoint base_value (t : base.type)
         := match t return Type with
            | base.type.nat as t
              => nat
            | base.type.prod A B as t
-             => (stateT' A * @expr var A + base_value A) * (stateT' B * @expr var B + base_value B)
+             => (abstract_domain' A * @expr var A + base_value A) * (abstract_domain' B * @expr var B + base_value B)
            end%type.
+      Eval cbn in parametric.base.type.interp (fun t : base.type.type => abstract_domain t)
+    #?[A].
 
-      Fixpoint state_of_base_value {t} : base_value t -> stateT' t
-        := match t return base_value t -> stateT' t with
-           | base.type.nat => state_of_literal
+      Fixpoint abstraction_function {t} : base_value t -> abstract_domain' t
+        := match t return base_value t -> abstract_domain' t with
+           | base.type.nat
+             => fun v => abstract_interp_ident _ (ident.Literal v)
            | base.type.prod A B
              => fun '(a, b)
                 => let sta := match a with
                               | inl (st, _) => st
-                              | inr a' => @state_of_base_value A a'
+                              | inr a' => @abstraction_function A a'
                               end in
                    let stb := match b with
                               | inl (st, _) => st
-                              | inr b' => @state_of_base_value B b'
+                              | inr b' => @abstraction_function B b'
                               end in
-                   pair_state _ _ sta stb
+                   abstract_interp_ident
+                     _ ident.Pair sta stb
            end.
 
       Fixpoint base_reify {t} : base_value t -> @expr var t
         := match t return base_value t -> expr t with
            | base.type.nat
-             => fun v => expr.Ident (ident.Literal v)
+             => fun v => expr.Ident (ident.wrap (ident.Literal v))
            | base.type.prod A B
              => fun '(a, b)
                 => let ea := match a with
                              | inl (st, e)
                                => match annotate _ st with
                                   | None => e
-                                  | Some cst => #cst @ e
+                                  | Some cst => ###cst @ e
                                   end%expr
                              | inr v => @base_reify _ v
                              end in
@@ -303,20 +400,22 @@ Module partial.
                              | inl (st, e)
                                => match annotate _ st with
                                   | None => e
-                                  | Some cst => #cst @ e
+                                  | Some cst => ###cst @ e
                                   end%expr
                              | inr v => @base_reify _ v
                              end in
                    (#ident.Pair @ ea @ eb)%expr
            end.
 
-      Fixpoint intersect_state_base_value {t} : stateT' t -> base_value t -> base_value t
-        := match t return stateT' t -> base_value t -> base_value t with
+      Local Notation value := (@value base.type ident var base_value abstract_domain').
+
+      Fixpoint intersect_state_base_value {t} : abstract_domain' t -> base_value t -> base_value t
+        := match t return abstract_domain' t -> base_value t -> base_value t with
            | base.type.nat => update_literal_with_state
            | base.type.prod _ _
              => fun st '(a, b)
-                => let sta := fst_state _ _ st in
-                   let stb := snd_state _ _ st in
+                => let sta := abstract_interp_ident _ ident.Fst st in
+                   let stb := abstract_interp_ident _ ident.Snd st in
                    let a' := match a with
                              | inl (sta', e) => inl (intersect_state _ sta sta', e)
                              | inr v => inr (@intersect_state_base_value _ sta v)
@@ -329,10 +428,7 @@ Module partial.
            end.
 
 
-      Local Notation value := (@value base.type ident var base_value stateT').
-      Local Notation stateT := (@stateT base.type stateT').
-
-      Definition intersect_state_value {t} : stateT t -> value t -> value t
+      Definition intersect_state_value {t} : abstract_domain t -> value t -> value t
         := match t with
            | type.base t
              => fun st e
@@ -343,94 +439,129 @@ Module partial.
            | type.arrow s d => fun _ e => e
            end.
 
-      Local Notation state_of_value := (@state_of_value base.type ident var base_value stateT' (@state_of_base_value)).
-      Local Notation reify := (@reify base.type ident var base_value stateT' annotate bottom (@base_reify)).
+      Local Notation state_of_value := (@state_of_value base.type ident var base_value abstract_domain' (@abstraction_function)).
+      Local Notation reify := (@reify base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify)).
+      Print reflect.
+      Local Notation reflect := (@reflect base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify)).
 
-      Definition interp {t} (idc : ident t) : value t
-        := match idc in ident.ident t return value t with
-           | ident.Literal v => inr v
-           | ident.Plus
-             => fun x'
-                => Base
-                     (fun y'
-                      => Base
-                           match x', y' with
-                           | inr xv, inr yv => inr (xv + yv)
-                           | _, _ => inl
-                                       (add_state (@state_of_value base.type.nat x')
-                                                  (@state_of_value base.type.nat y'),
-                                        (#ident.Plus
-                                           @ (@reify base.type.nat x')
-                                           @ (@reify base.type.nat y'))%expr)
-                           end)
-           | ident.Pair A B
-             => fun a'
-                => Base
-                     (fun b'
-                      => Base
-                           (inr (a', b')))
-           | ident.Fst A B
-             => fun x'
-                => Base
-                     match x' return value (type.base _) with
-                     | inl (st, e) => inl (fst_state _ _ st, (#ident.Fst @ e)%expr)
-                     | inr (a, b) => a
-                     end
-           | ident.Snd A B
-             => fun x'
-                => Base
-                     match x' return value (type.base _) with
-                     | inl (st, e) => inl (snd_state _ _ st, (#ident.Snd @ e)%expr)
-                     | inr (a, b) => b
-                     end
-           | ident.Cast T bound
-             => fun e'
-                => Base (intersect_state_value (t:=T) (state_of_upperbound _ bound) e')
+      Definition half_interp {t} (idc : pident t) : parametric.half_interp UnderLets value t
+        := match idc in ident.pident t return parametric.half_interp UnderLets value t with
+           | ident.Literal v => v
+           | ident.Plus => Nat.add
+           | ident.Pair A B => @pair _ _
+           | ident.Fst A B => @fst _ _
+           | ident.Snd A B => @snd _ _
+           | ident.Cast T upper_bound
+             => intersect_state_value (t:=T) (state_of_upperbound _ upper_bound)
            end.
 
-      Local Notation value_with_lets := (@value_with_lets base.type ident var base_value stateT').
+      Fixpoint pinterp_base {t : parametric.base.type} : parametric.half_interp UnderLets value (type.base t) -> value (parametric.subst (type.base t))
+        := match t return parametric.half_interp UnderLets value (type.base t) -> value (parametric.subst (type.base t)) with
+           | parametric.base.type.nat
+             => fun v => inr v
+           | parametric.base.type.prod A B
+             => fun '(a, b) => inr (@pinterp_base A a, @pinterp_base B b)
+           | parametric.base.type.var_with_subst subst
+             => fun v => v
+           end.
+
+      Fixpoint puninterp_base {t : parametric.base.type} : value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets value (type.base t))
+        := match t return value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets value (type.base t)) with
+           | parametric.base.type.nat
+             => fun v
+                => match v with
+                   | inl _ => None
+                   | inr v' => Some v'
+                   end
+           | parametric.base.type.prod A B
+             => fun ab
+                => match ab with
+                   | inl _ => None
+                   | inr (a, b)
+                     => (a' <- @puninterp_base A a;
+                           b' <- @puninterp_base B b;
+                           Some (a', b'))
+                   end
+           | parametric.base.type.var_with_subst subst
+             => @Some _
+           end%option.
+
+      (* FIXME: naming; these are basically just fancy identity functions *)
+      Fixpoint vinterp_arrow {t : type} : value t -> @type.interpM base.type UnderLets value t
+        := match t return value t -> @type.interpM base.type UnderLets value t with
+           | type.base t => fun v => v
+           | type.arrow s d
+             => fun f x
+                => (fx <-- f (@vuninterp_arrow s x);
+                      Base (@vinterp_arrow d fx))
+           end%under_lets
+      with vuninterp_arrow {t : type} : @type.interpM base.type UnderLets value t -> value t
+           := match t return @type.interpM base.type UnderLets value t -> value t with
+              | type.base t => fun v => v
+              | type.arrow s d
+                => fun f x
+                   => (fx <-- f (@vinterp_arrow s x);
+                         Base (@vuninterp_arrow d fx))
+              end%under_lets.
+
+      Fixpoint pinterp {t} : UnderLets (value (parametric.subst t)) -> parametric.half_interp UnderLets value t -> value (parametric.subst t)
+        := match t return UnderLets (value (parametric.subst t)) -> parametric.half_interp UnderLets value t -> value (parametric.subst t) with
+           | type.base t
+             => fun default partial => pinterp_base partial
+           | type.arrow (type.base s) d
+             => fun fdefault fpartial (v : value (parametric.subst (type.base s)))
+                => let default := (fdefault' <-- fdefault; fdefault' v) in
+                   match puninterp_base v return UnderLets (value (parametric.subst d)) with
+                   | Some v' => Base (@pinterp d default (fpartial v'))
+                   | None => default
+                   end
+           | type.arrow s d
+             => fun fdefault fpartial (v : value (parametric.subst s))
+                => Base
+                     (@pinterp
+                        d (fdefault' <-- fdefault; fdefault' v)
+                        (fpartial (vinterp_arrow v)))
+           end%under_lets.
+
+      Local Notation bottom := (@bottom base.type abstract_domain' bottom').
+
+      Definition interp {t} (idc : ident t) : value t
+        := match idc in ident t return value t with
+           | ident.wrap T idc' as idc
+             => pinterp
+                  (Base (reflect (###idc) (abstract_interp_ident _ idc')))%expr
+                  (half_interp idc')
+           end.
+
+      Local Notation value_with_lets := (@value_with_lets base.type ident var base_value abstract_domain').
+
+      Definition eval_with_bound {t} (e : @expr value_with_lets t)
+                 (st : type.for_each_lhs_of_arrow abstract_domain t)
+        : expr t
+        := @eval_with_bound base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) (@interp) t e st.
 
       Definition eval {t} (e : @expr value_with_lets t) : @expr var t
-        := @eval base.type ident var base_value stateT' annotate bottom (@state_of_base_value) (@base_reify) (@interp) t e.
-
-      Definition eval_with_bound {s d} (e : @expr value_with_lets (s -> d))
-                 (st : stateT s)
-        : expr (s -> d)
-        := @eval_with_bound base.type ident var base_value stateT' annotate bottom (@state_of_base_value) (@base_reify) (@interp) s d e st.
+        := @eval base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) (@interp) t e.
     End with_var.
   End ident.
 End partial.
 
 Section specialized.
-  Local Notation stateT' := upperboundT.
-  Local Notation stateT := (@partial.stateT base.type stateT').
+  Local Notation abstract_domain' := upperboundT.
+  Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
   Notation expr := (@expr base.type ident).
   Local Notation type := (type base.type).
   Let type_base (x : base.type) : type := type.base x.
   Local Coercion type_base : base.type >-> type.
-  Definition annotate t (st : stateT' t) : option (ident (t -> t))
-    := Some (ident.Cast st).
-  Fixpoint bottom T : stateT' T
-    := match T return stateT' T with
+  Definition annotate t (st : abstract_domain' t) : option (ident (t -> t))
+    := Some (ident.wrap (ident.Cast st)).
+  Fixpoint bottom' T : abstract_domain' T
+    := match T return abstract_domain' T with
        | base.type.nat => None
-       | base.type.prod A B => (bottom _, bottom _)
+       | base.type.prod A B => (bottom' _, bottom' _)
        end.
-  Definition add_state : stateT' base.type.nat -> stateT' base.type.nat -> stateT' base.type.nat
-    := fun x y
-       => match x, y with
-          | Some x', Some y' => Some (x' + y')
-          | _, _ => None
-          end.
-  Definition fst_state : forall A B : base.type, stateT' (A * B)%etype -> stateT' A
-    := fun _ _ => @fst _ _.
-  Definition snd_state : forall A B : base.type, stateT' (A * B)%etype -> stateT' B
-    := fun _ _ => @snd _ _.
-  Definition state_of_literal : nat -> stateT' base.type.nat
-    := @Some _.
-  Definition pair_state : forall A B, stateT' A -> stateT' B -> stateT' (base.type.prod A B)
-    := fun _ _ => @pair _ _.
-  Fixpoint intersect_state A : stateT' A -> stateT' A -> stateT' A
-    := match A return stateT' A -> stateT' A -> stateT' A with
+  Fixpoint intersect_state A : abstract_domain' A -> abstract_domain' A -> abstract_domain' A
+    := match A return abstract_domain' A -> abstract_domain' A -> abstract_domain' A with
        | base.type.nat
          => fun x y
             => match x, y with
@@ -442,27 +573,43 @@ Section specialized.
          => fun '(x, y) '(x', y') => (@intersect_state _ x x', @intersect_state _ y y')
        end.
   Axiom evil : nat -> nat.
-  Definition update_literal_with_state : stateT' base.type.nat -> nat -> nat
+  Definition update_literal_with_state : abstract_domain' base.type.nat -> nat -> nat
     := fun upperbound n
        => match upperbound with
         | Some upperbound'
           => if Nat.leb n upperbound' then n else evil n
         | None => n
         end.
-  Definition state_of_upperbound : forall T, upperboundT T -> stateT' T
+  Definition state_of_upperbound : forall T, upperboundT T -> abstract_domain' T
     := fun _ x => x.
+  Definition abstract_interp_ident t (idc : pident t) : type.interp abstract_domain' (parametric.subst t)
+    := match idc in ident.pident t return type.interp abstract_domain' (parametric.subst t) with
+       | ident.Literal v => Some v
+       | ident.Plus
+         => fun x y
+            => match x, y with
+               | Some x', Some y' => Some (x' + y')
+               | _, _ => None
+               end
+       | ident.Pair A B => @pair _ _
+       | ident.Fst A B => @fst _ _
+       | ident.Snd A B => @snd _ _
+       | ident.Cast T upper_bound
+         => intersect_state _ (state_of_upperbound _ upper_bound)
+       end.
 
   Print partial.ident.eval.
 
   Definition eval {var} {t} (e : @expr _ t) : expr t
     := (@partial.ident.eval)
-         var stateT' annotate add_state fst_state snd_state state_of_literal pair_state intersect_state update_literal_with_state state_of_upperbound bottom t e.
-  Definition eval_with_bound {var} {s d} (e : @expr _ (s -> d)) (bound : stateT s) : expr (s -> d)
+         var abstract_domain' annotate abstract_interp_ident intersect_state update_literal_with_state state_of_upperbound bottom' t e.
+  Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
     := (@partial.ident.eval_with_bound)
-         var stateT annotate add_state fst_state snd_state state_of_literal pair_state intersect_state update_literal_with_state state_of_upperbound bottom s d e bound.
+         var abstract_domain annotate abstract_interp_ident intersect_state update_literal_with_state state_of_upperbound bottom' t e bound.
 
   Import expr.
   Import ident.
+
   Compute eval (#Fst @ (expr_let x := ##10 in ($x, $x)))%expr.
 
   Compute eval ((\ x , expr_let y := ##5 in #Fst @ $x + (#Fst @ $x + ($y + $y)))
@@ -475,5 +622,5 @@ Section specialized.
   Eval cbv in eval_with_bound
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#Fst @ $x + #Snd @ $x)))
                          @ (##1, ##7)))%expr
-                (Some 100).
+                (Some 100, tt).
 End specialized.
