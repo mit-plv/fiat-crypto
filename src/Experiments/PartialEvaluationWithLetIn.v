@@ -60,7 +60,7 @@ Module expr.
     Notation "'λ' x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
     Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
     Notation "'$' x" := (Var x) (at level 9, format "'$' x") : expr_scope.
-    Notation "' x" := (Ident x) (at level 9, x at level 10, format "' x") : expr_scope.
+    Notation "# x" := (Ident x) (at level 9, x at level 10, format "# x") : expr_scope.
   End Notations.
 End expr.
 Import expr.Notations.
@@ -87,9 +87,9 @@ Module ident.
     Bind Scope ident_scope with ident.
     Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
     Notation "( x , y , .. , z )" := (expr.App (expr.App (expr.Ident Pair) .. (expr.App (expr.App (expr.Ident Pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
-    Notation "x + y" := ('Plus @ x @ y)%expr : expr_scope.
-    Notation "` x" := (Literal x) (at level 9, x at level 10, format "` x") : ident_scope.
-    Notation "` x" := (expr.Ident (Literal x)) (at level 9, x at level 10, format "` x") : expr_scope.
+    Notation "x + y" := (#Plus @ x @ y)%expr : expr_scope.
+    Notation "## x" := (Literal x) (at level 9, x at level 10, format "## x") : ident_scope.
+    Notation "## x" := (expr.Ident (Literal x)) (at level 9, x at level 10, format "## x") : expr_scope.
   End Notations.
 End ident.
 Import ident.Notations.
@@ -171,7 +171,7 @@ Module partial.
                  | inl (st, e)
                    => match annotate _ st with
                       | None => e
-                      | Some cst => 'cst @ e
+                      | Some cst => #cst @ e
                       end%expr
                  | inr v => base_reify _ v
                  end
@@ -295,7 +295,7 @@ Module partial.
                              | inl (st, e)
                                => match annotate _ st with
                                   | None => e
-                                  | Some cst => 'cst @ e
+                                  | Some cst => #cst @ e
                                   end%expr
                              | inr v => @base_reify _ v
                              end in
@@ -303,11 +303,11 @@ Module partial.
                              | inl (st, e)
                                => match annotate _ st with
                                   | None => e
-                                  | Some cst => 'cst @ e
+                                  | Some cst => #cst @ e
                                   end%expr
                              | inr v => @base_reify _ v
                              end in
-                   ('ident.Pair @ ea @ eb)%expr
+                   (#ident.Pair @ ea @ eb)%expr
            end.
 
       Fixpoint intersect_state_base_value {t} : stateT' t -> base_value t -> base_value t
@@ -359,7 +359,7 @@ Module partial.
                            | _, _ => inl
                                        (add_state (@state_of_value base.type.nat x')
                                                   (@state_of_value base.type.nat y'),
-                                        ('ident.Plus
+                                        (#ident.Plus
                                            @ (@reify base.type.nat x')
                                            @ (@reify base.type.nat y'))%expr)
                            end)
@@ -373,14 +373,14 @@ Module partial.
              => fun x'
                 => Base
                      match x' return value (type.base _) with
-                     | inl (st, e) => inl (fst_state _ _ st, ('ident.Fst @ e)%expr)
+                     | inl (st, e) => inl (fst_state _ _ st, (#ident.Fst @ e)%expr)
                      | inr (a, b) => a
                      end
            | ident.Snd A B
              => fun x'
                 => Base
                      match x' return value (type.base _) with
-                     | inl (st, e) => inl (snd_state _ _ st, ('ident.Snd @ e)%expr)
+                     | inl (st, e) => inl (snd_state _ _ st, (#ident.Snd @ e)%expr)
                      | inr (a, b) => b
                      end
            | ident.Cast T bound
@@ -463,17 +463,17 @@ Section specialized.
 
   Import expr.
   Import ident.
-  Compute eval ('Fst @ (expr_let x := `10 in ($x, $x)))%expr.
+  Compute eval (#Fst @ (expr_let x := ##10 in ($x, $x)))%expr.
 
-  Compute eval ((\ x , expr_let y := `5 in 'Fst @ $x + ('Fst @ $x + ($y + $y)))
-                  @ (`1, `1))%expr.
+  Compute eval ((\ x , expr_let y := ##5 in #Fst @ $x + (#Fst @ $x + ($y + $y)))
+                  @ (##1, ##1))%expr.
 
-  Compute eval ((\ x , expr_let y := `5 in $y + ($y + ('Fst @ $x + 'Snd @ $x)))
-                  @ (`1, `7))%expr.
+  Compute eval ((\ x , expr_let y := ##5 in $y + ($y + (#Fst @ $x + #Snd @ $x)))
+                  @ (##1, ##7))%expr.
 
 
   Eval cbv in eval_with_bound
-                (\z , ((\ x , expr_let y := `5 in $y + ($z + ('Fst @ $x + 'Snd @ $x)))
-                         @ (`1, `7)))%expr
+                (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#Fst @ $x + #Snd @ $x)))
+                         @ (##1, ##7)))%expr
                 (Some 100).
 End specialized.
