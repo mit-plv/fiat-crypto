@@ -361,7 +361,15 @@ Module partial.
               (update_literal_with_state : abstract_domain' base.type.nat -> nat -> nat)
               (state_of_upperbound : forall T, upperboundT T -> abstract_domain' T)
               (bottom' : forall A, abstract_domain' A)
-              (** we need constructors for reify and destructors for intersect_state *)
+              (** we need constructors for reify and destructors for
+              intersect_state, which is needed to talk about how to do
+              cast on values; there's a leaky abstraction barrier
+              here: we assume that we can take apart the abstract
+              state via type structure and then put it back together
+              again, in order to cast values.  But we don't require
+              that the abstract state is actually a pair on product
+              types, so we pay the cost of crossing that abstraction
+              barrier in both directions a decent amount *)
               (ident_Literal : nat -> pident parametric.base.type.nat)
               (ident_Pair : forall A B, pident (#A -> #B -> #A * #B)%ptype)
               (ident_Fst : forall A B, pident (#A * #B -> #A)%ptype)
