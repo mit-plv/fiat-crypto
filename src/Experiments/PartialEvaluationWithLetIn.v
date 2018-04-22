@@ -139,7 +139,7 @@ Module partial.
     Local Notation UnderLets := (@UnderLets base_type ident var).
     Context (base_value : base_type -> Type)
             (stateT' : base_type -> Type)
-            (cast : forall t, stateT' t -> @expr var t -> @expr var t)
+            (annotate : forall t, stateT' t -> option (ident (t -> t)))
             (intersect_state : forall A, stateT' A -> stateT' A -> stateT' A)
             (bottom : forall A, stateT' A)
             (state_of_base_value : forall t, base_value t -> stateT' t)
@@ -168,7 +168,11 @@ Module partial.
          | type.base t
            => fun v
               => match v with
-                 | inl (st, e) => cast _ st e
+                 | inl (st, e)
+                   => match annotate _ st with
+                      | None => e
+                      | Some cst => 'cst @ e
+                      end%expr
                  | inr v => base_reify _ v
                  end
          | type.arrow s d
@@ -246,7 +250,7 @@ Module partial.
       Local Notation expr := (@expr base.type ident).
       Local Notation UnderLets := (@UnderLets base.type ident var).
       Context (stateT' : base.type -> Type)
-              (cast : forall t, stateT' t -> @expr var t -> @expr var t)
+              (annotate : forall t, stateT' t -> option (ident (t -> t)))
               (add_state : stateT' base.type.nat -> stateT' base.type.nat -> stateT' base.type.nat)
               (fst_state : forall A B, stateT' (base.type.prod A B) -> stateT' A)
               (snd_state : forall A B, stateT' (base.type.prod A B) -> stateT' B)
@@ -288,11 +292,19 @@ Module partial.
            | base.type.prod A B
              => fun '(a, b)
                 => let ea := match a with
-                             | inl (st, e) => cast _ st e
+                             | inl (st, e)
+                               => match annotate _ st with
+                                  | None => e
+                                  | Some cst => 'cst @ e
+                                  end%expr
                              | inr v => @base_reify _ v
                              end in
                    let eb := match b with
-                             | inl (st, e) => cast _ st e
+                             | inl (st, e)
+                               => match annotate _ st with
+                                  | None => e
+                                  | Some cst => 'cst @ e
+                                  end%expr
                              | inr v => @base_reify _ v
                              end in
                    ('ident.Pair @ ea @ eb)%expr
@@ -332,7 +344,7 @@ Module partial.
            end.
 
       Local Notation state_of_value := (@state_of_value base.type ident var base_value stateT' (@state_of_base_value)).
-      Local Notation reify := (@reify base.type ident var base_value stateT' cast bottom (@base_reify)).
+      Local Notation reify := (@reify base.type ident var base_value stateT' annotate bottom (@base_reify)).
 
       Definition interp {t} (idc : ident t) : value t
         := match idc in ident.ident t return value t with
@@ -379,12 +391,12 @@ Module partial.
       Local Notation value_with_lets := (@value_with_lets base.type ident var base_value stateT').
 
       Definition eval {t} (e : @expr value_with_lets t) : @expr var t
-        := @eval base.type ident var base_value stateT' cast bottom (@state_of_base_value) (@base_reify) (@interp) t e.
+        := @eval base.type ident var base_value stateT' annotate bottom (@state_of_base_value) (@base_reify) (@interp) t e.
 
       Definition eval_with_bound {s d} (e : @expr value_with_lets (s -> d))
                  (st : stateT s)
         : expr (s -> d)
-        := @eval_with_bound base.type ident var base_value stateT' cast bottom (@state_of_base_value) (@base_reify) (@interp) s d e st.
+        := @eval_with_bound base.type ident var base_value stateT' annotate bottom (@state_of_base_value) (@base_reify) (@interp) s d e st.
     End with_var.
   End ident.
 End partial.
@@ -396,8 +408,8 @@ Section specialized.
   Local Notation type := (type base.type).
   Let type_base (x : base.type) : type := type.base x.
   Local Coercion type_base : base.type >-> type.
-  Definition cast {var} t (st : stateT' t) (e : @expr var t) : @expr var t
-    := ('ident.Cast st @ e)%expr.
+  Definition annotate t (st : stateT' t) : option (ident (t -> t))
+    := Some (ident.Cast st).
   Fixpoint bottom T : stateT' T
     := match T return stateT' T with
        | base.type.nat => None
@@ -444,10 +456,10 @@ Section specialized.
 
   Definition eval {var} {t} (e : @expr _ t) : expr t
     := (@partial.ident.eval)
-         var stateT' cast add_state fst_state snd_state state_of_literal pair_state intersect_state update_literal_with_state state_of_upperbound bottom t e.
+         var stateT' annotate add_state fst_state snd_state state_of_literal pair_state intersect_state update_literal_with_state state_of_upperbound bottom t e.
   Definition eval_with_bound {var} {s d} (e : @expr _ (s -> d)) (bound : stateT s) : expr (s -> d)
     := (@partial.ident.eval_with_bound)
-         var stateT cast add_state fst_state snd_state state_of_literal pair_state intersect_state update_literal_with_state state_of_upperbound bottom s d e bound.
+         var stateT annotate add_state fst_state snd_state state_of_literal pair_state intersect_state update_literal_with_state state_of_upperbound bottom s d e bound.
 
   Import expr.
   Import ident.
