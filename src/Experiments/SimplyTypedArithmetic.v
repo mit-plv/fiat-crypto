@@ -8644,26 +8644,21 @@ mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive ty
 
 End P192_64.
 
-(* TODO: suuuuper slow--need to replace (Z.mul_split _ 1 x) with (x, 0) to reduce term size
 Module P192_32.
-  Definition n := 6%nat.
-  Definition m := 12%nat.
   Definition s := 2^192.
   Definition c :=  [(2^64, 1); (1,1)].
   Definition machine_wordsize := 32.
 
   Derive mulmod
-         SuchThat (SaturatedSolinas.rmulmod_correctT n m s c machine_wordsize mulmod)
+         SuchThat (SaturatedSolinas.rmulmod_correctT s c machine_wordsize mulmod)
          As mulmod_correct.
   Proof. Time solve_rmulmod machine_wordsize. Time Qed.
-  (* 165.87s for solve, 163.404 for Qed *)
 
   Import PrintingNotations.
   Open Scope expr_scope.
   Set Printing Width 100000.
   Set Printing Depth 100000.
 
-  Eval compute in (2^32).
   Local Notation "'mul32' '(' x ',' y ')'" :=
     (Z.cast2 (uint32, _)%core @@ (Z.mul_split_concrete 4294967296 @@ (x , y)))%expr (at level 50) : expr_scope.
   Local Notation "'add32' '(' x ',' y ')'" :=
@@ -8672,18 +8667,185 @@ Module P192_32.
     (Z.cast2 (uint32, bool)%core @@ (Z.add_with_get_carry_concrete 4294967296 @@ (c, x , y)))%expr (at level 50) : expr_scope.
   
   Print mulmod.
+  (*
+mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive type.Z) * type.list (type.type_primitive type.Z))%ctype,
+         expr_let x0 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[5]])) in
+         expr_let x1 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[4]])) in
+         expr_let x2 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[3]])) in
+         expr_let x3 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[2]])) in
+         expr_let x4 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[1]])) in
+         expr_let x5 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[0]])) in
+         expr_let x6 := mul32 ((uint32)(x₁[[4]]), (uint32)(x₂[[5]])) in
+         expr_let x7 := mul32 ((uint32)(x₁[[4]]), (uint32)(x₂[[4]])) in
+         expr_let x8 := mul32 ((uint32)(x₁[[4]]), (uint32)(x₂[[3]])) in
+         expr_let x9 := mul32 ((uint32)(x₁[[4]]), (uint32)(x₂[[2]])) in
+         expr_let x10 := mul32 ((uint32)(x₁[[4]]), (uint32)(x₂[[1]])) in
+         expr_let x11 := mul32 ((uint32)(x₁[[4]]), (uint32)(x₂[[0]])) in
+         expr_let x12 := mul32 ((uint32)(x₁[[3]]), (uint32)(x₂[[5]])) in
+         expr_let x13 := mul32 ((uint32)(x₁[[3]]), (uint32)(x₂[[4]])) in
+         expr_let x14 := mul32 ((uint32)(x₁[[3]]), (uint32)(x₂[[3]])) in
+         expr_let x15 := mul32 ((uint32)(x₁[[3]]), (uint32)(x₂[[2]])) in
+         expr_let x16 := mul32 ((uint32)(x₁[[3]]), (uint32)(x₂[[1]])) in
+         expr_let x17 := mul32 ((uint32)(x₁[[3]]), (uint32)(x₂[[0]])) in
+         expr_let x18 := mul32 ((uint32)(x₁[[2]]), (uint32)(x₂[[5]])) in
+         expr_let x19 := mul32 ((uint32)(x₁[[2]]), (uint32)(x₂[[4]])) in
+         expr_let x20 := mul32 ((uint32)(x₁[[2]]), (uint32)(x₂[[3]])) in
+         expr_let x21 := mul32 ((uint32)(x₁[[2]]), (uint32)(x₂[[2]])) in
+         expr_let x22 := mul32 ((uint32)(x₁[[2]]), (uint32)(x₂[[1]])) in
+         expr_let x23 := mul32 ((uint32)(x₁[[2]]), (uint32)(x₂[[0]])) in
+         expr_let x24 := mul32 ((uint32)(x₁[[1]]), (uint32)(x₂[[5]])) in
+         expr_let x25 := mul32 ((uint32)(x₁[[1]]), (uint32)(x₂[[4]])) in
+         expr_let x26 := mul32 ((uint32)(x₁[[1]]), (uint32)(x₂[[3]])) in
+         expr_let x27 := mul32 ((uint32)(x₁[[1]]), (uint32)(x₂[[2]])) in
+         expr_let x28 := mul32 ((uint32)(x₁[[1]]), (uint32)(x₂[[1]])) in
+         expr_let x29 := mul32 ((uint32)(x₁[[1]]), (uint32)(x₂[[0]])) in
+         expr_let x30 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[5]])) in
+         expr_let x31 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[4]])) in
+         expr_let x32 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[3]])) in
+         expr_let x33 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[2]])) in
+         expr_let x34 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[1]])) in
+         expr_let x35 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[0]])) in
+         expr_let x36 := add32 (x30₂, x35₁) in
+         expr_let x37 := adc32 (x36₂, x34₁, x35₂) in
+         expr_let x38 := adc32 (x37₂, x33₁, x34₂) in
+         expr_let x39 := adc32 (x38₂, x32₁, x33₂) in
+         expr_let x40 := adc32 (x39₂, x31₁, x32₂) in
+         expr_let x41 := adc32 (x40₂, x30₁, x31₂) in
+         expr_let x42 := add32 (x25₂, x36₁) in
+         expr_let x43 := adc32 (x42₂, x29₁, x37₁) in
+         expr_let x44 := adc32 (x43₂, x29₂, x38₁) in
+         expr_let x45 := adc32 (x44₂, x28₂, x39₁) in
+         expr_let x46 := adc32 (x45₂, x27₂, x40₁) in
+         expr_let x47 := adc32 (x46₂, x26₂, x41₁) in
+         expr_let x48 := add32 (x24₁, x42₁) in
+         expr_let x49 := adc32 (x48₂, x24₂, x43₁) in
+         expr_let x50 := adc32 (x49₂, x28₁, x44₁) in
+         expr_let x51 := adc32 (x50₂, x27₁, x45₁) in
+         expr_let x52 := adc32 (x51₂, x26₁, x46₁) in
+         expr_let x53 := adc32 (x52₂, x25₁, x47₁) in
+         expr_let x54 := add32 (x20₂, x48₁) in
+         expr_let x55 := adc32 (x54₂, x19₂, x49₁) in
+         expr_let x56 := adc32 (x55₂, x23₁, x50₁) in
+         expr_let x57 := adc32 (x56₂, x23₂, x51₁) in
+         expr_let x58 := adc32 (x57₂, x22₂, x52₁) in
+         expr_let x59 := adc32 (x58₂, x21₂, x53₁) in
+         expr_let x60 := add32 (x19₁, x54₁) in
+         expr_let x61 := adc32 (x60₂, x18₁, x55₁) in
+         expr_let x62 := adc32 (x61₂, x30₂, x56₁) in
+         expr_let x63 := adc32 (x62₂, x22₁, x57₁) in
+         expr_let x64 := adc32 (x63₂, x21₁, x58₁) in
+         expr_let x65 := adc32 (x64₂, x20₁, x59₁) in
+         expr_let x66 := add32 (x15₂, x60₁) in
+         expr_let x67 := adc32 (x66₂, x14₂, x61₁) in
+         expr_let x68 := adc32 (x67₂, x25₂, x62₁) in
+         expr_let x69 := adc32 (x68₂, x17₁, x63₁) in
+         expr_let x70 := adc32 (x69₂, x17₂, x64₁) in
+         expr_let x71 := adc32 (x70₂, x16₂, x65₁) in
+         expr_let x72 := add32 (x14₁, x66₁) in
+         expr_let x73 := adc32 (x72₂, x13₁, x67₁) in
+         expr_let x74 := adc32 (x73₂, x24₁, x68₁) in
+         expr_let x75 := adc32 (x74₂, x24₂, x69₁) in
+         expr_let x76 := adc32 (x75₂, x16₁, x70₁) in
+         expr_let x77 := adc32 (x76₂, x15₁, x71₁) in
+         expr_let x78 := add32 (x10₂, x72₁) in
+         expr_let x79 := adc32 (x78₂, x9₂, x73₁) in
+         expr_let x80 := adc32 (x79₂, x20₂, x74₁) in
+         expr_let x81 := adc32 (x80₂, x19₂, x75₁) in
+         expr_let x82 := adc32 (x81₂, x11₁, x76₁) in
+         expr_let x83 := adc32 (x82₂, x11₂, x77₁) in
+         expr_let x84 := add32 (x9₁, x78₁) in
+         expr_let x85 := adc32 (x84₂, x8₁, x79₁) in
+         expr_let x86 := adc32 (x85₂, x19₁, x80₁) in
+         expr_let x87 := adc32 (x86₂, x18₁, x81₁) in
+         expr_let x88 := adc32 (x87₂, x18₂, x82₁) in
+         expr_let x89 := adc32 (x88₂, x10₁, x83₁) in
+         expr_let x90 := add32 (x5₂, x84₁) in
+         expr_let x91 := adc32 (x90₂, x4₂, x85₁) in
+         expr_let x92 := adc32 (x91₂, x15₂, x86₁) in
+         expr_let x93 := adc32 (x92₂, x14₂, x87₁) in
+         expr_let x94 := adc32 (x93₂, x13₂, x88₁) in
+         expr_let x95 := adc32 (x94₂, x5₁, x89₁) in
+         expr_let x96 := add32 (x4₁, x90₁) in
+         expr_let x97 := adc32 (x96₂, x3₁, x91₁) in
+         expr_let x98 := adc32 (x97₂, x14₁, x92₁) in
+         expr_let x99 := adc32 (x98₂, x13₁, x93₁) in
+         expr_let x100 := adc32 (x99₂, x12₁, x94₁) in
+         expr_let x101 := adc32 (x100₂, x12₂, x95₁) in
+         expr_let x102 := add32 (x6₂, x96₁) in
+         expr_let x103 := adc32 (x102₂, x0₂, x97₁) in
+         expr_let x104 := adc32 (x103₂, x10₂, x98₁) in
+         expr_let x105 := adc32 (x104₂, x9₂, x99₁) in
+         expr_let x106 := adc32 (x105₂, x8₂, x100₁) in
+         expr_let x107 := adc32 (x106₂, x7₂, x101₁) in
+         expr_let x108 := add32 (x1₂, x102₁) in
+         expr_let x109 := adc32 (x108₂, 0, x103₁) in
+         expr_let x110 := adc32 (x109₂, x9₁, x104₁) in
+         expr_let x111 := adc32 (x110₂, x8₁, x105₁) in
+         expr_let x112 := adc32 (x111₂, x7₁, x106₁) in
+         expr_let x113 := adc32 (x112₂, x6₁, x107₁) in
+         expr_let x114 := add32 (x0₁, x108₁) in
+         expr_let x115 := adc32 (x114₂, 0, x109₁) in
+         expr_let x116 := adc32 (x115₂, x5₂, x110₁) in
+         expr_let x117 := adc32 (x116₂, x4₂, x111₁) in
+         expr_let x118 := adc32 (x117₂, x3₂, x112₁) in
+         expr_let x119 := adc32 (x118₂, x2₂, x113₁) in
+         expr_let x120 := add32 (x4₁, x116₁) in
+         expr_let x121 := adc32 (x120₂, x3₁, x117₁) in
+         expr_let x122 := adc32 (x121₂, x2₁, x118₁) in
+         expr_let x123 := adc32 (x122₂, x1₁, x119₁) in
+         expr_let x124 := add32 (x18₂, x120₁) in
+         expr_let x125 := adc32 (x124₂, x12₂, x121₁) in
+         expr_let x126 := adc32 (x125₂, x6₂, x122₁) in
+         expr_let x127 := adc32 (x126₂, x0₂, x123₁) in
+         expr_let x128 := add32 (x13₂, x124₁) in
+         expr_let x129 := adc32 (x128₂, x7₂, x125₁) in
+         expr_let x130 := adc32 (x129₂, x1₂, x126₁) in
+         expr_let x131 := adc32 (x130₂, 0, x127₁) in
+         expr_let x132 := add32 (x12₁, x128₁) in
+         expr_let x133 := adc32 (x132₂, x6₁, x129₁) in
+         expr_let x134 := adc32 (x133₂, x0₁, x130₁) in
+         expr_let x135 := adc32 (x134₂, 0, x131₁) in
+         expr_let x136 := add32 (x8₂, x132₁) in
+         expr_let x137 := adc32 (x136₂, x2₂, x133₁) in
+         expr_let x138 := adc32 (x137₂, 0, x134₁) in
+         expr_let x139 := adc32 (x138₂, 0, x135₁) in
+         expr_let x140 := add32 (x7₁, x136₁) in
+         expr_let x141 := adc32 (x140₂, x1₁, x137₁) in
+         expr_let x142 := adc32 (x141₂, 0, x138₁) in
+         expr_let x143 := adc32 (x142₂, 0, x139₁) in
+         expr_let x144 := add32 (x3₂, x140₁) in
+         expr_let x145 := adc32 (x144₂, x0₂, x141₁) in
+         expr_let x146 := adc32 (x145₂, 0, x142₁) in
+         expr_let x147 := adc32 (x146₂, 0, x143₁) in
+         expr_let x148 := add32 (x2₁, x144₁) in
+         expr_let x149 := adc32 (x148₂, 0, x145₁) in
+         expr_let x150 := adc32 (x149₂, 0, x146₁) in
+         expr_let x151 := adc32 (x150₂, 0, x147₁) in
+         expr_let x152 := add32 (x6₂, x148₁) in
+         expr_let x153 := adc32 (x152₂, 0, x149₁) in
+         expr_let x154 := adc32 (x153₂, 0, x150₁) in
+         expr_let x155 := adc32 (x154₂, 0, x151₁) in
+         expr_let x156 := add32 (x1₂, x152₁) in
+         expr_let x157 := adc32 (x156₂, 0, x153₁) in
+         expr_let x158 := adc32 (x157₂, 0, x154₁) in
+         expr_let x159 := adc32 (x158₂, 0, x155₁) in
+         expr_let x160 := add32 (x0₁, x156₁) in
+         expr_let x161 := adc32 (x160₂, 0, x157₁) in
+         expr_let x162 := adc32 (x161₂, 0, x158₁) in
+         expr_let x163 := adc32 (x162₂, 0, x159₁) in
+         x114₁ :: x115₁ :: x160₁ :: x161₁ :: x162₁ :: x163₁ :: []
+     : Expr (type.uncurry (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z)))
+*)
 
 End P192_32.
 
 Module P256_32.
-  Definition n := 8%nat.
-  Definition m := 16%nat.
   Definition s := 2^256.
   Definition c :=  [(2^224, 1); (2^192, -1); (2^96, -1); (1,1)].
   Definition machine_wordsize := 32.
 
   Derive mulmod
-         SuchThat (SaturatedSolinas.rmulmod_correctT n m s c machine_wordsize mulmod)
+         SuchThat (SaturatedSolinas.rmulmod_correctT s c machine_wordsize mulmod)
          As mulmod_correct.
   Proof. Time solve_rmulmod machine_wordsize. Time Qed.
 
@@ -8692,10 +8854,14 @@ Module P256_32.
   Set Printing Width 100000.
 
   Print mulmod.
+  (* TODO : this one should use more reductions *)
+  (* Since 224 = 7*32, first reduce will leave 7 extra words
+     Each reduce changes that number by only 1
+     therefore we need 8 reductions
+   *)
 
 
 End P256_32.
-*)
 
 Module MontgomeryReduction.
   Section MontRed'.
