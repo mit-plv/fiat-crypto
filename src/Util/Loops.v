@@ -1,16 +1,4 @@
-Require Import Coq.Lists.List.
-Require Import Lia. 
-Require Import Crypto.Util.Tactics.UniquePose.
-Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.DestructHead.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.Sum.
-Require Import Crypto.Util.LetIn.
-
-Require Import Crypto.Util.CPSNotations.
+Require Import omega.Omega.
 
 Module Import core.
   Section Loops.
@@ -33,18 +21,19 @@ Module Import core.
       | inr b => inr b
       end.
 
-    Context (body_cps : A ~> A + B).
 
-    Fixpoint loop_cps (fuel : nat) (s : A) {struct fuel} :~> A + B :=
-      s <- body_cps s;
+    Context (body_cps : A -> forall T, (A + B -> T) -> T).
+
+    Fixpoint loop_cps (fuel : nat) (s : A) {struct fuel} : forall T, (A + B -> T) -> T :=
+      body_cps s _ (fun s =>
         match s with
         | inl a => 
           match fuel with
-          | O => return (inl a)
+          | O => fun _ k => k (inl a)
           | S fuel' => loop_cps fuel' a
           end
-        | inr b => return (inr b)
-        end.
+        | inr b => fun _ k => k (inr b)
+        end).
 
     Context (body_cps_ok : forall s {R} f, body_cps s R f = f (body s)).
     Lemma loop_cps_ok n s {R} f : loop_cps n s R f = f (loop n s).
@@ -56,7 +45,7 @@ Module Import core.
                | _ => progress cbn
                | _ => progress rewrite ?body_cps_ok
                | _ => progress rewrite ?IHn
-               | _ => progress break_match
+               | |- context [body s] => destruct (body s) eqn:?
                | _ => reflexivity
                end.
     Qed.
@@ -91,15 +80,14 @@ Module Import core.
                | _ => progress cbn
                | _ => progress rewrite ?body_cps2_ok
                | _ => progress rewrite ?IHn
-               | _ => progress inversion_sum
                | _ => progress subst
-               | _ => progress break_match
+               | |- context [body s] => destruct (body s) eqn:?
                | _ => reflexivity
                end.
     Qed.
 
     Local Lemma loop_fuel_0 s : loop 0 s = body s.
-    Proof. cbv; break_match; reflexivity. Qed.
+    Proof. cbv; destruct (body s); reflexivity. Qed.
 
     Local Lemma loop_fuel_S_first n s : loop (S n) s =
                                   match body s with
@@ -115,16 +103,15 @@ Module Import core.
                                  end.
     Proof.
       revert s; induction n; cbn; intros s.
-      { break_match; reflexivity. }
+      { repeat destruct (body _); reflexivity. }
       { destruct (body s); cbn; rewrite <-?IHn; reflexivity. }
     Qed.
 
     Local Lemma loop_fuel_S_stable n s b (H : loop n s = inr b) : loop (S n) s = inr b.
     Proof.
       revert H; revert b; revert s; induction n; intros ? ? H.
-      { cbn [loop nat_rect] in *; break_match_hyps; congruence_sum; congruence. }
-      { rewrite loop_fuel_S_last.
-        break_match; congruence_sum; reflexivity. }
+      { cbn [loop nat_rect] in *; destruct (body s); congruence. }
+      { rewrite loop_fuel_S_last; destruct (loop (S n) s); congruence. }
     Qed.
 
     Local Lemma loop_fuel_add_stable n m s b (H : loop n s = inr b) : loop (m+n) s = inr b.
@@ -144,7 +131,7 @@ Module Import core.
         destruct (PeanoNat.Nat.le_exists_sub _ _ H) as [d [? _]]; subst.
       { erewrite loop_fuel_add_stable in Hm by eassumption; congruence. }
       { erewrite loop_fuel_add_stable in Hn.
-        { congruence_sum. reflexivity. }
+        { inversion Hn. reflexivity. }
         { erewrite loop_fuel_S_stable by eassumption. congruence. } }
     Qed.
 
@@ -159,12 +146,12 @@ Module Import core.
         | inr s => P s
         end.
     Proof.
-      revert dependent s0; induction f; intros; destruct_head'_and.
-      { specialize (step s0 H); cbv; break_innermost_match; [lia|assumption]. }
+      revert dependent s0; induction f; intros.
+      { specialize (step s0 (proj1 init)); cbv. destruct (body _); [omega|assumption]. }
       { rewrite loop_fuel_S_first.
-        specialize (step s0 H); destruct (body s0); [|assumption].
+        specialize (step s0 (proj1 init)); destruct (body s0); [|assumption].
         destruct step.
-        exact (IHf a ltac:(split; (assumption || lia))). }
+        exact (IHf a ltac:(split; (assumption || omega))). }
     Qed.
 
     Lemma by_invariant_fuel (inv:_->Prop) measure P f s0
@@ -176,7 +163,7 @@ Module Import core.
       : exists b, loop f s0 = inr b /\ P b.
     Proof.
       pose proof (by_invariant_fuel' inv measure P f s0);
-        specialize_by assumption; break_match_hyps; [contradiction|eauto].
+        destruct (loop f s0); [exfalso|]; eauto.
     Qed.
 
     Lemma by_invariant (inv:_->Prop) measure P s0
@@ -211,7 +198,7 @@ Module Import core.
       (iterations_required fuel s = None -> forall n, n < fuel -> exists a, loop n s = inl a).
     Proof.
       induction fuel; intros.
-      { cbn. split; intros; inversion_option; lia. }
+      { cbn. split; [congruence|intros; omega]. }
       { change (iterations_required (S fuel) s)
           with (match iterations_required fuel s with
                 | None => match loop fuel s with
@@ -221,15 +208,15 @@ Module Import core.
                 | Some _ => iterations_required fuel s
                 end) in *.
         destruct (iterations_required fuel s) in *.
-        { split; intros; inversion_option; subst.
-          destruct (proj1 IHfuel _ eq_refl); split; [lia|assumption]. }
-        { destruct (loop fuel s) eqn:HSf; split; intros; inversion_option; subst.
-          { intros. destruct (PeanoNat.Nat.eq_dec n fuel); subst; eauto; [].
-            assert (n < fuel) by lia. eapply IHfuel; congruence. }
-          { split; [lia|].
+        { split; intros ? H; [ inversion H; subst | congruence ].
+          destruct (proj1 IHfuel _ eq_refl); split; [omega|assumption]. }
+        { destruct (loop fuel s) eqn:HSf; split; intros; try congruence.
+          { destruct (PeanoNat.Nat.eq_dec n fuel); subst; eauto; [].
+            eapply IHfuel; omega || congruence. }
+          { split; match goal with H:Some _=Some _|-_=>inversion H end; [omega|].
             exists b; intros; split; intros.
-            { eapply IHfuel; congruence || lia. }
-            { eapply PeanoNat.Nat.le_exists_sub in H; destruct H as [?[]]; subst.
+            { eapply IHfuel; congruence || omega. }
+            { destruct (PeanoNat.Nat.le_exists_sub m n ltac:(assumption)) as [?[]]; subst.
               eauto using loop_fuel_add_stable. } } } }
     Qed.
 
@@ -240,21 +227,20 @@ Module Import core.
     Proof.
       eapply iterations_required_correct in Hs.
       destruct Hs as [Hn [b Hs]].
-      pose proof (proj2 (Hs (S n)) ltac:(lia)) as H.
+      pose proof (proj2 (Hs (S n)) ltac:(omega)) as H.
       rewrite loop_fuel_S_first, Hstep in H.
       destruct (iterations_required fuel s') as [x|] eqn:Hs' in *; [f_equal|exfalso].
       { eapply iterations_required_correct in Hs'; destruct Hs' as [Hx Hs'].
         destruct Hs' as [b' Hs'].
         destruct (Compare_dec.le_lt_dec n x) as [Hc|Hc].
-        { destruct (Compare_dec.le_lt_dec x n) as [Hc'|Hc']; try lia; [].
+        { destruct (Compare_dec.le_lt_dec x n) as [Hc'|Hc']; try omega; [].
           destruct (proj1 (Hs' n) Hc'); congruence. }
-        { destruct (proj1 (Hs (S x)) ltac:(lia)) as [? HX].
+        { destruct (proj1 (Hs (S x)) ltac:(omega)) as [? HX].
           rewrite loop_fuel_S_first, Hstep in HX.
-          pose proof (proj2 (Hs' x) ltac:(lia)).
+          pose proof (proj2 (Hs' x) ltac:(omega)).
           congruence. } }
-      { eapply iterations_required_correct in Hs'; destruct Hs' as [? Hs'];
-          [|exact Hn].
-        rewrite loop_fuel_S_last, H in Hs'; congruence. }
+      { eapply iterations_required_correct in Hs'; [|exact Hn].
+        destruct Hs' as [? Hs']; rewrite loop_fuel_S_last, H in Hs'; congruence. }
     Qed.
 
     Local Lemma invariant_complete (P:_->Prop) f s0 b (H:loop f s0 = inr b) (HP:P b)
@@ -273,9 +259,9 @@ Module Import core.
       { cbv [measure].
         destruct (iterations_required (S f) s0) eqn:Hs0;
           eapply iterations_required_correct in Hs0;
-          [ .. | exact (ltac:(lia):f <S f)]; [|destruct_head'_ex; congruence].
-        destruct Hs0 as [? [? Hs0]]; split; [|lia].
-        pose proof (proj2 (Hs0 n) ltac:(lia)) as HH; rewrite HH.
+          [ .. | exact (ltac:(omega):f <S f)]; [|destruct Hs0; congruence].
+        destruct Hs0 as [? [? Hs0]]; split; [|omega].
+        pose proof (proj2 (Hs0 n) ltac:(omega)) as HH; rewrite HH.
         exact (loop_fuel_irrelevant _ _ _ _ _ HH H). }
       { intros s Hinv; destruct (body s) as [s'|c] eqn:Hstep.
         { destruct (loop (measure s) s) eqn:Hs; [contradiction|subst].
@@ -286,9 +272,9 @@ Module Import core.
           rewrite HA.
           destruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
           pose proof (HE' ltac:(constructor)) as HE; clear HE'.
-          split; [|lia].
+          split; [|omega].
           rewrite loop_fuel_S_first, Hstep in Hs.
-          break_match; congruence. }
+          destruct (loop n s'); congruence. }
         { destruct (loop (measure s) s) eqn:Hs; [contradiction|].
           assert (HH: loop 1 s = inr c) by (cbn; rewrite Hstep; reflexivity).
           rewrite (loop_fuel_irrelevant _ _ _ _ _ HH Hs); congruence. } }
@@ -304,7 +290,7 @@ Module Import core.
                                 | inr s' => P s'
                                 end).
     Proof.
-      repeat (intros || split || destruct_head'_ex || destruct_head'_and);
+      split; [intros [? []] | intros [? [? []]] ];
         eauto using invariant_complete, by_invariant_fuel.
     Qed.
   End Loops.
@@ -336,7 +322,7 @@ Module default.
     Proof.
       edestruct (by_invariant_fuel (body:=body) inv measure P f s0) as [x [HA HB]]; eauto; [].
       apply (f_equal (fun r : A + B => match r with inl s => default | inr s => s end)) in HA.
-      cbv [loop]; break_match; congruence.
+      cbv [loop]; destruct (core.loop body f s0); congruence.
     Qed.
 
     Lemma by_invariant (inv:_->Prop) measure P s0
@@ -371,7 +357,7 @@ Module silent.
     Proof.
       edestruct (by_invariant_fuel (body:=body) inv measure P f s0) as [x [A B]]; eauto; [].
       apply (f_equal (fun r : state + state => match r with inl s => s | inr s => s end)) in A.
-      cbv [loop]; break_match; congruence.
+      cbv [loop]; destruct (core.loop body f s0); congruence.
     Qed.
 
     Lemma by_invariant (inv:_->Prop) measure P s0
@@ -413,7 +399,7 @@ Module while.
                | _ => progress cbn in *
                | _ => progress cbv [silent.loop lbody] in *
                | _ => rewrite IHf
-               | _ => progress break_match
+               | |- context[test s] => destruct (test s)
                | _ => congruence
                end.
     Qed.
@@ -438,17 +424,17 @@ Module while.
       : P (while (measure s0) s0).
     Proof. eapply by_invariant_fuel; eauto. Qed.
     
-    Context (body_cps : state ~> state).
+    Context (body_cps : state -> forall T, (state -> T) -> T).
 
-    Fixpoint while_cps f s :~> state :=
+    Fixpoint while_cps f s : forall T, (state -> T) -> T :=
       if test s
       then
-        s <- body_cps s; 
+        body_cps s _ (fun s =>
           match f with
-          | O => return s
-                      | S f =>while_cps f s
-          end
-      else return s.
+          | O => fun _ k => k s
+          | S f =>while_cps f s
+          end)
+      else fun _ k => k s.
 
     Context (body_cps_ok : forall s {R} f, body_cps s R f = f (body s)).
     Lemma loop_cps_ok n s {R} f : while_cps n s R f = f (while n s).
@@ -460,8 +446,7 @@ Module while.
                | _ => progress cbn
                | _ => progress rewrite ?body_cps_ok
                | _ => progress rewrite ?IHn
-               | _ => progress inversion_sum
-               | _ => progress break_match
+               | |- context[test s] => destruct (test s)
                | _ => reflexivity
                end.
     Qed.
@@ -476,51 +461,3 @@ Definition for2 {state} (test : state -> bool) (increment body : state -> state)
 
 Definition for3 {state} init test increment body fuel :=
   @for2 state test increment body fuel init.
-
-(* TODO: we probably want notations for these. here are some ideas: *)
-
-(* notation for core.loop_cps2:
-  loop '(state1, state2, ...) := init
-    decreasing measure {{
-    continue:
-      body
-  }} break;
-  cont
-where
-  continue, break are binders (for continuations passed by core.loop_cps2)
-  state1, state2 are binders for tuple fields
-  measure is a function of state1, state2, ... (or the tuple bound by them)
-  body is a function of continue_label, state1, state2, ...
-  cont is the contiuation passed to core.loop_cps2
-  "loop" and "decreasing" are delimiters
-*)
-
-(* notation for while.while_cps:
-  
-  loop '(state1, state2, ...) := init
-  while test
-  decreasing measure {{
-    continue:
-      body
-  }};
-  cont
-where
-  state1, state2, continue are binders
-  body is a function of all of them
-  test and measure are functions of state1, state2 (or the tuple bound by them)
-  "loop", "while" and "decreasing" are delimiters
-  cont is a continuation to the entire loop
- *)
-
-
-(* idea for notation for some for-like loop:
-loop '(state1, state2) := init
-for (i := 0; i <? n; i+1) {{
-  continue:
-    body
-}};
-cont
-
-where the first i is a binder for all uses of i, and the test and increment are parsed as functions of some argument *)
-
-(* ideally it should be possible to explicitly indicate the type of the loop state somewhere, in all these examples *)
