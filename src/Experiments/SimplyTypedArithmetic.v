@@ -8303,7 +8303,8 @@ Module Barrett256.
 
   Print barrett_red256.
   (* TODO: the ADD/ADDC instructions containing Z.opp should be translated to SUB/SUBB in partial evaluation *)
-  (* TODO: it is suspicious that this bounds-checks, given that the carries from the above-mentioned ADD/ADDC instructions could be negative *)
+  (* Note: the aforementioned ADD/ADDC instructions currently *do* fail to bounds-check, although the pipeline doesn't give an error.
+     This is why their results are not cast (because the carry has range [-1~>0]). *)
   (*
 barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
                  expr_let x0 := SELM (x₂, 0, 26959946667150639793205513449348445388433292963828203772348655992835) in
