@@ -8995,17 +8995,7 @@ Module Straightline.
           end
         | None => None
         end.
-
-      Fixpoint depth {t} (e : uexpr t) : nat :=
-        match e with
-        | expr.Var _ _ => O
-        | expr.TT => O
-        | expr.AppIdent _ _ idc args => S (depth args)
-        | expr.App _ _ f x => S (Nat.max (depth f) (depth x))
-        | expr.Pair _ _ x y => S (Nat.max (depth x) (depth y))
-        | expr.Abs _ _ f => S (depth (f (dummy_var _)))
-        end.
-
+      
       Definition mk_LetInAppIdent {s d t} (default : expr t)
         : range_type d -> ident.ident s d -> scalar s -> (var d -> expr t) -> expr t :=
         match d as d0 return range_type d0 -> ident.ident s d0 -> scalar s -> (var d0 -> expr t) -> expr t with
@@ -9072,11 +9062,21 @@ Module Straightline.
     End with_var.
   End expr.
 
+  Fixpoint depth {var t} (dummy_var : forall t, var t) (e : @Uncurried.expr.expr ident.ident var t) : nat :=
+    match e with
+    | Uncurried.expr.Var _ _ => O
+    | Uncurried.expr.TT => O
+    | Uncurried.expr.AppIdent _ _ idc args => S (depth dummy_var args)
+    | Uncurried.expr.App _ _ f x => S (Nat.max (depth dummy_var f) (depth dummy_var x))
+    | Uncurried.expr.Pair _ _ x y => S (Nat.max (depth dummy_var x) (depth dummy_var y))
+    | Uncurried.expr.Abs _ _ f => S (depth dummy_var (f (dummy_var _)))
+    end.
+
   (* TODO : Can I avoid having dummy_var appear here? *)
   Definition of_Expr {s d} (e : Expr (s->d)) (var : type -> Type) (x:var s) dummy_var : expr.expr d
     :=
       match invert_Abs (e var) with
-      | Some f => expr.of_uncurried (dummy_var:=dummy_var) (expr.depth (dummy_var:=dummy_var) (f x)) (f x)
+      | Some f => expr.of_uncurried (dummy_var:=dummy_var) (depth dummy_var (f x)) (f x)
       | None => expr.dummy (dummy_var:=dummy_var) d
       end.
 
