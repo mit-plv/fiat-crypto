@@ -8965,16 +8965,6 @@ Module Straightline.
         | None => None
         end.
 
-
-      (* if we have a cast, what we have is
-         cast r (AppIdent idc x')
-         where x' has type s and idc is s -> type.Z
-         and tx = type.Z
-
-         we want this to be translated to
-
-         (idc, x',
-       *)
       (* ident.Let_In @@ (cast r x) => r, x *)
       Definition invert_LetInCast {tx tC} (args : uexpr (tx * (tx -> tC)))
         : option (range_type tx * uexpr tx * uexpr (tx -> tC)) :=
@@ -8987,8 +8977,6 @@ Module Straightline.
         | None => None
         end.
 
-
-      (* TODO : currently we look at the first application, which might be a cast. *)
       Definition invert_LetInAppIdent {tx tC} (args : uexpr (tx * (tx -> tC)))
         : option { s : type.type & (range_type tx * ident.ident s tx * scalar s * (var tx -> uexpr tC))%type } :=
         match invert_LetInCast args with
@@ -9018,25 +9006,51 @@ Module Straightline.
         | expr.Abs _ _ f => S (depth (f (dummy_var _)))
         end.
 
+      Definition mk_LetInAppIdent {s d t} (default : expr t)
+        : range_type d -> ident.ident s d -> scalar s -> (var d -> expr t) -> expr t :=
+        match d as d0 return range_type d0 -> ident.ident s d0 -> scalar s -> (var d0 -> expr t) -> expr t with
+        | type.type_primitive type.Z =>
+          fun r idc x k => @LetInAppIdentZ s t r idc x k
+        | type.prod type.Z type.Z =>
+          fun r idc x k => @LetInAppIdentZZ s t r idc x k
+        | _ => fun _ _ _ _ => default
+        end.
+
       Definition of_uncurried_step {t} (e : uexpr t)
                  (of_uncurried : forall {t}, uexpr t -> expr t)
-                 : expr t :=
-        (match e in Uncurried.expr.expr t return expr t -> expr t with
+                 : expr t -> expr t :=
+        match e in Uncurried.expr.expr t return expr t -> expr t with
          | AppIdent s d idc args =>
            (match idc in ident.ident s d return uexpr s -> expr d -> expr d with
             | ident.Let_In tx tC =>
-              (fun args default =>
+              fun args default =>
                  match invert_LetInAppIdent args return expr tC with
                  | Some (existT s (r, idc, x, k)) =>
-                   (match tx as tx0 return range_type tx0 -> ident.ident s tx0 -> (var tx0 -> expr tC) -> expr tC with
-                    | type.type_primitive type.Z =>
-                      fun r idc k => @LetInAppIdentZ s tC r idc x k
-                    | type.prod type.Z type.Z =>
-                      fun r idc k => @LetInAppIdentZZ s tC r idc x k
-                    | _ => fun _ _ _ => default
-                    end) r idc (fun y : var tx => of_uncurried (k y))
+                   @mk_LetInAppIdent s tx tC default r idc x (fun y : var tx => of_uncurried (k y))
                  | None => default
-                 end)
+                 end
+            | ident.Z.cast r =>
+              fun (args : uexpr _) default =>
+                match invert_AppIdent args with
+                | Some (existT s idc_x') =>
+                  match scalar_of_uncurried (snd idc_x') with
+                  | Some x'' =>
+                    @mk_LetInAppIdent s type.Z type.Z default r (fst idc_x') x'' (fun y => Scalar (Var _ y))
+                  | None => default
+                  end
+                | None => default
+                end
+            | ident.Z.cast2 r =>
+              fun (args : uexpr _) default =>
+                match invert_AppIdent args with
+                | Some (existT s idc_x') =>
+                  match scalar_of_uncurried (snd idc_x') with
+                  | Some x'' =>
+                    @mk_LetInAppIdent s (type.Z*type.Z) (type.Z*type.Z) default r (fst idc_x') x'' (fun y => Scalar (Var _ y))
+                  | None => default
+                  end
+                | None => default
+                end
             | _ => fun _ default => default
             end) args
          | _ as e =>
@@ -9045,13 +9059,13 @@ Module Straightline.
               | Some s => Scalar s
               | None => default
               end)
-         end) (dummy t).
+         end.
 
       (* TODO : uses fuel; ideally want a cleaner termination proof *)
       Fixpoint of_uncurried (fuel : nat) {t} (e : uexpr t)
         : expr t :=
         match fuel with
-        | S fuel' => of_uncurried_step e (@of_uncurried fuel')
+        | S fuel' => of_uncurried_step e (@of_uncurried fuel') (dummy t)
         | O => dummy t
         end.
 
@@ -9085,11 +9099,11 @@ Module StraightlineTest.
         (fun (x : var type.Z) =>
            AppIdent (var:=var) ident.Let_In
                (Pair (AppIdent (var:=var) (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent (var:=var) (ident.Z.shiftr 8) (Var x)))
-                     (Abs (fun x : var type.Z =>
+                     (Abs (fun y : var type.Z =>
                              AppIdent ident.Let_In
-                                      (Pair (AppIdent (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent ident.Z.mul (Pair (AppIdent (@ident.primitive type.Z 12) TT) (Var x))))
-                                            (Abs (fun x : var type.Z => Var x)))
-                             )))).
+                                      (Pair (AppIdent (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent ident.Z.mul (Pair (AppIdent (@ident.primitive type.Z 12) TT) (Var y))))
+                                            (Abs (fun z : var type.Z => (AppIdent (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent (ident.Z.shiftr 3) (Var z)))))
+                             ))))).
   Eval vm_compute in (Straightline.of_Expr test_mul).
 End StraightlineTest.
 
@@ -9119,6 +9133,7 @@ Module InlineOperations.
 
        F (AppIdent (ident.shiftr n) x)
      *)
+
 
     Definition replace_num {t} (old : var type.Z) (new : @expr.expr ident.ident var type.Z) (e : @expr.expr ident.ident var t)
       : @expr.expr ident.ident var t
@@ -9345,16 +9360,7 @@ Module Montgomery256.
   Set Printing Depth 1000000.
   Local Notation "'tZ'" := (type.type_primitive type.Z).
   Eval lazy in (Straightline.of_Expr montred256).
-  (* TODO : why is the sub not cast when I remove fst? *)
   Print montred256.
-
-  (* Check bounds on the sub, make sure it's outputting Some *)
-  Locate interp.
-  Eval lazy in (ZRange.ident.option.interp (ident.Z.sub_get_borrow_concrete (2^256)) (Some uint256, Some uint256)).
-
-  Check ZRange.split_bounds.
-  Print ZRange.split_bounds.
-  (* TODO: apply the split_bounds updates from the barrett branch! That's what currently is fucking up *)
 
 (* TODO: to get the right kind of output operation, I probably want
   to inline all these shifts/ands. *)
