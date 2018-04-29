@@ -14,7 +14,7 @@ HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
-	install-coqprime clean-coqprime coqprime \
+	install-coqprime clean-coqprime coqprime coqprime-all \
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite lite-display print-lite-display \
 	curves-proofs no-curves-proofs no-curves-proofs-non-specific \
@@ -208,6 +208,9 @@ export COQPATH
 
 coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
+
+coqprime-all:
+	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER)
 
 clean-coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) clean
