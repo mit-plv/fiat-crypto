@@ -47,21 +47,34 @@ jobs:
       allow_failure: true
       script: CUR=0 ./etc/ci/travis.sh printlite lite
     - stage: printlite lite
+      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
+      allow_failure: true
+      script: CUR=0 ./etc/ci/travis.sh printlite lite
+    - stage: printlite lite
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
       allow_failure: true
       script: CUR=0 ./etc/ci/travis.sh printlite lite
     - stage: printlite lite
-      env: COQ_VERSION="8.7.1"  COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: CUR=0 ./etc/ci/travis.sh printlite lite
+    - stage: printlite lite
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: CUR=0 ./etc/ci/travis.sh printlite lite
 
     - stage: no-curves-proofs-non-specific
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
       script: PREV=0 CUR=1 ./etc/ci/travis.sh no-curves-proofs-non-specific
     - stage: no-curves-proofs-non-specific
+      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
+      script: PREV=0 CUR=1 ./etc/ci/travis.sh no-curves-proofs-non-specific
+    - stage: no-curves-proofs-non-specific
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
       script: PREV=0 CUR=1 ./etc/ci/travis.sh no-curves-proofs-non-specific
     - stage: no-curves-proofs-non-specific
-      env: COQ_VERSION="8.7.1"  COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=0 CUR=1 ./etc/ci/travis.sh no-curves-proofs-non-specific
+    - stage: no-curves-proofs-non-specific
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=0 CUR=1 ./etc/ci/travis.sh no-curves-proofs-non-specific
 
     - stage: curves-proofs
@@ -69,11 +82,18 @@ jobs:
       allow_failure: true
       script: PREV=1 CUR=2 ./etc/ci/travis.sh curves-proofs
     - stage: curves-proofs
+      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
+      allow_failure: true
+      script: PREV=1 CUR=2 ./etc/ci/travis.sh curves-proofs
+    - stage: curves-proofs
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
       allow_failure: true
       script: PREV=1 CUR=2 ./etc/ci/travis.sh curves-proofs
     - stage: curves-proofs
-      env: COQ_VERSION="8.7.1"  COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=1 CUR=2 ./etc/ci/travis.sh curves-proofs
+    - stage: curves-proofs
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=1 CUR=2 ./etc/ci/travis.sh curves-proofs
 
     - stage: selected-specific selected-specific-display
@@ -81,19 +101,33 @@ jobs:
       allow_failure: true
       script: PREV=2 CUR=3 ./etc/ci/travis.sh selected-specific selected-specific-display
     - stage: selected-specific selected-specific-display
+      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
+      allow_failure: true
+      script: PREV=2 CUR=3 ./etc/ci/travis.sh selected-specific selected-specific-display
+    - stage: selected-specific selected-specific-display
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
       allow_failure: true
       script: PREV=2 CUR=3 ./etc/ci/travis.sh selected-specific selected-specific-display
     - stage: selected-specific selected-specific-display
-      env: COQ_VERSION="8.7.1"  COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=2 CUR=3 ./etc/ci/travis.sh selected-specific selected-specific-display
+    - stage: selected-specific selected-specific-display
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=2 CUR=3 ./etc/ci/travis.sh selected-specific selected-specific-display
 
     - stage: build-selected-test build-selected-bench
-      env: COQ_VERSION="8.7.1"  COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=3 CUR=4 ./etc/ci/travis.sh build-selected-test build-selected-bench
+    - stage: build-selected-test build-selected-bench
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=3 CUR=4 ./etc/ci/travis.sh build-selected-test build-selected-bench
 
 #    - stage: selected-test selected-bench
-#      env: COQ_VERSION="8.7.1"  COQ_PACKAGE="coq-8.7.1" PPA="ppa:jgross-h/many-coq-versions"
+#      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+#      allow_failure: true
+#      script: PREV=4 CUR=5 ./etc/ci/travis.sh selected-test selected-bench
+#    - stage: selected-test selected-bench
+#      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
 #      allow_failure: true
 #      script: PREV=4 CUR=5 ./etc/ci/travis.sh selected-test selected-bench
 
