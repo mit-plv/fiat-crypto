@@ -210,7 +210,7 @@ export COQPATH
 coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
 
-coqprime-all:
+coqprime-all: coqprime
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER)
 
 clean-coqprime:
