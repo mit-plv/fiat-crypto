@@ -8160,12 +8160,12 @@ End StraightlineTest.
 Module PreFancy.
   Section with_var.
     Import Straightline.expr.
-    Context {var : type -> Type} (dummy_var : forall t, var t) (log2wordsize : Z)
+    Context {var : type -> Type} (dummy_var : forall t, var t) (log2wordmax : Z)
             (constant_to_scalar : forall ident, Z -> option (@scalar var ident type.Z)).
     Local Notation Z := (type.type_primitive type.Z).
-    Let wordsize := 2 ^ log2wordsize.
-    Let half_bits := log2wordsize / 2.
-    Let half_wordsize := 2 ^ half_bits.
+    Let wordmax := 2 ^ log2wordmax.
+    Let half_bits := log2wordmax / 2.
+    Let wordmax_half_bits := 2 ^ half_bits.
 
     Inductive ident : type -> type -> Type :=
     | add : ident (Z * Z) (Z * Z)
@@ -8190,7 +8190,7 @@ Module PreFancy.
       option (@scalar var ident Z) :=
       match e in scalar t return option (@scalar var ident Z) with
       | Cast r (Land n x) =>
-        if (lower r =? 0) && (upper r =? (half_wordsize - 1)) && (n =? 2^half_bits-1)
+        if (lower r =? 0) && (upper r =? (wordmax_half_bits - 1)) && (n =? 2^half_bits-1)
         then Some x
         else None
       | _ => None
@@ -8200,7 +8200,7 @@ Module PreFancy.
       option (@scalar var ident Z) :=
       match e in scalar t return option (@scalar var ident Z) with
       | Cast r (Shiftr n x) =>
-        if (lower r =? 0) && (upper r =? (half_wordsize - 1)) && (n =? half_bits)
+        if (lower r =? 0) && (upper r =? (wordmax_half_bits - 1)) && (n =? half_bits)
         then Some x
         else None
       | _ => None
@@ -8248,7 +8248,7 @@ Module PreFancy.
       | Pair _ Z (Pair Z Z x y) z =>
         match x return option (@scalar var ident Z * @scalar var ident Z *  @scalar var ident Z) with
         | Cast r (CC_m n x') =>
-          if (lower r =? 0) && (upper r =? 1) && (n =? wordsize)
+          if (lower r =? 0) && (upper r =? 1) && (n =? wordmax)
           then Some (x', y, z)
           else None
         | _ => (@None _)
@@ -8261,17 +8261,17 @@ Module PreFancy.
       match idc in ident.ident s d return forall t, range_type d -> scalar s -> (var d -> @expr var ident t) -> @expr var ident t with
       | ident.Z.add_get_carry_concrete w =>
         fun t r x f =>
-          if w =? wordsize
+          if w =? wordmax
           then LetInAppIdentZZ r add x f
           else dummy _
       | ident.Z.add_with_get_carry_concrete w =>
         fun t r x f =>
-          if w =? wordsize
+          if w =? wordmax
           then LetInAppIdentZZ r addc x f
           else dummy _
       | ident.Z.sub_get_borrow_concrete w =>
         fun t r x f =>
-          if w =? wordsize
+          if w =? wordmax
           then LetInAppIdentZZ r sub x f
           else dummy _
       | ident.Z.land n => fun _ r => LetInAppIdentZ r (land n)
@@ -8279,7 +8279,7 @@ Module PreFancy.
       | ident.Z.shiftl n => fun _ r => LetInAppIdentZ r (shiftl n)
       | ident.Z.rshi_concrete w n =>
         fun _ r x f =>
-          if w =? wordsize
+          if w =? wordmax
           then LetInAppIdentZ r (rshi n) x f
           else dummy _
       | ident.Z.zselect =>
@@ -8345,7 +8345,69 @@ Module PreFancy.
       | LetInAppIdentZZ _ t r idc x f =>
         of_straightline_ident idc t r (of_straightline_scalar x) (fun y => of_straightline (f y))
       end.
+
+    Definition constant_to_scalar_single ident (const x : BinInt.Z) : option (@Straightline.expr.scalar var ident Z) :=
+      if x =? (BinInt.Z.shiftr const half_bits)
+      then Some (Cast {|lower := 0; upper:=wordmax_half_bits-1|} (Shiftr half_bits (Primitive (t:=type.Z) const)))
+      else if x =? (BinInt.Z.land const (wordmax_half_bits - 1))
+           then Some (Cast {|lower := 0; upper:=wordmax_half_bits-1|} (Land (wordmax_half_bits-1) (Primitive (t:=type.Z) const)))
+           else None.
+
+    Definition constant_to_scalar_gen (consts : list BinInt.Z) ident (x : BinInt.Z)
+      : option (Straightline.expr.scalar Z) :=
+      fold_right (fun c res => match res with
+                               | Some s => Some s
+                               | None => constant_to_scalar_single ident c x
+                               end) None consts.
   End with_var.
+
+  Definition of_Expr {s d} (log2wordmax : Z) (consts : list Z) (e : Expr (s -> d))
+             (var : type -> Type) (x : var s) dummy_var : @Straightline.expr.expr var ident d :=
+    @of_straightline var dummy_var log2wordmax (@constant_to_scalar_gen var log2wordmax consts) _ (Straightline.of_Expr e var x dummy_var).
+  Module Notations.
+    Import PrintingNotations.
+    Import Straightline.expr.
+
+    Local Notation "'tZ'" := (type.type_primitive type.Z).
+    Notation "'RegZero'" := (Primitive (t:=type.Z) 0).
+    Notation "$ x" := (Cast uint256 (Fst (Cast2 (uint256,bool)%core (Var (tZ * tZ) x)))) (at level 10, format "$ x").
+    Notation "$ x" := (Cast uint128 (Fst (Cast2 (uint128,bool)%core (Var (tZ * tZ) x)))) (at level 10, format "$ x").
+    Notation "$ x ₁" := (Cast uint256 (Fst (Var (tZ * tZ) x))) (at level 10, format "$ x ₁").
+    Notation "$ x ₂" := (Cast uint256 (Snd (Var (tZ * tZ) x))) (at level 10, format "$ x ₂").
+    Notation "$ x" := (Cast uint256 (Var tZ x)) (at level 10, format "$ x").
+    Notation "$ x" := (Cast uint128 (Var tZ x)) (at level 10, format "$ x").
+    Notation "$ x" := (Cast bool (Var tZ x)) (at level 10, format "$ x").
+    Notation "carry{ $ x }" := (Cast bool (Snd (Cast2 (uint256, bool)%core (Var (tZ * tZ) x))))
+                                 (at level 10, format "carry{ $ x }").
+    Notation "Lower{ x }" := (Cast uint128 (Land 340282366920938463463374607431768211455 x))
+                               (at level 10, format "Lower{ x }").
+    Notation "f @( y , x1 , x2 ); g "
+      := (LetInAppIdentZZ (uint256, bool)%core f (Pair x1 x2) (fun y => g))
+           (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ); '//' g ").
+    Notation "f @( y , x1 , x2 , x3 ); g "
+      := (LetInAppIdentZZ (uint256, bool)%core f (Pair (Pair x1 x2) x3) (fun y => g))
+           (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
+    Notation "f @( y , x1 , x2 , x3 ); g "
+      := (LetInAppIdentZZ (uint128, bool)%core f (Pair (Pair x1 x2) x3) (fun y => g))
+           (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
+    Notation "f @( y , x1 , x2 ); g "
+      := (LetInAppIdentZ uint256 f (Pair x1 x2) (fun y => g))
+           (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ); '//' g ").
+    Notation "f @( y , x1 , x2 , x3 ); g "
+      := (LetInAppIdentZ uint256 f (Pair (Pair x1 x2) x3) (fun y => g))
+           (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
+    Notation "shiftL@( y , x , n ); g"
+      := (LetInAppIdentZ uint256 (shiftl n) (Lower{x}) (fun y => g))
+           (at level 10, g at level 200, format "shiftL@( y ,  x ,  n ); '//' g").
+    Notation "shiftR@( y , x , n ); g "
+      := (LetInAppIdentZ uint128 (shiftr n) x (fun y => g))
+           (at level 10, g at level 200, format "shiftR@( y ,  x ,  n ); '//' g ").
+    Notation "rshi@( y , x1 , x2 , n ); g"
+      := (LetInAppIdentZ _ (rshi n) (Pair x1 x2) (fun y => g))
+           (at level 10, g at level 200, format "rshi@( y ,  x1 ,  x2 , n ); '//' g ").
+    Notation "'Ret' $ x" := (Scalar (Var tZ x)) (at level 10, format "'Ret'  $ x").
+    Notation "( x , y )" := (Pair x y) (at level 10, left associativity).
+  End Notations.
 End PreFancy.
 
 Module BarrettReduction.
@@ -8945,97 +9007,52 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
                  ADDM (x35, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951)
      : Expr (type.uncurry (type.type_primitive type.Z -> type.type_primitive type.Z -> type.type_primitive type.Z))
   *)
-  Import Straightline.expr.
-  Import PreFancy.
-
-  Definition barrett_red256_straightline := Eval lazy in (fun var dummy_var x => Straightline.of_Expr barrett_red256 var x dummy_var).
-
-  Definition constant_to_scalar_gen var ident (const x : Z) : option (@scalar var ident type.Z) :=
-    if x =? (BinInt.Z.shiftr const 128)
-    then Some (Cast uint128 (Shiftr 128 (Primitive (t:=type.Z) const)))
-    else if x =? (BinInt.Z.land const (2^128 - 1))
-         then Some (Cast uint128 (Land (2^128-1) (Primitive (t:=type.Z) const)))
-         else None.
 
   Definition muLow := (2 ^ (2 * machine_wordsize) / M) mod (2^machine_wordsize).
-  Definition constant_to_scalar var ident (x : Z) : option (@scalar var ident type.Z) :=
-    match (constant_to_scalar_gen var ident M x) with
-    | Some s => Some s
-    | None => constant_to_scalar_gen var ident muLow x
-    end.
-
   Definition barrett_red256_prefancy :=
-    Eval vm_compute in (fun var dummy_var x =>
-                    @of_straightline var dummy_var machine_wordsize (constant_to_scalar var) _
-                                     (barrett_red256_straightline var dummy_var x)).
+    Eval lazy in (PreFancy.of_Expr machine_wordsize [M;muLow] barrett_red256).
 
-  Local Notation "'tZ'" := (type.type_primitive type.Z).
-  Local Notation "'RegMod'" := (Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
-  Local Notation "'RegMuLow'" := (Primitive (t:=type.Z) 26959946667150639793205513449348445388433292963828203772348655992835).
-  Local Notation "'RegZero'" := (Primitive (t:=type.Z) 0).
-  Local Notation "$ x" := (Cast uint256 (Fst (Cast2 (uint256,bool)%core (Var (tZ * tZ) x)))) (at level 10, format "$ x").
-  Local Notation "$ x" := (Cast uint128 (Fst (Cast2 (uint128,bool)%core (Var (tZ * tZ) x)))) (at level 10, format "$ x").
-  Local Notation "$ x ₁" := (Cast uint256 (Fst (Var (tZ * tZ) x))) (at level 10, format "$ x ₁").
-  Local Notation "$ x ₂" := (Cast uint256 (Snd (Var (tZ * tZ) x))) (at level 10, format "$ x ₂").
-  Local Notation "carry{ $ x }" := (Cast bool (Snd (Cast2 (uint256, bool)%core (Var (tZ * tZ) x)))) (at level 10, format "carry{ $ x }").
-  Local Notation "Lower{ x }" := (Cast uint128 (Land 340282366920938463463374607431768211455 x)) (at level 10, format "Lower{ x }").
-  Local Notation "$ x" := (Cast uint256 (Var tZ x)) (at level 10, format "$ x").
-  Local Notation "$ x" := (Cast uint128 (Var tZ x)) (at level 10, format "$ x").
-  Local Notation "f @( y , x1 , x2 ); g "
-    := (LetInAppIdentZZ (uint256, bool)%core f (Pair x1 x2) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 , x3 ); g "
-    := (LetInAppIdentZZ (uint256, bool)%core f (Pair (Pair x1 x2) x3) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 , x3 ); g "
-    := (LetInAppIdentZZ (uint128, bool)%core f (Pair (Pair x1 x2) x3) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 ); g "
-    := (LetInAppIdentZ uint256 f (Pair x1 x2) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 , x3 ); g "
-    := (LetInAppIdentZ uint256 f (Pair (Pair x1 x2) x3) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
-  Local Notation "shiftL@( y , x , n ); g"
-    := (LetInAppIdentZ uint256 (shiftl n) (Lower{x}) (fun y => g)) (at level 10, g at level 200, format "shiftL@( y ,  x ,  n ); '//' g").
-  Local Notation "shiftR@( y , x , n ); g "
-    := (LetInAppIdentZ uint128 (shiftr n) x (fun y => g)) (at level 10, g at level 200, format "shiftR@( y ,  x ,  n ); '//' g ").
-  Local Notation "rshi@( y , x1 , x2 , n ); g"
-    := (LetInAppIdentZ _ (rshi n) (Pair x1 x2) (fun y => g)) (at level 10, g at level 200, format "rshi@( y ,  x1 ,  x2 , n ); '//' g ").
-  Local Notation "'Ret' $ x" := (Scalar (Var tZ x)) (at level 10, format "'Ret'  $ x").
-  Local Notation "( x , y )" := (Pair x y) (at level 10, left associativity).
+  Import PreFancy.
+  Import PreFancy.Notations.
+  Local Notation "'RegMod'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
+  Local Notation "'RegMuLow'" := (Straightline.expr.Primitive (t:=type.Z) 26959946667150639793205513449348445388433292963828203772348655992835).
   Print barrett_red256_prefancy.
   (* TODO : make prefancy cast uint128s to uint256s *)
   (* Note : currently (correctly) fails to convert the adds that should be subs *)
   (*
-    selm@(x0, $x₂, RegZero, RegMuLow);
-    rshi@(x1, RegZero, $x₂,255);
-    rshi@(x2, $x₂, $x₁,255);
-    mulhl@(x3, RegMuLow, $x2);
-    mullh@(x4, RegMuLow, $x2);
-    mulhh@(x5, RegMuLow, $x2);
-    shiftL@(x6, $x3, 128);
-    shiftR@(x7, $x3, 128);
-    shiftL@(x8, $x4, 128);
-    shiftR@(x9, $x4, 128);
-    mulll@(x10, RegMuLow, $x2);
-    add@(x11, $x8, $x10);
-    addc@(x12, carry{$x11}, $x7, $x9);
-    add@(x13, $x6, $x11);
-    addc@(x14, carry{$x13}, $x5, $x12);
-    add@(x15, $x2, $x14);
-    addc@(x16, carry{$x15}, RegZero, Cast bool (Var tZ x1));
-    add@(x17, $x0, $x15);
-    addc@(x18, carry{$x17}, RegZero, $x16);
-    rshi@(x19, $x18, $x17,1);
-    mullh@(x20, RegMod, $x19);
-    mulhl@(x21, RegMod, $x19);
-    mulhh@(x22, RegMod, $x19);
-    shiftL@(x23, $x20, 128);
-    shiftR@(x24, $x20, 128);
-    shiftL@(x25, $x21, 128);
-    shiftR@(x26, $x21, 128);
-    mulll@(x27, RegMod, $x19);
-    add@(x28, $x25, $x27);
-    addc@(x29, carry{$x28}, $x24, $x26);
-    add@(x30, $x23, $x28);
-    addc@(_, carry{$x30}, $x22, $x29);
-    Ret $(dummy_var tZ)
+    selm@(y, $x₂, RegZero, RegMuLow);
+    rshi@(y0, RegZero, $x₂,255);
+    rshi@(y1, $x₂, $x₁,255);
+    mulhl@(y2, RegMuLow, $y1);
+    mullh@(y3, RegMuLow, $y1);
+    mulhh@(y4, RegMuLow, $y1);
+    shiftL@(y5, $y2, 128);
+    shiftR@(y6, $y2, 128);
+    shiftL@(y7, $y3, 128);
+    shiftR@(y8, $y3, 128);
+    mulll@(y9, RegMuLow, $y1);
+    add@(y10, $y7, $y9);
+    addc@(y11, carry{$y10}, $y6, $y8);
+    add@(y12, $y5, $y10);
+    addc@(y13, carry{$y12}, $y4, $y11);
+    add@(y14, $y1, $y13);
+    addc@(y15, carry{$y14}, RegZero, $y0);
+    add@(y16, $y, $y14);
+    addc@(y17, carry{$y16}, RegZero, $y15);
+    rshi@(y18, $y17, $y16,1);
+    mullh@(y19, RegMod, $y18);
+    mulhl@(y20, RegMod, $y18);
+    mulhh@(y21, RegMod, $y18);
+    shiftL@(y22, $y19, 128);
+    shiftR@(y23, $y19, 128);
+    shiftL@(y24, $y20, 128);
+    shiftR@(y25, $y20, 128);
+    mulll@(y26, RegMod, $y18);
+    add@(y27, $y24, $y26);
+    addc@(y28, carry{$y27}, $y23, $y25);
+    add@(y29, $y22, $y27);
+    addc@(_, carry{$y29}, $y21, $y28);
+    Ret $(dummy_var (type.type_primitive type.Z))
   *)
 End Barrett256.
 
@@ -9626,79 +9643,38 @@ montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z *
      : Expr (type.uncurry (type.type_primitive type.Z * type.type_primitive type.Z -> type.type_primitive type.Z))
 *)
 
-  Import Straightline.expr.
-  Import PreFancy.
-
-  Definition montred256_straightline := Eval lazy in (fun var dummy_var x => Straightline.of_Expr montred256 var x dummy_var).
-
-  Definition constant_to_scalar var ident (x : Z) : option (@scalar var ident type.Z) :=
-    if x =? (BinInt.Z.shiftr N 128)
-    then Some (Cast uint128 (Shiftr 128 (Primitive (t:=type.Z) N)))
-    else if x =? (BinInt.Z.shiftr N' 128)
-         then Some (Cast uint128 (Shiftr 128 (Primitive (t:=type.Z) N')))
-         else if x =? (BinInt.Z.land N (2^128 - 1))
-              then Some (Cast uint128 (Land (2^128-1) (Primitive (t:=type.Z) N)))
-              else if x =? (BinInt.Z.land N' (2^128 - 1))
-                   then Some (Cast uint128 (Land (2^128-1) (Primitive (t:=type.Z) N')))
-                   else None.
-
   Definition montred256_prefancy :=
-    Eval vm_compute in (fun var dummy_var x =>
-                    @of_straightline var dummy_var machine_wordsize (constant_to_scalar var) _
-                                              (montred256_straightline var dummy_var x)).
-
-  Local Notation "'tZ'" := (type.type_primitive type.Z).
-  Local Notation "'RegMod'" := (Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
-  Local Notation "'RegPInv'" := (Primitive (t:=type.Z) 115792089210356248768974548684794254293921932838497980611635986753331132366849).
-  Local Notation "'RegZero'" := (Primitive (t:=type.Z) 0).
-  Local Notation "$ x" := (Cast uint256 (Fst (Cast2 (uint256,bool) (Var (tZ * tZ) x)))) (at level 10, format "$ x").
-  Local Notation "$ x ₁" := (Cast uint256 (Fst (Var (tZ * tZ) x))) (at level 10, format "$ x ₁").
-  Local Notation "$ x ₂" := (Cast uint256 (Snd (Var (tZ * tZ) x))) (at level 10, format "$ x ₂").
-  Local Notation "carry{ $ x }" := (Cast bool (Snd (Cast2 (uint256, bool) (Var (tZ * tZ) x)))) (at level 10, format "carry{ $ x }").
-  Local Notation "Lower{ x }" := (Cast uint128 (Land 340282366920938463463374607431768211455 x)) (at level 10, format "Lower{ x }").
-  Local Notation "$ x" := (Cast uint256 (Var tZ x)) (at level 10, format "$ x").
-  Local Notation "$ x" := (Cast uint128 (Var tZ x)) (at level 10, format "$ x").
-  Local Notation "f @( y , x1 , x2 ); g "
-    := (LetInAppIdentZZ (uint256, bool) f (Pair x1 x2) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 , x3 ); g "
-    := (LetInAppIdentZZ (uint256, bool) f (Pair (Pair x1 x2) x3) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 ); g "
-    := (LetInAppIdentZ uint256 f (Pair x1 x2) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ); '//' g ").
-  Local Notation "f @( y , x1 , x2 , x3 ); g "
-    := (LetInAppIdentZ uint256 f (Pair (Pair x1 x2) x3) (fun y => g)) (at level 10, g at level 200, format "f @( y ,  x1 ,  x2 ,  x3 ); '//' g ").
-  Local Notation "shiftL@( y , x , n ); g"
-    := (LetInAppIdentZ uint256 (shiftl n) (Lower{x}) (fun y => g)) (at level 10, g at level 200, format "shiftL@( y ,  x ,  n ); '//' g ").
-  Local Notation "shiftR@( y , x , n ); g"
-    := (LetInAppIdentZ uint128 (shiftr n) x (fun y => g)) (at level 10, g at level 200, format "shiftR@( y ,  x ,  n ); '//' g ").
-  Local Notation "'Ret' $ x" := (Scalar (Var tZ x)) (at level 10, format "'Ret'  $ x").
-  Local Notation "( x , y )" := (Pair x y) (at level 10, left associativity).
+    Eval lazy in (PreFancy.of_Expr machine_wordsize [N;N'] montred256).
+  Import PreFancy.
+  Import PreFancy.Notations.
+  Local Notation "'RegMod'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
+  Local Notation "'RegPInv'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248768974548684794254293921932838497980611635986753331132366849).
   Print montred256_prefancy.
   (*
-    mullh@(x0, RegPInv, $x₁);
-    mulhl@(x1, RegPInv, $x₁);
-    shiftL@(x2, $x0, 128);
-    shiftL@(x3, $x1, 128);
-    mulll@(x4, RegPInv, $x₁);
-    add@(x5, $x3, $x4);
-    add@(x6, $x2, $x5);
-    mullh@(x7, RegMod, $x6);
-    mulhl@(x8, RegMod, $x6);
-    mulhh@(x9, RegMod, $x6);
-    shiftL@(x10, $x7, 128);
-    shiftR@(x11, $x7, 128);
-    shiftL@(x12, $x8, 128);
-    shiftR@(x13, $x8, 128);
-    mulll@(x14, RegMod, $x6);
-    add@(x15, $x12, $x14);
-    addc@(x16, carry{$x15}, $x11, $x13);
-    add@(x17, $x10, $x15);
-    addc@(x18, carry{$x17}, $x9, $x16);
-    add@(x19, $x17, $x₁);
-    addc@(x20, carry{$x19}, $x18, $x₂);
-    sel@(x21, carry{$x20}, RegZero, RegMod);
-    sub@(x22, $x20, $x21);
-    addm@(x23, $x22, RegZero, RegMod);
-    Ret $x23
+   mulhl@(y0, RegPInv, $x₁);
+   shiftL@(y1, $y, 128);
+   shiftL@(y2, $y0, 128);
+   mulll@(y3, RegPInv, $x₁);
+   add@(y4, $y2, $y3);
+   add@(y5, $y1, $y4);
+   mullh@(y6, RegMod, $y5);
+   mulhl@(y7, RegMod, $y5);
+   mulhh@(y8, RegMod, $y5);
+   shiftL@(y9, $y6, 128);
+   shiftR@(y10, $y6, 128);
+   shiftL@(y11, $y7, 128);
+   shiftR@(y12, $y7, 128);
+   mulll@(y13, RegMod, $y5);
+   add@(y14, $y11, $y13);
+   addc@(y15, carry{$y14}, $y10, $y12);
+   add@(y16, $y9, $y14);
+   addc@(y17, carry{$y16}, $y8, $y15);
+   add@(y18, $y16, $x₁);
+   addc@(y19, carry{$y18}, $y17, $x₂);
+   selc@(y20, carry{$y19}, RegZero, RegMod);
+   sub@(y21, $y19, $y20);
+   addm@(y22, $y21, RegZero, RegMod);
+   Ret $y22
   *)
 End Montgomery256.
 
@@ -9841,50 +9817,42 @@ Print Barrett256.barrett_red256.
 c.Selm($x0, $x_hi, RegZero, RegMuLow);
 c.Rshi($x1, RegZero, $x_hi, 255);
 c.Rshi($x2, $x_hi, $x_lo, 255);
-c.ShiftR($x3, $x2, 128);
-c.Lower128($x4, $x2);
-c.Mul128x128($x5, c.Upper(RegMuLow), $x4);
-c.ShiftR($x6, $x5, 128);
-c.Lower128($x7, $x5);
-c.Mul128x128($x8, c.Lower(RegMuLow), $x3);
-c.ShiftR($x9, $x8, 128);
-c.Lower128($x10, $x8);
-c.Mul128x128($x11, c.Upper(RegMuLow), $x3);
-c.ShiftL($x12, $x7, 128);
-c.ShiftL($x13, $x10, 128);
-c.Mul128x128($x14, c.Lower(RegMuLow), $x4);
-c.Add256($x15, $x13, $x14);
-c.Addc128($x16, $x15_hi, $x6, $x9);
-c.Add256($x17, $x12, $x15_lo);
-c.Addc256($x18, $x17_hi, $x11, $x16_lo);
-c.Add256($x19, $x2, $x18_lo);
-c.Addc128($x20, $x19_hi, RegZero, $x1);
-c.Add256($x21, $x0, $x19_lo);
-c.Addc128($x22, $x21_hi, RegZero, $x20_lo);
-c.Rshi($x23, $x22_lo, $x21_lo, 1);
-c.ShiftR($x24, $x23, 128);
-c.Lower128($x25, $x23);
-c.Mul128x128($x26, c.Lower(RegMod), $x24);
-c.ShiftR($x27, $x26, 128);
-c.Lower128($x28, $x26);
-c.Mul128x128($x29, c.Upper(RegMod), $x25);
-c.ShiftR($x30, $x29, 128);
-c.Lower128($x31, $x29);
-c.Mul128x128($x32, c.Upper(RegMod), $x24);
-c.ShiftL($x33, $x28, 128);
-c.ShiftL($x34, $x31, 128);
-c.Mul128x128($x35, c.Lower(RegMod), $x25);
-c.Add256($x36, $x34, $x35);
-c.Addc256($x37, $x36_hi, $x27, $x30);
-c.Add256($x38, $x33, $x36_lo);
-c.Addc256($x39, $x38_hi, $x32, $x37_lo);
-expr_let x40 := Z.add_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-                (Z.opp @@ $x38_lo, $x_lo) in
-expr_let x41 := Z.add_with_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-                ($x40_hi, Z.opp @@ $x39_lo, $x_hi) in
-c.Sell($x42, $x41_lo, RegZero, RegMod);
-c.Sub($x43, $x40_lo, $x42);
-c.AddM($ret, $x43, RegZero, RegMod);
+c.Mul128x128($x3, c.Upper(RegMuLow), c.Lower($x2));
+c.Mul128x128($x4, c.Lower(RegMuLow), c.Upper($x2));
+c.Mul128x128($x5, c.Upper(RegMuLow), c.Upper($x2));
+c.ShiftL($x6, $x3, 128);
+c.ShiftR($x7, $x3, 128);
+c.ShiftL($x8, $x4, 128);
+c.ShiftR($x9, $x4, 128);
+c.Mul128x128($x10, c.Lower(RegMuLow), c.Lower($x2));
+c.Add256($x11, $x8, $x10);
+c.Addc128($x12, $x11_hi, $x7, $x9);
+c.Add256($x13, $x6, $x11_lo);
+c.Addc256($x14, $x13_hi, $x5, $x12_lo);
+c.Add256($x15, $x2, $x14_lo);
+c.Addc128($x16, $x15_hi, RegZero, $x1);
+c.Add256($x17, $x0, $x15_lo);
+c.Addc128($x18, $x17_hi, RegZero, $x16_lo);
+c.Rshi($x19, $x18_lo, $x17_lo, 1);
+c.Mul128x128($x20, c.Lower(RegMod), c.Upper($x19));
+c.Mul128x128($x21, c.Upper(RegMod), c.Lower($x19));
+c.Mul128x128($x22, c.Upper(RegMod), c.Upper($x19));
+c.ShiftL($x23, $x20, 128);
+c.ShiftR($x24, $x20, 128);
+c.ShiftL($x25, $x21, 128);
+c.ShiftR($x26, $x21, 128);
+c.Mul128x128($x27, c.Lower(RegMod), c.Lower($x19));
+c.Add256($x28, $x25, $x27);
+c.Addc256($x29, $x28_hi, $x24, $x26);
+c.Add256($x30, $x23, $x28_lo);
+c.Addc256($x31, $x30_hi, $x22, $x29_lo);
+expr_let x32 := Z.add_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                (Z.opp @@ $x30_lo, $x_lo) in
+expr_let x33 := Z.add_with_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                ($x32_hi, Z.opp @@ $x31_lo, $x_hi) in
+c.Sell($x34, $x33_lo, RegZero, RegMod);
+c.Sub($x35, $x32_lo, $x34);
+c.AddM($ret, $x35, RegZero, RegMod);
 *)
 
 Print Montgomery256.montred256.
