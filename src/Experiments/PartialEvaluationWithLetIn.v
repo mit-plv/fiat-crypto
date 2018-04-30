@@ -375,15 +375,14 @@ Module partial.
               (ident_Fst : forall A B, pident (#A * #B -> #A)%ptype)
               (ident_Snd : forall A B, pident (#A * #B -> #B)%ptype).
 
-      Fixpoint base_value (t : base.type)
-        := match t return Type with
-           | base.type.nat as t
-             => nat
-           | base.type.prod A B as t
-             => (abstract_domain' A * @expr var A + base_value A) * (abstract_domain' B * @expr var B + base_value B)
-           end%type.
+      Inductive base_value : type -> Type :=
+      | Ident {t} (idc : ident t) : base_value t
+      | App {s d} (f : base_value (s -> d)) (x : base_value s) : base_value d
+      | Expr {t} (st : abstract_domain' t) (e : @expr var t) : base_value t.
 
-      Fixpoint abstraction_function {t} : base_value t -> abstract_domain' t
+      Fixpoint abstraction_function {t : base.type} (v : base_value t) : abstract_domain' t.
+      Admitted.
+      (*refine
         := match t return base_value t -> abstract_domain' t with
            | base.type.nat
              => fun v => abstract_interp_ident _ (ident_Literal v)
@@ -399,38 +398,24 @@ Module partial.
                               end in
                    abstract_interp_ident
                      _ (ident_Pair A B) sta stb
-           end.
+           end.*)
 
-      Fixpoint base_reify {t} : base_value t -> @expr var t
-        := match t return base_value t -> expr t with
-           | base.type.nat
-             => fun v => expr.Ident (ident.wrap (ident_Literal v))
-           | base.type.prod A B
-             => fun '(a, b)
-                => let ea := match a with
-                             | inl (st, e)
-                               => match annotate _ st with
-                                  | None => e
-                                  | Some cst => ###cst @ e
-                                  end%expr
-                             | inr v => @base_reify _ v
-                             end in
-                   let eb := match b with
-                             | inl (st, e)
-                               => match annotate _ st with
-                                  | None => e
-                                  | Some cst => ###cst @ e
-                                  end%expr
-                             | inr v => @base_reify _ v
-                             end in
-                   (#(ident_Pair A B) @ ea @ eb)%expr
-           end.
+      Fixpoint base_reify {t} (v : base_value t) : @expr var t
+        := match v in base_value t return expr t with
+           | Ident t idc => ###idc
+           | App s d f x => @base_reify _ f @ (@base_reify _ x)
+           | Expr t st e => match annotate _ st with
+                            | None => e
+                            | Some cst => ###cst @ e
+                            end
+           end%expr.
 
       Local Notation value := (@value base.type ident var base_value abstract_domain').
 
       Context (half_interp : forall {t} (idc : pident t), parametric.half_interp UnderLets value t).
 
-      Fixpoint intersect_state_base_value {t} : abstract_domain' t -> base_value t -> base_value t
+      Fixpoint intersect_state_base_value {t} : abstract_domain' t -> base_value t -> base_value t.
+      Admitted. (*
         := match t return abstract_domain' t -> base_value t -> base_value t with
            | base.type.nat => update_literal_with_state
            | base.type.prod _ _
@@ -446,7 +431,7 @@ Module partial.
                              | inr v => inr (@intersect_state_base_value _ stb v)
                              end in
                    (a', b')
-           end.
+           end.*)
 
 
       Definition intersect_state_value {t} : abstract_domain t -> value t -> value t
@@ -461,10 +446,10 @@ Module partial.
            end.
 
       Local Notation reify := (@reify base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify)).
-      Print reflect.
       Local Notation reflect := (@reflect base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify)).
 
-      Fixpoint pinterp_base {t : parametric.base.type} : parametric.half_interp UnderLets value (type.base t) -> value (parametric.subst (type.base t))
+      Fixpoint pinterp_base {t : parametric.base.type} : parametric.half_interp UnderLets value (type.base t) -> value (parametric.subst (type.base t)).
+      Admitted. (*
         := match t return parametric.half_interp UnderLets value (type.base t) -> value (parametric.subst (type.base t)) with
            | parametric.base.type.nat
              => fun v => inr v
@@ -472,9 +457,11 @@ Module partial.
              => fun '(a, b) => inr (@pinterp_base A a, @pinterp_base B b)
            | parametric.base.type.var_with_subst subst
              => fun v => v
-           end.
+           end.*)
 
-      Fixpoint puninterp_base {t : parametric.base.type} : value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets value (type.base t))
+      Fixpoint puninterp_base {t : parametric.base.type} : value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets value (type.base t)).
+        Print parametric.half_interp.
+      Admitted. (*
         := match t return value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets value (type.base t)) with
            | parametric.base.type.nat
              => fun v
@@ -493,7 +480,7 @@ Module partial.
                    end
            | parametric.base.type.var_with_subst subst
              => @Some _
-           end%option.
+           end%option.*)
 
       (* FIXME: naming; these are basically just fancy identity functions *)
       Fixpoint vinterp_arrow {t : type} : value t -> @type.interpM base.type UnderLets value t
