@@ -246,13 +246,11 @@ Module partial.
             (abstraction_function : forall t, base_value t -> abstract_domain' t)
             (base_reify : forall t, base_value t -> @expr var t).
 
-    Fixpoint value (t : type)
-      := match t with
-         | type.base t
-           => abstract_domain' t * @expr var t + base_value t
-         | type.arrow s d
-           => value s -> UnderLets (value d)
-         end%type.
+    Definition value (t : type)
+      := type.interpM
+           UnderLets
+           (fun t => abstract_domain' t * @expr var t + base_value t)%type
+           t.
     Definition value_with_lets (t : type)
       := UnderLets (value t).
 
@@ -495,24 +493,6 @@ Module partial.
              => @Some _
            end%option.
 
-      (* FIXME: naming; these are basically just fancy identity functions *)
-      Fixpoint vinterp_arrow {t : type} : value t -> @type.interpM base.type UnderLets value t
-        := match t return value t -> @type.interpM base.type UnderLets value t with
-           | type.base t => fun v => v
-           | type.arrow s d
-             => fun f x
-                => (fx <-- f (@vuninterp_arrow s x);
-                      Base (@vinterp_arrow d fx))
-           end%under_lets
-      with vuninterp_arrow {t : type} : @type.interpM base.type UnderLets value t -> value t
-           := match t return @type.interpM base.type UnderLets value t -> value t with
-              | type.base t => fun v => v
-              | type.arrow s d
-                => fun f x
-                   => (fx <-- f (@vinterp_arrow s x);
-                         Base (@vuninterp_arrow d fx))
-              end%under_lets.
-
       Fixpoint pinterp {t} : UnderLets (value (parametric.subst t)) -> parametric.half_interp UnderLets value t -> value (parametric.subst t)
         := match t return UnderLets (value (parametric.subst t)) -> parametric.half_interp UnderLets value t -> value (parametric.subst t) with
            | type.base t
@@ -529,7 +509,7 @@ Module partial.
                 => Base
                      (@pinterp
                         d (fdefault' <-- fdefault; fdefault' v)
-                        (fpartial (vinterp_arrow v)))
+                        (fpartial v))
            end%under_lets.
 
       Local Notation bottom := (@bottom base.type abstract_domain' bottom').
