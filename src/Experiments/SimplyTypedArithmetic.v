@@ -7921,7 +7921,7 @@ Module Straightline.
   Module expr.
     Section with_var.
       Context {var : type.type -> Type}.
-      Context {dummy_var : forall t, var t}.
+      Context {dummy_arrow : forall s d, var (s -> d)}. (* TODO: remove once arrow-containing pairs are removed at type level *)
 
       Let uexpr t := @Uncurried.expr.expr ident.ident var t.
 
@@ -7934,6 +7934,7 @@ Module Straightline.
         with scalar : type.type -> Type :=
              | Var t : var t -> scalar t
              | TT : scalar (type.type_primitive type.unit)
+             | Nil t : scalar (type.list t)
              | Pair {a b} : scalar a -> scalar b -> scalar (a * b)
              | Cast : zrange -> scalar type.Z -> scalar type.Z
              | Cast2 : zrange * zrange -> scalar (type.Z*type.Z) -> scalar (type.Z*type.Z)
@@ -7947,7 +7948,15 @@ Module Straightline.
         .
       End with_ident.
 
-      Fixpoint dummy t : @expr ident.ident t := Scalar (Var t (dummy_var t)).
+      Fixpoint dummy_scalar t : @scalar ident.ident t :=
+        match t with
+        | type.type_primitive p => Primitive (@DefaultValue.type.primitive.default p)
+        | type.prod A B => Pair (dummy_scalar A) (dummy_scalar B)
+        | type.arrow A B => Var _ (dummy_arrow A B)
+        | type.list A => Nil A
+        end.
+
+      Definition dummy t : expr t := Scalar (dummy_scalar t).
 
       Definition scalar_of_uncurried_ident {s d} (idc : ident.ident s d)
         : scalar s -> option (scalar d) :=
@@ -8107,12 +8116,11 @@ Module Straightline.
     | Uncurried.expr.Abs _ _ f => S (depth dummy_var (f (dummy_var _)))
     end.
 
-  (* TODO : Can I avoid having dummy_var appear here? *)
-  Definition of_Expr {s d} (e : Expr (s->d)) (var : type -> Type) (x:var s) dummy_var : expr.expr d
+  Definition of_Expr {s d} (e : Expr (s->d)) (var : type -> Type) (x:var s) dummy_arrow: expr.expr d
     :=
       match invert_Abs (e var) with
-      | Some f => expr.of_uncurried (dummy_var:=dummy_var) (depth dummy_var (f x)) (f x)
-      | None => expr.dummy (dummy_var:=dummy_var) d
+      | Some f => expr.of_uncurried (dummy_arrow:=dummy_arrow) (depth (var:=fun _ => unit) (fun _ => tt) (e (fun _ => unit))) (f x)
+      | None => expr.dummy (dummy_arrow:=dummy_arrow) d
       end.
 
 End Straightline.
@@ -8126,7 +8134,11 @@ Module StraightlineTest.
                (Pair (AppIdent (var:=var) (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent (var:=var) (ident.Z.shiftr 8) (Var x)))
                      (Abs (fun x : var type.Z => expr.Var x)))).
 
-  Eval vm_compute in (Straightline.of_Expr test).
+  Check eq_refl :
+    Straightline.of_Expr test =
+    fun var x _ =>
+       Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] (ident.Z.shiftr 8) (Straightline.expr.Var _ x)
+         (fun x0 => Straightline.expr.Scalar (Straightline.expr.Var _ x0)).
 
   Definition test_mul : Expr (type.Z -> type.Z) :=
     fun var =>
@@ -8139,6 +8151,18 @@ Module StraightlineTest.
                                       (Pair (AppIdent (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent ident.Z.mul (Pair (AppIdent (@ident.primitive type.Z 12) TT) (Var y))))
                                             (Abs (fun z : var type.Z => (AppIdent (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent (ident.Z.shiftr 3) (Var z)))))
         ))))).
+
+  Check eq_refl :
+    Straightline.of_Expr test_mul =
+    fun var x _ =>
+       Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] (ident.Z.shiftr 8) (Straightline.expr.Var _ x)
+         (fun x0 =>
+          Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] ident.Z.mul
+            (Straightline.expr.Pair (Straightline.expr.Primitive (t:=type.Z) 12) (Straightline.expr.Var _ x0))
+            (fun x1 =>
+             Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] (ident.Z.shiftr 3)
+               (Straightline.expr.Var _ x1)
+               (fun x2 => Straightline.expr.Scalar (Straightline.expr.Var _ x2)))).
 
   Definition test_selm : Expr (type.Z -> type.Z) :=
     fun var =>
@@ -8154,6 +8178,18 @@ Module StraightlineTest.
                                                       (AppIdent (@ident.primitive type.Z 0) TT))
                                                    (AppIdent (@ident.primitive type.Z 100) TT))))
                             (Abs (fun z : var type.Z => Var z)))).
+
+  Check eq_refl :
+    Straightline.of_Expr test_selm =
+    fun var x _ =>
+      Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] ident.Z.zselect
+        (Straightline.expr.Pair
+           (Straightline.expr.Pair
+              (Straightline.expr.Cast r[0 ~> 1]
+                 (Straightline.expr.CC_m 4294967296
+                    (Straightline.expr.Cast r[0 ~> 4294967295] (Straightline.expr.Var _ x))))
+              (Straightline.expr.Primitive (t:=type.Z) 0)) (Straightline.expr.Primitive (t:=type.Z) 100))
+        (fun x0 => Straightline.expr.Scalar (Straightline.expr.Var _ x0)).
 End StraightlineTest.
 
 (* Convert straightline code to code that uses only a certain set of identifiers *)
