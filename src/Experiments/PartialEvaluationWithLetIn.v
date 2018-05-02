@@ -784,6 +784,15 @@ Section specialized.
                end
        | base.type.prod A B
          => fun '(x, y) '(x', y') => (@intersect_state _ x x', @intersect_state _ y y')
+       | base.type.list A
+         => fun ls1 ls2
+            => match ls1, ls2 with
+               | None, v => v
+               | v, None => v
+               | Some ls1, Some ls2
+                 => Some (List.map (fun '(x, x') => @intersect_state A x x')
+                                   (List.combine ls1 ls2))
+               end
        end.
   Axiom evil : nat -> nat.
   Definition update_literal_with_state : abstract_domain' base.type.nat -> nat -> nat
@@ -807,18 +816,49 @@ Section specialized.
        | ident.Pair A B => @pair _ _
        | ident.Fst A B => @fst _ _
        | ident.Snd A B => @snd _ _
+       | ident.Nil A => Some nil
+       | ident.Cons A
+         => fun x xs => (xs' <- xs; Some (cons x xs'))
+       | ident.List_map A B
+         => fun f ls => option_map (List.map f) ls
+       | ident.List_app A
+         => fun ls1 ls2 => (ls1' <- ls1; ls2' <- ls2; Some (ls1' ++ ls2'))
+       | ident.List_flat_map A B
+         => fun f ls
+            => (ls' <- ls;
+                  List.fold_right
+                    (fun ls1 ls2 => (ls1' <- ls1; ls2' <- ls2; Some (ls1' ++ ls2')))
+                    (Some nil)
+                    (List.map f ls'))
+       | ident.List_rect A P
+         => fun N C ls
+            => match ls with
+               | Some ls'
+                 => list_rect
+                      _
+                      N
+                      (fun x xs rec => C x (Some xs) rec)
+                      ls'
+               | None => bottom' _
+               end
        | ident.Cast T upper_bound
          => intersect_state _ (state_of_upperbound _ upper_bound)
-       end.
+       end%option.
 
-  Print partial.ident.eval.
+  Definition hd_tl_list_state A (st : abstract_domain' (base.type.list A))
+    : abstract_domain' A * abstract_domain' (base.type.list A)
+    := match st with
+       | None => (bottom' _, None)
+       | Some nil => (bottom' _, Some nil)
+       | Some (cons x xs) => (x, Some xs)
+       end.
 
   Definition eval {var} {t} (e : @expr _ t) : expr t
     := (@partial.ident.eval)
-         var abstract_domain' annotate abstract_interp_ident intersect_state update_literal_with_state state_of_upperbound bottom' t e.
+         var abstract_domain' annotate abstract_interp_ident intersect_state update_literal_with_state state_of_upperbound bottom' hd_tl_list_state t e.
   Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
     := (@partial.ident.eval_with_bound)
-         var abstract_domain annotate abstract_interp_ident intersect_state update_literal_with_state state_of_upperbound bottom' t e bound.
+         var abstract_domain annotate abstract_interp_ident intersect_state update_literal_with_state state_of_upperbound bottom' hd_tl_list_state t e bound.
 
   Import expr.
   Import ident.
