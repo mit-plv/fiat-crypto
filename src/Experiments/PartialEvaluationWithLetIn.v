@@ -200,7 +200,7 @@ Module ident.
     | Cons {A} : pident (#A -> parametric.base.type.list #A -> parametric.base.type.list #A)%ptype
     | List_map {A B} : pident ((#A -> #B) -> parametric.base.type.list #A -> parametric.base.type.list #B)%ptype
     | List_app {A} : pident (parametric.base.type.list #A -> parametric.base.type.list #A -> parametric.base.type.list #A)%ptype
-    | List_flat_map {A B} : pident ((#A -> parametric.base.type.list #B) -> parametric.base.type.list #A -> parametric.base.type.list #B)%ptype
+    | List_flat_map {A B} : pident ((#A -> parametric.base.type.list #B) -> parametric.base.type.list #A -> #(base.type.list B))%ptype
     | List_rect {A P} : pident (#P -> (#A -> parametric.base.type.list #A -> #P -> #P) -> parametric.base.type.list #A -> #P)%ptype
     | Cast {T} (upper_bound : upperboundT T) : pident (#T -> #T)%ptype
     .
@@ -692,11 +692,15 @@ Module partial.
       Local Notation pbase_value := (@wident.pbase_value var pident abstract_domain').
       Local Notation value := (@value base.type ident var base_value abstract_domain').
       Local Notation intersect_state_value := (@wident.intersect_state_value var pident abstract_domain' abstract_interp_ident intersect_state update_literal_with_state (@ident.Fst) (@ident.Snd) (@hd_tl_list_state)).
+      Local Notation abstraction_function := (@wident.abstraction_function var pident abstract_domain' abstract_interp_ident (@ident.Literal) (@ident.Pair) (@ident.Nil) (@ident.Cons)).
+      Local Notation base_reify := (@wident.base_reify var pident abstract_domain' annotate (@ident.Literal) (@ident.Pair) (@ident.Nil) (@ident.Cons)).
+      Local Notation reify := (@reify base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify)).
+      Local Notation state_of_value := (@state_of_value base.type ident var base_value abstract_domain' bottom' (@abstraction_function)).
 
       Definition half_interp {t} (idc : pident t)
         : parametric.half_interp UnderLets pbase_value value t
-          + parametric.half_interp2 UnderLets pbase_value value t.
-        refine match idc in ident.pident t return parametric.half_interp UnderLets pbase_value value t + parametric.half_interp2 UnderLets pbase_value value t with
+          + parametric.half_interp2 UnderLets pbase_value value t
+        := match idc in ident.pident t return parametric.half_interp UnderLets pbase_value value t + parametric.half_interp2 UnderLets pbase_value value t with
            | ident.Literal v => inl v
            | ident.Plus => inl Nat.add
            | ident.Pair A B => inl (@pair _ _)
@@ -709,18 +713,22 @@ Module partial.
              => inr (fun f ls => fls <--- List.map f ls; Base fls)
            | ident.List_flat_map A B
              => inr (fun f ls
-                     => list_rect
-                          _
-                          (Base nil)
-                          (fun x _ flat_map_xs
-                           => (fx <-- f x;
-                               flat_map_xs' <-- flat_map_xs;
-                               _))
-                          ls
-                    (*
-                          (_ nil)
-                          (fun x _ flat_map_xs => _(*f x ++ flat_map_xs*))
-                          ls*))
+                     => fls <--- List.map f ls;
+                          Base
+                            (List.fold_right
+                               (fun ls1 ls2 : value (base.type.list B)
+                                => match ls1, ls2 with
+                                   | inr ls1, inr ls2 => inr (ls1 ++ ls2)
+                                   | _, _
+                                     => let rls1 := reify ls1 tt in
+                                        let rls2 := reify ls2 tt in
+                                        let st1 := state_of_value ls1 in
+                                        let st2 := state_of_value ls2 in
+                                        inl (abstract_interp_ident _ (ident.List_app) st1 st2,
+                                             (#ident.List_app @ rls1 @ rls2)%expr)
+                                   end)
+                               (inr nil)
+                               fls))
            | ident.List_rect A P
              => inr
                   (fun N_case C_case ls
@@ -729,26 +737,23 @@ Module partial.
                         (Base N_case)
                         (fun x xs rest
                          => (rest' <-- rest;
-                             C_case <-- C_case x;
-                             C_case <-- C_case (inr xs);
-                             C_case rest'))
+                               C_case <-- C_case x;
+                               C_case <-- C_case (inr xs);
+                               C_case rest'))
                         ls)
            | ident.Cast T upper_bound as idc
              => inl (intersect_state_value (t:=T) (state_of_upperbound _ upper_bound))
-               end%under_lets.
-        cbn in *.
-        Print flat_map.
-
+           end%under_lets.
 
       Local Notation value_with_lets := (@value_with_lets base.type ident var base_value abstract_domain').
 
       Definition eval_with_bound {t} (e : @expr value_with_lets t)
                  (st : type.for_each_lhs_of_arrow abstract_domain t)
         : expr t
-        := @wident.eval_with_bound var pident abstract_domain' annotate abstract_interp_ident bottom' (@ident.Literal) (@ident.Pair) (@half_interp) t e st.
+        := @wident.eval_with_bound var pident abstract_domain' annotate abstract_interp_ident bottom' (@ident.Literal) (@ident.Pair) (@ident.Nil) (@ident.Cons) (@half_interp) t e st.
 
       Definition eval {t} (e : @expr value_with_lets t) : @expr var t
-        := @wident.eval var pident abstract_domain' annotate abstract_interp_ident bottom' (@ident.Literal) (@ident.Pair) (@half_interp) t e.
+        := @wident.eval var pident abstract_domain' annotate abstract_interp_ident bottom' (@ident.Literal) (@ident.Pair) (@ident.Nil) (@ident.Cons) (@half_interp) t e.
     End with_var.
   End ident.
 End partial.
@@ -766,6 +771,7 @@ Section specialized.
     := match T return abstract_domain' T with
        | base.type.nat => None
        | base.type.prod A B => (bottom' _, bottom' _)
+       | base.type.list _ => None
        end.
   Fixpoint intersect_state A : abstract_domain' A -> abstract_domain' A -> abstract_domain' A
     := match A return abstract_domain' A -> abstract_domain' A -> abstract_domain' A with
