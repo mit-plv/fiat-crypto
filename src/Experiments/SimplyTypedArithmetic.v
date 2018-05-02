@@ -7946,17 +7946,17 @@ Module Straightline.
              | CC_m : Z -> scalar type.Z -> scalar type.Z
              | Primitive {t} : type.interp (type.type_primitive t) -> scalar t
         .
+
+        Fixpoint dummy_scalar t : scalar t :=
+          match t with
+          | type.type_primitive p => Primitive (@DefaultValue.type.primitive.default p)
+          | type.prod A B => Pair (dummy_scalar A) (dummy_scalar B)
+          | type.arrow A B => Var _ (dummy_arrow A B)
+          | type.list A => Nil A
+          end.
+
+        Definition dummy t : expr t := Scalar (dummy_scalar t).
       End with_ident.
-
-      Fixpoint dummy_scalar t : @scalar ident.ident t :=
-        match t with
-        | type.type_primitive p => Primitive (@DefaultValue.type.primitive.default p)
-        | type.prod A B => Pair (dummy_scalar A) (dummy_scalar B)
-        | type.arrow A B => Var _ (dummy_arrow A B)
-        | type.list A => Nil A
-        end.
-
-      Definition dummy t : expr t := Scalar (dummy_scalar t).
 
       Definition scalar_of_uncurried_ident {s d} (idc : ident.ident s d)
         : scalar s -> option (scalar d) :=
@@ -8050,44 +8050,49 @@ Module Straightline.
         | _ => fun _ _ _ _ => default
         end.
 
+      Definition of_uncurried_ident
+                 (of_uncurried : forall t, uexpr t -> expr t)
+                 {s d} (idc : ident.ident s d)
+        : uexpr s -> expr d -> expr d :=
+        match idc in ident.ident s d return uexpr s -> expr d -> expr d with
+        | ident.Let_In tx tC =>
+          fun args default =>
+            match invert_LetInAppIdent args return expr tC with
+            | Some (existT s (r, idc, x, k)) =>
+              @mk_LetInAppIdent s tx tC default r idc x (fun y : var tx => of_uncurried _ (k y))
+            | None => default
+            end
+        | ident.Z.cast r =>
+          fun (args : uexpr _) default =>
+            match invert_AppIdent args with
+            | Some (existT s idc_x') =>
+              match scalar_of_uncurried (snd idc_x') with
+              | Some x'' =>
+                @mk_LetInAppIdent s type.Z type.Z default r (fst idc_x') x'' (fun y => Scalar (Var _ y))
+              | None => default
+              end
+            | None => default
+            end
+        | ident.Z.cast2 r =>
+          fun (args : uexpr _) default =>
+            match invert_AppIdent args with
+            | Some (existT s idc_x') =>
+              match scalar_of_uncurried (snd idc_x') with
+              | Some x'' =>
+                @mk_LetInAppIdent s (type.Z*type.Z) (type.Z*type.Z) default r (fst idc_x') x'' (fun y => Scalar (Var _ y))
+              | None => default
+              end
+            | None => default
+            end
+        | _ => fun _ default => default
+        end.
+
       Definition of_uncurried_step {t} (e : uexpr t)
-                 (of_uncurried : forall {t}, uexpr t -> expr t)
+                 (of_uncurried : forall t, uexpr t -> expr t)
                  : expr t -> expr t :=
         match e in Uncurried.expr.expr t return expr t -> expr t with
-         | AppIdent s d idc args =>
-           (match idc in ident.ident s d return uexpr s -> expr d -> expr d with
-            | ident.Let_In tx tC =>
-              fun args default =>
-                 match invert_LetInAppIdent args return expr tC with
-                 | Some (existT s (r, idc, x, k)) =>
-                   @mk_LetInAppIdent s tx tC default r idc x (fun y : var tx => of_uncurried (k y))
-                 | None => default
-                 end
-            | ident.Z.cast r =>
-              fun (args : uexpr _) default =>
-                match invert_AppIdent args with
-                | Some (existT s idc_x') =>
-                  match scalar_of_uncurried (snd idc_x') with
-                  | Some x'' =>
-                    @mk_LetInAppIdent s type.Z type.Z default r (fst idc_x') x'' (fun y => Scalar (Var _ y))
-                  | None => default
-                  end
-                | None => default
-                end
-            | ident.Z.cast2 r =>
-              fun (args : uexpr _) default =>
-                match invert_AppIdent args with
-                | Some (existT s idc_x') =>
-                  match scalar_of_uncurried (snd idc_x') with
-                  | Some x'' =>
-                    @mk_LetInAppIdent s (type.Z*type.Z) (type.Z*type.Z) default r (fst idc_x') x'' (fun y => Scalar (Var _ y))
-                  | None => default
-                  end
-                | None => default
-                end
-            | _ => fun _ default => default
-            end) args
-         | _ as e =>
+         | AppIdent s d idc args => of_uncurried_ident of_uncurried idc args
+         | _ as e  =>
            (fun default =>
               match scalar_of_uncurried e with
               | Some s => Scalar s
@@ -8196,7 +8201,7 @@ End StraightlineTest.
 Module PreFancy.
   Section with_var.
     Import Straightline.expr.
-    Context {var : type -> Type} (dummy_var : forall t, var t) (log2wordmax : Z)
+    Context {var : type -> Type} (dummy_arrow : forall s d, var (type.arrow s d)) (log2wordmax : Z)
             (constant_to_scalar : forall ident, Z -> option (@scalar var ident type.Z)).
     Local Notation Z := (type.type_primitive type.Z).
     Let wordmax := 2 ^ log2wordmax.
@@ -8220,7 +8225,7 @@ Module PreFancy.
     | sell : ident (Z * Z * Z) Z
     | addm : ident (Z * Z * Z) Z
     .
-    Let dummy t : @expr var ident t := Scalar (Var _ (dummy_var t)).
+    Definition dummy t : @expr var ident t := Scalar (dummy_scalar (dummy_arrow:=dummy_arrow) t).
 
     Definition invert_lower' {t} (e : @scalar var ident t) :
       option (@scalar var ident Z) :=
@@ -8360,6 +8365,7 @@ Module PreFancy.
       match s with
       | Var _ v => Var _ v
       | TT => TT
+      | Nil _ => Nil _
       | Pair _ _ x y => Pair (of_straightline_scalar x) (of_straightline_scalar y)
       | Cast r x => Cast r (of_straightline_scalar x)
       | Cast2 r x => Cast2 r (of_straightline_scalar x)
@@ -8398,8 +8404,8 @@ Module PreFancy.
   End with_var.
 
   Definition of_Expr {s d} (log2wordmax : Z) (consts : list Z) (e : Expr (s -> d))
-             (var : type -> Type) (x : var s) dummy_var : @Straightline.expr.expr var ident d :=
-    @of_straightline var dummy_var log2wordmax (@constant_to_scalar_gen var log2wordmax consts) _ (Straightline.of_Expr e var x dummy_var).
+             (var : type -> Type) (x : var s) dummy_arrow : @Straightline.expr.expr var ident d :=
+    @of_straightline var dummy_arrow log2wordmax (@constant_to_scalar_gen var log2wordmax consts) _ (Straightline.of_Expr e var x dummy_arrow).
   Module Notations.
     Import PrintingNotations.
     Import Straightline.expr.
@@ -9088,7 +9094,7 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
     addc@(y28, carry{$y27}, $y23, $y25);
     add@(y29, $y22, $y27);
     addc@(_, carry{$y29}, $y21, $y28);
-    Ret $(dummy_var (type.type_primitive type.Z))
+    Straightline.expr.Scalar (Straightline.expr.Primitive (-1))
   *)
 End Barrett256.
 
