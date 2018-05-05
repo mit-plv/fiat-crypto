@@ -863,13 +863,13 @@ Section specialized.
   Import expr.
   Import ident.
 
-  Compute eval (#Fst @ (expr_let x := ##10 in ($x, $x)))%expr.
+  Eval compute in eval (#Fst @ (expr_let x := ##10 in ($x, $x)))%expr.
 
-  Compute eval ((\ x , expr_let y := ##5 in #Fst @ $x + (#Fst @ $x + ($y + $y)))
-                  @ (##1, ##1))%expr.
+  Eval compute in eval ((\ x , expr_let y := ##5 in #Fst @ $x + (#Fst @ $x + ($y + $y)))
+                          @ (##1, ##1))%expr.
 
-  Compute eval ((\ x , expr_let y := ##5 in $y + ($y + (#Fst @ $x + #Snd @ $x)))
-                  @ (##1, ##7))%expr.
+  Eval compute in eval ((\ x , expr_let y := ##5 in $y + ($y + (#Fst @ $x + #Snd @ $x)))
+                          @ (##1, ##7))%expr.
 
 
   Eval cbv in eval_with_bound
