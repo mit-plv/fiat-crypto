@@ -514,7 +514,7 @@ Module partial.
                        := List.map
                             (fun a
                              => match a with
-                                | inl (st, e) (* list chunk *)
+                                | inl (st, e)
                                   => match annotate _ st with
                                      | None => e
                                      | Some cst => ###cst @ e
