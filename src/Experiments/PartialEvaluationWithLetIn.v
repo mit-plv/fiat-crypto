@@ -142,7 +142,7 @@ Delimit Scope ptype_scope with ptype.
 Notation "s -> d" := (type.arrow s%ptype d%ptype) : ptype_scope.
 Bind Scope ptype_scope with parametric.base.type.
 Infix "*" := parametric.base.type.prod : ptype_scope.
-Notation "# x" := (parametric.base.type.var_with_subst x) (at level 9, x at level 10, format "# x") : ptype_scope.
+Notation "# x" := (parametric.base.type.var_with_subst x) : ptype_scope.
 
 Fixpoint upperboundT (t : base.type) : Type
   := match t with
@@ -171,12 +171,11 @@ Module expr.
     Delimit Scope expr_scope with expr.
     Bind Scope expr_scope with expr.
     Infix "@" := App : expr_scope.
-    Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
     Notation "\ x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
     Notation "'λ' x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
     Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
-    Notation "'$' x" := (Var x) (at level 9, format "'$' x") : expr_scope.
-    Notation "### x" := (Ident x) (at level 9, x at level 10, format "### x") : expr_scope.
+    Notation "'$' x" := (Var x) : expr_scope.
+    Notation "### x" := (Ident x) : expr_scope.
   End Notations.
 End expr.
 Import expr.Notations.
@@ -218,9 +217,9 @@ Module ident.
     Bind Scope ident_scope with ident.
     Bind Scope ident_scope with pident.
     Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
-    Notation "## x" := (Literal x) (at level 9, x at level 10, format "## x") : ident_scope.
-    Notation "## x" := (expr.Ident (wrap (Literal x))) (at level 9, x at level 10, format "## x") : expr_scope.
-    Notation "# x" := (expr.Ident (wrap x)) (at level 9, x at level 10, format "# x") : expr_scope.
+    Notation "## x" := (Literal x) : ident_scope.
+    Notation "## x" := (expr.Ident (wrap (Literal x))) : expr_scope.
+    Notation "# x" := (expr.Ident (wrap x)) : expr_scope.
     Notation "( x , y , .. , z )" := (expr.App (expr.App (#Pair) .. (expr.App (expr.App (#Pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
     Notation "x + y" := (#Plus @ x @ y)%expr : expr_scope.
     (*Notation "x :: y" := (#Cons @ x @ y)%expr : expr_scope.*)
@@ -273,8 +272,6 @@ End UnderLets.
 Delimit Scope under_lets_scope with under_lets.
 Bind Scope under_lets_scope with UnderLets.UnderLets.
 Notation "x <-- y ; f" := (UnderLets.splice y (fun x => f%under_lets)) : under_lets_scope.
-(** FIXME: MOVE ME *)
-Reserved Notation "A <--- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <---  X ; '/' B ']'").
 Notation "x <--- y ; f" := (UnderLets.splice_list y (fun x => f%under_lets)) : under_lets_scope.
 
 Module partial.
