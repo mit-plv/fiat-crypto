@@ -138,3 +138,7 @@ Reserved Notation "A --->" (left associativity, at level 65).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
 Reserved Notation "f x" (only printing, at level 10, left associativity).
 Reserved Notation "# x" (at level 9, x at level 10, format "# x").
+Reserved Notation "## x" (at level 9, x at level 10, format "## x").
+Reserved Notation "### x" (at level 9, x at level 10, format "### x").
+Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
+Reserved Notation "'$' x" (at level 9, format "'$' x").
