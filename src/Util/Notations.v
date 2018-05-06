@@ -136,4 +136,4 @@ Reserved Notation "A ~> R" (at level 99).
 Reserved Notation "A --->" (left associativity, at level 65).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
 Reserved Notation "f x" (only printing, at level 10, left associativity).
-Reserved Notation "# x" := (at level 9, x at level 10, format "# x").
+Reserved Notation "# x" (at level 9, x at level 10, format "# x").
