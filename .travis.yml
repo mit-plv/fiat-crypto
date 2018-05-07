@@ -122,6 +122,13 @@ jobs:
       env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=3 CUR=4 ./etc/ci/travis.sh build-selected-test build-selected-bench
 
+    - stage: standalone-ocaml
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=4 CUR=5 ./etc/ci/travis.sh standalone-ocaml
+    - stage: standalone-ocaml
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=4 CUR=5 ./etc/ci/travis.sh standalone-ocaml
+
 #    - stage: selected-test selected-bench
 #      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
 #      allow_failure: true
