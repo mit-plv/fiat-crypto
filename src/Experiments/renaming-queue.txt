@@ -1,0 +1,11 @@
+Files:
+Arithmetic.v
+Language.v
+GENERATEDIdentifiersWithoutTypes.v
+Rewriter.v
+AbstractInterpretation.v
+MiscCompilerPasses.v
+Toplevel.v (* Ring Goal (+ comment that it SHOULD NOT depend on compilers *) + pipeline + all the stuff that uses compilers + arithmetic *)
+CLI.v (* common extraction stuff *)
+OCamlExtraction.v
+HaskellExtraction.v
