@@ -174,7 +174,7 @@ Module expr.
     Notation "\ x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
     Notation "'λ' x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
     Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
-    Notation "'$' x" := (Var x) : expr_scope.
+    Notation "'$' x" := (Var x) (at level 10, format "'$' x") : expr_scope.
     Notation "### x" := (Ident x) : expr_scope.
   End Notations.
 End expr.

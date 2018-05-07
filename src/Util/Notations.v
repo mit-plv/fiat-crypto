@@ -141,4 +141,3 @@ Reserved Notation "# x" (at level 0, format "# x").
 Reserved Notation "## x" (at level 0, format "## x").
 Reserved Notation "### x" (at level 0, format "### x").
 Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
-Reserved Notation "'$' x" (at level 0, format "'$' x").
