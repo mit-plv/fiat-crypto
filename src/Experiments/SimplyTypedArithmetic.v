@@ -41,6 +41,7 @@ Require Import Crypto.Util.ZUtil Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Require Import Crypto.Util.ZUtil.EquivModulo.
+Require Import Crypto.Util.Tactics.DebugPrint.
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -536,7 +537,6 @@ Section mod_ops.
       [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
           by auto; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
-    expand_lists ().
     subst carry_mulmod; reflexivity.
   Qed.
 
@@ -552,7 +552,6 @@ Section mod_ops.
       [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
           by auto; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
-    expand_lists ().
     subst carrymod; reflexivity.
   Qed.
 
@@ -567,7 +566,6 @@ Section mod_ops.
     intros.
     rewrite <-eval_add by auto.
     eapply f_equal2; [|trivial]. eapply f_equal.
-    expand_lists ().
     subst addmod; reflexivity.
   Qed.
 
@@ -583,7 +581,6 @@ Section mod_ops.
     intros.
     rewrite <-eval_sub with (coef:=coef) by auto.
     eapply f_equal2; [|trivial]. eapply f_equal.
-    expand_lists ().
     subst submod; reflexivity.
   Qed.
 
@@ -598,7 +595,6 @@ Section mod_ops.
     intros.
     rewrite <-eval_opp with (coef:=coef) by auto.
     eapply f_equal2; [|trivial]. eapply f_equal.
-    expand_lists ().
     subst oppmod; reflexivity.
   Qed.
 
@@ -612,7 +608,6 @@ Section mod_ops.
     etransitivity.
     2:rewrite <-@eval_encode with (weight:=weight) (n:=n) by auto; reflexivity.
     eapply f_equal2; [|trivial]. eapply f_equal.
-    expand_lists ().
     subst encodemod; reflexivity.
   Qed.
 End mod_ops.
@@ -1983,6 +1978,11 @@ Module Import MOVEME.
       = fold_andb_map (fun a b => f a (g b)) ls1 ls2.
   Proof. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
 
+  Lemma fold_andb_map_map1 {A B C} f g ls1 ls2
+    : @fold_andb_map A B f (@List.map C _ g ls1) ls2
+      = fold_andb_map (fun a b => f (g a) b) ls1 ls2.
+  Proof. revert ls1 ls2; induction ls1, ls2; cbn; congruence. Qed.
+
   Lemma fold_andb_map_length A B f ls1 ls2
         (H : @fold_andb_map A B f ls1 ls2 = true)
     : length ls1 = length ls2.
@@ -1990,15 +1990,16 @@ Module Import MOVEME.
     revert ls1 ls2 H; induction ls1, ls2; cbn; intros; Bool.split_andb; f_equal;
       try congruence; auto.
   Qed.
+
+  Global Instance fold_andb_map_Proper {A B}
+    : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq ==> eq) (@fold_andb_map A B).
+  Proof.
+    unfold pointwise_relation.
+    intros f g H ls1 y ? ls2 z ?; subst y z.
+    revert ls2; induction ls1, ls2; cbn; try reflexivity.
+    apply f_equal2; eauto.
+  Qed.
 End MOVEME.
-
-Definition expanding_id (n : nat) (ls : list Z) := expand_list (-1)%Z ls n.
-
-Lemma expanding_id_id n ls (H : List.length ls = n)
-  : expanding_id n ls = ls.
-Proof.
-  unfold expanding_id. rewrite expand_list_correct by assumption; reflexivity.
-Qed.
 
 Module Ring.
   Local Notation is_bounded_by0 r v
@@ -2007,8 +2008,10 @@ Module Ring.
     := (match r with Some r' => fun v => is_bounded_by0 r' v | None => fun _ => true end).
   Local Notation is_bounded_by bounds ls
     := (fold_andb_map (fun r v => is_bounded_by0o r v) bounds ls).
+  Local Notation is_bounded_by1 bounds ls
+    := (andb (is_bounded_by bounds (@fst _ unit ls)) true).
   Local Notation is_bounded_by2 bounds ls
-    := (let '(a, b) := ls in andb (is_bounded_by bounds a) (is_bounded_by bounds b)).
+    := (andb (is_bounded_by bounds (fst ls)) (is_bounded_by1 bounds (snd ls))).
 
   Lemma length_is_bounded_by bounds ls
     : is_bounded_by bounds ls = true -> length ls = length bounds.
@@ -2035,20 +2038,20 @@ Module Ring.
             (sc_pos : 0 < s - Associational.eval c)
             (Interp_rrelaxv : list Z -> list Z)
             (HInterp_rrelaxv : forall arg,
-                is_bounded_by tight_bounds arg = true
-                -> is_bounded_by loose_bounds (Interp_rrelaxv arg) = true
-                   /\ Interp_rrelaxv arg = expanding_id n arg)
+                is_bounded_by1 tight_bounds arg = true
+                -> is_bounded_by loose_bounds (Interp_rrelaxv (fst arg)) = true
+                   /\ Interp_rrelaxv (fst arg) = id (fst arg))
             (carry_mulmod : list Z -> list Z -> list Z)
             (Hcarry_mulmod
              : forall f g,
                 length f = n -> length g = n ->
                 (eval (carry_mulmod f g)) mod (s - Associational.eval c)
                 = (eval f * eval g) mod (s - Associational.eval c))
-            (Interp_rcarry_mulv : list Z * list Z -> list Z)
+            (Interp_rcarry_mulv : list Z -> list Z -> list Z)
             (HInterp_rcarry_mulv : forall arg,
                 is_bounded_by2 loose_bounds arg = true
-                -> is_bounded_by tight_bounds (Interp_rcarry_mulv arg) = true
-                   /\ Interp_rcarry_mulv arg = carry_mulmod (fst arg) (snd arg))
+                -> is_bounded_by tight_bounds (Interp_rcarry_mulv (fst arg) (fst (snd arg))) = true
+                   /\ Interp_rcarry_mulv (fst arg) (fst (snd arg)) = carry_mulmod (fst arg) (fst (snd arg)))
             (carrymod : list Z -> list Z)
             (Hcarrymod
              : forall f,
@@ -2057,31 +2060,31 @@ Module Ring.
                 = (eval f) mod (s - Associational.eval c))
             (Interp_rcarryv : list Z -> list Z)
             (HInterp_rcarryv : forall arg,
-                is_bounded_by loose_bounds arg = true
-                -> is_bounded_by tight_bounds (Interp_rcarryv arg) = true
-                   /\ Interp_rcarryv arg = carrymod arg)
+                is_bounded_by1 loose_bounds arg = true
+                -> is_bounded_by tight_bounds (Interp_rcarryv (fst arg)) = true
+                   /\ Interp_rcarryv (fst arg) = carrymod (fst arg))
             (addmod : list Z -> list Z -> list Z)
             (Haddmod
              : forall f g,
                 length f = n -> length g = n ->
                 (eval (addmod f g)) mod (s - Associational.eval c)
                 = (eval f + eval g) mod (s - Associational.eval c))
-            (Interp_raddv : list Z * list Z -> list Z)
+            (Interp_raddv : list Z -> list Z -> list Z)
             (HInterp_raddv : forall arg,
                 is_bounded_by2 tight_bounds arg = true
-                -> is_bounded_by loose_bounds (Interp_raddv arg) = true
-                   /\ Interp_raddv arg = addmod (fst arg) (snd arg))
+                -> is_bounded_by loose_bounds (Interp_raddv (fst arg) (fst (snd arg))) = true
+                   /\ Interp_raddv (fst arg) (fst (snd arg)) = addmod (fst arg) (fst (snd arg)))
             (submod : list Z -> list Z -> list Z)
             (Hsubmod
              : forall f g,
                 length f = n -> length g = n ->
                 (eval (submod f g)) mod (s - Associational.eval c)
                 = (eval f - eval g) mod (s - Associational.eval c))
-            (Interp_rsubv : list Z * list Z -> list Z)
+            (Interp_rsubv : list Z -> list Z -> list Z)
             (HInterp_rsubv : forall arg,
                 is_bounded_by2 tight_bounds arg = true
-                -> is_bounded_by loose_bounds (Interp_rsubv arg) = true
-                   /\ Interp_rsubv arg = submod (fst arg) (snd arg))
+                -> is_bounded_by loose_bounds (Interp_rsubv (fst arg) (fst (snd arg))) = true
+                   /\ Interp_rsubv (fst arg) (fst (snd arg)) = submod (fst arg) (fst (snd arg)))
             (oppmod : list Z -> list Z)
             (Hoppmod
              : forall f,
@@ -2090,9 +2093,9 @@ Module Ring.
                 = (- eval f) mod (s - Associational.eval c))
             (Interp_roppv : list Z -> list Z)
             (HInterp_roppv : forall arg,
-                is_bounded_by tight_bounds arg = true
-                -> is_bounded_by loose_bounds (Interp_roppv arg) = true
-                   /\ Interp_roppv arg = oppmod arg)
+                is_bounded_by1 tight_bounds arg = true
+                -> is_bounded_by loose_bounds (Interp_roppv (fst arg)) = true
+                   /\ Interp_roppv (fst arg) = oppmod (fst arg))
             (zeromod : list Z)
             (Hzeromod
              : (eval zeromod) mod (s - Associational.eval c)
@@ -2114,9 +2117,9 @@ Module Ring.
                 = f mod (s - Associational.eval c))
             (Interp_rencodev : Z -> list Z)
             (HInterp_rencodev : forall arg,
-                is_bounded_by0 prime_bound arg = true
-                -> is_bounded_by tight_bounds (Interp_rencodev arg) = true
-                   /\ Interp_rencodev arg = encodemod arg).
+                is_bounded_by0 prime_bound (@fst _ unit arg) && true = true
+                -> is_bounded_by tight_bounds (Interp_rencodev (fst arg)) = true
+                   /\ Interp_rencodev (fst arg) = encodemod (fst arg)).
 
     Local Notation T := (list Z) (only parsing).
     Local Notation encoded_ok ls
@@ -2131,9 +2134,9 @@ Module Ring.
     Definition encodedT := sig encoded_okf.
 
     Definition ring_mul (x y : T) : T
-      := Interp_rcarry_mulv (Interp_rrelaxv x, Interp_rrelaxv y).
-    Definition ring_add (x y : T) : T := Interp_rcarryv (Interp_raddv (x, y)).
-    Definition ring_sub (x y : T) : T := Interp_rcarryv (Interp_rsubv (x, y)).
+      := Interp_rcarry_mulv (Interp_rrelaxv x) (Interp_rrelaxv y).
+    Definition ring_add (x y : T) : T := Interp_rcarryv (Interp_raddv x y).
+    Definition ring_sub (x y : T) : T := Interp_rcarryv (Interp_rsubv x y).
     Definition ring_opp (x : T) : T := Interp_rcarryv (Interp_roppv x).
     Definition ring_encode (x : F m) : T := Interp_rencodev (F.to_Z x).
 
@@ -2171,9 +2174,13 @@ Module Ring.
         repeat match goal with
                | _ => solve [ auto using andb_true_intro, conj with nocore ]
                | _ => progress intros
-               | _ => progress cbn [fst snd]
+               | _ => progress cbn [fst snd] in *
+               | [ H : forall arg : _ * unit, _ |- _ ] => specialize (fun arg => H (arg, tt))
+               | [ H : forall arg : _ * (_ * unit), _ |- _ ] => specialize (fun a b => H (a, (b, tt)))
+               | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
                | [ H : _ |- is_bounded_by _ _ = true ] => apply H
                | [ |- _ <-> _ ] => reflexivity
+               | [ |- ?x = ?x ] => reflexivity
                | [ |- _ = _ :> Z ] => first [ reflexivity | rewrite <- m_eq; reflexivity ]
                | [ H : context[?x] |- Fdecode ?x = _ ] => rewrite H
                | [ H : context[?x _] |- Fdecode (?x _) = _ ] => rewrite H
@@ -2195,2635 +2202,1474 @@ Module Ring.
                | [ |- context[F.to_Z _ mod (_ - _)] ]
                  => rewrite <- m_eq, F.mod_to_Z
                | _ => rewrite <- m_eq; apply Fm_bounded_alt
+               | [ |- context[andb _ true] ] => rewrite andb_true_r
                end.
     Qed.
   End ring_goal.
 End Ring.
 
 Module Compilers.
+  Module Reify.
+    (** Change this with [Ltac reify_debug_level ::= constr:(1).] to get
+        more debugging. *)
+    Ltac debug_level := constr:(0%nat).
+
+    Tactic Notation "debug_enter_reify_idtac" ident(funname) uconstr(e)
+      := idtac funname ": Attempting to reify:" e.
+    Tactic Notation "debug_leave_reify_success_idtac" ident(funname) uconstr(e) uconstr(ret)
+      := idtac funname ": Success in reifying:" e "as" ret.
+    Tactic Notation "debug_leave_reify_failure_idtac" ident(funname) uconstr(e)
+      := idtac funname ": Failure in reifying:" e.
+    Ltac check_debug_level_then_Set _ :=
+      let lvl := debug_level in
+      lazymatch type of lvl with
+      | nat => constr:(Set)
+      | ?T => constr_run_tac ltac:(fun _ => idtac "Error: debug_level should have type nat but instead has type" T)
+      end.
+    Ltac debug0 tac :=
+      constr_run_tac tac.
+    Ltac debug1 tac :=
+      let lvl := debug_level in
+      lazymatch lvl with
+      | S _ => constr_run_tac tac
+      | _ => check_debug_level_then_Set ()
+      end.
+    Ltac debug2 tac :=
+      let lvl := debug_level in
+      lazymatch lvl with
+      | S (S _) => constr_run_tac tac
+      | _ => check_debug_level_then_Set ()
+      end.
+    Ltac debug3 tac :=
+      let lvl := debug_level in
+      lazymatch lvl with
+      | S (S (S _)) => constr_run_tac tac
+      | _ => check_debug_level_then_Set ()
+      end.
+    Ltac debug_enter_reify_base_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_base_type e).
+    Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_type e).
+    Ltac debug_enter_reify_in_context e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_in_context e).
+    Ltac debug_leave_reify_in_context_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac reify_in_context e ret).
+    Ltac debug_leave_reify_in_context_failure e
+      := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_in_context e) in
+         constr:(I : I).
+    Ltac debug_leave_reify_base_type_failure e
+      := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_base_type e) in
+         constr:(I : I).
+    Tactic Notation "idtac_reify_in_context_case" ident(case) :=
+      idtac "reify_in_context:" case.
+    Ltac debug_reify_in_context_case tac :=
+      debug3 tac.
+    Ltac debug_enter_reify_abs e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_abs e).
+  End Reify.
+
   Module type.
-    Variant primitive := unit | Z | nat | bool.
-    Inductive type := type_primitive (_:primitive) | prod (A B : type) | arrow (s d : type) | list (A : type).
-    Module Export Coercions.
-      Global Coercion type_primitive : primitive >-> type.
-    End Coercions.
+    Inductive type (base_type : Type) := base (t : base_type) | arrow (s d : type base_type).
+    Global Arguments base {_}.
+    Global Arguments arrow {_} s d.
+
+    Fixpoint final_codomain {base_type} (t : type base_type) : base_type
+      := match t with
+         | base t
+           => t
+         | arrow s d => @final_codomain base_type d
+         end.
+
+    Fixpoint for_each_lhs_of_arrow {base_type} (f : type base_type -> Type) (t : type base_type) : Type
+      := match t with
+         | base t => unit
+         | arrow s d => f s * @for_each_lhs_of_arrow _ f d
+         end.
 
     (** Denote [type]s into their interpretation in [Type]/[Set] *)
-    Fixpoint interp (t : type)
+    Fixpoint interp {base_type} (base_interp : base_type -> Type) (t : type base_type) : Type
       := match t with
-         | unit => Datatypes.unit
-         | prod A B => interp A * interp B
-         | arrow A B => interp A -> interp B
-         | list A => Datatypes.list (interp A)
-         | nat => Datatypes.nat
-         | type_primitive Z => BinInt.Z
-         | bool => Datatypes.bool
-         end%type.
-
-    Fixpoint final_codomain (t : type) : type
-      := match t with
-         | type_primitive _ as t
-         | prod _ _ as t
-         | list _ as t
-           => t
-         | arrow s d => final_codomain d
+         | base t => base_interp t
+         | arrow s d => @interp _ base_interp s -> @interp _ base_interp d
          end.
 
-    Definition domain (t : type) : type
+    Fixpoint app_curried {base_type} {f : base_type -> Type} {t : type base_type}
+      : interp f t -> for_each_lhs_of_arrow (interp f) t -> f (final_codomain t)
+      := match t with
+         | base t => fun v _ => v
+         | arrow s d => fun F x_xs => @app_curried _ f d (F (fst x_xs)) (snd x_xs)
+         end.
+
+    Fixpoint map_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
+             (F : forall t, f t -> g t)
+             {t}
+      : for_each_lhs_of_arrow f t -> for_each_lhs_of_arrow g t
+      := match t with
+         | base t => fun 'tt => tt
+         | arrow s d => fun '(x, xs) => (F s x, @map_for_each_lhs_of_arrow _ f g F d xs)
+         end.
+
+    Fixpoint andb_bool_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
+             (R : forall t, f t -> g t -> bool)
+             {t}
+      : for_each_lhs_of_arrow f t -> for_each_lhs_of_arrow g t -> bool
+      := match t with
+         | base t => fun _ _ => true
+         | arrow s d => fun x_xs y_ys => R s (fst x_xs) (fst y_ys) && @andb_bool_for_each_lhs_of_arrow _ f g R d (snd x_xs) (snd y_ys)
+         end%bool.
+
+    (** half-monadic denotation function; denote [type]s into their
+        interpretation in [Type]/[Set], wrapping the codomain of any
+        arrow in [M]. *)
+    Fixpoint interpM {base_type} (M : Type -> Type) (base_interp : base_type -> Type) (t : type base_type) : Type
+      := match t with
+         | base t => base_interp t
+         | arrow s d => @interpM _ M base_interp s -> M (@interpM _ M base_interp d)
+         end.
+
+    Definition domain {base_type} (default : base_type) (t : type base_type)
+      : type base_type
       := match t with
          | arrow s d => s
-         | _ => type_primitive unit
+         | base _ => base default
          end.
 
-    Definition codomain (t : type) : type
+    Definition codomain {base_type} (t : type base_type) : type base_type
       := match t with
          | arrow s d => d
          | t => t
          end.
 
-    Fixpoint try_transport (P : type -> Type) (t1 t2 : type) : P t1 -> option (P t2)
+    Fixpoint try_transport {base_type}
+             (try_transport_base_type : forall (P : base_type -> Type) t1 t2, P t1 -> option (P t2))
+             (P : type base_type -> Type) (t1 t2 : type base_type) : P t1 -> option (P t2)
       := match t1, t2 return P t1 -> option (P t2) with
-         | unit, unit
-         | Z, Z
-         | nat, nat
-         | bool, bool
-           => @Some _
-         | prod A B, prod A' B'
-           => fun v
-              => (v <- try_transport (fun A => P (prod A B)) A A' v;
-                    try_transport (fun B => P (prod A' B)) B B' v)%option
+         | base t1, base t2
+           => try_transport_base_type (fun t => P (base t)) t1 t2
          | arrow s d, arrow s' d'
            => fun v
-              => (v <- try_transport (fun s => P (arrow s d)) s s' v;
-                    try_transport (fun d => P (arrow s' d)) d d' v)%option
-         | list A, list A'
-           => @try_transport (fun A => P (list A)) A A'
-         | unit, _
-         | Z, _
-         | nat, _
-         | bool, _
-         | prod _ _, _
+              => (v <- (try_transport
+                          try_transport_base_type (fun s => P (arrow s d))
+                          s s' v);
+                    (try_transport
+                       try_transport_base_type (fun d => P (arrow s' d))
+                       d d' v))%option
+         | base _, _
          | arrow _ _, _
-         | list _, _
            => fun _ => None
          end.
 
-    Ltac reify_primitive ty :=
+    Ltac reify base_reify ty :=
+      let __ := Reify.debug_enter_reify_type ty in
+      let reify_rec t := reify base_reify t in
       lazymatch eval cbv beta in ty with
-      | Datatypes.unit => unit
-      | Datatypes.nat => nat
-      | Datatypes.bool => bool
-      | BinInt.Z => Z
-      | ?ty => let dummy := match goal with
-                            | _ => fail 1 "Unrecognized type:" ty
-                            end in
-               constr:(I : I)
+      | ?A -> ?B
+        => let rA := reify_rec A in
+           let rB := reify_rec B in
+           constr:(arrow rA rB)
+      | @interp _ _ ?T => T
+      | _ => let rt := base_reify ty in
+             constr:(base rt)
       end.
+  End type.
+  Notation type := type.type.
+  Delimit Scope etype_scope with etype.
+  Bind Scope etype_scope with type.type.
+  Infix "->" := type.arrow : etype_scope.
+  Module base.
+    Local Notation einterp := type.interp.
+    Module type.
+      Inductive type := unit | Z | bool | nat | prod (A B : type) | list (A : type).
+    End type.
+    Notation type := type.type.
+    Fixpoint interp (ty : type)
+      := match ty with
+         | type.unit => Datatypes.unit
+         | type.Z => BinInt.Z
+         | type.bool => Datatypes.bool
+         | type.nat => Datatypes.nat
+         | type.prod A B => interp A * interp B
+         | type.list A => Datatypes.list (interp A)
+         end%type.
+
+    Fixpoint try_transport
+             (P : type -> Type) (t1 t2 : type) : P t1 -> option (P t2)
+      := match t1, t2 return P t1 -> option (P t2) with
+         | type.unit, type.unit
+         | type.Z, type.Z
+         | type.bool, type.bool
+         | type.nat, type.nat
+           => @Some _
+         | type.list A, type.list A'
+           => @try_transport (fun A => P (type.list A)) A A'
+         | type.prod s d, type.prod s' d'
+           => fun v
+              => (v <- (try_transport (fun s => P (type.prod s d)) s s' v);
+                    (try_transport (fun d => P (type.prod s' d)) d d' v))%option
+
+         | type.unit, _
+         | type.Z, _
+         | type.bool, _
+         | type.nat, _
+         | type.prod _ _, _
+         | type.list _, _
+           => fun _ => None
+         end.
 
     Ltac reify ty :=
+      let __ := Reify.debug_enter_reify_base_type ty in
       lazymatch eval cbv beta in ty with
+      | Datatypes.unit => type.unit
+      | Datatypes.nat => type.nat
+      | Datatypes.bool => type.bool
+      | BinInt.Z => type.Z
       | Datatypes.prod ?A ?B
         => let rA := reify A in
            let rB := reify B in
-           constr:(prod rA rB)
-      | ?A -> ?B
-        => let rA := reify A in
-           let rB := reify B in
-           constr:(arrow rA rB)
+           constr:(type.prod rA rB)
       | Datatypes.list ?T
         => let rT := reify T in
-           constr:(list rT)
-      | type.interp ?T => T
-      | _ => let rt := reify_primitive ty in
-             constr:(type_primitive rt)
-      end.
-
-    Notation reify t := (ltac:(let rt := reify t in exact rt)) (only parsing).
-    Notation reify_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).
-
-    Module Export Notations.
-      Export Coercions.
-      Delimit Scope ctype_scope with ctype.
-      Bind Scope ctype_scope with type.
-      Notation "()" := unit : ctype_scope.
-      Notation "A * B" := (prod A B) : ctype_scope.
-      Notation "A -> B" := (arrow A B) : ctype_scope.
-      Notation type := type.
-    End Notations.
-  End type.
-  Export type.Notations.
-
-  Module Uncurried.
-    Module expr.
-      Inductive expr {ident : type -> type -> Type} {var : type -> Type} : type -> Type :=
-      | Var {t} (v : var t) : expr t
-      | TT : expr type.unit
-      | AppIdent {s d} (idc : ident s d) (args : expr s) : expr d
-      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
-      | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
-      | Abs {s d} (f : var s -> expr d) : expr (s -> d).
-
-      Definition Expr {ident : type -> type -> Type} t := forall var, @expr ident var t.
-
-      Definition APP {ident s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
-        := fun var => @App ident var s d (f var) (x var).
-
-      Module Export Notations.
-        Bind Scope expr_scope with expr.
-        Delimit Scope expr_scope with expr.
-        Bind Scope Expr_scope with Expr.
-        Delimit Scope Expr_scope with Expr.
-
-        Infix "@" := App : expr_scope.
-        Infix "@" := APP : Expr_scope.
-        Infix "@@" := AppIdent : expr_scope.
-        Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.
-        Notation "( )" := TT : expr_scope.
-        Notation "()" := TT : expr_scope.
-        Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
-      End Notations.
-
-      Section unexpr.
-        Context {ident : type -> type -> Type}
-                {var : type -> Type}.
-
-        Fixpoint unexpr {t} (e : @expr ident (@expr ident var) t) : @expr ident var t
-          := match e in expr t return expr t with
-             | Var t v => v
-             | TT => TT
-             | AppIdent s d idc args => AppIdent idc (unexpr args)
-             | App s d f x => App (unexpr f) (unexpr x)
-             | Pair A B a b => Pair (unexpr a) (unexpr b)
-             | Abs s d f => Abs (fun x => unexpr (f (Var x)))
-             end.
-      End unexpr.
-
-      Section with_ident.
-        Context {ident : type -> type -> Type}
-                (interp_ident : forall s d, ident s d -> type.interp s -> type.interp d).
-
-        (** Denote expressions *)
-        Fixpoint interp {t} (e : @expr ident type.interp t) : type.interp t
-          := match e with
-             | Var t v => v
-             | TT => tt
-             | AppIdent s d idc args => interp_ident s d idc (@interp s args)
-             | App s d f x => @interp _ f (@interp _ x)
-             | Pair A B a b => (@interp A a, @interp B b)
-             | Abs s d f => fun v => interp (f v)
-             end.
-
-        Definition Interp {t} (e : Expr t) := interp (e _).
-
-        (** [Interp (APP _ _)] is the same thing as Gallina
-            application of the [Interp]retations of the two arguments
-            to [APP]. *)
-        Definition Interp_APP {s d} (f : @Expr ident (s -> d)) (x : @Expr ident s)
-          : Interp (f @ x)%Expr = Interp f (Interp x)
-          := eq_refl.
-
-        (** Same as [Interp_APP], but for any reflexive relation, not
-            just [eq] *)
-        Definition Interp_APP_rel_reflexive {s d} {R} {H:Reflexive R}
-                   (f : @Expr ident (s -> d)) (x : @Expr ident s)
-          : R (Interp (f @ x)%Expr) (Interp f (Interp x))
-          := H _.
-      End with_ident.
-
-      Ltac require_primitive_const term :=
-        lazymatch term with
-        | S ?n => require_primitive_const n
-        | O => idtac
-        | true => idtac
-        | false => idtac
-        | tt => idtac
-        | Z0 => idtac
-        | Zpos ?p => require_primitive_const p
-        | Zneg ?p => require_primitive_const p
-        | xI ?p => require_primitive_const p
-        | xO ?p => require_primitive_const p
-        | xH => idtac
-        | ?term => fail 0 "Not a known const:" term
-        end.
-      Ltac is_primitive_const term :=
-        match constr:(Set) with
-        | _ => let check := match goal with
-                            | _ => require_primitive_const term
-                            end in
-               true
-        | _ => false
-        end.
-
-      Module var_context.
-        Inductive list {var : type -> Type} :=
-        | nil
-        | cons {t} (gallina_v : type.interp t) (v : var t) (ctx : list).
-      End var_context.
-
-      (* cf COQBUG(https://github.com/coq/coq/issues/5448) , COQBUG(https://github.com/coq/coq/issues/6315) , COQBUG(https://github.com/coq/coq/issues/6559) , COQBUG(https://github.com/coq/coq/issues/6534) , https://github.com/mit-plv/fiat-crypto/issues/320 *)
-      Ltac require_same_var n1 n2 :=
-        (*idtac n1 n2;*)
-        let c1 := constr:(fun n1 n2 : Set => ltac:(exact n1)) in
-        let c2 := constr:(fun n1 n2 : Set => ltac:(exact n2)) in
-        (*idtac c1 c2;*)
-        first [ constr_eq c1 c2 | fail 1 "Not the same var:" n1 "and" n2 "(via constr_eq" c1 c2 ")" ].
-      Ltac is_same_var n1 n2 :=
-        match goal with
-        | _ => let check := match goal with _ => require_same_var n1 n2 end in
-               true
-        | _ => false
-        end.
-      Ltac is_underscore v :=
-        let v' := fresh v in
-        let v' := fresh v' in
-        is_same_var v v'.
-      Ltac refresh n fresh_tac :=
-        let n_is_underscore := is_underscore n in
-        let n' := lazymatch n_is_underscore with
-                  | true => fresh
-                  | false => fresh_tac n
-                  end in
-        let n' := fresh_tac n' in
-        n'.
-
-      Ltac type_of_first_argument_of f :=
-        let f_ty := type of f in
-        lazymatch eval hnf in f_ty with
-        | forall x : ?T, _ => T
-        end.
-
-      (** Forms of abstraction in Gallina that our reflective language
-      cannot handle get handled by specializing the code "template" to
-      each particular application of that abstraction. In particular,
-      type arguments (nat, Z, (λ _, nat), etc) get substituted into
-      lambdas and treated as a integral part of primitive operations
-      (such as [@List.app T], [@list_rect (λ _, nat)]).  During
-      reification, we accumulate them in a right-associated tuple,
-      using [tt] as the "nil" base case.  When we hit a λ or an
-      identifier, we plug in the template parameters as necessary. *)
-      Ltac require_template_parameter parameter_type :=
-        first [ unify parameter_type Prop
-              | unify parameter_type Set
-              | unify parameter_type Type
-              | lazymatch eval hnf in parameter_type with
-                | forall x : ?T, @?P x
-                  => let check := constr:(fun x : T
-                                          => ltac:(require_template_parameter (P x);
-                                                   exact I)) in
-                     idtac
-                end ].
-      Ltac is_template_parameter parameter_type :=
-        is_success_run_tactic ltac:(fun _ => require_template_parameter parameter_type).
-      Ltac plug_template_ctx f template_ctx :=
-        lazymatch template_ctx with
-        | tt => f
-        | (?arg, ?template_ctx')
-          =>
-          let T := type_of_first_argument_of f in
-          let x_is_template_parameter := is_template_parameter T in
-          lazymatch x_is_template_parameter with
-          | true
-            => plug_template_ctx (f arg) template_ctx'
-          | false
-            => constr:(fun x : T
-                       => ltac:(let v := plug_template_ctx (f x) template_ctx in
-                                exact v))
-          end
-        end.
-
-      Ltac reify_in_context ident reify_ident var term value_ctx template_ctx :=
-        let reify_rec_gen term value_ctx template_ctx := reify_in_context ident reify_ident var term value_ctx template_ctx in
-        let reify_rec term := reify_rec_gen term value_ctx template_ctx in
-        let reify_rec_not_head term := reify_rec_gen term value_ctx tt in
-        let mkAppIdent idc args
-            := let rargs := reify_rec_not_head args in
-               constr:(@AppIdent ident var _ _ idc rargs) in
-        let do_reify_ident term else_tac
-            := let term_is_primitive_const := is_primitive_const term in
-               reify_ident
-                 mkAppIdent
-                 term_is_primitive_const
-                 term
-                 else_tac in
-        (*let dummy := match goal with _ => idtac "reify_in_context: attempting to reify:" term end in*)
-        lazymatch value_ctx with
-        | context[@var_context.cons _ ?rT term ?v _]
-          => constr:(@Var ident var rT v)
-        | _
-          =>
-          lazymatch term with
-          | match ?b with true => ?t | false => ?f end
-            => let T := type of t in
-               reify_rec (@bool_rect (fun _ => T) t f b)
-          | match ?x with Datatypes.pair a b => ?f end
-            => reify_rec (match Datatypes.fst x, Datatypes.snd x return _ with
-                          | a, b => f
-                          end)
-          | match ?x with nil => ?N | cons a b => @?C a b end
-            => let T := type of term in
-               reify_rec (@list_case _ (fun _ => T) N C x)
-          | let x := ?a in @?b x
-            => let A := type of a in
-               let B := lazymatch type of b with forall x, @?B x => B end in
-               reify_rec (b a) (*(@Let_In A B a b)*)
-          | Datatypes.pair ?x ?y
-            => let rx := reify_rec x in
-               let ry := reify_rec y in
-               constr:(Pair (ident:=ident) (var:=var) rx ry)
-          | tt
-            => constr:(@TT ident var)
-          | (fun x : ?T => ?f)
-            =>
-            let x_is_template_parameter := is_template_parameter T in
-            lazymatch x_is_template_parameter with
-            | true
-              =>
-              lazymatch template_ctx with
-              | (?arg, ?template_ctx)
-                => (* we pull a trick with [match] to plug in [arg] without running cbv β *)
-                lazymatch type of term with
-                | forall y, ?P
-                  => reify_rec_gen (match arg as y return P with x => f end) value_ctx template_ctx
-                end
-              end
-            | false
-              =>
-              let rT := type.reify T in
-              let not_x := fresh (* could be [refresh x ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
-              let not_x2 := fresh (* could be [refresh not_x ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
-              let not_x3 := fresh (* could be [refresh not_x2 ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
-              (*let dummy := match goal with _ => idtac "reify_in_context: λ case:" term "using vars:" not_x not_x2 not_x3 end in*)
-              let rf0 :=
-                  constr:(
-                    fun (x : T) (not_x : var rT)
-                    => match f, @var_context.cons var rT x not_x value_ctx return _ with (* c.f. COQBUG(https://github.com/coq/coq/issues/6252#issuecomment-347041995) for [return _] *)
-                       | not_x2, not_x3
-                         => ltac:(
-                              let f := (eval cbv delta [not_x2] in not_x2) in
-                              let var_ctx := (eval cbv delta [not_x3] in not_x3) in
-                              (*idtac "rec call" f "was" term;*)
-                              let rf := reify_rec_gen f var_ctx template_ctx in
-                              exact rf)
-                       end) in
-              lazymatch rf0 with
-              | (fun _ => ?rf)
-                => constr:(@Abs ident var rT _ rf)
-              | _
-                => (* This will happen if the reified term still
-              mentions the non-var variable.  By chance, [cbv delta]
-              strips type casts, which are only places that I can
-              think of where such dependency might remain.  However,
-              if this does come up, having a distinctive error message
-              is much more useful for debugging than the generic "no
-              matching clause" *)
-                let dummy := match goal with
-                             | _ => fail 1 "Failure to eliminate functional dependencies of" rf0
-                             end in
-                constr:(I : I)
-              end
-            end
-          | _
-            =>
-            do_reify_ident
-              term
-              ltac:(
-              fun _
-              =>
-                lazymatch term with
-                | ?f ?x
-                  =>
-                  let ty := type_of_first_argument_of f in
-                  let x_is_template_parameter := is_template_parameter ty in
-                  lazymatch x_is_template_parameter with
-                  | true
-                    => (* we can't reify things of type [Type], so we save it for later to plug in *)
-                    reify_rec_gen f value_ctx (x, template_ctx)
-                  | false
-                    => let rx := reify_rec_gen x value_ctx tt in
-                       let rf := reify_rec_gen f value_ctx template_ctx in
-                       constr:(App (ident:=ident) (var:=var) rf rx)
-                  end
-                | _
-                  => let term' := plug_template_ctx term template_ctx in
-                     do_reify_ident
-                       term'
-                       ltac:(fun _
-                             =>
-                               (*let __ := match goal with _ => idtac "Attempting to unfold" term end in*)
-                               let term
-                                   := match constr:(Set) with
-                                      | _ => (eval cbv delta [term] in term) (* might fail, so we wrap it in a match to give better error messages *)
-                                      | _
-                                        => let dummy := match goal with
-                                                        | _ => fail 2 "Unrecognized term:" term'
-                                                        end in
-                                           constr:(I : I)
-                                      end in
-                               reify_rec term)
-                end)
-          end
-        end.
-      Ltac reify ident reify_ident var term :=
-        reify_in_context ident reify_ident var term (@var_context.nil var) tt.
-      Ltac Reify ident reify_ident term :=
-        constr:(fun var : type -> Type
-                => ltac:(let r := reify ident reify_ident var term in
-                         exact r)).
-      Ltac Reify_rhs ident reify_ident interp_ident _ :=
-        let RHS := lazymatch goal with |- _ = ?RHS => RHS end in
-        let R := Reify ident reify_ident RHS in
-        transitivity (@Interp ident interp_ident _ R);
-        [ | cbv beta iota delta [Interp interp interp_ident Let_In type.interp bool_rect];
-            reflexivity ].
-
-      Module for_reification.
-        Module ident.
-          Import type.
-          Inductive ident : type -> type -> Set :=
-          | primitive {t:type.primitive} (v : interp t) : ident () t
-          | Let_In {tx tC} : ident (tx * (tx -> tC)) tC
-          | Nat_succ : ident nat nat
-          | Nat_max : ident (nat * nat) nat
-          | Nat_mul : ident (nat * nat) nat
-          | Nat_add : ident (nat * nat) nat
-          | Nat_sub : ident (nat * nat) nat
-          | nil {t} : ident () (list t)
-          | cons {t} : ident (t * list t) (list t)
-          | fst {A B} : ident (A * B) A
-          | snd {A B} : ident (A * B) B
-          | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
-          | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
-          | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
-          | list_case {A P} : ident ((unit -> P) * (A * list A -> P) * list A) P
-          | pred : ident nat nat
-          | List_length {T} : ident (list T) nat
-          | List_seq : ident (nat * nat) (list nat)
-          | List_repeat {A} : ident (A * nat) (list A)
-          | List_combine {A B} : ident (list A * list B) (list (A * B))
-          | List_map {A B} : ident ((A -> B) * list A) (list B)
-          | List_flat_map {A B} : ident ((A -> list B) * list A) (list B)
-          | List_partition {A} : ident ((A -> bool) * list A) (list A * list A)
-          | List_app {A} : ident (list A * list A) (list A)
-          | List_rev {A} : ident (list A) (list A)
-          | List_fold_right {A B} : ident ((B * A -> A) * A * list B) A
-          | List_update_nth {T} : ident (nat * (T -> T) * list T) (list T)
-          | List_nth_default {T} : ident (T * list T * nat) T
-          | Z_add : ident (Z * Z) Z
-          | Z_mul : ident (Z * Z) Z
-          | Z_pow : ident (Z * Z) Z
-          | Z_sub : ident (Z * Z) Z
-          | Z_opp : ident Z Z
-          | Z_div : ident (Z * Z) Z
-          | Z_modulo : ident (Z * Z) Z
-          | Z_eqb : ident (Z * Z) bool
-          | Z_leb : ident (Z * Z) bool
-          | Z_of_nat : ident nat Z
-          | Z_mul_split : ident (Z * Z * Z) (Z * Z)
-          | Z_add_get_carry : ident (Z * Z * Z) (Z * Z)
-          | Z_add_with_carry : ident (Z * Z * Z) Z
-          | Z_add_with_get_carry : ident (Z * Z * Z * Z) (Z * Z)
-          | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
-          | Z_sub_with_get_borrow : ident (Z * Z * Z * Z) (Z * Z)
-          | Z_zselect : ident (Z * Z * Z) Z
-          | Z_add_modulo : ident (Z * Z * Z) Z
-          | Z_rshi : ident (Z * Z * Z * Z) Z
-          | Z_cc_m : ident (Z * Z) Z
-          .
-
-          Notation curry0 f
-            := (fun 'tt => f).
-          Notation curry2 f
-            := (fun '(a, b) => f a b).
-          Notation curry3 f
-            := (fun '(a, b, c) => f a b c).
-          Notation curry4 f
-            := (fun '(a, b, c, d) => f a b c d).
-          Notation uncurry2 f
-            := (fun a b => f (a, b)).
-          Notation uncurry3 f
-            := (fun a b c => f (a, b, c)).
-          Notation curry3_1 f
-            := (fun '(a, b, c) => f (uncurry2 a) b c).
-          Notation curry3_2 f
-            := (fun '(a, b, c) => f a (uncurry2 b) c).
-          Notation curry3_3 f
-            := (fun '(a, b, c) => f a (uncurry3 b) c).
-
-          (** Denote identifiers *)
-          Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
-            := match idc in ident s d return type.interp s -> type.interp d with
-               | primitive _ v => curry0 v
-               | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
-               | Nat_succ => Nat.succ
-               | Nat_add => curry2 Nat.add
-               | Nat_sub => curry2 Nat.sub
-               | Nat_mul => curry2 Nat.mul
-               | Nat_max => curry2 Nat.max
-               | nil t => curry0 (@Datatypes.nil (type.interp t))
-               | cons t => curry2 (@Datatypes.cons (type.interp t))
-               | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
-               | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-               | bool_rect T => curry3 (fun t f => @Datatypes.bool_rect (fun _ => type.interp T) (t tt) (f tt))
-               | nat_rect P => curry3_2 (fun O_case => @Datatypes.nat_rect (fun _ => type.interp P) (O_case tt))
-               | list_rect A P => curry3_3 (fun N_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt))
-               | list_case A P => curry3_2 (fun N_case => @ListUtil.list_case (type.interp A) (fun _ => type.interp P) (N_case tt))
-               | pred => Nat.pred
-               | List_length T => @List.length (type.interp T)
-               | List_seq => curry2 List.seq
-               | List_combine A B => curry2 (@List.combine (type.interp A) (type.interp B))
-               | List_map A B => curry2 (@List.map (type.interp A) (type.interp B))
-               | List_repeat A => curry2 (@List.repeat (type.interp A))
-               | List_flat_map A B => curry2 (@List.flat_map (type.interp A) (type.interp B))
-               | List_partition A => curry2 (@List.partition (type.interp A))
-               | List_app A => curry2 (@List.app (type.interp A))
-               | List_rev A => @List.rev (type.interp A)
-               | List_fold_right A B => curry3_1 (@List.fold_right (type.interp A) (type.interp B))
-               | List_update_nth T => curry3 (@update_nth (type.interp T))
-               | List_nth_default T => curry3 (@List.nth_default (type.interp T))
-               | Z_add => curry2 Z.add
-               | Z_mul => curry2 Z.mul
-               | Z_pow => curry2 Z.pow
-               | Z_modulo => curry2 Z.modulo
-               | Z_opp => Z.opp
-               | Z_sub => curry2 Z.sub
-               | Z_div => curry2 Z.div
-               | Z_eqb => curry2 Z.eqb
-               | Z_leb => curry2 Z.leb
-               | Z_of_nat => Z.of_nat
-               | Z_mul_split => curry3 Z.mul_split
-               | Z_add_get_carry => curry3 Z.add_get_carry_full
-               | Z_add_with_carry => curry3 Z.add_with_carry
-               | Z_add_with_get_carry => curry4 Z.add_with_get_carry_full
-               | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
-               | Z_sub_with_get_borrow => curry4 Z.sub_with_get_borrow_full
-               | Z_zselect => curry3 Z.zselect
-               | Z_add_modulo => curry3 Z.add_modulo
-               | Z_rshi => curry4 Z.rshi
-               | Z_cc_m => curry2 Z.cc_m
-               end.
-
-          Ltac reify
-               mkAppIdent
-               term_is_primitive_const
-               term
-               else_tac :=
-            (*let dummy := match goal with _ => idtac "attempting to reify_op" term end in*)
-            lazymatch term with
-            | Nat.succ ?x => mkAppIdent Nat_succ x
-            | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
-            | Nat.sub ?x ?y => mkAppIdent Nat_sub (x, y)
-            | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
-            | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
-            | S ?x => mkAppIdent Nat_succ x
-            | @Datatypes.nil ?T
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.nil rT) tt
-            | @Datatypes.cons ?T ?x ?xs
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.cons rT) (x, xs)
-            | @Datatypes.fst ?A ?B ?x
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.fst rA rB) x
-            | @Datatypes.snd ?A ?B ?x
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.snd rA rB) x
-            | @Datatypes.bool_rect (fun _ => ?T) ?Ptrue ?Pfalse ?b
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.bool_rect rT)
-                            ((fun _ : Datatypes.unit => Ptrue), (fun _ : Datatypes.unit => Pfalse), b)
-            | @Datatypes.nat_rect (fun _ => ?T) ?P0 (fun (n' : Datatypes.nat) Pn => ?PS) ?n
-              => let rT := type.reify T in
-                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.nat_rect rT) ((fun _ : Datatypes.unit => P0),
-                                                  (fun pat : Datatypes.nat * T
-                                                   => let '(n', Pn) := pat in PS),
-                                                  n)
-            | @Datatypes.nat_rect (fun _ => ?T) ?P0 ?PS ?n
-              => let dummy := match goal with _ => fail 1 "nat_rect successor case is not syntactically a function of two arguments:" PS end in
-                 constr:(I : I)
-            | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil (fun a tl Ptl => ?PS) ?ls
-              => let rA := type.reify A in
-                 let rT := type.reify T in
-                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.list_rect rA rT)
-                            ((fun _ : Datatypes.unit => Pnil),
-                             (fun pat : A * Datatypes.list A * T
-                              => let '(a, tl, Ptl) := pat in PS),
-                             ls)
-            | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil ?PS ?ls
-              => let dummy := match goal with _ => fail 1 "list_rect successor case is not syntactically a function of three arguments:" PS end in
-                 constr:(I : I)
-            | @ListUtil.list_case ?A (fun _ => ?T) ?Pnil (fun a tl => ?PS) ?ls
-              => let rA := type.reify A in
-                 let rT := type.reify T in
-                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.list_case rA rT)
-                            ((fun _ : Datatypes.unit => Pnil),
-                             (fun pat : A * Datatypes.list A
-                              => let '(a, tl) := pat in PS),
-                             ls)
-            | @ListUtil.list_case ?A (fun _ => ?T) ?Pnil ?PS ?ls
-              => let dummy := match goal with _ => fail 1 "list_case successor case is not syntactically a function of two arguments:" PS end in
-                 constr:(I : I)
-            | Nat.pred ?x => mkAppIdent ident.pred x
-            | @List.length ?A ?x =>
-              let rA := type.reify A in
-              mkAppIdent (@ident.List_length rA) x
-            | List.seq ?x ?y  => mkAppIdent ident.List_seq (x, y)
-            | @List.repeat ?A ?x ?y
-              => let rA := type.reify A in
-                 mkAppIdent (@ident.List_repeat rA) (x, y)
-            | @LetIn.Let_In ?A (fun _ => ?B) ?x ?f
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.Let_In rA rB) (x, f)
-            | @LetIn.Let_In ?A ?B ?x ?f
-              => let dummy := match goal with _ => fail 1 "Let_In contains a dependent type λ as its second argument:" B end in
-                 constr:(I : I)
-            | @combine ?A ?B ?ls1 ?ls2
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.List_combine rA rB) (ls1, ls2)
-            | @List.map ?A ?B ?f ?ls
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.List_map rA rB) (f, ls)
-            | @List.flat_map ?A ?B ?f ?ls
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.List_flat_map rA rB) (f, ls)
-            | @List.partition ?A ?f ?ls
-              => let rA := type.reify A in
-                 mkAppIdent (@ident.List_partition rA) (f, ls)
-            | @List.app ?A ?ls1 ?ls2
-              => let rA := type.reify A in
-                 mkAppIdent (@ident.List_app rA) (ls1, ls2)
-            | @List.rev ?A ?ls
-              => let rA := type.reify A in
-                 mkAppIdent (@ident.List_rev rA) ls
-            | @List.fold_right ?A ?B (fun b a => ?f) ?a0 ?ls
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.List_fold_right rA rB) ((fun pat : B * A => let '(b, a) := pat in f), a0, ls)
-            | @List.fold_right ?A ?B ?f ?a0 ?ls
-              => let dummy := match goal with _ => fail 1 "List.fold_right function argument is not syntactically a function of two arguments:" f end in
-                 constr:(I : I)
-            | @update_nth ?T ?n ?f ?ls
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.List_update_nth rT) (n, f, ls)
-            | @List.nth_default ?T ?d ?ls ?n
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.List_nth_default rT) (d, ls, n)
-            | Z.add ?x ?y => mkAppIdent ident.Z_add (x, y)
-            | Z.mul ?x ?y => mkAppIdent ident.Z_mul (x, y)
-            | Z.pow ?x ?y => mkAppIdent ident.Z_pow (x, y)
-            | Z.sub ?x ?y => mkAppIdent ident.Z_sub (x, y)
-            | Z.opp ?x => mkAppIdent ident.Z_opp x
-            | Z.div ?x ?y => mkAppIdent ident.Z_div (x, y)
-            | Z.modulo ?x ?y => mkAppIdent ident.Z_modulo (x, y)
-            | Z.eqb ?x ?y => mkAppIdent ident.Z_eqb (x, y)
-            | Z.leb ?x ?y => mkAppIdent ident.Z_leb (x, y)
-            | Z.of_nat ?x => mkAppIdent ident.Z_of_nat x
-            | Z.mul_split ?x ?y ?z => mkAppIdent ident.Z_mul_split (x, y, z)
-            | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
-            | Z.add_with_carry ?x ?y ?z => mkAppIdent ident.Z_add_with_carry (x, y, z)
-            | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
-            | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
-            | Z.sub_with_get_borrow_full ?x ?y ?z ?a => mkAppIdent ident.Z_sub_with_get_borrow (x, y, z, a)
-            | Z.zselect ?x ?y ?z => mkAppIdent ident.Z_zselect (x, y, z)
-            | Z.add_modulo ?x ?y ?z => mkAppIdent ident.Z_add_modulo (x,y,z)
-            | Z.rshi ?x ?y ?z ?a => mkAppIdent ident.Z_rshi (x,y,z,a)
-            | Z.cc_m ?x ?y => mkAppIdent ident.Z_cc_m (x,y)
-            | _
-              => lazymatch term_is_primitive_const with
-                 | true
-                   =>
-                   let assert_const := match goal with
-                                       | _ => require_primitive_const term
-                                       end in
-                   let T := type of term in
-                   let rT := type.reify_primitive T in
-                   mkAppIdent (@ident.primitive rT term) tt
-                 | false => else_tac ()
-                 end
-            end.
-
-          Module List.
-            Notation length := List_length.
-            Notation seq := List_seq.
-            Notation repeat := List_repeat.
-            Notation combine := List_combine.
-            Notation map := List_map.
-            Notation flat_map := List_flat_map.
-            Notation partition := List_partition.
-            Notation app := List_app.
-            Notation rev := List_rev.
-            Notation fold_right := List_fold_right.
-            Notation update_nth := List_update_nth.
-            Notation nth_default := List_nth_default.
-          End List.
-
-          Module Z.
-            Notation add := Z_add.
-            Notation mul := Z_mul.
-            Notation pow := Z_pow.
-            Notation sub := Z_sub.
-            Notation opp := Z_opp.
-            Notation div := Z_div.
-            Notation modulo := Z_modulo.
-            Notation eqb := Z_eqb.
-            Notation leb := Z_leb.
-            Notation of_nat := Z_of_nat.
-            Notation mul_split := Z_mul_split.
-            Notation add_get_carry := Z_add_get_carry.
-            Notation add_with_carry := Z_add_with_carry.
-            Notation add_with_get_carry := Z_add_with_get_carry.
-            Notation sub_get_borrow := Z_sub_get_borrow.
-            Notation sub_with_get_borrow := Z_sub_with_get_borrow.
-            Notation zselect := Z_zselect.
-            Notation add_modulo := Z_add_modulo.
-            Notation rshi := Z_rshi.
-            Notation cc_m := Z_cc_m.
-          End Z.
-
-          Module Nat.
-            Notation succ := Nat_succ.
-            Notation add := Nat_add.
-            Notation sub := Nat_sub.
-            Notation mul := Nat_mul.
-            Notation max := Nat_max.
-          End Nat.
-
-          Module Export Notations.
-            Notation ident := ident.
-          End Notations.
-        End ident.
-
-        Module Notations.
-          Include ident.Notations.
-          Notation expr := (@expr ident).
-          Notation Expr := (@Expr ident).
-          Notation interp := (@interp ident (@ident.interp)).
-          Notation Interp := (@Interp ident (@ident.interp)).
-
-          (*Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.*)
-          Notation "'expr_let' x := A 'in' b" := (AppIdent ident.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
-          Notation "[ ]" := (AppIdent ident.nil _) : expr_scope.
-          Notation "x :: xs" := (AppIdent ident.cons (Pair x%expr xs%expr)) : expr_scope.
-          Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : expr_scope.
-          Notation "ls [[ n ]]"
-            := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%expr)
-               : expr_scope.
-
-          Module Reification.
-            Ltac reify var term := expr.reify ident ident.reify var term.
-            Ltac Reify term := expr.Reify ident ident.reify term.
-            Ltac Reify_rhs _ :=
-              expr.Reify_rhs ident ident.reify ident.interp ().
-          End Reification.
-          Include Reification.
-        End Notations.
-        Include Notations.
-      End for_reification.
-
-      Module Export default.
-        Module ident.
-          Import type.
-          Inductive ident : type -> type -> Set :=
-          | primitive {t : type.primitive} (v : interp t) : ident () t
-          | Let_In {tx tC} : ident (tx * (tx -> tC)) tC
-          | Nat_succ : ident nat nat
-          | Nat_add : ident (nat * nat) nat
-          | Nat_sub : ident (nat * nat) nat
-          | Nat_mul : ident (nat * nat) nat
-          | Nat_max : ident (nat * nat) nat
-          | nil {t} : ident () (list t)
-          | cons {t} : ident (t * list t) (list t)
-          | fst {A B} : ident (A * B) A
-          | snd {A B} : ident (A * B) B
-          | bool_rect {T} : ident ((unit -> T) * (unit -> T) * bool) T
-          | nat_rect {P} : ident ((unit -> P) * (nat * P -> P) * nat) P
-          | pred : ident nat nat
-          | list_rect {A P} : ident ((unit -> P) * (A * list A * P -> P) * list A) P
-          | List_nth_default {T} : ident (T * list T * nat) T
-          | List_nth_default_concrete {T : type.primitive} (d : interp T) (n : Datatypes.nat) : ident (list T) T
-          | Z_shiftr (offset : BinInt.Z) : ident Z Z
-          | Z_shiftl (offset : BinInt.Z) : ident Z Z
-          | Z_land (mask : BinInt.Z) : ident Z Z
-          | Z_add : ident (Z * Z) Z
-          | Z_mul : ident (Z * Z) Z
-          | Z_pow : ident (Z * Z) Z
-          | Z_sub : ident (Z * Z) Z
-          | Z_opp : ident Z Z
-          | Z_div : ident (Z * Z) Z
-          | Z_modulo : ident (Z * Z) Z
-          | Z_eqb : ident (Z * Z) bool
-          | Z_leb : ident (Z * Z) bool
-          | Z_of_nat : ident nat Z
-          | Z_mul_split : ident (Z * Z * Z) (Z * Z)
-          | Z_mul_split_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
-          | Z_add_get_carry : ident (Z * Z * Z) (Z * Z)
-          | Z_add_get_carry_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
-          | Z_add_with_carry : ident (Z * Z * Z) Z
-          | Z_add_with_get_carry : ident (Z * Z * Z * Z) (Z * Z)
-          | Z_add_with_get_carry_concrete (s:BinInt.Z) : ident (Z * Z * Z) (Z * Z)
-          | Z_sub_get_borrow : ident (Z * Z * Z) (Z * Z)
-          | Z_sub_get_borrow_concrete (s:BinInt.Z) : ident (Z * Z) (Z * Z)
-          | Z_sub_with_get_borrow : ident (Z * Z * Z * Z) (Z * Z)
-          | Z_sub_with_get_borrow_concrete (s:BinInt.Z) : ident (Z * Z * Z) (Z * Z)
-          | Z_zselect : ident (Z * Z * Z) Z
-          | Z_add_modulo : ident (Z * Z * Z) Z
-          | Z_rshi : ident (Z * Z * Z * Z) Z
-          | Z_rshi_concrete (s offset:BinInt.Z) : ident (Z * Z) Z
-          | Z_cc_m : ident (Z * Z) Z
-          | Z_cc_m_concrete (s:BinInt.Z) : ident Z Z
-          | Z_cast (range : zrange) : ident Z Z
-          | Z_cast2 (range : zrange * zrange) : ident (Z * Z) (Z * Z)
-          .
-
-          Notation curry0 f
-            := (fun 'tt => f).
-          Notation curry2 f
-            := (fun '(a, b) => f a b).
-          Notation curry3 f
-            := (fun '(a, b, c) => f a b c).
-          Notation curry4 f
-            := (fun '(a, b, c, d) => f a b c d).
-          Notation uncurry2 f
-            := (fun a b => f (a, b)).
-          Notation uncurry3 f
-            := (fun a b c => f (a, b, c)).
-          Notation curry3_23 f
-            := (fun '(a, b, c) => f a (uncurry3 b) c).
-          Notation curry3_2 f
-            := (fun '(a, b, c) => f a (uncurry2 b) c).
-
-          Section gen.
-            Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
-
-            Definition cast (r : zrange) (x : BinInt.Z)
-              := if (lower r <=? x) && (x <=? upper r)
-                 then x
-                 else cast_outside_of_range r x.
-
-            (** Interpret identifiers where the behavior of [Z_cast]
-                on a value that does not fit in the range is given by
-                a context variable.  (This allows us to treat [Z_cast]
-                as "undefined behavior" when the value doesn't fit in
-                the range by quantifying over all possible
-                interpretations. *)
-            Definition gen_interp {s d} (idc : ident s d) : type.interp s -> type.interp d
-              := match idc in ident s d return type.interp s -> type.interp d with
-                 | primitive _ v => curry0 v
-                 | Let_In tx tC => curry2 (@LetIn.Let_In (type.interp tx) (fun _ => type.interp tC))
-                 | Nat_succ => Nat.succ
-                 | Nat_add => curry2 Nat.add
-                 | Nat_sub => curry2 Nat.sub
-                 | Nat_mul => curry2 Nat.mul
-                 | Nat_max => curry2 Nat.max
-                 | nil t => curry0 (@Datatypes.nil (type.interp t))
-                 | cons t => curry2 (@Datatypes.cons (type.interp t))
-                 | fst A B => @Datatypes.fst (type.interp A) (type.interp B)
-                 | snd A B => @Datatypes.snd (type.interp A) (type.interp B)
-                 | bool_rect T => curry3 (fun t f => @Datatypes.bool_rect (fun _ => type.interp T) (t tt) (f tt))
-                 | nat_rect P => curry3_2 (fun O_case => @Datatypes.nat_rect (fun _ => type.interp P) (O_case tt))
-                 | pred => Nat.pred
-                 | list_rect A P => curry3_23 (fun N_case => @Datatypes.list_rect (type.interp A) (fun _ => type.interp P) (N_case tt))
-                 | List_nth_default T => curry3 (@List.nth_default (type.interp T))
-                 | List_nth_default_concrete T d n => fun ls => @List.nth_default (type.interp T) d ls n
-                 | Z_shiftr n => fun v => Z.shiftr v n
-                 | Z_shiftl n => fun v => Z.shiftl v n
-                 | Z_land mask => fun v => Z.land v mask
-                 | Z_add => curry2 Z.add
-                 | Z_mul => curry2 Z.mul
-                 | Z_pow => curry2 Z.pow
-                 | Z_modulo => curry2 Z.modulo
-                 | Z_sub => curry2 Z.sub
-                 | Z_opp => Z.opp
-                 | Z_div => curry2 Z.div
-                 | Z_eqb => curry2 Z.eqb
-                 | Z_leb => curry2 Z.leb
-                 | Z_of_nat => Z.of_nat
-                 | Z_mul_split => curry3 Z.mul_split
-                 | Z_mul_split_concrete s => curry2 (Z.mul_split s)
-                 | Z_add_get_carry => curry3 Z.add_get_carry_full
-                 | Z_add_get_carry_concrete s => curry2 (Z.add_get_carry_full s)
-                 | Z_add_with_carry => curry3 Z.add_with_carry
-                 | Z_add_with_get_carry => curry4 Z.add_with_get_carry_full
-                 | Z_add_with_get_carry_concrete s => curry3 (Z.add_with_get_carry_full s)
-                 | Z_sub_get_borrow => curry3 Z.sub_get_borrow_full
-                 | Z_sub_get_borrow_concrete s => curry2 (Z.sub_get_borrow_full s)
-                 | Z_sub_with_get_borrow => curry4 Z.sub_with_get_borrow_full
-                 | Z_sub_with_get_borrow_concrete s => curry3 (Z.sub_with_get_borrow_full s)
-                 | Z_zselect => curry3 Z.zselect
-                 | Z_add_modulo => curry3 Z.add_modulo
-                 | Z_rshi => curry4 Z.rshi
-                 | Z_rshi_concrete s n => curry2 (fun x y => Z.rshi s x y n)
-                 | Z_cc_m => curry2 Z.cc_m
-                 | Z_cc_m_concrete s => Z.cc_m s
-                 | Z_cast r => cast r
-                 | Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
-                 end.
-          End gen.
-
-          Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
-          Proof. exact v. Qed.
-
-          (** Interpret identifiers where [Z_cast] is an opaque
-              identity function when the value is not inside the range
-              *)
-          Definition interp {s d} (idc : ident s d) : type.interp s -> type.interp d
-            := @gen_interp cast_outside_of_range s d idc.
-          Global Arguments interp _ _ !_ _ / .
-
-          Ltac reify
-               mkAppIdent
-               term_is_primitive_const
-               term
-               else_tac :=
-            (*let dummy := match goal with _ => idtac "attempting to reify_op" term end in*)
-            lazymatch term with
-            | Nat.succ ?x => mkAppIdent Nat_succ x
-            | Nat.add ?x ?y => mkAppIdent Nat_add (x, y)
-            | Nat.sub ?x ?y => mkAppIdent Nat_sub (x, y)
-            | Nat.mul ?x ?y => mkAppIdent Nat_mul (x, y)
-            | Nat.max ?x ?y => mkAppIdent Nat_max (x, y)
-            | S ?x => mkAppIdent Nat_succ x
-            | @Datatypes.nil ?T
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.nil rT) tt
-            | @Datatypes.cons ?T ?x ?xs
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.cons rT) (x, xs)
-            | @Datatypes.fst ?A ?B ?x
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.fst rA rB) x
-            | @Datatypes.snd ?A ?B ?x
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.snd rA rB) x
-            | @Datatypes.bool_rect (fun _ => ?T) ?Ptrue ?Pfalse ?b
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.bool_rect rT)
-                            ((fun _ : Datatypes.unit => Ptrue), (fun _ : Datatypes.unit => Pfalse), b)
-            | @Datatypes.nat_rect (fun _ => ?T) ?P0 (fun (n' : Datatypes.nat) Pn => ?PS) ?n
-              => let rT := type.reify T in
-                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 mkAppIdent (@ident.nat_rect rT)
-                            ((fun _ : Datatypes.unit => P0),
-                             (fun pat : Datatypes.nat * T
-                              => let '(n', Pn) := pat in PS),
-                             n)
-            | @Datatypes.nat_rect (fun _ => ?T) ?P0 ?PS ?n
-              => let dummy := match goal with _ => fail 1 "nat_rect successor case is not syntactically a function of two arguments:" PS end in
-                 constr:(I : I)
-            | Nat.pred ?x => mkAppIdent ident.pred x
-            | @LetIn.Let_In ?A (fun _ => ?B) ?x ?f
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 mkAppIdent (@ident.Let_In rA rB) (x, f)
-            | @LetIn.Let_In ?A ?B ?x ?f
-              => let dummy := match goal with _ => fail 1 "Let_In contains a dependent type λ as its second argument:" B end in
-                 constr:(I : I)
-            | @Datatypes.list_rect ?A (fun _ => ?B) ?Pnil (fun x xs rec => ?Pcons) ?ls
-              => let rA := type.reify A in
-                 let rB := type.reify B in
-                 let pat := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) *)
-                 let pat' := fresh "pat" in (* fresh for COQBUG(https://github.com/coq/coq/issues/6562) (must also not overlap with [rec], but I think [fresh] handles that correctly, at least) *)
-                 mkAppIdent (@ident.list_rect rA rB)
-                            ((fun _ : Datatypes.unit => Pnil),
-                             (fun pat : A * Datatypes.list A * B
-                              => let '(pat', rec) := pat in
-                                 let '(x, xs) := pat' in
-                                 Pcons),
-                             ls)
-            | @Datatypes.list_rect ?A (fun _ => ?B) ?Pnil ?Pcons ?ls
-              => let dummy := match goal with _ => fail 1 "list_rect cons case is not syntactically a function of three arguments:" Pcons end in
-                 constr:(I : I)
-            | @List.nth_default ?T ?d ?ls ?n
-              => let rT := type.reify T in
-                 mkAppIdent (@ident.List_nth_default rT) (d, ls, n)
-            | Z.add ?x ?y => mkAppIdent ident.Z_add (x, y)
-            | Z.mul ?x ?y => mkAppIdent ident.Z_mul (x, y)
-            | Z.pow ?x ?y => mkAppIdent ident.Z_pow (x, y)
-            | Z.sub ?x ?y => mkAppIdent ident.Z_sub (x, y)
-            | Z.opp ?x => mkAppIdent ident.Z_opp x
-            | Z.div ?x ?y => mkAppIdent ident.Z_div (x, y)
-            | Z.modulo ?x ?y => mkAppIdent ident.Z_modulo (x, y)
-            | Z.eqb ?x ?y => mkAppIdent ident.Z_eqb (x, y)
-            | Z.leb ?x ?y => mkAppIdent ident.Z_leb (x, y)
-            | Z.of_nat ?x => mkAppIdent ident.Z_of_nat x
-            | Z.mul_split ?x ?y ?z => mkAppIdent ident.Z_mul_split (x, y, z)
-            | Z.add_get_carry_full ?x ?y ?z => mkAppIdent ident.Z_add_get_carry (x, y, z)
-            | Z.add_with_carry ?x ?y ?z => mkAppIdent ident.Z_add_with_carry (x, y, z)
-            | Z.add_with_get_carry_full ?x ?y ?z ?a => mkAppIdent ident.Z_add_with_get_carry (x, y, z, a)
-            | Z.sub_get_borrow_full ?x ?y ?z => mkAppIdent ident.Z_sub_get_borrow (x, y, z)
-            | Z.sub_with_get_borrow_full ?x ?y ?z ?a => mkAppIdent ident.Z_sub_with_get_borrow (x, y, z, a)
-            | Z.zselect ?x ?y ?z => mkAppIdent ident.Z_zselect (x, y, z)
-            | Z.add_modulo ?x ?y ?z => mkAppIdent ident.Z_add_modulo (x,y,z)
-            | Z.rshi ?x ?y ?z ?a => mkAppIdent ident.Z_rshi (x,y,z,a)
-            | Z.cc_m ?x ?y => mkAppIdent ident.Z_cc_m (x,y)
-            | _
-              => lazymatch term_is_primitive_const with
-                 | true
-                   =>
-                   let assert_const := match goal with
-                                       | _ => require_primitive_const term
-                                       end in
-                   let T := type of term in
-                   let rT := type.reify_primitive T in
-                   mkAppIdent (@ident.primitive rT term) tt
-                 | _ => else_tac ()
-                 end
-            end.
-
-          Module List.
-            Notation nth_default := List_nth_default.
-            Notation nth_default_concrete := List_nth_default_concrete.
-          End List.
-
-          Module Z.
-            Notation shiftr := Z_shiftr.
-            Notation shiftl := Z_shiftl.
-            Notation land := Z_land.
-            Notation add := Z_add.
-            Notation mul := Z_mul.
-            Notation pow := Z_pow.
-            Notation sub := Z_sub.
-            Notation opp := Z_opp.
-            Notation div := Z_div.
-            Notation modulo := Z_modulo.
-            Notation eqb := Z_eqb.
-            Notation leb := Z_leb.
-            Notation of_nat := Z_of_nat.
-            Notation mul_split := Z_mul_split.
-            Notation mul_split_concrete := Z_mul_split_concrete.
-            Notation add_get_carry := Z_add_get_carry.
-            Notation add_get_carry_concrete := Z_add_get_carry_concrete.
-            Notation add_with_carry := Z_add_with_carry.
-            Notation add_with_get_carry := Z_add_with_get_carry.
-            Notation add_with_get_carry_concrete := Z_add_with_get_carry_concrete.
-            Notation sub_get_borrow := Z_sub_get_borrow.
-            Notation sub_get_borrow_concrete := Z_sub_get_borrow_concrete.
-            Notation sub_with_get_borrow := Z_sub_with_get_borrow.
-            Notation sub_with_get_borrow_concrete := Z_sub_with_get_borrow_concrete.
-            Notation zselect := Z_zselect.
-            Notation add_modulo := Z_add_modulo.
-            Notation rshi := Z_rshi.
-            Notation rshi_concrete := Z_rshi_concrete.
-            Notation cc_m := Z_cc_m.
-            Notation cc_m_concrete := Z_cc_m_concrete.
-            Notation cast := Z_cast.
-            Notation cast2 := Z_cast2.
-          End Z.
-
-          Module Nat.
-            Notation succ := Nat_succ.
-            Notation add := Nat_add.
-            Notation sub := Nat_sub.
-            Notation mul := Nat_mul.
-            Notation max := Nat_max.
-          End Nat.
-
-          Module Export Notations.
-            Notation ident := ident.
-          End Notations.
-        End ident.
-
-        Module Notations.
-          Include ident.Notations.
-          Notation expr := (@expr ident).
-          Notation Expr := (@Expr ident).
-          Notation interp := (@interp ident (@ident.interp)).
-          Notation Interp := (@Interp ident (@ident.interp)).
-          Notation gen_interp cast_outside_of_range := (@interp ident (@ident.gen_interp cast_outside_of_range)).
-          Notation GenInterp cast_outside_of_range := (@Interp ident (@ident.gen_interp cast_outside_of_range)).
-
-          (*Notation "( x , y , .. , z )" := (Pair .. (Pair x%expr y%expr) .. z%expr) : expr_scope.*)
-          Notation "'expr_let' x := A 'in' b" := (AppIdent ident.Let_In (Pair A%expr (Abs (fun x => b%expr)))) : expr_scope.
-          Notation "[ ]" := (AppIdent ident.nil _) : expr_scope.
-          Notation "x :: xs" := (AppIdent ident.cons (Pair x%expr xs%expr)) : expr_scope.
-          Notation "x" := (AppIdent (ident.primitive x) _) (only printing, at level 9) : expr_scope.
-          Notation "ls [[ n ]]"
-            := (AppIdent ident.List.nth_default (_, ls, AppIdent (ident.primitive n%nat) _)%expr)
-               : expr_scope.
-          Notation "ls [[ n ]]"
-            := (AppIdent (ident.List.nth_default_concrete n) ls%expr)
-               : expr_scope.
-
-          Ltac reify var term := expr.reify ident ident.reify var term.
-          Ltac Reify term := expr.Reify ident ident.reify term.
-          Ltac Reify_rhs _ :=
-            expr.Reify_rhs ident ident.reify ident.interp ().
-        End Notations.
-        Include Notations.
-      End default.
-    End expr.
-
-    Module canonicalize_list_recursion.
-      Import expr.
-      Import expr.default.
-      Module ident.
-        Local Ltac app_and_maybe_cancel term :=
-          lazymatch term with
-          | Abs (fun x : @expr ?var ?T => ?f)
-            => eval cbv [unexpr] in (fun x : @expr var T => @unexpr ident.ident var _ f)
-          | Abs (fun x : ?T => ?f)
-            => let dummy := match goal with _ => fail 1 "Invalid var type:" T end in
+           constr:(type.list rT)
+      | interp ?T => T
+      | @einterp type interp (@type.base type ?T) => T
+      | ?ty => let __ := match goal with
+                         | _ => fail 1 "Unrecognized type:" ty
+                         end in
                constr:(I : I)
-          end.
+      end.
+    Notation reify t := (ltac:(let rt := reify t in exact rt)) (only parsing).
+    Notation reify_norm t := (ltac:(let t' := eval cbv in t in let rt := reify t' in exact rt)) (only parsing).
+    Notation reify_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).
+    Notation reify_norm_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).
+  End base.
+  Bind Scope etype_scope with base.type.
+  Infix "*" := base.type.prod : etype_scope.
+  Notation "()" := base.type.unit : etype_scope.
 
-        Definition transfer {var} {s d} (idc : for_reification.ident s d) : @expr var s -> @expr var d
-          := let List_app A :=
-                 list_rect
-                   (fun _ => list (type.interp A) -> list (type.interp A))
-                   (fun m => m)
-                   (fun a l1 app_l1 m => a :: app_l1 m) in
-             match idc in for_reification.ident s d return @expr var s -> @expr var d with
-             | for_reification.ident.Let_In tx tC
-               => AppIdent ident.Let_In
-             | for_reification.ident.Nat_succ
-               => AppIdent ident.Nat_succ
-             | for_reification.ident.Nat_add
-               => AppIdent ident.Nat_add
-             | for_reification.ident.Nat_sub
-               => AppIdent ident.Nat_sub
-             | for_reification.ident.Nat_mul
-               => AppIdent ident.Nat_mul
-             | for_reification.ident.Nat_max
-               => AppIdent ident.Nat_max
-             | for_reification.ident.nil t
-               => AppIdent ident.nil
-             | for_reification.ident.cons t
-               => AppIdent ident.cons
-             | for_reification.ident.fst A B
-               => AppIdent ident.fst
-             | for_reification.ident.snd A B
-               => AppIdent ident.snd
-             | for_reification.ident.bool_rect T
-               => AppIdent ident.bool_rect
-             | for_reification.ident.nat_rect P
-               => AppIdent ident.nat_rect
-             | for_reification.ident.list_rect A P
-               => AppIdent ident.list_rect
-             | for_reification.ident.pred
-               => AppIdent ident.pred
-             | for_reification.ident.primitive t v
-               => AppIdent (ident.primitive v)
-             | for_reification.ident.Z_add
-               => AppIdent ident.Z.add
-             | for_reification.ident.Z_mul
-               => AppIdent ident.Z.mul
-             | for_reification.ident.Z_pow
-               => AppIdent ident.Z.pow
-             | for_reification.ident.Z_sub
-               => AppIdent ident.Z.sub
-             | for_reification.ident.Z_opp
-               => AppIdent ident.Z.opp
-             | for_reification.ident.Z_div
-               => AppIdent ident.Z.div
-             | for_reification.ident.Z_modulo
-               => AppIdent ident.Z.modulo
-             | for_reification.ident.Z_eqb
-               => AppIdent ident.Z.eqb
-             | for_reification.ident.Z_leb
-               => AppIdent ident.Z.leb
-             | for_reification.ident.Z_of_nat
-               => AppIdent ident.Z.of_nat
-             | for_reification.ident.Z_mul_split
-               => AppIdent ident.Z.mul_split
-             | for_reification.ident.Z_add_get_carry
-               => AppIdent ident.Z.add_get_carry
-             | for_reification.ident.Z_add_with_carry
-               => AppIdent ident.Z.add_with_carry
-             | for_reification.ident.Z_add_with_get_carry
-               => AppIdent ident.Z.add_with_get_carry
-             | for_reification.ident.Z_sub_get_borrow
-               => AppIdent ident.Z.sub_get_borrow
-             | for_reification.ident.Z_sub_with_get_borrow
-               => AppIdent ident.Z.sub_with_get_borrow
-             | for_reification.ident.Z_zselect
-               => AppIdent ident.Z.zselect
-             | for_reification.ident.Z_add_modulo
-               => AppIdent ident.Z.add_modulo
-             | for_reification.ident.Z_rshi
-               => AppIdent ident.Z.rshi
-             | for_reification.ident.Z_cc_m
-               => AppIdent ident.Z.cc_m
-             | for_reification.ident.list_case A P
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun '((Pnil, Pcons, ls)
-                                      : (unit -> type.interp P)
-                                        * (type.interp A * list (type.interp A) -> type.interp P)
-                                        * (list (type.interp A)))
-                                => list_rect
-                                     (fun _ => type.interp P)
-                                     (Pnil tt)
-                                     (fun x xs _ => Pcons (x, xs))
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_length A
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun (ls : list (type.interp A))
-                                => list_rect
-                                     (fun _ => nat)
-                                     0%nat
-                                     (fun a t len_t => S len_t)
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_seq
-               => ltac:(
-                    let v
-                        :=
-                        reify
-                          (@expr var)
-                          (fun start_len : nat * nat
-                           => nat_rect
-                                (fun _ => nat -> list nat)
-                                (fun _ => nil)
-                                (fun len seq_len start => cons start (seq_len (S start)))
-                                (snd start_len) (fst start_len)) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_repeat A
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun (xn : type.interp A * nat)
-                                => nat_rect
-                                     (fun _ => list (type.interp A))
-                                     nil
-                                     (fun k repeat_k => cons (fst xn) repeat_k)
-                                     (snd xn)) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_combine A B
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun '((ls1, ls2) : list (type.interp A) * list (type.interp B))
-                                => list_rect
-                                     (fun _ => list (type.interp B) -> list (type.interp A * type.interp B))
-                                     (fun l' => nil)
-                                     (fun x tl combine_tl rest
-                                      => list_rect
-                                           (fun _ => list (type.interp A * type.interp B))
-                                           nil
-                                           (fun y tl' _
-                                            => (x, y) :: combine_tl tl')
-                                           rest)
-                                     ls1
-                                     ls2) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_map A B
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun '((f, ls) : (type.interp A -> type.interp B) * Datatypes.list (type.interp A))
-                                => list_rect
-                                     (fun _ => list (type.interp B))
-                                     nil
-                                     (fun a t map_t => f a :: map_t)
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_flat_map A B
-               => ltac:(
-                    let List_app := (eval cbv [List_app] in (List_app B)) in
-                    let v := reify
-                               (@expr var)
-                               (fun '((f, ls) : (type.interp A -> list (type.interp B)) * list (type.interp A))
-                                => list_rect
-                                     (fun _ => list (type.interp B))
-                                     nil
-                                     (fun x t flat_map_t => List_app (f x) flat_map_t)
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_partition A
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun '((f, ls) : (type.interp A -> bool) * list (type.interp A))
-                                => list_rect
-                                     (fun _ => list (type.interp A) * list (type.interp A))%type
-                                     (nil, nil)
-                                     (fun x tl partition_tl
-                                      => let g := fst partition_tl in
-                                         let d := snd partition_tl in
-                                         if f x then (x :: g, d) else (g, x :: d))
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_app A
-               => ltac:(
-                    let List_app := (eval cbv [List_app] in (List_app A)) in
-                    let v := reify (@expr var) (fun '(ls1, ls2) => List_app ls1 ls2) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_rev A
-               => ltac:(
-                    let List_app := (eval cbv [List_app] in (List_app A)) in
-                    let v := reify
-                               (@expr var)
-                               (fun ls
-                                => list_rect
-                                     (fun _ => list (type.interp A))
-                                     nil
-                                     (fun x l' rev_l' => List_app rev_l' [x])
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_fold_right A B
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun '((f, a0, ls)
-                                      : (type.interp B * type.interp A -> type.interp A) * type.interp A * list (type.interp B))
-                                => list_rect
-                                     (fun _ => type.interp A)
-                                     a0
-                                     (fun b t fold_right_t => f (b, fold_right_t))
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_update_nth T
-               => ltac:(
-                    let v := reify
-                               (@expr var)
-                               (fun '((n, f, ls) : nat * (type.interp T -> type.interp T) * list (type.interp T))
-                                => nat_rect
-                                     (fun _ => list (type.interp T) -> list (type.interp T))
-                                     (fun ls
-                                      => list_rect
-                                           (fun _ => list (type.interp T))
-                                           nil
-                                           (fun x' xs' __ => f x' :: xs')
-                                           ls)
-                                     (fun n' update_nth_n' ls
-                                      => list_rect
-                                           (fun _ => list (type.interp T))
-                                           nil
-                                           (fun x' xs' __ => x' :: update_nth_n' xs')
-                                           ls)
-                                     n
-                                     ls) in
-                    let v := app_and_maybe_cancel v in exact v)
-             | for_reification.ident.List_nth_default T
-               => AppIdent ident.List_nth_default
-             (*ltac:(
-                  let v := reify
-                             var
-                             (fun (default : type.interp T) (l : list (type.interp T)) (n : nat)
-                              => nat_rect
-                                   (fun _ => list (type.interp T) -> type.interp T)
-                                   (list_rect
-                                      (fun _ => type.interp T)
-                                      default
-                                      (fun x __ __ => x))
-                                   (fun n nth_error_n
-                                    => list_rect
-                                         (fun _ => type.interp T)
-                                         default
-                                         (fun __ l __ => nth_error_n l))
-                                   n
-                                   l) in
-                  exact v)*)
-             end%expr.
-      End ident.
-
-      Module expr.
-        Section with_var.
-          Context {var : type -> Type}.
-
-          Fixpoint transfer {t} (e : @for_reification.Notations.expr var t)
-            : @expr var t
-            := match e  with
-               | Var t v => Var v
-               | TT => TT
-               | Pair A B a b => Pair (@transfer A a) (@transfer B b)
-               | AppIdent s d idc args => @ident.transfer var s d idc (@transfer _ args)
-               | App s d f x => App (@transfer _ f) (@transfer _ x)
-               | Abs s d f => Abs (fun x => @transfer d (f x))
-               end.
-        End with_var.
-
-        Definition Transfer {t} (e : for_reification.Notations.Expr t) : Expr t
-          := fun var => transfer (e _).
-      End expr.
-    End canonicalize_list_recursion.
-    Notation canonicalize_list_recursion := canonicalize_list_recursion.expr.Transfer.
-    Export expr.
-    Export expr.default.
-  End Uncurried.
-
-  Import Uncurried.
-  Section invert.
-    Context {var : type -> Type}.
-
-    Definition invert_Var {t} (e : @expr var t) : option (var t)
-      := match e with
-         | Var t v => Some v
-         | _ => None
-         end.
-
-    Local Notation if_arrow f
-      := (fun t => match t return Type with
-                   | type.arrow s d => f s d
-                   | _ => True
-                   end) (only parsing).
-    Local Notation if_arrow_s f := (if_arrow (fun s d => f s)) (only parsing).
-    Local Notation if_arrow_d f := (if_arrow (fun s d => f d)) (only parsing).
-    Local Notation if_prod f
-      := (fun t => match t return Type with
-                   | type.prod A B => f A B
-                   | _ => True
-                   end).
-
-    Definition invert_Abs {s d} (e : @expr var (type.arrow s d)) : option (var s -> @expr var d)
-      := match e in expr.expr t return option (if_arrow (fun _ _ => _) t) with
-         | Abs s d f => Some f
-         | _ => None
-         end.
-
-    Definition invert_App {d} (e : @expr var d) : option { s : _ & @expr var (s -> d) * @expr var s }%type
-      := match e with
-         | App s d f x => Some (existT _ s (f, x))
-         | _ => None
-         end.
-
-    Definition invert_AppIdent {d} (e : @expr var d) : option { s : _ & @ident s d * @expr var s }%type
-      := match e with
-         | AppIdent s d idc args
-           => Some (existT _ s (idc, args))
-         | _ => None
-         end.
-
-    Definition invert_App2 {d} (e : @expr var d) : option { s1s2 : _ * _ & @expr var (fst s1s2 -> snd s1s2 -> d) * @expr var (fst s1s2) * @expr var (snd s1s2) }%type
-      := match invert_App e with
-         | Some (existT s (f, y))
-           => match invert_App f with
-              | Some (existT s' (f', x))
-                => Some (existT _ (s', s) (f', x, y))
-              | None => None
-              end
-         | None => None
-         end.
-
-    Local Notation expr_prod
-      := (fun t => match t return Type with
-                   | type.prod A B => prod (expr A) (expr B)
-                   | _ => True
-                   end) (only parsing).
-
-    Definition invert_Pair {A B} (e : @expr var (type.prod A B)) : option (@expr var A * @expr var B)
-      := match e in expr.expr t return option (if_prod (fun A B => expr A * expr B)%type t) with
-         | Pair A B a b
-           => Some (a, b)
-         | _ => None
-         end.
-
-    Definition invert_or_expand_Pair {A B} (e : @expr var (type.prod A B)) : @expr var A * @expr var B
-      := match invert_Pair e with
-         | Some p => p
-         | None => (ident.fst @@ e, ident.snd @@ e)
-         end%core%expr.
-
-    (* if we want more code for the below, I would suggest [reify_base_type] and [reflect_base_type] *)
-    Definition reify_primitive {t} (v : type.interp (type.type_primitive t)) : @expr var (type.type_primitive t)
-      := AppIdent (ident.primitive v) TT.
-    Definition reflect_primitive {t} (e : @expr var (type.type_primitive t)) : option (type.interp (type.type_primitive t))
-      := match invert_AppIdent e with
-         | Some (existT s (idc, args))
-           => match idc in ident _ t return option (type.interp t) with
-              | ident.primitive _ v => Some v
-              | _ => None
-              end
-         | None => None
-         end.
-    Definition invert_Z_opp (e : @expr var type.Z) : option (@expr var type.Z)
-      := match invert_AppIdent e with
-         | Some (existT s (idc, args))
-           => match idc in ident s t return expr s -> option (expr type.Z) with
-              | ident.Z_opp => fun v => Some v
-              | _ => fun _ => None
-              end args
-         | None => None
-         end.
-
-    Definition invert_Z_cast (e : @expr var type.Z) : option (zrange * @expr var type.Z)
-      := match invert_AppIdent e with
-         | Some (existT s (idc, args))
-           => match idc in ident s t return expr s -> option (zrange * expr type.Z) with
-              | ident.Z_cast r => fun v => Some (r, v)
-              | _ => fun _ => None
-              end args
-         | None => None
-         end.
-
-    Definition invert_Z_cast2 (e : @expr var (type.Z * type.Z)) : option ((zrange * zrange) * @expr var (type.Z * type.Z))
-      := match invert_AppIdent e with
-         | Some (existT s (idc, args))
-           => match idc in ident s t return expr s -> option ((zrange * zrange) * expr (type.Z * type.Z)) with
-              | ident.Z_cast2 r => fun v => Some (r, v)
-              | _ => fun _ => None
-              end args
-         | None => None
-         end.
-
-    Local Notation list_expr
-      := (fun t => match t return Type with
-                   | type.list T => list (expr T)
-                   | _ => True
-                   end) (only parsing).
-
-    (* oh, the horrors of not being able to use non-linear deep pattern matches.  c.f. COQBUG(https://github.com/coq/coq/issues/6320) *)
-    Fixpoint reflect_list {t} (e : @expr var (type.list t))
-      : option (list (@expr var t))
-      := match e in expr.expr t return option (list_expr t) with
-         | AppIdent s (type.list t) idc x_xs
-           => match x_xs in expr.expr s return ident s (type.list t) -> option (list (expr t)) with
-              | Pair A (type.list B) x xs
-                => match @reflect_list B xs with
-                   | Some xs
-                     => fun idc
-                        => match idc in ident s d
-                                 return if_prod (fun A B => expr A) s
-                                        -> if_prod (fun A B => list_expr B) s
-                                        -> option (list_expr d)
-                           with
-                           | ident.cons A
-                             => fun x xs => Some (cons x xs)
-                           | _ => fun _ _ => None
-                           end x xs
-                   | None => fun _ => None
-                   end
-              | _
-                => fun idc
-                   => match idc in ident _ t return option (list_expr t) with
-                      | ident.nil _ => Some nil
-                      | _ => None
-                      end
-              end idc
-         | _ => None
-         end.
-  End invert.
-
-  Section gallina_reify.
-    Context {var : type -> Type}.
-    Definition reify_list {t} (ls : list (@expr var t)) : @expr var (type.list t)
-      := list_rect
-           (fun _ => _)
-           (ident.nil @@ TT)%expr
-           (fun x _ xs => ident.cons @@ (x, xs))%expr
-           ls.
-  End gallina_reify.
-
-  Lemma interp_reify_list {t} ls
-    : interp (@reify_list _ t ls) = List.map interp ls.
-  Proof.
-    unfold reify_list.
-    induction ls as [|x xs IHxs]; cbn in *; [ reflexivity | ].
-    rewrite IHxs; reflexivity.
-  Qed.
-
-  Module GallinaReify.
-    Section value.
-      Context (var : type -> Type).
-      Fixpoint value (t : type)
-        := match t return Type with
-           | type.prod A B as t => value A * value B
-           | type.arrow s d => var s -> value d
-           | type.list A => list (value A)
-           | type.type_primitive _ as t
-             => type.interp t
-           end%type.
-    End value.
-
-    Section reify.
-      Context {var : type -> Type}.
-      Fixpoint reify {t : type} {struct t}
-        : value var t -> @expr var t
-        := match t return value var t -> expr t with
-           | type.prod A B as t
-             => fun '((a, b) : value var A * value var B)
-                => (@reify A a, @reify B b)%expr
-           | type.arrow s d
-             => fun (f : var s -> value var d)
-                => Abs (fun x
-                        => @reify d (f x))
-           | type.list A as t
-             => fun x : list (value var A)
-                => reify_list (List.map (@reify A) x)
-           | type.type_primitive _ as t
-             => fun x : type.interp t
-                => (ident.primitive x @@ TT)%expr
-           end.
-    End reify.
-
-    Definition Reify_as (t : type) (v : forall var, value var t) : Expr t
-      := fun var => reify (v _).
-
-    (** [Reify] does Ltac type inference to get the type *)
-    Notation Reify v
-      := (Reify_as (type.reify_type_of v) (fun _ => v)) (only parsing).
-  End GallinaReify.
-
-  Module Uncurry.
+  Module parametric.
+    Local Notation einterp := type.interp.
     Module type.
-      Fixpoint uncurried_domain (t : type) : type
-        := match t with
-           | type.arrow s d
-             => match d with
-                | type.arrow _ _
-                  => s * uncurried_domain d
-                | _ => s
-                end
-           | _ => type.type_primitive type.unit
-           end%ctype.
+      Section subst.
+        Context {base_type_with_var base_type}
+                (base_subst : base_type_with_var -> base_type)
+                (base_interp : base_type_with_var -> Type)
+                (base_subst_interp : base_type -> Type)
+                (M : Type -> Type)
+                (ret : forall T, T -> M T).
 
-      Definition uncurry (t : type) : type
-        := type.arrow (uncurried_domain t) (type.final_codomain t).
-    End type.
+        Fixpoint subst (t : type base_type_with_var) : type base_type
+          := match t with
+             | type.base t => type.base (base_subst t)
+             | type.arrow s d => type.arrow (subst s) (subst d)
+             end.
 
-    Fixpoint app_curried {t : type}
-      : type.interp t -> type.interp (type.uncurried_domain t) -> type.interp (type.final_codomain t)
-      := match t return type.interp t -> type.interp (type.uncurried_domain t) -> type.interp (type.final_codomain t) with
-         | type.arrow s d
-           => match d
-                    return (type.interp d -> type.interp (type.uncurried_domain d) -> type.interp (type.final_codomain d))
-                           -> type.interp (type.arrow s d)
-                           -> type.interp (type.uncurried_domain (type.arrow s d))
-                           -> type.interp (type.final_codomain d)
-              with
-              | type.arrow _ _ as d
-                => fun app_curried_d
-                       (f : type.interp s -> type.interp d)
-                       (x : type.interp s * type.interp (type.uncurried_domain d))
-                   => app_curried_d (f (fst x)) (snd x)
-              | d
-                => fun _
-                       (f : type.interp s -> type.interp d)
-                       (x : type.interp s)
-                   => f x
-              end (@app_curried d)
-         | _ => fun f _ => f
-         end.
-
-    Module expr.
-      Section with_var.
-        Context {var : type -> Type}.
-
-        Fixpoint uncurry' {t}
-          : @expr (@expr var) t -> @expr var (type.uncurried_domain t) -> @expr var (type.final_codomain t)
-          := match t return expr t -> expr (type.uncurried_domain t) -> expr (type.final_codomain t) with
+        (* half_interp *)
+        Fixpoint interp (t : type base_type_with_var) : Type
+          := match t with
+             | type.base t => base_interp t
              | type.arrow s d
-               => fun e
-                  => let f := fun v
-                              => @uncurry'
-                                   d
-                                   match invert_Abs e with
-                                   | Some f => f v
-                                   | None => e @ Var v
-                                   end%expr in
-                     match d return (expr s -> expr (type.uncurried_domain d) -> expr (type.final_codomain d)) -> expr (type.uncurried_domain (s -> d)) -> expr (type.final_codomain d) with
-                     | type.arrow _ _ as d
-                       => fun f sdv
-                          => f (ident.fst @@ sdv) (ident.snd @@ sdv)
-                     | _
-                       => fun f sv => f sv TT
-                     end f
-             | type.type_primitive _
-             | type.prod _ _
-             | type.list _
-               => fun e _ => unexpr e
-             end%expr.
+               => match s with
+                  | type.arrow s' d' => type.interpM M base_subst_interp (subst s)
+                  | type.base t => base_interp t
+                  end -> interp d
+             end.
 
-        Definition uncurry {t} (e : @expr (@expr var) t)
-          : @expr var (type.uncurry t)
-          := Abs (fun v => @uncurry' t e (Var v)).
-      End with_var.
+        Fixpoint interpM_final (t : type base_type_with_var) : Type
+          := match t with
+             | type.base t => M (base_interp t)
+             | type.arrow s d
+               => match s with
+                  | type.arrow s' d' => type.interpM M base_subst_interp (subst s)
+                  | type.base t => base_interp t
+                  end -> interpM_final d
+             end.
 
-      Definition Uncurry {t} (e : Expr t) : Expr (type.uncurry t)
-        := fun var => uncurry (e _).
-    End expr.
-  End Uncurry.
-
-  Module CPS.
-    Import Uncurried.
-    Module Import Output.
+        Fixpoint interpM_final_of_interp {t} : interp t -> interpM_final t
+          := match t with
+             | type.base t => ret _
+             | type.arrow s d
+               => fun f x => @interpM_final_of_interp d (f x)
+             end.
+      End subst.
+    End type.
+    Local Notation btype := base.type.type.
+    Local Notation bunit := base.type.unit.
+    Local Notation bZ := base.type.Z.
+    Local Notation bbool := base.type.bool.
+    Local Notation bnat := base.type.nat.
+    Local Notation bprod := base.type.prod.
+    Local Notation blist := base.type.list.
+    Module base.
       Module type.
-        Import Compilers.type.
-        Inductive type := type_primitive (_:primitive) | prod (A B : type) | continuation (A : type) | list (A : type).
-        Module Export Coercions.
-          Global Coercion type_primitive : primitive >-> type.
-        End Coercions.
+        Inductive type := unit | Z | bool | nat | prod (A B : type) | list (A : type) | var_with_subst (subst : btype).
 
-        Module Export Notations.
-          Export Coercions.
-          Delimit Scope cpstype_scope with cpstype.
-          Bind Scope cpstype_scope with type.
-          Notation "()" := unit : cpstype_scope.
-          Notation "A * B" := (prod A B) : cpstype_scope.
-          Notation "A --->" := (continuation A) : cpstype_scope.
-          Notation type := type.
-        End Notations.
+        Fixpoint subst (t : type) : btype
+          := match t with
+             | unit => bunit
+             | Z => bZ
+             | bool => bbool
+             | nat => bnat
+             | prod A B => bprod (subst A) (subst B)
+             | list A => blist (subst A)
+             | var_with_subst s => s
+             end.
+
+        (** TODO: naming? *)
+        Fixpoint parametricify (t : btype) : type
+          := match t with
+             | bunit => unit
+             | bZ => Z
+             | bbool => bool
+             | bnat => nat
+             | bprod A B => prod (parametricify A) (parametricify B)
+             | blist A => list (parametricify A)
+             end.
+        Global Coercion parametricify : btype >-> type.
+
+        Fixpoint transport_subst_parametricify (P : _ -> Type) {t}
+          : P (parametric.base.type.subst (parametric.base.type.parametricify t))
+            -> P t
+          := match t with
+             | bunit
+             | bZ
+             | bbool
+             | bnat
+               => fun x => x
+             | bprod A B
+               => fun v
+                  => @transport_subst_parametricify
+                       (fun A => P (bprod A B)) A
+                       (@transport_subst_parametricify
+                          (fun B => P (bprod (subst (parametricify A)) B)) B
+                          v)
+             | blist A
+               => @transport_subst_parametricify
+                    (fun A => P (blist A)) A
+             end.
+        Fixpoint untransport_subst_parametricify (P : _ -> Type) {t}
+          : P t
+            -> P (parametric.base.type.subst (parametric.base.type.parametricify t))
+          := match t with
+             | bunit
+             | bZ
+             | bbool
+             | bnat
+               => fun x => x
+             | bprod A B
+               => fun v
+                  => @untransport_subst_parametricify
+                       (fun A => P (bprod A (subst (parametricify B)))) A
+                       (@untransport_subst_parametricify
+                          (fun B => P (bprod A B)) B
+                          v)
+             | blist A
+               => @untransport_subst_parametricify
+                    (fun A => P (blist A)) A
+             end.
 
         Section interp.
-          Context (R : Type).
-          (** denote CPS types *)
-          Fixpoint interp (t : type)
-            := match t return Type with
-               | type_primitive t => Compilers.type.interp t
+          Context (base_interp : btype -> Type).
+
+          Fixpoint interp (t : type) : Type
+            := match t with
+               | unit => Datatypes.unit
+               | Z => BinInt.Z
+               | bool => Datatypes.bool
+               | nat => Datatypes.nat
                | prod A B => interp A * interp B
-               | continuation A => interp A -> R
                | list A => Datatypes.list (interp A)
+               | var_with_subst s => base_interp s
                end%type.
         End interp.
       End type.
-      Export type.Notations.
+      Notation type := type.type.
+    End base.
 
-      Module expr.
-        Section expr.
-          Context {ident : type -> Type} {var : type -> Type} {R : type}.
+    Definition subst (t : type base.type) : type btype
+      := type.subst base.type.subst t.
 
-          Inductive expr :=
-          | Halt (v : var R)
-          | App {A} (f : var (A --->)) (x : var A)
-          | Bind {A} (x : primop A) (f : var A -> expr)
-          with
-          primop : type -> Type :=
-          | Var {t} (v : var t) : primop t
-          | Abs {t} (f : var t -> expr) : primop (t --->)
-          | Pair {A B} (x : var A) (y : var B) : primop (A * B)
-          | Fst {A B} (x : var (A * B)) : primop A
-          | Snd {A B} (x : var (A * B)) : primop B
-          | TT : primop ()
-          | Ident {t} (idc : ident t) : primop t.
-        End expr.
-        Global Arguments expr {ident var} R.
-        Global Arguments primop {ident var} R _.
+    Definition half_interp (M : Type -> Type) (half_interp : base.type.type -> Type) (interp : btype -> Type) (t : type base.type) : Type
+      := type.interp base.type.subst half_interp interp M t.
+    Definition half_interp2 (M : Type -> Type) (half_interp : base.type.type -> Type) (interp : btype -> Type) (t : type base.type) : Type
+      := type.interpM_final base.type.subst half_interp interp M t.
+    Definition half_interp2_of_interp {M half_interpf interp t} ret
+      : half_interp M half_interpf interp t -> half_interp2 M half_interpf interp t
+      := type.interpM_final_of_interp _ _ _ _ ret.
+  End parametric.
+  Notation ptype := (type.type parametric.base.type).
+  Delimit Scope ptype_scope with ptype.
+  Notation "s -> d" := (type.arrow s%ptype d%ptype) : ptype_scope.
+  Bind Scope ptype_scope with parametric.base.type.
+  Infix "*" := parametric.base.type.prod : ptype_scope.
+  Notation "()" := parametric.base.type.unit : ptype_scope.
+  Notation "# x" := (parametric.base.type.var_with_subst x) : ptype_scope.
+  Global Coercion parametric.base.type.parametricify : base.type >-> parametric.base.type.type.
 
-        Definition Expr {ident : type -> Type} R := forall var, @expr ident var R.
+  Module expr.
+    Section with_var.
+      Context {base_type : Type}.
+      Local Notation type := (type base_type).
+      Context {ident : type -> Type}
+              {var : type -> Type}.
 
-        Section with_ident.
-          Context {ident : type -> Type}
-                  (r : type)
-                  (R : Type)
-                  (interp_ident
-                   : forall t, ident t -> type.interp R t).
+      Inductive expr : type -> Type :=
+      | Ident {t} (idc : ident t) : expr t
+      | Var {t} (v : var t) : expr t
+      | Abs {s d} (f : var s -> expr d) : expr (s -> d)
+      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
+      | LetIn {A B} (x : expr A) (f : var A -> expr B) : expr B
+      .
+    End with_var.
 
-          (** denote CPS exprs *)
-          Fixpoint interp (e : @expr ident (type.interp R) r) (k : type.interp R r -> R)
-                   {struct e}
-            : R
-            := match e with
-               | Halt v => k v
-               | App A f x => f x
-               | Bind A x f => interp (f (@interp_primop _ x k)) k
-               end
-          with interp_primop {t} (e : @primop ident (type.interp R) r t) (k : type.interp R r -> R)
-                             {struct e}
-               : type.interp R t
-               := match e with
-                  | Var t v => v
-                  | Abs t f => fun x : type.interp _ t => interp (f x) k
-                  | Pair A B x y => (x, y)
-                  | Fst A B x => fst x
-                  | Snd A B x => snd x
-                  | TT => tt
-                  | Ident t idc => interp_ident t idc
-                  end.
+    Fixpoint interp {base_type ident} {interp_base_type : base_type -> Type}
+             (interp_ident : forall t, ident t -> type.interp interp_base_type t)
+             {t} (e : @expr base_type ident (type.interp interp_base_type) t)
+      : type.interp interp_base_type t
+      := match e in expr t return type.interp _ t with
+         | Ident t idc => interp_ident _ idc
+         | Var t v => v
+         | Abs s d f => fun x => @interp _ _ _ interp_ident _ (f x)
+         | App s d f x => (@interp _ _ _ interp_ident _ f)
+                            (@interp _ _ _ interp_ident _ x)
+         | LetIn A B x f
+           => dlet y := @interp _ _ _ interp_ident _ x in
+               @interp _ _ _ interp_ident _ (f y)
+         end.
 
-          Definition Interp (e : Expr r) (k : type.interp R r -> R) : R := interp (e _) k.
-        End with_ident.
+    Definition Expr {base_type ident} t := forall var, @expr base_type ident var t.
+    Definition APP {base_type ident s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
+      := fun var => @App base_type ident var s d (f var) (x var).
 
-        Module Export Notations.
-          Delimit Scope cpsexpr_scope with cpsexpr.
-          Bind Scope cpsexpr_scope with expr.
-          Bind Scope cpsexpr_scope with primop.
+    Definition Interp {base_type ident interp_base_type} interp_ident {t} (e : @Expr base_type ident t)
+      : type.interp interp_base_type t
+      := @interp base_type ident interp_base_type interp_ident t (e _).
 
-          Infix "@" := App : cpsexpr_scope.
-          Notation "v <- x ; f" := (Bind x (fun v => f)) : cpsexpr_scope.
-          Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%cpsexpr)) ..)) : cpsexpr_scope.
-          Notation "( x , y , .. , z )" := (Pair .. (Pair x%cpsexpr y%cpsexpr) .. z%cpsexpr) : cpsexpr_scope.
-        Notation "( )" := TT : cpsexpr_scope.
-        Notation "()" := TT : cpsexpr_scope.
-        End Notations.
-      End expr.
-      Export expr.Notations.
-    End Output.
+    (** [Interp (APP _ _)] is the same thing as Gallina application of
+        the [Interp]retations of the two arguments to [APP]. *)
+    Definition Interp_APP {base_type ident interp_base_type interp_ident} {s d} (f : @Expr base_type ident (s -> d)) (x : @Expr base_type ident s)
+      : @Interp base_type ident interp_base_type interp_ident _ (APP f x)
+        = Interp interp_ident f (Interp interp_ident x)
+      := eq_refl.
 
-    Module type.
-      Section translate.
-        Fixpoint translate (t : Compilers.type.type) : type
-          := match t with
-             | A * B => (translate A * translate B)%cpstype
-             | s -> d => (translate s * (translate d --->) --->)%cpstype
-             | Compilers.type.list A => type.list (translate A)
-             | Compilers.type.type_primitive t
-               => t
-             end%ctype.
-        Fixpoint untranslate (R : Compilers.type.type) (t : type)
-          : Compilers.type.type
-          := match t with
-             | type.type_primitive t => t
-             | A * B => (untranslate R A * untranslate R B)%ctype
-             | (t --->)
-               => (untranslate R t -> R)%ctype
-             | type.list A => Compilers.type.list (untranslate R A)
-             end%cpstype.
-      End translate.
-    End type.
+    (** Same as [Interp_APP], but for any reflexive relation, not just
+        [eq] *)
+    Definition Interp_APP_rel_reflexive {base_type ident interp_base_type interp_ident} {s d} {R} {H:Reflexive R}
+               (f : @Expr base_type ident (s -> d)) (x : @Expr base_type ident s)
+      : R (@Interp base_type ident interp_base_type interp_ident _ (APP f x))
+          (Interp interp_ident f (Interp interp_ident x))
+      := H _.
 
-    Module expr.
-      Import Output.expr.
-      Import Output.expr.Notations.
-      Import Compilers.type.
-      Import Compilers.Uncurried.expr.
-      Section with_ident.
-        Context {ident : Output.type.type -> Type}
-                {ident' : type -> type -> Type}
-                {var : Output.type.type -> Type}
-                (translate_ident : forall s d, ident' s d -> ident (type.translate (s -> d))).
-        Notation var' := (fun t => var (type.translate t)).
-        Local Notation oexpr := (@Output.expr.expr ident var).
+    Module var_context.
+      Inductive list {base_type} {var : type base_type -> Type} :=
+      | nil
+      | cons {T t} (gallina_v : T) (v : var t) (ctx : list).
+    End var_context.
 
-        Section splice.
-          Context {r1 r2 : Output.type.type}.
-          Fixpoint splice  (e1 : oexpr r1) (e2 : var r1 -> oexpr r2)
-                   {struct e1}
-            : oexpr r2
-            := match e1 with
-               | Halt v => e2 v
-               | f @ x => f @ x
-               | Bind A x f => v <- @splice_primop _ x e2; @splice (f v) e2
-               end%cpsexpr
-          with
-          splice_primop {t} (f : @primop ident var r1 t) (e2 : var r1 -> oexpr r2)
-                        {struct f}
-          : @primop ident var r2 t
-          := match f with
-             | Output.expr.Var t v => Output.expr.Var v
-             | Output.expr.Pair A B x y as e => Output.expr.Pair x y
-             | Output.expr.Fst A B x => Output.expr.Fst x
-             | Output.expr.Snd A B x => Output.expr.Snd x
-             | Output.expr.TT => Output.expr.TT
-             | Output.expr.Ident t idc => Output.expr.Ident idc
-             | Output.expr.Abs t f
-               => Output.expr.Abs (fun x => @splice (f x) e2)
+    (* cf COQBUG(https://github.com/coq/coq/issues/5448) , COQBUG(https://github.com/coq/coq/issues/6315) , COQBUG(https://github.com/coq/coq/issues/6559) , COQBUG(https://github.com/coq/coq/issues/6534) , https://github.com/mit-plv/fiat-crypto/issues/320 *)
+    Ltac require_same_var n1 n2 :=
+      (*idtac n1 n2;*)
+      let c1 := constr:(fun n1 n2 : Set => ltac:(exact n1)) in
+      let c2 := constr:(fun n1 n2 : Set => ltac:(exact n2)) in
+      (*idtac c1 c2;*)
+      first [ constr_eq c1 c2 | fail 1 "Not the same var:" n1 "and" n2 "(via constr_eq" c1 c2 ")" ].
+    Ltac is_same_var n1 n2 :=
+      match goal with
+      | _ => let check := match goal with _ => require_same_var n1 n2 end in
+             true
+      | _ => false
+      end.
+    Ltac is_underscore v :=
+      let v' := fresh v in
+      let v' := fresh v' in
+      is_same_var v v'.
+    Ltac refresh n fresh_tac :=
+      let n_is_underscore := is_underscore n in
+      let n' := lazymatch n_is_underscore with
+                | true => fresh
+                | false => fresh_tac n
+                end in
+      let n' := fresh_tac n' in
+      n'.
+
+    Ltac type_of_first_argument_of f :=
+      let f_ty := type of f in
+      lazymatch eval hnf in f_ty with
+      | forall x : ?T, _ => T
+      end.
+
+    (** Forms of abstraction in Gallina that our reflective language
+        cannot handle get handled by specializing the code "template"
+        to each particular application of that abstraction. In
+        particular, type arguments (nat, Z, (λ _, nat), etc) get
+        substituted into lambdas and treated as a integral part of
+        primitive operations (such as [@List.app T], [@list_rect (λ _,
+        nat)]).  During reification, we accumulate them in a
+        right-associated tuple, using [tt] as the "nil" base case.
+        When we hit a λ or an identifier, we plug in the template
+        parameters as necessary. *)
+    Ltac require_template_parameter parameter_type :=
+      first [ unify parameter_type Prop
+            | unify parameter_type Set
+            | unify parameter_type Type
+            | lazymatch eval hnf in parameter_type with
+              | forall x : ?T, @?P x
+                => let check := constr:(fun x : T
+                                        => ltac:(require_template_parameter (P x);
+                                                 exact I)) in
+                   idtac
+              end ].
+    Ltac is_template_parameter parameter_type :=
+      is_success_run_tactic ltac:(fun _ => require_template_parameter parameter_type).
+    Ltac plug_template_ctx f template_ctx :=
+      lazymatch template_ctx with
+      | tt => f
+      | (?arg, ?template_ctx')
+        =>
+        let T := type_of_first_argument_of f in
+        let x_is_template_parameter := is_template_parameter T in
+        lazymatch x_is_template_parameter with
+        | true
+          => plug_template_ctx (f arg) template_ctx'
+        | false
+          => constr:(fun x : T
+                     => ltac:(let v := plug_template_ctx (f x) template_ctx in
+                              exact v))
+        end
+      end.
+
+    Ltac reify_in_context base_type ident reify_base_type reify_ident var term value_ctx template_ctx :=
+      let reify_rec_gen term value_ctx template_ctx := reify_in_context base_type ident reify_base_type reify_ident var term value_ctx template_ctx in
+      let reify_rec term := reify_rec_gen term value_ctx template_ctx in
+      let reify_rec_not_head term := reify_rec_gen term value_ctx tt in
+      let do_reify_ident term else_tac
+          := reify_ident
+               term
+               ltac:(fun idc => constr:(@Ident base_type ident var _ idc))
+                      reify_rec
+                      else_tac in
+      let __ := Reify.debug_enter_reify_in_context term in
+      lazymatch value_ctx with
+      | context[@var_context.cons _ _ ?T ?rT term ?v _]
+        => constr:(@Var base_type ident var rT v)
+      | _
+        =>
+        lazymatch term with
+        | match ?b with true => ?t | false => ?f end
+          => let T := type of term in
+             reify_rec (@bool_rect (fun _ => T) t f b)
+        | match ?x with Datatypes.pair a b => ?f end
+          => let x' := fresh in
+             let T := type of x in
+             reify_rec ((fun x' : T
+                         => match Datatypes.fst x, Datatypes.snd x return _ with
+                            | a, b => f
+                            end) x)
+        | match ?x with nil => ?N | cons a b => @?C a b end
+          => let T := type of term in
+             reify_rec (@list_case _ (fun _ => T) N C x)
+        | let x := ?a in @?b x
+          => let A := type of a in
+             let B := lazymatch type of b with forall x, @?B x => B end in
+             reify_rec (b a) (*(@Let_In A B a b)*)
+        | @Let_In ?A ?B ?a ?b
+          => let ra := reify_rec a in
+             let rb := reify_rec b in
+             lazymatch rb with
+             | @Abs _ _ _ ?s ?d ?f
+               => constr:(@LetIn base_type ident var s d ra f)
+             | ?rb => let __ := match goal with
+                                | _ => fail 1 "Invalid non-Abs function reification of" b "to" rb
+                                end in
+                      constr:(I : I)
+             end
+        | (fun x : ?T => ?f)
+          =>
+          let x_is_template_parameter := is_template_parameter T in
+          lazymatch x_is_template_parameter with
+          | true
+            =>
+            lazymatch template_ctx with
+            | (?arg, ?template_ctx)
+              => (* we pull a trick with [match] to plug in [arg] without running cbv β *)
+              lazymatch type of term with
+              | forall y, ?P
+                => reify_rec_gen (match arg as y return P with x => f end) value_ctx template_ctx
+              end
+            end
+          | false
+            =>
+            let rT := type.reify reify_base_type T in
+            let not_x := fresh (* could be [refresh x ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
+            let not_x2 := fresh (* could be [refresh not_x ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
+            let not_x3 := fresh (* could be [refresh not_x2 ltac:(fun n => fresh n)] in 8.8; c.f. https://github.com/mit-plv/fiat-crypto/issues/320 and probably COQBUG(https://github.com/coq/coq/issues/6534) *) in
+            (*let __ := match goal with _ => idtac "reify_in_context: λ case:" term "using vars:" not_x not_x2 not_x3 end in*)
+            let rf0 :=
+                constr:(
+                  fun (x : T) (not_x : var rT)
+                  => match f, @var_context.cons base_type var T rT x not_x value_ctx return _ with (* c.f. COQBUG(https://github.com/coq/coq/issues/6252#issuecomment-347041995) for [return _] *)
+                     | not_x2, not_x3
+                       => ltac:(
+                            let f := (eval cbv delta [not_x2] in not_x2) in
+                            let var_ctx := (eval cbv delta [not_x3] in not_x3) in
+                            (*idtac "rec call" f "was" term;*)
+                            let rf := reify_rec_gen f var_ctx template_ctx in
+                            exact rf)
+                     end) in
+            lazymatch rf0 with
+            | (fun _ => ?rf)
+              => constr:(@Abs base_type ident var rT _ rf)
+            | _
+              => (* This will happen if the reified term still
+                    mentions the non-var variable.  By chance, [cbv
+                    delta] strips type casts, which are only places
+                    that I can think of where such dependency might
+                    remain.  However, if this does come up, having a
+                    distinctive error message is much more useful for
+                    debugging than the generic "no matching clause" *)
+              let __ := match goal with
+                        | _ => fail 1 "Failure to eliminate functional dependencies of" rf0
+                        end in
+              constr:(I : I)
+            end
+          end
+        | _
+          =>
+          do_reify_ident
+            term
+            ltac:(
+            fun _
+            =>
+              lazymatch term with
+              | ?f ?x
+                =>
+                let ty := type_of_first_argument_of f in
+                let x_is_template_parameter := is_template_parameter ty in
+                lazymatch x_is_template_parameter with
+                | true
+                  => (* we can't reify things of type [Type], so we save it for later to plug in *)
+                  reify_rec_gen f value_ctx (x, template_ctx)
+                | false
+                  => let rx := reify_rec_gen x value_ctx tt in
+                     let rf := reify_rec_gen f value_ctx template_ctx in
+                     constr:(App (base_type:=base_type) (ident:=ident) (var:=var) rf rx)
+                end
+              | _
+                => let term' := plug_template_ctx term template_ctx in
+                   do_reify_ident
+                     term'
+                     ltac:(fun _
+                           =>
+                             (*let __ := match goal with _ => idtac "Attempting to unfold" term end in*)
+                             let term
+                                 := match constr:(Set) with
+                                    | _ => (eval cbv delta [term] in term) (* might fail, so we wrap it in a match to give better error messages *)
+                                    | _
+                                      => let __ := match goal with
+                                                   | _ => fail 2 "Unrecognized term:" term'
+                                                   end in
+                                         constr:(I : I)
+                                    end in
+                             reify_rec term)
+              end)
+        end
+      end.
+    Ltac reify base_type ident reify_base_type reify_ident var term :=
+      reify_in_context base_type ident reify_base_type reify_ident var term (@var_context.nil base_type var) tt.
+    Ltac Reify base_type ident reify_base_type reify_ident term :=
+      constr:(fun var : type base_type -> Type
+              => ltac:(let r := reify base_type ident reify_base_type reify_ident var term in
+                       exact r)).
+    Ltac Reify_rhs base_type ident reify_base_type reify_ident base_interp interp_ident _ :=
+      let RHS := lazymatch goal with |- _ = ?RHS => RHS end in
+      let R := Reify base_type ident reify_base_type reify_ident RHS in
+      transitivity (@Interp base_type ident base_interp interp_ident _ R);
+      [ | try cbv beta iota delta [Interp interp base_interp interp_ident type.interp bool_rect];
+          cbv beta iota delta [Interp interp];
+          try cbv beta iota delta [interp_ident];
+          try cbv beta iota delta [base_interp];
+          cbv beta iota delta [type.interp bool_rect];
+          reflexivity ].
+
+    Module Export Notations.
+      Delimit Scope expr_scope with expr.
+      Delimit Scope Expr_scope with Expr.
+      Delimit Scope expr_pat_scope with expr_pat.
+      Bind Scope expr_scope with expr.
+      Bind Scope Expr_scope with Expr.
+      Infix "@" := App : expr_scope.
+      Infix "@" := APP : Expr_scope.
+      Notation "\ x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
+      Notation "'λ' x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
+      Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
+      Notation "'$' x" := (Var x) (at level 10, format "'$' x") : expr_scope.
+      Notation "### x" := (Ident x) : expr_scope.
+    End Notations.
+  End expr.
+  Export expr.Notations.
+  Notation expr := expr.expr.
+
+  Module ident.
+    Local Notation type := (type base.type).
+    Section with_base.
+      Let type_base (x : base.type) : type := type.base x.
+      Local Coercion type_base : base.type >-> type.
+      Let ptype_base (x : parametric.base.type) : ptype := type.base x.
+      Local Coercion ptype_base : parametric.base.type >-> ptype.
+      Section with_scopes.
+        Import parametric.base.type.
+        (* Local *) Bind Scope ptype_scope with ptype.
+
+        Inductive pident : ptype -> Type :=
+        | Literal {t:base.type} (v : base.interp t) : pident (parametricify t)
+        | Nat_succ : pident (nat -> nat)
+        | Nat_pred : pident (nat -> nat)
+        | Nat_max : pident (nat -> nat -> nat)
+        | Nat_mul : pident (nat -> nat -> nat)
+        | Nat_add : pident (nat -> nat -> nat)
+        | Nat_sub : pident (nat -> nat -> nat)
+        | nil {t} : pident (list #t)
+        | cons {t} : pident (#t -> list #t -> list #t)
+        | pair {A B} : pident (#A -> #B -> #A * #B)
+        | fst {A B} : pident (#A * #B -> #A)
+        | snd {A B} : pident (#A * #B -> #B)
+        | bool_rect {T} : pident ((unit -> #T) -> (unit -> #T) -> bool -> #T)
+        | nat_rect {P} : pident ((unit -> #P) -> (nat -> #P -> #P) -> nat -> #P)
+        | list_rect {A P} : pident ((unit -> #P) -> (#A -> list #A -> #P -> #P) -> list #A -> #P)
+        | list_case {A P} : pident ((unit -> #P) -> (#A -> list #A -> #P) -> list #A -> #P)
+        | List_length {T} : pident (list #T -> nat)
+        | List_seq : pident (nat -> nat -> list nat)
+        | List_repeat {A} : pident (#A -> nat -> list #A)
+        | List_combine {A B} : pident (list #A -> list #B -> list (#A * #B))
+        | List_map {A B} : pident ((#A -> #B) -> list #A -> list #B)
+        | List_app {A} : pident (list #A -> list #A -> list #A)
+        | List_rev {A} : pident (list #A -> list #A)
+        | List_flat_map {A B} : pident ((#A -> #(base.type.list B)) -> list #A -> #(base.type.list B))
+        | List_partition {A} : pident ((#A -> bool) -> list #A -> #(base.type.list A * base.type.list A))
+        | List_fold_right {A B} : pident ((#B -> #A -> #A) -> #A -> list #B -> #A)
+        | List_update_nth {T} : pident (nat -> (#T -> #T) -> list #T -> list #T)
+        | List_nth_default {T} : pident (#T -> list #T -> nat -> #T)
+        | Z_add : pident (#base.type.Z -> #base.type.Z -> #base.type.Z)
+        | Z_mul : pident (#base.type.Z -> #base.type.Z -> #base.type.Z)
+        | Z_pow : pident (Z -> Z -> Z)
+        | Z_sub : pident (#base.type.Z -> #base.type.Z -> #base.type.Z)
+        | Z_opp : pident (#base.type.Z -> #base.type.Z)
+        | Z_div : pident (#base.type.Z -> Z -> #base.type.Z)
+        | Z_modulo : pident (#base.type.Z -> Z -> #base.type.Z)
+        | Z_eqb : pident (Z -> Z -> bool)
+        | Z_leb : pident (Z -> Z -> bool)
+        | Z_of_nat : pident (nat -> Z)
+        | Z_shiftr (offset : BinInt.Z) : pident (Z -> Z)
+        | Z_shiftl (offset : BinInt.Z) : pident (Z -> Z)
+        | Z_land (mask : BinInt.Z) : pident (Z -> Z)
+        | Z_mul_split : pident (Z -> Z -> Z -> Z * Z)
+        | Z_mul_split_concrete (s:BinInt.Z) : pident (Z -> Z -> Z * Z)
+        | Z_add_get_carry : pident (Z -> #base.type.Z -> #base.type.Z -> #(base.type.Z * base.type.Z))
+        | Z_add_get_carry_concrete (s:BinInt.Z) : pident (#base.type.Z -> #base.type.Z -> #(base.type.Z * base.type.Z))
+        | Z_add_with_carry : pident (Z -> #base.type.Z -> #base.type.Z -> #base.type.Z)
+        | Z_add_with_get_carry : pident (Z -> #base.type.Z -> #base.type.Z -> #base.type.Z -> #(base.type.Z * base.type.Z))
+        | Z_add_with_get_carry_concrete (s:BinInt.Z) : pident (Z -> Z -> Z -> Z * Z)
+        | Z_sub_get_borrow : pident (Z -> #base.type.Z -> #base.type.Z -> #(base.type.Z * base.type.Z))
+        | Z_sub_get_borrow_concrete (s:BinInt.Z) : pident (Z -> Z -> Z * Z)
+        | Z_sub_with_get_borrow : pident (Z -> #base.type.Z -> #base.type.Z -> #base.type.Z -> #(base.type.Z * base.type.Z))
+        | Z_sub_with_get_borrow_concrete (s:BinInt.Z) : pident (Z -> Z -> Z -> Z * Z)
+        | Z_zselect : pident (Z -> Z -> Z -> Z)
+        | Z_add_modulo : pident (Z -> Z -> Z -> Z)
+        | Z_rshi : pident (Z -> #base.type.Z -> #base.type.Z -> Z -> #base.type.Z)
+        | Z_rshi_concrete (s offset:BinInt.Z) : pident (Z -> Z -> Z)
+        | Z_cc_m : pident (Z -> #base.type.Z -> #base.type.Z)
+        | Z_cc_m_concrete (s:BinInt.Z) : pident (Z -> Z)
+        | Z_neg_snd : pident (#(base.type.Z * base.type.Z) -> #base.type.Z * #base.type.Z) (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template; N.B. the type signature here says "given any amount of information about a thing of type [ℤ * ℤ], we promise to return a concrete pair of some amount of information about a thing of type ℤ and a thing of type ℤ" *)
+        | Z_cast (range : zrange) : pident (#base.type.Z -> #base.type.Z)
+        | Z_cast2 (range : zrange * zrange) : pident (#(base.type.Z * base.type.Z) -> #(base.type.Z * base.type.Z))
+        .
+      End with_scopes.
+
+      Section gen.
+        Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
+
+        Definition cast (r : zrange) (x : BinInt.Z)
+          := if (lower r <=? x) && (x <=? upper r)
+             then x
+             else cast_outside_of_range r x.
+
+        (** Interpret identifiers where the behavior of [Z_cast] on a
+            value that does not fit in the range is given by a context
+            variable.  (This allows us to treat [Z_cast] as "undefined
+            behavior" when the value doesn't fit in the range by
+            quantifying over all possible interpretations. *)
+        Definition gen_pinterp {t} (idc : pident t) : type.interp base.interp (parametric.subst t)
+          := match idc in pident t return type.interp base.interp (parametric.subst t) with
+             | Literal _ v
+               => parametric.base.type.untransport_subst_parametricify base.interp v
+             | Nat_succ => Nat.succ
+             | Nat_pred => Nat.pred
+             | Nat_max => Nat.max
+             | Nat_mul => Nat.mul
+             | Nat_add => Nat.add
+             | Nat_sub => Nat.sub
+             | nil t => Datatypes.nil
+             | cons t => Datatypes.cons
+             | pair A B => Datatypes.pair
+             | fst A B => Datatypes.fst
+             | snd A B => Datatypes.snd
+             | bool_rect T
+               => fun t f => Datatypes.bool_rect _ (t tt) (f tt)
+             | nat_rect P
+               => fun O_case S_case => Datatypes.nat_rect _ (O_case tt) S_case
+             | list_rect A P
+               => fun N_case C_case => Datatypes.list_rect _ (N_case tt) C_case
+             | list_case A P
+               => fun N_case C_case => ListUtil.list_case _ (N_case tt) C_case
+             | List_length T => @List.length _
+             | List_seq => List.seq
+             | List_repeat A => @List.repeat _
+             | List_combine A B => @List.combine _ _
+             | List_map A B => @List.map _ _
+             | List_app A => @List.app _
+             | List_rev A => @List.rev _
+             | List_flat_map A B => @List.flat_map _ _
+             | List_partition A => @List.partition _
+             | List_fold_right A B => @List.fold_right _ _
+             | List_update_nth T => update_nth
+             | List_nth_default T => @nth_default _
+             | Z_add => Z.add
+             | Z_mul => Z.mul
+             | Z_pow => Z.pow
+             | Z_sub => Z.sub
+             | Z_opp => Z.opp
+             | Z_div => Z.div
+             | Z_modulo => Z.modulo
+             | Z_eqb => Z.eqb
+             | Z_leb => Z.leb
+             | Z_of_nat => Z.of_nat
+             | Z_shiftr offset => fun v => Z.shiftr v offset
+             | Z_shiftl offset => fun v => Z.shiftl v offset
+             | Z_land mask => fun v => Z.land v mask
+             | Z_mul_split => Z.mul_split
+             | Z_mul_split_concrete s => Z.mul_split s
+             | Z_add_get_carry => Z.add_get_carry_full
+             | Z_add_get_carry_concrete s => Z.add_get_carry_full s
+             | Z_add_with_carry => Z.add_with_carry
+             | Z_add_with_get_carry => Z.add_with_get_carry_full
+             | Z_add_with_get_carry_concrete s => Z.add_with_get_carry_full s
+             | Z_sub_get_borrow => Z.sub_get_borrow_full
+             | Z_sub_get_borrow_concrete s => Z.sub_get_borrow_full s
+             | Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
+             | Z_sub_with_get_borrow_concrete s => Z.sub_with_get_borrow_full s
+             | Z_zselect => Z.zselect
+             | Z_add_modulo => Z.add_modulo
+             | Z_rshi => Z.rshi
+             | Z_rshi_concrete s offset => fun x y => Z.rshi s x y offset
+             | Z_cc_m => Z.cc_m
+             | Z_cc_m_concrete s => Z.cc_m s
+             | Z_neg_snd => fun '(x, y) => (x, -y) (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template *)
+             | Z_cast r => cast r
+             | Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
              end.
-        End splice.
+      End gen.
 
-        Local Notation "x <-- e1 ; e2" := (splice e1 (fun x => e2%cpsexpr)) : cpsexpr_scope.
+      Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
+      Proof. exact v. Qed.
 
-        (** Note: We used to special-case [bool_rect] because
-            reduction of the bodies of eliminators should block on the
-            branching.  We would like to just write:
+      (** Interpret identifiers where [Z_cast] is an opaque identity
+         function when the value is not inside the range *)
+      Definition pinterp {t} (idc : pident t) : type.interp base.interp (parametric.subst t)
+        := @gen_pinterp cast_outside_of_range t idc.
+      Global Arguments pinterp _ !_ / .
 
-<<
-| AppIdent (A * A * type.bool) A ident.bool_rect (Ptrue, Pfalse, b)
-  => b' <-- @translate _ b;
-     App_bool_rect (@translate _ Ptrue) (@translate _ Pfalse) b'
-| AppIdent s d idc args
-  => args' <-- @translate _ args;
-     k <- Output.expr.Abs (fun r => Halt r);
-     p <- (args', k);
-     f <- Output.expr.Ident (translate_ident s d idc);
-     f @ p
->>
-            but due do deficiencies in non-linear deep pattern
-            matching (and the fact that we're generic over the type of
-            identifiers), we cannot, and must write something
-            significantly more verbose.  Because this is so painful,
-            we do not special-case [nat_rect] nor [list_rect], which
-            anyway do not need special casing except in cases where
-            they never hit the base case; it is already the case that
-            functions get a sort of "free pass" and do get evaluated
-            until applied to arguments, and the base case ought to be
-            hit exactly once.
+      Inductive wident (pident : ptype -> Type) : type -> Type :=
+      | wrap {T} (idc : pident T) : wident pident (parametric.subst T).
+      Definition ident := wident pident.
+      Definition pwrap {T} (idc : pident T) : ident _ := @wrap pident T idc.
 
-            However, now that [bool_rect]'s arguments are thunked, we
-            no longer need to do this. *)
-        Fixpoint translate {t}
-                 (e : @Compilers.Uncurried.expr.expr ident' var' t)
-          : @Output.expr.expr ident var (type.translate t)
-          := match e with
-             | Var t v => Halt v
-             | TT => x <- () ; Halt x
-             | AppIdent s d idc args
-               => (args' <-- @translate _ args;
-                     k <- Output.expr.Abs (fun r => Halt r);
-                     p <- (args', k);
-                     f <- Output.expr.Ident (translate_ident s d idc);
-                     f @ p)
-             | Pair A B a b
-               => (a' <-- @translate _ a;
-                     b' <-- @translate _ b;
-                     p <- (a', b');
-                     Halt p)
-             | App s d e1 e2
-               => (f <-- @translate _ e1;
-                     x <-- @translate _ e2;
-                     k <- Output.expr.Abs (fun r => Halt r);
-                     p <- (x, k);
-                     f @ p)
-             | Abs s d f
-               => f <- (Output.expr.Abs
-                          (fun p
-                           => x <- Fst p;
-                                k <- Snd p;
-                                r <-- @translate _ (f x);
-                                k @ r));
-                    Halt f
-             end%cpsexpr.
-      End with_ident.
+      Definition winterp {pident} (pinterp : forall t, pident t -> type.interp base.interp (parametric.subst t)) {t} (idc : wident pident t)
+        : type.interp base.interp t
+        := match idc with
+           | wrap _ idc => pinterp _ idc
+           end.
+      Definition interp {t} (idc : ident t) : type.interp base.interp t
+        := winterp (@pinterp) idc.
+    End with_base.
+    Global Arguments wrap {pident T} idc.
+    Global Coercion pwrap : pident >-> ident.
 
-      Definition Translate
-                 {ident : Output.type.type -> Type}
-                 {ident' : type -> type -> Type}
-                 (translate_ident : forall s d, ident' s d -> ident (type.translate (s -> d)))
-                 {t} (e : @Compilers.Uncurried.expr.Expr ident' t)
-        : @Output.expr.Expr ident (type.translate t)
-        := fun var => translate translate_ident (e _).
+    (** TODO: MOVE ME? *)
+    Module Thunked.
+      Definition bool_rect P (t f : Datatypes.unit -> P) (b : bool) : P
+        := Datatypes.bool_rect (fun _ => P) (t tt) (f tt) b.
+      Definition list_rect {A} P (N : Datatypes.unit -> P) (C : A -> list A -> P -> P) (ls : list A) : P
+        := Datatypes.list_rect (fun _ => P) (N tt) C ls.
+      Definition list_case {A} P (N : Datatypes.unit -> P) (C : A -> list A -> P) (ls : list A) : P
+        := ListUtil.list_case (fun _ => P) (N tt) C ls.
+      Definition nat_rect P (O_case : unit -> P) (S_case : nat -> P -> P) (n : nat) : P
+        := Datatypes.nat_rect (fun _ => P) (O_case tt) S_case n.
+    End Thunked.
 
-      Section call_with_cont.
-        Context {ident' : Output.type.type -> Type}
-                {ident : type -> type -> Type}
-                {var : type -> Type}
-                {r : Output.type.type}
-                {R : type}.
-        Notation ucexpr := (@Compilers.Uncurried.expr.expr ident var).
-        Notation ucexprut t := (ucexpr (type.untranslate R t)) (only parsing).
-        Notation var' := (fun t => ucexprut t).
-        Context (untranslate_ident : forall t, ident' t -> ucexprut t)
-                (ifst : forall A B, ident (A * B)%ctype A)
-                (isnd : forall A B, ident (A * B)%ctype B).
+    Ltac require_primitive_const term :=
+      lazymatch term with
+      | S ?n => require_primitive_const n
+      | O => idtac
+      | true => idtac
+      | false => idtac
+      | tt => idtac
+      | Z0 => idtac
+      | Zpos ?p => require_primitive_const p
+      | Zneg ?p => require_primitive_const p
+      | xI ?p => require_primitive_const p
+      | xO ?p => require_primitive_const p
+      | xH => idtac
+      | ?term => fail 0 "Not a known const:" term
+      end.
+    Ltac is_primitive_const term :=
+      match constr:(Set) with
+      | _ => let check := match goal with
+                          | _ => require_primitive_const term
+                          end in
+             true
+      | _ => false
+      end.
 
-        Fixpoint call_with_continuation
-                 (e : @Output.expr.expr ident' var' r)
-                 (k : ucexprut r -> ucexpr R)
-                 {struct e}
-          : ucexpr R
-          := match e with
-             | Halt v => k v
-             | expr.App A f x
-               => @App _ _ (type.untranslate R A) R
-                       f x
-             | Bind A x f
-               => @call_with_continuation
-                    (f (@call_primop_with_continuation A x k))
-                    k
-             end%expr
-        with
-        call_primop_with_continuation
-          {t}
-          (e : @Output.expr.primop ident' var' r t)
-          (k : ucexprut r -> ucexpr R)
-          {struct e}
-        : ucexprut t
-        := match e in Output.expr.primop _ t return ucexprut t with
-           | expr.Var t v => v
-           | expr.Abs t f => Abs (fun x : var (type.untranslate _ _)
-                                  => @call_with_continuation
-                                       (f (Var x)) k)
-           | expr.Pair A B x y => (x, y)
-           | Fst A B x => ifst (type.untranslate _ A) (type.untranslate _ B)
-                               @@ x
-           | Snd A B x => isnd (type.untranslate _ A) (type.untranslate _ B)
-                               @@ x
-           | expr.TT => TT
-           | Ident t idc => untranslate_ident t idc
-           end%expr.
-      End call_with_cont.
+    Ltac preify
+         term
+         then_tac
+         reify_rec
+         else_tac :=
+      (*let __ := match goal with _ => idtac "attempting to reify_op" term end in*)
+      let term_is_primitive_const := is_primitive_const term in
+      lazymatch term_is_primitive_const with
+      | true
+        =>
+        let T := type of term in
+        let rT := base.reify T in
+        then_tac (@ident.Literal rT term)
+      | false
+        =>
+        lazymatch term with
+        | Nat.succ => then_tac Nat_succ
+        | Nat.add => then_tac Nat_add
+        | Nat.sub => then_tac Nat_sub
+        | Nat.mul => then_tac Nat_mul
+        | Nat.max => then_tac Nat_max
+        | Nat.pred => then_tac Nat_pred
+        | S => then_tac Nat_succ
+        | @Datatypes.nil ?T
+          => let rT := base.reify T in
+             then_tac (@ident.nil rT)
+        | @Datatypes.cons ?T
+          => let rT := base.reify T in
+             then_tac (@ident.cons rT)
+        | @Datatypes.fst ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.fst rA rB)
+        | @Datatypes.snd ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.snd rA rB)
+        | @Datatypes.pair ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.pair rA rB)
+        | @Datatypes.bool_rect (fun _ => ?T) ?Ptrue ?Pfalse
+          => reify_rec (@Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
+        | @Thunked.bool_rect ?T
+          => let rT := base.reify T in
+             then_tac (@ident.bool_rect rT)
+        | @Datatypes.nat_rect (fun _ => ?T) ?P0
+          => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+        | @Thunked.nat_rect ?T
+          => let rT := base.reify T in
+             then_tac (@ident.nat_rect rT)
+        | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil
+          => reify_rec (@Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
+        | @Thunked.list_rect ?A ?T
+          => let rA := base.reify A in
+             let rT := base.reify T in
+             then_tac (@ident.list_rect rA rT)
+        | @ListUtil.list_case ?A (fun _ => ?T) ?Pnil
+          => reify_rec (@Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
+        | @Thunked.list_case ?A ?T
+          => let rA := base.reify A in
+             let rT := base.reify T in
+             then_tac (@ident.list_case rA rT)
+        | @List.length ?A =>
+          let rA := base.reify A in
+          then_tac (@ident.List_length rA)
+        | List.seq => then_tac ident.List_seq
+        | @List.repeat ?A
+          => let rA := base.reify A in
+             then_tac (@ident.List_repeat rA)
+        | @combine ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.List_combine rA rB)
+        | @List.map ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.List_map rA rB)
+        | @List.flat_map ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.List_flat_map rA rB)
+        | @List.partition ?A
+          => let rA := base.reify A in
+             then_tac (@ident.List_partition rA)
+        | @List.app ?A
+          => let rA := base.reify A in
+             then_tac (@ident.List_app rA)
+        | @List.rev ?A
+          => let rA := base.reify A in
+             then_tac (@ident.List_rev rA)
+        | @List.fold_right ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.List_fold_right rA rB)
+        | @update_nth ?T
+          => let rT := base.reify T in
+             then_tac (@ident.List_update_nth rT)
+        | @List.nth_default ?T
+          => let rT := base.reify T in
+             then_tac (@ident.List_nth_default rT)
+        | Z.add => then_tac ident.Z_add
+        | Z.mul => then_tac ident.Z_mul
+        | Z.pow => then_tac ident.Z_pow
+        | Z.sub => then_tac ident.Z_sub
+        | Z.opp => then_tac ident.Z_opp
+        | Z.div => then_tac ident.Z_div
+        | Z.modulo => then_tac ident.Z_modulo
+        | Z.eqb => then_tac ident.Z_eqb
+        | Z.leb => then_tac ident.Z_leb
+        | Z.of_nat => then_tac ident.Z_of_nat
+        | Z.mul_split => then_tac ident.Z_mul_split
+        | Z.add_get_carry_full => then_tac ident.Z_add_get_carry
+        | Z.add_with_carry => then_tac ident.Z_add_with_carry
+        | Z.add_with_get_carry_full => then_tac ident.Z_add_with_get_carry
+        | Z.sub_get_borrow_full => then_tac ident.Z_sub_get_borrow
+        | Z.sub_with_get_borrow_full => then_tac ident.Z_sub_with_get_borrow
+        | Z.zselect => then_tac ident.Z_zselect
+        | Z.add_modulo => then_tac ident.Z_add_modulo
+        | Z.rshi => then_tac ident.Z_rshi
+        | Z.cc_m => then_tac ident.Z_cc_m
+        | _ => else_tac ()
+        end
+      end.
 
-      Definition CallWithContinuation
-                 {ident' : Output.type.type -> Type}
-                 {ident : type -> type -> Type}
-                 {R : type}
-                 (untranslate_ident : forall t, ident' t -> @Compilers.Uncurried.expr.Expr ident (type.untranslate R t))
-                 (ifst : forall A B, ident (A * B)%ctype A)
-                 (isnd : forall A B, ident (A * B)%ctype B)
-                 {t} (e : @Output.expr.Expr ident' t)
-                 (k : forall var, @Uncurried.expr.expr ident var (type.untranslate R t) -> @Uncurried.expr.expr ident var R)
-        : @Compilers.Uncurried.expr.Expr ident R
-        := fun var => call_with_continuation
-                        (fun t idc => untranslate_ident t idc _) ifst isnd (e _) (k _).
-    End expr.
+    Ltac reify term then_tac reify_rec else_tac :=
+      preify
+        term
+        ltac:(fun idc => then_tac (@wrap pident _ idc))
+               reify_rec
+               else_tac.
 
-    Module ident.
-      Import CPS.Output.type.
+    Module Export Notations.
+      Delimit Scope ident_scope with ident.
+      Bind Scope ident_scope with ident.
+      Bind Scope ident_scope with pident.
+      Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
+      Notation "## x" := (Literal x) (only printing) : ident_scope.
+      Notation "## x" := (Literal (t:=base.reify_type_of x) x) (only parsing) : ident_scope.
+      Notation "## x" := (expr.Ident (wrap (Literal x))) (only printing) : expr_scope.
+      Notation "## x" := (expr.Ident (wrap (Literal (t:=base.reify_type_of x) x))) (only parsing) : expr_scope.
+      Notation "# x" := (expr.Ident (wrap x)) : expr_pat_scope.
+      Notation "# x" := (@expr.Ident base.type _ _ _ (wrap x)) : expr_scope.
+      Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair) .. (expr.App (expr.App (#pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
+      Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair)%expr_pat .. (expr.App (expr.App (#pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
+      (*Notation "x :: y" := (#cons @ x @ y)%expr : expr_scope.*)
+      (* Unification fails if we don't fill in [wident pident] explicitly *)
+      Notation "x :: y" := (@expr.App base.type.type (wident pident) _ _ _ (#cons @ x) y)%expr : expr_scope.
+      Notation "[ ]" := (#nil)%expr : expr_scope.
+      Notation "[ x ]" := (#cons @ x @ (#nil))%expr : expr_scope.
+      Notation "[ x ; y ; .. ; z ]" := (#cons @ x @ (#cons @ y @ .. (#cons @ z @ #nil) ..))%expr (only printing) : expr_scope.
+      Notation "[ x ; y ; .. ; z ]" :=  (@expr.App base.type.type (wident pident) _ _ _ (#cons @ x) (#cons @ y @ .. (#cons @ z @ #nil) ..))%expr (only parsing) : expr_scope.
+      Notation "ls [[ n ]]"
+        := ((#(List_nth_default) @ _ @ ls @ #(Literal n%nat))%expr)
+           : expr_scope.
+    End Notations.
+  End ident.
+  Export ident.Notations.
+  Notation ident := ident.ident.
+  Notation pident := ident.pident.
+  Notation wident := ident.wident.
 
-      Inductive ident : type -> Set :=
-      | wrap {s d} (idc : Uncurried.expr.default.ident s d) : ident (type.translate (s -> d)).
+  Ltac reify var term :=
+    expr.reify base.type ident ltac:(base.reify) ident.reify var term.
+  Ltac Reify term :=
+    expr.Reify base.type ident ltac:(base.reify) ident.reify term.
+  Ltac Reify_rhs _ :=
+    expr.Reify_rhs base.type ident ltac:(base.reify) ident.reify (@base.interp) (@ident.interp) ().
 
-      Notation cps_of f
-        := (fun x k => k (f x)).
-      Notation curry0 f
-        := (fun 'tt => f).
-      Notation curry2 f
-        := (fun '(a, b) => f a b).
-      Notation curry3 f
-        := (fun '(a, b, c) => f a b c).
-      Notation uncurry2 f
-        := (fun a b => f (a, b)).
-      Notation uncurry3 f
-        := (fun a b c => f (a, b, c)).
-      Notation curry3_23 f
-        := (fun '(a, b, c) => f a (uncurry3 b) c).
-      Notation curry3_2 f
-        := (fun '(a, b, c) => f a (uncurry2 b) c).
+  Module Import invert_expr.
+    Section with_var_gen.
+      Context {base_type} {ident var : type base_type -> Type}.
+      Local Notation expr := (@expr base_type ident var).
+      Definition invert_Ident {t} (e : expr t)
+        : option (ident t)
+        := match e with
+           | expr.Ident t idc => Some idc
+           | _ => None
+           end.
+      Definition invert_App {t} (e : expr t)
+        : option { s : _ & expr (s -> t) * expr s }%type
+        := match e with
+           | expr.App A B f x => Some (existT _ A (f, x))
+           | _ => None
+           end.
+      Definition invert_App2 {t} (e : expr t)
+        : option { ss' : _ & expr (fst ss' -> snd ss' -> t) * expr (fst ss') * expr (snd ss') }%type
+        := (e <- invert_App e;
+              let '(existT s' (f', x')) := e in
+              f' <- invert_App f';
+                let '(existT s (f, x)) := f' in
+                Some (existT _ (s, s') (f, x, x')))%option.
+      Definition invert_AppIdent {t} (e : expr t)
+        : option { s : _ & ident (s -> t) * expr s }%type
+        := (e <- invert_App e;
+              let '(existT s (f, x)) := e in
+              f' <- invert_Ident f;
+                Some (existT _ s (f', x)))%option.
+      Definition invert_AppIdent2 {t} (e : expr t)
+        : option { ss' : _ & ident (fst ss' -> snd ss' -> t) * expr (fst ss') * expr (snd ss') }%type
+        := (e <- invert_App2 e;
+              let '(existT ss' (f, x, x')) := e in
+              f' <- invert_Ident f;
+                Some (existT _ ss' (f', x, x')))%option.
+      Definition invert_Var {t} (e : expr t)
+        : option (var t)
+        := match e with
+           | expr.Var t v => Some v
+           | _ => None
+           end.
+    End with_var_gen.
 
-      (** denote CPS identifiers *)
-      Definition interp {R} {t} (idc : ident t) : type.interp R t
-        := match idc in ident t return type.interp R t with
-           | wrap s d idc
-             => fun '((x, k) : type.interp R (type.translate s) * (type.interp R (type.translate d) -> R))
-                =>
-                  match idc in Uncurried.expr.default.ident s d return type.interp R (type.translate s) -> (type.interp R (type.translate d) -> R) -> R with
-                  | ident.primitive _ _ as idc
-                  | ident.Nat_succ as idc
-                  | ident.Nat_add as idc
-                  | ident.Nat_sub as idc
-                  | ident.Nat_mul as idc
-                  | ident.Nat_max as idc
-                  | ident.pred as idc
-                  | ident.Z_shiftr _ as idc
-                  | ident.Z_shiftl _ as idc
-                  | ident.Z_land _ as idc
-                  | ident.Z_add as idc
-                  | ident.Z_mul as idc
-                  | ident.Z_pow as idc
-                  | ident.Z_sub as idc
-                  | ident.Z_opp as idc
-                  | ident.Z_div as idc
-                  | ident.Z_modulo as idc
-                  | ident.Z_eqb as idc
-                  | ident.Z_leb as idc
-                  | ident.Z_of_nat as idc
-                  | ident.Z_mul_split as idc
-                  | ident.Z_add_get_carry as idc
-                  | ident.Z_add_with_carry as idc
-                  | ident.Z_add_with_get_carry as idc
-                  | ident.Z_sub_with_get_borrow as idc
-                  | ident.Z_sub_get_borrow as idc
-                  | ident.Z_zselect as idc
-                  | ident.Z_add_modulo as idc
-                  | ident.Z_rshi as idc
-                  | ident.Z_cc_m as idc
-                  | ident.Z_cast _ as idc
-                  | ident.Z_cast2 _ as idc
-                    => cps_of (Uncurried.expr.default.ident.interp idc)
-                  | ident.Z_mul_split_concrete s
-                    => cps_of (curry2 (Z.mul_split s))
-                  | ident.Z_add_get_carry_concrete s
-                    => cps_of (curry2 (Z.add_get_carry_full s))
-                  | ident.Z_add_with_get_carry_concrete s
-                    => cps_of (curry3 (Z.add_with_get_carry_full s))
-                  | ident.Z_sub_get_borrow_concrete s
-                    => cps_of (curry2 (Z.sub_get_borrow_full s))
-                  | ident.Z_sub_with_get_borrow_concrete s
-                    => cps_of (curry3 (Z.sub_with_get_borrow_full s))
-                  | ident.Z_rshi_concrete s n
-                    => cps_of (curry2 (fun x y => Z.rshi s x y n))
-                  | ident.Z_cc_m_concrete s
-                    => cps_of (Z.cc_m s)
-                  | ident.Let_In tx tC
-                    => fun '((x, f) : (interp R (type.translate tx)
-                                       * (interp R (type.translate tx) * (interp R (type.translate tC) -> R) -> R)))
-                           (k : interp R (type.translate tC) -> R)
-                       => @LetIn.Let_In
-                            (type.interp R (type.translate tx)) (fun _ => R)
-                            x
-                            (fun v => f (v, k))
-                  | ident.nil t
-                    => cps_of (curry0 (@Datatypes.nil (interp R (type.translate t))))
-                  | ident.cons t
-                    => cps_of (curry2 (@Datatypes.cons (interp R (type.translate t))))
-                  | ident.fst A B
-                    => cps_of (@Datatypes.fst (interp R (type.translate A)) (interp R (type.translate B)))
-                  | ident.snd A B
-                    => cps_of (@Datatypes.snd (interp R (type.translate A)) (interp R (type.translate B)))
-                  | ident.bool_rect T
-                    => fun '((tc, fc, b) :
-                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) ((unit * (type.interp R (type.translate T) -> R) -> R) * (unit * (type.interp R (type.translate T) -> R) -> R) * bool))
-                           k
-                       => @Datatypes.bool_rect
-                            (fun _ => R)
-                            (tc (tt, k))
-                            (fc (tt, k))
-                            b
-                  | ident.nat_rect P
-                    => fun '((PO, PS, n) :
-                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) ((unit * (interp R (type.translate P) -> R) -> R) * (nat * interp R (type.translate P) * (interp R (type.translate P) -> R) -> R) * nat))
-                           k
-                       => @Datatypes.nat_rect
-                            (fun _ => (interp R (type.translate P) -> R) -> R)
-                            (fun k => PO (tt, k))
-                            (fun n' rec k
-                             => rec (fun rec => PS (n', rec, k)))
-                            n
-                            k
-                  | ident.list_rect A P
-                    => fun '((Pnil, Pcons, ls) :
-                               (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) ((unit * (interp R (type.translate P) -> R) -> R) * (interp R (type.translate A) * Datatypes.list (interp R (type.translate A)) * interp R (type.translate P) * (interp R (type.translate P) -> R) -> R) * Datatypes.list (interp R (type.translate A))))
-                           k
-                       => @Datatypes.list_rect
-                            (interp R (type.translate A))
-                            (fun _ => (interp R (type.translate P) -> R) -> R)
-                            (fun k => Pnil (tt, k))
-                            (fun x xs rec k
-                             => rec (fun rec => Pcons (x, xs, rec, k)))
-                            ls
-                            k
-                  | ident.List_nth_default T
-                    => cps_of (curry3 (@List.nth_default (interp R (type.translate T))))
-                  | ident.List_nth_default_concrete T d n
-                    => cps_of (fun ls => @List.nth_default (interp R (type.translate T)) d ls n)
-                  end x k
+    Section with_var.
+      Context {var : type base.type -> Type}.
+      Local Notation expr := (@expr base.type ident var).
+      Local Notation try_transportP P := (@type.try_transport base.type (@base.try_transport) P _ _).
+      Local Notation try_transport := (try_transportP _).
+
+      Definition invert_Z_opp (e : expr (type.base base.type.Z))
+        : option (expr (type.base base.type.Z))
+        := match e return option (expr (type.base base.type.Z)) with
+           | expr.App (type.base base.type.Z) _ (#ident.Z_opp) v => Some v
+           | _ => None
+           end%expr_pat%expr.
+
+      Definition invert_pair {A B} (e : expr (type.base (A * B)%etype))
+        : option (expr (type.base A) * expr (type.base B))
+        := match e with
+           | (a, b)
+             => a <- try_transport a; b <- try_transport b; Some (a, b)%core
+           | _ => None
+           end%expr_pat%expr%option.
+      Definition invert_Literal {t} (e : expr (type.base t))
+        : option (base.interp t)
+        := match e with
+           | ##v
+             => base.try_transport _ _ _ v
+           | _ => None
+           end%expr_pat%expr.
+    End with_var.
+  End invert_expr.
+
+  Module UnderLets.
+    Section with_var.
+      Context {base_type : Type}.
+      Local Notation type := (type base_type).
+      Context {ident : type -> Type}
+              {var : type -> Type}.
+      Local Notation expr := (@expr base_type ident var).
+
+      Inductive UnderLets {T : Type} :=
+      | Base (v : T)
+      | UnderLet {A} (x : expr A) (f : var A -> UnderLets).
+
+      Fixpoint splice {A B} (x : @UnderLets A) (e : A -> @UnderLets B) : @UnderLets B
+        := match x with
+           | Base v => e v
+           | UnderLet A x f => UnderLet x (fun v => @splice _ _ (f v) e)
            end.
 
-      Local Notation var_eta x := (ident.fst @@ x, ident.snd @@ x)%core%expr.
-
-      Definition untranslate {R} {t} (idc : ident t)
-        : @Compilers.Uncurried.expr.Expr Uncurried.expr.default.ident (type.untranslate R t)
-        := fun var
-           => match idc in ident t return @Compilers.Uncurried.expr.expr Uncurried.expr.default.ident var (type.untranslate R t) with
-              | wrap s d idc
-                =>
-                match idc in default.ident s d return @Compilers.Uncurried.expr.expr Uncurried.expr.default.ident var (type.untranslate R (type.translate (s -> d))) with
-                | ident.primitive t v
-                  => λ (_k :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (() * (t -> R))%ctype) ,
-                     (ident.snd @@ (Var _k))
-                       @ (ident.primitive v @@ TT)
-                | ident.Let_In tx tC
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate tx) * (type.untranslate _ (type.translate tx) * (type.untranslate _ (type.translate tC) -> R) -> R) * (type.untranslate _ (type.translate tC) -> R))%ctype) ,
-                     ident.Let_In
-                       @@ (ident.fst @@ (ident.fst @@ (Var xyk)),
-                           (λ (x :
-                                 (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate tx))) ,
-                            (ident.snd @@ (ident.fst @@ (Var xyk)))
-                              @ (Var x, ident.snd @@ Var xyk)))
-                | ident.nat_rect P
-                  => λ (PO_PS_n_k :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate P) -> R) -> R) * (Compilers.type.type_primitive type.nat * type.untranslate R (type.translate P) * (type.untranslate R (type.translate P) -> R) -> R) * Compilers.type.type_primitive type.nat * (type.untranslate R (type.translate P) -> R))%ctype) ,
-                     let (PO_PS_n, k) := var_eta (Var PO_PS_n_k) in
-                     let (PO_PS, n) := var_eta PO_PS_n in
-                     let (PO, PS) := var_eta PO_PS in
-                     ((@ident.nat_rect ((type.untranslate _ (type.translate P) -> R) -> R))
-                        @@ ((λ tt k , PO @ (Var tt, Var k)),
-                            (λ n'rec k ,
-                             let (n', rec) := var_eta (Var n'rec) in
-                             rec @ (λ rec , PS @ (n', Var rec, Var k))),
-                            n))
-                       @ k
-                | ident.list_rect A P
-                  => λ (Pnil_Pcons_ls_k :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate P) -> R) -> R) * (type.untranslate R (type.translate A) * Compilers.type.list (type.untranslate R (type.translate A)) * type.untranslate R (type.translate P) * (type.untranslate R (type.translate P) -> R) -> R) * Compilers.type.list (type.untranslate R (type.translate A)) * (type.untranslate R (type.translate P) -> R))%ctype) ,
-                     let (Pnil_Pcons_ls, k) := var_eta (Var Pnil_Pcons_ls_k) in
-                     let (Pnil_Pcons, ls) := var_eta Pnil_Pcons_ls in
-                     let (Pnil, Pcons) := var_eta Pnil_Pcons in
-                     ((@ident.list_rect
-                         (type.untranslate _ (type.translate A))
-                         ((type.untranslate _ (type.translate P) -> R) -> R))
-                        @@ ((λ tt k, Pnil @ (Var tt, Var k)),
-                            (λ x_xs_rec k,
-                             let (x_xs, rec) := var_eta (Var x_xs_rec) in
-                             let (x, xs) := var_eta x_xs in
-                             rec @ (λ rec , Pcons @ (x, xs, Var rec, Var k))),
-                            ls))
-                       @ k
-                | ident.List_nth_default T
-                  => λ (xyzk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate T) * Compilers.type.list (type.untranslate _ (type.translate T)) * type.nat * (type.untranslate _ (type.translate T) -> R))%ctype) ,
-                     (ident.snd @@ Var xyzk)
-                       @ (ident.List_nth_default @@ (ident.fst @@ Var xyzk))
-                | ident.List_nth_default_concrete T d n
-                  => λ (xk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (Compilers.type.list (type.untranslate R (type.translate T)) * (type.untranslate R (type.translate T) -> R))%ctype) ,
-                     (ident.snd @@ Var xk)
-                       @ (ident.List_nth_default_concrete d n @@ (ident.fst @@ Var xk))
-                | ident.bool_rect T
-                  => λ (xyzk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var ((Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate T) -> R) -> R) * (Compilers.type.type_primitive ()%cpstype * (type.untranslate R (type.translate T) -> R) -> R) * Compilers.type.type_primitive type.bool * (type.untranslate R (type.translate T) -> R))%ctype) ,
-                     ident.bool_rect
-                       @@ ((λ tt,
-                            (ident.fst @@ (ident.fst @@ (ident.fst @@ (Var xyzk))))
-                              @ (Var tt, (ident.snd @@ (Var xyzk)))),
-                           (λ tt,
-                            (ident.snd @@ (ident.fst @@ (ident.fst @@ (Var xyzk))))
-                              @ (Var tt, (ident.snd @@ (Var xyzk)))),
-                           ident.snd @@ (ident.fst @@ (Var xyzk)))
-                | ident.nil t
-                  => λ (_k :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (() * (Compilers.type.list (type.untranslate _ (type.translate t)) -> R))%ctype) ,
-                     (ident.snd @@ (Var _k))
-                       @ (ident.nil @@ TT)
-                | ident.cons t
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate t) * Compilers.type.list (type.untranslate _ (type.translate t)) * (Compilers.type.list (type.untranslate _ (type.translate t)) -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ (ident.cons
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.fst A B
-                  => λ (xk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate A) * type.untranslate _ (type.translate B) * (type.untranslate _ (type.translate A) -> R))%ctype) ,
-                     (ident.snd @@ (Var xk))
-                       @ (ident.fst
-                            @@ (ident.fst @@ (Var xk)))
-                | ident.snd A B
-                  => λ (xk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.untranslate _ (type.translate A) * type.untranslate _ (type.translate B) * (type.untranslate _ (type.translate B) -> R))%ctype) ,
-                     (ident.snd @@ (Var xk))
-                       @ (ident.snd
-                            @@ (ident.fst @@ (Var xk)))
-                | ident.Nat_succ as idc
-                | ident.pred as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.nat * (type.nat -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.nat)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Nat_add as idc
-                | ident.Nat_sub as idc
-                | ident.Nat_mul as idc
-                | ident.Nat_max as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.nat * type.nat * (type.nat -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.nat)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_shiftr _ as idc
-                | ident.Z_shiftl _ as idc
-                | ident.Z_land _ as idc
-                | ident.Z_opp as idc
-                | ident.Z_cast _ as idc
-                | ident.Z.cc_m_concrete _ as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * (type.Z -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.Z)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_add as idc
-                | ident.Z_mul as idc
-                | ident.Z_sub as idc
-                | ident.Z_pow as idc
-                | ident.Z_div as idc
-                | ident.Z_modulo as idc
-                | ident.Z.cc_m as idc
-                | ident.Z_rshi_concrete _ _ as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * (type.Z -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.Z)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_eqb as idc
-                | ident.Z_leb as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * (type.bool -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.bool)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_of_nat as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.nat * (type.Z -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.Z)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_mul_split as idc
-                | ident.Z_add_get_carry as idc
-                | ident.Z_sub_get_borrow as idc
-                | ident.Z_add_with_get_carry_concrete _ as idc
-                | ident.Z_sub_with_get_borrow_concrete _ as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ (type.Z * type.Z))
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_cast2 _ as idc
-                | ident.Z_mul_split_concrete _ as idc
-                | ident.Z_add_get_carry_concrete _ as idc
-                | ident.Z_sub_get_borrow_concrete _ as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ (type.Z * type.Z))
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_add_with_carry as idc
-                | ident.Z_zselect as idc
-                | ident.Z_add_modulo as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * (type.Z -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.Z)
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_add_with_get_carry as idc
-                | ident.Z_sub_with_get_borrow as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * type.Z * ((type.Z * type.Z) -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ (type.Z * type.Z))
-                            @@ (ident.fst @@ (Var xyk)))
-                | ident.Z_rshi as idc
-                  => λ (xyk :
-                          (* ignore this line; it's to work around lack of fixpoint refolding in type inference *) var (type.Z * type.Z * type.Z * type.Z * (type.Z -> R))%ctype) ,
-                     (ident.snd @@ (Var xyk))
-                       @ ((idc : default.ident _ type.Z)
-                            @@ (ident.fst @@ (Var xyk)))
-                end%expr
-              end.
-    End ident.
-    Notation ident := ident.ident.
-
-    Module default.
-      Notation expr := (@Output.expr.expr ident).
-      Notation Expr := (@Output.expr.Expr ident).
-
-      Definition Translate
-                 {t} (e : @Compilers.Uncurried.expr.default.Expr t)
-        : Expr (type.translate t)
-        := expr.Translate (@ident.wrap) e.
-
-      Definition call_with_continuation
-                 {var}
-                 {R : Compilers.type.type}
-                 {t} (e : @expr _ t)
-                 (k : @Uncurried.expr.default.expr var (type.untranslate R t) -> @Uncurried.expr.default.expr var R)
-        : @Compilers.Uncurried.expr.default.expr var R
-        := expr.call_with_continuation (fun t idc => @ident.untranslate _ t idc _) (@ident.fst) (@ident.snd) e k.
-
-      Definition CallWithContinuation
-                 {R : Compilers.type.type}
-                 {t} (e : Expr t)
-                 (k : forall var, @Uncurried.expr.default.expr var (type.untranslate R t) -> @Uncurried.expr.default.expr var R)
-        : @Compilers.Uncurried.expr.default.Expr R
-        := expr.CallWithContinuation (@ident.untranslate _) (@ident.fst) (@ident.snd) e k.
-
-      Local Notation iffT A B := ((A -> B) * (B -> A))%type.
-      (** We can only "plug in the identity continuation" for flat
-          (arrow-free) types.  (Actually, we know how to do it in a
-          very ad-hoc way for types of at-most second-order functions;
-          see git history.  This is much simpler.) *)
-      Fixpoint try_untranslate_translate {R} {t}
-        : option (forall (P : Compilers.type.type -> Type),
-                     iffT (P (type.untranslate R (type.translate t))) (P t))
-        := match t return option (forall (P : Compilers.type.type -> Type),
-                                     iffT (P (type.untranslate R (type.translate t))) (P t)) with
-           | Compilers.type.type_primitive x
-             => Some (fun P => ((fun v => v), (fun v => v)))
-           | type.arrow s d => None
-           | Compilers.type.prod A B
-             => (fA <- (@try_untranslate_translate _ A);
-                   fB <- (@try_untranslate_translate _ B);
-                   Some
-                     (fun P
-                      => let fA := fA (fun A => P (Compilers.type.prod A (type.untranslate R (type.translate B)))) in
-                         let fB := fB (fun B => P (Compilers.type.prod A B)) in
-                         ((fun v => fst fB (fst fA v)),
-                          (fun v => snd fA (snd fB v)))))%option
-           | Compilers.type.list A
-             => (fA <- (@try_untranslate_translate R A);
-                   Some (fun P => fA (fun A => P (Compilers.type.list A))))%option
+      Fixpoint splice_list {A B} (ls : list (@UnderLets A)) (e : list A -> @UnderLets B) : @UnderLets B
+        := match ls with
+           | nil => e nil
+           | cons x xs
+             => splice x (fun x => @splice_list A B xs (fun xs => e (cons x xs)))
            end.
 
-      Local Notation "x <-- e1 ; e2" := (expr.splice e1 (fun x => e2%cpsexpr)) : cpsexpr_scope.
-
-      Definition call_fun_with_id_continuation'
-                 {s d}
-        : option (forall var
-                         (e : @expr _ (type.translate (s -> d))),
-                     @Compilers.Uncurried.expr.default.expr var (s -> d))
-        := (fs <- (@try_untranslate_translate _ s);
-              fd <- (@try_untranslate_translate _ d);
-              Some
-                (fun var e
-                 => let P := @Compilers.Uncurried.expr.default.expr var in
-                    Abs
-                      (fun v : var s
-                       => call_with_continuation
-                            ((f <-- e;
-                                k <- (λ r, expr.Halt r);
-                                p <- (snd (fs P) (Var v), k);
-                                f @ p)%cpsexpr)
-                            (fst (fd P)))))%option.
-
-      Definition call_fun_with_id_continuation
-                 {var}
-                 {s d} (e : @expr _ (type.translate (s -> d)))
-        : option (@Compilers.Uncurried.expr.default.expr var (s -> d))
-        := option_map
-             (fun f => f _ e)
-             (@call_fun_with_id_continuation' s d).
-
-      Definition CallFunWithIdContinuation
-                 {s d}
-                 (e : Expr (type.translate (s -> d)))
-        : option (@Compilers.Uncurried.expr.default.Expr (s -> d))
-        := option_map
-             (fun f var => f _ (e _))
-             (@call_fun_with_id_continuation' s d).
-    End default.
-    Include default.
-  End CPS.
+      Fixpoint to_expr {t} (x : @UnderLets (expr t)) : expr t
+        := match x with
+           | Base v => v
+           | UnderLet A x f
+             => expr.LetIn x (fun v => @to_expr _ (f v))
+           end.
+    End with_var.
+    Global Arguments UnderLets : clear implicits.
+  End UnderLets.
+  Delimit Scope under_lets_scope with under_lets.
+  Bind Scope under_lets_scope with UnderLets.UnderLets.
+  Notation "x <-- y ; f" := (UnderLets.splice y (fun x => f%under_lets)) : under_lets_scope.
+  Notation "x <--- y ; f" := (UnderLets.splice_list y (fun x => f%under_lets)) : under_lets_scope.
 
   Module ZRange.
     Module type.
-      Module primitive.
-        (** turn a [type.primitive] into a [Set] describing the type
-            of bounds on that primitive *)
-        Definition interp (t : type.primitive) : Set
+      Local Notation binterp := base.interp.
+      Local Notation tinterp_gen := type.interp.
+      Local Notation einterp := (type.interp base.interp).
+      Module base.
+        (** turn a [base.type] into a [Set] describing the type of
+          bounds on that primitive; Z is a range, nat and bool are exact values *)
+        Fixpoint interp (t : base.type) : Set
           := match t with
-             | type.unit => unit
-             | type.Z => zrange
-             | type.nat => unit
-             | type.bool => unit
-             end.
+             | base.type.Z => zrange
+             | base.type.unit as t
+             | base.type.nat as t
+             | base.type.bool as t
+               => base.interp t
+             | base.type.prod A B => interp A * interp B
+             | base.type.list A => list (interp A)
+             end%type.
         Definition is_neg {t} : interp t -> bool
           := match t with
-             | type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
+             | base.type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
              | _ => fun _ => false
-             end.
-        Definition is_tighter_than {t} : interp t -> interp t -> bool
-          := match t with
-             | type.Z => is_tighter_than_bool
-             | type.unit
-             | type.nat
-             | type.bool
-               => fun _ _ => true
-             end.
-        Definition is_bounded_by {t} : interp t -> type.interp t -> bool
-          := match t with
-             | type.Z => fun r z => (lower r <=? z) && (z <=? upper r)
-             | type.unit
-             | type.nat
-             | type.bool
-               => fun _ _ => true
-             end.
-        Module option.
-          (** turn a [type.primitive] into a [Set] describing the type
-              of optional bounds on that primitive; bounds on a [Z]
-              may be either a range, or [None], generally indicating
-              that the [Z] is unbounded. *)
-          Definition interp (t : type.primitive) : Set
-            := match t with
-               | type.unit => unit
-               | type.Z => option zrange
-               | type.nat => unit
-               | type.bool => unit
-               end.
-          Definition None {t} : interp t
-            := match t with
-               | type.Z => None
-               | _ => tt
-               end.
-          Definition Some {t} : primitive.interp t -> interp t
-            := match t with
-               | type.Z => Some
-               | _ => id
-               end.
-          Definition is_neg {t} : interp t -> bool
-            := match t with
-               | type.Z => fun v => match v with
-                                    | Datatypes.Some v => @is_neg type.Z v
-                                    | Datatypes.None => false
-                                    end
-               | t => @primitive.is_neg t
-               end.
-        Definition is_tighter_than {t} : interp t -> interp t -> bool
-          := match t with
-             | type.Z
-               => fun r1 r2
-                  => match r1, r2 with
-                     | _, Datatypes.None => true
-                     | Datatypes.None, Datatypes.Some _ => false
-                     | Datatypes.Some r1, Datatypes.Some r2 => is_tighter_than (t:=type.Z) r1 r2
-                     end
-             | t => @is_tighter_than t
-             end.
-        Definition is_bounded_by {t} : interp t -> type.interp t -> bool
-          := match t with
-             | type.Z
-               => fun r
-                  => match r with
-                     | Datatypes.Some r => @is_bounded_by type.Z r
-                     | Datatypes.None => fun _ => true
-                     end
-             | t => @is_bounded_by t
-             end.
-        End option.
-      End primitive.
-      (** turn a [type] into a [Set] describing the type of bounds on
-          that type; this lifts [primitive.interp] from
-          [type.primitive] to [type] *)
-      Fixpoint interp (t : type) : Set
-        := match t with
-           | type.type_primitive x => primitive.interp x
-           | type.prod A B => interp A * interp B
-           | type.arrow s d => interp s -> interp d
-           | type.list A => list (interp A)
-           end.
-      Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
-        := match t with
-           | type.type_primitive x => @primitive.is_tighter_than x
-           | type.prod A B
-             => fun '((ra, rb) : interp A * interp B)
-                    '((ra', rb') : interp A * interp B)
-                => @is_tighter_than A ra ra' && @is_tighter_than B rb rb'
-           | type.arrow s d => fun _ _ => false
-           | type.list A
-             => fold_andb_map (@is_tighter_than A)
-           end.
-      Fixpoint is_bounded_by {t} : interp t -> Compilers.type.interp t -> bool
-        := match t return interp t -> Compilers.type.interp t -> bool with
-           | type.type_primitive x => @primitive.is_bounded_by x
-           | type.prod A B
-             => fun '((ra, rb) : interp A * interp B)
-                    '((ra', rb') : Compilers.type.interp A * Compilers.type.interp B)
-                => @is_bounded_by A ra ra' && @is_bounded_by B rb rb'
-           | type.arrow s d => fun _ _ => false
-           | type.list A
-             => fold_andb_map (@is_bounded_by A)
-           end.
-      Module option.
-        (** turn a [type] into a [Set] describing the type of optional
-            bounds on that primitive; bounds on a [Z] may be either a
-            range, or [None], generally indicating that the [Z] is
-            unbounded.  This lifts [primitive.option.interp] from
-            [type.primitive] to [type] *)
-        Fixpoint interp (t : type) : Set
-          := match t with
-             | type.type_primitive x => primitive.option.interp x
-             | type.prod A B => interp A * interp B
-             | type.arrow s d => interp s -> interp d
-             | type.list A => option (list (interp A))
-             end.
-        Fixpoint None {t : type} : interp t
-          := match t with
-             | type.type_primitive x => @primitive.option.None x
-             | type.prod A B => (@None A, @None B)
-             | type.arrow s d => fun _ => @None d
-             | type.list A => Datatypes.None
-             end.
-        Fixpoint Some {t : type} : type.interp t -> interp t
-          := match t with
-             | type.type_primitive x => @primitive.option.Some x
-             | type.prod A B
-               => fun x : type.interp A * type.interp B
-                  => (@Some A (fst x), @Some B (snd x))
-             | type.arrow s d => fun _ _ => @None d
-             | type.list A => fun ls => Datatypes.Some (List.map (@Some A) ls)
              end.
         Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
           := match t with
-             | type.type_primitive x => @primitive.option.is_tighter_than x
-             | type.prod A B
-               => fun '((ra, rb) : interp A * interp B)
-                      '((ra', rb') : interp A * interp B)
-                  => @is_tighter_than A ra ra' && @is_tighter_than B rb rb'
-             | type.arrow s d => fun _ _ => false
-             | type.list A
-               => fun ls1 ls2
-                  => match ls1, ls2 with
-                     | Datatypes.None, Datatypes.None => true
-                     | Datatypes.Some _, Datatypes.None => true
-                     | Datatypes.None, Datatypes.Some _ => false
-                     | Datatypes.Some ls1, Datatypes.Some ls2 => fold_andb_map (@is_tighter_than A) ls1 ls2
-                     end
+             | base.type.Z => is_tighter_than_bool
+             | base.type.nat => Nat.eqb
+             | base.type.unit => fun _ _ => true
+             | base.type.bool => bool_eq
+             | base.type.prod A B
+               => fun '(a, b) '(a', b')
+                  => @is_tighter_than A a a' && @is_tighter_than B b b'
+             | base.type.list A
+               => fold_andb_map (@is_tighter_than A)
+             end%bool.
+        Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
+          := match t with
+             | base.type.Z => fun r z => (lower r <=? z) && (z <=? upper r)
+             | base.type.nat => Nat.eqb
+             | base.type.unit => fun _ _ => true
+             | base.type.bool => bool_eq
+             | base.type.prod A B
+               => fun '(a, b) '(a', b')
+                  => @is_bounded_by A a a' && @is_bounded_by B b b'
+             | base.type.list A
+               => fold_andb_map (@is_bounded_by A)
              end.
-        Fixpoint is_bounded_by {t} : interp t -> Compilers.type.interp t -> bool
-          := match t return interp t -> Compilers.type.interp t -> bool with
-             | type.type_primitive x => @primitive.option.is_bounded_by x
-             | type.prod A B
-               => fun '((ra, rb) : interp A * interp B)
-                      '((ra', rb') : Compilers.type.interp A * Compilers.type.interp B)
-                  => @is_bounded_by A ra ra' && @is_bounded_by B rb rb'
+        Module option.
+          (** turn a [base.type] into a [Set] describing the type
+              of optional bounds on that primitive; bounds on a [Z]
+              may be either a range, or [None], generally indicating
+              that the [Z] is unbounded. *)
+          Fixpoint interp (t : base.type) : Set
+            := match t with
+               | base.type.Z => option zrange
+               | base.type.unit => unit
+               | base.type.nat as t
+               | base.type.bool as t
+                 => option (base.interp t)
+               | base.type.prod A B => interp A * interp B
+               | base.type.list A => option (list (interp A))
+               end%type.
+          Fixpoint None {t} : interp t
+            := match t with
+               | base.type.unit => tt
+               | base.type.list _
+               | base.type.Z
+               | base.type.nat
+               | base.type.bool
+                 => Datatypes.None
+               | base.type.prod A B
+                 => (@None A, @None B)
+               end.
+          Fixpoint Some {t} : base.interp t -> interp t
+            := match t with
+               | base.type.Z
+               | base.type.nat
+               | base.type.bool
+                 => Datatypes.Some
+               | base.type.list A
+                 => fun ls => Datatypes.Some (List.map (@Some A) ls)
+               | base.type.prod A B
+                 => fun '(a, b)
+                    => (@Some A a, @Some B b)
+               | _ => fun _ => tt
+               end.
+          (** Keep data about list length and nat value, but not zrange *)
+          Fixpoint strip_ranges {t} : interp t -> interp t
+            := match t with
+               | base.type.Z => fun _ => Datatypes.None
+               | base.type.nat
+               | base.type.bool
+               | base.type.unit
+                 => fun x => x
+               | base.type.list A
+                 => fun ls => ls <- ls; Datatypes.Some (List.map (@strip_ranges A) ls)
+               | base.type.prod A B
+                 => fun '(a, b)
+                    => (@strip_ranges A a, @strip_ranges B b)
+               end%option.
+          Definition is_neg {t} : interp t -> bool
+            := match t with
+               | base.type.Z
+                 => fun v => match v with
+                             | Datatypes.Some v => @is_neg base.type.Z v
+                             | Datatypes.None => false
+                             end
+               | t => fun _ => false
+               end.
+          Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+            := match t with
+               | base.type.Z as t
+               | base.type.nat as t
+               | base.type.bool as t
+                 => fun r1 r2
+                    => match r1, r2 with
+                       | _, Datatypes.None => true
+                       | Datatypes.None, Datatypes.Some _ => false
+                       | Datatypes.Some r1, Datatypes.Some r2 => base.is_tighter_than (t:=t) r1 r2
+                       end
+               | base.type.prod A B
+                 => fun '(a, b) '(a', b')
+                    => @is_tighter_than A a a' && @is_tighter_than B b b'
+               | base.type.list A
+                 => fun ls1 ls2
+                    => match ls1, ls2 with
+                       | Datatypes.None, Datatypes.None => true
+                       | Datatypes.Some _, Datatypes.None => true
+                       | Datatypes.None, Datatypes.Some _ => false
+                       | Datatypes.Some ls1, Datatypes.Some ls2 => fold_andb_map (@is_tighter_than A) ls1 ls2
+                       end
+               | _ => fun 'tt 'tt => true
+               end.
+          Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
+            := match t with
+               | base.type.Z as t
+               | base.type.nat as t
+               | base.type.bool as t
+                 => fun r
+                    => match r with
+                       | Datatypes.Some r => @base.is_bounded_by t r
+                       | Datatypes.None => fun _ => true
+                       end
+               | base.type.prod A B
+                 => fun '(a, b) '(a', b')
+                    => @is_bounded_by A a a' && @is_bounded_by B b b'
+               | base.type.list A
+                 => fun ls1 ls2
+                    => match ls1 with
+                       | Datatypes.None => true
+                       | Datatypes.Some ls1 => fold_andb_map (@is_bounded_by A) ls1 ls2
+                       end
+               | _ => fun 'tt _ => true
+               end.
+
+          Lemma is_bounded_by_Some {t} r val
+            : is_bounded_by (@Some t r) val = base.is_bounded_by r val.
+          Proof.
+            induction t;
+              repeat first [ reflexivity
+                           | progress cbn in *
+                           | progress destruct_head'_prod
+                           | rewrite fold_andb_map_map1
+                           | match goal with H : _ |- _ => rewrite H end
+                           | match goal with H : _ |- _ => setoid_rewrite H end ].
+          Qed.
+
+          Lemma is_tighter_than_is_bounded_by {t} r1 r2 val
+                (Htight : @is_tighter_than t r1 r2 = true)
+                (Hbounds : is_bounded_by r1 val = true)
+            : is_bounded_by r2 val = true.
+          Proof.
+            induction t;
+              repeat first [ progress destruct_head'_prod
+                           | progress destruct_head'_and
+                           | progress destruct_head'_unit
+                           | progress cbn in *
+                           | progress destruct_head' option
+                           | solve [ eauto with nocore ]
+                           | progress cbv [is_tighter_than_bool] in *
+                           | progress rewrite ?Bool.andb_true_iff in *
+                           | discriminate
+                           | apply conj
+                           | Z.ltb_to_lt; omega
+                           | progress break_innermost_match_hyps
+                           | progress subst
+                           | rewrite NPeano.Nat.eqb_refl
+                           | reflexivity
+                           | match goal with
+                             | [ H : Nat.eqb _ _ = true |- _ ] => apply beq_nat_true in H
+                             | [ H : bool_eq _ _ = true |- _ ] => apply bool_eq_ok in H
+                             | [ |- bool_eq ?x ?x = true ] => destruct x; reflexivity
+                             end ].
+            { lazymatch goal with
+              | [ r1 : list (interp t), r2 : list (interp t), val : list (binterp t) |- _ ]
+                => revert r1 r2 val Htight Hbounds IHt
+              end; intros r1 r2 val; revert r1 r2 val.
+              induction r1, r2, val; cbn; auto with nocore; try congruence; [].
+              rewrite !Bool.andb_true_iff; intros; destruct_head'_and; split; eauto with nocore. }
+          Qed.
+
+          Lemma is_tighter_than_Some_is_bounded_by {t} r1 r2 val
+                (Htight : @is_tighter_than t r1 (Some r2) = true)
+                (Hbounds : is_bounded_by r1 val = true)
+            : base.is_bounded_by r2 val = true.
+          Proof.
+            rewrite <- is_bounded_by_Some.
+            eapply is_tighter_than_is_bounded_by; eassumption.
+          Qed.
+        End option.
+      End base.
+
+      (** turn a [type] into a [Set] describing the type of bounds on
+          that type; this lifts [base.interp] from
+          [type.base] to [type] *)
+      Definition interp (t : type base.type)
+        := type.interp base.interp t.
+      Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+        := match t with
+           | type.base x => @base.is_tighter_than x
+           | type.arrow s d => fun _ _ => false
+           end.
+      Fixpoint is_bounded_by {t} : interp t -> einterp t -> bool
+        := match t return interp t -> einterp t -> bool with
+           | type.base x => @base.is_bounded_by x
+           | type.arrow s d => fun _ _ => false
+           end.
+      Module option.
+        (** turn a [type] into a [Set] describing the type of optional
+            bounds on that base type; bounds on a [Z] may be either a
+            range, or [None], generally indicating that the [Z] is
+            unbounded.  This lifts [base.option.interp] from
+            [base.type] to [type] *)
+        Definition interp (t : type base.type)
+          := tinterp_gen base.option.interp t.
+        Fixpoint None {t : type base.type} : interp t
+          := match t with
+             | type.base x => @base.option.None x
+             | type.arrow s d => fun _ => @None d
+             end.
+        Fixpoint Some {t : type base.type} : type.interp t -> interp t
+          := match t with
+             | type.base x =>@base.option.Some x
+             | type.arrow s d => fun _ _ => @None d
+             end.
+        Fixpoint strip_ranges {t : type base.type} : interp t -> interp t
+          := match t with
+             | type.base x =>@base.option.strip_ranges x
+             | type.arrow s d => fun f x => @strip_ranges d (f x)
+             end.
+        Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+          := match t with
+             | type.base x => @base.option.is_tighter_than x
              | type.arrow s d => fun _ _ => false
-             | type.list A
-               => fun ls1 ls2
-                  => match ls1 with
-                     | Datatypes.None => true
-                     | Datatypes.Some ls1 => fold_andb_map (@is_bounded_by A) ls1 ls2
-                     end
+             end.
+        Fixpoint is_bounded_by {t} : interp t -> einterp t -> bool
+          := match t with
+             | type.base x => @base.option.is_bounded_by x
+             | type.arrow s d => fun _ _ => false
              end.
 
         Lemma is_bounded_by_Some {t} r val
           : is_bounded_by (@Some t r) val = type.is_bounded_by r val.
         Proof.
-          induction t;
-            repeat first [ reflexivity
-                         | progress cbn in *
-                         | progress destruct_head'_prod
-                         | progress destruct_head' type.primitive
-                         | match goal with H : _ |- _ => rewrite H end ].
-          { lazymatch goal with
-            | [ r : list (type.interp t), val : list (Compilers.type.interp t) |- _ ]
-              => revert r val IHt
-            end; intros r val; revert r val.
-            induction r, val; cbn; auto with nocore; try congruence; [].
-            intro H'; rewrite H', IHr by auto.
-            reflexivity. }
+          induction t; [ apply base.option.is_bounded_by_Some | reflexivity ].
         Qed.
 
         Lemma is_tighter_than_is_bounded_by {t} r1 r2 val
@@ -4831,25 +3677,8 @@ Module Compilers.
               (Hbounds : is_bounded_by r1 val = true)
           : is_bounded_by r2 val = true.
         Proof.
-          induction t;
-            repeat first [ progress destruct_head'_prod
-                         | progress destruct_head'_and
-                         | progress destruct_head' type.primitive
-                         | progress cbn in *
-                         | progress destruct_head' option
-                         | solve [ eauto with nocore ]
-                         | progress cbv [is_tighter_than_bool] in *
-                         | progress rewrite ?Bool.andb_true_iff in *
-                         | discriminate
-                         | apply conj
-                         | Z.ltb_to_lt; omega
-                         | rewrite @fold_andb_map_map in * ].
-          { lazymatch goal with
-            | [ r1 : list (interp t), r2 : list (interp t), val : list (Compilers.type.interp t) |- _ ]
-              => revert r1 r2 val Htight Hbounds IHt
-            end; intros r1 r2 val; revert r1 r2 val.
-            induction r1, r2, val; cbn; auto with nocore; try congruence; [].
-            rewrite !Bool.andb_true_iff; intros; destruct_head'_and; split; eauto with nocore. }
+          induction t; cbn in *;
+            eauto using base.option.is_tighter_than_is_bounded_by.
         Qed.
 
         Lemma is_tighter_than_Some_is_bounded_by {t} r1 r2 val
@@ -4867,170 +3696,246 @@ Module Compilers.
       Module option.
         Local Open Scope zrange_scope.
 
-        Notation curry0 f
-          := (fun 'tt => f).
-        Notation curry2 f
-          := (fun '(a, b) => f a b).
-        Notation uncurry2 f
-          := (fun a b => f (a, b)).
-        Notation curry3 f
-          := (fun '(a, b, c) => f a b c).
-
+        Fixpoint of_literal {t} : base.interp t -> type.base.option.interp t
+          := match t with
+             | base.type.Z => fun z => Some r[z~>z]%zrange
+             | base.type.nat
+             | base.type.bool
+               => fun n => Some n
+             | base.type.unit
+               => fun _ => tt
+             | base.type.prod A B
+               => fun '(a, b) => (@of_literal A a, @of_literal B b)
+             | base.type.list A
+               => fun ls => Some (List.map (@of_literal A) ls)
+             end.
+        Local Notation rSome v
+          := (ZRange.type.base.option.Some (t:=base.reify_norm_type_of v) v)
+               (only parsing).
         (** do bounds analysis on identifiers; take in optional bounds
             on arguments, return optional bounds on outputs. *)
-        Definition interp {s d} (idc : ident s d) : type.option.interp s -> type.option.interp d
-          := match idc in ident.ident s d return type.option.interp s -> type.option.interp d with
-             | ident.primitive type.Z v => fun _ => Some r[v ~> v]
-             | ident.Let_In tx tC => fun '(x, C) => C x
-             | ident.primitive _ _
-             | ident.Nat_succ
-             | ident.Nat_add
-             | ident.Nat_sub
-             | ident.Nat_mul
-             | ident.Nat_max
-             | ident.bool_rect _
-             | ident.nat_rect _
-             | ident.pred
-             | ident.list_rect _ _
-             | ident.List_nth_default _
-             | ident.Z_pow
-             | ident.Z_div
-             | ident.Z_eqb
-             | ident.Z_leb
-             | ident.Z_of_nat
-             | ident.Z_mul_split
-             | ident.Z_add_get_carry
-             | ident.Z_add_with_get_carry
-             | ident.Z_sub_get_borrow
-             | ident.Z_sub_with_get_borrow
-             | ident.Z_modulo
-             | ident.Z_rshi
-             | ident.Z_cc_m
-               => fun _ => type.option.None
-             | ident.nil t => curry0 (Some (@nil (type.option.interp t)))
-             | ident.cons t => curry2 (fun a => option_map (@Datatypes.cons (type.option.interp t) a))
-             | ident.fst A B => @Datatypes.fst (type.option.interp A) (type.option.interp B)
-             | ident.snd A B => @Datatypes.snd (type.option.interp A) (type.option.interp B)
-             | ident.List_nth_default_concrete T d n
-               => fun ls
-                  => match ls with
-                     | Datatypes.Some ls
-                       => @nth_default (type.option.interp T) type.option.None ls n
-                     | Datatypes.None
-                       => type.option.None
-                     end
-             | ident.Z_shiftr _ as idc
-             | ident.Z_shiftl _ as idc
-             | ident.Z_opp as idc
-             | ident.Z_cc_m_concrete _ as idc
-               => option_map (ZRange.two_corners (ident.interp idc))
-             | ident.Z_land mask
-               => option_map
-                    (fun r : zrange
-                     => ZRange.land_bounds r r[mask~>mask])
-             | ident.Z_add as idc
-             | ident.Z_mul as idc
-             | ident.Z_sub as idc
-             | ident.Z.rshi_concrete _ _ as idc
-               => fun '((x, y) : option zrange * option zrange)
-                  => match x, y with
-                     | Some x, Some y
-                       => Some (ZRange.four_corners (uncurry2 (ident.interp idc)) x y)
-                     | Some _, None | None, Some _ | None, None => None
-                     end
-             | ident.Z_cast range
-               => fun r : option zrange
-                  => Some match r with
-                          | Some r => ZRange.intersection r range
-                          | None => range
+        Definition interp {t} (idc : ident t) : type.option.interp t
+          := match idc in ident.wident _ t return type.option.interp t with
+             | ident.wrap _ idc
+               => match idc in ident.pident t return type.option.interp (parametric.subst t) with
+                  | ident.Literal _ v => parametric.base.type.untransport_subst_parametricify _ (of_literal v)
+                  | ident.Nat_succ as idc
+                  | ident.Nat_pred as idc
+                    => option_map (ident.pinterp idc)
+                  | ident.Z_of_nat as idc
+                    => option_map (fun n => r[Z.of_nat n~>Z.of_nat n]%zrange)
+                  | ident.List_length _
+                    => option_map (@List.length _)
+                  | ident.Nat_max as idc
+                  | ident.Nat_mul as idc
+                  | ident.Nat_add as idc
+                  | ident.Nat_sub as idc
+                  | ident.List_seq as idc
+                    => fun x y => x <- x; y <- y; rSome (ident.pinterp idc x y)
+                  | ident.List_repeat _
+                    => fun x y => y <- y; Some (List.repeat x y)
+                  | ident.List_combine _ _
+                    => fun x y => x <- x; y <- y; Some (List.combine x y)
+                  | ident.List_flat_map _ _
+                    => fun f ls
+                       => (ls <- ls;
+                             let fls := List.map f ls in
+                             List.fold_right
+                               (fun ls1 ls2 => ls1 <- ls1; ls2 <- ls2; Some (ls1 ++ ls2))
+                               (Some nil)
+                               fls)
+                  | ident.List_partition _
+                    => fun f ls
+                       => match ls with
+                          | Some ls
+                            => list_rect
+                                 _
+                                 (Some nil, Some nil)
+                                 (fun x tl partition_tl
+                                  => let '(g, d) := partition_tl in
+                                     ((fx <- f x;
+                                         if fx then (g <- g; Some (x::g)) else g),
+                                      (fx <- f x;
+                                         if fx then d else (d <- d; Some (x::d)))))
+                                 ls
+                          | None => (None, None)
                           end
-             | ident.Z_cast2 (r1, r2)
-               => fun '((r1', r2') : option zrange * option zrange)
-                  => (Some match r1' with
-                           | Some r => ZRange.intersection r r1
-                           | None => r1
-                           end,
-                      Some match r2' with
-                           | Some r => ZRange.intersection r r2
-                           | None => r2
-                           end)
-             | ident.Z_mul_split_concrete split_at
-               => fun '((x, y) : option zrange * option zrange)
-                  => match x, y with
-                     | Some x, Some y
-                       => type.option.Some
-                            (t:=(type.Z*type.Z)%ctype)
-                            (ZRange.split_bounds (ZRange.four_corners BinInt.Z.mul x y) split_at)
-                     | Some _, None | None, Some _ | None, None => type.option.None
-                     end
-             | ident.Z_add_get_carry_concrete split_at
-               => fun '((x, y) : option zrange * option zrange)
-                  => match x, y with
-                     | Some x, Some y
-                       => type.option.Some
-                            (t:=(type.Z*type.Z)%ctype)
-                            (ZRange.split_bounds (ZRange.four_corners BinInt.Z.add x y) split_at)
-                     | Some _, None | None, Some _ | None, None => type.option.None
-                     end
-             | ident.Z_add_with_carry
-               => fun '((x, y, z) : option zrange * option zrange * option zrange)
-                  => match x, y, z with
-                     | Some x, Some y, Some z
-                       => type.option.Some
-                            (t:=type.Z)
-                            (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
-                     | _, _, _ => type.option.None
-                     end
-             | ident.Z_add_with_get_carry_concrete split_at
-               => fun '((x, y, z) : option zrange * option zrange * option zrange)
-                  => match x, y, z with
-                     | Some x, Some y, Some z
-                       => type.option.Some
-                            (t:=(type.Z*type.Z)%ctype)
-                            (ZRange.split_bounds
-                               (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
-                               split_at)
-                     | _, _, _ => type.option.None
-                     end
-             | ident.Z_sub_get_borrow_concrete split_at
-               => fun '((x, y) : option zrange * option zrange)
-                  => match x, y with
-                     | Some x, Some y
-                       => type.option.Some
-                            (t:=(type.Z*type.Z)%ctype)
-                            (let b := ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at in
-                             (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
-                             (fst b, ZRange.opp (snd b)))
-                     | Some _, None | None, Some _ | None, None => type.option.None
-                     end
-             | ident.Z_sub_with_get_borrow_concrete split_at
-               => fun '((x, y, z) : option zrange * option zrange * option zrange)
-                  => match x, y, z with
-                     | Some x, Some y, Some z
-                       => type.option.Some
-                            (t:=(type.Z*type.Z)%ctype)
-                            (let b := ZRange.split_bounds (ZRange.eight_corners (fun x y z => (y - z - x)%Z) x y z) split_at in
-                             (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
-                               (fst b, ZRange.opp (snd b)))
-                     | _, _, _ => type.option.None
-                     end
-             | ident.Z_zselect
-               => fun '((x, y, z) : option zrange * option zrange * option zrange)
-                  => match y, z with
-                     | Some y, Some z => Some (ZRange.union y z)
-                     | Some _, None | None, Some _ | None, None => None
-                     end
-             | ident.Z_add_modulo
-               => fun '((x, y, z) : option zrange * option zrange * option zrange)
-                  => match x, y, z with
-                     | Some x, Some y, Some m
-                       => Some (ZRange.union
-                                  (ZRange.four_corners BinInt.Z.add x y)
-                                  (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
-                                                        x y m))
-                     | _, _, _ => None
-                     end
-             end.
+                  | ident.Z_eqb
+                  | ident.Z_leb
+                  | ident.Z_cc_m
+                  | ident.Z_pow
+                  | ident.Z_modulo
+                    => fun _ _ => ZRange.type.base.option.None
+                  | ident.bool_rect _
+                    => fun t f b
+                       => match b with
+                          | Some b => if b then t tt else f tt
+                          | None => ZRange.type.base.option.None
+                          end
+                  | ident.nat_rect _
+                    => fun O_case S_case n
+                       => match n with
+                          | Some n
+                            => nat_rect
+                                 _
+                                 (O_case tt)
+                                 (fun n' rec => S_case (Some n') rec)
+                                 n
+                          | None => ZRange.type.base.option.None
+                          end
+                  | ident.list_rect _ _
+                    => fun N C ls
+                       => match ls with
+                          | Some ls
+                            => list_rect
+                                 _
+                                 (N tt)
+                                 (fun x xs rec => C x (Some xs) rec)
+                                 ls
+                          | None => ZRange.type.base.option.None
+                          end
+                  | ident.list_case _ _
+                    => fun N C ls
+                       => match ls with
+                          | Some ls
+                            => list_case
+                                 _
+                                 (N tt)
+                                 (fun x xs => C x (Some xs))
+                                 ls
+                          | None => ZRange.type.base.option.None
+                          end
+                  | ident.List_fold_right _ _
+                    => fun f v ls
+                       => match ls with
+                          | Some ls
+                            => fold_right f v ls
+                          | None => ZRange.type.base.option.None
+                          end
+                  | ident.List_nth_default _
+                    => fun d ls n
+                       => match ls, n with
+                          | Some ls, Some n
+                            => nth_default d ls n
+                          | _, _ => ZRange.type.base.option.None
+                          end
+                  | ident.List_update_nth _
+                    => fun n f ls => ls <- ls; n <- n; Some (update_nth n f ls)
+                  | ident.Z_mul_split
+                  | ident.Z_add_get_carry
+                  | ident.Z_sub_get_borrow
+                    => fun _ _ _ => ZRange.type.base.option.None
+                  | ident.Z_add_with_get_carry
+                  | ident.Z_sub_with_get_borrow
+                  | ident.Z_rshi
+                    => fun _ _ _ _ => ZRange.type.base.option.None
+                  | ident.nil t => Some nil
+                  | ident.cons t => fun x => option_map (cons x)
+                  | ident.pair A B => pair
+                  | ident.fst A B => fst
+                  | ident.snd A B => snd
+                  | ident.List_map _ _
+                    => fun f ls => ls <- ls; Some (List.map f ls)
+                  | ident.List_app _
+                    => fun ls1 ls2 => ls1 <- ls1; ls2 <- ls2; Some (List.app ls1 ls2)
+                  | ident.List_rev _ => option_map (@List.rev _)
+                  | ident.Z_opp as idc
+                  | ident.Z_shiftr _ as idc
+                  | ident.Z_shiftl _ as idc
+                  | ident.Z_cc_m_concrete _ as idc
+                    => fun x => x <- x; Some (ZRange.two_corners (ident.pinterp idc) x)
+                  | ident.Z_add as idc
+                  | ident.Z_mul as idc
+                  | ident.Z_sub as idc
+                  | ident.Z_div as idc
+                  | ident.Z_rshi_concrete _ _ as idc
+                    => fun x y => x <- x; y <- y; Some (ZRange.four_corners (ident.pinterp idc) x y)
+                  | ident.Z_add_with_carry as idc
+                    => fun x y z => x <- x; y <- y; z <- z; Some (ZRange.eight_corners (ident.pinterp idc) x y z)
+                  | ident.Z_land mask
+                    => option_map (ZRange.land_bounds r[mask~>mask])
+                  | ident.Z_mul_split_concrete split_at
+                    => fun x y
+                       => match x, y with
+                          | Some x, Some y
+                            => ZRange.type.base.option.Some
+                                 (t:=base.type.Z*base.type.Z)
+                                 (ZRange.split_bounds (ZRange.four_corners Z.mul x y) split_at)
+                          | _, _ => ZRange.type.base.option.None
+                          end
+                  | ident.Z_add_get_carry_concrete split_at
+                    => fun x y
+                       => match x, y with
+                          | Some x, Some y
+                            => ZRange.type.base.option.Some
+                                 (t:=base.type.Z*base.type.Z)
+                                 (ZRange.split_bounds (ZRange.four_corners Z.add x y) split_at)
+                          | _, _ => ZRange.type.base.option.None
+                          end
+                  | ident.Z_add_with_get_carry_concrete split_at
+                    => fun x y z
+                       => match x, y, z with
+                          | Some x, Some y, Some z
+                            => ZRange.type.base.option.Some
+                                 (t:=base.type.Z*base.type.Z)
+                                 (ZRange.split_bounds
+                                    (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
+                                    split_at)
+                          | _, _, _ => ZRange.type.base.option.None
+                          end
+                  | ident.Z_sub_get_borrow_concrete split_at
+                    => fun x y
+                       => match x, y with
+                          | Some x, Some y
+                            => ZRange.type.base.option.Some
+                                 (t:=base.type.Z*base.type.Z)
+                                 (let b := ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at in
+                                  (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
+                                  (fst b, ZRange.opp (snd b)))
+                          | _, _ => ZRange.type.base.option.None
+                          end
+                  | ident.Z_sub_with_get_borrow_concrete split_at
+                    => fun x y z
+                       => match x, y, z with
+                          | Some x, Some y, Some z
+                            => ZRange.type.base.option.Some
+                                 (t:=base.type.Z*base.type.Z)
+                                 (let b := ZRange.split_bounds (ZRange.eight_corners (fun x y z => (y - z - x)%Z) x y z) split_at in
+                                  (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
+                                  (fst b, ZRange.opp (snd b)))
+                          | _, _, _ => ZRange.type.base.option.None
+                          end
+                  | ident.Z_zselect
+                    => fun _ y z => y <- y; z <- z; Some (ZRange.union y z)
+                  | ident.Z_add_modulo
+                    => fun x y m
+                       => (x <- x;
+                             y <- y;
+                             m <- m;
+                             Some (ZRange.union
+                                     (ZRange.four_corners Z.add x y)
+                                     (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
+                                                           x y m)))
+                  | ident.Z_neg_snd (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template *)
+                    => fun '(a, b) => (a, option_map ZRange.opp b)
+                  | ident.Z_cast range
+                    => fun r : option zrange
+                       => Some match r with
+                               | Some r => ZRange.intersection r range
+                               | None => range
+                               end
+                  | ident.Z_cast2 (r1, r2)
+                    => fun '((r1', r2') : option zrange * option zrange)
+                       => (Some match r1' with
+                                | Some r => ZRange.intersection r r1
+                                | None => r1
+                                end,
+                           Some match r2' with
+                                | Some r => ZRange.intersection r r2
+                                | None => r2
+                                end)
+                  end
+             end%option.
       End option.
     End ident.
   End ZRange.
@@ -5042,473 +3947,1098 @@ Module Compilers.
         other places where we need to provide a dummy value in cases
         that will never actually be reached in correctly used code. *)
     Module type.
-      Module primitive.
-        Definition default {t : type.primitive} : type.interp t
+      Module base.
+        Fixpoint default {t : base.type} : base.interp t
           := match t with
-             | type.unit => tt
-             | type.Z => (-1)%Z
-             | type.nat => 0%nat
-             | type.bool => true
+             | base.type.unit => tt
+             | base.type.Z => (-1)%Z
+             | base.type.nat => 0%nat
+             | base.type.bool => true
+             | base.type.list _ => nil
+             | base.type.prod A B
+               => (@default A, @default B)
              end.
-      End primitive.
-      Fixpoint default {t} : type.interp t
+      End base.
+      Fixpoint default {t} : type.interp base.interp t
         := match t with
-           | type.type_primitive x => @primitive.default x
-           | type.prod A B => (@default A, @default B)
+           | type.base x => @base.default x
            | type.arrow s d => fun _ => @default d
-           | type.list A => @nil (type.interp A)
            end.
     End type.
 
     Module expr.
+      Module base.
+        Section with_var.
+          Context {var : type.type base.type -> Type}.
+          Fixpoint default {t : base.type} : @expr base.type ident var (type.base t)
+            := match t with
+               | base.type.prod A B
+                 => (@default A, @default B)
+               | base.type.list A => #ident.nil
+               | base.type.unit as t
+               | base.type.Z as t
+               | base.type.nat as t
+               | base.type.bool as t
+                 => ##(@type.base.default t)
+               end%expr.
+        End with_var.
+
+        Definition Default {t : base.type} : expr.Expr (type.base t) := fun _ => default.
+      End base.
+
       Section with_var.
-        Context {var : type -> Type}.
-        Fixpoint default {t : type} : @expr var t
+        Context {var : type base.type -> Type}.
+        Fixpoint default {t : type base.type} : @expr base.type ident var t
           := match t with
-             | type.type_primitive x
-               => AppIdent (ident.primitive type.primitive.default) TT
-             | type.prod A B
-               => (@default A, @default B)
-             | type.arrow s d => Abs (fun _ => @default d)
-             | type.list A => AppIdent ident.nil TT
-             end.
+             | type.base x => base.default
+             | type.arrow s d => λ _, @default d
+             end%expr.
       End with_var.
 
-      Definition Default {t} : Expr t := fun _ => default.
+      Definition Default {t} : expr.Expr t := fun _ => default.
     End expr.
   End DefaultValue.
 
-  Module GeneralizeVar.
-    (** In both lazy and cbv evaluation strategies, reduction under
-        lambdas is only done at the very end.  This means that if we
-        have a computation which returns a PHOAS syntax tree, and we
-        plug in two different values for [var], the computation is run
-        twice.  This module provides a way of computing a
-        representation of terms which does not suffer from this issue.
-        By computing a flat representation, and then going back to
-        PHOAS, the cbv strategy will fully compute the preceeding
-        PHOAS passes only once, and the lazy strategy will share
-        computation among the various uses of [var] (because there are
-        no lambdas to get blocked on) and thus will also compute the
-        preceeding PHOAS passes only once. *)
-    Module Flat.
-      Inductive expr : type -> Set :=
-      | Var (t : type) (n : positive) : expr t
-      | TT : expr type.unit
-      | AppIdent {s d} (idc : ident s d) (arg : expr s) : expr d
-      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
-      | Pair {A B} (a : expr A) (b : expr B) : expr (A * B)
-      | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d).
-    End Flat.
-
-    Definition ERROR {T} (v : T) : T. exact v. Qed.
-
-    Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
-             (cur_idx : PositiveMap.key)
-      : Flat.expr t
-      := match e in expr.expr t return Flat.expr t with
-         | Var t v => Flat.Var t v
-         | TT => Flat.TT
-         | AppIdent s d idc args
-           => Flat.AppIdent idc (@to_flat' _ args cur_idx)
-         | App s d f x => Flat.App
-                            (@to_flat' _ f cur_idx)
-                            (@to_flat' _ x cur_idx)
-         | Pair A B a b => Flat.Pair
-                             (@to_flat' _ a cur_idx)
-                             (@to_flat' _ b cur_idx)
-         | Abs s d f
-           => Flat.Abs s cur_idx
-                       (@to_flat'
-                          d (f cur_idx)
-                          (Pos.succ cur_idx))
-         end.
-
-    Fixpoint from_flat {t} (e : Flat.expr t)
-      : forall var, PositiveMap.t { t : type & var t } -> @expr var t
-      := match e in Flat.expr t return forall var, _ -> expr t with
-         | Flat.Var t v
-           => fun var ctx
-              => match (tv <- PositiveMap.find v ctx;
-                          type.try_transport var _ _ (projT2 tv))%option with
-                 | Some v => Var v
-                 | None => ERROR DefaultValue.expr.default
-                 end
-         | Flat.TT => fun _ _ => TT
-         | Flat.AppIdent s d idc args
-           => let args' := @from_flat _ args in
-              fun var ctx => AppIdent idc (args' var ctx)
-         | Flat.App s d f x
-           => let f' := @from_flat _ f in
-              let x' := @from_flat _ x in
-              fun var ctx => App (f' var ctx) (x' var ctx)
-         | Flat.Pair A B a b
-           => let a' := @from_flat _ a in
-              let b' := @from_flat _ b in
-              fun var ctx => Pair (a' var ctx) (b' var ctx)
-         | Flat.Abs s cur_idx d f
-           => let f' := @from_flat d f in
-              fun var ctx
-              => Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
-         end.
-
-    Definition to_flat {t} (e : expr t) : Flat.expr t
-      := to_flat' e 1%positive.
-    Definition ToFlat {t} (E : Expr t) : Flat.expr t
-      := to_flat (E _).
-    Definition FromFlat {t} (e : Flat.expr t) : Expr t
-      := let e' := @from_flat t e in
-         fun var => e' var (PositiveMap.empty _).
-    Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
-      := FromFlat (to_flat e).
-  End GeneralizeVar.
-
   Module partial.
-    Notation data := ZRange.type.option.interp.
-    Section value.
-      Context (var : type -> Type).
-      Definition value_prestep (value : type -> Type) (t : type)
-        := match t return Type with
-           | type.prod A B as t => value A * value B
-           | type.arrow s d => value s -> value d
-           | type.list A => list (value A)
-           | type.type_primitive _ as t
-             => type.interp t
-           end%type.
-      Definition value_step (value : type -> Type) (t : type)
-        := match t return Type with
-           | type.arrow _ _ as t
-             => value_prestep value t
-           | type.prod _ _ as t
-           | type.list _ as t
-           | type.type_primitive _ as t
-             => data t * @expr var t + value_prestep value t
-           end%type.
-      Fixpoint value (t : type)
-        := value_step value t.
+    Import UnderLets.
+    Section with_var.
+      Context {base_type : Type}.
+      Local Notation type := (type base_type).
+      Let type_base (x : base_type) : type := type.base x.
+      Local Coercion type_base : base_type >-> type.
+      Context {ident : type -> Type}
+              {var : type -> Type}.
+      Local Notation expr := (@expr base_type ident).
+      Local Notation UnderLets := (@UnderLets base_type ident var).
+      Context (base_value : base_type -> Type)
+              (abstract_domain' : base_type -> Type)
+              (annotate : forall t, abstract_domain' t -> option (ident (t -> t)))
+              (intersect_state : forall A, abstract_domain' A -> abstract_domain' A -> abstract_domain' A)
+              (bottom' : forall A, abstract_domain' A)
+              (abstraction_function : forall t, base_value t -> abstract_domain' t)
+              (base_reify : forall (is_let_bound : bool) t, base_value t -> UnderLets (@expr var t))
+              (base_reflect : forall t : base_type, @expr var t -> abstract_domain' t -> option (base_value t)).
 
-      Fixpoint value_default {t} : value t
-        := match t return value t with
-           | type.type_primitive type.Z
-           | type.type_primitive _
-             => inr DefaultValue.type.primitive.default
-           | type.prod A B
-             => inr (@value_default A, @value_default B)
-           | type.arrow s d => fun _ => @value_default d
-           | type.list A => inr (@nil (value A))
+      Definition value (t : type)
+        := type.interpM
+             UnderLets
+             (fun t => abstract_domain' t * @expr var t + base_value t)%type
+             t.
+      Definition value_with_lets (t : type)
+        := UnderLets (value t).
+
+      Context (interp_ident : forall t, ident t -> value_with_lets t).
+
+      Definition abstract_domain (t : type)
+        := type.interp abstract_domain' t.
+      Definition lazy_abstract_domain (t : type)
+        := type.interp (fun t => unit -> abstract_domain' t) t.
+
+      Fixpoint force_abstract_domain {t} : lazy_abstract_domain t -> abstract_domain t
+        := match t with
+           | type.base t => fun st => st tt
+           | type.arrow s d
+             => fun f x => @force_abstract_domain d (f (@thunk_abstract_domain s x))
+           end
+      with thunk_abstract_domain {t} : abstract_domain t -> lazy_abstract_domain t
+        := match t with
+           | type.base t => fun st 'tt => st
+           | type.arrow s d
+             => fun f x => @thunk_abstract_domain d (f (@force_abstract_domain s x))
            end.
 
-      Fixpoint data_from_value {t} : value t -> data t
-        := match t return value t -> data t with
-           | type.arrow _ _ as t
-             => fun _ => ZRange.type.option.None
-           | type.prod A B as t
-             => fun v
-                => match v with
-                   | inl (data, _) => data
-                   | inr (a, b)
-                     => (@data_from_value A a, @data_from_value B b)
-                   end
-           | type.list A as t
-             => fun v
-                => match v with
-                   | inl (data, _) => data
-                   | inr ls
-                     => Some (List.map (@data_from_value A) ls)
-                   end
-           | type.type_primitive type.Z as t
-             => fun v
-                => match v with
-                   | inl (data, _) => data
-                   | inr v => Some r[v~>v]%zrange
-                   end
-           | type.type_primitive _ as t
-             => fun v
-                => match v with
-                   | inl (data, _) => data
-                   | inr _ => ZRange.type.option.None
-                   end
+      Fixpoint bottom {t} : abstract_domain t
+        := match t with
+           | type.base t => bottom' t
+           | type.arrow s d => fun _ => @bottom d
            end.
-    End value.
 
-    Module expr.
-      Section reify.
-        Context {var : type -> Type}.
-        Fixpoint reify {t : type} {struct t}
-          : value var t -> @expr var t
-          := match t return value var t -> expr t with
-             | type.prod A B as t
-               => fun x : (data A * data B) * expr t + value var A * value var B
-                  => match x with
-                     | inl ((da, db), v)
-                       => match A, B return data A -> data B -> expr (A * B) -> expr (A * B) with
-                          | type.Z, type.Z
-                            => fun da db v
-                               => match da, db with
-                                  | Some r1, Some r2
-                                    => (ident.Z.cast2 (r1, r2)%core @@ v)%expr
-                                  | _, _ => v
-                                  end
-                          | _, _ => fun _ _ v => v
-                          end da db v
-                     | inr (a, b) => (@reify A a, @reify B b)%expr
+      Fixpoint bottom_for_each_lhs_of_arrow {t} : type.for_each_lhs_of_arrow abstract_domain t
+        := match t return type.for_each_lhs_of_arrow abstract_domain t with
+           | type.base t => tt
+           | type.arrow s d => (bottom, @bottom_for_each_lhs_of_arrow d)
+           end.
+
+      Fixpoint state_of_value {t} : value t -> abstract_domain t
+        := match t return value t -> abstract_domain t with
+           | type.base t
+             => fun v
+                => match v with
+                   | inl (st, _) => st
+                   | inr n => abstraction_function _ n
+                   end
+           | type.arrow s d => fun _ => bottom
+           end.
+
+      Definition annotate_term {t} (st : abstract_domain' t) (e : @expr var t)
+        : @expr var t
+        := match annotate _ st with
+           | None => e
+           | Some cst => ###cst @ e
+           end%expr.
+
+      Fixpoint reify (is_let_bound : bool) {t} : value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t)
+        := match t return value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t) with
+           | type.base t
+             => fun v 'tt
+                => match v with
+                   | inl (st, e)
+                     => let e' := annotate_term st e in
+                        if is_let_bound
+                        then UnderLet e' (fun v => Base ($v)%expr)
+                        else Base e'
+                   | inr v => base_reify is_let_bound _ v
+                   end
+           | type.arrow s d
+             => fun f '(sv, dv)
+                => Base
+                     (λ x , (UnderLets.to_expr
+                               (fx <-- f (@reflect _ (expr.Var x) sv);
+                                  @reify false _ fx dv)))
+           end%core%expr
+      with reflect {t} : @expr var t -> abstract_domain t -> value t
+           := match t return @expr var t -> abstract_domain t -> value t with
+              | type.base t
+                => fun e st
+                   => match base_reflect _ e st with
+                      | Some v => inr v
+                      | None => inl (st, e)
+                      end
+              | type.arrow s d
+                => fun e absf v
+                   => let stv := state_of_value v in
+                      (rv <-- (@reify false s v bottom_for_each_lhs_of_arrow);
+                         Base (@reflect d (e @ rv) (absf stv))%expr)%under_lets
+              end.
+
+      Fixpoint interp {t} (e : @expr value_with_lets t) : value_with_lets t
+        := match e in expr.expr t return value_with_lets t with
+           | expr.Ident t idc => interp_ident t idc
+           | expr.Var t v => v
+           | expr.Abs s d f => Base (fun x => @interp d (f (Base x)))
+           | expr.App s d f x
+             => (x' <-- @interp s x;
+                   f' <-- @interp (s -> d)%etype f;
+                   f' x')
+           | expr.LetIn (type.arrow _ _) B x f
+             => (x' <-- @interp _ x;
+                   @interp _ (f (Base x')))
+           | expr.LetIn (type.base A) B x f
+             => (x' <-- @interp _ x;
+                   x'' <-- reify true (* this forces a let-binder here *) x' tt;
+                   @interp _ (f (Base (reflect x'' (state_of_value x')))))
+           end%under_lets.
+
+      Definition eval_with_bound' {t} (e : @expr value_with_lets t)
+                 (st : type.for_each_lhs_of_arrow abstract_domain t)
+        : expr t
+        := UnderLets.to_expr (e' <-- interp e; reify false e' st).
+
+      Definition eval' {t} (e : @expr value_with_lets t) : expr t
+        := eval_with_bound' e bottom_for_each_lhs_of_arrow.
+
+      Section extract.
+        Context (ident_extract : forall t, ident t -> lazy_abstract_domain t).
+
+        Fixpoint extract' {t} (e : @expr lazy_abstract_domain t)
+          : lazy_abstract_domain t
+          := match e in expr.expr t return lazy_abstract_domain t with
+             | expr.Ident t idc => ident_extract t idc
+             | expr.Var t v => v
+             | expr.Abs s d f
+               => fun v => @extract' d (f v)
+             | expr.App s d f x
+               => let f' := @extract' _ f in
+                  let x' := @extract' _ x in
+                  f' x'
+             | expr.LetIn A B x f
+               => let x' := @extract' A x in
+                  @extract' B (f x')
+             end.
+
+        Definition extract {t} (e : @expr lazy_abstract_domain t) (bound : type.for_each_lhs_of_arrow abstract_domain t)
+          : abstract_domain' (type.final_codomain t)
+          := type.app_curried (extract' e) (type.map_for_each_lhs_of_arrow (@thunk_abstract_domain) bound) tt.
+      End extract.
+    End with_var.
+
+    Module wident.
+      Section with_var.
+        Local Notation type := (type base.type).
+        Let type_base (x : base.type) : type := type.base x.
+        Local Coercion type_base : base.type >-> type.
+        Let type_pbase (x : parametric.base.type) : ptype := type.base x.
+        Local Coercion type_pbase : parametric.base.type >-> type.
+        Context {var : type -> Type}
+                (pident : ptype -> Type).
+        Local Notation ident := (wident pident).
+        Local Notation expr := (@expr base.type ident).
+        Local Notation UnderLets := (@UnderLets base.type ident var).
+        Context (abstract_domain' : base.type -> Type).
+        Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
+        Context (annotate : forall t, abstract_domain' t -> option (ident (t -> t)))
+                (abstract_interp_ident : forall t, pident t -> type.interp abstract_domain' (parametric.subst t))
+                (intersect_state : forall A, abstract_domain' A -> abstract_domain' A -> abstract_domain' A)
+                (update_Z_literal_with_state : abstract_domain' base.type.Z -> Z -> Z)
+                (update_bool_literal_with_state : abstract_domain' base.type.bool -> bool -> bool)
+                (update_nat_literal_with_state : abstract_domain' base.type.nat -> nat -> nat)
+                (bottom' : forall A, abstract_domain' A)
+                (** we need constructors for reify and destructors for
+                    intersect_state, which is needed to talk about how
+                    to do cast on values; there's a leaky abstraction
+                    barrier here: we assume that we can take apart the
+                    abstract state via type structure and then put it
+                    back together again, in order to cast values.  But
+                    we don't require that the abstract state is
+                    actually a pair on product types, so we pay the
+                    cost of crossing that abstraction barrier in both
+                    directions a decent amount *)
+                (ident_TT : pident parametric.base.type.unit)
+                (ident_Literal_Z : Z -> pident parametric.base.type.Z)
+                (ident_Literal_bool : bool -> pident parametric.base.type.bool)
+                (ident_Literal_nat : nat -> pident parametric.base.type.nat)
+                (ident_Pair : forall A B, pident (#A -> #B -> #A * #B)%ptype)
+                (ident_Nil : forall A, pident (parametric.base.type.list #A)%ptype)
+                (ident_Cons : forall A, pident (#A -> parametric.base.type.list #A -> parametric.base.type.list #A)%ptype)
+                (ident_List_app : forall A, pident (parametric.base.type.list #A -> parametric.base.type.list #A -> parametric.base.type.list #A)%ptype)
+                (ident_Fst : forall A B, pident (#A * #B -> #A)%ptype)
+                (ident_Snd : forall A B, pident (#A * #B -> #B)%ptype)
+                (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A))).
+
+        Local Notation expr_with_abs A
+          := (prod (abstract_domain' A) (@expr var A)).
+        Local Notation expr_or base_value A
+          := (Datatypes.sum (expr_with_abs A) (base_value A%etype)).
+        Fixpoint base_value (t : base.type)
+          := match t return Type with
+             | base.type.unit as t
+             | base.type.Z as t
+             | base.type.bool as t
+             | base.type.nat as t
+               => base.interp t
+             | base.type.prod A B as t
+               => (expr_or base_value A) * (expr_or base_value B)
+             | base.type.list A as t
+               => list (expr_or base_value A) (* cons cells *)
+             end%type.
+        Local Notation value := (@value base.type ident var base_value abstract_domain').
+        Local Notation value_with_lets := (@value_with_lets base.type ident var base_value abstract_domain').
+        Fixpoint pbase_value (t : parametric.base.type)
+          := match t return Type with
+             | parametric.base.type.unit as t
+             | parametric.base.type.Z as t
+             | parametric.base.type.bool as t
+             | parametric.base.type.nat as t
+               => parametric.base.type.interp base.interp t
+             | parametric.base.type.prod A B as t
+               => pbase_value A * pbase_value B
+             | parametric.base.type.list A as t
+               => list (pbase_value A)
+             | parametric.base.type.var_with_subst A as t
+               => value A
+             end%type.
+
+        Fixpoint abstraction_function {t} : base_value t -> abstract_domain' t
+          := match t return base_value t -> abstract_domain' t with
+             | base.type.unit
+               => fun v => abstract_interp_ident _ ident_TT
+             | base.type.Z
+               => fun v => abstract_interp_ident _ (ident_Literal_Z v)
+             | base.type.bool
+               => fun v => abstract_interp_ident _ (ident_Literal_bool v)
+             | base.type.nat
+               => fun v => abstract_interp_ident _ (ident_Literal_nat v)
+             | base.type.prod A B
+               => fun '(a, b)
+                  => let sta := match a with
+                                | inl (st, _) => st
+                                | inr a' => @abstraction_function A a'
+                                end in
+                     let stb := match b with
+                                | inl (st, _) => st
+                                | inr b' => @abstraction_function B b'
+                                end in
+                     abstract_interp_ident
+                       _ (ident_Pair A B) sta stb
+             | base.type.list A
+               => fun cells
+                  => let st_cells
+                         := List.map
+                              (fun a => match a with
+                                        | inl (st, _) => st
+                                        | inr a' => @abstraction_function A a'
+                                        end)
+                              cells in
+                     List.fold_right
+                       (abstract_interp_ident _ (ident_Cons A))
+                       (abstract_interp_ident _ (ident_Nil A))
+                       st_cells
+             end.
+
+        Local Notation annotate_term := (@annotate_term base.type ident var abstract_domain' annotate).
+
+        Fixpoint base_reify (is_let_bound : bool) {t} : base_value t -> UnderLets (@expr var t)
+          := let do_annotate t st e
+                 := let e' := @annotate_term t st e in
+                    if is_let_bound
+                    then UnderLet e' (fun v => Base ($v)%expr)
+                    else Base e' in
+             match t return base_value t -> UnderLets (expr t) with
+             | base.type.unit
+               => fun v => Base (expr.Ident (ident.wrap ident_TT))
+             | base.type.Z
+               => fun v => Base (expr.Ident (ident.wrap (ident_Literal_Z v)))
+             | base.type.bool
+               => fun v => Base (expr.Ident (ident.wrap (ident_Literal_bool v)))
+             | base.type.nat
+               => fun v => Base (expr.Ident (ident.wrap (ident_Literal_nat v)))
+             | base.type.prod A B
+               => fun '(a, b)
+                  => let ea := match a with
+                               | inl (st, e)
+                                 => do_annotate _ st e
+                               | inr v => @base_reify is_let_bound _ v
+                               end in
+                     let eb := match b with
+                               | inl (st, e)
+                                 => do_annotate _ st e
+                               | inr v => @base_reify is_let_bound _ v
+                               end in
+                     (ea' <-- ea;
+                        eb' <-- eb;
+                        Base (#(ident_Pair A B) @ ea' @ eb')%expr)
+             | base.type.list A
+               => fun cells
+                  => let cells'
+                         := List.map
+                              (fun a
+                               => match a with
+                                  | inl (st, e)
+                                    => do_annotate _ st e
+                                  | inr v
+                                    => @base_reify is_let_bound _ v
+                                  end)
+                              cells in
+                     List.fold_right
+                       (fun x xs => x <-- x; xs <-- xs; Base (#(ident_Cons A) @ x @ xs)%expr)
+                       (Base (#(ident_Nil A))%expr)
+                       cells'
+             end%under_lets.
+
+        Context (base_reflect : forall t : base.type, @expr var t -> abstract_domain' t -> option (base_value t)).
+
+        Fixpoint intersect_state_base_value {t} : abstract_domain' t -> base_value t -> base_value t
+          := match t return abstract_domain' t -> base_value t -> base_value t with
+             | base.type.unit => fun _ 'tt => tt
+             | base.type.Z => update_Z_literal_with_state
+             | base.type.bool => update_bool_literal_with_state
+             | base.type.nat => update_nat_literal_with_state
+             | base.type.prod _ _
+               => fun st '(a, b)
+                  => let sta := abstract_interp_ident _ (ident_Fst _ _) st in
+                     let stb := abstract_interp_ident _ (ident_Snd _ _) st in
+                     let a' := match a with
+                               | inl (sta', e) => inl (intersect_state _ sta sta', e)
+                               | inr v => inr (@intersect_state_base_value _ sta v)
+                               end in
+                     let b' := match b with
+                               | inl (stb', e) => inl (intersect_state _ stb stb', e)
+                               | inr v => inr (@intersect_state_base_value _ stb v)
+                               end in
+                     (a', b')
+             | base.type.list _
+               => fun st cells
+                  => List.map
+                       (fun '(st0, cell)
+                        => match cell with
+                           | inl (st0', e) => inl (intersect_state _ st0 st0', e)
+                           | inr v => inr (@intersect_state_base_value _ st0 v)
+                           end)
+                       (List.combine
+                          match extract_list_state _ st with
+                          | Some ls => ls
+                          | None => List.map (fun _ => bottom' _) cells
+                          end
+                          cells)
+             end.
+
+
+        Definition intersect_state_value {t} : abstract_domain t -> value t -> value t
+          := match t with
+             | type.base t
+               => fun st e
+                  => match e with
+                     | inl (st', e) => inl (intersect_state _ st st', e)
+                     | inr v => inr (intersect_state_base_value st v)
                      end
+             | type.arrow s d => fun _ e => e
+             end.
+
+        Local Notation reify := (@reify base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) base_reflect).
+        Local Notation reflect := (@reflect base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) base_reflect).
+
+        Fixpoint pinterp_base {t : parametric.base.type} : parametric.half_interp UnderLets pbase_value value (type.base t) -> value (parametric.subst (type.base t))
+          := match t return parametric.half_interp UnderLets pbase_value value (type.base t) -> value (parametric.subst (type.base t)) with
+             | parametric.base.type.unit
+             | parametric.base.type.Z
+             | parametric.base.type.bool
+             | parametric.base.type.nat
+               => fun v => inr v
+             | parametric.base.type.prod A B
+               => fun '(a, b) => inr (@pinterp_base A a, @pinterp_base B b)
+             | parametric.base.type.list A
+               => fun ls => inr (List.map (@pinterp_base A) ls)
+             | parametric.base.type.var_with_subst subst
+               => fun v => v
+             end.
+
+        Fixpoint puninterp_base {t : parametric.base.type} : value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets pbase_value value (type.base t))
+          := match t return value (parametric.subst (type.base t)) -> option (parametric.half_interp UnderLets pbase_value value (type.base t)) with
+             | parametric.base.type.unit
+             | parametric.base.type.Z
+             | parametric.base.type.bool
+             | parametric.base.type.nat
+               => fun v
+                  => match v with
+                     | inl _ => None
+                     | inr v' => Some v'
+                     end
+             | parametric.base.type.prod A B
+               => fun ab
+                  => match ab with
+                     | inl _ => None
+                     | inr (a, b)
+                       => (a' <- @puninterp_base A a;
+                             b' <- @puninterp_base B b;
+                             Some (a', b'))
+                     end
+             | parametric.base.type.list A
+               => fun ls
+                  => match ls with
+                     | inl rest => None
+                     | inr ls
+                       => List.fold_right
+                            (fun x xs
+                             => (x' <- x; xs' <- xs; Some (x' :: xs'))%option)
+                            (Some nil)
+                            (List.map (@puninterp_base A) ls)
+                     end
+             | parametric.base.type.var_with_subst subst
+               => @Some _
+             end%option.
+
+        Fixpoint pinterp {t} : UnderLets (value (parametric.subst t)) -> parametric.half_interp2 UnderLets pbase_value value t -> value_with_lets (parametric.subst t)
+          := match t return UnderLets (value (parametric.subst t)) -> parametric.half_interp2 UnderLets pbase_value value t -> value_with_lets (parametric.subst t) with
+             | type.base t
+               => fun default partial => (partial' <-- partial;
+                                            Base (pinterp_base partial'))
+             | type.arrow (type.base s) d
+               => fun fdefault fpartial
+                  => Base
+                       (fun (v : value (parametric.subst (type.base s)))
+                        => let default := (fdefault' <-- fdefault; fdefault' v) in
+                           match puninterp_base v return UnderLets (value (parametric.subst d)) with
+                           | Some v' => @pinterp d default (fpartial v')
+                           | None => default
+                           end)
              | type.arrow s d
-               => fun (f : value var s -> value var d)
-                  => Abs (fun x
-                          => @reify d (f (@reflect s (Var x))))
-             | type.list A as t
-               => fun x : _ * expr t + list (value var A)
-                  => match x with
-                     | inl (_, v) => v
-                     | inr v => reify_list (List.map (@reify A) v)
-                     end
-             | type.type_primitive type.Z as t
-               => fun x : _ * expr t + type.interp t
-                  => match x with
-                     | inl (Some r, v) => ident.Z.cast r @@ v
-                     | inl (None, v) => v
-                     | inr v => ident.primitive v @@ TT
-                     end%core%expr
-             | type.type_primitive _ as t
-               => fun x : _ * expr t + type.interp t
-                  => match x with
-                     | inl (_, v) => v
-                     | inr v => ident.primitive v @@ TT
-                     end%core%expr
-             end
-        with reflect {t : type}
-             : @expr var t -> value var t
-             := match t return expr t -> value var t with
-                | type.arrow s d
-                  => fun (f : expr (s -> d)) (x : value var s)
-                     => @reflect d (App f (@reify s x))
-                | type.prod A B as t
-                  => fun v : expr t
-                     => let inr := @inr (data t * expr t) (value_prestep (value var) t) in
-                        let inl := @inl (data t * expr t) (value_prestep (value var) t) in
-                        match invert_Pair v with
-                        | Some (a, b)
-                          => inr (@reflect A a, @reflect B b)
-                        | None
-                          => inl
-                               (match A, B return expr (A * B) -> data (A * B) * expr (A * B) with
-                                | type.Z, type.Z
-                                  => fun v
-                                     => match invert_Z_cast2 v with
-                                        | Some (r, v)
-                                          => (ZRange.type.option.Some (t:=type.Z*type.Z) r, v)
-                                        | None
-                                          => (ZRange.type.option.None, v)
-                                        end
-                                | _, _ => fun v => (ZRange.type.option.None, v)
-                                end v)
-                        end
-                | type.list A as t
-                  => fun v : expr t
-                     => let inr := @inr (data t * expr t) (value_prestep (value var) t) in
-                        let inl := @inl (data t * expr t) (value_prestep (value var) t) in
-                        match reflect_list v with
-                        | Some ls
-                          => inr (List.map (@reflect A) ls)
-                        | None
-                          => inl (None, v)
-                        end
-                | type.type_primitive type.Z as t
-                  => fun v : expr t
-                     => let inr' := @inr (data t * expr t) (value_prestep (value var) t) in
-                        let inl' := @inl (data t * expr t) (value_prestep (value var) t) in
-                        match reflect_primitive v, invert_Z_cast v with
-                        | Some v, _ => inr' v
-                        | None, Some (r, v) => inl' (Some r, v)
-                        | None, None => inl' (None, v)
-                        end
-                | type.type_primitive _ as t
-                  => fun v : expr t
-                     => let inr := @inr (data t * expr t) (value_prestep (value var) t) in
-                        let inl := @inl (data t * expr t) (value_prestep (value var) t) in
-                        match reflect_primitive v with
-                        | Some v => inr v
-                        | None => inl (tt, v)
-                        end
-                end.
-      End reify.
-    End expr.
+               => fun fdefault fpartial
+                  => Base
+                       (fun (v : value (parametric.subst s))
+                        => @pinterp
+                             d (fdefault' <-- fdefault; fdefault' v)
+                             (fpartial v))
+             end%under_lets.
+
+        Local Notation bottom := (@bottom base.type abstract_domain' bottom').
+
+        Context (half_interp : forall {t} (idc : pident t),
+                    parametric.half_interp UnderLets pbase_value value t
+                    + parametric.half_interp2 UnderLets pbase_value value t).
+
+        Definition interp {t} (idc : ident t) : value_with_lets t
+          := match idc in ident.wident _ t return value_with_lets t with
+             | ident.wrap T idc' as idc
+               => pinterp
+                    (Base (reflect (###idc) (abstract_interp_ident _ idc')))%expr
+                    match half_interp _ idc' with
+                    | inl interp_idc => parametric.half_interp2_of_interp (fun T => @Base _ ident var T) interp_idc
+                    | inr interp2_idc => interp2_idc
+                    end
+             end.
+
+        Definition eval_with_bound {t} (e : @expr value_with_lets t)
+                   (st : type.for_each_lhs_of_arrow abstract_domain t)
+          : expr t
+          := @eval_with_bound' base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) base_reflect (@interp) t e st.
+
+        Definition eval {t} (e : @expr value_with_lets t) : @expr var t
+          := @eval' base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) base_reflect (@interp) t e.
+
+        (** Helpers *)
+        (** this is just a fancy identity function *)
+        Fixpoint half_interp_of_literal {t} : base.interp t -> parametric.half_interp UnderLets pbase_value value (parametric.base.type.parametricify t)
+          := match t with
+             | base.type.unit
+             | base.type.Z
+             | base.type.bool
+             | base.type.nat
+               => fun x => x
+             | base.type.prod A B
+               => fun '(a, b) => (@half_interp_of_literal A a, @half_interp_of_literal B b)
+             | base.type.list A
+               => List.map (@half_interp_of_literal A)
+             end.
+      End with_var.
+    End wident.
 
     Module ident.
-      Section interp.
-        Context (inline_var_nodes : bool)
-                {var : type -> Type}.
-        Fixpoint is_var_like {t} (e : @expr var t) : bool
-          := match e with
-             | Var t v => true
-             | TT => true
-             | AppIdent _ _ (ident.fst _ _) args => @is_var_like _ args
-             | AppIdent _ _ (ident.snd _ _) args => @is_var_like _ args
-             | AppIdent _ _ (ident.Z.cast _) args => @is_var_like _ args
-             | AppIdent _ _ (ident.Z.cast2 _) args => @is_var_like _ args
-             | Pair A B a b => @is_var_like A a && @is_var_like B b
-             | AppIdent _ _ _ _ => false
-             | App _ _ _ _
-             | Abs _ _ _
-               => false
-             end.
-        (** do partial evaluation on let-in, controlling what gets
-            inlined and what doesn't *)
-        Fixpoint interp_let_in {tC tx : type} {struct tx} : value var tx -> (value var tx -> value var tC) -> value var tC
-          := match tx return value var tx -> (value var tx -> value var tC) -> value var tC with
-             | type.arrow _ _
-               => fun x f => f x
-             | type.list T as t
-               => fun (x : data t * expr t + list (value var T)) (f : data t * expr t + list (value var T) -> value var tC)
-                  => match x with
-                     | inr ls
-                       => list_rect
-                            (fun _ => (list (value var T) -> value var tC) -> value var tC)
-                            (fun f => f nil)
-                            (fun x _ rec f
-                             => rec (fun ls => @interp_let_in
-                                                 _ T x
-                                                 (fun x => f (cons x ls))))
-                            ls
-                            (fun ls => f (inr ls))
-                     | inl e => f (inl e)
+      Section with_var.
+        Local Notation type := (type base.type).
+        Let type_base (x : base.type) : type := type.base x.
+        Local Coercion type_base : base.type >-> type.
+        Context {var : type -> Type}.
+        Local Notation expr := (@expr base.type ident).
+        Local Notation UnderLets := (@UnderLets base.type ident var).
+        Context (abstract_domain' : base.type -> Type).
+        Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
+        Context (annotate : forall t, abstract_domain' t -> option (ident (t -> t)))
+                (abstract_interp_ident : forall t, pident t -> type.interp abstract_domain' (parametric.subst t))
+                (intersect_state : forall A, abstract_domain' A -> abstract_domain' A -> abstract_domain' A)
+                (update_Z_literal_with_state : abstract_domain' base.type.Z -> Z -> Z)
+                (update_bool_literal_with_state : abstract_domain' base.type.bool -> bool -> bool)
+                (update_nat_literal_with_state : abstract_domain' base.type.nat -> nat -> nat)
+                (state_of_zrange : forall T, ZRange.type.base.option.interp T -> abstract_domain' T)
+                (bottom' : forall A, abstract_domain' A)
+                (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A))).
+
+        Local Notation lazy_abstract_domain := (@lazy_abstract_domain base.type abstract_domain').
+        Local Notation thunk_abstract_domain := (@thunk_abstract_domain base.type abstract_domain').
+        Local Notation force_abstract_domain := (@force_abstract_domain base.type abstract_domain').
+        Local Notation base_value := (@wident.base_value var pident abstract_domain').
+        Local Notation pbase_value := (@wident.pbase_value var pident abstract_domain').
+        Local Notation value := (@value base.type ident var base_value abstract_domain').
+        Local Notation intersect_state_value := (@wident.intersect_state_value var pident abstract_domain' abstract_interp_ident intersect_state update_Z_literal_with_state update_bool_literal_with_state update_nat_literal_with_state bottom' (@ident.fst) (@ident.snd) (@extract_list_state)).
+        Local Notation intersect_state_base_value := (@wident.intersect_state_base_value var pident abstract_domain' abstract_interp_ident intersect_state update_Z_literal_with_state update_bool_literal_with_state update_nat_literal_with_state bottom' (@ident.fst) (@ident.snd) (@extract_list_state)).
+        Local Notation abstraction_function := (@wident.abstraction_function var pident abstract_domain' abstract_interp_ident (@ident.Literal base.type.unit tt) (@ident.Literal base.type.Z) (@ident.Literal base.type.bool) (@ident.Literal base.type.nat) (@ident.pair) (@ident.nil) (@ident.cons)).
+        Local Notation base_reify := (@wident.base_reify var pident abstract_domain' annotate (@ident.Literal base.type.unit tt) (@ident.Literal base.type.Z) (@ident.Literal base.type.bool) (@ident.Literal base.type.nat) (@ident.pair) (@ident.nil) (@ident.cons)).
+
+        Fixpoint base_reflect {t : base.type} : @expr var t -> abstract_domain' t -> option (base_value t)
+          := match t return expr t -> abstract_domain' t -> option (base_value t) with
+             | base.type.list A
+               => fun e st
+                  => match extract_list_state _ st with
+                     | Some ls
+                       => Some
+                            (List.map
+                               (fun '(n, st0)
+                                => let e' := (#ident.List_nth_default @ DefaultValue.expr.base.default @ e @ ##(n:nat))%expr in
+                                   match @base_reflect A e' st0 with
+                                   | Some v => inr v
+                                   | None => inl (st0, e')
+                                   end)
+                               (List.combine (List.seq 0 (List.length ls)) ls))
+                     | None => None
                      end
-             | type.prod A B as t
-               => fun (x : data t * expr t + value var A * value var B) (f : data t * expr t + value var A * value var B -> value var tC)
-                  => match x with
-                     | inr (a, b)
-                       => @interp_let_in
-                            _ A a
-                            (fun a
-                             => @interp_let_in
-                                  _ B b
-                                  (fun b => f (inr (a, b))))
-                     | inl (data, e)
-                       => if inline_var_nodes && is_var_like e
-                          then f x
-                          else partial.expr.reflect
-                                 (expr_let y := partial.expr.reify (t:=t) x in
-                                      partial.expr.reify (f (inl (data, Var y)%core)))%expr
-                     end
-             | type.type_primitive _ as t
-               => fun (x : data t * expr t + type.interp t) (f : data t * expr t + type.interp t -> value var tC)
-                  => match x with
-                     | inl (data, e)
-                       => if inline_var_nodes && is_var_like e
-                          then f x
-                          else partial.expr.reflect
-                                 (expr_let y := (partial.expr.reify (t:=t) x) in
-                                      partial.expr.reify (f (inl (data, Var y)%core)))%expr
-                     | inr v => f (inr v) (* FIXME: do not substitute [S (big stuck term)] *)
-                     end
+             | base.type.unit
+               => fun _ _ => Some tt
+             | base.type.Z
+             | base.type.bool
+             | base.type.nat
+               => fun v st => invert_Literal v
+             | base.type.prod A B
+               => fun e st
+                  => (xy <- invert_pair e;
+                        let '(x, y) := xy in
+                        let stx := abstract_interp_ident _ ident.fst st in
+                        let sty := abstract_interp_ident _ ident.snd st in
+                        Some (match @base_reflect A x stx with
+                              | Some x' => inr x'
+                              | None => inl (stx, x)
+                              end,
+                              match @base_reflect B y sty with
+                              | Some y' => inr y'
+                              | None => inl (sty, y)
+                              end))%option
              end.
 
-        Let default_interp
-            {s d}
-          : ident s d -> value var s -> value var d
-          := match d return ident s d -> value var s -> value var d with
-             | type.arrow _ _
-               => fun idc args => expr.reflect (AppIdent idc (expr.reify args))
-             | _
-               => fun idc args
-                  => inl (ZRange.ident.option.interp idc (data_from_value var args),
-                          AppIdent idc (expr.reify args))
-             end.
+        Local Notation reify := (@reify base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) (@base_reflect)).
+        Local Notation reflect := (@reflect base.type ident var base_value abstract_domain' annotate bottom' (@abstraction_function) (@base_reify) (@base_reflect)).
+        Local Notation state_of_value := (@state_of_value base.type ident var base_value abstract_domain' bottom' (@abstraction_function)).
+        Local Notation half_interp_of_literal := (@wident.half_interp_of_literal var pident abstract_domain').
+        Local Notation bottom := (@bottom base.type abstract_domain' bottom').
 
-        (** do partial evaluation on identifiers *)
-        Definition interp {s d} (idc : ident s d) : value var (s -> d)
-          := match idc in ident s d return value var (s -> d) with
-             | ident.Let_In tx tC as idc
-               => fun (xf : data (tx * (tx -> tC)) * expr (tx * (tx -> tC)) + value var tx * value var (tx -> tC))
-                  => match xf with
-                     | inr (x, f) => interp_let_in x f
-                     | _ => expr.reflect (AppIdent idc (expr.reify (t:=tx * (tx -> tC)) xf))
-                     end
-             | ident.nil t
-               => fun _ => inr (@nil (value var t))
-             | ident.primitive t v
-               => fun _ => inr v
-             | ident.cons t as idc
-               => fun (x_xs : data (t * type.list t) * expr (t * type.list t) + value var t * (data (type.list t) * expr (type.list t) + list (value var t)))
-                  => match x_xs return data (type.list t) * expr (type.list t) + list (value var t) with
-                     | inr (x, inr xs) => inr (cons x xs)
-                     | _
-                       => default_interp idc x_xs
-                     end
-             | ident.fst A B as idc
-               => fun x : data (A * B) * expr (A * B) + value var A * value var B
-                  => match x with
-                     | inr x => fst x
-                     | _ => default_interp idc x
-                     end
-             | ident.snd A B as idc
-               => fun x : data (A * B) * expr (A * B) + value var A * value var B
-                  => match x with
-                     | inr x => snd x
-                     | _ => default_interp idc x
-                     end
-             | ident.bool_rect T as idc
-               => fun (true_case_false_case_b : data ((type.unit -> T) * (type.unit -> T) * type.bool) * expr ((type.unit -> T) * (type.unit -> T) * type.bool) + (data ((type.unit -> T) * (type.unit -> T)) * expr ((type.unit -> T) * (type.unit -> T)) + (_ + Datatypes.unit -> value var T) * (_ + Datatypes.unit -> value var T)) * (data type.bool * expr type.bool + bool))
-                  => match true_case_false_case_b with
-                     | inr (inr (true_case, false_case), inr b)
-                       => if b then true_case (inr tt) else false_case (inr tt)
-                     | _ => default_interp idc true_case_false_case_b
-                     end
-             | ident.nat_rect P as idc
-               => fun (O_case_S_case_n : _ * expr ((type.unit -> P) * (type.nat * P -> P) * type.nat) + (_ * expr ((type.unit -> P) * (type.nat * P -> P)) + (_ + Datatypes.unit -> value var P) * value var (type.nat * P -> P)) * (_ * expr type.nat + nat))
-                  => match O_case_S_case_n with
-                     | inr (inr (O_case, S_case), inr n)
-                       => @nat_rect (fun _ => value var P)
-                                    (O_case (inr tt))
-                                    (fun n' rec => S_case (inr (inr n', rec)))
-                                    n
-                     | _ => default_interp idc O_case_S_case_n
-                     end
-             | ident.list_rect A P as idc
-               => fun (nil_case_cons_case_ls : _ * expr ((type.unit -> P) * (A * type.list A * P -> P) * type.list A) + (_ * expr ((type.unit -> P) * (A * type.list A * P -> P)) + (_ + Datatypes.unit -> value var P) * value var (A * type.list A * P -> P)) * (_ * expr (type.list A) + list (value var A)))
-                  => match nil_case_cons_case_ls with
-                     | inr (inr (nil_case, cons_case), inr ls)
-                       => @list_rect
-                            (value var A)
-                            (fun _ => value var P)
-                            (nil_case (inr tt))
-                            (fun x xs rec => cons_case (inr (inr (x, inr xs), rec)))
-                            ls
-                     | _ => default_interp idc nil_case_cons_case_ls
-                     end
-             | ident.List.nth_default type.Z as idc
-               => fun (default_ls_idx : _ * expr (type.Z * type.list type.Z * type.nat) + (_ * expr (type.Z * type.list type.Z) + (_ * expr type.Z + type.interp type.Z) * (_ * expr (type.list type.Z) + list (value var type.Z))) * (_ * expr type.nat + nat))
-                  => match default_ls_idx with
-                     | inr (inr (default, inr ls), inr idx)
-                       => List.nth_default default ls idx
-                     | inr (inr (inr default, ls), inr idx)
-                       => default_interp (ident.List.nth_default_concrete default idx) ls
-                     | _ => default_interp idc default_ls_idx
-                     end
-             | ident.List.nth_default (type.type_primitive A) as idc
-               => fun (default_ls_idx : _ * expr (A * type.list A * type.nat) + (_ * expr (A * type.list A) + (_ * expr A + type.interp A) * (_ * expr (type.list A) + list (value var A))) * (_ * expr type.nat + nat))
-                  => match default_ls_idx with
-                     | inr (inr (default, inr ls), inr idx)
-                       => List.nth_default default ls idx
-                     | inr (inr (inr default, ls), inr idx)
-                       => default_interp (ident.List.nth_default_concrete default idx) ls
-                     | _ => default_interp idc default_ls_idx
-                     end
-             | ident.List.nth_default A as idc
-               => fun (default_ls_idx : _ * expr (A * type.list A * type.nat) + (_ * expr (A * type.list A) + value var A * (_ * expr (type.list A) + list (value var A))) * (_ * expr type.nat + nat))
-                  => match default_ls_idx with
-                     | inr (inr (default, inr ls), inr idx)
-                       => List.nth_default default ls idx
-                     | _ => default_interp idc default_ls_idx
-                     end
-             | ident.List.nth_default_concrete A default idx as idc
-               => fun (ls : _ * expr (type.list A) + list (value var A))
-                  => match ls with
-                     | inr ls
-                       => List.nth_default (expr.reflect (t:=A) (AppIdent (ident.primitive default) TT)) ls idx
-                     | _ => default_interp idc ls
-                     end
+        Axiom admit : forall {T}, T.
+        Local Notation "x - y" := (#ident.Z_sub @ x @ y)%expr : expr_scope.
+        Local Notation "x + y" := (#ident.Z_add @ x @ y)%expr : expr_scope.
+        Local Notation "x / y" := (#ident.Z_div @ x @ y)%expr : expr_scope.
+        Local Notation "x * y" := (#ident.Z_mul @ x @ y)%expr : expr_scope.
+        Local Notation "- x" := (#ident.Z_opp @ x)%expr : expr_scope.
+        Definition half_interp {t} (idc : pident t)
+          : parametric.half_interp UnderLets pbase_value value t
+            + parametric.half_interp2 UnderLets pbase_value value t.
+          refine match idc in ident.pident t return parametric.half_interp UnderLets pbase_value value t + parametric.half_interp2 UnderLets pbase_value value t with
+                 | ident.Literal _ v
+                   => inl (half_interp_of_literal v)
+                 | ident.Nat_succ as idc
+                 | ident.Nat_pred as idc
+                 | ident.Nat_max as idc
+                 | ident.Nat_mul as idc
+                 | ident.Nat_add as idc
+                 | ident.Nat_sub as idc
+                 | ident.Z_pow as idc
+                 | ident.Z_eqb as idc
+                 | ident.Z_leb as idc
+                 | ident.Z_of_nat as idc
+                 | ident.Z_shiftr _ as idc
+                 | ident.Z_shiftl _ as idc
+                 | ident.Z_land _ as idc
+                 | ident.Z_cc_m_concrete _ as idc
+                 | ident.Z_zselect as idc
+                 | ident.Z_add_modulo as idc
+                 | ident.Z_mul_split_concrete _ as idc
+                 | ident.Z_add_with_get_carry_concrete _ as idc
+                 | ident.Z_sub_with_get_borrow_concrete _ as idc
+                 | ident.Z_rshi_concrete _ _ as idc
+                 | ident.Z_sub_get_borrow_concrete _ as idc
+                   => inl (ident.pinterp idc)
+                 | ident.nil _ => inl nil
+                 | ident.cons _ => inl cons
+                 | ident.pair _ _ => inl pair
+                 | ident.fst _ _ => inl fst
+                 | ident.snd _ _ => inl snd
+                 | ident.List_nth_default _ => inl (@nth_default _)
+                 | ident.bool_rect T
+                   => inr (fun t f (b : bool) => if b then t (inr tt) else f (inr tt))
+                 | ident.nat_rect P
+                   => inr (fun O_case S_case n
+                           => nat_rect
+                                (fun _ => UnderLets (pbase_value #(P)))
+                                (O_case (inr tt))
+                                (fun n' rec => (S_casen' <-- S_case (inr n');
+                                                rec' <-- rec;
+                                                S_casen' rec')%under_lets)
+                                n)
+                 | ident.list_rect A P
+                   => inr (fun N C ls
+                           => list_rect
+                                (fun _ => UnderLets (pbase_value #(P)))
+                                (N (inr tt))
+                                (fun x xs rec => (Cx <-- C x;
+                                                  Cxxs <-- Cx (inr xs);
+                                                  rec' <-- rec;
+                                                  Cxxs rec')%under_lets)
+                                ls)
+                 | ident.list_case A P
+                   => inr (fun N C ls
+                           => ListUtil.list_case
+                                (fun _ => UnderLets (pbase_value #(P)))
+                                (N (inr tt))
+                                (fun x xs => (Cx <-- C x; Cx (inr xs))%under_lets)
+                                ls)
+                 | ident.List_length T => inl (@List.length _)
+                 | ident.List_seq => inl List.seq
+                 | ident.List_repeat A => inl (@List.repeat _)
+                 | ident.List_combine A B => inl (@List.combine _ _)
+                 | ident.List_map A B
+                   => inr (fun f ls => (fls <--- List.map f ls; Base fls)%under_lets)
+                 | ident.List_app A => inl (@List.app _)
+                 | ident.List_rev A => inl (@List.rev _)
+                 | ident.List_flat_map A B
+                   => inr (fun f ls
+                           => fls <--- List.map f ls;
+                              Base
+                                (List.fold_right
+                                   (fun ls1 ls2 : value (base.type.list B)
+                                    => match ls1, ls2 with
+                                       | inr ls1, inr ls2 => inr (ls1 ++ ls2)
+                                       | _, _
+                                         => let rls1 := UnderLets.to_expr (reify false ls1 tt) in
+                                            let rls2 := UnderLets.to_expr (reify false ls2 tt) in
+                                            let st1 := state_of_value ls1 in
+                                            let st2 := state_of_value ls2 in
+                                            inl (abstract_interp_ident _ (ident.List_app) st1 st2,
+                                                 (#ident.List_app @ rls1 @ rls2)%expr)
+                                       end)
+                                   (inr nil)
+                                   fls))
+                 | ident.List_partition A
+                   => (* TODO: FIXME: This is very verbose, basically
+                          because we're manually inlining all of the
+                          recursive calls to interpretation here *)
+                   (* TODO: FIXME: Type inference is noticably slow at evaluating this case *)
+                   (*
+                                fix partition (l : list A) : list A * list A :=
+  match l with
+  | [] => ([], [])
+  | x :: tl =>
+      let (g, d) := partition tl in if f x then (x :: g, d) else (g, x :: d)
+  end
+     : forall A : Type, (A -> bool) -> list A -> list A * list A
+
+                    *)
+                   inr (fun f ls
+                        => list_rect
+                             (fun _ => UnderLets (pbase_value #(base.type.list A * base.type.list A)))
+                             (Base (inr (inr nil, inr nil)))
+                             (fun x tl partition_tl
+                              => (partition_tl' <-- partition_tl;
+                                  fx <-- f x;
+                                  let rec_call g d
+                                      := let stg := state_of_value (t:=type.base (base.type.list A)) g in
+                                         let std := state_of_value (t:=type.base (base.type.list A)) d in
+                                         let stx := state_of_value (t:=type.base A) x in
+                                         let rx _ := UnderLets.to_expr (reify false x tt) in
+                                         let rg _ := UnderLets.to_expr (reify false g tt) in
+                                         let rd _ := UnderLets.to_expr (reify false d tt) in
+                                         match fx with
+                                         | inr fx'
+                                           => Base
+                                                (inr
+                                                   (if fx' : bool
+                                                    then
+                                                      (match g with
+                                                       | inr g' => inr (cons x g')
+                                                       | inl (st, g')
+                                                         => inl
+                                                              (abstract_interp_ident _ ident.cons stx st,
+                                                               (rx tt :: g')%expr)
+                                                       end, d)
+                                                    else
+                                                      (g,
+                                                       match d with
+                                                       | inr d' => inr (cons x d')
+                                                       | inl (st, d')
+                                                         => inl
+                                                              (abstract_interp_ident _ ident.cons stx st,
+                                                               (rx tt :: d')%expr)
+                                                       end)))
+                                         | inl (st, fx')
+                                           => Base
+                                                (inl
+                                                   (abstract_interp_ident
+                                                      _ ident.bool_rect
+                                                      (fun _
+                                                       => abstract_interp_ident
+                                                            _ ident.pair
+                                                            (abstract_interp_ident
+                                                               _ ident.cons
+                                                               stx stg)
+                                                            std)
+                                                      (fun _
+                                                       => abstract_interp_ident
+                                                            _ ident.pair
+                                                            stg
+                                                            (abstract_interp_ident
+                                                               _ ident.cons
+                                                               stx stg))
+                                                      st,
+                                                    (#ident.bool_rect
+                                                      @ (\ _, (rx tt :: rg tt, rd tt))
+                                                      @ (\ _, (rg tt, rx tt :: rd tt))
+                                                      @ fx')%expr))
+                                         end in
+                                  match partition_tl' with
+                                  | inr (g, d)
+                                    => rec_call g d
+                                  | inl (st, partition_tl'')
+                                    => UnderLet
+                                         partition_tl''
+                                         (fun gdv
+                                          => rec_call
+                                               (inl (abstract_interp_ident _ (ident.fst) st,
+                                                     (#ident.fst @ $gdv)%expr))
+                                               (inl (abstract_interp_ident _ (ident.snd) st,
+                                                     (#ident.snd @ $gdv)%expr)))
+                                  end))
+                             ls)
+                 | ident.List_fold_right A B
+                   => inr (fun f d ls => List.fold_right
+                                           (fun x rec
+                                            => fx <-- f x;
+                                               rec' <-- rec;
+                                               fx rec')
+                                           (Base d)
+                                           ls)
+                 | ident.List_update_nth T
+                   => inr (fun n f ls
+                           => retv <--- (update_nth
+                                           n
+                                           (fun x => x' <-- x; f x')
+                                           (List.map Base ls));
+                              Base retv)
+                 | ident.Z_add as idc
+                   => inl (fun x y
+                           => let stx _ := state_of_value x in
+                              let sty _ := state_of_value y in
+                              (* must take in argument to [reify] as an argument to [default0] so that type inference works *)
+                              let default0 tt := (#idc @ (UnderLets.to_expr (reify false x tt)) @ (UnderLets.to_expr (reify false y tt)))%expr in
+                              let default_st _ := abstract_interp_ident _ idc (stx tt) (sty tt) in
+                              (*let default _ := reflect (default0 tt) (default_st tt) in*)
+                              (* TODO: FIXME: Most of these cases are missing cast/annotation data, which should be added by reify *)
+                              match x, y with
+                              | inr x', inr y' => inr (ident.pinterp idc x' y')
+                              | inr x', inl ((data, e) as y') as y
+                              | inl ((data, e) as y') as y, inr x'
+                                => let x' := x' : Z in
+                                   if Z.eqb x' 0
+                                   then y
+                                   else inl
+                                          (default_st tt,
+                                           if Z.ltb x' 0
+                                           then
+                                             match invert_Z_opp e with
+                                             | Some e'
+                                               => -(##(-x')%Z + e')
+                                             | None
+                                               => e - ##(-x')%Z
+                                             end%expr
+                                           else
+                                             match invert_Z_opp e with
+                                                | Some e'
+                                                  => ##x' - e'
+                                                | None
+                                                  => default0 tt
+                                             end%expr)
+                              | inl ((datax, ex) as x'), inl ((datay, ey) as y')
+                                => inl
+                                     (default_st tt,
+                                      match invert_Z_opp ex, invert_Z_opp ey with
+                                      | Some ex', Some ey'
+                                        => -(ex' + ey')
+                                      | Some ex', None
+                                        => ey - ex'
+                                      | None, Some ey'
+                                        => ex - ey'
+                                      | None, None
+                                        => default0 tt
+                                      end%expr)
+                              end)
+                 | ident.Z_sub as idc
+                   => inl (fun x y
+                           => let stx _ := state_of_value x in
+                              let sty _ := state_of_value y in
+                              (* must take in argument to [reify] as an argument to [default0] so that type inference works *)
+                              let default0 tt := (#idc @ (UnderLets.to_expr (reify false x tt)) @ (UnderLets.to_expr (reify false y tt)))%expr in
+                              let default_st _ := abstract_interp_ident _ idc (stx tt) (sty tt) in
+                              (*let default _ := reflect (default0 tt) (default_st tt) in*)
+                              (* TODO: FIXME: Most of these cases are missing cast/annotation data, which should be added by reify *)
+                              match x, y with
+                              | inr x', inr y' => inr (ident.pinterp idc x' y')
+                              | inr x', inl ((data, e) as y')
+                                => let x' := x' : Z in
+                                   if Z.eqb x' 0
+                                   then y
+                                   else inl
+                                          (default_st tt,
+                                           if Z.ltb x' 0
+                                           then
+                                             match invert_Z_opp e with
+                                             | Some e'
+                                               => e' - ##(-x')%Z
+                                             | None
+                                               => -(e + #(ident.Literal (t:=base.type.Z) (-x')%Z))
+                                             end%expr
+                                           else
+                                             match invert_Z_opp e with
+                                                | Some e'
+                                                  => ##x' + e'
+                                                | None
+                                                  => default0 tt
+                                             end%expr)
+                              | inl ((data, e) as x'), inr y'
+                                => let y' := y' : Z in
+                                   if Z.eqb y' 0
+                                   then x
+                                   else inl
+                                          (default_st tt,
+                                           if Z.ltb y' 0
+                                           then
+                                             match invert_Z_opp e with
+                                             | Some e'
+                                               => ##(-y')%Z - e'
+                                             | None
+                                               => -(##(-y')%Z + e)
+                                             end%expr
+                                           else
+                                             match invert_Z_opp e with
+                                                | Some e'
+                                                  => -(##y' + e')
+                                                | None
+                                                  => default0 tt
+                                             end%expr)
+                              | inl ((datax, ex) as x'), inl ((datay, ey) as y')
+                                => inl
+                                     (default_st tt,
+                                      match invert_Z_opp ex, invert_Z_opp ey with
+                                      | Some ex', Some ey'
+                                        => ey' - ex'
+                                      | Some ex', None
+                                        => -(ex' + ey)
+                                      | None, Some ey'
+                                        => ex + ey'
+                                      | None, None
+                                        => default0 tt
+                                      end%expr)
+                              end)
+                 | ident.Z_mul as idc
+                   => inl
+                        (fun x y
+                         => let stx _ := state_of_value x in
+                            let sty _ := state_of_value y in
+                            (* must take in argument to [reify] as an argument to [default0] so that type inference works *)
+                            let rx tt := UnderLets.to_expr (reify false x tt) in
+                            let ry tt := UnderLets.to_expr (reify false y tt) in
+                            let default0 tt := (#idc @ rx tt @ ry tt)%expr in
+                            let default_st _ := abstract_interp_ident _ idc (stx tt) (sty tt) in
+                            (*let default _ := reflect (default0 tt) (default_st tt) in*)
+                            (* TODO: FIXME: Most of these cases are missing cast/annotation data, which should be added by reify *)
+                            match x, y with
+                              | inr x', inr y' => inr (ident.pinterp idc x' y')
+                              | inr x', inl ((data, e) as y') as y
+                              | inl ((data, e) as y') as y, inr x'
+                                => let x' := x' : Z in
+                                   let ry tt := UnderLets.to_expr (reify false y tt) in
+                                   if Z.eqb x' 0
+                                   then inr 0
+                                   else
+                                     if Z.eqb x' 1
+                                     then y
+                                     else inl
+                                            (default_st tt,
+                                             if Z.eqb x' (-1)
+                                             then (-ry tt)%expr
+                                             else
+                                               if Z.eqb x' (2^Z.log2 x')
+                                               then
+                                                 (#(ident.Z_shiftl (Z.log2 x')) @ ry tt)%expr
+                                               else
+                                                 (##x' * ry tt)%expr)
+                              | inl ((datax, ex) as x'), inl ((datay, ey) as y')
+                                => inl
+                                     (default_st tt,
+                                      match invert_Z_opp ex, invert_Z_opp ey with
+                                      | Some ex', Some ey'
+                                        => ex' * ey'
+                                      | Some ex', None
+                                        => -(ex' * ey)
+                                      | None, Some ey'
+                                        => -(ex * ey')
+                                      | None, None
+                                        => ex * ey
+                                      end%expr)
+                            end)
+                 | ident.Z_opp as idc
+                   => inl
+                        (fun x
+                         => let stx _ := state_of_value x in
+                            (* must take in argument to [reify] as an argument to [default0] so that type inference works ... also, [default_st] doesn't typecheck unless we have [default0] here *)
+                            let default0 tt := (#idc @ (UnderLets.to_expr (reify false x tt)))%expr in
+                            let default_st _ := abstract_interp_ident _ idc (stx tt) in
+                            (* TODO: FIXME: Most of these cases are missing cast/annotation data, which should be added by reify *)
+                            match x with
+                            | inr x' => inr (-x')
+                            | inl (st, e)
+                              => inl (default_st tt,
+                                      match invert_Z_opp e with
+                                      | Some e' => e'
+                                      | None => default0 tt
+                                      end%expr)
+                            end)
+                 | ident.Z_div as idc
+                   => inl
+                        (fun x y
+                         => let stx _ := state_of_value x in
+                            let sty _ := state_of_value (t:=base.type.Z) (inr y) in
+                            (* must take in argument to [reify] as an argument to [default0] so that type inference works *)
+                            let default0 tt := (#idc @ (UnderLets.to_expr (reify false x tt)) @ (##(y:Z)))%expr in
+                            let default_st _ := abstract_interp_ident _ idc (stx tt) (sty tt) in
+                            (*let default _ := reflect (default0 tt) (default_st tt) in*)
+                            match x with
+                            | inr x' => inr (ident.pinterp idc x' y)
+                            | inl _
+                              => inl
+                                   (default_st tt,
+                                    if Z.eqb y (2^Z.log2 y)
+                                    then (#(ident.Z_shiftr (Z.log2 y)) @ (UnderLets.to_expr (reify false x tt)))%expr
+                                    else default0 tt)
+                            end)
+                 | ident.Z_modulo as idc
+                   => inl
+                        (fun x y
+                         => let stx _ := state_of_value x in
+                            let sty _ := state_of_value (t:=base.type.Z) (inr y) in
+                            (* must take in argument to [reify] as an argument to [default0] so that type inference works *)
+                            let default0 tt := (#idc @ (UnderLets.to_expr (reify false x tt)) @ (##(y:Z)))%expr in
+                            let default_st _ := abstract_interp_ident _ idc (stx tt) (sty tt) in
+                            (*let default _ := reflect (default0 tt) (default_st tt) in*)
+                            match x with
+                            | inr x' => inr (ident.pinterp idc x' y)
+                            | inl _
+                              => inl
+                                   (default_st tt,
+                                    if Z.eqb y (2^Z.log2 y)
+                                    then (#(ident.Z_land (y-1)) @ (UnderLets.to_expr (reify false x tt)))%expr
+                                    else default0 tt)
+                            end)
+                 | ident.Z_mul_split as idc => admit
+                 | ident.Z_add_get_carry as idc => admit
+                 | ident.Z_add_with_carry as idc => admit
+                 | ident.Z_add_with_get_carry as idc => admit
+                 | ident.Z_sub_get_borrow as idc => admit
+                 | ident.Z_sub_with_get_borrow as idc => admit
+                 | ident.Z_rshi as idc
+                   => inl
+                        (fun x y z a
+                         => let stx _ := state_of_value (t:=base.type.Z) (inr x) in
+                            let sty _ := state_of_value y in
+                            let stz _ := state_of_value z in
+                            let sta _ := state_of_value (t:=base.type.Z) (inr a) in
+                            (* must take in argument to [reify] as an argument to [default0] so that type inference works *)
+                            let default0 tt := (#idc @ ##(x:Z) @ (UnderLets.to_expr (reify false y tt)) @ (UnderLets.to_expr (reify false z tt)) @ ##(a:Z))%expr in
+                            let default_st _ := abstract_interp_ident _ idc (stx tt) (sty tt) (stz tt) (sta tt) in
+                            (*let default _ := reflect (default0 tt) (default_st tt) in*)
+                            match y, z with
+                            | inr y', inr z' => inr (ident.pinterp idc x y' z' a)
+                            | _, _
+                              => inl
+                                   (default_st tt,
+                                    (#(ident.Z_rshi_concrete x a) @ (UnderLets.to_expr (reify false y tt)) @ (UnderLets.to_expr (reify false z tt)))%expr)
+                            end)
+                 | ident.Z_add_get_carry_concrete s as idc => admit
+                 | ident.Z_cc_m as idc => admit
+                 | ident.Z_neg_snd as idc  (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template *)
+                   => inr (fun xy
+                           => let stxy _ := state_of_value (t:=base.type.Z*base.type.Z) xy in
+                              let default_st _ := abstract_interp_ident _ idc (stxy tt) in
+                              (* TODO: FIXME: Most of these cases are missing cast/annotation data, which should be added by reify *)
+                              match xy with
+                              | inr (x, y)
+                                => (* if it's a concrete pair, we can opp the second value *)
+                                Base (x,
+                                      match y with
+                                      | inr y' => inr (-y')
+                                      | inl (st, y') => inl (abstract_interp_ident _ ident.Z_opp st,
+                                                             (#ident.Z_opp @ y')%expr)
+                                      end)
+                              | inl (_, xy')
+                                => (* if it's not a concrete pair, let-bind the pair and negate the second element *)
+                                UnderLet
+                                  xy'
+                                  (fun xyv
+                                   => Base (intersect_state_base_value
+                                              (t:=base.type.Z*base.type.Z)
+                                              (default_st tt)
+                                              (inl (bottom' _, (#ident.fst @ $xyv)%expr),
+                                               inl (bottom' _, (#ident.Z_opp @ (#ident.snd @ $xyv))%expr))))
+                              end)
+                 | ident.Z_cast _ as idc
+                   => inl (intersect_state_value (t:=base.type.Z) (abstract_interp_ident _ idc (bottom' _)))
+                 | ident.Z_cast2 _ as idc
+                   => inl (intersect_state_value (t:=base.type.Z*base.type.Z) (abstract_interp_ident _ idc (bottom' _)))
+                 end%under_lets.
+        Defined.
+(*
              | ident.Z_mul_split as idc
                => fun (x_y_z :  (_ * expr (type.Z * type.Z * type.Z) +
                                  (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
@@ -5634,16 +5164,6 @@ Module Compilers.
                        => default_interp (ident.Z.sub_with_get_borrow_concrete x) (inr (inr (y, z), a))
                      | _ => default_interp idc x_y_z_a
                      end
-             | ident.Z_mul_split_concrete _ as idc
-             | ident.Z.sub_get_borrow_concrete _ as idc
-               => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default _ := default_interp idc x_y in
-                     match x_y return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
-                     | inr (inr x, inr y) =>
-                       let result := ident.interp idc (x, y) in
-                       inr (inr (fst result), inr (snd result))
-                     | _ => default tt
-                     end
              | ident.Z.add_get_carry_concrete _ as idc
                => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
                   => let default _ := default_interp idc x_y in
@@ -5658,29 +5178,6 @@ Module Compilers.
                        else default tt
                      | _ => default tt
                      end
-             | ident.Z.add_with_get_carry_concrete _ as idc
-             | ident.Z.sub_with_get_borrow_concrete _ as idc
-               => fun (x_y_z :
-                         (_ * expr (type.Z * type.Z * type.Z) + (_ * expr (type.Z * type.Z) + (_ * expr type.Z + Z) * (_ * expr type.Z + Z)) * (_ * expr type.Z + Z))%type)
-                  => match x_y_z return (_ * expr _ + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) with
-                     | inr (inr (inr x, inr y), inr z) =>
-                       let result := ident.interp idc (x, y, z) in
-                       inr (inr (fst result), inr (snd result))
-                     | _ => default_interp idc x_y_z
-                     end
-             | ident.pred as idc
-             | ident.Nat_succ as idc
-               => fun x : _ * expr _ + type.interp _
-                  => match x return _ * expr _ + type.interp _ with
-                     | inr x => inr (ident.interp idc x)
-                     | _ => default_interp idc x
-                     end
-             | ident.Z_of_nat as idc
-               => fun x : _ * expr _ + type.interp _
-                  => match x return _ * expr _ + type.interp _ with
-                     | inr x => inr (ident.interp idc x)
-                     | _ => default_interp idc x
-                     end
              | ident.Z_opp as idc
                => fun x : _ * expr _ + type.interp _
                   => match x return _ * expr _ + type.interp _ with
@@ -5690,149 +5187,6 @@ Module Compilers.
                           | Some x => inl (r, x)
                           | None => inl (ZRange.ident.option.interp idc r, AppIdent idc x)
                           end
-                     end
-             | ident.Z_shiftr _ as idc
-             | ident.Z_shiftl _ as idc
-             | ident.Z_land _ as idc
-             | ident.Z_cc_m_concrete _ as idc
-               => fun x : _ * expr _ + type.interp _
-                  => match x return _ * expr _ + type.interp _ with
-                     | inr x => inr (ident.interp idc x)
-                     | inl (data, e)
-                       => inl (ZRange.ident.option.interp idc data,
-                               AppIdent idc (expr.reify (t:=type.Z) x))
-                     end
-             | ident.Nat_add as idc
-             | ident.Nat_sub as idc
-             | ident.Nat_mul as idc
-             | ident.Nat_max as idc
-             | ident.Z_eqb as idc
-             | ident.Z_leb as idc
-             | ident.Z_pow as idc
-             | ident.Z_rshi_concrete _ _ as idc
-               => fun (x_y : data (_ * _) * expr (_ * _) + (_ + type.interp _) * (_ + type.interp _))
-                  => match x_y return _ + type.interp _ with
-                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | _ => default_interp idc x_y
-                     end
-             | ident.Z_div as idc
-               => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default _ := default_interp idc x_y in
-                     match x_y return _ * expr _ + type.interp _ with
-                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (x, inr y)
-                       => if Z.eqb y (2^Z.log2 y)
-                          then default_interp (ident.Z.shiftr (Z.log2 y)) x
-                          else default tt
-                     | _ => default tt
-                     end
-             | ident.Z_modulo as idc
-               => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default _ := default_interp idc x_y in
-                     match x_y return _ * expr _ + type.interp _ with
-                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (x, inr y)
-                       => if Z.eqb y (2^Z.log2 y)
-                          then default_interp (ident.Z.land (y-1)) x
-                          else default tt
-                     | _ => default tt
-                     end
-             | ident.Z_mul as idc
-               => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default _ := default_interp idc x_y in
-                     match x_y return _ * expr _ + type.interp _ with
-                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (inr x, inl (data, e) as y)
-                     | inr (inl (data, e) as y, inr x)
-                       => let data' _ := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
-                          if Z.eqb x 0
-                          then inr 0%Z
-                          else if Z.eqb x 1
-                               then y
-                               else if Z.eqb x (-1)
-                                    then inl (data' tt, AppIdent ident.Z.opp (expr.reify (t:=type.Z) y))
-                                    else if Z.eqb x (2^Z.log2 x)
-                                         then inl (data' tt,
-                                                   AppIdent (ident.Z.shiftl (Z.log2 x)) (expr.reify (t:=type.Z) y))
-                                         else inl (data' tt,
-                                                   AppIdent idc (ident.primitive (t:=type.Z) x @@ TT, expr.reify (t:=type.Z) y))
-                     | inr (inl (dataa, a), inl (datab, b))
-                       => inl (ZRange.ident.option.interp idc (dataa, datab),
-                               AppIdent idc (a, b))
-                     | inl _ => default tt
-                     end
-             | ident.Z_add as idc
-               => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default0 _ := AppIdent idc (expr.reify (t:=_*_) x_y) in
-                     let default _ := expr.reflect (default0 tt) in
-                     match x_y return _ * expr _ + type.interp _ with
-                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (inr x, inl (data, e) as y)
-                     | inr (inl (data, e) as y, inr x)
-                       => let data' _ := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
-                          if Z.eqb x 0
-                          then y
-                          else inl (data' tt,
-                                    match invert_Z_opp e with
-                                    | Some e => AppIdent
-                                                  ident.Z.sub
-                                                  (ident.primitive (t:=type.Z) x @@ TT,
-                                                   e)
-                                    | None => default0 tt
-                                    end)
-                     | inr (inl (dataa, a), inl (datab, b))
-                       => inl (ZRange.ident.option.interp idc (dataa, datab),
-                               match invert_Z_opp a, invert_Z_opp b with
-                               | Some a, Some b
-                                 => AppIdent
-                                      ident.Z.opp
-                                      (idc @@ (a, b))
-                               | Some a, None
-                                 => AppIdent ident.Z.sub (b, a)
-                               | None, Some b
-                                 => AppIdent ident.Z.sub (a, b)
-                               | None, None => default0 tt
-                               end)
-                     | inl _ => default tt
-                     end
-             | ident.Z_sub as idc
-               => fun (x_y : _ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _))
-                  => let default0 _ := AppIdent idc (expr.reify (t:=_*_) x_y) in
-                     let default _ := expr.reflect (default0 tt) in
-                     match x_y return _ * expr _ + type.interp _ with
-                     | inr (inr x, inr y) => inr (ident.interp idc (x, y))
-                     | inr (inr x, inl (data, e))
-                       => let data' _ := ZRange.ident.option.interp idc (Some r[x~>x]%zrange, data) in
-                          if Z.eqb x 0
-                          then inl (data' tt, AppIdent ident.Z.opp e)
-                          else inl (data' tt, default0 tt)
-                     | inr (inl (data, e), inr x)
-                       => let data' _ := ZRange.ident.option.interp idc (data, Some r[x~>x]%zrange) in
-                          if Z.eqb x 0
-                          then inl (data' tt, e)
-                          else inl (data' tt, default0 tt)
-                     | inr (inl (dataa, a), inl (datab, b))
-                       => inl (ZRange.ident.option.interp idc (dataa, datab),
-                               match invert_Z_opp a, invert_Z_opp b with
-                               | Some a, Some b
-                                 => AppIdent
-                                      ident.Z.opp
-                                      (idc @@ (a, b))
-                               | Some a, None
-                                 => AppIdent ident.Z.add (b, a)
-                               | None, Some b
-                                 => AppIdent ident.Z.add (a, b)
-                               | None, None => default0 tt
-                               end)
-                     | inl _ => default tt
-                     end
-             | ident.Z_zselect as idc
-             | ident.Z_add_modulo as idc
-               => fun (x_y_z :  (_ * expr (_ * _ * _) +
-                                 (_ * expr (_ * _) + (_ * expr _ + type.interp _) * (_ * expr _ + type.interp _)) * (_ * expr _ + type.interp _))%type)
-                  => match x_y_z return _ * expr _ + type.interp _ with
-                     | inr (inr (inr x, inr y), inr z) => inr (ident.interp idc (x, y, z))
-                     | _ => default_interp idc x_y_z
                      end
              | ident.Z_cast r as idc
                => fun (x : _ * expr _ + type.interp _)
@@ -5859,244 +5213,325 @@ Module Compilers.
                      | inl (data, e)
                        => inl (ZRange.ident.option.interp idc data, e)
                      end
-           end.
-      End interp.
+           end.*)
+
+        Local Notation value_with_lets := (@value_with_lets base.type ident var base_value abstract_domain').
+
+        Definition eval_with_bound {t} (e : @expr value_with_lets t)
+                   (st : type.for_each_lhs_of_arrow abstract_domain t)
+          : expr t
+          := @wident.eval_with_bound var pident abstract_domain' annotate abstract_interp_ident bottom' (@ident.Literal base.type.unit tt) (@ident.Literal base.type.Z) (@ident.Literal base.type.bool) (@ident.Literal base.type.nat) (@ident.pair) (@ident.nil) (@ident.cons) (@base_reflect) (@half_interp) t e st.
+
+        Definition eval {t} (e : @expr value_with_lets t) : @expr var t
+          := @wident.eval var pident abstract_domain' annotate abstract_interp_ident bottom' (@ident.Literal base.type.unit tt) (@ident.Literal base.type.Z) (@ident.Literal base.type.bool) (@ident.Literal base.type.nat) (@ident.pair) (@ident.nil) (@ident.cons) (@base_reflect) (@half_interp) t e.
+
+        Section extract.
+          Definition pextract {t} (idc : pident t) : lazy_abstract_domain (parametric.subst t)
+            := match idc in ident.pident t return lazy_abstract_domain (parametric.subst t) with
+               | ident.Literal _ _ as idc
+               | ident.nil _ as idc
+               | ident.cons _ as idc
+               | ident.pair _ _ as idc
+                 => thunk_abstract_domain (abstract_interp_ident _ idc)
+               | ident.Z_cast _ as idc
+               | ident.Z_cast2 _ as idc
+                 => (* fast-path for cast: don't bother with the abstract state of the argument *)
+                 fun _ 'tt => abstract_interp_ident _ idc (bottom' _)
+               | _ => thunk_abstract_domain bottom
+               end.
+
+          Definition ident_extract {t} (idc : ident t) : lazy_abstract_domain t
+          := match idc with
+             | ident.wrap _ idc => pextract idc
+             end.
+
+          Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
+            := @extract base.type ident abstract_domain' (@ident_extract) t e bound.
+        End extract.
+      End with_var.
     End ident.
 
-    Module bounds.
-      Section with_var.
-        Context {var : type -> Type}.
+    Section specialized.
+      Local Notation abstract_domain' := ZRange.type.base.option.interp.
+      Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
+      Notation expr := (@expr base.type ident).
+      Notation Expr := (@expr.Expr base.type ident).
+      Local Notation type := (type base.type).
+      Let type_base (x : base.type) : type := type.base x.
+      Local Coercion type_base : base.type >-> type.
+      Definition annotate t : abstract_domain' t -> option (ident (t -> t))
+        := match t return abstract_domain' t -> option (ident (t -> t)) with
+           | base.type.Z
+             => fun st => st' <- st; Some (ident.wrap (ident.Z_cast st'))
+           | base.type.Z * base.type.Z
+             => fun '(sta, stb) => sta' <- sta; stb' <- stb; Some (ident.wrap (ident.Z_cast2 (sta', stb')))
+           | _ => fun _ => None
+           end%option%etype.
+      Definition bottom' T : abstract_domain' T
+        := ZRange.type.base.option.None.
+      Fixpoint intersect_state A : abstract_domain' A -> abstract_domain' A -> abstract_domain' A
+        := match A return abstract_domain' A -> abstract_domain' A -> abstract_domain' A with
+           | base.type.bool
+             => fun x y => (x <- x; y <- y; if bool_eq x y then Some x else None)%option
+           | base.type.nat
+             => fun x y => (x <- x; y <- y; if Nat.eqb x y then Some x else None)%option
+           | base.type.unit
+             => fun 'tt 'tt => tt
+           | base.type.Z
+             => fun x y
+                => match x, y with
+                   | Some x', Some y' => Some (ZRange.intersection x' y')
+                   | Some x', None | None, Some x' => Some x'
+                   | None, None => None
+                   end
+           | base.type.prod A B
+             => fun '(x, y) '(x', y') => (@intersect_state _ x x', @intersect_state _ y y')
+           | base.type.list A
+             => fun ls1 ls2
+                => match ls1, ls2 with
+                   | None, v => v
+                   | v, None => v
+                   | Some ls1, Some ls2
+                     => Some (List.map (fun '(x, x') => @intersect_state A x x')
+                                       (List.combine ls1 ls2))
+                   end
+           end.
+      Axiom evil : Z -> Z.
+      Definition update_Z_literal_with_state : abstract_domain' base.type.Z -> Z -> Z
+        := fun r n
+           => if ZRange.type.base.option.is_bounded_by r n
+              then n
+              else evil n.
+      Definition abstract_interp_ident t (idc : pident t) : type.interp abstract_domain' (parametric.subst t)
+        := ZRange.ident.option.interp (ident.wrap idc).
+      Definition extract_list_state A (st : abstract_domain' (base.type.list A)) : option (list (abstract_domain' A))
+        := st.
 
-        Fixpoint extend_concrete_list_with_obounds {t}
-                 (extend_with_obounds : ZRange.type.option.interp t -> partial.value var t -> partial.value var t )
-                 (ls : list (ZRange.type.option.interp t))
-                 (e : list (partial.value var t))
-                 {struct ls}
-          : list (partial.value var t)
-          := match ls with
-             | nil => nil
-             | cons b bs
-               => cons (extend_with_obounds
-                          b
-                          (hd (partial.value_default _) e))
-                       (@extend_concrete_list_with_obounds
-                          t extend_with_obounds bs (tl e))
-             end.
+      Definition eval {var} {t} (e : @expr _ t) : expr t
+        := (@partial.ident.eval)
+             var abstract_domain' annotate abstract_interp_ident intersect_state update_Z_literal_with_state (fun _ => id) (fun _ => id) bottom' extract_list_state t e.
+      Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
+        := (@partial.ident.eval_with_bound)
+             var abstract_domain annotate abstract_interp_ident intersect_state update_Z_literal_with_state (fun _ => id) (fun _ => id) bottom' extract_list_state t e bound.
+      Definition Eval {t} (e : Expr t) : Expr t
+        := fun var => eval (e _).
+      Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+        := fun var => eval_with_bound (e _) bound.
+      Definition EvalWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+        := EvalWithBound e (type.map_for_each_lhs_of_arrow (@ZRange.type.option.strip_ranges) bound).
 
-        Fixpoint extend_list_expr_with_obounds {t}
-                 (extend_with_obounds : ZRange.type.primitive.option.interp t -> partial.value var t -> partial.value var t )
-                 (starting_index : nat)
-                 (ls : list (ZRange.type.option.interp t))
-                 (e : @expr var (type.list t))
-                 {struct ls}
-          : list (partial.value var t)
-          := match ls with
-             | nil => nil
-             | cons b bs
-               => cons (extend_with_obounds
-                          b
-                          (partial.expr.reflect
-                             (AppIdent
-                                (ident.List_nth_default_concrete
-                                   DefaultValue.type.default starting_index)
-                                e)))
-                       (@extend_list_expr_with_obounds
-                          t extend_with_obounds (S starting_index) bs e)
-             end.
-
-        Fixpoint extend_with_obounds {t} : ZRange.type.option.interp t -> partial.value var t -> partial.value var t
-          := match t return ZRange.type.option.interp t -> partial.value var t -> partial.value var t with
-             | type.type_primitive type.Z
-               => fun (r : option zrange) (e : option zrange * expr _ + type.interp _)
-                  => match r, e with
-                     | Some r, inr v => inr (default.ident.interp (ident.Z.cast r) v)
-                     | Some r, inl (data, e)
-                       => inl (ZRange.ident.option.interp (ident.Z.cast r) data, e)
-                     | None, e => e
-                     end
-             | type.type_primitive t => fun _ => id
-             | type.prod A B
-               => fun '((ra, rb) : ZRange.type.option.interp A * ZRange.type.option.interp B)
-                      (e : _ * expr _ + partial.value var A * partial.value var B)
-                  => match e with
-                     | inr (a, b)
-                       => inr (@extend_with_obounds A ra a,
-                               @extend_with_obounds B rb b)
-                     | inl ((dataa, datab), e)
-                       => if partial.ident.is_var_like e
-                          then inr (@extend_with_obounds A ra (partial.expr.reflect (AppIdent ident.fst e)),
-                                    @extend_with_obounds B rb (partial.expr.reflect (AppIdent ident.snd e)))
-                          else inl
-                                 (match A, B return ZRange.type.option.interp A  -> ZRange.type.option.interp B -> data A -> data B -> expr (A * B) -> data (A * B) * expr (A * B) with
-                                  | type.Z, type.Z
-                                    => fun ra rb da db e
-                                       => let da'
-                                              := match ra with
-                                                 | Some ra
-                                                   => ZRange.ident.option.interp
-                                                        (ident.Z.cast ra) da
-                                                 | None => da
-                                                 end in
-                                          let db'
-                                              := match rb with
-                                                 | Some rb
-                                                   => ZRange.ident.option.interp
-                                                        (ident.Z.cast rb) db
-                                                 | None => db
-                                                 end in
-                                          ((da', db'), e)
-                                  | _, _
-                                    => fun _ _ da db e => ((da, db), e)
-                                  end ra rb dataa datab e)
-                     end
-             | type.arrow s d => fun _ => id
-             | type.list A
-               => fun (ls : option (Datatypes.list (ZRange.type.option.interp A)))
-                      (e : data _ * expr _ + list (partial.value var A))
-                  => match ls with
-                     | None => e
-                     | Some ls
-                       =>
-                       match e with
-                       | inl (data, e)
-                         => match A return (ZRange.type.option.interp A -> partial.value var A -> partial.value var A)
-                                           -> Datatypes.list (ZRange.type.option.interp A)
-                                           -> option (Datatypes.list (ZRange.type.option.interp A))
-                                           -> expr (type.list A)
-                                           -> partial.value var (type.list A)
-                            with
-                            | type.type_primitive A
-                              => fun extend_with_obounds ls data e
-                                 => match data with
-                                    | Some data
-                                      => inr
-                                           (extend_concrete_list_with_obounds
-                                              extend_with_obounds ls
-                                              (extend_list_expr_with_obounds
-                                                 extend_with_obounds 0 data e))
-                                    | None
-                                      => inr (extend_list_expr_with_obounds
-                                                extend_with_obounds 0 ls e)
-                                    end
-                            | A'
-                                (* N.B. We clobber the existing bounds here, rather than fusing them *)
-                              => fun _ ls data e => inl (Some ls, e)
-                            end (@extend_with_obounds A) ls data e
-                       | inr e => inr (extend_concrete_list_with_obounds
-                                         (@extend_with_obounds A) ls e)
-                       end
-                     end
-             end.
-        Definition extend_with_bounds {t}
-                   (b : ZRange.type.interp t)
-                   (e : partial.value var t)
-          : partial.value var t
-          := @extend_with_obounds t (ZRange.type.option.Some b) e.
-      End with_var.
-
-      Module ident.
-        Definition extract {s d} (idc : ident s d) : ZRange.type.option.interp s -> ZRange.type.option.interp d
-          := match idc in ident s d return ZRange.type.option.interp s -> ZRange.type.option.interp d with
-             | ident.Let_In tx tC
-               => fun '((x, f) : ZRange.type.option.interp tx * (ZRange.type.option.interp tx -> ZRange.type.option.interp tC))
-                  => f x
-             | ident.Z_cast range => fun _ => Some range
-             | ident.Z_cast2 (r1, r2) => fun _ => (Some r1, Some r2)
-             | ident.primitive type.Z v
-               => fun _ => Some r[v~>v]%zrange
-             | ident.nil _ => fun _ => Some nil
-             | ident.cons t
-               => fun '((x, xs) : ZRange.type.option.interp t * option (list (ZRange.type.option.interp t)))
-                  => option_map (cons x) xs
-             | _ => fun _ => ZRange.type.option.None
-             end.
-      End ident.
-
-      Module expr.
-        Section with_var.
-          Context {var : type -> Type}
-                  (fill_var : forall t, ZRange.type.option.interp t -> var t).
-          Fixpoint extract' {t} (e : @expr var t) : ZRange.type.option.interp t
-            := match e in expr.expr t return ZRange.type.option.interp t with
-               | Var _ _
-               | TT
-                 => ZRange.type.option.None
-               | AppIdent s d idc args => ident.extract idc (@extract' s args)
-               | App s d f x => @extract' _ f (@extract' s x)
-               | Pair A B a b => (@extract' A a, @extract' B b)
-               | Abs s d f => fun bs : ZRange.type.option.interp s
-                              => @extract' d (f (fill_var s bs))
-               end.
-        End with_var.
-
-        Definition extract {t} (e : expr t) : ZRange.type.option.interp t
-          := extract' (fun _ => id) e.
-
-        Definition Extract {t} (e : Expr t) : ZRange.type.option.interp t
-          := extract (e _).
-      End expr.
-    End bounds.
+      Definition Extract {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
+        := @partial.ident.extract abstract_domain' abstract_interp_ident bottom' t (e _) bound.
+    End specialized.
   End partial.
 
-  Section partial_evaluate.
-    Context (inline_var_nodes : bool)
-            {var : type -> Type}.
+  Module Import defaults.
+    Notation expr := (@expr base.type ident).
+    Notation Expr := (@expr.Expr base.type ident).
+    Notation type := (type base.type).
+    Global Coercion type_base (t : base.type) : type := type.base t.
+    Global Arguments type_base _ / .
+    Notation interp := (@expr.interp base.type ident base.interp (@ident.interp)).
+    Notation Interp := (@expr.Interp base.type ident base.interp (@ident.interp)).
+    Ltac reify_type ty := type.reify ltac:(base.reify) ty.
+    Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).
+    Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
+  End defaults.
 
-    Definition partial_evaluate'_step
-               (partial_evaluate' : forall {t} (e : @expr (partial.value var) t),
-                   partial.value var t)
-               {t} (e : @expr (partial.value var) t)
-      : partial.value var t
-      := match e in expr.expr t return partial.value var t with
-         | Var t v => v
-         | TT => inr tt
-         | AppIdent s d idc args => partial.ident.interp inline_var_nodes idc (@partial_evaluate' _ args)
-         | Pair A B a b => inr (@partial_evaluate' A a, @partial_evaluate' B b)
-         | App s d f x => @partial_evaluate' _ f (@partial_evaluate' _ x)
-         | Abs s d f => fun x => @partial_evaluate' d (f x)
+  Section gallina_reify.
+    Context {var : type -> Type}.
+    Definition reify_list {t} (ls : list (@expr var (type.base t))) : @expr var (base.type.list t)
+      := (list_rect
+            (fun _ => _)
+            (#ident.nil)
+            (fun x _ xs => x :: xs)
+            ls)%expr.
+  End gallina_reify.
+
+  Lemma interp_reify_list {t} ls
+    : interp (@reify_list _ t ls) = List.map interp ls.
+  Proof.
+    unfold reify_list.
+    induction ls as [|x xs IHxs]; cbn in *; [ reflexivity | ].
+    rewrite IHxs; reflexivity.
+  Qed.
+
+  Module GallinaReify.
+    Module base.
+      Fixpoint value (t : base.type) : Set
+        := match t with
+           | base.type.unit as t
+           | base.type.Z as t
+           | base.type.bool as t
+           | base.type.nat as t
+             => base.interp t
+           | base.type.prod A B => value A * value B
+           | base.type.list A => list (value A)
+           end%type.
+
+      Section reify.
+        Context {var : type -> Type}.
+        Fixpoint reify {t : base.type} {struct t}
+          : value t -> @expr var t
+          := match t return value t -> expr t with
+             | base.type.prod A B as t
+               => fun '((a, b) : value A * value B)
+                  => (@reify A a, @reify B b)%expr
+             | base.type.list A as t
+               => fun x : list (value A)
+                  => reify_list (List.map (@reify A) x)
+             | base.type.unit as t
+             | base.type.Z as t
+             | base.type.bool as t
+             | base.type.nat as t
+               => fun x : base.interp t
+                  => (##x)%expr
+             end.
+      End reify.
+
+      Definition Reify_as (t : base.type) (v : value t) : Expr t
+        := fun var => reify v.
+
+      (** [Reify] does Ltac type inference to get the type *)
+      Notation Reify v
+        := (Reify_as (base.reify_type_of v) (fun _ => v)) (only parsing).
+    End base.
+
+    Section value.
+      Context (var : type -> Type).
+      Fixpoint value (t : type)
+        := match t return Type with
+           | type.arrow s d => var s -> value d
+           | type.base t => base.value t
+           end%type.
+    End value.
+
+    Section reify.
+      Context {var : type -> Type}.
+      Fixpoint reify {t : type} {struct t}
+        : value var t -> @expr var t
+        := match t return value var t -> expr t with
+           | type.arrow s d
+             => fun (f : var s -> value var d)
+                => (λ x , @reify d (f x))%expr
+           | type.base t
+             => @base.reify var t
+           end.
+    End reify.
+
+    Definition Reify_as (t : type) (v : forall var, value var t) : Expr t
+      := fun var => reify (v _).
+
+    (** [Reify] does Ltac type inference to get the type *)
+    Notation Reify v
+      := (Reify_as (reify_type_of v) (fun _ => v)) (only parsing).
+  End GallinaReify.
+
+  Module GeneralizeVar.
+    (** In both lazy and cbv evaluation strategies, reduction under
+        lambdas is only done at the very end.  This means that if we
+        have a computation which returns a PHOAS syntax tree, and we
+        plug in two different values for [var], the computation is run
+        twice.  This module provides a way of computing a
+        representation of terms which does not suffer from this issue.
+        By computing a flat representation, and then going back to
+        PHOAS, the cbv strategy will fully compute the preceeding
+        PHOAS passes only once, and the lazy strategy will share
+        computation among the various uses of [var] (because there are
+        no lambdas to get blocked on) and thus will also compute the
+        preceeding PHOAS passes only once. *)
+    Module Flat.
+      Print expr.expr.
+      Inductive expr : type -> Set :=
+      | Ident {t} (idc : ident t) : expr t
+      | Var (t : type) (n : positive) : expr t
+      | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d)
+      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
+      | LetIn {A B} (n : positive) (ex : expr A) (eC : expr B) : expr B.
+    End Flat.
+
+    Definition ERROR {T} (v : T) : T. exact v. Qed.
+
+    Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
+             (cur_idx : PositiveMap.key)
+      : Flat.expr t
+      := match e in expr.expr t return Flat.expr t with
+         | expr.Var t v => Flat.Var t v
+         | expr.App s d f x => Flat.App
+                                 (@to_flat' _ f cur_idx)
+                                 (@to_flat' _ x cur_idx)
+         | expr.Ident t idc => Flat.Ident idc
+         | expr.Abs s d f
+           => Flat.Abs s cur_idx
+                       (@to_flat'
+                          d (f cur_idx)
+                          (Pos.succ cur_idx))
+         | expr.LetIn A B ex eC
+           => Flat.LetIn
+                cur_idx
+                (@to_flat' A ex cur_idx)
+                (@to_flat'
+                   B (eC cur_idx)
+                   (Pos.succ cur_idx))
          end.
-    Fixpoint partial_evaluate' {t} (e : @expr (partial.value var) t)
-      : partial.value var t
-      := @partial_evaluate'_step (@partial_evaluate') t e.
 
-    Definition partial_evaluate {t} (e : @expr (partial.value var) t) : @expr var t
-      := partial.expr.reify (@partial_evaluate' t e).
+    Fixpoint from_flat {t} (e : Flat.expr t)
+      : forall var, PositiveMap.t { t : type & var t } -> @expr var t
+      := match e in Flat.expr t return forall var, _ -> expr t with
+         | Flat.Var t v
+           => fun var ctx
+              => match (tv <- PositiveMap.find v ctx;
+                          type.try_transport base.try_transport var _ _ (projT2 tv))%option with
+                 | Some v => expr.Var v
+                 | None => ERROR DefaultValue.expr.default
+                 end
+         | Flat.Ident t idc => fun var ctx => expr.Ident idc
+         | Flat.App s d f x
+           => let f' := @from_flat _ f in
+              let x' := @from_flat _ x in
+              fun var ctx => expr.App (f' var ctx) (x' var ctx)
+         | Flat.Abs s cur_idx d f
+           => let f' := @from_flat d f in
+              fun var ctx
+              => expr.Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
+         | Flat.LetIn A B cur_idx ex eC
+           => let ex' := @from_flat A ex in
+              let eC' := @from_flat B eC in
+              fun var ctx
+              => expr.LetIn
+                   (ex' var ctx)
+                   (fun v => eC' var (PositiveMap.add cur_idx (existT _ A v) ctx))
+         end.
 
-    Definition partial_evaluate_with_bounds1' {s d} (e : @expr (partial.value var) (s -> d))
-               (b : ZRange.type.option.interp s)
-      : partial.value var (s -> d)
-      := fun x : partial.value var s
-         => partial_evaluate' e (partial.bounds.extend_with_obounds b x).
-
-    Definition partial_evaluate_with_bounds1 {s d} (e : @expr (partial.value var) (s -> d))
-               (b : ZRange.type.option.interp s)
-      := partial.expr.reify (@partial_evaluate_with_bounds1' s d e b).
-
-  End partial_evaluate.
-
-  Definition PartialEvaluate (inline_var_nodes : bool) {t} (e : Expr t) : Expr t
-    := fun var => @partial_evaluate inline_var_nodes var t (e _).
+    Definition to_flat {t} (e : expr t) : Flat.expr t
+      := to_flat' e 1%positive.
+    Definition ToFlat {t} (E : Expr t) : Flat.expr t
+      := to_flat (E _).
+    Definition FromFlat {t} (e : Flat.expr t) : Expr t
+      := let e' := @from_flat t e in
+         fun var => e' var (PositiveMap.empty _).
+    Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
+      := FromFlat (to_flat e).
+  End GeneralizeVar.
 
   Module RelaxZRange.
     Module ident.
       Section relax.
-        Context (relax_zrange : zrange -> option zrange)
-                {var : type -> Type}.
+        Context (relax_zrange : zrange -> option zrange).
 
-        Definition relax {s d} (idc : ident s d) : @expr var s -> @expr var d
-          := match idc in ident s d return expr s -> expr d with
-             | ident.Z_cast range
-               => match relax_zrange range with
-                  | Some r => AppIdent (ident.Z.cast r)
-                  | None => id
-                  end
-             | ident.Z_cast2 (r1, r2)
-               => match relax_zrange r1, relax_zrange r2 with
-                  | Some r1, Some r2
-                    => AppIdent (ident.Z.cast2 (r1, r2))
-                  | Some _, None | None, Some _ | None, None => id
-                  end
-             | idc => AppIdent idc
+        Definition relax {t} (idc : ident t) : option (ident t)
+          := match idc in ident.wident _ t return option (ident t) with
+             | ident.wrap _ idc
+               => match idc in ident.pident t return option (ident.wident _ (parametric.subst t)) with
+                  | ident.Z_cast range
+                    => (r <- relax_zrange range;
+                          Some (ident.wrap (ident.Z_cast r)))
+                  | ident.Z_cast2 (r1, r2)
+                    => (r1 <- relax_zrange r1;
+                          r2 <- relax_zrange r2;
+                          Some (ident.wrap (ident.Z_cast2 (r1, r2))))
+                  | _ => None
+                  end%option
              end.
       End relax.
     End ident.
@@ -6109,13 +5544,25 @@ Module Compilers.
 
           Fixpoint relax {t} (e : @expr var t) : @expr var t
             := match e with
-               | Var t v => Var v
-               | TT => TT
-               | AppIdent s d idc args => @ident.relax relax_zrange var s d idc
-                                                       (@relax s args)
-               | App s d f x => App (@relax _ f) (@relax _ x)
-               | Pair A B a b => Pair (@relax A a) (@relax B b)
-               | Abs s d f => Abs (fun v => @relax d (f v))
+               | expr.Var _ _ as e
+               | expr.Ident _ _ as e
+                 => e
+               | expr.Abs s d f => expr.Abs (fun v => @relax d (f v))
+               | expr.LetIn tx tC ex eC => expr.LetIn (@relax tx ex) (fun v => @relax tC (eC v))
+               | expr.App s d f x
+                 => let f' := @relax _ f in
+                    let x' := @relax _ x in
+                    match s, d return expr (s -> d) -> expr s -> expr d with
+                    | type.base base.type.Z, type.base base.type.Z
+                    | type.base (base.type.Z * base.type.Z)%etype, type.base (base.type.Z * base.type.Z)%etype
+                      => fun f x
+                         => match option_map (ident.relax relax_zrange)
+                                             (invert_Ident f) with
+                            | Some (Some idc) => expr.App (expr.Ident idc) x
+                            | _ => expr.App f x
+                            end
+                    | _, _ => expr.App
+                    end f' x'
                end.
         End with_var.
 
@@ -6125,198 +5572,122 @@ Module Compilers.
     End expr.
   End RelaxZRange.
 
-  Definition PartialEvaluateWithBounds1
-             {s d} (e : Expr (s -> d)) (b : ZRange.type.option.interp s)
-    : Expr (s -> d)
-    := fun var => @partial_evaluate_with_bounds1 true var s d (e _) b.
+  Definition PartialEvaluate {t} (e : Expr t) : Expr t := partial.Eval e.
+  Definition PartialEvaluateWithBounds {t} (e : Expr t)
+             (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+    : Expr t
+    := partial.EvalWithBound e bound.
+  Definition PartialEvaluateWithListInfoFromBounds {t} (e : Expr t)
+             (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+    : Expr t
+    := partial.EvalWithListInfoFromBound e bound.
 
-  Definition CheckPartialEvaluateWithBounds1
-             (relax_zrange : zrange -> option zrange)
-             {s d} (E : Expr (s -> d))
-             (b_in : ZRange.type.option.interp s)
-             (b_out : ZRange.type.option.interp d)
-    : Expr (s -> d) + (ZRange.type.option.interp d * Expr (s -> d))
-    := let b_computed := partial.bounds.expr.Extract E b_in in
-       if ZRange.type.option.is_tighter_than b_computed b_out
-       then @inl (Expr (s -> d)) _ (RelaxZRange.expr.Relax relax_zrange E)
-       else @inr _ (ZRange.type.option.interp d * Expr (s -> d)) (b_computed, E).
-
-  Definition CheckPartialEvaluateWithBounds0
+  Definition CheckPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
              {t} (E : Expr t)
-             (b_out : ZRange.type.option.interp t)
-    : Expr t + (ZRange.type.option.interp t * Expr t)
-    := let b_computed := partial.bounds.expr.Extract E in
-       if ZRange.type.option.is_tighter_than b_computed b_out
+             (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+             (b_out : ZRange.type.base.option.interp (type.final_codomain t))
+    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t)
+    := let b_computed := partial.Extract E b_in in
+       if ZRange.type.base.option.is_tighter_than b_computed b_out
        then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
-       else @inr _ (ZRange.type.option.interp t * Expr t) (b_computed, E).
+       else @inr _ (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) (b_computed, E).
 
-  Definition CheckedPartialEvaluateWithBounds1
+  Definition CheckedPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
-             {s d} (e : Expr (s -> d))
-             (b_in : ZRange.type.option.interp s)
-             (b_out : ZRange.type.option.interp d)
-    : Expr (s -> d) + (ZRange.type.option.interp d * Expr (s -> d))
-    := let E := PartialEvaluateWithBounds1 e b_in in
+             {t} (E : Expr t)
+             (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+             (b_out : ZRange.type.base.option.interp (type.final_codomain t))
+    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t)
+    := let E := PartialEvaluateWithBounds E b_in in
        dlet_nd e := GeneralizeVar.ToFlat E in
              let E := GeneralizeVar.FromFlat e in
-             CheckPartialEvaluateWithBounds1 relax_zrange E b_in b_out.
-
-  Definition CheckedPartialEvaluateWithBounds0
-             (relax_zrange : zrange -> option zrange)
-             {t} (e : Expr t)
-             (b_out : ZRange.type.option.interp t)
-    : Expr t + (ZRange.type.option.interp t * Expr t)
-    := let E := PartialEvaluate true e in
-       dlet_nd e := GeneralizeVar.ToFlat E in
-             let E := GeneralizeVar.FromFlat e in
-             CheckPartialEvaluateWithBounds0 relax_zrange E b_out.
+             CheckPartialEvaluateWithBounds relax_zrange E b_in b_out.
 
   Axiom admit_pf : False.
   Local Notation admit := (match admit_pf with end).
 
-  Theorem CheckedPartialEvaluateWithBounds1_Correct
+  Theorem CheckedPartialEvaluateWithBounds_Correct
           (relax_zrange : zrange -> option zrange)
           (Hrelax : forall r r' z, is_tighter_than_bool z r = true
                                    -> relax_zrange r = Some r'
                                    -> is_tighter_than_bool z r' = true)
-          {s d} (e : Expr (s -> d))
-          (b_in : ZRange.type.option.interp s)
-          (b_out : ZRange.type.option.interp d)
-          rv (Hrv : CheckedPartialEvaluateWithBounds1 relax_zrange e b_in b_out = inl rv)
+          {t} (E : Expr t)
+          (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+          (b_out : ZRange.type.base.option.interp (type.final_codomain t))
+          rv (Hrv : CheckedPartialEvaluateWithBounds relax_zrange E b_in b_out = inl rv)
     : forall arg
-             (Harg : ZRange.type.option.is_bounded_by b_in arg = true),
-      Interp rv arg = Interp e arg
-      /\ ZRange.type.option.is_bounded_by b_out (Interp rv arg) = true.
+             (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg = true),
+      type.app_curried (Interp rv) arg = type.app_curried (Interp E) arg
+      /\ ZRange.type.base.option.is_bounded_by b_out (type.app_curried (Interp rv) arg) = true.
   Proof.
-    cbv [CheckedPartialEvaluateWithBounds1 CheckPartialEvaluateWithBounds1 Let_In] in *;
+    cbv [CheckedPartialEvaluateWithBounds CheckPartialEvaluateWithBounds Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     intros arg Harg.
     split.
     { exact admit. (* correctness of interp *) }
-    { eapply ZRange.type.option.is_tighter_than_is_bounded_by; [ eassumption | ].
-      cbv [expr.Interp].
+    { eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; [ eassumption | ].
       revert Harg.
       exact admit. (* boundedness *) }
   Qed.
 
-  Theorem CheckedPartialEvaluateWithBounds0_Correct
-          (relax_zrange : zrange -> option zrange)
-          (Hrelax : forall r r' z, is_tighter_than_bool z r = true
-                                   -> relax_zrange r = Some r'
-                                   -> is_tighter_than_bool z r' = true)
-          {t} (e : Expr t)
-          (b_out : ZRange.type.option.interp t)
-          rv (Hrv : CheckedPartialEvaluateWithBounds0 relax_zrange e b_out = inl rv)
-    : Interp rv = Interp e
-      /\ ZRange.type.option.is_bounded_by b_out (Interp rv) = true.
-  Proof.
-    cbv [CheckedPartialEvaluateWithBounds0 CheckPartialEvaluateWithBounds0 Let_In] in *;
-      break_innermost_match_hyps; inversion_sum; subst.
-    split.
-    { exact admit. (* correctness of interp *) }
-    { eapply ZRange.type.option.is_tighter_than_is_bounded_by; [ eassumption | ].
-      cbv [expr.Interp].
-      exact admit. (* boundedness *) }
-  Qed.
-
   Module DeadCodeElimination.
-    Fixpoint compute_live' {t} (e : @expr (fun _ => PositiveSet.t) t) (cur_idx : positive)
-    : positive * PositiveSet.t
-      := match e with
-         | Var t v => (cur_idx, v)
-         | TT => (cur_idx, PositiveSet.empty)
-         | AppIdent s d idc args
-           => let default _ := @compute_live' _ args cur_idx in
-              match args in expr.expr t return ident.ident t d -> _ with
-              | Pair A B x (Abs s d f)
-                => fun idc
-                   => match idc with
-                      | ident.Let_In _ _
-                        => let '(idx, live) := @compute_live' A x cur_idx in
-                           let '(_, live) := @compute_live' _ (f (PositiveSet.add idx live)) (Pos.succ idx) in
-                           (Pos.succ idx, live)
-                      | _ => default tt
-                      end
-              | _ => fun _ => default tt
-              end idc
-         | App s d f x
-           => let '(idx, live1) := @compute_live' _ f cur_idx in
-              let '(idx, live2) := @compute_live' _ x idx in
-              (idx, PositiveSet.union live1 live2)
-         | Pair A B a b
-           => let '(idx, live1) := @compute_live' A a cur_idx in
-              let '(idx, live2) := @compute_live' B b idx in
-              (idx, PositiveSet.union live1 live2)
-         | Abs s d f
-           => let '(_, live) := @compute_live' _ (f PositiveSet.empty) cur_idx in
-              (cur_idx, live)
-         end.
-    Definition compute_live {t} e : PositiveSet.t := snd (@compute_live' t e 1).
-    Definition ComputeLive {t} (e : Expr t) := compute_live (e _).
-
-    Section with_var.
-      Context {var : type -> Type}
-              (live : PositiveSet.t).
-      Definition OUGHT_TO_BE_UNUSED {T1 T2} (v : T1) (v' : T2) := v.
-      Global Opaque OUGHT_TO_BE_UNUSED.
-      Fixpoint eliminate_dead' {t} (e : @expr (@expr var) t) (cur_idx : positive)
-        : positive * @expr var t
+    Section with_ident.
+      Context {base_type : Type}.
+      Local Notation type := (type.type base_type).
+      Context {ident : type -> Type}.
+      Local Notation expr := (@expr.expr base_type ident).
+      Fixpoint compute_live' {t} (e : @expr (fun _ => PositiveSet.t) t) (cur_idx : positive)
+        : positive * PositiveSet.t
         := match e with
-           | Var t v => (cur_idx, v)
-           | TT => (cur_idx, TT)
-           | AppIdent s d idc args
-             => let default _
-                    := let default' := @eliminate_dead' _ args cur_idx in
-                       (fst default', AppIdent idc (snd default')) in
-                match args in expr.expr t return ident.ident t d -> (unit -> positive * expr d) -> positive * expr d with
-                | Pair A B x y
-                  => match y in expr.expr Y return ident.ident (A * Y) d -> (unit -> positive * expr d) -> positive * expr d with
-                     | Abs s' d' f
-                       => fun idc
-                          => let '(idx, x') := @eliminate_dead' A x cur_idx in
-                             let f' := fun v => snd (@eliminate_dead' _ (f v) (Pos.succ idx)) in
-                             match idc in ident.ident s d
-                                   return (match s return Type with
-                                           | A * _ => expr A
-                                           | _ => unit
-                                           end%ctype
-                                           -> match s return Type with
-                                              | _ * (s -> d) => (expr s -> expr d)%type
-                                              | _ => unit
-                                              end%ctype
-                                           -> (unit -> positive * expr d)
-                                           -> positive * expr d)
-                             with
-                             | ident.Let_In _ _
-                               => fun x' f' _
-                                  => if PositiveSet.mem idx live
-                                     then (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
-                                     else (Pos.succ idx, f' (OUGHT_TO_BE_UNUSED x' (Pos.succ idx, PositiveSet.elements live)))
-                             | _ => fun _ _ default => default tt
-                             end x' f'
-                     | _ => fun _ default => default tt
-                     end
-                | _ => fun _ default => default tt
-                end idc default
-           | App s d f x
-             => let '(idx, f') := @eliminate_dead' _ f cur_idx in
-                let '(idx, x') := @eliminate_dead' _ x idx in
-                (idx, App f' x')
-           | Pair A B a b
-             => let '(idx, a') := @eliminate_dead' A a cur_idx in
-                let '(idx, b') := @eliminate_dead' B b idx in
-                (idx, Pair a' b')
-           | Abs s d f
-             => (cur_idx, Abs (fun v => snd (@eliminate_dead' _ (f (Var v)) cur_idx)))
+           | expr.Var t v => (cur_idx, v)
+           | expr.App s d f x
+             => let '(idx, live1) := @compute_live' _ f cur_idx in
+                let '(idx, live2) := @compute_live' _ x idx in
+                (idx, PositiveSet.union live1 live2)
+           | expr.Abs s d f
+             => let '(_, live) := @compute_live' _ (f PositiveSet.empty) cur_idx in
+                (cur_idx, live)
+           | expr.LetIn tx tC ex eC
+             => let '(idx, live) := @compute_live' tx ex cur_idx in
+                let '(_, live) := @compute_live' tC (eC (PositiveSet.add idx live)) (Pos.succ idx) in
+                (Pos.succ idx, live)
+           | expr.Ident t idc => (cur_idx, PositiveSet.empty)
            end.
+      Definition compute_live {t} e : PositiveSet.t := snd (@compute_live' t e 1).
+      Definition ComputeLive {t} (e : expr.Expr t) := compute_live (e _).
 
-      Definition eliminate_dead {t} e : expr t
-        := snd (@eliminate_dead' t e 1).
-    End with_var.
+      Section with_var.
+        Context {var : type -> Type}
+                (live : PositiveSet.t).
+        Definition OUGHT_TO_BE_UNUSED {T1 T2} (v : T1) (v' : T2) := v.
+        Global Opaque OUGHT_TO_BE_UNUSED.
+        Fixpoint eliminate_dead' {t} (e : @expr (@expr var) t) (cur_idx : positive)
+          : positive * @expr var t
+          := match e with
+             | expr.Var t v => (cur_idx, v)
+             | expr.Ident t idc => (cur_idx, expr.Ident idc)
+             | expr.App s d f x
+               => let '(idx, f') := @eliminate_dead' _ f cur_idx in
+                  let '(idx, x') := @eliminate_dead' _ x idx in
+                  (idx, expr.App f' x')
+             | expr.Abs s d f
+               => (cur_idx, expr.Abs (fun v => snd (@eliminate_dead' _ (f (expr.Var v)) cur_idx)))
+             | expr.LetIn tx tC ex eC
+               => let '(idx, ex') := @eliminate_dead' tx ex cur_idx in
+                  let eC' := fun v => snd (@eliminate_dead' _ (eC v) (Pos.succ idx)) in
+                  if PositiveSet.mem idx live
+                  then (Pos.succ idx, expr.LetIn ex' (fun v => eC' (expr.Var v)))
+                  else (Pos.succ idx, eC' (OUGHT_TO_BE_UNUSED ex' (Pos.succ idx, PositiveSet.elements live)))
+             end.
 
-    Definition EliminateDead {t} (e : Expr t) : Expr t
-      := fun var => eliminate_dead (ComputeLive e) (e _).
+        Definition eliminate_dead {t} e : expr t
+          := snd (@eliminate_dead' t e 1).
+      End with_var.
+
+      Definition EliminateDead {t} (e : expr.Expr t) : expr.Expr t
+        := fun var => eliminate_dead (ComputeLive e) (e _).
+    End with_ident.
   End DeadCodeElimination.
 
   Module Subst01.
@@ -6335,148 +5706,120 @@ Module Compilers.
                   => Some n
                 | None, None => None
                 end) m1 m2).
-    Fixpoint compute_live_counts' {t} (e : @expr (fun _ => positive) t) (cur_idx : positive)
-      : positive * PositiveMap.t nat
-      := match e with
-         | Var t v => (cur_idx, PositiveMap_incr v (PositiveMap.empty _))
-         | TT => (cur_idx, PositiveMap.empty _)
-         | AppIdent s d idc args
-           => @compute_live_counts' _ args cur_idx
-         | App s d f x
-           => let '(idx, live1) := @compute_live_counts' _ f cur_idx in
-              let '(idx, live2) := @compute_live_counts' _ x idx in
-              (idx, PositiveMap_union live1 live2)
-         | Pair A B a b
-           => let '(idx, live1) := @compute_live_counts' A a cur_idx in
-              let '(idx, live2) := @compute_live_counts' B b idx in
-              (idx, PositiveMap_union live1 live2)
-         | Abs s d f
-           => let '(idx, live) := @compute_live_counts' _ (f cur_idx) (Pos.succ cur_idx) in
-              (cur_idx, live)
-         end.
-    Definition compute_live_counts {t} e : PositiveMap.t _ := snd (@compute_live_counts' t e 1).
-    Definition ComputeLiveCounts {t} (e : Expr t) := compute_live_counts (e _).
-
-    Section with_var.
-      Context {var : type -> Type}
-              (live : PositiveMap.t nat).
-      Fixpoint subst01' {t} (e : @expr (@expr var) t) (cur_idx : positive)
-        : positive * @expr var t
+    Section with_ident.
+      Context {base_type : Type}.
+      Local Notation type := (type.type base_type).
+      Context {ident : type -> Type}.
+      Local Notation expr := (@expr.expr base_type ident).
+      Fixpoint compute_live_counts' {t} (e : @expr (fun _ => positive) t) (cur_idx : positive)
+        : positive * PositiveMap.t nat
         := match e with
-           | Var t v => (cur_idx, v)
-           | TT => (cur_idx, TT)
-           | AppIdent s d idc args
-             => let default _
-                    := let default := @subst01' _ args cur_idx in
-                       (fst default, AppIdent idc (snd default)) in
-                match args in expr.expr t return ident.ident t d -> (unit -> positive * expr d) -> positive * expr d with
-                | Pair A B x y
-                  => match y in expr.expr Y return ident.ident (A * Y) d -> (unit -> positive * expr d) -> positive * expr d with
-                     | Abs s' d' f
-                       => fun idc
-                          => let '(idx, x') := @subst01' A x cur_idx in
-                             let f' := fun v => snd (@subst01' _ (f v) (Pos.succ idx)) in
-                             match idc in ident.ident s d
-                                   return (match s return Type with
-                                           | A * _ => expr A
-                                           | _ => unit
-                                           end%ctype
-                                           -> match s return Type with
-                                              | _ * (s -> d) => (expr s -> expr d)%type
-                                              | _ => unit
-                                              end%ctype
-                                           -> (unit -> positive * expr d)
-                                           -> positive * expr d)
-                             with
-                             | ident.Let_In _ _
-                               => fun x' f' _
-                                  => if match PositiveMap.find idx live with
-                                        | Some n => (n <=? 1)%nat
-                                        | None => true
-                                        end
-                                     then (Pos.succ idx, f' x')
-                                     else (Pos.succ idx, AppIdent ident.Let_In (Pair x' (Abs (fun v => f' (Var v)))))
-                             | _ => fun _ _ default => default tt
-                             end x' f'
-                     | _ => fun _ default => default tt
-                     end
-                | _ => fun _ default => default tt
-                end idc default
-           | App s d f x
-             => let '(idx, f') := @subst01' _ f cur_idx in
-                let '(idx, x') := @subst01' _ x idx in
-                (idx, App f' x')
-           | Pair A B a b
-             => let '(idx, a') := @subst01' A a cur_idx in
-                let '(idx, b') := @subst01' B b idx in
-                (idx, Pair a' b')
-           | Abs s d f
-             => (cur_idx, Abs (fun v => snd (@subst01' _ (f (Var v)) (Pos.succ cur_idx))))
+           | expr.Var t v => (cur_idx, PositiveMap_incr v (PositiveMap.empty _))
+           | expr.Ident t idc => (cur_idx, PositiveMap.empty _)
+           | expr.App s d f x
+             => let '(idx, live1) := @compute_live_counts' _ f cur_idx in
+                let '(idx, live2) := @compute_live_counts' _ x idx in
+                (idx, PositiveMap_union live1 live2)
+           | expr.Abs s d f
+             => let '(idx, live) := @compute_live_counts' _ (f cur_idx) (Pos.succ cur_idx) in
+                (cur_idx, live)
+           | expr.LetIn tx tC ex eC
+             => let '(idx, live1) := @compute_live_counts' tx ex cur_idx in
+                let '(idx, live2) := @compute_live_counts' tC (eC idx) (Pos.succ idx) in
+                (idx, PositiveMap_union live1 live2)
            end.
+      Definition compute_live_counts {t} e : PositiveMap.t _ := snd (@compute_live_counts' t e 1).
+      Definition ComputeLiveCounts {t} (e : expr.Expr t) := compute_live_counts (e _).
 
-      Definition subst01 {t} e : expr t
-        := snd (@subst01' t e 1).
-    End with_var.
+      Section with_var.
+        Context {var : type -> Type}
+                (live : PositiveMap.t nat).
+        Fixpoint subst01' {t} (e : @expr (@expr var) t) (cur_idx : positive)
+          : positive * @expr var t
+          := match e with
+             | expr.Var t v => (cur_idx, v)
+             | expr.Ident t idc => (cur_idx, expr.Ident idc)
+             | expr.App s d f x
+               => let '(idx, f') := @subst01' _ f cur_idx in
+                  let '(idx, x') := @subst01' _ x idx in
+                  (idx, expr.App f' x')
+             | expr.Abs s d f
+               => (cur_idx, expr.Abs (fun v => snd (@subst01' _ (f (expr.Var v)) (Pos.succ cur_idx))))
+             | expr.LetIn tx tC ex eC
+               => let '(idx, ex') := @subst01' tx ex cur_idx in
+                  let eC' := fun v => snd (@subst01' tC (eC v) (Pos.succ idx)) in
+                  if match PositiveMap.find idx live with
+                     | Some n => (n <=? 1)%nat
+                     | None => true
+                     end
+                  then (Pos.succ idx, eC' ex')
+                  else (Pos.succ idx, expr.LetIn ex' (fun v => eC' (expr.Var v)))
+             end.
 
-    Definition Subst01 {t} (e : Expr t) : Expr t
-      := fun var => subst01 (ComputeLiveCounts e) (e _).
+        Definition subst01 {t} e : expr t
+          := snd (@subst01' t e 1).
+      End with_var.
+
+      Definition Subst01 {t} (e : expr.Expr t) : expr.Expr t
+        := fun var => subst01 (ComputeLiveCounts e) (e _).
+    End with_ident.
   End Subst01.
 
   Module ReassociateSmallConstants.
-    Import Compilers.Uncurried.expr.default.
-
     Section with_var.
       Context (max_const_val : Z)
               {var : type -> Type}.
 
-      Fixpoint to_mul_list (e : @expr var type.Z) : list (@expr var type.Z)
+      Local Notation "x * y" := (expr.App (s:=type.base base.type.Z) (d:=type.base base.type.Z) (expr.App (s:=type.base base.type.Z) (d:=type.arrow (type.base base.type.Z) (type.base base.type.Z)) (expr.Ident (ident.wrap ident.Z_mul)) x) y) : expr_pat_scope. (* for patterns, for type inference *)
+
+      Fixpoint to_mul_list (e : @expr var base.type.Z) : list (@expr var base.type.Z)
         := match e in expr.expr t return list (@expr var t) with
-           | AppIdent s type.Z ident.Z_mul (Pair type.Z type.Z x y)
-             => to_mul_list x ++ to_mul_list y
-           | Var _ _ as e
-           | TT as e
-           | App _ _ _ _ as e
-           | Abs _ _ _ as e
-           | Pair _ _ _ _ as e
-           | AppIdent _ _ _ _ as e
+           | (x * y)%expr_pat => to_mul_list x ++ to_mul_list y
+           | expr.Var _ _ as e
+           | expr.Ident _ _ as e
+           | expr.LetIn _ _ _ _ as e
+           | expr.Abs _ _ _ as e
+           | expr.App _ _ _ _ as e
              => [e]
            end.
 
-      Definition is_small_prim (e : @expr var type.Z) : bool
+      Definition is_small_prim (e : @expr var base.type.Z) : bool
         := match e with
-           | AppIdent _ _ (ident.primitive type.Z v) _
+           | expr.Ident _ (ident.wrap _ (ident.Literal base.type.Z v))
              => Z.abs v <=? Z.abs max_const_val
            | _ => false
            end.
-      Definition is_not_small_prim (e : @expr var type.Z) : bool
+      Definition is_not_small_prim (e : @expr var base.type.Z) : bool
         := negb (is_small_prim e).
 
-      Definition reorder_mul_list (ls : list (@expr var type.Z))
-        : list (@expr var type.Z)
+      Definition reorder_mul_list (ls : list (@expr var base.type.Z))
+        : list (@expr var base.type.Z)
         := filter is_not_small_prim ls ++ filter is_small_prim ls.
 
-      Fixpoint of_mul_list (ls : list (@expr var type.Z)) : @expr var type.Z
+      Fixpoint of_mul_list (ls : list (@expr var base.type.Z)) : @expr var base.type.Z
         := match ls with
-           | nil => AppIdent (ident.primitive (t:=type.Z) 1) TT
+           | nil => ##1
            | cons x nil
              => x
            | cons x xs
-             => AppIdent ident.Z_mul (x, of_mul_list xs)
-           end.
+             => x * of_mul_list xs
+           end%expr_pat%expr.
 
       Fixpoint reassociate {t} (e : @expr var t) : @expr var t
         := match e in expr.expr t return expr t with
-           | Var _ _ as e
-           | TT as e
+           | expr.Var _ _ as e
+           | expr.Ident _ _ as e
              => e
-           | Pair A B a b
-             => Pair (@reassociate A a) (@reassociate B b)
-           | App s d f x => App (@reassociate _ f) (@reassociate _ x)
-           | Abs s d f => Abs (fun v => @reassociate _ (f v))
-           | AppIdent s type.Z idc args
-             => of_mul_list (reorder_mul_list (to_mul_list (AppIdent idc (@reassociate s args))))
-           | AppIdent s d idc args
-             => AppIdent idc (@reassociate s args)
+           | expr.App s d f x
+             => let reorder := match d return expr d -> expr d with
+                               | type.base base.type.Z
+                                 => fun e => of_mul_list (reorder_mul_list (to_mul_list e))
+                               | _ => fun e => e
+                               end in
+                reorder (expr.App (@reassociate _ f) (@reassociate _ x))
+           | expr.Abs s d f => expr.Abs (fun v => @reassociate _ (f v))
+           | expr.LetIn tx tC ex eC
+             => expr.LetIn (@reassociate tx ex) (fun v => @reassociate tC (eC v))
            end.
     End with_var.
 
@@ -6495,30 +5838,55 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 - reassociation
 - indexed + bounds analysis + of phoas *)
 
-Import Uncurried.
+(*Import Uncurried.
 Import expr.
-Import for_reification.Notations.Reification.
+Import for_reification.Notations.Reification.*)
+Import Compilers.defaults.
 
 Notation "x + y"
-  := (AppIdent ident.Z.add (x, y)%expr)
+  := ((#ident.Z_add @ x @ y)%expr)
      : expr_scope.
 Notation "x * y"
-  := (AppIdent ident.Z.mul (x, y)%expr)
+  := ((#ident.Z_mul @ x @ y)%expr)
      : expr_scope.
-Notation "x" := (Var x) (only printing, at level 9) : expr_scope.
+Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
 
 Example test1 : True.
 Proof.
   let v := Reify ((fun x => 2^x) 255)%Z in
   pose v as E.
   vm_compute in E.
-  pose (PartialEvaluate false (canonicalize_list_recursion E)) as E'.
+  pose (partial.Eval E) as E'.
   vm_compute in E'.
   lazymatch (eval cbv delta [E'] in E') with
-  | (fun var => AppIdent (ident.primitive ?v) TT) => idtac
+  | (fun var => expr.Ident (ident.wrap (ident.Literal ?v))) => idtac
   end.
   constructor.
 Qed.
+Module testpartial.
+  Import expr.
+  Import ident.
+
+  Eval compute in partial.eval
+                          (#ident.fst @ (expr_let x := ##10 in ($x, $x)))%expr.
+
+  Notation "x + y" := (@expr.Ident base.type ident _ _ (ident.wrap ident.Z_add) @ x @ y)%expr : expr_scope.
+
+  Eval compute in partial.eval
+                          ((\ x , expr_let y := ##5 in #ident.fst @ $x + (#ident.fst @ $x + ($y + $y)))
+                             @ (##1, ##1))%expr.
+
+  Eval compute in partial.eval
+                          ((\ x , expr_let y := ##5 in $y + ($y + (#ident.fst @ $x + #ident.snd @ $x)))
+                             @ (##1, ##7))%expr.
+
+
+  Eval cbv in partial.eval_with_bound
+                (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
+                         @ (##1, ##7)))%expr
+                (Some r[0~>100]%zrange, tt).
+End testpartial.
+
 Module test2.
   Example test2 : True.
   Proof.
@@ -6530,23 +5898,23 @@ Module test2.
                          (fun v => v)) in
     pose v as E.
     vm_compute in E.
-    pose (PartialEvaluate false (canonicalize_list_recursion E)) as E'.
+    pose (partial.Eval E) as E'.
     vm_compute in E'.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var : type -> Type =>
-         (λ x : var (type.type_primitive type.Z),
-                expr_let x0 := (Var x * Var x) in
-              expr_let x1 := (Var x0 * Var x0) in
-              (Var x1, Var x1))%expr) => idtac
+         (λ x : var _,
+                expr_let x0 := ($x * $x) in
+              expr_let x1 := ($x0 * $x0) in
+              ($x1, $x1))%expr) => idtac
     end.
-    pose (PartialEvaluateWithBounds1 E' (Some r[0~>10]%zrange)) as E''.
+    pose (partial.EvalWithBound E' (Some r[0~>10]%zrange, tt)) as E''.
     lazy in E''.
-    lazymatch (eval cbv delta [E''] in E'') with
-    | (fun var : type -> Type =>
-         (λ x : var (type.type_primitive type.Z),
-          expr_let y := ident.Z.cast r[0 ~> 100] @@ (Var x * Var x) in
-          expr_let y0 := ident.Z.cast r[0 ~> 10000] @@ (Var y * Var y) in
-          (ident.Z.cast r[0 ~> 10000] @@ Var y0, ident.Z.cast r[0 ~> 10000] @@ Var y0))%expr)
+     lazymatch (eval cbv delta [E''] in E'') with
+     | (fun var : type -> Type =>
+          (λ x : var _,
+                 expr_let y := #(ident.Z_cast r[0 ~> 100]) @ ($x * $x) in
+               expr_let y0 := #(ident.Z_cast r[0 ~> 10000]) @ ($y * $y) in
+               (#(ident.Z_cast r[0 ~> 10000]) @ $y0, #(ident.Z_cast r[0 ~> 10000]) @ $y0))%expr)
       => idtac
     end.
     constructor.
@@ -6563,29 +5931,28 @@ Module test3.
                         (z * z)) in
     pose v as E.
     vm_compute in E.
-    pose (option_map (PartialEvaluate false) (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
+    pose (partial.Eval E) as E'.
     vm_compute in E'.
     lazymatch (eval cbv delta [E'] in E') with
-    | (Some
-         (fun var : type -> Type =>
-            (λ x : var (type.type_primitive type.Z),
-                   expr_let x0 := Var x * Var x in
-                 expr_let x1 := Var x0 * Var x0 in
-                 expr_let x2 := Var x1 * Var x1 in
-                 expr_let x3 := Var x2 * Var x2 in
-                 Var x3 * Var x3)%expr))
+    | (fun var : type -> Type =>
+         (λ x : var _,
+                expr_let x0 := $x * $x in
+              expr_let x1 := $x0 * $x0 in
+              expr_let x2 := $x1 * $x1 in
+              expr_let x3 := $x2 * $x2 in
+              $x3 * $x3)%expr)
       => idtac
     end.
-    pose (PartialEvaluateWithBounds1 (invert_Some E') (Some r[0~>10]%zrange)) as E'''.
+    pose (partial.EvalWithBound E' (Some r[0~>10]%zrange, tt)) as E'''.
     lazy in E'''.
     lazymatch (eval cbv delta [E'''] in E''') with
     | (fun var : type -> Type =>
-          (λ x : var (type.type_primitive type.Z),
-           expr_let y := ident.Z.cast r[0 ~> 100] @@ (Var x * Var x) in
-           expr_let y0 := ident.Z.cast r[0 ~> 10000] @@ (Var y * Var y) in
-           expr_let y1 := ident.Z.cast r[0 ~> 100000000] @@ (Var y0 * Var y0) in
-           expr_let y2 := ident.Z.cast r[0 ~> 10000000000000000] @@ (Var y1 * Var y1) in
-           ident.Z.cast r[0 ~> 100000000000000000000000000000000] @@ (Var y2 * Var y2))%expr)
+          (λ x : var _,
+           expr_let y := #(ident.Z_cast r[0 ~> 100]) @ ($x * $x) in
+           expr_let y0 := #(ident.Z_cast r[0 ~> 10000]) @ ($y * $y) in
+           expr_let y1 := #(ident.Z_cast r[0 ~> 100000000]) @ ($y0 * $y0) in
+           expr_let y2 := #(ident.Z_cast r[0 ~> 10000000000000000]) @ ($y1 * $y1) in
+           #(ident.Z_cast r[0 ~> 100000000000000000000000000000000]) @ ($y2 * $y2))%expr)
       => idtac
     end.
     constructor.
@@ -6601,20 +5968,20 @@ Module test4.
                         (xz :: xz :: nil)) in
     pose v as E.
     vm_compute in E.
-    pose (option_map (PartialEvaluate false) (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))) as E'.
+    pose (partial.Eval E) as E'.
     lazy in E'.
     clear E.
-    pose (PartialEvaluateWithBounds1 (invert_Some E') (Some [Some r[0~>10]%zrange],Some [Some r[0~>10]%zrange])) as E''.
+    pose (partial.EvalWithBound E' (Some [Some r[0~>10]%zrange],Some [Some r[0~>10]%zrange], tt)) as E''.
     lazy in E''.
     lazymatch (eval cbv delta [E''] in E'') with
     | (fun var : type -> Type =>
-         (λ x : var (type.list (type.type_primitive type.Z) * type.list (type.type_primitive type.Z))%ctype,
-          expr_let y := ident.Z.cast r[0 ~> 10] @@
-                        (ident.List.nth_default_concrete (-1) 0 @@ (ident.fst @@ Var x)) in
-          expr_let y0 := ident.Z.cast r[0 ~> 10] @@
-                         (ident.List.nth_default_concrete (-1) 0 @@ (ident.snd @@ Var x)) in
-          expr_let y1 := ident.Z.cast r[0 ~> 100] @@ (Var y * Var y0) in
-          ident.Z.cast r[0 ~> 100] @@ Var y1 :: ident.Z.cast r[0 ~> 100] @@ Var y1 :: [])%expr)
+         (λ x : var _,
+          expr_let y := #(ident.Z_cast r[0 ~> 10]) @
+                        (#ident.List_nth_default @ #(ident.Literal (-1)%Z) @ (#ident.fst @ $x) @ #(ident.Literal 0%nat)) in
+          expr_let y0 := #(ident.Z_cast r[0 ~> 10]) @
+                          (#ident.List_nth_default @ #(ident.Literal (-1)%Z) @ (#ident.snd @ $x) @ #(ident.Literal 0%nat)) in
+          expr_let y1 := #(ident.Z_cast r[0 ~> 100]) @ ($y * $y0) in
+          #(ident.Z_cast r[0 ~> 100]) @ $y1 :: #(ident.Z_cast r[0 ~> 100]) @ $y1 :: [])%expr)
       => idtac
     end.
     constructor.
@@ -6628,14 +5995,14 @@ Module test5.
                         x) in
     pose v as E.
     vm_compute in E.
-    pose (ReassociateSmallConstants.Reassociate (2^8) (PartialEvaluate false (invert_Some (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E)))))) as E'.
+    pose (ReassociateSmallConstants.Reassociate (2^8) (partial.Eval E)) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
-         Abs (fun v
-              => (expr_let v0 := ident.Z.mul @@ (ident.fst @@ Var v, ident.Z.mul @@ (ident.snd @@ Var v, ident.primitive 13 @@ TT)) in
-                      Var v0)%expr))
+         expr.Abs (fun v
+              => (expr_let v0 := (#ident.Z_mul @ (#ident.fst @ $v) @ (#ident.Z_mul @ (#ident.snd @ $v) @ #(ident.Literal 13))) in
+                      $v0)%expr))
       => idtac
     end.
     constructor.
@@ -6652,13 +6019,10 @@ Module test6.
                        else y) in
     pose v as E.
     vm_compute in E.
-    pose (CPS.CallFunWithIdContinuation (CPS.Translate (canonicalize_list_recursion E))) as E'.
-    lazy in E'.
-    clear E.
-    pose (PartialEvaluate false (invert_Some E')) as E''.
+    pose (partial.Eval E) as E''.
     lazy in E''.
     lazymatch eval cbv delta [E''] in E'' with
-    | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), Var x)%expr
+    | fun var : type -> Type => (λ x : var _, $x)%expr
       => idtac
     end.
     exact I.
@@ -6675,13 +6039,10 @@ Module test7.
                         z'' + z'') in
     pose v as E.
     vm_compute in E.
-    pose (canonicalize_list_recursion E) as E'.
-    lazy in E'.
-    clear E.
-    pose (Subst01.Subst01 (DeadCodeElimination.EliminateDead E')) as E''.
+    pose (Subst01.Subst01 (DeadCodeElimination.EliminateDead E)) as E''.
     lazy in E''.
     lazymatch eval cbv delta [E''] in E'' with
-    | fun var : type -> Type => (λ x : var (type.type_primitive type.Z), expr_let v0 := Var x + Var x in Var v0 + Var v0)%expr
+    | fun var : type -> Type => (λ x : var _, expr_let v0 := $x + $x in $v0 + $v0)%expr
       => idtac
     end.
     exact I.
@@ -6698,12 +6059,9 @@ Module test8.
                         z'' + z'') in
     pose v as E.
     vm_compute in E.
-    pose (canonicalize_list_recursion E) as E'.
-    lazy in E'.
-    clear E.
-    pose (GeneralizeVar.GeneralizeVar (E' _)) as E''.
+    pose (GeneralizeVar.GeneralizeVar (E _)) as E''.
     lazy in E''.
-    unify E' E''.
+    unify E E''.
     exact I.
   Qed.
 End test8.
@@ -6713,94 +6071,95 @@ Module test9.
     let v := Reify (fun y : list Z => (hd 0%Z y, tl y)) in
     pose v as E.
     vm_compute in E.
-    pose (PartialEvaluate true (canonicalize_list_recursion E)) as E'.
+    pose (partial.Eval E) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var
        => (λ x,
-           (ident.list_rect
-              @@
-              ((λ _, ident.primitive 0%Z @@ TT),
-               (λ x0, ident.fst @@ (ident.fst @@ Var x0)),
-               Var x),
-            ident.list_rect
-              @@
-              ((λ _, ident.nil @@ TT),
-               (λ x0, ident.snd @@ (ident.fst @@ Var x0)),
-               Var x)))%expr)
+           (#ident.list_case
+              @ (λ _, #(ident.Literal 0%Z))
+              @ (λ x0 _, $x0)
+              @ $x,
+            #ident.list_case
+              @ (λ _, #ident.nil)
+              @ (λ _ x0, $x0)
+              @ $x))%expr)
       => idtac
     end.
     exact I.
   Qed.
 End test9.
+(*
 Module test10.
   Example test10 : True.
   Proof.
     let v := Reify (fun (f : Z -> Z -> Z) x y => f (x + y) (x * y))%Z in
     pose v as E.
     vm_compute in E.
-    pose (Uncurry.expr.Uncurry (PartialEvaluate true (canonicalize_list_recursion E))) as E'.
+    pose (Uncurry.expr.Uncurry (partial.Eval true (canonicalize_list_recursion E))) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
          (λ v,
-          ident.fst @@ Var v @
-                    (ident.fst @@ (ident.snd @@ Var v) + ident.snd @@ (ident.snd @@ Var v)) @
-                    (ident.fst @@ (ident.snd @@ Var v) * ident.snd @@ (ident.snd @@ Var v)))%expr)
+          ident.fst @@ $v @
+                    (ident.fst @@ (ident.snd @@ $v) + ident.snd @@ (ident.snd @@ $v)) @
+                    (ident.fst @@ (ident.snd @@ $v) * ident.snd @@ (ident.snd @@ $v)))%expr)
       => idtac
     end.
     constructor.
   Qed.
 End test10.
+ *)
+(*
 Module test11.
   Example test11 : True.
   Proof.
     let v := Reify (fun x y => (fun f a b => f a b) (fun a b => a + b) (x + y) (x * y))%Z in
     pose v as E.
     vm_compute in E.
-    pose (Uncurry.expr.Uncurry (PartialEvaluate true (canonicalize_list_recursion E))) as E'.
+    pose (Uncurry.expr.Uncurry (partial.Eval true (canonicalize_list_recursion E))) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
          (λ x,
-          ident.fst @@ Var x + ident.snd @@ Var x + ident.fst @@ Var x * ident.snd @@ Var x)%expr)
+          ident.fst @@ $x + ident.snd @@ $x + ident.fst @@ $x * ident.snd @@ $x)%expr)
       => idtac
     end.
     constructor.
   Qed.
 End test11.
+ *)
+Module test12.
+  Example test12 : True.
+  Proof.
+    let v := Reify (fun y : list Z => List.repeat y 2) in
+    pose v as E.
+    vm_compute in E.
+    pose (partial.EvalWithBound E (Some (List.repeat None 3), tt)) as E'.
+    lazy in E'.
+    clear E.
+    lazymatch (eval cbv delta [E'] in E') with
+    | (fun var
+       => (λ x, [ [ $x[[0]] ; $x[[1]]; $x[[2]] ] ; [ $x[[0]] ; $x[[1]]; $x[[2]] ] ])%expr)
+      => idtac
+    end.
+    exact I.
+  Qed.
+End test12.
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
 Ltac cache_reify _ :=
   intros;
   etransitivity;
   [
-  | repeat apply (f_equal (fun f => f _));
+  | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
     Reify_rhs ();
     reflexivity ];
-  cbv beta;
-  let RHS := match goal with |- _ = ?RHS => RHS end in
-  let e := match RHS with context[expr.Interp _ ?e] => e end in
-  let E := fresh "E" in
-  set (E := e);
-  let E' := constr:(canonicalize_list_recursion E) in
-  let LHS := match goal with |- ?LHS = _ => LHS end in
-  lazymatch LHS with
-  | context LHS[@expr.Interp ?ident ?interp_ident ?t ?e]
-    => let LHS := context LHS[@expr.Interp ident interp_ident t E'] in
-       transitivity LHS; [ | clear e ]
-  end;
-  [ repeat match goal with |- context[expr.Interp _ _ _] => apply (f_equal (fun f => f _)) end;
-    apply f_equal;
-    lazymatch goal with |- ?LHS = ?RHS => subst LHS end;
-    let RHS := lazymatch goal with |- ?LHS = ?RHS => RHS end in
-    time (let RHS' := (eval vm_compute in RHS) in (* [vm_compute] is much faster than [lazy] here on large things *)
-          time instantiate (1:=RHS');
-          vm_cast_no_check (eq_refl RHS'))
-  | clearbody E ].
+  subst_evars;
+  reflexivity.
 
 Create HintDb reify_gen_cache.
 
@@ -6810,15 +6169,13 @@ Derive carry_mul_gen
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
-                        (len_c : nat)
-                        (idxs : list nat)
-                        (len_idxs : nat),
-                    Interp (t:=type.reify_type_of carry_mulmod)
-                           carry_mul_gen limbwidth_num limbwidth_den s c n len_c idxs len_idxs f g
-                    = carry_mulmod limbwidth_num limbwidth_den s c n len_c idxs len_idxs f g)
+                        (idxs : list nat),
+                    Interp (t:=reify_type_of carry_mulmod)
+                           carry_mul_gen limbwidth_num limbwidth_den s c n idxs f g
+                    = carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)
        As carry_mul_gen_correct.
-Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
-Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
+Proof. Time cache_reify (). Time Qed.
+Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
 
 Derive carry_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
@@ -6826,116 +6183,107 @@ Derive carry_gen
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
-                        (len_c : nat)
-                        (idxs : list nat)
-                        (len_idxs : nat),
-                    Interp (t:=type.reify_type_of carrymod)
-                           carry_gen limbwidth_num limbwidth_den s c n len_c idxs len_idxs f
-                    = carrymod limbwidth_num limbwidth_den s c n len_c idxs len_idxs f)
+                        (idxs : list nat),
+                    Interp (t:=reify_type_of carrymod)
+                           carry_gen limbwidth_num limbwidth_den s c n idxs f
+                    = carrymod limbwidth_num limbwidth_den s c n idxs f)
        As carry_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
 
 Derive encode_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (v : Z)
                         (n : nat)
                         (s : Z)
-                        (c : list (Z * Z))
-                        (len_c : nat),
-                    Interp (t:=type.reify_type_of encodemod)
-                           encode_gen limbwidth_num limbwidth_den s c n len_c v
-                    = encodemod limbwidth_num limbwidth_den s c n len_c v)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of encodemod)
+                           encode_gen limbwidth_num limbwidth_den s c n v
+                    = encodemod limbwidth_num limbwidth_den s c n v)
        As encode_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = encodemod _ _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
 
 Derive add_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (f g : list Z)
                         (n : nat),
-                    Interp (t:=type.reify_type_of addmod)
+                    Interp (t:=reify_type_of addmod)
                            add_gen limbwidth_num limbwidth_den n f g
                     = addmod limbwidth_num limbwidth_den n f g)
        As add_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
+Proof. cache_reify (). Qed.
 Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
 Derive sub_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
-                        (len_c : nat)
                         (coef : Z)
                         (f g : list Z),
-                    Interp (t:=type.reify_type_of submod)
-                           sub_gen limbwidth_num limbwidth_den s c n len_c coef f g
-                    = submod limbwidth_num limbwidth_den s c n len_c coef f g)
+                    Interp (t:=reify_type_of submod)
+                           sub_gen limbwidth_num limbwidth_den s c n coef f g
+                    = submod limbwidth_num limbwidth_den s c n coef f g)
        As sub_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
 
 Derive opp_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
                         (c : list (Z * Z))
-                        (len_c : nat)
                         (coef : Z)
                         (f : list Z),
-                    Interp (t:=type.reify_type_of oppmod)
-                           opp_gen limbwidth_num limbwidth_den s c n len_c coef f
-                    = oppmod limbwidth_num limbwidth_den s c n len_c coef f)
+                    Interp (t:=reify_type_of oppmod)
+                           opp_gen limbwidth_num limbwidth_den s c n coef f
+                    = oppmod limbwidth_num limbwidth_den s c n coef f)
        As opp_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
 
-Definition zeromod limbwidth_num limbwidth_den n s c len_c := encodemod limbwidth_num limbwidth_den n s c len_c 0.
-Definition onemod limbwidth_num limbwidth_den n s c len_c := encodemod limbwidth_num limbwidth_den n s c len_c 1.
+Definition zeromod limbwidth_num limbwidth_den n s c := encodemod limbwidth_num limbwidth_den n s c 0.
+Definition onemod limbwidth_num limbwidth_den n s c := encodemod limbwidth_num limbwidth_den n s c 1.
 
 Derive zero_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
-                        (c : list (Z * Z))
-                        (len_c : nat),
-                    Interp (t:=type.reify_type_of zeromod)
-                           zero_gen limbwidth_num limbwidth_den s c n len_c
-                    = zeromod limbwidth_num limbwidth_den s c n len_c)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of zeromod)
+                           zero_gen limbwidth_num limbwidth_den s c n
+                    = zeromod limbwidth_num limbwidth_den s c n)
        As zero_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = zeromod _ _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
 
 Derive one_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
                         (s : Z)
-                        (c : list (Z * Z))
-                        (len_c : nat),
-                    Interp (t:=type.reify_type_of onemod)
-                           one_gen limbwidth_num limbwidth_den s c n len_c
-                    = onemod limbwidth_num limbwidth_den s c n len_c)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of onemod)
+                           one_gen limbwidth_num limbwidth_den s c n
+                    = onemod limbwidth_num limbwidth_den s c n)
        As one_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = onemod _ _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
 
 Derive id_gen
-       SuchThat (forall (n : nat)
-                        (ls : list Z),
-                    Interp (t:=type.reify_type_of expanding_id)
-                           id_gen n ls
-                    = expanding_id n ls)
+       SuchThat (forall (ls : list Z),
+                    Interp (t:=reify_type_of (@id (list Z)))
+                           id_gen ls
+                    = id ls)
        As id_gen_correct.
-Proof. cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Qed.
-Hint Extern 1 (_ = expanding_id _ _) => simple apply id_gen_correct : reify_gen_cache.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = id _) => simple apply id_gen_correct : reify_gen_cache.
 
-Import Uncurry.
 Module Pipeline.
   Import GeneralizeVar.
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
-      {t} (computed_bounds expected_bounds : ZRange.type.option.interp t)
-      {s} (syntax_tree : Expr (s -> t)) (arg_bounds : ZRange.type.option.interp s)
+      {t} (computed_bounds expected_bounds : ZRange.type.base.option.interp (type.final_codomain t))
+      (syntax_tree : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
   | Bounds_analysis_failed
   | Type_too_complicated_for_cps (t : type)
   | Value_not_le (descr : string) {T'} (lhs rhs : T')
@@ -6954,17 +6302,6 @@ Module Pipeline.
        | Error msg => msg
        end.
 
-  Definition PrePipeline
-             {t}
-             (E : for_reification.Expr t)
-    : Expr t
-    := canonicalize_list_recursion E.
-
-  Lemma PrePipeline_correct {t} (E : for_reification.Expr t) v
-    : expr.Interp (@ident.interp) v =
-      expr.Interp (@for_reification.ident.interp) E.
-  Admitted.
-
   Definition BoundsPipeline
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -6973,31 +6310,26 @@ Module Pipeline.
              (E : Expr t)
              arg_bounds
              out_bounds
-  : ErrorT (Expr (type.uncurry t))
-    := let E := expr.Uncurry E in
-       let E := CPS.CallFunWithIdContinuation (CPS.Translate E) in
-       match E with
-       | Some E
-         => (let E := PartialEvaluate false E in
-             (* Note that DCE evaluates the expr with two different
-                [var] arguments, and so results in a pipeline that is
-                2x slower unless we pass through a uniformly concrete
-                [var] type first *)
-             dlet_nd e := ToFlat E in
-             let E := FromFlat e in
-             let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-             dlet_nd e := ToFlat E in
-             let E := FromFlat e in
-             let E := if with_subst01 then Subst01.Subst01 E else E in
-             let E := ReassociateSmallConstants.Reassociate (2^8) E in
-             let E := CheckedPartialEvaluateWithBounds1 relax_zrange E arg_bounds out_bounds in
-             match E with
-             | inl E => Success E
-             | inr (b, E)
-               => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
-             end)
-       | None => Error (Type_too_complicated_for_cps t)
-       end.
+  : ErrorT (Expr t)
+    := (*let E := expr.Uncurry E in*)
+      let E := partial.EvalWithListInfoFromBound E arg_bounds in
+      (* Note that DCE evaluates the expr with two different [var]
+         arguments, and so results in a pipeline that is 2x slower
+         unless we pass through a uniformly concrete [var] type
+         first *)
+      dlet_nd e := ToFlat E in
+      let E := FromFlat e in
+      let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+      dlet_nd e := ToFlat E in
+      let E := FromFlat e in
+      let E := if with_subst01 then Subst01.Subst01 E else E in
+      let E := ReassociateSmallConstants.Reassociate (2^8) E in
+      let E := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
+      match E with
+      | inl E => Success E
+      | inr (b, E)
+        => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
+      end.
 
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
@@ -7012,9 +6344,9 @@ Module Pipeline.
              rv
              (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : forall arg
-             (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
-      ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
-      /\ Interp rv arg = app_curried (Interp e) arg.
+             (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg = true),
+      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg) = true
+      /\ type.app_curried (Interp rv) arg = type.app_curried (Interp e) arg.
   Proof.
     cbv [BoundsPipeline Let_In] in *;
       repeat match goal with
@@ -7026,15 +6358,13 @@ Module Pipeline.
     { intros;
         match goal with
         | [ H : _ = _ |- _ ]
-          => eapply CheckedPartialEvaluateWithBounds1_Correct in H;
+          => eapply CheckedPartialEvaluateWithBounds_Correct in H;
                [ destruct H as [H0 H1] | .. ]
         end;
         [
         | eassumption || (try reflexivity).. ].
-      refine (let H' := admit (* interp correctness *) in
-              conj _ (eq_trans H' _));
-        clearbody H'.
-      { rewrite H'; eassumption. }
+      subst.
+      split; [ assumption | ].
       { rewrite H0.
         exact admit. (* interp correctness *) } }
   Qed.
@@ -7043,12 +6373,12 @@ Module Pipeline.
              {t}
              arg_bounds
              out_bounds
-             (InterpE : type.interp t)
-             (rv : Expr (type.uncurry t))
+             (InterpE : type.interp base.interp t)
+             (rv : Expr t)
     := forall arg
-              (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
-      ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
-      /\ Interp rv arg = app_curried InterpE arg.
+              (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg = true),
+      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg) = true
+      /\ type.app_curried (Interp rv) arg = type.app_curried InterpE arg.
 
   Lemma BoundsPipeline_correct_trans
         (with_dead_code_elimination : bool := true)
@@ -7060,55 +6390,17 @@ Module Pipeline.
         {t}
         (e : Expr t)
         arg_bounds out_bounds
-        (InterpE : type.interp t)
+        (InterpE : type.interp base.interp t)
         (InterpE_correct
          : forall arg
-                  (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
-            app_curried (Interp e) arg = app_curried InterpE arg)
+                  (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg = true),
+            type.app_curried (Interp e) arg = type.app_curried InterpE arg)
         rv
         (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 relax_zrange e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     intros arg Harg; rewrite <- InterpE_correct by assumption.
     eapply @BoundsPipeline_correct; eassumption.
-  Qed.
-
-  Definition BoundsPipeline_full
-             (with_dead_code_elimination : bool := true)
-             (with_subst01 : bool)
-             relax_zrange
-             {t}
-             (E : for_reification.Expr t)
-             arg_bounds
-             out_bounds
-  : ErrorT (Expr (type.uncurry t))
-    := let E := PrePipeline E in
-       @BoundsPipeline
-         (*with_dead_code_elimination*)
-         with_subst01
-         relax_zrange
-         t E arg_bounds out_bounds.
-
-  Lemma BoundsPipeline_full_correct
-             (with_dead_code_elimination : bool := true)
-             (with_subst01 : bool)
-             relax_zrange
-             (Hrelax : forall r r' z : zrange,
-                 (z <=? r)%zrange = true -> relax_zrange r = Some r' -> (z <=? r')%zrange = true)
-             {t}
-             (E : for_reification.Expr t)
-             arg_bounds
-             out_bounds
-             rv
-             (Hrv : BoundsPipeline_full (*with_dead_code_elimination*) with_subst01 relax_zrange E arg_bounds out_bounds = Success rv)
-    : forall arg
-             (Harg : ZRange.type.option.is_bounded_by arg_bounds arg = true),
-      ZRange.type.option.is_bounded_by out_bounds (Interp rv arg) = true
-      /\ Interp rv arg = app_curried (for_reification.Interp E) arg.
-  Proof.
-    cbv [BoundsPipeline_full] in *.
-    eapply BoundsPipeline_correct_trans; [ eassumption | | eassumption.. ].
-    intros; erewrite PrePipeline_correct; reflexivity.
   Qed.
 End Pipeline.
 
@@ -7172,16 +6464,16 @@ Section rcarry_mul.
     := List.map
          (fun v : Z => Qceiling (11/10 * v))
          (encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c (s-1)).
-  Let prime_bound : ZRange.type.option.interp (type.Z)
+  Let prime_bound : ZRange.type.option.interp (base.type.Z)
     := Some r[0~>(s - Associational.eval c - 1)]%zrange.
 
   Definition relax_zrange_of_machine_wordsize
     := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Let relax_zrange := relax_zrange_of_machine_wordsize.
-  Let tight_bounds : list (ZRange.type.option.interp type.Z)
+  Let tight_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
-  Let loose_bounds : list (ZRange.type.option.interp type.Z)
+  Let loose_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
 
   Definition check_args {T} (res : Pipeline.ErrorT T)
@@ -7207,7 +6499,7 @@ Section rcarry_mul.
           rop%Expr in_bounds out_bounds).
 
   Notation BoundsPipeline_correct in_bounds out_bounds op
-    := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
+    := (fun rv (rop : Expr (reify_type_of op)) Hrop
         => @Pipeline.BoundsPipeline_correct_trans
              (*false*) true
              relax_zrange
@@ -7224,63 +6516,63 @@ Section rcarry_mul.
   Definition rcarry_mul
     := BoundsPipeline
          (carry_mul_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify (length c) @ GallinaReify.Reify idxs @ GallinaReify.Reify (length idxs))
-         (Some loose_bounds, Some loose_bounds)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
+         (Some loose_bounds, (Some loose_bounds, tt))
          (Some tight_bounds).
 
   Definition rcarry_mul_correct
     := BoundsPipeline_correct
-         (Some loose_bounds, Some loose_bounds)
+         (Some loose_bounds, (Some loose_bounds, tt))
          (Some tight_bounds)
-         (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
+         (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
   Definition rcarry_correct
     := BoundsPipeline_correct
-         (Some loose_bounds)
+         (Some loose_bounds, tt)
          (Some tight_bounds)
-         (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) idxs (List.length idxs)).
+         (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
   Definition rrelax_correct
     := BoundsPipeline_correct
-         (Some tight_bounds)
+         (Some tight_bounds, tt)
          (Some loose_bounds)
-         (expanding_id n).
+         (@id (list Z)).
 
   Definition radd_correct
     := BoundsPipeline_correct
-         (Some tight_bounds, Some tight_bounds)
+         (Some tight_bounds, (Some tight_bounds, tt))
          (Some loose_bounds)
          (addmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
   Definition rsub_correct
     := BoundsPipeline_correct
-         (Some tight_bounds, Some tight_bounds)
+         (Some tight_bounds, (Some tight_bounds, tt))
          (Some loose_bounds)
-         (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
+         (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n coef).
 
   Definition ropp_correct
     := BoundsPipeline_correct
-         (Some tight_bounds)
+         (Some tight_bounds, tt)
          (Some loose_bounds)
-         (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c) coef).
+         (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n coef).
 
   Definition rencode_correct
     := BoundsPipeline_correct
-         prime_bound
+         (prime_bound, tt)
          (Some tight_bounds)
-         (encodemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
+         (encodemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n).
 
   Definition rzero_correct
     := BoundsPipeline_correct
          tt
          (Some tight_bounds)
-         (zeromod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
+         (zeromod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n).
 
   Definition rone_correct
     := BoundsPipeline_correct
          tt
          (Some tight_bounds)
-         (onemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n (List.length c)).
+         (onemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n).
 
   (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
   Definition rcarry_mul_correctT rv : Prop
@@ -7376,8 +6668,8 @@ Section rcarry_mul.
            (Interp raddv)
            (Interp rsubv)
            (Interp roppv)
-           (Interp rzerov tt)
-           (Interp ronev tt)
+           (Interp rzerov)
+           (Interp ronev)
            (Interp rencodev).
 
     Theorem Good : GoodT.
@@ -7395,12 +6687,11 @@ Section rcarry_mul.
                      | apply conj
                      | progress intros
                      | progress cbv [onemod zeromod]
-                     | eapply Hrzerov (* to handle diff with whether or not correctness asks for boundedness of tt *)
-                     | eapply Hronev (* to handle diff with whether or not correctness asks for boundedness of tt *)
+                     | eapply Hrzerov with (arg:=tt) (* to handle diff with whether or not correctness asks for boundedness of tt *)
+                     | eapply Hronev with (arg:=tt) (* to handle diff with whether or not correctness asks for boundedness of tt *)
                      | match goal with
                        | [ |- ?x = ?x ] => reflexivity
-                       | [ |- ?x = ?ev ] => is_evar ev; reflexivity
-                       | [ |- ZRange.type.option.is_bounded_by tt tt = true ] => reflexivity
+                       | [ |- type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) tt tt = true ] => reflexivity
                        end ].
     Qed.
   End make_ring.
@@ -7423,10 +6714,10 @@ Ltac peel_interp_app _ :=
     => let sv := type of x in
        let fx := constr:(f x) in
        let dv := type of fx in
-       let rs := type.reify sv in
-       let rd := type.reify dv in
+       let rs := reify_type sv in
+       let rd := reify_type dv in
        etransitivity;
-       [ apply @Interp_APP_rel_reflexive with (s:=rs) (d:=rd) (R:=R');
+       [ apply @expr.Interp_APP_rel_reflexive with (s:=rs) (d:=rd) (R:=R');
          typeclasses eauto
        | apply fg_equal_rel;
          [ try peel_interp_app ()
@@ -7439,7 +6730,7 @@ Ltac peel_interp_app _ :=
                end ] ]
   end.
 Ltac pre_cache_reify _ :=
-  cbv [app_curried];
+  cbv [type.app_curried];
   let arg := fresh "arg" in
   intros arg _;
   peel_interp_app ();
@@ -7458,7 +6749,7 @@ Ltac do_inline_cache_reify do_if_not_cached :=
           eauto with nocore reify_gen_cache;
           do_if_not_cached ()
         ];
-    cache_reify (); exact admit
+    cache_reify ()
   | .. ].
 
 (* TODO: MOVE ME *)
@@ -7509,67 +6800,65 @@ Module PrintingNotations.
     := (r[0 ~> 4294967295]) : zrange_scope.
   Notation "'bool'"
     := (r[0 ~> 1]%zrange) : zrange_scope.
-  Notation "ls [[ n ]]"
-    := ((List.nth_default_concrete _ n @@ ls)%expr)
-         (at level 30, format "ls [[ n ]]") : expr_scope.
   Notation "( range )( ls [[ n ]] )"
-    := ((ident.Z.cast range @@ (List.nth_default_concrete _ n @@ ls))%expr)
+    := ((#(ident.Z_cast range) @ (ls [[ n ]]))%expr)
          (format "( range )( ls [[ n ]] )") : expr_scope.
-  (*Notation "( range )( v )" := (ident.Z.cast range @@ v)%expr : expr_scope.*)
+  (*Notation "( range )( v )" := (ident.Z_cast range @@ v)%expr : expr_scope.*)
   Notation "x *₂₅₆ y"
-    := (ident.Z.cast uint256 @@ (ident.Z.mul @@ (x, y)))%expr (at level 40) : expr_scope.
+    := (#(ident.Z_cast uint256) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
   Notation "x *₁₂₈ y"
-    := (ident.Z.cast uint128 @@ (ident.Z.mul @@ (x, y)))%expr (at level 40) : expr_scope.
+    := (#(ident.Z_cast uint128) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
   Notation "x *₆₄ y"
-    := (ident.Z.cast uint64 @@ (ident.Z.mul @@ (x, y)))%expr (at level 40) : expr_scope.
+    := (#(ident.Z_cast uint64) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
   Notation "x *₃₂ y"
-    := (ident.Z.cast uint32 @@ (ident.Z.mul @@ (x, y)))%expr (at level 40) : expr_scope.
+    := (#(ident.Z_cast uint32) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
   Notation "x +₂₅₆ y"
-    := (ident.Z.cast uint256 @@ (ident.Z.add @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint256) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
   Notation "x +₁₂₈ y"
-    := (ident.Z.cast uint128 @@ (ident.Z.add @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint128) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
   Notation "x +₆₄ y"
-    := (ident.Z.cast uint64 @@ (ident.Z.add @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint64) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
   Notation "x +₃₂ y"
-    := (ident.Z.cast uint32 @@ (ident.Z.add @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint32) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
   Notation "x -₁₂₈ y"
-    := (ident.Z.cast uint128 @@ (ident.Z.sub @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint128) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
   Notation "x -₆₄ y"
-    := (ident.Z.cast uint64 @@ (ident.Z.sub @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint64) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
   Notation "x -₃₂ y"
-    := (ident.Z.cast uint32 @@ (ident.Z.sub @@ (x, y)))%expr (at level 50) : expr_scope.
+    := (#(ident.Z_cast uint32) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
   Notation "( out_t )( v >> count )"
-    := ((ident.Z.cast out_t @@ (ident.Z.shiftr count @@ v))%expr)
+    := ((#(ident.Z_cast out_t) @ (#(ident.Z_shiftr count) @ v))%expr)
          (format "( out_t )( v  >>  count )") : expr_scope.
   Notation "( out_t )( v << count )"
-    := ((ident.Z.cast out_t @@ (ident.Z.shiftl count @@ v))%expr)
+    := ((#(ident.Z_cast out_t) @ (#(ident.Z_shiftl count) @ v))%expr)
          (format "( out_t )( v  <<  count )") : expr_scope.
   Notation "( range )( v )"
-    := ((ident.Z.cast range @@ Var v)%expr)
+    := ((#(ident.Z_cast range) @ $v)%expr)
          (format "( range )( v )") : expr_scope.
   Notation "( ( out_t )( v ) & mask )"
-    := ((ident.Z.cast out_t @@ (ident.Z.land mask @@ v))%expr)
+    := ((#(ident.Z_cast out_t) @ (#(ident.Z_land mask) @ v))%expr)
          (format "( ( out_t )( v )  &  mask )")
        : expr_scope.
 
-  Notation "x" := (ident.Z.cast _ @@ Var x)%expr (only printing, at level 9) : expr_scope.
-  Notation "x" := (ident.Z.cast2 _ @@ Var x)%expr (only printing, at level 9) : expr_scope.
-  Notation "v ₁" := (ident.fst @@ Var v)%expr (at level 10, format "v ₁") : expr_scope.
-  Notation "v ₂" := (ident.snd @@ Var v)%expr (at level 10, format "v ₂") : expr_scope.
-  Notation "v ₁" := (ident.Z.cast _ @@ (ident.fst @@ Var v))%expr (at level 10, format "v ₁") : expr_scope.
-  Notation "v ₂" := (ident.Z.cast _ @@ (ident.snd @@ Var v))%expr (at level 10, format "v ₂") : expr_scope.
-  Notation "v ₁" := (ident.Z.cast _ @@ (ident.fst @@ (ident.Z.cast2 _ @@ Var v)))%expr (at level 10, format "v ₁") : expr_scope.
-  Notation "v ₂" := (ident.Z.cast _ @@ (ident.snd @@ (ident.Z.cast2 _ @@ Var v)))%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "x" := (#(ident.Z_cast _) @ $x)%expr (only printing, at level 9) : expr_scope.
+  Notation "x" := (#(ident.Z_cast2 _) @ $x)%expr (only printing, at level 9) : expr_scope.
+  Notation "v ₁" := (#ident.fst @ $v)%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (#ident.snd @ $v)%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "v ₁" := (#(ident.Z_cast _) @ (#ident.fst @ $v))%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (#(ident.Z_cast _) @ (#ident.snd @ $v))%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "v ₁" := (#(ident.Z_cast _) @ (#ident.fst @ (#(ident.Z_cast2 _) @ $v)))%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (#(ident.Z_cast _) @ (#ident.snd @ (#(ident.Z_cast2 _) @ $v)))%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "x" := (#(ident.Literal x%Z))%expr (only printing) : expr_scope.
 
   (*Notation "ls [[ n ]]" := (List.nth_default_concrete _ n @@ ls)%expr : expr_scope.
-  Notation "( range )( v )" := (ident.Z.cast range @@ v)%expr : expr_scope.
+  Notation "( range )( v )" := (ident.Z_cast range @@ v)%expr : expr_scope.
   Notation "x *₁₂₈ y"
-    := (ident.Z.cast uint128 @@ (ident.Z.mul (x, y)))%expr (at level 40) : expr_scope.
+    := (ident.Z_cast uint128 @@ (ident.Z.mul (x, y)))%expr (at level 40) : expr_scope.
   Notation "( out_t )( v >> count )"
-    := (ident.Z.cast out_t (ident.Z.shiftr count @@ v)%expr)
+    := (ident.Z_cast out_t (ident.Z.shiftr count @@ v)%expr)
          (format "( out_t )( v  >>  count )") : expr_scope.
   Notation "( out_t )( v >> count )"
-    := (ident.Z.cast out_t (ident.Z.shiftr count @@ v)%expr)
+    := (ident.Z_cast out_t (ident.Z.shiftr count @@ v)%expr)
          (format "( out_t )( v  >>  count )") : expr_scope.
   Notation "v ₁" := (ident.fst @@ v)%expr (at level 10, format "v ₁") : expr_scope.
   Notation "v ₂" := (ident.snd @@ v)%expr (at level 10, format "v ₂") : expr_scope.*)
@@ -7626,6 +6915,7 @@ Module PrintingNotations.
   (* TODO: come up with a better notation for arithmetic with carries
   that still distinguishes it from arithmetic without carries? *)
   Local Notation "'TwoPow256'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 (only parsing).
+  (*
   Notation "'ADD_256' ( x ,  y )" := (ident.Z.cast2 (uint256, bool)%core @@ (ident.Z.add_get_carry_concrete TwoPow256 @@ (x, y)))%expr : expr_scope.
   Notation "'ADD_128' ( x ,  y )" := (ident.Z.cast2 (uint128, bool)%core @@ (ident.Z.add_get_carry_concrete TwoPow256 @@ (x, y)))%expr : expr_scope.
   Notation "'ADDC_256' ( x ,  y ,  z )" := (ident.Z.cast2 (uint256, bool)%core @@ (ident.Z.add_with_get_carry_concrete TwoPow256 @@ (x, y, z)))%expr : expr_scope.
@@ -7637,6 +6927,7 @@ Module PrintingNotations.
   Notation "'SELC' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.zselect @@ (x, y, z)))%expr : expr_scope.
   Notation "'SELM' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.zselect @@ (Z.cast bool @@ (Z.cc_m_concrete _ @@ x), y, z)))%expr : expr_scope.
   Notation "'SELL' ( x ,  y ,  z )" := (ident.Z.cast uint256 @@ (ident.Z.zselect @@ (Z.cast bool @@ (Z.land 1 @@ x), y, z)))%expr : expr_scope.
+*)
 End PrintingNotations.
 
 (*
@@ -7683,20 +6974,20 @@ Abort.
 *)
 
 Time Compute
-     (Pipeline.BoundsPipeline_full
+     (Pipeline.BoundsPipeline
         true (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (to_associational (weight 51 1) 5) in
               exact r)
-               ZRange.type.option.None ZRange.type.option.None).
+               (Some (List.repeat (@None _) 5), tt)
+               ZRange.type.base.option.None).
 
-(* N.B. When the uncurrying PR lands, we will no longer need to
-   manually uncurry this function example before reification *)
 Time Compute
-     (Pipeline.BoundsPipeline_full
+     (Pipeline.BoundsPipeline
         true (relax_zrange_gen [64; 128])
-        ltac:(let r := Reify (fun '(x, y) => scmul (weight 51 1) 5 x y) in
+        ltac:(let r := Reify (scmul (weight 51 1) 5) in
               exact r)
-               ZRange.type.option.None ZRange.type.option.None).
+               (None, (Some (List.repeat (@None _) 5), tt))
+               ZRange.type.base.option.None).
 
 Module X25519_64.
   Definition n := 5%nat.
@@ -7763,67 +7054,59 @@ Module X25519_64.
   Print base_51_carry_mul.
 (*base_51_carry_mul =
 fun var : type -> Type =>
-(λ x : var
-         (type.list (type.type_primitive type.Z) *
-          type.list (type.type_primitive type.Z))%ctype,
- expr_let x0 := x₁ [[0]] *₁₂₈ x₂ [[0]] +₁₂₈
-                (x₁ [[1]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
-                 (x₁ [[2]] *₁₂₈ (19 * (uint64)(x₂[[3]])) +₁₂₈
-                  (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[2]])) +₁₂₈
-                   x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[1]]))))) in
- expr_let x1 := (uint64)(x0 >> 51) +₁₂₈
-                (x₁ [[0]] *₁₂₈ x₂ [[1]] +₁₂₈
-                 (x₁ [[1]] *₁₂₈ x₂ [[0]] +₁₂₈
-                  (x₁ [[2]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
-                   (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[3]])) +₁₂₈
-                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[2]])))))) in
+(λ x x0 : var (type.base (base.type.list base.type.Z)),
+ expr_let x1 := x [[0]] *₁₂₈ x0 [[0]] +₁₂₈
+                (x [[1]] *₁₂₈ (19 * (uint64)(x0[[4]])) +₁₂₈
+                 (x [[2]] *₁₂₈ (19 * (uint64)(x0[[3]])) +₁₂₈
+                  (x [[3]] *₁₂₈ (19 * (uint64)(x0[[2]])) +₁₂₈
+                   x [[4]] *₁₂₈ (19 * (uint64)(x0[[1]]))))) in
  expr_let x2 := (uint64)(x1 >> 51) +₁₂₈
-                (x₁ [[0]] *₁₂₈ x₂ [[2]] +₁₂₈
-                 (x₁ [[1]] *₁₂₈ x₂ [[1]] +₁₂₈
-                  (x₁ [[2]] *₁₂₈ x₂ [[0]] +₁₂₈
-                   (x₁ [[3]] *₁₂₈ (19 * (uint64)(x₂[[4]])) +₁₂₈
-                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[3]])))))) in
+                (x [[0]] *₁₂₈ x0 [[1]] +₁₂₈
+                 (x [[1]] *₁₂₈ x0 [[0]] +₁₂₈
+                  (x [[2]] *₁₂₈ (19 * (uint64)(x0[[4]])) +₁₂₈
+                   (x [[3]] *₁₂₈ (19 * (uint64)(x0[[3]])) +₁₂₈
+                    x [[4]] *₁₂₈ (19 * (uint64)(x0[[2]])))))) in
  expr_let x3 := (uint64)(x2 >> 51) +₁₂₈
-                (x₁ [[0]] *₁₂₈ x₂ [[3]] +₁₂₈
-                 (x₁ [[1]] *₁₂₈ x₂ [[2]] +₁₂₈
-                  (x₁ [[2]] *₁₂₈ x₂ [[1]] +₁₂₈
-                   (x₁ [[3]] *₁₂₈ x₂ [[0]] +₁₂₈
-                    x₁ [[4]] *₁₂₈ (19 * (uint64)(x₂[[4]])))))) in
+                (x [[0]] *₁₂₈ x0 [[2]] +₁₂₈
+                 (x [[1]] *₁₂₈ x0 [[1]] +₁₂₈
+                  (x [[2]] *₁₂₈ x0 [[0]] +₁₂₈
+                   (x [[3]] *₁₂₈ (19 * (uint64)(x0[[4]])) +₁₂₈
+                    x [[4]] *₁₂₈ (19 * (uint64)(x0[[3]])))))) in
  expr_let x4 := (uint64)(x3 >> 51) +₁₂₈
-                (x₁ [[0]] *₁₂₈ x₂ [[4]] +₁₂₈
-                 (x₁ [[1]] *₁₂₈ x₂ [[3]] +₁₂₈
-                  (x₁ [[2]] *₁₂₈ x₂ [[2]] +₁₂₈
-                   (x₁ [[3]] *₁₂₈ x₂ [[1]] +₁₂₈ x₁ [[4]] *₁₂₈ x₂ [[0]])))) in
- expr_let x5 := ((uint64)(x0) & 2251799813685247) +₆₄ 19 *₆₄ (uint64)(x4 >> 51) in
- expr_let x6 := (uint64)(x5 >> 51) +₆₄ ((uint64)(x1) & 2251799813685247) in
- ((uint64)(x5) & 2251799813685247)
- :: ((uint64)(x6) & 2251799813685247)
-    :: (uint64)(x6 >> 51) +₆₄ ((uint64)(x2) & 2251799813685247)
-       :: ((uint64)(x3) & 2251799813685247)
-          :: ((uint64)(x4) & 2251799813685247) :: [])%expr
+                (x [[0]] *₁₂₈ x0 [[3]] +₁₂₈
+                 (x [[1]] *₁₂₈ x0 [[2]] +₁₂₈
+                  (x [[2]] *₁₂₈ x0 [[1]] +₁₂₈
+                   (x [[3]] *₁₂₈ x0 [[0]] +₁₂₈
+                    x [[4]] *₁₂₈ (19 * (uint64)(x0[[4]])))))) in
+ expr_let x5 := (uint64)(x4 >> 51) +₁₂₈
+                (x [[0]] *₁₂₈ x0 [[4]] +₁₂₈
+                 (x [[1]] *₁₂₈ x0 [[3]] +₁₂₈
+                  (x [[2]] *₁₂₈ x0 [[2]] +₁₂₈
+                   (x [[3]] *₁₂₈ x0 [[1]] +₁₂₈ x [[4]] *₁₂₈ x0 [[0]])))) in
+ expr_let x6 := ((uint64)(x1) & 2251799813685247) +₆₄ 19 *₆₄ (uint64)(x5 >> 51) in
+ expr_let x7 := (uint64)(x6 >> 51) +₆₄ ((uint64)(x2) & 2251799813685247) in
+ [((uint64)(x6) & 2251799813685247); ((uint64)(x7) & 2251799813685247);
+ (uint64)(x7 >> 51) +₆₄ ((uint64)(x3) & 2251799813685247);
+ ((uint64)(x4) & 2251799813685247); ((uint64)(x5) & 2251799813685247)])%expr
      : Expr
-         (type.uncurry
-            (type.list (type.type_primitive type.Z) ->
-             type.list (type.type_primitive type.Z) ->
-             type.list (type.type_primitive type.Z)))
+         (type.base (base.type.list base.type.Z) ->
+          type.base (base.type.list base.type.Z) ->
+          type.base (base.type.list base.type.Z))%ptype
 *)
   Print base_51_sub.
   (*
 base_51_sub =
 fun var : type -> Type =>
-(λ x : var
-         (type.list (type.type_primitive type.Z) *
-          type.list (type.type_primitive type.Z))%ctype,
- (4503599627370458 + (uint64)(x₁[[0]])) -₆₄ x₂ [[0]]
- :: (4503599627370494 + (uint64)(x₁[[1]])) -₆₄ x₂ [[1]]
-    :: (4503599627370494 + (uint64)(x₁[[2]])) -₆₄ x₂ [[2]]
-       :: (4503599627370494 + (uint64)(x₁[[3]])) -₆₄ x₂ [[3]]
-          :: (4503599627370494 + (uint64)(x₁[[4]])) -₆₄ x₂ [[4]] :: [])%expr
+(λ x x0 : var (type.base (base.type.list base.type.Z)),
+ [(4503599627370458 +₆₄ (uint64)(x[[0]])) -₆₄ (uint64)(x0[[0]]);
+ (4503599627370494 +₆₄ (uint64)(x[[1]])) -₆₄ (uint64)(x0[[1]]);
+ (4503599627370494 +₆₄ (uint64)(x[[2]])) -₆₄ (uint64)(x0[[2]]);
+ (4503599627370494 +₆₄ (uint64)(x[[3]])) -₆₄ (uint64)(x0[[3]]);
+ (4503599627370494 +₆₄ (uint64)(x[[4]])) -₆₄ (uint64)(x0[[4]])])%expr
      : Expr
-         (type.uncurry
-            (type.list (type.type_primitive type.Z) ->
-             type.list (type.type_primitive type.Z) ->
-             type.list (type.type_primitive type.Z)))
+         (type.base (base.type.list base.type.Z) ->
+          type.base (base.type.list base.type.Z) ->
+          type.base (base.type.list base.type.Z))%ptype
 *)
 End X25519_64.
 
@@ -11210,11 +10493,11 @@ Module BarrettReduction.
          SuchThat (forall (k M muLow : Z)
                           (n nout: nat)
                           (xLow xHigh : Z),
-                      Interp (t:=type.reify_type_of barrett_reduce)
+                      Interp (t:=reify_type_of barrett_reduce)
                              barrett_red_gen k M muLow n nout xLow xHigh
                       = barrett_reduce k M muLow n nout xLow xHigh)
          As barrett_red_gen_correct.
-  Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
+  Proof. Time cache_reify (). Time Qed.
   (* TODO : reification here is still quite slow (~90s on a beefy machine). Possibly just due to size of term, but warrants further investigation. *)
   Module Export ReifyHints.
     Global Hint Extern 1 (_ = barrett_reduce _ _ _ _ _ _ _) => simple apply barrett_red_gen_correct : reify_gen_cache.
@@ -11268,7 +10551,7 @@ Module BarrettReduction.
                         else res.
 
     Notation BoundsPipeline_correct in_bounds out_bounds op
-      := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
                false (* subst01 *)
                relax_zrange
@@ -11283,7 +10566,7 @@ Module BarrettReduction.
 
     Definition rbarrett_red_correct
       := BoundsPipeline_correct
-           (bound, bound)
+           (bound, (bound, tt))
            bound
            (barrett_reduce machine_wordsize M muLow 2 2).
 
@@ -11773,11 +11056,11 @@ Module SaturatedSolinas.
   Derive mulmod_gen
          SuchThat (forall (log2base s : Z) (c : list (Z * Z)) (n nreductions : nat)
                           (f g : list Z),
-                      Interp (t:=type.reify_type_of mulmod')
+                      Interp (t:=reify_type_of mulmod')
                              mulmod_gen s c log2base n nreductions f g
                       = mulmod' s c log2base n nreductions f g)
          As mulmod_gen_correct.
-  Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
+  Proof. Time cache_reify (). Time Qed.
   Module Export ReifyHints.
     Global Hint Extern 1 (_ = mulmod' _ _ _ _ _ _ _) => simple apply mulmod_gen_correct : reify_gen_cache.
   End ReifyHints.
@@ -11823,7 +11106,7 @@ Module SaturatedSolinas.
           rop%Expr in_bounds out_bounds).
 
   Notation BoundsPipeline_correct in_bounds out_bounds op
-    := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
+    := (fun rv (rop : Expr (reify_type_of op)) Hrop
         => @Pipeline.BoundsPipeline_correct_trans
              (*false*) true
              relax_zrange
@@ -12233,11 +11516,11 @@ Module MontgomeryReduction.
                           (Zlog2R : Z)
                           (n nout: nat)
                           (lo_hi : Z * Z),
-                      Interp (t:=type.reify_type_of montred')
+                      Interp (t:=reify_type_of montred')
                              montred_gen N R N' Zlog2R n nout lo_hi
                       = montred' N R N' Zlog2R n nout lo_hi)
          As montred_gen_correct.
-  Proof. Time cache_reify (). exact admit. (* correctness of initial parts of the pipeline *) Time Qed.
+  Proof. Time cache_reify (). Time Qed.
   Module Export ReifyHints.
     Global Hint Extern 1 (_ = montred' _ _ _ _ _ _ _) => simple apply montred_gen_correct : reify_gen_cache.
   End ReifyHints.
@@ -12259,7 +11542,7 @@ Module MontgomeryReduction.
       := res. (* TODO: this should actually check stuff that corresponds with preconditions of montred'_correct *)
 
     Notation BoundsPipeline_correct in_bounds out_bounds op
-      := (fun rv (rop : Expr (type.reify_type_of op)) Hrop
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
                false (* subst01 *)
                relax_zrange
