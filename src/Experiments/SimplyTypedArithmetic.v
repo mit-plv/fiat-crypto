@@ -1430,7 +1430,6 @@ Module Rows.
       Hint Resolve length_sum_rows.
       Hint Rewrite sum_rows_mod using (auto; solve [distr_length; auto]) : push_eval.
 
-
       Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=
         fold_right (fun next_row (state : list Z * Z)=>
                       let out_carry := sum_rows next_row (fst state) in
@@ -7482,7 +7481,6 @@ Module PrintingNotations.
   Notation "v ₁" := (ident.Z.cast _ @@ (ident.fst @@ (ident.Z.cast2 _ @@ Var v)))%expr (at level 10, format "v ₁") : expr_scope.
   Notation "v ₂" := (ident.Z.cast _ @@ (ident.snd @@ (ident.Z.cast2 _ @@ Var v)))%expr (at level 10, format "v ₂") : expr_scope.
 
-
   (*Notation "ls [[ n ]]" := (List.nth_default_concrete _ n @@ ls)%expr : expr_scope.
   Notation "( range )( v )" := (ident.Z.cast range @@ v)%expr : expr_scope.
   Notation "x *₁₂₈ y"
@@ -8171,7 +8169,7 @@ Module Straightline.
         | CC_m n x => Z.cc_m n (interp_scalar x)
         | Primitive _ x => x
         end.
-      
+
       Fixpoint interp {t} (e : @expr type.interp ident t) : type.interp t :=
         match e with
         | Scalar _ s => interp_scalar s
@@ -8316,7 +8314,7 @@ Module Straightline.
                | _ => progress break_match;
                       match goal with | H: Some _ = Some _ |- _ => inversion H; progress subst end
                end.
-      
+
       Lemma of_uncurried_correct dummy_arrow fuel dummy_var :
         forall {t} (e : uexpr t),
         (depth _ dummy_var e <= fuel)%nat ->
@@ -8383,7 +8381,7 @@ Module Straightline.
         Admitted.
     End proofs.
   End expr.
-  
+
   Definition of_Expr {s d} (e : Expr (s->d)) (var : type -> Type) (x:var s) dummy_arrow: expr.expr d
     :=
       match invert_Abs (e var) with
@@ -8678,7 +8676,7 @@ Module PreFancy.
       Fixpoint of_straightline {t} (e : @expr var ident.ident t)
         : @expr var ident t :=
         match e with
-        | Scalar _ s => Scalar s 
+        | Scalar _ s => Scalar s
         | LetInAppIdentZ _ t r idc x f =>
           of_straightline_ident idc t r x (fun y => of_straightline (f y))
         | LetInAppIdentZZ _ t r idc x f =>
@@ -8738,7 +8736,7 @@ Module PreFancy.
           fun x => (get_range_var a (fst x), get_range_var b (snd x))
         | _ => fun _ => tt
         end.
-      
+
       Fixpoint get_range {t} (x : @scalar type.interp t) : range_type t :=
         match x with
         | Var t v => get_range_var t v
@@ -8842,7 +8840,7 @@ Module PreFancy.
             in_word_range (snd (get_range x)) ->
             ok_ident _
                      (type.prod type.Z type.Z)
-                     x 
+                     x
                      (word_range, flag_range)
                      (ident.Z.sub_get_borrow_concrete wordmax)
      (* | ok_land :
@@ -8873,7 +8871,7 @@ Module PreFancy.
             in_flag_range (snd (get_range x)) ->
             in_word_range (get_range y) ->
             in_word_range (get_range z) ->
-            ok_ident _ 
+            ok_ident _
                      type.Z
                      (Pair (Pair (Cast flag_range (Snd x)) y) z)
                      word_range
@@ -8883,7 +8881,7 @@ Module PreFancy.
             in_word_range (get_range x) ->
             in_word_range (get_range y) ->
             in_word_range (get_range z) ->
-            ok_ident _ 
+            ok_ident _
                      type.Z
                      (Pair (Pair (Cast flag_range (CC_m wordmax x)) y) z)
                      word_range
@@ -8893,7 +8891,7 @@ Module PreFancy.
             in_word_range (get_range x) ->
             in_word_range (get_range y) ->
             in_word_range (get_range z) ->
-            ok_ident _ 
+            ok_ident _
                      type.Z
                      (Pair (Pair (Cast flag_range (Land 1 x)) y) z)
                      word_range
@@ -8906,7 +8904,7 @@ Module PreFancy.
             upper (fst (fst (get_range x))) + upper (snd (fst (get_range x))) - lower (snd (get_range x)) < wordmax ->
             ok_ident _
                      type.Z
-                     x 
+                     x
                      word_range
                      ident.Z.add_modulo
       | ok_mul :
@@ -8918,52 +8916,6 @@ Module PreFancy.
                      (Pair x y)
                      word_range
                      ident.Z.mul
-                     (*
-      | ok_mulll :
-          forall x y : scalar type.Z,
-            in_word_range (get_range x) ->
-            in_word_range (get_range y) ->
-            ok_ident (type.prod type.Z type.Z)
-                     type.Z
-                     (Pair
-                        (Cast half_word_range (Land (wordmax_half_bits - 1) x))
-                        (Cast half_word_range (Land (wordmax_half_bits - 1) y)))
-                     word_range
-                     ident.Z.mul
-      | ok_mullh :
-          forall x y : scalar type.Z,
-            in_word_range (get_range x) ->
-            in_word_range (get_range y) ->
-            ok_ident (type.prod type.Z type.Z)
-                     type.Z
-                     (Pair
-                        (Cast half_word_range (Land (wordmax_half_bits - 1) x))
-                        (Cast half_word_range (Shiftr half_bits y)))
-                     word_range
-                     ident.Z.mul
-      | ok_mulhl :
-          forall x y : scalar type.Z,
-            in_word_range (get_range x) ->
-            in_word_range (get_range y) ->
-            ok_ident (type.prod type.Z type.Z)
-                     type.Z
-                     (Pair
-                        (Cast half_word_range (Shiftr half_bits x))
-                        (Cast half_word_range (Land (wordmax_half_bits - 1) y)))
-                     word_range
-                     ident.Z.mul
-      | ok_mulhh :
-          forall x y : scalar type.Z,
-            in_word_range (get_range x) ->
-            in_word_range (get_range y) ->
-            ok_ident (type.prod type.Z type.Z)
-                     type.Z
-                     (Pair
-                        (Cast half_word_range (Shiftr half_bits x))
-                        (Cast half_word_range (Shiftr half_bits y)))
-                     word_range
-                     ident.Z.mul
-*)
       .
 
       Inductive ok_expr : forall {t}, @expr type.interp ident.ident t -> Prop :=
@@ -9226,7 +9178,7 @@ Module PreFancy.
         Qed.
 
         Lemma constant_to_scalar_single_cases x y z :
-          @constant_to_scalar_single type.interp x z = Some y -> 
+          @constant_to_scalar_single type.interp x z = Some y ->
           (y = Cast half_word_range (Land (wordmax_half_bits - 1) (Primitive (t:=type.Z) x)))
           \/ (y = Cast half_word_range (Shiftr half_bits (Primitive (t:=type.Z) x))).
         Proof.
@@ -10745,7 +10697,6 @@ Module Montgomery256.
          As montred256_correct.
   Proof. Time solve_rmontred machine_wordsize. Time Qed.
 
-
   Lemma montred'_correct_specialized R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
@@ -10830,7 +10781,7 @@ Module Montgomery256.
     intros. rewrite montred256_prefancy_eq; cbv [montred256_prefancy'].
     erewrite PreFancy.of_Expr_correct.
     { apply montred256_correct_full; assumption. }
-    { reflexivity. } 
+    { reflexivity. }
     { lazy; reflexivity. }
     { lazy; reflexivity. }
     { repeat constructor. }
@@ -10875,7 +10826,6 @@ montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z *
     ADDM (x22₁, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951))%expr
      : Expr (type.uncurry (type.type_primitive type.Z * type.type_primitive type.Z -> type.type_primitive type.Z))
 *)
-
 
   Import PreFancy.
   Import PreFancy.Notations.
