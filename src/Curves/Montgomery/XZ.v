@@ -124,7 +124,7 @@ Module M.
             let (x2, x3) := cswap swap x2 x3 in
             let (z2, z3) := cswap swap z2 z3 in
             dlet swap := b in
-            let '((x2, z2), (x3, z3)) := xzladderstep x1 (x2, z2) (x3, z3) in
+            let '((x2, z2), (x3, z3)) := xzladderstep x1 (x2, z2) (x3, z3) return _ in
             let i := BinInt.Z.pred i in (* the third "increment" component of a for loop; either between the test and body or just inlined into the body like here *)
             (x2, z2, x3, z3, swap, i)) (* the "return value" of the body is always the exact same variable names as in the beginning of the body because we shadow the original binders, but I think for now this will be unavoidable boilerplate. *)
           (BinInt.Z.to_nat scalarbits) (* bound on number of loop iterations, should come between test and body *)
