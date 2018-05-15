@@ -15,6 +15,7 @@ INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime coqprime-all \
+	nobigmem print-nobigmem \
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite lite-display print-lite-display \
 	curves-proofs no-curves-proofs no-curves-proofs-non-specific \
@@ -43,7 +44,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite print-lite-display lite-display,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite print-lite-display lite-display nobigmem print-nobigmem,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -77,6 +78,9 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Specific/NISTP256/AMD128/fe%.vo \
 	src/Specific/X25519/C64/ladderstep.vo \
 	src/Specific/X25519/C32/fe%.vo \
+	$(SPECIFIC_GENERATED_VOFILES)
+NOBIGMEM_UNMADE_VOFILES := \
+	src/Curves/Weierstrass/Projective.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/Weierstrass/Jacobian.vo src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
@@ -112,6 +116,10 @@ LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse
 LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 LITE_DISPLAY_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(DISPLAY_VO))
 endif
+ifneq ($(filter nobigmem print-nobibmem,$(MAKECMDGOALS),)
+NOBIGMEM_ALL_UNMADE_VOFILES := $(foreach vo,$(NOBIGMEM_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+NOBIGMEM_VOFILES := $(filter-out $(NOBIGMEM_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
 ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
 HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
 endif
@@ -135,6 +143,7 @@ non-specific: $(NON_SPECIFIC_VO) coqprime
 coq: $(COQ_VOFILES) coqprime
 lite: $(LITE_VOFILES) coqprime
 lite-display: $(LITE_DISPLAY_VOFILES:.vo=.log) coqprime
+nobigmem: $(NOBIGMEM_VOFILES) coqprime
 only-heavy: $(HEAVY_VOFILES) coqprime
 curves-proofs: $(CURVES_PROOFS_VOFILES) coqprime
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES) coqprime
@@ -194,6 +203,14 @@ print-lite-display::
 	@echo
 	@echo 'Files Not Made:'
 	@for i in $(sort $(LITE_ALL_UNMADE_VOFILES)); do echo $$i; done
+
+print-nobigmem::
+	@echo 'Files Made:'
+	@for i in $(sort $(NOBIGMEM_VOFILES)); do echo $$i; done
+	@echo
+	@echo
+	@echo 'Files Not Made:'
+	@for i in $(sort $(NOBIGMEM_ALL_UNMADE_VOFILES)); do echo $$i; done
 
 COQPRIME_FOLDER := coqprime
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
