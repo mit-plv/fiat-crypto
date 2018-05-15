@@ -116,7 +116,7 @@ LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse
 LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 LITE_DISPLAY_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(DISPLAY_VO))
 endif
-ifneq ($(filter nobigmem print-nobibmem,$(MAKECMDGOALS),)
+ifneq ($(filter nobigmem print-nobigmem,$(MAKECMDGOALS)),)
 NOBIGMEM_ALL_UNMADE_VOFILES := $(foreach vo,$(NOBIGMEM_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 NOBIGMEM_VOFILES := $(filter-out $(NOBIGMEM_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
