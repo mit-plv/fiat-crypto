@@ -80,6 +80,8 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Specific/X25519/C32/fe%.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 NOBIGMEM_UNMADE_VOFILES := \
+	src/Curves/Weierstrass/AffineProofs.vo \
+	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
