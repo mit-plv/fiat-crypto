@@ -117,6 +117,15 @@ Module Associational.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
   Hint Rewrite eval_reduce : push_eval.
 
+  Definition bind_snd (p : list (Z*Z)) :=
+    map (fun t => dlet_nd t2 := snd t in (fst t, t2)) p.
+
+  Lemma bind_snd_correct p : bind_snd p = p.
+  Proof.
+    cbv [bind_snd]; induction p as [| [? ?] ];
+      push; [|rewrite IHp]; reflexivity.
+  Qed.
+
   Section Carries.
     Definition carryterm (w fw:Z) (t:Z * Z) :=
       if (Z.eqb (fst t) w)
@@ -1754,7 +1763,7 @@ Module BaseConversion.
     (* carry at specified indices in dw, then use Rows.flatten to convert to Positional with sw *)
     Definition from_associational idxs n (p : list (Z * Z)) : list Z :=
       (* important not to use Positional.carry here; we don't want to accumulate yet *)
-      let p' := fold_right (fun i acc => Associational.carry (dw i) (dw (S i) / dw i) acc) p (rev idxs) in
+      let p' := fold_right (fun i acc => Associational.carry (dw i) (dw (S i) / dw i) acc) (Associational.bind_snd p) (rev idxs) in
       fst (Rows.flatten sw n (Rows.from_associational sw n p')).
 
     Lemma eval_carries p idxs :
@@ -1775,6 +1784,7 @@ Module BaseConversion.
     Proof.
       cbv [from_associational]; intros.
       rewrite Rows.flatten_mod by eauto using Rows.length_from_associational.
+      rewrite Associational.bind_snd_correct.
       push_eval.
     Qed.
     Hint Rewrite eval_from_associational using solve [push_eval; distr_length] : push_eval.
@@ -1785,6 +1795,7 @@ Module BaseConversion.
     Proof.
       intros; cbv [from_associational].
       rewrite Rows.flatten_partitions with (n:=n) by (eauto using Rows.length_from_associational; omega).
+      rewrite Associational.bind_snd_correct.
       push_eval.
     Qed.
 
@@ -1793,19 +1804,39 @@ Module BaseConversion.
     Proof.
       intros. cbv [from_associational].
       rewrite Rows.flatten_partitions' with (n:=n) by eauto using Rows.length_from_associational.
+      rewrite Associational.bind_snd_correct.
       push_eval.
     Qed.
 
-    (* bind the input, but *not* the carrying operations *)
     Derive from_associational_inlined
-           SuchThat (forall n idxs p,
-                        from_associational_inlined n idxs p = from_associational n idxs p)
+           SuchThat (forall idxs n p,
+                        from_associational_inlined idxs n p = from_associational idxs n p)
            As from_associational_inlined_correct.
     Proof.
       intros.
       cbv beta iota delta [from_associational Associational.carry Associational.carryterm].
-      unfold Let_In at 2 3.
+      cbv beta iota delta [Let_In]. (* inlines all shifts/lands from carryterm *)
+      cbv beta iota delta [from_associational Rows.from_associational Columns.from_associational].
+      cbv beta iota delta [Let_In]. (* inlines the shifts from place *)
       subst from_associational_inlined; reflexivity.
+    Qed.
+
+    Derive to_associational_inlined
+           SuchThat (forall n m p,
+                        to_associational_inlined n m p = to_associational n m p)
+           As to_associational_inlined_correct.
+    Proof.
+      intros.
+      cbv beta iota delta [ to_associational convert_bases
+                                             Positional.to_associational
+                                             Positional.from_associational
+                                             chained_carries_no_reduce
+                                             carry
+                                             Associational.carry
+                                             Associational.carryterm
+                          ].
+      cbv beta iota delta [Let_In].
+      subst to_associational_inlined; reflexivity.
     Qed.
 
     (* carry chain that aligns terms in the intermediate weight with the final weight *)
@@ -1870,6 +1901,9 @@ Module BaseConversion.
       Z.rewrite_mod_small. reflexivity.
     Qed.
 
+    (* For some reason, this is a universe inconsistency if not factored out *)
+    Lemma nout_nonzero : nout <> 0%nat. Proof. omega. Qed.
+
     Derive widemul_inlined
            SuchThat (forall a b,
                         0 <= a * b < 2^log2base * 2^log2base ->
@@ -1878,12 +1912,10 @@ Module BaseConversion.
     Proof.
       intros.
       rewrite <-widemul_correct by auto.
-      cbv beta iota delta [widemul mul_converted to_associational convert_bases
-                                   chained_carries_no_reduce carry
-                                   Associational.carry Associational.carryterm
-                                   Positional.from_associational].
-      cbv beta iota delta [Let_In].
-      rewrite <-from_associational_inlined_correct.
+      cbv beta iota delta [widemul mul_converted].
+      rewrite <-to_associational_inlined_correct with (p:=[a]).
+      rewrite <-to_associational_inlined_correct with (p:=[b]).
+      rewrite <-from_associational_inlined_correct by (apply nout_nonzero || assumption).
       subst widemul_inlined; reflexivity.
     Qed.
   End widemul.
@@ -10055,43 +10087,50 @@ Module Barrett256.
      This is why their results are not cast (because the carry has range [-1~>0]). *)
   (*
 barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
-                 expr_let x0 := SELM (x₂, 0, 26959946667150639793205513449348445388433292963828203772348655992835) in
-                 expr_let x1 := RSHI (0, x₂, 255) in
-                 expr_let x2 := RSHI (x₂, x₁, 255) in
-                 expr_let x3 := 79228162514264337589248983038 *₂₅₆ ((uint128)(x2) & 340282366920938463463374607431768211455) in
-                 expr_let x4 := 340282366841710300930663525764514709507 *₂₅₆ (uint128)(x2 >> 128) in
-                 expr_let x5 := 79228162514264337589248983038 *₂₅₆ (uint128)(x2 >> 128) in
-                 expr_let x6 := (uint256)(((uint128)(x3) & 340282366920938463463374607431768211455) << 128) in
-                 expr_let x7 := (uint128)(x3 >> 128) in
-                 expr_let x8 := (uint256)(((uint128)(x4) & 340282366920938463463374607431768211455) << 128) in
-                 expr_let x9 := (uint128)(x4 >> 128) in
-                 expr_let x10 := 340282366841710300930663525764514709507 *₂₅₆ ((uint128)(x2) & 340282366920938463463374607431768211455) in
-                 expr_let x11 := ADD_256 (x8, x10) in
-                 expr_let x12 := ADDC_128 (x11₂, x7, x9) in
-                 expr_let x13 := ADD_256 (x6, x11₁) in
-                 expr_let x14 := ADDC_256 (x13₂, x5, x12₁) in
-                 expr_let x15 := ADD_256 (x2, x14₁) in
-                 expr_let x16 := ADDC_128 (x15₂, 0, x1) in
-                 expr_let x17 := ADD_256 (x0, x15₁) in
-                 expr_let x18 := ADDC_128 (x17₂, 0, x16₁) in
-                 expr_let x19 := RSHI (x18₁, x17₁, 1) in
-                 expr_let x20 := 79228162514264337593543950335 *₂₅₆ (uint128)(x19 >> 128) in
-                 expr_let x21 := 340282366841710300967557013911933812736 *₂₅₆ ((uint128)(x19) & 340282366920938463463374607431768211455) in
-                 expr_let x22 := 340282366841710300967557013911933812736 *₂₅₆ (uint128)(x19 >> 128) in
-                 expr_let x23 := (uint256)(((uint128)(x20) & 340282366920938463463374607431768211455) << 128) in
-                 expr_let x24 := (uint128)(x20 >> 128) in
-                 expr_let x25 := (uint256)(((uint128)(x21) & 340282366920938463463374607431768211455) << 128) in
-                 expr_let x26 := (uint128)(x21 >> 128) in
-                 expr_let x27 := 79228162514264337593543950335 *₂₅₆ ((uint128)(x19) & 340282366920938463463374607431768211455) in
-                 expr_let x28 := ADD_256 (x25, x27) in
-                 expr_let x29 := ADDC_256 (x28₂, x24, x26) in
-                 expr_let x30 := ADD_256 (x23, x28₁) in
-                 expr_let x31 := ADDC_256 (x30₂, x22, x29₁) in
-                 expr_let x32 := Z.add_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (Z.opp @@ (fst @@ x30), x₁) in
-                 expr_let x33 := Z.add_with_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@ (x32₂, Z.opp @@ (fst @@ x31), x₂) in
-                 expr_let x34 := SELL (x33₁, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
-                 expr_let x35 := Z.cast uint256 @@ (fst @@ SUB_256 (x32₁, x34)) in
-                 ADDM (x35, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951)
+                expr_let x0 := SELM (x₂, 0,
+                            26959946667150639793205513449348445388433292963828203772348655992835) in
+                expr_let x1 := RSHI (0, x₂, 255) in
+                expr_let x2 := RSHI (x₂, x₁, 255) in
+                expr_let x3 := 79228162514264337589248983038 *₂₅₆ (uint128)(x2 >> 128) in
+                expr_let x4 := 79228162514264337589248983038 *₂₅₆
+                            ((uint128)(x2) & 340282366920938463463374607431768211455) in
+                expr_let x5 := 340282366841710300930663525764514709507 *₂₅₆ (uint128)(x2 >> 128) in
+                expr_let x6 := 340282366841710300930663525764514709507 *₂₅₆
+                            ((uint128)(x2) & 340282366920938463463374607431768211455) in
+                expr_let x7 := ADD_256 ((uint256)(((uint128)(x5) & 340282366920938463463374607431768211455) << 128),
+                            x6) in
+                expr_let x8 := ADDC_128 (x7₂, (uint128)(x4 >> 128), (uint128)(x5 >> 128)) in
+                expr_let x9 := ADD_256 ((uint256)(((uint128)(x4) & 340282366920938463463374607431768211455) << 128),
+                            x7₁) in
+                expr_let x10 := ADDC_256 (x9₂, x3, x8₁) in
+                expr_let x11 := ADD_256 (x2, x10₁) in
+                expr_let x12 := ADDC_128 (x11₂, 0, x1) in
+                expr_let x13 := ADD_256 (x0, x11₁) in
+                expr_let x14 := ADDC_128 (x13₂, 0, x12₁) in
+                expr_let x15 := RSHI (x14₁, x13₁, 1) in
+                expr_let x16 := 340282366841710300967557013911933812736 *₂₅₆ (uint128)(x15 >> 128) in
+                expr_let x17 := 79228162514264337593543950335 *₂₅₆ (uint128)(x15 >> 128) in
+                expr_let x18 := 340282366841710300967557013911933812736 *₂₅₆
+                                ((uint128)(x15) & 340282366920938463463374607431768211455) in
+                expr_let x19 := 79228162514264337593543950335 *₂₅₆
+                                ((uint128)(x15) & 340282366920938463463374607431768211455) in
+                expr_let x20 := ADD_256 ((uint256)(((uint128)(x18) & 340282366920938463463374607431768211455) << 128),
+                                x19) in
+                expr_let x21 := ADDC_256 (x20₂, (uint128)(x17 >> 128), (uint128)(x18 >> 128)) in
+                expr_let x22 := ADD_256 ((uint256)(((uint128)(x17) & 340282366920938463463374607431768211455) << 128),
+                                x20₁) in
+                expr_let x23 := ADDC_256 (x22₂, x16, x21₁) in
+                expr_let x24 := Z.add_get_carry_concrete
+                                115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                                (Z.opp @@ (fst @@ x22), x₁) in
+                expr_let x25 := Z.add_with_get_carry_concrete
+                                115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                                (x24₂, Z.opp @@ (fst @@ x23), x₂) in
+                expr_let x26 := SELL (x25₁, 0,
+                                115792089210356248762697446949407573530086143415290314195533631308867097853951) in
+                expr_let x27 := Z.cast uint256 @@ (fst @@ SUB_256 (x24₁, x26)) in
+                ADDM (x27, 0,
+                115792089210356248762697446949407573530086143415290314195533631308867097853951)
      : Expr (type.uncurry (type.type_primitive type.Z -> type.type_primitive type.Z -> type.type_primitive type.Z))
   *)
 
@@ -10104,42 +10143,39 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
   Local Notation "'RegMod'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
   Local Notation "'RegMuLow'" := (Straightline.expr.Primitive (t:=type.Z) 26959946667150639793205513449348445388433292963828203772348655992835).
   Print barrett_red256_prefancy.
-  (* TODO : make prefancy cast uint128s to uint256s *)
   (* Note : currently (correctly) fails to convert the adds that should be subs *)
   (*
     selm@(y, $x₂, RegZero, RegMuLow);
     rshi@(y0, RegZero, $x₂,255);
     rshi@(y1, $x₂, $x₁,255);
-    mulhl@(y2, RegMuLow, $y1);
-    mullh@(y3, RegMuLow, $y1);
-    mulhh@(y4, RegMuLow, $y1);
-    shiftL@(y5, $y2, 128);
-    shiftR@(y6, $y2, 128);
-    shiftL@(y7, $y3, 128);
-    shiftR@(y8, $y3, 128);
-    mulll@(y9, RegMuLow, $y1);
-    add@(y10, $y7, $y9);
-    addc@(y11, carry{$y10}, $y6, $y8);
-    add@(y12, $y5, $y10);
-    addc@(y13, carry{$y12}, $y4, $y11);
-    add@(y14, $y1, $y13);
-    addc@(y15, carry{$y14}, RegZero, $y0);
-    add@(y16, $y, $y14);
-    addc@(y17, carry{$y16}, RegZero, $y15);
-    rshi@(y18, $y17, $y16,1);
-    mullh@(y19, RegMod, $y18);
-    mulhl@(y20, RegMod, $y18);
-    mulhh@(y21, RegMod, $y18);
-    shiftL@(y22, $y19, 128);
-    shiftR@(y23, $y19, 128);
-    shiftL@(y24, $y20, 128);
-    shiftR@(y25, $y20, 128);
-    mulll@(y26, RegMod, $y18);
-    add@(y27, $y24, $y26);
-    addc@(y28, carry{$y27}, $y23, $y25);
-    add@(y29, $y22, $y27);
-    addc@(_, carry{$y29}, $y21, $y28);
-    Straightline.expr.Scalar (Straightline.expr.Primitive (-1))
+    mulhh@(y2, RegMuLow, $y1);
+    mulhl@(y3, RegMuLow, $y1);
+    mullh@(y4, RegMuLow, $y1);
+    mulll@(y5, RegMuLow, $y1);
+    add@(y6, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y4})), $y5);
+    addc@(y7, carry{$y6}, Straightline.expr.Cast uint128
+                            (Straightline.expr.Shiftr 128 ($y3)), 
+    Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y4)));
+    add@(y8, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y3})), $y6);
+    addc@(y9, carry{$y8}, $y2, $y7);
+    add@(y10, $y1, $y9);
+    addc@(y11, carry{$y10}, RegZero, $y0);
+    add@(y12, $y, $y10);
+    addc@(y13, carry{$y12}, RegZero, $y11);
+    rshi@(y14, $y13, $y12,1);
+    mulhh@(y15, RegMod, $y14);
+    mullh@(y16, RegMod, $y14);
+    mulhl@(y17, RegMod, $y14);
+    mulll@(y18, RegMod, $y14);
+    add@(y19, Straightline.expr.Cast uint256
+                (Straightline.expr.Shiftl 128 (Lower{$y17})), $y18);
+    addc@(y20, carry{$y19}, Straightline.expr.Cast uint128
+                            (Straightline.expr.Shiftr 128 ($y16)), 
+    Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y17)));
+    add@(y21, Straightline.expr.Cast uint256
+                (Straightline.expr.Shiftl 128 (Lower{$y16})), $y19);
+    addc@(_, carry{$y21}, $y15, $y20);
+    Straightline.expr.Scalar (Straightline.expr.Primitive (-1)) 
   *)
 End Barrett256.
 
@@ -10592,7 +10628,7 @@ Module MontgomeryReduction.
       assert (0 <= T mod R * N' < w 2) by (solve_range).
 
       rewrite !BaseConversion.widemul_inlined_correct
-        by (rewrite ?BaseConversion.widemul_correct; autorewrite with push_nth_default; solve_range).
+        by (rewrite ?BaseConversion.widemul_inlined_correct; autorewrite with push_nth_default; solve_range).
       rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; omega).
       rewrite R_two_pow.
       cbv [Rows.partition seq]. rewrite !eval2.
@@ -10697,6 +10733,13 @@ Module Montgomery256.
          As montred256_correct.
   Proof. Time solve_rmontred machine_wordsize. Time Qed.
 
+  Definition montred256_prefancy' := PreFancy.of_Expr machine_wordsize [N;N'] montred256.
+
+  Derive montred256_prefancy
+         SuchThat (montred256_prefancy = montred256_prefancy' type.interp)
+         As montred256_prefancy_eq.
+  Proof. lazy - [type.interp]; reflexivity. Qed.
+
   Lemma montred'_correct_specialized R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
@@ -10718,8 +10761,16 @@ Module Montgomery256.
         (t:=type.prod type.Z type.Z)
         (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
         xy = true ->
-       expr.Interp (@ident.interp) montred256 xy = MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2 xy.
+       expr.Interp (@ident.interp) montred256 xy = app_curried (t:=type.arrow (type.prod type.Z type.Z) type.Z) (MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2) xy.
   Proof. intros; destruct (montred256_correct xy); assumption. Qed.
+  Lemma montred256_correct_proj2' :
+    forall xy : type.interp (type.prod type.Z type.Z),
+      ZRange.type.option.is_bounded_by
+        (t:=type.prod type.Z type.Z)
+        (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
+        xy = true ->
+       expr.Interp (@ident.interp) montred256 xy = MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2 xy.
+  Proof. intros; rewrite montred256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
 
   Lemma montred256_correct_full  R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
@@ -10728,7 +10779,7 @@ Module Montgomery256.
   Proof.
     intros.
     rewrite <-montred'_correct_specialized by assumption.
-    rewrite <-montred256_correct_proj2.
+    rewrite <-montred256_correct_proj2'.
     { cbv [expr.Interp type.uncurried_domain type.uncurry type.final_codomain].
       reflexivity. }
     { cbn. rewrite !andb_true_iff. cbv [R N] in *.
@@ -10766,13 +10817,6 @@ Module Montgomery256.
     | |- context [PreFancy.ok_expr] => constructor; cbn [fst snd]; repeat ok_expr_step'
     end; intros; cbn [Nat.max].
 
-  Definition montred256_prefancy' := PreFancy.of_Expr machine_wordsize [N;N'] montred256.
-
-  Derive montred256_prefancy
-         SuchThat (montred256_prefancy = montred256_prefancy' type.interp)
-         As montred256_prefancy_eq.
-  Proof. lazy - [type.interp]; reflexivity. Qed.
-
   Lemma montred256_prefancy_correct R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z) dummy_arrow,
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
@@ -10802,28 +10846,22 @@ Module Montgomery256.
 montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
     expr_let x0 := 79228162514264337593543950337 *₂₅₆ (uint128)(x₁ >> 128) in
     expr_let x1 := 340282366841710300986003757985643364352 *₂₅₆ ((uint128)(x₁) & 340282366920938463463374607431768211455) in
-    expr_let x2 := (uint256)(((uint128)(x0) & 340282366920938463463374607431768211455) << 128) in
-    expr_let x3 := (uint256)(((uint128)(x1) & 340282366920938463463374607431768211455) << 128) in
-    expr_let x4 := 79228162514264337593543950337 *₂₅₆ ((uint128)(x₁) & 340282366920938463463374607431768211455) in
-    expr_let x5 := ADD_256 (x3, x4) in
-    expr_let x6 := ADD_256 (x2, x5₁) in
-    expr_let x7 := 79228162514264337593543950335 *₂₅₆ (uint128)(x6₁ >> 128) in
-    expr_let x8 := 340282366841710300967557013911933812736 *₂₅₆ ((uint128)(x6₁) & 340282366920938463463374607431768211455) in
-    expr_let x9 := 340282366841710300967557013911933812736 *₂₅₆ (uint128)(x6₁ >> 128) in
-    expr_let x10 := (uint256)(((uint128)(x7) & 340282366920938463463374607431768211455) << 128) in
-    expr_let x11 := (uint128)(x7 >> 128) in
-    expr_let x12 := (uint256)(((uint128)(x8) & 340282366920938463463374607431768211455) << 128) in
-    expr_let x13 := (uint128)(x8 >> 128) in
-    expr_let x14 := 79228162514264337593543950335 *₂₅₆ ((uint128)(x6₁) & 340282366920938463463374607431768211455) in
-    expr_let x15 := ADD_256 (x12, x14) in
-    expr_let x16 := ADDC_256 (x15₂, x11, x13) in
-    expr_let x17 := ADD_256 (x10, x15₁) in
-    expr_let x18 := ADDC_256 (x17₂, x9, x16₁) in
-    expr_let x19 := ADD_256 (x17₁, x₁) in
-    expr_let x20 := ADDC_256 (x19₂, x18₁, x₂) in
-    expr_let x21 := SELC (x20₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
-    expr_let x22 := SUB_256 (x20₁, x21) in
-    ADDM (x22₁, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951))%expr
+    expr_let x2 := 79228162514264337593543950337 *₂₅₆ ((uint128)(x₁) & 340282366920938463463374607431768211455) in
+    expr_let x3 := ADD_256 ((uint256)(((uint128)(x1) & 340282366920938463463374607431768211455) << 128), x2) in
+    expr_let x4 := ADD_256 ((uint256)(((uint128)(x0) & 340282366920938463463374607431768211455) << 128), x3₁) in
+    expr_let x5 := 340282366841710300967557013911933812736 *₂₅₆ (uint128)(x4₁ >> 128) in
+    expr_let x6 := 79228162514264337593543950335 *₂₅₆ (uint128)(x4₁ >> 128) in
+    expr_let x7 := 340282366841710300967557013911933812736 *₂₅₆ ((uint128)(x4₁) & 340282366920938463463374607431768211455) in
+    expr_let x8 := 79228162514264337593543950335 *₂₅₆ ((uint128)(x4₁) & 340282366920938463463374607431768211455) in
+    expr_let x9 := ADD_256 ((uint256)(((uint128)(x7) & 340282366920938463463374607431768211455) << 128), x8) in
+    expr_let x10 := ADDC_256 (x9₂, (uint128)(x6 >> 128), (uint128)(x7 >> 128)) in
+    expr_let x11 := ADD_256 ((uint256)(((uint128)(x6) & 340282366920938463463374607431768211455) << 128), x9₁) in
+    expr_let x12 := ADDC_256 (x11₂, x5, x10₁) in
+    expr_let x13 := ADD_256 (x11₁, x₁) in
+    expr_let x14 := ADDC_256 (x13₂, x12₁, x₂) in
+    expr_let x15 := SELC (x14₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
+    expr_let x16 := SUB_256 (x14₁, x15) in
+    ADDM (x16₁, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951))%expr
      : Expr (type.uncurry (type.type_primitive type.Z * type.type_primitive type.Z -> type.type_primitive type.Z))
 *)
 
@@ -10834,29 +10872,23 @@ montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z *
   Print montred256_prefancy.
   (*
    mulhl@(y0, RegPInv, $x₁);
-   shiftL@(y1, $y, 128);
-   shiftL@(y2, $y0, 128);
-   mulll@(y3, RegPInv, $x₁);
-   add@(y4, $y2, $y3);
-   add@(y5, $y1, $y4);
-   mullh@(y6, RegMod, $y5);
-   mulhl@(y7, RegMod, $y5);
-   mulhh@(y8, RegMod, $y5);
-   shiftL@(y9, $y6, 128);
-   shiftR@(y10, $y6, 128);
-   shiftL@(y11, $y7, 128);
-   shiftR@(y12, $y7, 128);
-   mulll@(y13, RegMod, $y5);
-   add@(y14, $y11, $y13);
-   addc@(y15, carry{$y14}, $y10, $y12);
-   add@(y16, $y9, $y14);
-   addc@(y17, carry{$y16}, $y8, $y15);
-   add@(y18, $y16, $x₁);
-   addc@(y19, carry{$y18}, $y17, $x₂);
-   selc@(y20, carry{$y19}, RegZero, RegMod);
-   sub@(y21, $y19, $y20);
-   addm@(y22, $y21, RegZero, RegMod);
-   Ret $y22
+   mulll@(y1, RegPInv, $x₁);
+   add@(y2, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y0})), $y1);
+   add@(y3, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y})), $y2);
+   mulhh@(y4, RegMod, $y3);
+   mullh@(y5, RegMod, $y3);
+   mulhl@(y6, RegMod, $y3);
+   mulll@(y7, RegMod, $y3);
+   add@(y8, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y6})), $y7);
+   addc@(y9, carry{$y8}, Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y5)), Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y6)));
+   add@(y10, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y5})), $y8);
+   addc@(y11, carry{$y10}, $y4, $y9);
+   add@(y12, $y10, $x₁);
+   addc@(y13, carry{$y12}, $y11, $x₂);
+   selc@(y14, carry{$y13}, RegZero, RegMod);
+   sub@(y15, $y13, $y14);
+   addm@(y16, $y15, RegZero, RegMod);
+   Ret $y16
   *)
 End Montgomery256.
 
@@ -10999,68 +11031,56 @@ Print Barrett256.barrett_red256.
 c.Selm($x0, $x_hi, RegZero, RegMuLow);
 c.Rshi($x1, RegZero, $x_hi, 255);
 c.Rshi($x2, $x_hi, $x_lo, 255);
-c.Mul128x128($x3, c.Upper(RegMuLow), c.Lower($x2));
-c.Mul128x128($x4, c.Lower(RegMuLow), c.Upper($x2));
-c.Mul128x128($x5, c.Upper(RegMuLow), c.Upper($x2));
-c.ShiftL($x6, $x3, 128);
-c.ShiftR($x7, $x3, 128);
-c.ShiftL($x8, $x4, 128);
-c.ShiftR($x9, $x4, 128);
-c.Mul128x128($x10, c.Lower(RegMuLow), c.Lower($x2));
-c.Add256($x11, $x8, $x10);
-c.Addc128($x12, $x11_hi, $x7, $x9);
-c.Add256($x13, $x6, $x11_lo);
-c.Addc256($x14, $x13_hi, $x5, $x12_lo);
-c.Add256($x15, $x2, $x14_lo);
-c.Addc128($x16, $x15_hi, RegZero, $x1);
-c.Add256($x17, $x0, $x15_lo);
-c.Addc128($x18, $x17_hi, RegZero, $x16_lo);
-c.Rshi($x19, $x18_lo, $x17_lo, 1);
-c.Mul128x128($x20, c.Lower(RegMod), c.Upper($x19));
-c.Mul128x128($x21, c.Upper(RegMod), c.Lower($x19));
-c.Mul128x128($x22, c.Upper(RegMod), c.Upper($x19));
-c.ShiftL($x23, $x20, 128);
-c.ShiftR($x24, $x20, 128);
-c.ShiftL($x25, $x21, 128);
-c.ShiftR($x26, $x21, 128);
-c.Mul128x128($x27, c.Lower(RegMod), c.Lower($x19));
-c.Add256($x28, $x25, $x27);
-c.Addc256($x29, $x28_hi, $x24, $x26);
-c.Add256($x30, $x23, $x28_lo);
-c.Addc256($x31, $x30_hi, $x22, $x29_lo);
-expr_let x32 := Z.add_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-                (Z.opp @@ $x30_lo, $x_lo) in
-expr_let x33 := Z.add_with_get_carry_concrete 115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
-                ($x32_hi, Z.opp @@ $x31_lo, $x_hi) in
-c.Sell($x34, $x33_lo, RegZero, RegMod);
-c.Sub($x35, $x32_lo, $x34);
-c.AddM($ret, $x35, RegZero, RegMod);
+c.Mul128x128($x3, c.Upper(RegMuLow), c.Upper($x2));
+c.Mul128x128($x4, c.Upper(RegMuLow), c.Lower($x2));
+c.Mul128x128($x5, c.Lower(RegMuLow), c.Upper($x2));
+c.Mul128x128($x6, c.Lower(RegMuLow), c.Lower($x2));
+c.Add256($x7, (c.Lower($x5) << 128), $x6);
+c.Addc128($x8, $x7_hi, c.Upper($x4), c.Upper($x5));
+c.Add256($x9, (c.Lower($x4) << 128), $x7_lo);
+c.Addc256($x10, $x9_hi, $x3, $x8_lo);
+c.Add256($x11, $x2, $x10_lo);
+c.Addc128($x12, $x11_hi, RegZero, $x1);
+c.Add256($x13, $x0, $x11_lo);
+c.Addc128($x14, $x13_hi, RegZero, $x12_lo);
+c.Rshi($x15, $x14_lo, $x13_lo, 1);
+c.Mul128x128($x16, c.Upper(RegMod), c.Upper($x15));
+c.Mul128x128($x17, c.Lower(RegMod), c.Upper($x15));
+c.Mul128x128($x18, c.Upper(RegMod), c.Lower($x15));
+c.Mul128x128($x19, c.Lower(RegMod), c.Lower($x15));
+c.Add256($x20, (c.Lower($x18) << 128), $x19);
+c.Addc256($x21, $x20_hi, c.Upper($x17), c.Upper($x18));
+c.Add256($x22, (c.Lower($x17) << 128), $x20_lo);
+c.Addc256($x23, $x22_hi, $x16, $x21_lo);
+expr_let x24 := Z.add_get_carry_concrete
+                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                (Z.opp @@ $x22_lo, $x_lo) in
+expr_let x25 := Z.add_with_get_carry_concrete
+                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                ($x24_hi, Z.opp @@ $x23_lo, $x_hi) in
+c.Sell($x26, $x25_lo, RegZero, RegMod);
+c.Sub($x27, $x24_lo, $x26);
+c.AddM($ret, $x27, RegZero, RegMod);
 *)
 
 Print Montgomery256.montred256.
 (*
 c.Mul128x128($x0, c.Lower(RegPinv), c.Upper($x_lo));
 c.Mul128x128($x1, c.Upper(RegPinv), c.Lower($x_lo));
-c.ShiftL($x2, $x0, 128);
-c.ShiftL($x3, $x1, 128);
-c.Mul128x128($x4, c.Lower(RegPinv), c.Lower($x_lo));
-c.Add256($x5, $x3, $x4);
-c.Add256($x6, $x2, $x5_lo);
-c.Mul128x128($x7, c.Lower(RegMod), c.Upper($x6_lo));
-c.Mul128x128($x8, c.Upper(RegMod), c.Lower($x6_lo));
-c.Mul128x128($x9, c.Upper(RegMod), c.Upper($x6_lo));
-c.ShiftL($x10, $x7, 128);
-c.ShiftR($x11, $x7, 128);
-c.ShiftL($x12, $x8, 128);
-c.ShiftR($x13, $x8, 128);
-c.Mul128x128($x14, c.Lower(RegMod), c.Lower($x6_lo));
-c.Add256($x15, $x12, $x14);
-c.Addc256($x16, $x15_hi, $x11, $x13);
-c.Add256($x17, $x10, $x15_lo);
-c.Addc256($x18, $x17_hi, $x9, $x16_lo);
-c.Add256($x19, $x17_lo, $x_lo);
-c.Addc256($x20, $x19_hi, $x18_lo, $x_hi);
-c.Selc($x21, $x20_hi, RegZero, RegMod);
-c.Sub($x22, $x20_lo, $x21);
-c.AddM($ret, $x22_lo, RegZero, RegMod);
+c.Mul128x128($x2, c.Lower(RegPinv), c.Lower($x_lo));
+c.Add256($x3, (c.Lower($x1) << 128), $x2);
+c.Add256($x4, (c.Lower($x0) << 128), $x3_lo);
+c.Mul128x128($x5, c.Upper(RegMod), c.Upper($x4_lo));
+c.Mul128x128($x6, c.Lower(RegMod), c.Upper($x4_lo));
+c.Mul128x128($x7, c.Upper(RegMod), c.Lower($x4_lo));
+c.Mul128x128($x8, c.Lower(RegMod), c.Lower($x4_lo));
+c.Add256($x9, (c.Lower($x7) << 128), $x8);
+c.Addc256($x10, $x9_hi, c.Upper($x6), c.Upper($x7));
+c.Add256($x11, (c.Lower($x6) << 128), $x9_lo);
+c.Addc256($x12, $x11_hi, $x5, $x10_lo);
+c.Add256($x13, $x11_lo, $x_lo);
+c.Addc256($x14, $x13_hi, $x12_lo, $x_hi);
+c.Selc($x15, $x14_hi, RegZero, RegMod);
+c.Sub($x16, $x14_lo, $x15);
+c.AddM($ret, $x16_lo, RegZero, RegMod);
  *)
