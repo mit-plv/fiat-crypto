@@ -1069,6 +1069,9 @@ Module Rows.
              | H: forall x, In x (?y :: ?ls) -> ?P |- _ =>
                unique pose proof (H y ltac:(apply in_eq));
                unique assert (forall x, In x ls -> P) by auto
+             | H: forall x, In x (?ls ++ ?y :: nil) -> ?P |- _ =>
+               unique pose proof (H y ltac:(auto using in_or_app, in_eq));
+               unique assert (forall x, In x ls -> P) by eauto using in_or_app
              end.
 
     Section FromAssociational.
@@ -1442,7 +1445,7 @@ Module Rows.
       Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=
         fold_right (fun next_row (state : list Z * Z)=>
                       let out_carry := sum_rows next_row (fst state) in
-                      (fst out_carry, snd state + snd out_carry)) start_state (rev inp).
+                      (fst out_carry, snd state + snd out_carry)) start_state inp.
 
       (* In order for the output to have the right length and bounds,
          we insert rows of zeroes if there are fewer than two rows. *)
@@ -1451,10 +1454,13 @@ Module Rows.
         flatten' (hd default inp, 0) (hd default (tl inp) :: tl (tl inp)).
 
       Lemma flatten'_cons state r inp :
-        flatten' state (r :: inp) = flatten' (fst (sum_rows r (fst state)), snd state + snd (sum_rows r (fst state))) inp.
+        flatten' state (r :: inp) = (fst (sum_rows r (fst (flatten' state inp))), snd (flatten' state inp) + snd (sum_rows r (fst (flatten' state inp)))).
+      Proof. cbv [flatten']; autorewrite with list push_fold_right. reflexivity. Qed.
+      Lemma flatten'_snoc state r inp :
+        flatten' state (inp ++ r :: nil) = flatten' (fst (sum_rows r (fst state)), snd state + snd (sum_rows r (fst state))) inp.
       Proof. cbv [flatten']; autorewrite with list push_fold_right. reflexivity. Qed.
       Lemma flatten'_nil state : flatten' state [] = state. Proof. reflexivity. Qed.
-      Hint Rewrite flatten'_cons flatten'_nil : push_flatten.
+      Hint Rewrite flatten'_cons flatten'_snoc flatten'_nil : push_flatten.
 
       Ltac push :=
         repeat match goal with
@@ -1466,6 +1472,7 @@ Module Rows.
                | _ => progress In_cases
                | |- _ /\ _ => split
                | |- context [?x mod ?y] => unique pose proof (Z.mul_div_eq_full x y ltac:(auto)); lia
+                                                                                                    | _ => apply length_sum_rows
                | _ => solve [repeat (ring_simplify; f_equal; try ring)]
                | _ => congruence
                | _ => solve [eauto]
@@ -1480,7 +1487,7 @@ Module Rows.
                        (Positional.eval weight n (fst start_state) + eval n inp + weight n * snd start_state)
                        (weight n)).
       Proof.
-        induction inp; push; [apply IHinp; push|].
+        induction inp using rev_ind; push; [apply IHinp; push|].
         destruct (dec (inp = nil)); [subst inp; cbv [is_div_mod]
                                     | eapply is_div_mod_result_equal; try apply IHinp]; push.
         { autorewrite with zsimplify; push. }
@@ -1537,7 +1544,7 @@ Module Rows.
                   nth_default 0 (fst (flatten' start_state inp)) i
                   = ((Positional.eval weight n (fst start_state) + eval n inp) mod weight (S i)) / (weight i).
       Proof.
-        induction inp; push.
+        induction inp using rev_ind; push.
         destruct (dec (inp = nil)).
         { subst inp; push. rewrite sum_rows_partitions with (n:=n) by eauto. push. }
         { erewrite IHinp; push.
@@ -10086,23 +10093,23 @@ Module Barrett256.
   (* Note: the aforementioned ADD/ADDC instructions currently *do* fail to bounds-check, although the pipeline doesn't give an error.
      This is why their results are not cast (because the carry has range [-1~>0]). *)
   (*
-barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
+barrett_red256 =  fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
                 expr_let x0 := SELM (x₂, 0,
-                            26959946667150639793205513449348445388433292963828203772348655992835) in
+                               26959946667150639793205513449348445388433292963828203772348655992835) in
                 expr_let x1 := RSHI (0, x₂, 255) in
                 expr_let x2 := RSHI (x₂, x₁, 255) in
                 expr_let x3 := 79228162514264337589248983038 *₂₅₆ (uint128)(x2 >> 128) in
                 expr_let x4 := 79228162514264337589248983038 *₂₅₆
-                            ((uint128)(x2) & 340282366920938463463374607431768211455) in
+                               ((uint128)(x2) & 340282366920938463463374607431768211455) in
                 expr_let x5 := 340282366841710300930663525764514709507 *₂₅₆ (uint128)(x2 >> 128) in
                 expr_let x6 := 340282366841710300930663525764514709507 *₂₅₆
-                            ((uint128)(x2) & 340282366920938463463374607431768211455) in
-                expr_let x7 := ADD_256 ((uint256)(((uint128)(x5) & 340282366920938463463374607431768211455) << 128),
-                            x6) in
-                expr_let x8 := ADDC_128 (x7₂, (uint128)(x4 >> 128), (uint128)(x5 >> 128)) in
-                expr_let x9 := ADD_256 ((uint256)(((uint128)(x4) & 340282366920938463463374607431768211455) << 128),
-                            x7₁) in
-                expr_let x10 := ADDC_256 (x9₂, x3, x8₁) in
+                               ((uint128)(x2) & 340282366920938463463374607431768211455) in
+                expr_let x7 := ADD_256 ((uint256)(((uint128)(x4) & 340282366920938463463374607431768211455) << 128),
+                               x6) in
+                expr_let x8 := ADDC_256 (x7₂, x3, (uint128)(x5 >> 128)) in
+                expr_let x9 := ADD_256 ((uint256)(((uint128)(x5) & 340282366920938463463374607431768211455) << 128),
+                               x7₁) in
+                expr_let x10 := ADDC_256 (x9₂, (uint128)(x4 >> 128), x8₁) in
                 expr_let x11 := ADD_256 (x2, x10₁) in
                 expr_let x12 := ADDC_128 (x11₂, 0, x1) in
                 expr_let x13 := ADD_256 (x0, x11₁) in
@@ -10114,17 +10121,17 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
                                 ((uint128)(x15) & 340282366920938463463374607431768211455) in
                 expr_let x19 := 79228162514264337593543950335 *₂₅₆
                                 ((uint128)(x15) & 340282366920938463463374607431768211455) in
-                expr_let x20 := ADD_256 ((uint256)(((uint128)(x18) & 340282366920938463463374607431768211455) << 128),
+                expr_let x20 := ADD_256 ((uint256)(((uint128)(x17) & 340282366920938463463374607431768211455) << 128),
                                 x19) in
-                expr_let x21 := ADDC_256 (x20₂, (uint128)(x17 >> 128), (uint128)(x18 >> 128)) in
-                expr_let x22 := ADD_256 ((uint256)(((uint128)(x17) & 340282366920938463463374607431768211455) << 128),
+                expr_let x21 := ADDC_256 (x20₂, x16, (uint128)(x18 >> 128)) in
+                expr_let x22 := ADD_256 ((uint256)(((uint128)(x18) & 340282366920938463463374607431768211455) << 128),
                                 x20₁) in
-                expr_let x23 := ADDC_256 (x22₂, x16, x21₁) in
+                expr_let x23 := ADDC_256 (x22₂, (uint128)(x17 >> 128), x21₁) in
                 expr_let x24 := Z.add_get_carry_concrete
-                                115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
                                 (Z.opp @@ (fst @@ x22), x₁) in
                 expr_let x25 := Z.add_with_get_carry_concrete
-                                115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
+                                  115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
                                 (x24₂, Z.opp @@ (fst @@ x23), x₂) in
                 expr_let x26 := SELL (x25₁, 0,
                                 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
@@ -10152,12 +10159,12 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
     mulhl@(y3, RegMuLow, $y1);
     mullh@(y4, RegMuLow, $y1);
     mulll@(y5, RegMuLow, $y1);
-    add@(y6, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y4})), $y5);
-    addc@(y7, carry{$y6}, Straightline.expr.Cast uint128
-                            (Straightline.expr.Shiftr 128 ($y3)), 
-    Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y4)));
-    add@(y8, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y3})), $y6);
-    addc@(y9, carry{$y8}, $y2, $y7);
+    add@(y6, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y3})), $y5);
+    addc@(y7, carry{$y6}, $y2, Straightline.expr.Cast uint128
+                                (Straightline.expr.Shiftr 128 ($y4)));
+    add@(y8, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y4})), $y6);
+    addc@(y9, carry{$y8}, Straightline.expr.Cast uint128
+                            (Straightline.expr.Shiftr 128 ($y3)), $y7);
     add@(y10, $y1, $y9);
     addc@(y11, carry{$y10}, RegZero, $y0);
     add@(y12, $y, $y10);
@@ -10168,14 +10175,14 @@ barrett_red256 = fun var : type -> Type => λ x : var (type.type_primitive type.
     mulhl@(y17, RegMod, $y14);
     mulll@(y18, RegMod, $y14);
     add@(y19, Straightline.expr.Cast uint256
-                (Straightline.expr.Shiftl 128 (Lower{$y17})), $y18);
-    addc@(y20, carry{$y19}, Straightline.expr.Cast uint128
-                            (Straightline.expr.Shiftr 128 ($y16)), 
-    Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y17)));
+                (Straightline.expr.Shiftl 128 (Lower{$y16})), $y18);
+    addc@(y20, carry{$y19}, $y15, Straightline.expr.Cast uint128
+                                    (Straightline.expr.Shiftr 128 ($y17)));
     add@(y21, Straightline.expr.Cast uint256
-                (Straightline.expr.Shiftl 128 (Lower{$y16})), $y19);
-    addc@(_, carry{$y21}, $y15, $y20);
-    Straightline.expr.Scalar (Straightline.expr.Primitive (-1)) 
+                (Straightline.expr.Shiftl 128 (Lower{$y17})), $y19);
+    addc@(_, carry{$y21}, Straightline.expr.Cast uint128
+                            (Straightline.expr.Shiftr 128 ($y16)), $y20);
+    Straightline.expr.Scalar (Straightline.expr.Primitive (-1))
   *)
 End Barrett256.
 
@@ -10324,35 +10331,35 @@ mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive ty
          expr_let x6 := mul64 ((uint64)(x₁[[0]]), (uint64)(x₂[[2]])) in
          expr_let x7 := mul64 ((uint64)(x₁[[0]]), (uint64)(x₂[[1]])) in
          expr_let x8 := mul64 ((uint64)(x₁[[0]]), (uint64)(x₂[[0]])) in
-         expr_let x9 := add64 (x6₂, x8₁) in
-         expr_let x10 := adc64 (x9₂, x7₁, x8₂) in
-         expr_let x11 := adc64 (x10₂, x6₁, x7₂) in
-         expr_let x12 := add64 (x4₂, x9₁) in
-         expr_let x13 := adc64 (x12₂, x5₁, x10₁) in
-         expr_let x14 := adc64 (x13₂, x5₂, x11₁) in
-         expr_let x15 := add64 (x3₁, x12₁) in
-         expr_let x16 := adc64 (x15₂, x6₂, x13₁) in
-         expr_let x17 := adc64 (x16₂, x4₁, x14₁) in
-         expr_let x18 := add64 (x2₂, x15₁) in
-         expr_let x19 := adc64 (x18₂, x4₂, x16₁) in
-         expr_let x20 := adc64 (x19₂, x2₁, x17₁) in
-         expr_let x21 := add64 (x1₁, x18₁) in
-         expr_let x22 := adc64 (x21₂, x3₁, x19₁) in
-         expr_let x23 := adc64 (x22₂, x3₂, x20₁) in
-         expr_let x24 := add64 (x0₂, x21₁) in
-         expr_let x25 := adc64 (x24₂, x2₂, x22₁) in
-         expr_let x26 := adc64 (x25₂, x1₂, x23₁) in
-         expr_let x27 := add64 (x1₁, x25₁) in
-         expr_let x28 := adc64 (x27₂, x0₁, x26₁) in
-         expr_let x29 := add64 (x3₂, x27₁) in
-         expr_let x30 := adc64 (x29₂, x0₂, x28₁) in
-         expr_let x31 := add64 (x1₂, x29₁) in
-         expr_let x32 := adc64 (x31₂, 0, x30₁) in
-         expr_let x33 := add64 (x0₁, x31₁) in
-         expr_let x34 := adc64 (x33₂, 0, x32₁) in
-         expr_let x35 := add64 (x0₂, x33₁) in
-         expr_let x36 := adc64 (x35₂, 0, x34₁) in
-         x24₁ :: x35₁ :: x36₁ :: []
+         expr_let x9 := add64 (x0₂, x8₂) in
+         expr_let x10 := adc64 (x9₂, 0, x7₂) in
+         expr_let x11 := add64 (x0₁, x9₁) in
+         expr_let x12 := adc64 (x11₂, 0, x10₁) in
+         expr_let x13 := add64 (x1₂, x11₁) in
+         expr_let x14 := adc64 (x13₂, 0, x12₁) in
+         expr_let x15 := add64 (x3₂, x13₁) in
+         expr_let x16 := adc64 (x15₂, x0₂, x14₁) in
+         expr_let x17 := add64 (x1₁, x15₁) in
+         expr_let x18 := adc64 (x17₂, x0₁, x16₁) in
+         expr_let x19 := add64 (x0₂, x8₁) in
+         expr_let x20 := adc64 (x19₂, x2₂, x17₁) in
+         expr_let x21 := adc64 (x20₂, x1₂, x18₁) in
+         expr_let x22 := add64 (x1₁, x19₁) in
+         expr_let x23 := adc64 (x22₂, x3₁, x20₁) in
+         expr_let x24 := adc64 (x23₂, x3₂, x21₁) in
+         expr_let x25 := add64 (x2₂, x22₁) in
+         expr_let x26 := adc64 (x25₂, x4₂, x23₁) in
+         expr_let x27 := adc64 (x26₂, x2₁, x24₁) in
+         expr_let x28 := add64 (x3₁, x25₁) in
+         expr_let x29 := adc64 (x28₂, x6₂, x26₁) in
+         expr_let x30 := adc64 (x29₂, x4₁, x27₁) in
+         expr_let x31 := add64 (x4₂, x28₁) in
+         expr_let x32 := adc64 (x31₂, x5₁, x29₁) in
+         expr_let x33 := adc64 (x32₂, x5₂, x30₁) in
+         expr_let x34 := add64 (x6₂, x31₁) in
+         expr_let x35 := adc64 (x34₂, x7₁, x32₁) in
+         expr_let x36 := adc64 (x35₂, x6₁, x33₁) in
+         x34₁ :: x35₁ :: x36₁ :: []
      : Expr (type.uncurry (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z)))
 *)
 
@@ -10419,135 +10426,135 @@ mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive ty
          expr_let x33 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[2]])) in
          expr_let x34 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[1]])) in
          expr_let x35 := mul32 ((uint32)(x₁[[0]]), (uint32)(x₂[[0]])) in
-         expr_let x36 := add32 (x30₂, x35₁) in
-         expr_let x37 := adc32 (x36₂, x34₁, x35₂) in
-         expr_let x38 := adc32 (x37₂, x33₁, x34₂) in
-         expr_let x39 := adc32 (x38₂, x32₁, x33₂) in
-         expr_let x40 := adc32 (x39₂, x31₁, x32₂) in
-         expr_let x41 := adc32 (x40₂, x30₁, x31₂) in
-         expr_let x42 := add32 (x25₂, x36₁) in
-         expr_let x43 := adc32 (x42₂, x29₁, x37₁) in
-         expr_let x44 := adc32 (x43₂, x29₂, x38₁) in
-         expr_let x45 := adc32 (x44₂, x28₂, x39₁) in
-         expr_let x46 := adc32 (x45₂, x27₂, x40₁) in
-         expr_let x47 := adc32 (x46₂, x26₂, x41₁) in
-         expr_let x48 := add32 (x24₁, x42₁) in
-         expr_let x49 := adc32 (x48₂, x24₂, x43₁) in
-         expr_let x50 := adc32 (x49₂, x28₁, x44₁) in
-         expr_let x51 := adc32 (x50₂, x27₁, x45₁) in
-         expr_let x52 := adc32 (x51₂, x26₁, x46₁) in
-         expr_let x53 := adc32 (x52₂, x25₁, x47₁) in
-         expr_let x54 := add32 (x20₂, x48₁) in
-         expr_let x55 := adc32 (x54₂, x19₂, x49₁) in
-         expr_let x56 := adc32 (x55₂, x23₁, x50₁) in
-         expr_let x57 := adc32 (x56₂, x23₂, x51₁) in
-         expr_let x58 := adc32 (x57₂, x22₂, x52₁) in
-         expr_let x59 := adc32 (x58₂, x21₂, x53₁) in
-         expr_let x60 := add32 (x19₁, x54₁) in
-         expr_let x61 := adc32 (x60₂, x18₁, x55₁) in
-         expr_let x62 := adc32 (x61₂, x30₂, x56₁) in
-         expr_let x63 := adc32 (x62₂, x22₁, x57₁) in
-         expr_let x64 := adc32 (x63₂, x21₁, x58₁) in
-         expr_let x65 := adc32 (x64₂, x20₁, x59₁) in
-         expr_let x66 := add32 (x15₂, x60₁) in
-         expr_let x67 := adc32 (x66₂, x14₂, x61₁) in
-         expr_let x68 := adc32 (x67₂, x25₂, x62₁) in
-         expr_let x69 := adc32 (x68₂, x17₁, x63₁) in
-         expr_let x70 := adc32 (x69₂, x17₂, x64₁) in
-         expr_let x71 := adc32 (x70₂, x16₂, x65₁) in
-         expr_let x72 := add32 (x14₁, x66₁) in
-         expr_let x73 := adc32 (x72₂, x13₁, x67₁) in
-         expr_let x74 := adc32 (x73₂, x24₁, x68₁) in
-         expr_let x75 := adc32 (x74₂, x24₂, x69₁) in
-         expr_let x76 := adc32 (x75₂, x16₁, x70₁) in
-         expr_let x77 := adc32 (x76₂, x15₁, x71₁) in
-         expr_let x78 := add32 (x10₂, x72₁) in
-         expr_let x79 := adc32 (x78₂, x9₂, x73₁) in
-         expr_let x80 := adc32 (x79₂, x20₂, x74₁) in
-         expr_let x81 := adc32 (x80₂, x19₂, x75₁) in
-         expr_let x82 := adc32 (x81₂, x11₁, x76₁) in
-         expr_let x83 := adc32 (x82₂, x11₂, x77₁) in
-         expr_let x84 := add32 (x9₁, x78₁) in
-         expr_let x85 := adc32 (x84₂, x8₁, x79₁) in
-         expr_let x86 := adc32 (x85₂, x19₁, x80₁) in
-         expr_let x87 := adc32 (x86₂, x18₁, x81₁) in
-         expr_let x88 := adc32 (x87₂, x18₂, x82₁) in
-         expr_let x89 := adc32 (x88₂, x10₁, x83₁) in
-         expr_let x90 := add32 (x5₂, x84₁) in
-         expr_let x91 := adc32 (x90₂, x4₂, x85₁) in
-         expr_let x92 := adc32 (x91₂, x15₂, x86₁) in
-         expr_let x93 := adc32 (x92₂, x14₂, x87₁) in
-         expr_let x94 := adc32 (x93₂, x13₂, x88₁) in
-         expr_let x95 := adc32 (x94₂, x5₁, x89₁) in
-         expr_let x96 := add32 (x4₁, x90₁) in
-         expr_let x97 := adc32 (x96₂, x3₁, x91₁) in
-         expr_let x98 := adc32 (x97₂, x14₁, x92₁) in
-         expr_let x99 := adc32 (x98₂, x13₁, x93₁) in
-         expr_let x100 := adc32 (x99₂, x12₁, x94₁) in
-         expr_let x101 := adc32 (x100₂, x12₂, x95₁) in
-         expr_let x102 := add32 (x6₂, x96₁) in
-         expr_let x103 := adc32 (x102₂, x0₂, x97₁) in
-         expr_let x104 := adc32 (x103₂, x10₂, x98₁) in
-         expr_let x105 := adc32 (x104₂, x9₂, x99₁) in
-         expr_let x106 := adc32 (x105₂, x8₂, x100₁) in
-         expr_let x107 := adc32 (x106₂, x7₂, x101₁) in
-         expr_let x108 := add32 (x1₂, x102₁) in
-         expr_let x109 := adc32 (x108₂, 0, x103₁) in
-         expr_let x110 := adc32 (x109₂, x9₁, x104₁) in
+         expr_let x36 := add32 (x0₁, x34₂) in
+         expr_let x37 := adc32 (x36₂, 0, x33₂) in
+         expr_let x38 := adc32 (x37₂, 0, x32₂) in
+         expr_let x39 := adc32 (x38₂, 0, x31₂) in
+         expr_let x40 := add32 (x1₂, x36₁) in
+         expr_let x41 := adc32 (x40₂, 0, x37₁) in
+         expr_let x42 := adc32 (x41₂, 0, x38₁) in
+         expr_let x43 := adc32 (x42₂, 0, x39₁) in
+         expr_let x44 := add32 (x6₂, x40₁) in
+         expr_let x45 := adc32 (x44₂, 0, x41₁) in
+         expr_let x46 := adc32 (x45₂, 0, x42₁) in
+         expr_let x47 := adc32 (x46₂, 0, x43₁) in
+         expr_let x48 := add32 (x2₁, x44₁) in
+         expr_let x49 := adc32 (x48₂, 0, x45₁) in
+         expr_let x50 := adc32 (x49₂, 0, x46₁) in
+         expr_let x51 := adc32 (x50₂, 0, x47₁) in
+         expr_let x52 := add32 (x3₂, x48₁) in
+         expr_let x53 := adc32 (x52₂, x0₂, x49₁) in
+         expr_let x54 := adc32 (x53₂, 0, x50₁) in
+         expr_let x55 := adc32 (x54₂, 0, x51₁) in
+         expr_let x56 := add32 (x7₁, x52₁) in
+         expr_let x57 := adc32 (x56₂, x1₁, x53₁) in
+         expr_let x58 := adc32 (x57₂, 0, x54₁) in
+         expr_let x59 := adc32 (x58₂, 0, x55₁) in
+         expr_let x60 := add32 (x8₂, x56₁) in
+         expr_let x61 := adc32 (x60₂, x2₂, x57₁) in
+         expr_let x62 := adc32 (x61₂, 0, x58₁) in
+         expr_let x63 := adc32 (x62₂, 0, x59₁) in
+         expr_let x64 := add32 (x12₁, x60₁) in
+         expr_let x65 := adc32 (x64₂, x6₁, x61₁) in
+         expr_let x66 := adc32 (x65₂, x0₁, x62₁) in
+         expr_let x67 := adc32 (x66₂, 0, x63₁) in
+         expr_let x68 := add32 (x13₂, x64₁) in
+         expr_let x69 := adc32 (x68₂, x7₂, x65₁) in
+         expr_let x70 := adc32 (x69₂, x1₂, x66₁) in
+         expr_let x71 := adc32 (x70₂, 0, x67₁) in
+         expr_let x72 := add32 (x18₂, x68₁) in
+         expr_let x73 := adc32 (x72₂, x12₂, x69₁) in
+         expr_let x74 := adc32 (x73₂, x6₂, x70₁) in
+         expr_let x75 := adc32 (x74₂, x0₂, x71₁) in
+         expr_let x76 := add32 (x4₁, x72₁) in
+         expr_let x77 := adc32 (x76₂, x3₁, x73₁) in
+         expr_let x78 := adc32 (x77₂, x2₁, x74₁) in
+         expr_let x79 := adc32 (x78₂, x1₁, x75₁) in
+         expr_let x80 := add32 (x0₁, x35₁) in
+         expr_let x81 := adc32 (x80₂, 0, x35₂) in
+         expr_let x82 := adc32 (x81₂, x5₂, x76₁) in
+         expr_let x83 := adc32 (x82₂, x4₂, x77₁) in
+         expr_let x84 := adc32 (x83₂, x3₂, x78₁) in
+         expr_let x85 := adc32 (x84₂, x2₂, x79₁) in
+         expr_let x86 := add32 (x1₂, x80₁) in
+         expr_let x87 := adc32 (x86₂, 0, x81₁) in
+         expr_let x88 := adc32 (x87₂, x9₁, x82₁) in
+         expr_let x89 := adc32 (x88₂, x8₁, x83₁) in
+         expr_let x90 := adc32 (x89₂, x7₁, x84₁) in
+         expr_let x91 := adc32 (x90₂, x6₁, x85₁) in
+         expr_let x92 := add32 (x6₂, x86₁) in
+         expr_let x93 := adc32 (x92₂, x0₂, x87₁) in
+         expr_let x94 := adc32 (x93₂, x10₂, x88₁) in
+         expr_let x95 := adc32 (x94₂, x9₂, x89₁) in
+         expr_let x96 := adc32 (x95₂, x8₂, x90₁) in
+         expr_let x97 := adc32 (x96₂, x7₂, x91₁) in
+         expr_let x98 := add32 (x4₁, x92₁) in
+         expr_let x99 := adc32 (x98₂, x3₁, x93₁) in
+         expr_let x100 := adc32 (x99₂, x14₁, x94₁) in
+         expr_let x101 := adc32 (x100₂, x13₁, x95₁) in
+         expr_let x102 := adc32 (x101₂, x12₁, x96₁) in
+         expr_let x103 := adc32 (x102₂, x12₂, x97₁) in
+         expr_let x104 := add32 (x5₂, x98₁) in
+         expr_let x105 := adc32 (x104₂, x4₂, x99₁) in
+         expr_let x106 := adc32 (x105₂, x15₂, x100₁) in
+         expr_let x107 := adc32 (x106₂, x14₂, x101₁) in
+         expr_let x108 := adc32 (x107₂, x13₂, x102₁) in
+         expr_let x109 := adc32 (x108₂, x5₁, x103₁) in
+         expr_let x110 := add32 (x9₁, x104₁) in
          expr_let x111 := adc32 (x110₂, x8₁, x105₁) in
-         expr_let x112 := adc32 (x111₂, x7₁, x106₁) in
-         expr_let x113 := adc32 (x112₂, x6₁, x107₁) in
-         expr_let x114 := add32 (x0₁, x108₁) in
-         expr_let x115 := adc32 (x114₂, 0, x109₁) in
-         expr_let x116 := adc32 (x115₂, x5₂, x110₁) in
-         expr_let x117 := adc32 (x116₂, x4₂, x111₁) in
-         expr_let x118 := adc32 (x117₂, x3₂, x112₁) in
-         expr_let x119 := adc32 (x118₂, x2₂, x113₁) in
-         expr_let x120 := add32 (x4₁, x116₁) in
-         expr_let x121 := adc32 (x120₂, x3₁, x117₁) in
-         expr_let x122 := adc32 (x121₂, x2₁, x118₁) in
-         expr_let x123 := adc32 (x122₂, x1₁, x119₁) in
-         expr_let x124 := add32 (x18₂, x120₁) in
-         expr_let x125 := adc32 (x124₂, x12₂, x121₁) in
-         expr_let x126 := adc32 (x125₂, x6₂, x122₁) in
-         expr_let x127 := adc32 (x126₂, x0₂, x123₁) in
-         expr_let x128 := add32 (x13₂, x124₁) in
-         expr_let x129 := adc32 (x128₂, x7₂, x125₁) in
-         expr_let x130 := adc32 (x129₂, x1₂, x126₁) in
-         expr_let x131 := adc32 (x130₂, 0, x127₁) in
-         expr_let x132 := add32 (x12₁, x128₁) in
-         expr_let x133 := adc32 (x132₂, x6₁, x129₁) in
-         expr_let x134 := adc32 (x133₂, x0₁, x130₁) in
-         expr_let x135 := adc32 (x134₂, 0, x131₁) in
-         expr_let x136 := add32 (x8₂, x132₁) in
-         expr_let x137 := adc32 (x136₂, x2₂, x133₁) in
-         expr_let x138 := adc32 (x137₂, 0, x134₁) in
-         expr_let x139 := adc32 (x138₂, 0, x135₁) in
-         expr_let x140 := add32 (x7₁, x136₁) in
-         expr_let x141 := adc32 (x140₂, x1₁, x137₁) in
-         expr_let x142 := adc32 (x141₂, 0, x138₁) in
-         expr_let x143 := adc32 (x142₂, 0, x139₁) in
-         expr_let x144 := add32 (x3₂, x140₁) in
-         expr_let x145 := adc32 (x144₂, x0₂, x141₁) in
-         expr_let x146 := adc32 (x145₂, 0, x142₁) in
-         expr_let x147 := adc32 (x146₂, 0, x143₁) in
-         expr_let x148 := add32 (x2₁, x144₁) in
-         expr_let x149 := adc32 (x148₂, 0, x145₁) in
-         expr_let x150 := adc32 (x149₂, 0, x146₁) in
-         expr_let x151 := adc32 (x150₂, 0, x147₁) in
-         expr_let x152 := add32 (x6₂, x148₁) in
-         expr_let x153 := adc32 (x152₂, 0, x149₁) in
-         expr_let x154 := adc32 (x153₂, 0, x150₁) in
-         expr_let x155 := adc32 (x154₂, 0, x151₁) in
-         expr_let x156 := add32 (x1₂, x152₁) in
-         expr_let x157 := adc32 (x156₂, 0, x153₁) in
-         expr_let x158 := adc32 (x157₂, 0, x154₁) in
-         expr_let x159 := adc32 (x158₂, 0, x155₁) in
-         expr_let x160 := add32 (x0₁, x156₁) in
-         expr_let x161 := adc32 (x160₂, 0, x157₁) in
-         expr_let x162 := adc32 (x161₂, 0, x158₁) in
-         expr_let x163 := adc32 (x162₂, 0, x159₁) in
-         x114₁ :: x115₁ :: x160₁ :: x161₁ :: x162₁ :: x163₁ :: []
+         expr_let x112 := adc32 (x111₂, x19₁, x106₁) in
+         expr_let x113 := adc32 (x112₂, x18₁, x107₁) in
+         expr_let x114 := adc32 (x113₂, x18₂, x108₁) in
+         expr_let x115 := adc32 (x114₂, x10₁, x109₁) in
+         expr_let x116 := add32 (x10₂, x110₁) in
+         expr_let x117 := adc32 (x116₂, x9₂, x111₁) in
+         expr_let x118 := adc32 (x117₂, x20₂, x112₁) in
+         expr_let x119 := adc32 (x118₂, x19₂, x113₁) in
+         expr_let x120 := adc32 (x119₂, x11₁, x114₁) in
+         expr_let x121 := adc32 (x120₂, x11₂, x115₁) in
+         expr_let x122 := add32 (x14₁, x116₁) in
+         expr_let x123 := adc32 (x122₂, x13₁, x117₁) in
+         expr_let x124 := adc32 (x123₂, x24₁, x118₁) in
+         expr_let x125 := adc32 (x124₂, x24₂, x119₁) in
+         expr_let x126 := adc32 (x125₂, x16₁, x120₁) in
+         expr_let x127 := adc32 (x126₂, x15₁, x121₁) in
+         expr_let x128 := add32 (x15₂, x122₁) in
+         expr_let x129 := adc32 (x128₂, x14₂, x123₁) in
+         expr_let x130 := adc32 (x129₂, x25₂, x124₁) in
+         expr_let x131 := adc32 (x130₂, x17₁, x125₁) in
+         expr_let x132 := adc32 (x131₂, x17₂, x126₁) in
+         expr_let x133 := adc32 (x132₂, x16₂, x127₁) in
+         expr_let x134 := add32 (x19₁, x128₁) in
+         expr_let x135 := adc32 (x134₂, x18₁, x129₁) in
+         expr_let x136 := adc32 (x135₂, x30₂, x130₁) in
+         expr_let x137 := adc32 (x136₂, x22₁, x131₁) in
+         expr_let x138 := adc32 (x137₂, x21₁, x132₁) in
+         expr_let x139 := adc32 (x138₂, x20₁, x133₁) in
+         expr_let x140 := add32 (x20₂, x134₁) in
+         expr_let x141 := adc32 (x140₂, x19₂, x135₁) in
+         expr_let x142 := adc32 (x141₂, x23₁, x136₁) in
+         expr_let x143 := adc32 (x142₂, x23₂, x137₁) in
+         expr_let x144 := adc32 (x143₂, x22₂, x138₁) in
+         expr_let x145 := adc32 (x144₂, x21₂, x139₁) in
+         expr_let x146 := add32 (x24₁, x140₁) in
+         expr_let x147 := adc32 (x146₂, x24₂, x141₁) in
+         expr_let x148 := adc32 (x147₂, x28₁, x142₁) in
+         expr_let x149 := adc32 (x148₂, x27₁, x143₁) in
+         expr_let x150 := adc32 (x149₂, x26₁, x144₁) in
+         expr_let x151 := adc32 (x150₂, x25₁, x145₁) in
+         expr_let x152 := add32 (x25₂, x146₁) in
+         expr_let x153 := adc32 (x152₂, x29₁, x147₁) in
+         expr_let x154 := adc32 (x153₂, x29₂, x148₁) in
+         expr_let x155 := adc32 (x154₂, x28₂, x149₁) in
+         expr_let x156 := adc32 (x155₂, x27₂, x150₁) in
+         expr_let x157 := adc32 (x156₂, x26₂, x151₁) in
+         expr_let x158 := add32 (x30₂, x152₁) in
+         expr_let x159 := adc32 (x158₂, x34₁, x153₁) in
+         expr_let x160 := adc32 (x159₂, x33₁, x154₁) in
+         expr_let x161 := adc32 (x160₂, x32₁, x155₁) in
+         expr_let x162 := adc32 (x161₂, x31₁, x156₁) in
+         expr_let x163 := adc32 (x162₂, x30₁, x157₁) in
+         x158₁ :: x159₁ :: x160₁ :: x161₁ :: x162₁ :: x163₁ :: []
      : Expr (type.uncurry (type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z) -> type.list (type.type_primitive type.Z)))
 *)
 
@@ -10847,16 +10854,16 @@ montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z *
     expr_let x0 := 79228162514264337593543950337 *₂₅₆ (uint128)(x₁ >> 128) in
     expr_let x1 := 340282366841710300986003757985643364352 *₂₅₆ ((uint128)(x₁) & 340282366920938463463374607431768211455) in
     expr_let x2 := 79228162514264337593543950337 *₂₅₆ ((uint128)(x₁) & 340282366920938463463374607431768211455) in
-    expr_let x3 := ADD_256 ((uint256)(((uint128)(x1) & 340282366920938463463374607431768211455) << 128), x2) in
-    expr_let x4 := ADD_256 ((uint256)(((uint128)(x0) & 340282366920938463463374607431768211455) << 128), x3₁) in
+    expr_let x3 := ADD_256 ((uint256)(((uint128)(x0) & 340282366920938463463374607431768211455) << 128), x2) in
+    expr_let x4 := ADD_256 ((uint256)(((uint128)(x1) & 340282366920938463463374607431768211455) << 128), x3₁) in
     expr_let x5 := 340282366841710300967557013911933812736 *₂₅₆ (uint128)(x4₁ >> 128) in
     expr_let x6 := 79228162514264337593543950335 *₂₅₆ (uint128)(x4₁ >> 128) in
     expr_let x7 := 340282366841710300967557013911933812736 *₂₅₆ ((uint128)(x4₁) & 340282366920938463463374607431768211455) in
     expr_let x8 := 79228162514264337593543950335 *₂₅₆ ((uint128)(x4₁) & 340282366920938463463374607431768211455) in
-    expr_let x9 := ADD_256 ((uint256)(((uint128)(x7) & 340282366920938463463374607431768211455) << 128), x8) in
-    expr_let x10 := ADDC_256 (x9₂, (uint128)(x6 >> 128), (uint128)(x7 >> 128)) in
-    expr_let x11 := ADD_256 ((uint256)(((uint128)(x6) & 340282366920938463463374607431768211455) << 128), x9₁) in
-    expr_let x12 := ADDC_256 (x11₂, x5, x10₁) in
+    expr_let x9 := ADD_256 ((uint256)(((uint128)(x6) & 340282366920938463463374607431768211455) << 128), x8) in
+    expr_let x10 := ADDC_256 (x9₂, x5, (uint128)(x7 >> 128)) in
+    expr_let x11 := ADD_256 ((uint256)(((uint128)(x7) & 340282366920938463463374607431768211455) << 128), x9₁) in
+    expr_let x12 := ADDC_256 (x11₂, (uint128)(x6 >> 128), x10₁) in
     expr_let x13 := ADD_256 (x11₁, x₁) in
     expr_let x14 := ADDC_256 (x13₂, x12₁, x₂) in
     expr_let x15 := SELC (x14₂, 0, 115792089210356248762697446949407573530086143415290314195533631308867097853951) in
@@ -10873,22 +10880,22 @@ montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z *
   (*
    mulhl@(y0, RegPInv, $x₁);
    mulll@(y1, RegPInv, $x₁);
-   add@(y2, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y0})), $y1);
-   add@(y3, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y})), $y2);
+   add@(y2, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y})), $y1);
+   add@(y3, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y0})), $y2);
    mulhh@(y4, RegMod, $y3);
    mullh@(y5, RegMod, $y3);
    mulhl@(y6, RegMod, $y3);
    mulll@(y7, RegMod, $y3);
-   add@(y8, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y6})), $y7);
-   addc@(y9, carry{$y8}, Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y5)), Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y6)));
-   add@(y10, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y5})), $y8);
-   addc@(y11, carry{$y10}, $y4, $y9);
+   add@(y8, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y5})), $y7);
+   addc@(y9, carry{$y8}, $y4, Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y6)));
+   add@(y10, Straightline.expr.Cast uint256 (Straightline.expr.Shiftl 128 (Lower{$y6})), $y8);
+   addc@(y11, carry{$y10}, Straightline.expr.Cast uint128 (Straightline.expr.Shiftr 128 ($y5)), $y9);
    add@(y12, $y10, $x₁);
    addc@(y13, carry{$y12}, $y11, $x₂);
    selc@(y14, carry{$y13}, RegZero, RegMod);
    sub@(y15, $y13, $y14);
    addm@(y16, $y15, RegZero, RegMod);
-   Ret $y16
+   Ret $y16                  
   *)
 End Montgomery256.
 
@@ -11035,10 +11042,10 @@ c.Mul128x128($x3, c.Upper(RegMuLow), c.Upper($x2));
 c.Mul128x128($x4, c.Upper(RegMuLow), c.Lower($x2));
 c.Mul128x128($x5, c.Lower(RegMuLow), c.Upper($x2));
 c.Mul128x128($x6, c.Lower(RegMuLow), c.Lower($x2));
-c.Add256($x7, (c.Lower($x5) << 128), $x6);
-c.Addc128($x8, $x7_hi, c.Upper($x4), c.Upper($x5));
-c.Add256($x9, (c.Lower($x4) << 128), $x7_lo);
-c.Addc256($x10, $x9_hi, $x3, $x8_lo);
+c.Add256($x7, (c.Lower($x4) << 128), $x6);
+c.Addc256($x8, $x7_hi, $x3, c.Upper($x5));
+c.Add256($x9, (c.Lower($x5) << 128), $x7_lo);
+c.Addc256($x10, $x9_hi, c.Upper($x4), $x8_lo);
 c.Add256($x11, $x2, $x10_lo);
 c.Addc128($x12, $x11_hi, RegZero, $x1);
 c.Add256($x13, $x0, $x11_lo);
@@ -11048,10 +11055,10 @@ c.Mul128x128($x16, c.Upper(RegMod), c.Upper($x15));
 c.Mul128x128($x17, c.Lower(RegMod), c.Upper($x15));
 c.Mul128x128($x18, c.Upper(RegMod), c.Lower($x15));
 c.Mul128x128($x19, c.Lower(RegMod), c.Lower($x15));
-c.Add256($x20, (c.Lower($x18) << 128), $x19);
-c.Addc256($x21, $x20_hi, c.Upper($x17), c.Upper($x18));
-c.Add256($x22, (c.Lower($x17) << 128), $x20_lo);
-c.Addc256($x23, $x22_hi, $x16, $x21_lo);
+c.Add256($x20, (c.Lower($x17) << 128), $x19);
+c.Addc256($x21, $x20_hi, $x16, c.Upper($x18));
+c.Add256($x22, (c.Lower($x18) << 128), $x20_lo);
+c.Addc256($x23, $x22_hi, c.Upper($x17), $x21_lo);
 expr_let x24 := Z.add_get_carry_concrete
                   115792089237316195423570985008687907853269984665640564039457584007913129639936 @@
                 (Z.opp @@ $x22_lo, $x_lo) in
@@ -11068,16 +11075,16 @@ Print Montgomery256.montred256.
 c.Mul128x128($x0, c.Lower(RegPinv), c.Upper($x_lo));
 c.Mul128x128($x1, c.Upper(RegPinv), c.Lower($x_lo));
 c.Mul128x128($x2, c.Lower(RegPinv), c.Lower($x_lo));
-c.Add256($x3, (c.Lower($x1) << 128), $x2);
-c.Add256($x4, (c.Lower($x0) << 128), $x3_lo);
+c.Add256($x3, (c.Lower($x0) << 128), $x2);
+c.Add256($x4, (c.Lower($x1) << 128), $x3_lo);
 c.Mul128x128($x5, c.Upper(RegMod), c.Upper($x4_lo));
 c.Mul128x128($x6, c.Lower(RegMod), c.Upper($x4_lo));
 c.Mul128x128($x7, c.Upper(RegMod), c.Lower($x4_lo));
 c.Mul128x128($x8, c.Lower(RegMod), c.Lower($x4_lo));
-c.Add256($x9, (c.Lower($x7) << 128), $x8);
-c.Addc256($x10, $x9_hi, c.Upper($x6), c.Upper($x7));
-c.Add256($x11, (c.Lower($x6) << 128), $x9_lo);
-c.Addc256($x12, $x11_hi, $x5, $x10_lo);
+c.Add256($x9, (c.Lower($x6) << 128), $x8);
+c.Addc256($x10, $x9_hi, $x5, c.Upper($x7));
+c.Add256($x11, (c.Lower($x7) << 128), $x9_lo);
+c.Addc256($x12, $x11_hi, c.Upper($x6), $x10_lo);
 c.Add256($x13, $x11_lo, $x_lo);
 c.Addc256($x14, $x13_hi, $x12_lo, $x_hi);
 c.Selc($x15, $x14_hi, RegZero, RegMod);
