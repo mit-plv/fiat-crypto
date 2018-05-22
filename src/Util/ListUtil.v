@@ -107,7 +107,7 @@ Module Export List.
   End FlatMap.
   Hint Rewrite @flat_map_cons @flat_map_nil : push_flat_map.
 
-  Lemma rev_cons {A} x ls : @rev A (x :: ls) = rev ls ++ [x]. Proof. reflexivity. Qed. 
+  Lemma rev_cons {A} x ls : @rev A (x :: ls) = rev ls ++ [x]. Proof. reflexivity. Qed.
   Hint Rewrite @rev_cons : list.
 
   Section FoldRight.
@@ -283,14 +283,18 @@ Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
 
 Definition sum xs := sum_firstn xs (length xs).
 
-Fixpoint map2 {A B C} (f : A -> B -> C) (la : list A) (lb : list B) : list C :=
-  match la with
-  | nil => nil
-  | a :: la' => match lb with
-                | nil => nil
-                | b :: lb' => f a b :: map2 f la' lb'
-                end
-  end.
+Section map2.
+  Context {A B C}
+          (f : A -> B -> C).
+
+  Fixpoint map2 (la : list A) (lb : list B) : list C :=
+    match la, lb with
+    | nil, _ => nil
+    | _, nil => nil
+    | a :: la', b :: lb'
+      => f a b :: map2 la' lb'
+    end.
+End map2.
 
 (* xs[n] := f xs[n] *)
 Fixpoint update_nth {T} n f (xs:list T) {struct n} :=
