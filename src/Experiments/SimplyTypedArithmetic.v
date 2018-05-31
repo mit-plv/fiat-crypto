@@ -9908,6 +9908,41 @@ Module PreFancy.
     Notation "'ret' $ x" := (Scalar (Var tZ x)) (at level 10, format "'ret'  $ x").
     Notation "( x , y )" := (Pair x y) (at level 10, left associativity).
   End Notations.
+ 
+  Module Tactics.
+    Ltac ok_expr_step' :=
+      match goal with
+      | _ => assumption
+      | |- _ <= _ <= _ \/ @eq zrange _ _ =>
+        right; lazy; try split; congruence
+      | |- _ <= _ <= _ \/ @eq zrange _ _ =>
+        left; lazy; try split; congruence
+      | |- context [PreFancy.ok_ident] => constructor
+      | |- context [PreFancy.ok_scalar] => constructor; try omega
+      | |- context [PreFancy.is_halved] => eapply PreFancy.is_halved_constant; [lazy; reflexivity | ]
+      | |- context [PreFancy.is_halved] => constructor
+      | |- context [PreFancy.in_word_range] => lazy; reflexivity
+      | |- context [PreFancy.in_flag_range] => lazy; reflexivity
+      | |- context [PreFancy.get_range] =>
+        cbn [PreFancy.get_range lower upper fst snd ZRange.map]
+      | x : type.interp (type.prod _ _) |- _ => destruct x
+      | |- (_ <=? _)%zrange = true =>
+        match goal with
+        | |- context [PreFancy.get_range_var] =>
+          cbv [is_tighter_than_bool PreFancy.has_range fst snd upper lower] in *; cbn;
+          apply andb_true_iff; split; apply Z.leb_le
+        | _ => lazy
+        end; omega || reflexivity
+      | |- @eq zrange _ _ => lazy; reflexivity
+      | |- _ <= _ => omega
+      | |- _ <= _ <= _ => omega
+      end; intros.
+
+    Ltac ok_expr_step :=
+      match goal with
+      | |- context [PreFancy.ok_expr] => constructor; cbn [fst snd]; repeat ok_expr_step'
+      end; intros; cbn [Nat.max].
+  End Tactics.
 End PreFancy.
 
 Module Fancy.
@@ -10567,6 +10602,7 @@ Module ProdEquiv.
     rewrite !(Z.mod_small (ctx _)) by (cbn in *; omega). reflexivity.
   Qed.
 
+  (* Tactics to help prove that something in Fancy is line-by-line equivalent to something in PreFancy *)
   Ltac push_value_unused :=
     repeat match goal with
            | |- ~ In _ _ => cbn; intuition; congruence
@@ -11190,8 +11226,22 @@ Module BarrettReduction.
     Check barrett_reduce_correct.
     Print Pipeline.Values_not_provably_distinct.
 
-    Definition relax_zrange_of_machine_wordsize
+    Definition relax_zrange_of_machine_wordsize'
       := relax_zrange_gen [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
+    (* TODO: This is a special-case hack to let the prefancy pass have enough bounds information. *)
+    Definition relax_zrange_of_machine_wordsize r : option zrange :=
+      if (lower r =? 0) && (upper r =? 2)
+      then Some r
+      else relax_zrange_of_machine_wordsize' r.
+
+    Lemma relax_zrange_good (r r' z : zrange) :
+      (z <=? r)%zrange = true ->
+      relax_zrange_of_machine_wordsize r = Some r' -> (z <=? r')%zrange = true.
+    Proof.
+      cbv [relax_zrange_of_machine_wordsize]; break_match; [congruence|].
+      eauto using relax_zrange_gen_good.
+    Qed.
+
     Local Arguments relax_zrange_of_machine_wordsize / .
 
     Let relax_zrange := relax_zrange_of_machine_wordsize.
@@ -11217,7 +11267,7 @@ Module BarrettReduction.
           => @Pipeline.BoundsPipeline_correct_trans
                false (* subst01 *)
                relax_zrange
-               (relax_zrange_gen_good _)
+               relax_zrange_good
                _
                rop
                in_bounds
@@ -11306,41 +11356,7 @@ Module Barrett256.
       cbn in *. repeat split; apply Z.leb_le; omega. }
   Qed.
 
-  (* TODO : maybe move these ok_expr tactics somewhere else *)
-  Ltac ok_expr_step' :=
-    match goal with
-    | _ => assumption
-    | |- _ <= _ <= _ \/ @eq zrange _ _ =>
-      right; lazy; try split; congruence
-    | |- _ <= _ <= _ \/ @eq zrange _ _ =>
-      left; lazy; try split; congruence
-    | |- context [PreFancy.ok_ident] => constructor
-    | |- context [PreFancy.ok_scalar] => constructor; try omega
-    | |- context [PreFancy.is_halved] => eapply PreFancy.is_halved_constant; [lazy; reflexivity | ]
-    | |- context [PreFancy.is_halved] => constructor
-    | |- context [PreFancy.in_word_range] => lazy; reflexivity
-    | |- context [PreFancy.in_flag_range] => lazy; reflexivity
-    | |- context [PreFancy.get_range] =>
-      cbn [PreFancy.get_range lower upper fst snd ZRange.map]
-    | x : type.interp (type.prod _ _) |- _ => destruct x
-    | |- (_ <=? _)%zrange = true =>
-      match goal with
-      | |- context [PreFancy.get_range_var] =>
-        cbv [is_tighter_than_bool PreFancy.has_range fst snd upper lower machine_wordsize M muLow] in *; cbn;
-        apply andb_true_iff; split; apply Z.leb_le
-      | _ => lazy
-      end; omega || reflexivity
-    | |- @eq zrange _ _ => lazy; reflexivity
-    | |- _ <= _ => cbv [machine_wordsize]; omega
-    | |- _ <= _ <= _ => cbv [machine_wordsize]; omega
-    end; intros.
-
-  (* TODO : maybe move these ok_expr tactics somewhere else *)
-  Ltac ok_expr_step :=
-    match goal with
-    | |- context [PreFancy.ok_expr] => constructor; cbn [fst snd]; repeat ok_expr_step'
-    end; intros; cbn [Nat.max].
-
+  Import PreFancy.Tactics. (* for ok_expr_step *)
   Lemma barrett_red256_prefancy_correct :
     forall xLow xHigh dummy_arrow,
       0 <= xLow < 2 ^ machine_wordsize ->
@@ -11357,10 +11373,8 @@ Module Barrett256.
     { cbv [In M muLow]; intros; intuition; subst; cbv; congruence. }
     { let r := (eval compute in (2 ^ machine_wordsize)) in
       replace (2^machine_wordsize) with r in * by reflexivity.
-      cbv [M] in *.
+      cbv [M muLow machine_wordsize] in *.
       assert (lower r[0~>1] = 0) by reflexivity.
-      repeat (ok_expr_step; [ ]).
-      ok_expr_step. { exact admit. (* TODO: the actual bounds on the second argument are lower, but relax_zrange steps have lost that information. *) }
       repeat (ok_expr_step; [ ]).
       ok_expr_step.
       lazy; congruence.
@@ -12383,8 +12397,8 @@ Module Montgomery256.
       start_context RegPInv = N' ->  (* RegPInv needs to hold the inverse of the modulus *)
       start_context RegMod = N ->    (* RegMod needs to hold the modulus *)
       start_context RegZero = 0 ->   (* RegZero needs to hold zero *)
-      (0 <= start_context lo < R) -> (* value in lo is in bounds (R=2^256) *)
-      (0 <= start_context hi < R) -> (* value in hi is in bounds (R=2^256) *)
+      (0 <= start_context lo < R) -> (* low half of the input is in bounds (R=2^256) *)
+      (0 <= start_context hi < R) -> (* high half of the input is in bounds (R=2^256) *)
       let x := (start_context lo) + R * (start_context hi) in (* x is the input (split into two registers) *)
       (0 <= x < R * N) -> (* input precondition *)
       (ProdEquiv.interp256 (Prod.MontRed256 lo hi y t1 t2 scratch RegPInv) cc_start_state start_context = (x * R') mod N).
@@ -12527,9 +12541,8 @@ Print Assumptions Montgomery256.prod_montred256_correct.
 (*** Barrett Reduction ***)
 
 (* Status : Code in "pre-fancy" (stage before final form) is proven
-correct modulo admits in compiler portions and one additional
-admit (see comment in barrett_red256_prefancy_correct). Code in final
-form ("fancy") is generated, but not yet proven equivalent to the
+correct modulo admits in compiler portions. Code in final form
+("fancy") is generated, but not yet proven equivalent to the
 "pre-fancy" version.
 
 The next step is to, using the same methodology as for Montgomery,
