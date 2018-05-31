@@ -8560,7 +8560,7 @@ Module PreFancy.
     Qed.
 
     Let half_bits := log2wordmax / 2.
- 
+
     Lemma half_bits_nonneg : 0 <= half_bits.
     Proof. subst half_bits; Z.zero_bounds. Qed.
 
@@ -9686,7 +9686,7 @@ Module PreFancy.
 
       Definition range_ok {t} : range_type t -> Prop :=
         match t with
-        | type.type_primitive type.Z => fun r => in_word_range r 
+        | type.type_primitive type.Z => fun r => in_word_range r
         | type.prod type.Z type.Z => fun r => in_word_range (fst r) /\ snd r = flag_range
         | _ => fun _ => False
         end.
@@ -9908,7 +9908,7 @@ Module PreFancy.
     Notation "'ret' $ x" := (Scalar (Var tZ x)) (at level 10, format "'ret'  $ x").
     Notation "( x , y )" := (Pair x y) (at level 10, left associativity).
   End Notations.
- 
+
   Module Tactics.
     Ltac ok_expr_step' :=
       match goal with
@@ -10112,12 +10112,17 @@ Module Fancy.
                    (upper128 r0) * (upper128 r1))
       |}.
 
+    (* Note : Unlike the other operations, the output of RSHI is
+    truncated in the specification. This is not strictly necessary,
+    since the interpretation function truncates the output
+    anyway. However, it is useful to make the definition line up
+    exactly with Z.rshi. *)
     Definition RSHI (imm : int) : instruction :=
       {|
         num_source_regs := 2;
         writes_conditions := [M; L; Z];
         spec := (fun '(r0, r1) cc =>
-                   (r0 + (r1 << 256)) >> imm)
+                   (((2^256 * r0) + r1) >> imm) mod (2^256))
       |}.
 
     Definition SELC : instruction :=
@@ -11472,10 +11477,197 @@ Module Barrett256.
 
   Admitted.
 
+  Import Fancy_PreFancy_Equiv.
+
+  Definition interp_equivZZ_256 {s} :=
+    @interp_equivZZ s 256 ltac:(cbv; congruence) 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
+  Definition interp_equivZ_256 {s} :=
+    @interp_equivZ s 256 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
+
+  Local Ltac simplify_op_equiv start_ctx :=
+    cbn - [Fancy.spec PreFancy.interp_ident Fancy.cc_spec Z.shiftl];
+    repeat match goal with H : start_ctx _ = _ |- _ => rewrite H end;
+    cbv - [
+      Z.rshi Z.cc_m Fancy.CC.cc_m
+        Z.add_with_get_carry_full Z.add_get_carry_full
+        Z.sub_get_borrow_full Z.sub_with_get_borrow_full
+        Z.le Z.lt Z.ltb Z.leb Z.geb Z.eqb Z.land Z.shiftr Z.shiftl
+        Z.add Z.mul Z.div Z.sub Z.modulo Z.testbit Z.pow Z.ones
+        fst snd]; cbn [fst snd];
+    try (replace (2 ^ (256 / 2) - 1) with (Z.ones 128) by reflexivity; rewrite !Z.land_ones by omega);
+    autorewrite with to_div_mod; rewrite ?Z.mod_mod, <-?Z.testbit_spec' by omega;
+    let r := (eval compute in (2 ^ 256)) in
+    replace (2^256) with r in * by reflexivity;
+    repeat match goal with
+           | H : 0 <= ?x < ?m |- context [?x mod ?m] => rewrite (Z.mod_small x m) by apply H
+           | |- context [?x <? 0] => rewrite (proj2 (Z.ltb_ge x 0)) by (break_match; Z.zero_bounds)
+           | _ => rewrite Z.mod_small with (b:=2) by (break_match; omega)
+           | |- context [ (if Z.testbit ?a ?n then 1 else 0) + ?b + ?c] =>
+             replace ((if Z.testbit a n then 1 else 0) + b + c) with (b + c + (if Z.testbit a n then 1 else 0)) by ring
+           end.
+
+  Local Ltac solve_nonneg ctx :=
+    match goal with x := (Fancy.spec _ _ _) |- _ => subst x end;
+    simplify_op_equiv ctx; Z.zero_bounds.
+
+  Local Ltac generalize_result :=
+    let v := fresh "v" in intro v; generalize v; clear v; intro v.
+
+  Local Ltac generalize_result_nonneg ctx :=
+    let v := fresh "v" in
+    let v_nonneg := fresh "v_nonneg" in
+    intro v; assert (0 <= v) as v_nonneg; [solve_nonneg ctx |generalize v v_nonneg; clear v v_nonneg; intros v v_nonneg].
+
+  Local Ltac step ctx :=
+    match goal with
+    | |- Fancy.interp _ _ _ (Fancy.Instr (Fancy.ADD _) _ _ (Fancy.Instr (Fancy.ADDC _) _ _ _)) _ _ = _ =>
+      apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result_nonneg ctx]
+    | _ => apply interp_equivZ_256; [simplify_op_equiv ctx | generalize_result]
+    | _ => apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result]
+    end.
+
+  (* TODO: move this lemma to ZUtil *)
+  Lemma testbit_neg_eq_if x n :
+    0 <= n ->
+    - (2 ^ n) <= x  < 2 ^ n ->
+    Z.b2z (if x <? 0 then true else Z.testbit x n) = - (x / 2 ^ n) mod 2.
+  Proof.
+    intros. break_match; Z.ltb_to_lt.
+    { autorewrite with zsimplify. reflexivity. }
+    { autorewrite with zsimplify.
+      rewrite Z.bits_above_pow2 by omega.
+      reflexivity. }
+  Qed.
+
+  Lemma prod_barrett_red256_correct :
+    forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
+           (start_context : register -> Z)   (* starting register values *)
+           (x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 extra_reg : register), (* registers to use in computation *)
+      NoDup [x; xHigh; RegMuLow; scratchp1; scratchp2; scratchp3; scratchp4; scratchp5; extra_reg; RegMod; RegZero] -> (* registers are unique *)
+             0 <= start_context x < 2^machine_wordsize ->
+             0 <= start_context xHigh < M ->
+             start_context RegMuLow = muLow ->
+             start_context RegMod = M ->
+             start_context RegZero = 0 ->
+             cc_start_state.(Fancy.CC.cc_m) = (Z.cc_m (2^256) (start_context xHigh) =? 1) ->
+             let X := start_context x + 2^machine_wordsize * start_context xHigh in
+             ProdEquiv.interp256 (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
+  Proof.
+    intros. subst X.
+    assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; omega).
+    let r := (eval compute in (2 ^ machine_wordsize)) in
+    replace (2^machine_wordsize) with r in * by reflexivity.
+    cbv [M muLow] in *.
+
+    rewrite <-barrett_red256_prefancy_correct with (dummy_arrow := fun s d _ => DefaultValue.type.default) by auto.
+    rewrite <-barrett_red256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
+      by (cbn in *; auto with omega).
+    cbv [ProdEquiv.interp256].
+    let r := (eval compute in (2 ^ 256)) in
+    replace (2^256) with r in * by reflexivity.
+    cbv [barrett_red256_alloc barrett_red256_prefancy].
+
+    step start_context.
+    {
+      match goal with H : Fancy.CC.cc_m _ = _ |- _ => rewrite H end.
+      match goal with |- context [Z.cc_m ?s ?x] =>
+                      pose proof (Z.cc_m_small s x ltac:(reflexivity) ltac:(reflexivity) ltac:(omega));
+                        let H := fresh in
+                        assert (Z.cc_m s x = 1 \/ Z.cc_m s x = 0) as H by omega;
+                          destruct H as [H | H]; rewrite H in *
+      end; break_innermost_match; Z.ltb_to_lt; try congruence. }
+    apply interp_equivZ_256; [ simplify_op_equiv start_context | ]. (* apply manually instead of using [step] to allow a custom bounds proof *)
+    { rewrite Z.rshi_correct by omega.
+      autorewrite with zsimplify_fast.
+      rewrite Z.shiftr_div_pow2 by omega.
+      reflexivity. }
+
+    (* Special case to remember the bound for the output of RSHI *)
+    let v := fresh "v" in
+    let v_bound := fresh "v_bound" in
+    intro v; assert (0 <= v <= 1) as v_bound; [ |generalize v v_bound; clear v v_bound; intros v v_bound].
+    { solve_nonneg start_context. autorewrite with zsimplify_fast.
+      rewrite Z.shiftr_div_pow2 by omega.
+      rewrite Z.mod_pull_div by omega.
+      rewrite Z.mod_small by (cbn; omega).
+      split; [Z.zero_bounds|].
+      apply Z.lt_succ_r.
+      apply Z.div_lt_upper_bound; cbn; omega. }
+
+    step start_context.
+    { rewrite Z.rshi_correct by omega.
+      rewrite Z.shiftr_div_pow2 by omega.
+      repeat (f_equal; try ring). }
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context;
+      [ rewrite Z.mod_small with (b:=2) by (rewrite Z.mod_small by omega; omega); (* Here we make use of the bound of RSHI *)
+        reflexivity
+      | rewrite Z.mod_small with (b:=2) by (rewrite Z.mod_small by omega; omega); (* Here we make use of the bound of RSHI *)
+        reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context.
+    { rewrite Z.rshi_correct by omega.
+      rewrite Z.shiftr_div_pow2 by omega.
+      repeat (f_equal; try ring). }
+
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+    step start_context; [ reflexivity | reflexivity | ].
+
+    step start_context.
+    { reflexivity. }
+    { autorewrite with zsimplify_fast.
+      match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
+      rewrite <-testbit_neg_eq_if with (n:=256) by (cbn; omega).
+      reflexivity. }
+    step start_context.
+    { reflexivity. }
+    { autorewrite with zsimplify_fast.
+      rewrite Z.mod_small with (a:=(if (if _ <? 0 then true else _) then _ else _)) (b:=2) by (break_innermost_match; omega).
+      match goal with |- context [?a - ?b - ?c] => replace (a - b - c) with (a - (b + c)) by ring end.
+      match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
+      rewrite <-testbit_neg_eq_if with (n:=256) by (break_innermost_match; cbn; omega).
+      reflexivity. }
+    step start_context.
+    { rewrite Z.bit0_eqb.
+      match goal with |- context [(?x mod ?m) &' 1] =>
+                      replace (x mod m) with (x &' Z.ones 256) by (rewrite Z.land_ones by omega; reflexivity) end.
+      rewrite <-Z.land_assoc.
+      rewrite Z.land_ones with (n:=1) by omega.
+      cbn.
+      match goal with |- context [?x mod 2] =>
+                      let H := fresh in
+                      assert (x mod 2 = 0 \/ x mod 2 = 1) as H
+                          by (pose proof (Z.mod_pos_bound x 2 ltac:(omega)); omega);
+                        destruct H as [H | H]; rewrite H
+      end; reflexivity. }
+    step start_context.
+    { reflexivity. }
+    { autorewrite with zsimplify_fast.
+      repeat match goal with |- context [?x mod ?m] => unique pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
+      rewrite <-testbit_neg_eq_if with (n:=256) by (cbn; omega).
+      reflexivity. }
+    step start_context; [ break_innermost_match; Z.ltb_to_lt; omega | ].
+    reflexivity.
+  Qed.
+
   Import PrintingNotations.
   Set Printing Width 1000.
   Open Scope expr_scope.
-
   Print barrett_red256.
   (*
 barrett_red256 =  fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
@@ -11546,7 +11738,7 @@ barrett_red256 =  fun var : type -> Type => λ x : var (type.type_primitive type
     sell@(y25, $y24, RegZero, RegMod);
     sub@(y26, $y23, $y25, 0);
     addm@(y27, $y26, RegZero, RegMod);
-    ret $y27 
+    ret $y27
   *)
 End Barrett256.
 
@@ -12533,71 +12725,67 @@ Eval cbv beta iota delta [Prod.MontRed256 Prod.Mul256 Prod.Mul256x256] in Prod.M
 (* Uncomment to see proof statement and remaining admitted statements,
 or search for "prod_montred256_correct" to see comments on the proof
 preconditions. *)
-(* 
+(*
 Check Montgomery256.prod_montred256_correct.
 Print Assumptions Montgomery256.prod_montred256_correct.
 *)
 
 (*** Barrett Reduction ***)
 
-(* Status : Code in "pre-fancy" (stage before final form) is proven
-correct modulo admits in compiler portions. Code in final form
-("fancy") is generated, but not yet proven equivalent to the
-"pre-fancy" version.
+(* Status: Code is proven correct modulo admits in compiler
+portions. However, unlike for Montgomery, this code is not proven
+equivalent to the register-allocated and efficiently-scheduled
+reference (Prod.MulMod). This proof is currently admitted and would
+require either fiddling with code generation to make instructions come
+out in the right order or reasoning about which instructions
+commute. *)
 
-The next step is to, using the same methodology as for Montgomery,
-prove the generated fancy code equivalent to Prod.MulMod and also
-equivalent to the "pre-fancy" code. Once these equivalences are
-proven, then the "pre-fancy" proof will apply to Prod.MulMod.
- *)
-
-Import PreFancy.
-Import PreFancy.Notations.
-Local Notation "'RegMod'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
-Local Notation "'RegMuLow'" := (Straightline.expr.Primitive (t:=type.Z) 26959946667150639793205513449348445388433292963828203772348655992835).
-
-(* "Prefancy" form : *)
-Print Barrett256.barrett_red256_prefancy.
+(* Barrett reference code: *)
+Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
 (*
-selm@(y, $x₂, RegZero, RegMuLow);
-rshi@(y0, RegZero, $x₂,255);
-rshi@(y1, $x₂, $x₁,255);
-mulhh@(y2, RegMuLow, $y1);
-mulhl@(y3, RegMuLow, $y1);
-mullh@(y4, RegMuLow, $y1);
-mulll@(y5, RegMuLow, $y1);
-add@(y6, $y5, $y4, 128);
-addc@(y7, carry{$y6}, $y2, $y4, -128);
-add@(y8, $y6, $y3, 128);
-addc@(y9, carry{$y8}, $y7, $y3, -128);
-add@(y10, $y1, $y9, 0);
-addc@(y11, carry{$y10}, RegZero, $y0, 0);
-add@(y12, $y, $y10, 0);
-addc@(y13, carry{$y12}, RegZero, $y11, 0);
-rshi@(y14, $y13, $y12,1);
-mulhh@(y15, RegMod, $y14);
-mullh@(y16, RegMod, $y14);
-mulhl@(y17, RegMod, $y14);
-mulll@(y18, RegMod, $y14);
-add@(y19, $y18, $y17, 128);
-addc@(y20, carry{$y19}, $y15, $y17, -128);
-add@(y21, $y19, $y16, 128);
-addc@(y22, carry{$y21}, $y20, $y16, -128);
-sub@(y23, $x₁, $y21, 0);
-subb@(y24, carry{$y23}, $x₂, $y22, 0);
-sell@(y25, $y24, RegZero, RegMod);
-sub@(y26, $y23, $y25, 0);
-addm@(y27, $y26, RegZero, RegMod);
-ret $y27
+     = fun x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : register =>
+       let q1Bottom256 := scratchp1 in
+       let muSelect := scratchp2 in
+       let q2 := scratchp3 in
+       let q2High := scratchp4 in
+       let q2High2 := scratchp5 in
+       let q3 := scratchp1 in
+       let r2 := scratchp2 in
+       let r2High := scratchp3 in
+       let maybeM := scratchp1 in
+       SELM muSelect RegMuLow RegZero;
+       RSHI 255 q1Bottom256 xHigh x;
+       MUL128LL q2 q1Bottom256 RegMuLow;
+       MUL128UU q2High q1Bottom256 RegMuLow;
+       MUL128UL scratchp5 q1Bottom256 RegMuLow;
+       ADD 128 q2 q2 scratchp5;
+       ADDC (-128) q2High q2High scratchp5;
+       MUL128LU scratchp5 q1Bottom256 RegMuLow;
+       ADD 128 q2 q2 scratchp5;
+       ADDC (-128) q2High q2High scratchp5;
+       RSHI 255 q2High2 RegZero xHigh;
+       ADD 0 q2High q2High q1Bottom256;
+       ADDC 0 q2High2 q2High2 RegZero;
+       ADD 0 q2High q2High muSelect;
+       ADDC 0 q2High2 q2High2 RegZero;
+       RSHI 1 q3 q2High2 q2High;
+       MUL128LL r2 RegMod q3;
+       MUL128UU r2High RegMod q3;
+       MUL128UL scratchp4 RegMod q3;
+       ADD 128 r2 r2 scratchp4;
+       ADDC (-128) r2High r2High scratchp4;
+       MUL128LU scratchp4 RegMod q3;
+       ADD 128 r2 r2 scratchp4;
+       ADDC (-128) r2High r2High scratchp4;
+       SUB 0 muSelect x r2;
+       SUBC 0 xHigh xHigh r2High;
+       SELL maybeM RegMod RegZero;
+       SUB 0 q3 muSelect maybeM;
+       ADDM x q3 RegZero RegMod;
+       Ret x
  *)
 
-(* Uncomment to see proof statement and remaining admitted statements. *)
-(*
-Check barrett_red256_prefancy_correct.
-Print Assumptions barrett_red256_prefancy_correct.
- *)
-
-(* "Fancy" code (NOT proven) *)
+(* Barrett generated code (equivalence with reference admitted) *)
 Eval cbv beta iota delta [barrett_red256_alloc] in barrett_red256_alloc.
 (*
      = fun (xLow xHigh RegMuLow : register) (_ : positive) (_ : register) =>
@@ -12632,3 +12820,10 @@ Eval cbv beta iota delta [barrett_red256_alloc] in barrett_red256_alloc.
        ADDM r28 r27 RegZero RegMod;
        Ret r28
  *)
+
+(* Uncomment to see proof statement and remaining admitted statements. *)
+(*
+Check prod_barrett_red256_correct.
+Print Assumptions prod_barrett_red256_correct.
+(* The equivalence with generated code is admitted as barrett_red256_alloc_equivalent. *)
+*)
