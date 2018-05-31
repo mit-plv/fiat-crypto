@@ -8547,12 +8547,8 @@ Module PreFancy.
   Section with_wordmax.
     Context (log2wordmax : Z) (log2wordmax_pos : 1 < log2wordmax) (log2wordmax_even : log2wordmax mod 2 = 0).
     Let wordmax := 2 ^ log2wordmax.
-    Let half_bits := log2wordmax / 2.
-    Let wordmax_half_bits := 2 ^ half_bits.
-
     Lemma wordmax_gt_2 : 2 < wordmax.
     Proof.
-      clear - wordmax log2wordmax log2wordmax_pos. subst wordmax.
       apply Z.le_lt_trans with (m:=2 ^ 1); [ reflexivity | ].
       apply Z.pow_lt_mono_r; omega.
     Qed.
@@ -8563,11 +8559,15 @@ Module PreFancy.
       subst wordmax. apply Z.mod_same_pow; omega.
     Qed.
 
-    Lemma wordmax_half_bits_pos : 0 < wordmax_half_bits.
-    Proof. subst wordmax_half_bits half_bits. Z.zero_bounds. Qed.
-
+    Let half_bits := log2wordmax / 2.
+ 
     Lemma half_bits_nonneg : 0 <= half_bits.
     Proof. subst half_bits; Z.zero_bounds. Qed.
+
+    Let wordmax_half_bits := 2 ^ half_bits.
+
+    Lemma wordmax_half_bits_pos : 0 < wordmax_half_bits.
+    Proof. subst wordmax_half_bits half_bits. Z.zero_bounds. Qed.
 
     Lemma half_bits_squared : (wordmax_half_bits - 1) * (wordmax_half_bits - 1) <= wordmax - 1.
     Proof.
