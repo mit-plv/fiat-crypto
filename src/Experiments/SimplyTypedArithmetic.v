@@ -1475,7 +1475,7 @@ Module Rows.
                | _ => progress In_cases
                | |- _ /\ _ => split
                | |- context [?x mod ?y] => unique pose proof (Z.mul_div_eq_full x y ltac:(auto)); lia
-                                                                                                    | _ => apply length_sum_rows
+               | _ => apply length_sum_rows
                | _ => solve [repeat (ring_simplify; f_equal; try ring)]
                | _ => congruence
                | _ => solve [eauto]
