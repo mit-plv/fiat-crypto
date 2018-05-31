@@ -4,6 +4,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.CPSNotations.
 Import ListNotations.
 
 Set Boolean Equality Schemes.
@@ -17,7 +18,6 @@ Infix "->" := Arrow : ctype_scope.
 Infix "*" := Prod : ctype_scope.
 Notation "( )" := Unit : ctype_scope.
 
-About partition.
 Inductive ident : type -> Type :=
 | O : ident Nat
 | S : ident (Nat -> Nat)
@@ -72,10 +72,11 @@ show_match_ident = r"""match # with
  | Literal n =>
  end
 
-""".replace('=>', '=>')
+"""
 ctors = [i.strip('|=> ').split(' ') for i in show_match_ident.split('\n') if i.strip().startswith('|')]
 pctors = ['p' + i[0] for i in ctors]
-print(r"""Inductive pident : Type :=
+print(r"""(* p for pattern *)
+Inductive pident : Type :=
 | %s.
 """ % '\n| '.join(pctors))
 print(r"""Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
@@ -88,8 +89,8 @@ print(r"""Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
 """ % ('\n     | '.join(pctor + ', ' + ' '.join([ctor[0]] + ['_'] * (len(ctor)-1))
                         for pctor, ctor in zip(pctors, ctors)),
        '\n     | '.join(pctor + ', _' for pctor in pctors)))
-print(r"""Definition eta_ident_cps {T t} (idc : ident t)
-           (f : forall t, ident t -> T t)
+print(r"""Definition eta_ident_cps {T : type -> Type} {t} (idc : ident t)
+           (f : forall t', ident t' -> T t')
   : T t
   := match idc with
      | %s
@@ -98,7 +99,7 @@ print(r"""Definition eta_ident_cps {T t} (idc : ident t)
                         + (('%s' if len(ctor) == 1 else '(@%s)')
                            % ' '.join(ctor))
                         for ctor in ctors)))
-print(r"""Definition eta_option_pident_cps {T} (f : pident -> option T)
+print(r"""Definition eta_all_option_pident_cps {T} (f : pident -> option T)
   : option (pident -> T)
   := (%s;
       Some (fun c
@@ -117,6 +118,7 @@ print(r"""Definition orb_pident (f : pident -> bool) : bool
 """ % ' || '.join('f ' + pctor for pctor in pctors))
 >>>
 *)
+(* p for pattern *)
 Inductive pident : Type :=
 | pO
 | pS
@@ -191,8 +193,8 @@ Definition pident_ident_beq {t} (X : pident) (Y : ident t) : bool
        => false
      end.
 
-Definition eta_ident_cps {T t} (idc : ident t)
-           (f : forall t, ident t -> T t)
+Definition eta_ident_cps {T : type -> Type} {t} (idc : ident t)
+           (f : forall t', ident t' -> T t')
   : T t
   := match idc with
      | O => f _ O
@@ -219,7 +221,7 @@ Definition eta_ident_cps {T t} (idc : ident t)
      | Literal n => f _ (@Literal n)
      end.
 
-Definition eta_option_pident_cps {T} (f : pident -> option T)
+Definition eta_all_option_pident_cps {T} (f : pident -> option T)
   : option (pident -> T)
   := (fO <- f pO;
       fS <- f pS;
@@ -298,8 +300,13 @@ Definition pident_of_ident {t} (idc : ident t) : pident
 Definition orb_pident (f : pident -> bool) : bool
   := (f pO || f pS || f pNatRect || f pNatEqb || f pAdd || f pPair || f pFst || f pSnd || f pMatchPair || f pNil || f pCons || f pListMap || f pListApp || f pListFlatMap || f pListRect || f pListFoldRight || f pListPartition || f pTT || f piTrue || f piFalse || f pBoolRect || f pLiteral)%bool.
 
-
 (*===*)
+
+Definition invert_Literal {t} (idc : ident t) : option nat
+  := match idc with
+     | Literal n => Some n
+     | _ => None
+     end.
 
 Definition or_opt_pident {T} (f : pident -> option T) : bool
   := orb_pident (fun p => match f p with Some _ => true | None => false end).
@@ -312,13 +319,13 @@ Inductive expr {var : type -> Type} : type -> Type :=
 | LetIn {A B} (x : expr A) (f : var A -> expr B) : expr B .
 
 Inductive pbase_type := pbAny | pNat | pUnit | pBool | pProd (A B : pbase_type) | pList (A : pbase_type).
-Definition option_type := option type.
-Coercion Some_t (t : type) : option_type := Some t.
-Inductive ptype := pAny | pBase (t : pbase_type) | pArrow (s : option_type) (d : ptype).
+Coercion Some_t (t : type) : option type := Some t.
+(* N.B. In [pArrow], [None] on the source means "any" *)
+Inductive ptype := pAny | pBase (t : pbase_type) | pArrow (s : option type) (d : ptype).
 Coercion pBase : pbase_type >-> ptype.
 Bind Scope ptype_scope with ptype.
 Bind Scope pbtype_scope with pbase_type.
-Bind Scope ctype_scope with option_type.
+Bind Scope ctype_scope with option type.
 Delimit Scope ptype_scope with ptype.
 Delimit Scope pbtype_scope with pbtype.
 Infix "->" := pArrow : ptype_scope.
@@ -334,8 +341,7 @@ Notation "'??'" := (@None base_type) : ctype_scope.
 Notation "'??'" := None (only parsing) : ctype_scope.
 
 Inductive pattern : Type :=
-| Wildcardv (t : ptype)
-| Wildcarde (t : option type)
+| Wildcard (t : ptype)
 | pIdent (idc : pident)
 | pApp (f x : pattern).
 
@@ -346,7 +352,7 @@ Notation "## n" := (Ident (Literal n)) : expr_scope.
 Notation "'expr_let' x := A 'in' b" := (LetIn A (fun x => b%expr)) : expr_scope.
 Infix "@" := App : expr_scope.
 Notation "\ x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) .. )) : expr_scope.
-Notation "'λ'  x .. y , t" := (Abs (fun x => .. (Abs (fun y => t%expr)) ..)) : expr_scope.
+Notation "'λ'  x .. y , f" := (Abs (fun x => .. (Abs (fun y => f%expr)) ..)) : expr_scope.
 Notation "'$' x" := (Var x) (at level 10, format "'$' x") : expr_scope.
 Notation "( )" := (#TT)%expr : expr_scope.
 Notation "0" := (#O)%expr : expr_scope.
@@ -363,11 +369,9 @@ Notation "[ x ; y ; .. ; z ]" :=  (#Cons @ x @ (#Cons @ y @ .. (#Cons @ z @ []) 
 Delimit Scope pattern_scope with pattern.
 Bind Scope pattern_scope with pattern.
 Notation "#?" := (pIdent pLiteral) : pattern_scope.
-Notation "???{ t }" := (Wildcarde (Some t)) (format "???{ t }") : pattern_scope.
-Notation "??{ t }" := (Wildcardv t) (format "??{ t }") : pattern_scope.
-Notation "??" := (Wildcarde None) : pattern_scope.
-Notation "??ℕ" := (Wildcarde (Some (Base Nat))) : pattern_scope.
-Notation "??ℕℕ" := (Wildcarde (Some (Base (Prod Nat Nat)))) : pattern_scope.
+Notation "??{ t }" := (Wildcard t) (format "??{ t }") : pattern_scope.
+Notation "??" := (Wildcard (pBase pbAny)) : pattern_scope.
+Notation "??ℕ" := (Wildcard (pBase pNat)) : pattern_scope.
 Notation "# idc" := (pIdent idc) : pattern_scope.
 Infix "@" := pApp : pattern_scope.
 Notation "( )" := (#pTT)%pattern : pattern_scope.
@@ -381,153 +385,69 @@ Notation "[ ]" := (#pNil)%pattern : pattern_scope.
 Notation "[ x ]" := (x :: [])%pattern : pattern_scope.
 Notation "[ x ; y ; .. ; z ]" :=  (#pCons @ x @ (#pCons @ y @ .. (#pCons @ z @ []) ..))%pattern : pattern_scope.
 
+(** TODO: MOVEME, FIX NOTATION CLASH *)
+Definition cpsbind {A B} (v:~> A) (f:A ~> B) : ~> B
+  := fun T k => (a <- v; fa <- f a; k fa)%cps.
+Notation "x' <- v ; C" := (cpsbind v%cps (fun x' => C%cps)) : cps_scope.
+
+Notation "x' <-- v ; C" := (cpsbind v%cps (fun x' T k => match x' with Some x' => C%cps T k | None => k None end)) : cps_scope.
+
+(** N.B. The pattern matching compilation algorithm in
+    http://moscova.inria.fr/~maranget/papers/ml05e-maranget.pdf ---
+    "Compiling Pattern Matching to Good Decision Trees" by Luc
+    Maranget --- is based on manipulating untyped terms, or
+    manipulating typed terms in a raw (untyped) syntax tree.  PHOAS
+    enforces well-typedness by construction, and we need something
+    like this for NBE (normalization by evaluation), which we use for
+    reducing applications of lambdas, to work.  So we jump through
+    many hoops to cast across types. *)
+(** TODO: Would it work to operate on syntax trees which are only
+    typed by their arrow structure, and nothing else?  Would it help? *)
 Module type.
-  Fixpoint try_make_transport_base_cps {T} (P : base_type -> Type) (t1 t2 : base_type)
-           {struct t2}
-  : (option (P t1 -> P t2) -> T) -> T
-    := match t2, t1 with
+  Fixpoint try_make_transport_base_cps (P : base_type -> Type) (t1 t2 : base_type) : ~> option (P t1 -> P t2)
+    := match t1, t2 with
        | Nat, Nat
        | Unit, Unit
        | Bool, Bool
-         => fun k => k (Some (fun v => v))
+         => (return (Some (fun v => v)))
        | List A, List A'
          => try_make_transport_base_cps
-              (fun A => P (List A)) _ _
+             (fun A => P (List A)) _ _
        | Prod s d, Prod s' d'
-         => fun k
-            => try_make_transport_base_cps
-                 (fun s => P (Prod s _)) _ _
-                 (fun trs
-                  => match trs with
-                     | Some trs
-                       => try_make_transport_base_cps
-                            (fun d => P (Prod _ d)) _ _
-                            (fun trd
-                             => match trd with
-                                | Some trd => k (Some (fun v => trd (trs v)))
-                                | None => k None
-                                end)
-                     | None => k None
-                     end)
+         => (trs <-- try_make_transport_base_cps (fun s => P (Prod s _)) _ _;
+              trd <-- try_make_transport_base_cps (fun d => P (Prod _ d)) _ _;
+            return (Some (fun v => trd (trs v))))
        | Nat, _
        | Unit, _
        | Bool, _
        | List _, _
        | Prod _ _, _
-         => fun k => k None
-       end.
+         => (return None)
+       end%option%cps.
 
-  Fixpoint try_make_transport_cps {T} (P : type -> Type) (t1 t2 : type) {struct t2} : (option (P t1 -> P t2) -> T) -> T
-    := match t2, t1 with
-       | Base t2, Base t1
-         => try_make_transport_base_cps P t1 t2
+  Fixpoint try_make_transport_cps (P : type -> Type) (t1 t2 : type) : ~> option (P t1 -> P t2)
+    := match t1, t2 with
+       | Base t1, Base t2
+         => @try_make_transport_base_cps P t1 t2
        | Arrow s d, Arrow s' d'
-         => fun k
-            => try_make_transport_cps
-                 (fun s => P (Arrow s _)) _ _
-                 (fun trs
-                  => match trs with
-                     | Some trs
-                       => try_make_transport_cps
-                            (fun d => P (Arrow _ d)) _ _
-                            (fun trd
-                             => match trd with
-                                | Some trd => k (Some (fun v => trd (trs v)))
-                                | None => k None
-                                end)
-                     | None => k None
-                     end)
+         => (trs <-- try_make_transport_cps (fun s => P (Arrow s _)) _ _;
+              trd <-- try_make_transport_cps (fun d => P (Arrow _ d)) _ _;
+            return (Some (fun v => trd (trs v))))
        | Base _, _
        | Arrow _ _, _
-         => fun k => k None
-       end.
-  Definition try_transport_base_cps {T} (P : base_type -> Type) (t1 t2 : base_type) (v : P t1) (k : option (P t2) -> T) : T
-    := try_make_transport_base_cps
-         P t1 t2
-         (fun tr
-          => match tr with
-             | Some tr => k (Some (tr v))
-             | None => k None
-             end).
+         => (return None)
+       end%option%cps.
 
-  Definition try_transport_cps {T} (P : type -> Type) (t1 t2 : type) (v : P t1) (k : option (P t2) -> T) : T
-    := try_make_transport_cps
-         P t1 t2
-         (fun tr
-          => match tr with
-             | Some tr => k (Some (tr v))
-             | None => k None
-             end).
+  Definition try_transport_base_cps (P : base_type -> Type) (t1 t2 : base_type) (v : P t1) : ~> option (P t2)
+    := (tr <-- try_make_transport_base_cps P t1 t2;
+        return (Some (tr v)))%cps.
 
-(*
-  Fixpoint try_transport_base_cps {T} (P : base_type -> Type) (t1 t2 : base_type)
-           {struct t2}
-  : P t1 -> (option (P t2) -> T) -> T
-    := match t2 with
-       | Nat
-         => fun v k
-            => match t1 with
-               | Nat => fun v => k (Some v)
-               | _ => fun _ => k None
-               end v
-       | List A
-         => fun v k
-            => match t1 return P t1 -> _ with
-               | List A'
-                 => fun v
-                    => try_transport_base_cps
-                         (fun A => P (List A)) _ _ v
-                         k
-               | _ => fun _ => k None
-               end v
-       | Prod s d
-         => fun v k
-            => match t1 return P t1 -> _ with
-               | Prod s' d'
-                 => fun v
-                    => try_transport_base_cps
-                         (fun s => P (Prod s _)) _ _ v
-                         (fun v'
-                          => match v' with
-                             | Some v'
-                               => try_transport_base_cps
-                                    (fun d => P (Prod _ d)) _ _ v'
-                                    k
-                             | None => k None
-                             end)
-               | _ => fun _ => k None
-               end v
-       end.
+  Definition try_transport_cps (P : type -> Type) (t1 t2 : type) (v : P t1) : ~> option (P t2)
+    := (tr <-- try_make_transport_cps P t1 t2;
+        return (Some (tr v)))%cps.
 
-  Fixpoint try_transport_cps {T} (P : type -> Type) (t1 t2 : type) {struct t2} : P t1 -> (option (P t2) -> T) -> T
-    := match t2 with
-       | Base t2
-         => fun v k
-            => match t1 with
-               | Base t1 => fun v => try_transport_base_cps P t1 t2 v k
-               | _ => fun _ => k None
-               end v
-       | Arrow s d
-         => fun v k
-            => match t1 return P t1 -> _ with
-               | Arrow s' d'
-                 => fun v
-                    => try_transport_cps
-                         (fun s => P (Arrow s _)) _ _ v
-                         (fun v'
-                          => match v' with
-                             | Some v'
-                               => try_transport_cps
-                                    (fun d => P (Arrow _ d)) _ _ v'
-                                    k
-                             | None => k None
-                             end)
-               | _ => fun _ => k None
-               end v
-       end.
-*)
   Definition try_transport (P : type -> Type) (t1 t2 : type) (v : P t1) : option (P t2)
-    := try_transport_cps P t1 t2 v id.
+    := try_transport_cps P t1 t2 v _ id.
 End type.
 
 Record > anyexpr {var : type -> Type}
@@ -608,8 +528,6 @@ Section with_var.
        | Base t, false, true => fun e k => k (UnderLets.Base e)
        | Arrow s d,_ , _ => fun f k => k f
        end%under_lets.
-  (** TODO: MOVEME *)
-  Reserved Notation "A <---- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <----  X ; '/' B ']'").
   Local Notation "e <---- e' ; f" := (splice_value'_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
   Fixpoint push_lets_value' {t} : UnderLets (value' t) -> value'_with_lets t
     := match t return UnderLets (value' t) -> value'_with_lets t with
@@ -755,67 +673,52 @@ Section with_var.
 
   Fixpoint binding_dataT (p : pattern) : Type
     := match p return Type with
-       | Wildcardv t => ptype_interp qexists t id
-       | Wildcarde None => anyexpr
-       | Wildcarde (Some t) => expr t
-       | pIdent pLiteral => nat
-       | pIdent _ => unit
+       | Wildcard t => ptype_interp qexists t id
+       | pIdent idc => if pident_beq pLiteral idc then nat else unit
        | pApp f x => binding_dataT f * binding_dataT x
        end%type.
 
-  Fixpoint bind_base_cps {T t1 t2}
+  Fixpoint bind_base_cps {t1 t2}
            (K : base_type -> Type)
-           (k : option (pbase_type_interp_cps qexists t1 K) -> T)
            (v : K t2)
            {struct t1}
-    : T
-    := match t1 return (option (pbase_type_interp_cps qexists t1 K) -> T) -> T with
-       | pbAny => fun k => k (Some (existT K t2 v))
+    : ~> option (pbase_type_interp_cps qexists t1 K)
+    := match t1 return ~> option (pbase_type_interp_cps qexists t1 K) with
+       | pbAny => (return (Some (existT K t2 v)))
        | pNat
-         => fun k
-            => match t2 return K t2 -> T with
-               | Nat => fun v => k (Some v)
-               | _ => fun _ => k None
-               end v
+         => (v <-- type.try_transport_base_cps _ _ Nat v;
+             return (Some v))
        | pUnit
-         => fun k
-            => match t2 return K t2 -> T with
-               | Unit => fun v => k (Some v)
-               | _ => fun _ => k None
-               end v
+         => (v <-- type.try_transport_base_cps _ _ Unit v;
+             return (Some v))
        | pBool
-         => fun k
-            => match t2 return K t2 -> T with
-               | Bool => fun v => k (Some v)
-               | _ => fun _ => k None
-               end v
+         => (v <-- type.try_transport_base_cps _ _ Bool v;
+             return (Some v))
        | pProd A B
-         => fun k
+         => fun T k
             => match t2 return K t2 -> T with
                | Prod A' B'
                  => fun v
                     => @bind_base_cps
-                         T B B' (fun B' => K (A' * B')%ctype)
+                         B B' (fun B' => K (A' * B')%ctype) v T
                          (fun v'
                           => match v' with
                              | Some v''
                                => @bind_base_cps
-                                    T A A' (fun A' => pbase_type_interp_cps qexists B (fun B' => K (A' * B')%ctype))
+                                    A A' (fun A' => pbase_type_interp_cps qexists B (fun B' => K (A' * B')%ctype)) v'' T
                                     k
-                                    v''
                              | None => k None
                              end)
-                         v
                | _ => fun _ => k None
                end v
        | pList A
-         => fun k
+         => fun T k
             => match t2 return K t2 -> T with
                | List A'
-                 => @bind_base_cps T A A' (fun A'' => K (List A'')) k
+                 => fun v => @bind_base_cps A A' (fun A'' => K (List A'')) v T k
                | _ => fun _ => k None
                end v
-       end k.
+       end%cps.
 
   Fixpoint bind_value_cps {T t1 t2}
            (kt : type -> type)
@@ -828,7 +731,7 @@ Section with_var.
        | pBase t1
          => fun k
             => match t2 return K t2 -> T with
-               | Base t2 => fun e => bind_base_cps K k e
+               | Base t2 => fun e => bind_base_cps K e T k
                | Arrow _ _ => fun _ => k None
                end v
        | pAny => fun k => k (Some (existT _ t2 v))
@@ -855,7 +758,7 @@ Section with_var.
                | Arrow s' d'
                  => fun v
                     => type.try_transport_cps
-                         (fun s => K (s -> _)%ctype) s' s v
+                         (fun s => K (s -> _)%ctype) s' s v _
                          (fun v'
                           => match v' with
                              | Some v''
@@ -868,53 +771,25 @@ Section with_var.
                end v
        end k.
 
-  Fixpoint bind_data_cps {T} (e : rawexpr) (p : pattern) {struct p}
-    : (option (binding_dataT p) -> T) -> T
-    := match p return (option (binding_dataT p) -> T) -> T with
-       | Wildcardv t
-         => fun k => bind_value_cps id k (value_of_rawexpr e)
-       | Wildcarde None
-         => fun k => k (Some (wrap (expr_of_rawexpr e)))
-       | Wildcarde (Some _)
-         => fun k => type.try_transport_cps _ _ _ (expr_of_rawexpr e) k
-       | pIdent pLiteral
-         => fun k
-            => match e with
-               | rIdent _ (Literal n) _ _
-                 => k (Some n)
-               | _ => k None
-               end
-       | pIdent pidc
-         => fun k
-            => match e with
-               | rIdent t idc _ _
-                 => if pident_ident_beq pidc idc
-                    then k (Some tt)
-                    else k None
-               | _ => k None
-               end
-       | pApp pf px
-         => fun k
-            => match e with
-               | rApp f x _ _
-                 => @bind_data_cps
-                      T f pf
-                      (fun f'
-                       => match f' with
-                          | Some f''
-                            => @bind_data_cps
-                                 T x px
-                                 (fun x'
-                                  => match x' with
-                                     | Some x''
-                                       => k (Some (f'', x''))
-                                     | None => k None
-                                     end)
-                          | None => k None
-                          end)
-               | _ => k None
-               end
-       end.
+  Fixpoint bind_data_cps (e : rawexpr) (p : pattern)
+    : ~> option (binding_dataT p)
+    := match p, e return ~> option (binding_dataT p) with
+       | Wildcard t, _
+         => fun T k => bind_value_cps id k (value_of_rawexpr e)
+       | pIdent pidc, rIdent _ idc _ _
+         => (if pident_beq pLiteral pidc as b return ~> option (if b then nat else unit)
+             then return (invert_Literal idc)
+             else if pident_ident_beq pidc idc
+                  then return (Some tt)
+                  else return None)
+       | pApp pf px, rApp f x _ _
+         => (f' <-- bind_data_cps f pf;
+               x' <-- bind_data_cps x px;
+             return (Some (f', x')))
+       | pIdent _, _
+       | pApp _ _, _
+         => (return None)
+       end%cps.
 
   Inductive decision_tree :=
   | TryLeaf (k : nat) (onfailure : decision_tree)
@@ -1020,7 +895,7 @@ Section with_var.
                => match nth_error rew k' return UnderLets (expr (type_of_rawexpr e)) with
                   | Some (existT p f)
                     => bind_data_cps
-                         e' p
+                         e' p _
                          (fun v
                           => match v with
                              | Some v
@@ -1030,7 +905,7 @@ Section with_var.
                                         | Some (existT should_do_again fv)
                                           => (fv <-- fv;
                                                type.try_transport_cps
-                                                 _ _ _ (unwrap fv)
+                                                 _ _ _ (unwrap fv) _
                                                  (fun fv'
                                                   => match fv', default_on_rewrite_failure with
                                                     | Some fv'', _
@@ -1066,15 +941,14 @@ Section with_var.
   Definition get_index_of_first_non_wildcard (p : list pattern) : option nat
     := first_satisfying_helper
          (fun '(n, x) => match x with
-                         | Wildcarde _ | Wildcardv _ => None
+                         | Wildcard _ => None
                          | _ => Some n
                          end)
          (enumerate p).
 
   Definition filter_pattern_wildcard (p : list (nat * list pattern)) : list (nat * list pattern)
     := filter (fun '(_, p) => match p with
-                              | Wildcarde _::_ => true
-                              | Wildcardv _::_ => true
+                              | Wildcard _::_ => true
                               | _ => false
                               end)
               p.
@@ -1095,9 +969,8 @@ Section with_var.
 
   Definition refine_pattern_app (p : nat * list pattern) : option (nat * list pattern)
     := match p with
-       | (n, Wildcarde _::ps)
-       | (n, Wildcardv _::ps)
-         => Some (n, Wildcarde None :: Wildcarde None :: ps)
+       | (n, Wildcard _::ps)
+         => Some (n, Wildcard pAny :: Wildcard pAny :: ps)
        | (n, pApp f x :: ps)
          => Some (n, f :: x :: ps)
        | (_, pIdent _::_)
@@ -1107,8 +980,7 @@ Section with_var.
 
   Definition refine_pattern_pident (pidc : pident) (p : nat * list pattern) : option (nat * list pattern)
     := match p with
-       | (n, Wildcarde _::ps)
-       | (n, Wildcardv _::ps)
+       | (n, Wildcard _::ps)
          => Some (n, ps)
        | (n, pIdent pidc'::ps)
          => if pident_beq pidc pidc'
@@ -1146,7 +1018,7 @@ Section with_var.
                                 else Some None);
                    icases
                      <- (if orb_pident (fun pidc => contains_pattern_pident pidc pattern_matrix)
-                         then eta_option_pident_cps
+                         then eta_all_option_pident_cps
                                 (fun pidc => if contains_pattern_pident pidc pattern_matrix
                                              then option_map Some (compile_rewrites (omap (refine_pattern_pident pidc) pattern_matrix))
                                              else Some None)
@@ -1179,9 +1051,7 @@ Section with_var.
 
   Fixpoint with_bindingsT (p : pattern) (T : Type)
     := match p return Type with
-       | Wildcarde (Some t) => expr t -> T
-       | Wildcarde None => forall t, expr t -> T
-       | Wildcardv t => ptype_interp qforall t (fun eT => eT -> T)
+       | Wildcard t => ptype_interp qforall t (fun eT => eT -> T)
        | pIdent pLiteral => nat -> T
        | pApp f x => with_bindingsT f (with_bindingsT x T)
        | pIdent _ => T
@@ -1238,9 +1108,7 @@ Section with_var.
 
   Fixpoint lift_with_bindings {p} {A B : Type} (F : A -> B) {struct p} : with_bindingsT p A -> with_bindingsT p B
     := match p return with_bindingsT p A -> with_bindingsT p B with
-       | Wildcarde (Some _) => fun f e => F (f e)
-       | Wildcarde None => fun f _ e => F (f _ e)
-       | Wildcardv t => lift_ptype_interp_cps F
+       | Wildcard t => lift_ptype_interp_cps F
        | pIdent pLiteral => fun f e => F (f e)
        | pApp f x
          => @lift_with_bindings
@@ -1300,12 +1168,9 @@ Section with_var.
 
   Fixpoint app_binding_data {T p} : forall (f : with_bindingsT p T) (v : binding_dataT p), T
     := match p return forall (f : with_bindingsT p T) (v : binding_dataT p), T with
-       | Wildcarde (Some _)
        | pIdent pLiteral
          => fun f => f
-       | Wildcarde None
-         => fun f v => f _ (unwrap v)
-       | Wildcardv t
+       | Wildcard t
          => app_ptype_interp_cps
        | pApp f x
          => fun F '(vf, vx)
@@ -1320,66 +1185,38 @@ Section with_var.
          []%expr
          ls.
 
-  Fixpoint reflect_list_cps {t} (e : expr t) T
-    : (option (list (expr match t return base_type with
-                          | Base (List t) => t
-                          | _ => Nat
-                          end)) -> T)
-      -> T
+  Fixpoint reflect_list_cps {t} (e : expr t)
+    : ~> option (list (expr match t return base_type with
+                            | Base (List t) => t
+                            | _ => Nat
+                            end))
     := match e in topexpr t
-             return (option (list (expr match t return base_type with
-                                        | Base (List t) => t
-                                        | _ => Nat
-                                        end)) -> T)
-                    -> T with
-       | [] => fun k => k (Some nil)
+             return ~> option (list (expr match t return base_type with
+                                          | Base (List t) => t
+                                          | _ => Nat
+                                          end))
+       with
+       | [] => (return (Some nil))
        | x :: xs
-         => fun k
-            => @reflect_list_cps
-                 _ xs T
-                 (fun xs'
-                  => match xs' with
-                     | Some xs'
-                       => type.try_transport_base_cps
-                            (fun t => list (expr t)) _ _ xs'
-                            (fun xs'
-                             => match xs' with
-                                | Some xs'
-                                  => type.try_transport_cps
-                                       _ _ _ x
-                                       (fun x
-                                        => match x with
-                                           | Some x'
-                                             => k (Some (x' :: xs')%list)
-                                           | None => k None
-                                           end)
-                                | None => k None
-                                end)
-                     | None => k None
-                     end)
-       | _ => fun k => k None
-       end%expr.
+         => (xs' <-- @reflect_list_cps _ xs;
+               xs' <-- type.try_transport_base_cps (fun t => list (expr t)) _ _ xs';
+               x' <-- type.try_transport_cps _ _ _ x;
+             return (Some (x' :: xs')%list))
+       | _ => (return None)
+       end%expr%cps.
   Arguments reflect_list_cps {t} e [T] _.
 
-  (** XXX MOVEME *)
-  Definition continuation A := forall T, (A -> T) -> T.
-  Definition bind_continuation {A B} (x : continuation A) (f : A -> continuation B) : continuation B
-    := fun T k => x _ (fun x' => f x' T k).
-  Definition option_bind_continuation {A B} (x : continuation (option A)) (f : A -> continuation (option B)) : continuation (option B)
-    := bind_continuation x (fun x' T k => match x' with
-                                          | Some x' => f x' T k
-                                          | None => k None
-                                          end).
-  Delimit Scope continuation_scope with continuation.
-  Bind Scope continuation_scope with continuation.
-  Notation "v <- x ; f" := (bind_continuation x (fun v => f%continuation)) : continuation_scope.
-  Notation "v <-- x ; f" := (option_bind_continuation x (fun v => f%continuation)) : continuation_scope.
-  Definition mkcast {P : type -> Type} {t1 t2 : type} : continuation (option (P t1 -> P t2))
-    := fun T k => type.try_make_transport_cps P t1 t2 k.
-  Definition cast {P : type -> Type} {t1 t2 : type} (v : P t1) : continuation (option (P t2))
-    := fun T k => type.try_transport_cps P t1 t2 v k.
-  Definition ret {A} (v : A) : continuation A := fun T k => k v.
-  Definition oret {A} (v : A) : continuation (option A) := fun T k => k (Some v).
+  (** XXX MOVEME? *)
+  Definition mkcast {P : type -> Type} {t1 t2 : type} : ~> (option (P t1 -> P t2))
+    := fun T k => type.try_make_transport_cps P t1 t2 _ k.
+  Definition cast {P : type -> Type} {t1 t2 : type} (v : P t1) : ~> (option (P t2))
+    := fun T k => type.try_transport_cps P t1 t2 v _ k.
+  Definition caste {t1 t2 : base_type} (v : expr t1) : ~> (option (expr t2))
+    := fun T k => type.try_transport_base_cps expr t1 t2 v _ k.
+  Definition castv {t1 t2} (v : value t1) : ~> (option (value t2))
+    := fun T k => type.try_transport_cps value t1 t2 v _ k.
+  Definition ret {A} (v : A) : ~> A := fun T k => k v.
+  Definition oret {A} (v : A) : ~> (option A) := fun T k => k (Some v).
   Let UnderLetsAnyExpr {ivar} := @UnderLets.UnderLets ivar (@topanyexpr ivar).
   Let BaseWrapExpr {ivar} {t} (e : @topexpr ivar t) : @UnderLetsAnyExpr ivar := UnderLets.Base (wrap e).
   Let BaseAnyExpr {ivar} : @topanyexpr ivar -> @UnderLets.UnderLets ivar (@topanyexpr ivar) := UnderLets.Base.
@@ -1389,13 +1226,13 @@ Section with_var.
     := (e <-- e; UnderLets.Base (wrap e))%under_lets.
   Notation make_rewrite'_cps p f
     := (existT
-          (fun p' : pattern => binding_dataT p' -> continuation (opt_anyexpr value))
+          (fun p' : pattern => binding_dataT p' ~> (opt_anyexpr value))
           p%pattern
           (fun v T (k : opt_anyexpr value -> T)
            => @app_binding_data _ p%pattern f%expr v T k)).
   Notation make_rewrite' p f
     := (existT
-          (fun p' : pattern => binding_dataT p' -> continuation (opt_anyexpr value))
+          (fun p' : pattern => binding_dataT p' ~> (opt_anyexpr value))
           p%pattern
           (fun v T (k : opt_anyexpr value -> T)
            => k (@app_binding_data _ p%pattern f%expr v))).
@@ -1406,12 +1243,11 @@ Section with_var.
     := (let f' := (@lift_with_bindings p _ _ (fun x:@UnderLetsAnyExpr value => Some (existT (opt_anyexprP value) true x)) f%expr) in
         make_rewrite' p f').
   Notation make_rewrite_cps p f
-    := (let f' := (@lift_with_bindings p _ _ (fun x:continuation (option (UnderLets anyexpr)) => (x' <-- x; oret (existT (opt_anyexprP value) false x'))%continuation) f%expr) in
+    := (let f' := (@lift_with_bindings p _ _ (fun x:~> (option (UnderLets anyexpr)) => (x' <-- x; oret (existT (opt_anyexprP value) false x'))%cps) f%expr) in
         make_rewrite'_cps p f').
   Notation make_rewrite_step_cps p f
-    := (let f' := (@lift_with_bindings p _ _ (fun x:continuation (option (UnderLets (@topanyexpr value))) => (x' <-- x; oret (existT (opt_anyexprP value) true x'))%continuation) f%expr) in
+    := (let f' := (@lift_with_bindings p _ _ (fun x:~> (option (UnderLets (@topanyexpr value))) => (x' <-- x; oret (existT (opt_anyexprP value) true x'))%cps) f%expr) in
         make_rewrite'_cps p f').
-  Print partition.
   Definition rewrite_rules : rewrite_rulesT' value
     := [make_rewrite (0 + ??ℕ) (fun x => x);
           make_rewrite (??ℕ + 0) (fun x => x);
@@ -1429,20 +1265,20 @@ Section with_var.
           make_rewrite_cps
             (#pMatchPair @ ??{?? -> ?? -> pBase ??} @ (??, ??))
             (fun _ _ _ f _ x _ y
-             => x <-- cast x;
-                  y <-- cast y;
+             => x <-- caste x;
+                  y <-- caste y;
                   oret (LiftWrapExpr (push_value_lets f x y)));
           make_rewrite_cps
             (??{pList ??} ++ ??{pList ??})
             (fun _ xs _ ys
-             => xs <-- @cast expr _ (List _) xs;
+             => xs <-- @caste _ (List _) xs;
                 xs <-- reflect_list_cps xs;
                 ys <-- reflect_list_cps ys;
                 oret (UnderLets.Base (wrap (reify_list (List.app xs ys)))));
           make_rewrite_step_cps
             (#pListFlatMap @ ??{?? -> pList ??} @ ??{pList ??})
             (fun _ _ f _ xs
-             => xs <-- @cast expr _ (List _) xs;
+             => xs <-- @caste _ (List _) xs;
                   xs <-- reflect_list_cps xs;
                   oret (fxs <--- List.map f xs;
                           UnderLets.Base
@@ -1450,7 +1286,7 @@ Section with_var.
           make_rewrite_step_cps
             (#pListPartition @ ??{?? -> pBool} @ ??{pList ??})
             (fun _ f _ xs
-             => xs <-- @cast expr _ (List _) xs;
+             => xs <-- @caste _ (List _) xs;
                   xs <-- reflect_list_cps xs;
                   oret (v <-- (list_rect
                                  _
@@ -1468,9 +1304,9 @@ Section with_var.
                                  xs)%expr;
                           UnderLets.Base (wrap v))%under_lets);
           make_rewrite_cps
-            (#pListFoldRight @ ??{?? -> ?? -> ??} @ ??{pBase ??} @ ??{pList ??})
+            (#pListFoldRight @ ??{?? -> ?? -> ??} @ ?? @ ??{pList ??})
             (fun _ _ _ f A init B xs
-             => f <-- @cast value _ (B -> A -> A)%ctype f;
+             => f <-- @castv _ (B -> A -> A)%ctype f;
                   xs <-- reflect_list_cps xs;
                   oret (v <-- (fold_right
                                  (fun x y => y <-- y; push_value_lets f x y)
@@ -1480,7 +1316,7 @@ Section with_var.
           make_rewrite_cps
             (#pListRect @ ??{Unit -> pBase ??} @ ??{?? -> ?? -> ?? -> ??} @ ??{pList ??})
             (fun P Pnil _ _ _ _ Pcons A xs
-             => Pcons <-- @cast value _ (A -> List A -> P -> P)%ctype Pcons;
+             => Pcons <-- @castv _ (A -> List A -> P -> P)%ctype Pcons;
                   xs <-- reflect_list_cps xs;
                   oret (v <-- (list_rect
                                  (fun _ => UnderLets (expr P))
@@ -1491,18 +1327,18 @@ Section with_var.
           make_rewrite_cps
             (#pListMap @ ??{?? -> pBase ??} @ ??{pList ??})
             (fun _ _ f _ xs
-             => xs <-- @cast expr _ (List _) xs;
+             => xs <-- @caste _ (List _) xs;
                   xs <-- reflect_list_cps xs;
                   oret (fxs <--- List.map f xs;
                           UnderLets.Base (wrap (reify_list fxs)))%under_lets);
           make_rewrite_cps
             (#pListMap @ ??{?? -> pBase ??} @ (?? :: ??))
             (fun _ _ f _ x _ xs
-             => xs <-- @cast expr _ (List _) xs;
-                  x <-- cast x;
+             => xs <-- @caste _ (List _) xs;
+                  x <-- caste x;
                   oret (fx <-- f x;
                           UnderLets.Base (wrap (fx :: #ListMap @ (λ v , UnderLets.to_expr (f ($v))) @ xs))%expr)%under_lets)
-       ]%list%pattern%continuation%option%under_lets.
+       ]%list%pattern%cps%option%under_lets.
 
   Definition dtree : decision_tree
     := Eval compute in invert_Some (compile_rewrites 100 rewrite_rules).
@@ -1592,7 +1428,7 @@ Arguments eval_rewrite_rules / .
 Arguments dtree / .
 Arguments eval_decision_tree / .
 Arguments eta_ident_cps / .
-Arguments eta_option_pident_cps / .
+Arguments eta_all_option_pident_cps / .
 Arguments pident_of_ident / .
 Arguments option_map _ _ _ !_ / .
 Arguments swap_list _ !_ !_ !_ / .
@@ -1607,39 +1443,44 @@ Arguments unwrap / .
 Arguments type_of_rawexpr / .
 Arguments expr_of_rawexpr / .
 Arguments reveal_rawexpr_cps / .
-Arguments type.try_transport_cps _ _ !_ !_ / .
-Arguments type.try_transport_base_cps _ _ !_ !_ / .
-Arguments type.try_make_transport_cps _ _ !_ !_.
-Arguments type.try_make_transport_base_cps _ _ !_ !_.
+Arguments type.try_transport_cps _ !_ !_ _ {_}.
+Arguments type.try_transport_base_cps _ !_ !_ _ {_}.
+Arguments type.try_make_transport_cps _ !_ !_ {_}.
+Arguments type.try_make_transport_base_cps _ !_ !_ {_}.
 Arguments orb_pident / .
 Arguments or_opt_pident / .
 Arguments rValueOrExpr / .
 Arguments Some_t / .
 Arguments value_of_rawexpr / .
 Arguments cast / .
+Arguments caste / .
+Arguments castv / .
 Arguments ret / .
 Arguments oret / .
-Arguments bind_continuation / .
-Arguments option_bind_continuation / .
 Arguments lift_ptype_interp_cps / .
 Arguments lift_pbase_type_interp_cps / .
 Arguments app_pbase_type_interp_cps / .
-Arguments option_type / .
 Arguments pbase_type_interp_cps / .
 Arguments ptype_interp / .
 Arguments ptype_interp_cps / .
 Arguments default_fuel / .
+Arguments cpsreturn / .
+Arguments cpsbind / .
+Arguments cpscall / .
+Arguments invert_Literal / .
 Set Printing Depth 1000000.
 Definition dorewrite''' {var}
   := Eval cbv (*-[value reify default_fuel reflect nbe type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id orb projT1 projT2 nth_error set_nth update_nth anyexpr_ty app_binding_data app_pbase_type_interp_cps app_ptype_interp_cps bind_base_cps bind_continuation bind_data_cps binding_dataT bind_value_cps cast continuation dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_pbase_type_interp_cps lift_ptype_interp_cps lift_with_bindings option_bind_continuation orb_pident oret or_opt_pident pbase_type_interp_cps pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps unwrap value_of_rawexpr with_bindingsT Some_t value_with_lets value' value'_with_lets splice_value'_with_lets push_lets_value' push_pull_value_lets push_value_lets pull_value_lets fst snd]
+          [id cpscall cpsbind cpsreturn orb projT1 projT2 nth_error set_nth update_nth anyexpr_ty app_binding_data app_pbase_type_interp_cps app_ptype_interp_cps bind_base_cps bind_data_cps binding_dataT bind_value_cps cast caste castv dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_pbase_type_interp_cps lift_ptype_interp_cps lift_with_bindings orb_pident oret or_opt_pident pbase_type_interp_cps pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps unwrap value_of_rawexpr with_bindingsT Some_t value_with_lets value' value'_with_lets splice_value'_with_lets push_lets_value' push_pull_value_lets push_value_lets pull_value_lets fst snd invert_Literal pident_beq]
     in @dorewrite'' default_fuel var.
 Arguments dorewrite''' / .
+Print dorewrite'''.
 Definition dorewrite
-  := Eval cbn [dorewrite''' type.try_transport_cps type.try_transport_base_cps type.try_make_transport_cps type.try_make_transport_base_cps Option.bind value value'' reify reflect nbe UnderLets.splice UnderLets.splice_list UnderLets.to_expr (*default_fuel*)] in @dorewrite'''.
+  := Eval cbn [dorewrite''' type.try_transport_cps type.try_transport_base_cps type.try_make_transport_cps type.try_make_transport_base_cps Option.bind value value'' reify reflect nbe UnderLets.splice UnderLets.splice_list UnderLets.to_expr cpscall cpsbind cpsreturn (*default_fuel*)] in @dorewrite'''.
 Arguments dorewrite {var t} e.
 Local Open Scope expr_scope.
 Arguments expr : clear implicits.
+Set Printing Width 137.
 Print dorewrite.
 (*dorewrite =
 fun var : type -> Type =>
@@ -1688,16 +1529,45 @@ fun var : type -> Type =>
                  UnderLets.Base
                    (fun x0 : expr var0 Nat =>
                     match x with
+                    | $_ =>
+                        match x0 with
+                        | 0 => UnderLets.Base x
+                        | @App _ s _ #(S) x1 =>
+                            match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                            | Base t4 =>
+                                fun e1 : expr var0 t4 =>
+                                type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 Nat e1
+                                  (fun a : option (expr var0 Nat) =>
+                                   match a with
+                                   | Some v0 => UnderLets.Base ((x + v0).+1)
+                                   | None => UnderLets.Base (x + x0)
+                                   end)
+                            | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                            end (reflect x1)
+                        | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(@NatRect _) _ | @App _ s _
+                          #(NatEqb) _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
+                          #(@Snd _ _) _ | @App _ s _ #(@MatchPair _ _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _
+                          #(@ListMap _ _) _ | @App _ s _ #(@ListApp _) _ | @App _ s _ #(@ListFlatMap _ _) _ | @App _ s _
+                          #(@ListRect _ _) _ | @App _ s _ #(@ListFoldRight _ _) _ | @App _ s _ #(@ListPartition _) _ | @App _ s _
+                          ( ) _ | @App _ s _ #(iTrue) _ | @App _ s _ #(iFalse) _ | @App _ s _ #(@BoolRect _) _ | @App _ s _ ##
+                          (_) _ | @App _ s _ (_ @ _) _ | @App _ s _ (@LetIn _ _ _ _ _) _ => UnderLets.Base (x + x0)
+                        | _ => UnderLets.Base (x + x0)
+                        end
                     | @Abs _ _ _ _ =>
                         match x0 with
                         | 0 => UnderLets.Base x
                         | @App _ s0 _ #(S) x1 =>
-                            type.try_make_transport_cps (expr var0) s0 Nat
-                              (fun tr : option (expr var0 s0 -> expr var0 Nat) =>
-                               match tr with
-                               | Some tr0 => UnderLets.Base ((x + tr0 x1).+1)
-                               | None => UnderLets.Base (x + x0)
-                               end)
+                            match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                            | Base t3 =>
+                                fun e1 : expr var0 t3 =>
+                                type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t3 Nat e1
+                                  (fun a : option (expr var0 Nat) =>
+                                   match a with
+                                   | Some v => UnderLets.Base ((x + v).+1)
+                                   | None => UnderLets.Base (x + x0)
+                                   end)
+                            | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                            end (reflect x1)
                         | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #
                           (@NatRect _) _ | @App _ s0 _ #(NatEqb) _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _
                           #(@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _ #(@MatchPair _ _ _) _ | @App _ s0 _ [] _ | @App _ s0 _
@@ -1714,12 +1584,17 @@ fun var : type -> Type =>
                         | 0 => UnderLets.Base x
                         | ##(n0) => UnderLets.Base ##(n + n0)
                         | @App _ s _ #(S) x1 =>
-                            type.try_make_transport_cps (expr var0) s Nat
-                              (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                               match tr with
-                               | Some tr0 => UnderLets.Base (##(Datatypes.S n) + tr0 x1)
-                               | None => UnderLets.Base (x + x0)
-                               end)
+                            match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                            | Base t4 =>
+                                fun e1 : expr var0 t4 =>
+                                type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 Nat e1
+                                  (fun a : option (expr var0 Nat) =>
+                                   match a with
+                                   | Some v => UnderLets.Base (##(Datatypes.S n) + v)
+                                   | None => UnderLets.Base (x + x0)
+                                   end)
+                            | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                            end (reflect x1)
                         | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(@NatRect _) _ | @App _ s _
                           #(NatEqb) _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
                           #(@Snd _ _) _ | @App _ s _ #(@MatchPair _ _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _
@@ -1731,68 +1606,258 @@ fun var : type -> Type =>
                         end
                     | @App _ s _ f x1 =>
                         match x0 with
+                        | $_ =>
+                            match f with
+                            | #(S) =>
+                                match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v0 => UnderLets.Base ((v0 + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
+                        | @Abs _ _ _ _ =>
+                            match f with
+                            | #(S) =>
+                                match s as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
                         | 0 => UnderLets.Base x
                         | ##(n) =>
                             match f with
                             | #(S) =>
-                                type.try_make_transport_cps (expr var0) s Nat
-                                  (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                                   match tr with
-                                   | Some tr0 => UnderLets.Base (tr0 x1 + ##(Datatypes.S n))
-                                   | None => UnderLets.Base (x + x0)
-                                   end)
+                                match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base (v + ##(Datatypes.S n))
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
+                        | @App _ s0 _ ($_) _ =>
+                            match f with
+                            | #(S) =>
+                                match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v0 => UnderLets.Base ((v0 + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
+                        | @App _ s0 _ (@Abs _ _ _ _) _ =>
+                            match f with
+                            | #(S) =>
+                                match s as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s2 -> d2)%ctype => fun _ : value s2 -> UnderLets var0 (value d2) => UnderLets.Base (x + x0)
+                                end (reflect x1)
                             | _ => UnderLets.Base (x + x0)
                             end
                         | @App _ s0 _ #(S) x2 =>
                             match f with
+                            | $_ =>
+                                match s0 as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v0 => UnderLets.Base ((x + v0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x2)
+                            | @Abs _ _ _ _ =>
+                                match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((x + v).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s2 -> d2)%ctype => fun _ : value s2 -> UnderLets var0 (value d2) => UnderLets.Base (x + x0)
+                                end (reflect x2)
                             | #(S) =>
-                                type.try_make_transport_cps (expr var0) s Nat
-                                  (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                                   match tr with
-                                   | Some tr0 =>
-                                       type.try_make_transport_cps (expr var0) s0 Nat
-                                         (fun tr1 : option (expr var0 s0 -> expr var0 Nat) =>
-                                          match tr1 with
-                                          | Some tr2 => UnderLets.Base (((tr0 x1 + tr2 x2).+1).+1)
-                                          | None => UnderLets.Base (x + x0)
-                                          end)
-                                   | None => UnderLets.Base (x + x0)
-                                   end)
+                                match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v =>
+                                           match s0 as t5 return (value t5 -> UnderLets var0 (expr var0 Nat)) with
+                                           | Base t5 =>
+                                               fun e2 : expr var0 t5 =>
+                                               type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t5 Nat e2
+                                                 (fun a0 : option (expr var0 Nat) =>
+                                                  match a0 with
+                                                  | Some v0 => UnderLets.Base (((v + v0).+1).+1)
+                                                  | None => UnderLets.Base (x + x0)
+                                                  end)
+                                           | (s1 -> d1)%ctype =>
+                                               fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                           end (reflect x2)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ @ _ =>
+                                match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x4 : base_type => expr var0 x4) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((x + v).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s2 -> d2)%ctype => fun _ : value s2 -> UnderLets var0 (value d2) => UnderLets.Base (x + x0)
+                                end (reflect x2)
+                            | @LetIn _ _ _ _ _ =>
+                                match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x4 : base_type => expr var0 x4) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((x + v).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x2)
                             | _ =>
-                                type.try_make_transport_cps (expr var0) s0 Nat
-                                  (fun tr : option (expr var0 s0 -> expr var0 Nat) =>
-                                   match tr with
-                                   | Some tr0 => UnderLets.Base ((x + tr0 x2).+1)
-                                   | None => UnderLets.Base (x + x0)
-                                   end)
+                                match s0 as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((x + v).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x2)
                             end
-                        | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #
-                          (@NatRect _) _ | @App _ s0 _ #(NatEqb) _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _
-                          #(@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _ #(@MatchPair _ _ _) _ | @App _ s0 _ [] _ | @App _ s0 _
-                          #(@Cons _) _ | @App _ s0 _ #(@ListMap _ _) _ | @App _ s0 _ #(@ListApp _) _ | @App _ s0 _ #
-                          (@ListFlatMap _ _) _ | @App _ s0 _ #(@ListRect _ _) _ | @App _ s0 _ #(@ListFoldRight _ _) _ | @App _ s0 _
-                          #(@ListPartition _) _ | @App _ s0 _ ( ) _ | @App _ s0 _ #(iTrue) _ | @App _ s0 _ #
-                          (iFalse) _ | @App _ s0 _ #(@BoolRect _) _ | @App _ s0 _ ##(_) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _
-                          (@LetIn _ _ _ _ _) _ =>
+                        | @App _ s0 _ 0 _ | @App _ s0 _ #(@NatRect _) _ | @App _ s0 _ #(NatEqb) _ | @App _ s0 _ #
+                          (Add) _ | @App _ s0 _ #(@Pair _ _) _ | @App _ s0 _ #(@Fst _ _) _ | @App _ s0 _ #(@Snd _ _) _ | @App _ s0 _
+                          #(@MatchPair _ _ _) _ | @App _ s0 _ [] _ | @App _ s0 _ #(@Cons _) _ | @App _ s0 _ #
+                          (@ListMap _ _) _ | @App _ s0 _ #(@ListApp _) _ | @App _ s0 _ #(@ListFlatMap _ _) _ | @App _ s0 _
+                          #(@ListRect _ _) _ | @App _ s0 _ #(@ListFoldRight _ _) _ | @App _ s0 _ #(@ListPartition _) _ | @App _ s0 _
+                          ( ) _ | @App _ s0 _ #(iTrue) _ | @App _ s0 _ #(iFalse) _ | @App _ s0 _ #(@BoolRect _) _ | @App _ s0 _ ##
+                          (_) _ =>
                             match f with
                             | #(S) =>
-                                type.try_make_transport_cps (expr var0) s Nat
-                                  (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                                   match tr with
-                                   | Some tr0 => UnderLets.Base ((tr0 x1 + x0).+1)
-                                   | None => UnderLets.Base (x + x0)
-                                   end)
+                                match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
+                        | @App _ s0 _ (_ @ _) _ =>
+                            match f with
+                            | #(S) =>
+                                match s as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x4 : base_type => expr var0 x4) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s2 -> d2)%ctype => fun _ : value s2 -> UnderLets var0 (value d2) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
+                        | @App _ s0 _ (@LetIn _ _ _ _ _) _ =>
+                            match f with
+                            | #(S) =>
+                                match s as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x4 : base_type => expr var0 x4) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (x + x0)
+                                end (reflect x1)
+                            | _ => UnderLets.Base (x + x0)
+                            end
+                        | @LetIn _ _ _ _ _ =>
+                            match f with
+                            | #(S) =>
+                                match s as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t3 =>
+                                    fun e1 : expr var0 t3 =>
+                                    type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                                end (reflect x1)
                             | _ => UnderLets.Base (x + x0)
                             end
                         | _ =>
                             match f with
                             | #(S) =>
-                                type.try_make_transport_cps (expr var0) s Nat
-                                  (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                                   match tr with
-                                   | Some tr0 => UnderLets.Base ((tr0 x1 + x0).+1)
-                                   | None => UnderLets.Base (x + x0)
-                                   end)
+                                match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                                | Base t4 =>
+                                    fun e1 : expr var0 t4 =>
+                                    type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 Nat e1
+                                      (fun a : option (expr var0 Nat) =>
+                                       match a with
+                                       | Some v => UnderLets.Base ((v + x0).+1)
+                                       | None => UnderLets.Base (x + x0)
+                                       end)
+                                | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                                end (reflect x1)
                             | _ => UnderLets.Base (x + x0)
                             end
                         end
@@ -1800,12 +1865,17 @@ fun var : type -> Type =>
                         match x0 with
                         | 0 => UnderLets.Base x
                         | @App _ s _ #(S) x2 =>
-                            type.try_make_transport_cps (expr var0) s Nat
-                              (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                               match tr with
-                               | Some tr0 => UnderLets.Base ((x + tr0 x2).+1)
-                               | None => UnderLets.Base (x + x0)
-                               end)
+                            match s as t3 return (value t3 -> UnderLets var0 (expr var0 Nat)) with
+                            | Base t3 =>
+                                fun e1 : expr var0 t3 =>
+                                type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 Nat e1
+                                  (fun a : option (expr var0 Nat) =>
+                                   match a with
+                                   | Some v => UnderLets.Base ((x + v).+1)
+                                   | None => UnderLets.Base (x + x0)
+                                   end)
+                            | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                            end (reflect x2)
                         | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(@NatRect _) _ | @App _ s _
                           #(NatEqb) _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
                           #(@Snd _ _) _ | @App _ s _ #(@MatchPair _ _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _
@@ -1819,12 +1889,17 @@ fun var : type -> Type =>
                         match x0 with
                         | 0 => UnderLets.Base x
                         | @App _ s _ #(S) x1 =>
-                            type.try_make_transport_cps (expr var0) s Nat
-                              (fun tr : option (expr var0 s -> expr var0 Nat) =>
-                               match tr with
-                               | Some tr0 => UnderLets.Base ((x + tr0 x1).+1)
-                               | None => UnderLets.Base (x + x0)
-                               end)
+                            match s as t4 return (value t4 -> UnderLets var0 (expr var0 Nat)) with
+                            | Base t4 =>
+                                fun e1 : expr var0 t4 =>
+                                type.try_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 Nat e1
+                                  (fun a : option (expr var0 Nat) =>
+                                   match a with
+                                   | Some v => UnderLets.Base ((x + v).+1)
+                                   | None => UnderLets.Base (x + x0)
+                                   end)
+                            | (s0 -> d0)%ctype => fun _ : value s0 -> UnderLets var0 (value d0) => UnderLets.Base (x + x0)
+                            end (reflect x1)
                         | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ 0 _ | @App _ s _ #(@NatRect _) _ | @App _ s _
                           #(NatEqb) _ | @App _ s _ #(Add) _ | @App _ s _ #(@Pair _ _) _ | @App _ s _ #(@Fst _ _) _ | @App _ s _
                           #(@Snd _ _) _ | @App _ s _ #(@MatchPair _ _ _) _ | @App _ s _ [] _ | @App _ s _ #(@Cons _) _ | @App _ s _
@@ -1840,21 +1915,35 @@ fun var : type -> Type =>
               UnderLets.Base
                 (fun x : expr var0 (A * B) =>
                  match x with
-                 | @App _ s0 _ #(@Pair _ _) x1 @ _ =>
-                     type.try_make_transport_cps (expr var0) s0 A
-                       (fun tr : option (expr var0 s0 -> expr var0 A) =>
-                        match tr with
-                        | Some tr0 => UnderLets.Base (tr0 x1)
-                        | None => UnderLets.Base (#(Fst) @ x)
-                        end)
-                 | @App _ s0 _ ($_) _ @ _ | @App _ s0 _ (@Abs _ _ _ _) _ @ _ | @App _ s0 _ 0 _ @ _ | @App _ s0 _ #(S) _ @ _ |
-                   @App _ s0 _ #(@NatRect _) _ @ _ | @App _ s0 _ #(NatEqb) _ @ _ | @App _ s0 _ #(Add) _ @ _ |
-                   @App _ s0 _ #(@Fst _ _) _ @ _ | @App _ s0 _ #(@Snd _ _) _ @ _ | @App _ s0 _ #(@MatchPair _ _ _) _ @ _ |
-                   @App _ s0 _ [] _ @ _ | @App _ s0 _ #(@Cons _) _ @ _ | @App _ s0 _ #(@ListMap _ _) _ @ _ |
-                   @App _ s0 _ #(@ListApp _) _ @ _ | @App _ s0 _ #(@ListFlatMap _ _) _ @ _ | @App _ s0 _ #(@ListRect _ _) _ @ _ |
-                   @App _ s0 _ #(@ListFoldRight _ _) _ @ _ | @App _ s0 _ #(@ListPartition _) _ @ _ | @App _ s0 _ ( ) _ @ _ |
-                   @App _ s0 _ #(iTrue) _ @ _ | @App _ s0 _ #(iFalse) _ @ _ | @App _ s0 _ #(@BoolRect _) _ @ _ |
-                   @App _ s0 _ ##(_) _ @ _ | @App _ s0 _ (_ @ _) _ @ _ | @App _ s0 _ (@LetIn _ _ _ _ _) _ @ _ =>
+                 | @App _ s _ (@App _ s0 _ #(@Pair _ _) x1) x0 =>
+                     match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 A)) with
+                     | Base t3 =>
+                         fun e1 : expr var0 t3 =>
+                         match s as t4 return (value t4 -> UnderLets var0 (expr var0 A)) with
+                         | Base t4 =>
+                             fun _ : expr var0 t4 =>
+                             type.try_make_transport_base_cps (fun x2 : base_type => expr var0 x2) t3 A
+                               (fun a : option (expr var0 t3 -> expr var0 A) =>
+                                match a with
+                                | Some tr => UnderLets.Base (tr e1)
+                                | None => UnderLets.Base (#(Fst) @ x)
+                                end)
+                         | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (#(Fst) @ x)
+                         end (reflect x0)
+                     | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (#(Fst) @ x)
+                     end (reflect x1)
+                 | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
+                   (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ | @App _ s _
+                   (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _
+                   s _ (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ #(@MatchPair _ _ _) _) _ | @App _ s _
+                   (@App _ s0 _ [] _) _ | @App _ s _ (@App _ s0 _ #(@Cons _) _) _ | @App _ s _ (@App _ s0 _ #(@ListMap _ _) _) _ | @App
+                   _ s _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _
+                   (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _
+                   (@App _ s0 _ #(@ListPartition _) _) _ | @App _ s _ (@App _ s0 _ ( ) _) _ | @App _ s _ (@App _ s0 _ #(iTrue) _) _ |
+                   @App _ s _ (@App _ s0 _ #(iFalse) _) _ | @App _ s _ (@App _ s0 _ #(@BoolRect _) _) _ | @App _ s _
+                   (@App _ s0 _ ##(_) _) _ | @App _ s _ (@App _ s0 _ (_ @ _) _) _ | @App _ s _ (@App _ s0 _ (@LetIn _ _ _ _ _) _) _ =>
+                     UnderLets.Base (#(Fst) @ x)
+                 | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ (@LetIn _ _ _ _ _) _ =>
                      UnderLets.Base (#(Fst) @ x)
                  | _ => UnderLets.Base (#(Fst) @ x)
                  end)
@@ -1862,22 +1951,35 @@ fun var : type -> Type =>
               UnderLets.Base
                 (fun x : expr var0 (A * B) =>
                  match x with
-                 | @App _ s _ (#(@Pair _ _) @ _) x0 =>
-                     type.try_make_transport_cps (expr var0) s B
-                       (fun tr : option (expr var0 s -> expr var0 B) =>
-                        match tr with
-                        | Some tr0 => UnderLets.Base (tr0 x0)
-                        | None => UnderLets.Base (#(Snd) @ x)
-                        end)
-                 | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ ($_ @ _) _ | @App _ s _
-                   (@Abs _ _ _ _ @ _) _ | @App _ s _ (0 @ _) _ | @App _ s _ (_.+1) _ | @App _ s _ (#(@NatRect _) @ _) _ | @App _ s _
-                   (#(NatEqb) @ _) _ | @App _ s _ (#(Add) @ _) _ | @App _ s _ (#(@Fst _ _) @ _) _ | @App _ s _
-                   (#(@Snd _ _) @ _) _ | @App _ s _ (#(@MatchPair _ _ _) @ _) _ | @App _ s _ ([] @ _) _ | @App _ s _
-                   (#(@Cons _) @ _) _ | @App _ s _ (#(@ListMap _ _) @ _) _ | @App _ s _ (#(@ListApp _) @ _) _ | @App _ s _
-                   (#(@ListFlatMap _ _) @ _) _ | @App _ s _ (#(@ListRect _ _) @ _) _ | @App _ s _ (#(@ListFoldRight _ _) @ _) _ | @App _
-                   s _ (#(@ListPartition _) @ _) _ | @App _ s _ (( ) @ _) _ | @App _ s _ (#(iTrue) @ _) _ | @App _ s _
-                   (#(iFalse) @ _) _ | @App _ s _ (#(@BoolRect _) @ _) _ | @App _ s _ (##(_) @ _) _ | @App _ s _
-                   (_ @ _ @ _) _ | @App _ s _ (@LetIn _ _ _ _ _ @ _) _ | @App _ s _ (@LetIn _ _ _ _ _) _ =>
+                 | @App _ s _ (@App _ s0 _ #(@Pair _ _) x1) x0 =>
+                     match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 B)) with
+                     | Base t3 =>
+                         fun _ : expr var0 t3 =>
+                         match s as t4 return (value t4 -> UnderLets var0 (expr var0 B)) with
+                         | Base t4 =>
+                             fun e2 : expr var0 t4 =>
+                             type.try_make_transport_base_cps (fun x2 : base_type => expr var0 x2) t4 B
+                               (fun a : option (expr var0 t4 -> expr var0 B) =>
+                                match a with
+                                | Some tr => UnderLets.Base (tr e2)
+                                | None => UnderLets.Base (#(Snd) @ x)
+                                end)
+                         | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (#(Snd) @ x)
+                         end (reflect x0)
+                     | (s1 -> d1)%ctype => fun _ : value s1 -> UnderLets var0 (value d1) => UnderLets.Base (#(Snd) @ x)
+                     end (reflect x1)
+                 | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
+                   (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ | @App _ s _
+                   (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ | @App _
+                   s _ (@App _ s0 _ #(@Snd _ _) _) _ | @App _ s _ (@App _ s0 _ #(@MatchPair _ _ _) _) _ | @App _ s _
+                   (@App _ s0 _ [] _) _ | @App _ s _ (@App _ s0 _ #(@Cons _) _) _ | @App _ s _ (@App _ s0 _ #(@ListMap _ _) _) _ | @App
+                   _ s _ (@App _ s0 _ #(@ListApp _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFlatMap _ _) _) _ | @App _ s _
+                   (@App _ s0 _ #(@ListRect _ _) _) _ | @App _ s _ (@App _ s0 _ #(@ListFoldRight _ _) _) _ | @App _ s _
+                   (@App _ s0 _ #(@ListPartition _) _) _ | @App _ s _ (@App _ s0 _ ( ) _) _ | @App _ s _ (@App _ s0 _ #(iTrue) _) _ |
+                   @App _ s _ (@App _ s0 _ #(iFalse) _) _ | @App _ s _ (@App _ s0 _ #(@BoolRect _) _) _ | @App _ s _
+                   (@App _ s0 _ ##(_) _) _ | @App _ s _ (@App _ s0 _ (_ @ _) _) _ | @App _ s _ (@App _ s0 _ (@LetIn _ _ _ _ _) _) _ =>
+                     UnderLets.Base (#(Snd) @ x)
+                 | @App _ s _ ($_) _ | @App _ s _ (@Abs _ _ _ _) _ | @App _ s _ #(_) _ | @App _ s _ (@LetIn _ _ _ _ _) _ =>
                      UnderLets.Base (#(Snd) @ x)
                  | _ => UnderLets.Base (#(Snd) @ x)
                  end)
@@ -1897,62 +1999,92 @@ fun var : type -> Type =>
                                                UnderLets.to_expr (fx0 <-- fx ($x3);
                                                                   UnderLets.Base fx0)))) @ x0)
                     | @App _ s _ (@App _ s0 _ #(@Pair _ _) x2) x1 =>
-                        type.try_make_transport_cps (expr var0) s0 A
-                          (fun tr : option (expr var0 s0 -> expr var0 A) =>
-                           match tr with
-                           | Some tr0 =>
-                               type.try_make_transport_cps (expr var0) s B
-                                 (fun tr1 : option (expr var0 s -> expr var0 B) =>
-                                  match tr1 with
-                                  | Some tr2 =>
-                                      (fv <-- (e1 <-- (f1 <-- (fx <-- x (tr0 x2);
-                                                               UnderLets.Base (fun x3 : expr var0 B => fx0 <--
-                                                                                                       fx x3;
-                                                                                                       UnderLets.Base fx0));
-                                                       e1 <-- f1 (tr2 x1);
-                                                       UnderLets.Base e1);
-                                               UnderLets.Base e1);
-                                       type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty) P
-                                         (fun tr3 : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 P) =>
-                                          match tr3 with
-                                          | Some tr4 =>
-                                              UnderLets.Base
-                                                (tr4
-                                                   (let
-                                                      (anyexpr_ty, unwrap) as a
-                                                       return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
-                                                    unwrap))
+                        match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 P)) with
+                        | Base t3 =>
+                            fun e1 : expr var0 t3 =>
+                            match s as t4 return (value t4 -> UnderLets var0 (expr var0 P)) with
+                            | Base t4 =>
+                                fun e2 : expr var0 t4 =>
+                                type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 A e1
+                                  (fun a : option (expr var0 A) =>
+                                   match a with
+                                   | Some x3 =>
+                                       type.try_transport_base_cps (fun x4 : base_type => expr var0 x4) t4 B e2
+                                         (fun a0 : option (expr var0 B) =>
+                                          match a0 with
+                                          | Some y =>
+                                              (fv <-- (e3 <-- (f1 <-- (fx <-- x x3;
+                                                                       UnderLets.Base
+                                                                         (fun x4 : expr var0 B => fx0 <-- fx x4;
+                                                                                                  UnderLets.Base fx0));
+                                                               e3 <-- f1 y;
+                                                               UnderLets.Base e3);
+                                                       UnderLets.Base e3);
+                                               type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty) P
+                                                 (fun a1 : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 P)
+                                                  =>
+                                                  match a1 with
+                                                  | Some tr =>
+                                                      UnderLets.Base
+                                                        (tr
+                                                           (let
+                                                              (anyexpr_ty, unwrap) as a2
+                                                               return (expr var0 (let (anyexpr_ty, _) := a2 in anyexpr_ty)) := fv in
+                                                            unwrap))
+                                                  | None =>
+                                                      UnderLets.Base
+                                                        (#(MatchPair) @
+                                                         (λ x4 : var0 A,
+                                                          UnderLets.to_expr
+                                                            (fx <-- x ($x4);
+                                                             UnderLets.Base
+                                                               (λ x5 : var0 B,
+                                                                UnderLets.to_expr (fx0 <-- fx ($x5);
+                                                                                   UnderLets.Base fx0)))) @ x0)
+                                                  end))%under_lets
                                           | None =>
                                               UnderLets.Base
                                                 (#(MatchPair) @
-                                                 (λ x3 : var0 A,
+                                                 (λ x4 : var0 A,
                                                   UnderLets.to_expr
-                                                    (fx <-- x ($x3);
+                                                    (fx <-- x ($x4);
                                                      UnderLets.Base
-                                                       (λ x4 : var0 B,
-                                                        UnderLets.to_expr (fx0 <-- fx ($x4);
+                                                       (λ x5 : var0 B,
+                                                        UnderLets.to_expr (fx0 <-- fx ($x5);
                                                                            UnderLets.Base fx0)))) @ x0)
-                                          end))%under_lets
-                                  | None =>
-                                      UnderLets.Base
-                                        (#(MatchPair) @
-                                         (λ x3 : var0 A,
-                                          UnderLets.to_expr
-                                            (fx <-- x ($x3);
-                                             UnderLets.Base (λ x4 : var0 B,
-                                                             UnderLets.to_expr (fx0 <-- fx ($x4);
-                                                                                UnderLets.Base fx0)))) @ x0)
-                                  end)
-                           | None =>
-                               UnderLets.Base
-                                 (#(MatchPair) @
-                                  (λ x3 : var0 A,
-                                   UnderLets.to_expr
-                                     (fx <-- x ($x3);
-                                      UnderLets.Base (λ x4 : var0 B,
-                                                      UnderLets.to_expr (fx0 <-- fx ($x4);
-                                                                         UnderLets.Base fx0)))) @ x0)
-                           end)
+                                          end)
+                                   | None =>
+                                       UnderLets.Base
+                                         (#(MatchPair) @
+                                          (λ x3 : var0 A,
+                                           UnderLets.to_expr
+                                             (fx <-- x ($x3);
+                                              UnderLets.Base (λ x4 : var0 B,
+                                                              UnderLets.to_expr (fx0 <-- fx ($x4);
+                                                                                 UnderLets.Base fx0)))) @ x0)
+                                   end)
+                            | (s1 -> d1)%ctype =>
+                                fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                UnderLets.Base
+                                  (#(MatchPair) @
+                                   (λ x3 : var0 A,
+                                    UnderLets.to_expr
+                                      (fx <-- x ($x3);
+                                       UnderLets.Base (λ x4 : var0 B,
+                                                       UnderLets.to_expr (fx0 <-- fx ($x4);
+                                                                          UnderLets.Base fx0)))) @ x0)
+                            end (reflect x1)
+                        | (s1 -> d1)%ctype =>
+                            fun _ : value s1 -> UnderLets var0 (value d1) =>
+                            UnderLets.Base
+                              (#(MatchPair) @
+                               (λ x3 : var0 A,
+                                UnderLets.to_expr
+                                  (fx <-- x ($x3);
+                                   UnderLets.Base (λ x4 : var0 B,
+                                                   UnderLets.to_expr (fx0 <-- fx ($x4);
+                                                                      UnderLets.Base fx0)))) @ x0)
+                        end (reflect x2)
                     | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
                       (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ | @App _ s _
                       (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _ (@App _ s0 _ #(@Fst _ _) _) _ |
@@ -2016,25 +2148,25 @@ fun var : type -> Type =>
                  UnderLets.Base
                    (fun x0 : expr var0 (List A) =>
                     type.try_make_transport_base_cps (fun A0 : base_type => expr var0 (List A0)) A A
-                      (fun tr : option (expr var0 (List A) -> expr var0 (List A)) =>
-                       match tr with
-                       | Some tr0 =>
-                           reflect_list_cps (tr0 x0) (UnderLets var0 (expr var0 (List B)))
-                             (fun x' : option (list (expr var0 A)) =>
-                              match x' with
-                              | Some x'0 =>
-                                  (fv <-- (fxs <--- map x x'0;
+                      (fun a : option (expr var0 (List A) -> expr var0 (List A)) =>
+                       match a with
+                       | Some tr =>
+                           reflect_list_cps (tr x0) (UnderLets var0 (expr var0 (List B)))
+                             (fun a0 : option (list (expr var0 A)) =>
+                              match a0 with
+                              | Some xs =>
+                                  (fv <-- (fxs <--- map x xs;
                                            UnderLets.Base (reify_list fxs));
                                    type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty)
                                      (List B)
-                                     (fun tr1 : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 (List B)) =>
-                                      match tr1 with
-                                      | Some tr2 =>
+                                     (fun a1 : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 (List B)) =>
+                                      match a1 with
+                                      | Some tr0 =>
                                           UnderLets.Base
-                                            (tr2
+                                            (tr0
                                                (let
-                                                  (anyexpr_ty, unwrap) as a
-                                                   return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
+                                                  (anyexpr_ty, unwrap) as a2
+                                                   return (expr var0 (let (anyexpr_ty, _) := a2 in anyexpr_ty)) := fv in
                                                 unwrap))
                                       | None =>
                                           match x0 with
@@ -2044,56 +2176,81 @@ fun var : type -> Type =>
                                                                UnderLets.to_expr (fx <-- x ($x2);
                                                                                   UnderLets.Base fx)) @ x0)
                                           | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
-                                              type.try_make_transport_cps (expr var0) s (List A)
-                                                (fun tr2 : option (expr var0 s -> expr var0 (List A)) =>
-                                                 match tr2 with
-                                                 | Some tr3 =>
-                                                     type.try_make_transport_cps (expr var0) s0 A
-                                                       (fun tr4 : option (expr var0 s0 -> expr var0 A) =>
-                                                        match tr4 with
-                                                        | Some tr5 =>
-                                                            fv0 <-- (fx <-- x (tr5 x2);
-                                                                     UnderLets.Base
-                                                                       (fx
-                                                                        :: #(ListMap) @ (λ v : var0 A,
-                                                                                         UnderLets.to_expr (x ($v))) @
-                                                                           tr3 x1));
-                                                            type.try_make_transport_cps (expr var0)
-                                                              (let (anyexpr_ty, _) := fv0 in anyexpr_ty) (List B)
-                                                              (fun
-                                                                 tr6 : option
-                                                                         (expr var0 (let (anyexpr_ty, _) := fv0 in anyexpr_ty) ->
-                                                                          expr var0 (List B)) =>
-                                                               match tr6 with
-                                                               | Some tr7 =>
-                                                                   UnderLets.Base
-                                                                     (tr7
-                                                                        (let
-                                                                           (anyexpr_ty, unwrap) as a
-                                                                            return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) :=
-                                                                           fv0 in
-                                                                         unwrap))
-                                                               | None =>
-                                                                   UnderLets.Base
-                                                                     (#(ListMap) @
-                                                                      (λ x3 : var0 A,
-                                                                       UnderLets.to_expr (fx <-- x ($x3);
-                                                                                          UnderLets.Base fx)) @ x0)
-                                                               end)
-                                                        | None =>
-                                                            UnderLets.Base
-                                                              (#(ListMap) @
-                                                               (λ x3 : var0 A,
-                                                                UnderLets.to_expr (fx <-- x ($x3);
-                                                                                   UnderLets.Base fx)) @ x0)
-                                                        end)
-                                                 | None =>
-                                                     UnderLets.Base
-                                                       (#(ListMap) @
-                                                        (λ x3 : var0 A,
-                                                         UnderLets.to_expr (fx <-- x ($x3);
-                                                                            UnderLets.Base fx)) @ x0)
-                                                 end)
+                                              match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 (List B))) with
+                                              | Base t3 =>
+                                                  fun e1 : expr var0 t3 =>
+                                                  match s as t4 return (value t4 -> UnderLets var0 (expr var0 (List B))) with
+                                                  | Base t4 =>
+                                                      fun e2 : expr var0 t4 =>
+                                                      type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4
+                                                        (List A) e2
+                                                        (fun a2 : option (expr var0 (List A)) =>
+                                                         match a2 with
+                                                         | Some xs0 =>
+                                                             type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 A e1
+                                                               (fun a3 : option (expr var0 A) =>
+                                                                match a3 with
+                                                                | Some x3 =>
+                                                                    fv0 <-- (fx <-- x x3;
+                                                                             UnderLets.Base
+                                                                               (fx
+                                                                                :: #(ListMap) @
+                                                                                   (λ v : var0 A,
+                                                                                    UnderLets.to_expr (x ($v))) @ xs0));
+                                                                    type.try_make_transport_cps (expr var0)
+                                                                      (let (anyexpr_ty, _) := fv0 in anyexpr_ty)
+                                                                      (List B)
+                                                                      (fun
+                                                                         a4 : option
+                                                                                (expr var0 (let (anyexpr_ty, _) := fv0 in anyexpr_ty) ->
+                                                                                 expr var0 (List B)) =>
+                                                                       match a4 with
+                                                                       | Some tr0 =>
+                                                                           UnderLets.Base
+                                                                             (tr0
+                                                                                (let
+                                                                                   (anyexpr_ty, unwrap) as a5
+                                                                                    return
+                                                                                      (expr var0
+                                                                                         (let (anyexpr_ty, _) := a5 in anyexpr_ty)) :=
+                                                                                   fv0 in
+                                                                                 unwrap))
+                                                                       | None =>
+                                                                           UnderLets.Base
+                                                                             (#(ListMap) @
+                                                                              (λ x4 : var0 A,
+                                                                               UnderLets.to_expr (fx <-- x ($x4);
+                                                                                                  UnderLets.Base fx)) @ x0)
+                                                                       end)
+                                                                | None =>
+                                                                    UnderLets.Base
+                                                                      (#(ListMap) @
+                                                                       (λ x3 : var0 A,
+                                                                        UnderLets.to_expr (fx <-- x ($x3);
+                                                                                           UnderLets.Base fx)) @ x0)
+                                                                end)
+                                                         | None =>
+                                                             UnderLets.Base
+                                                               (#(ListMap) @
+                                                                (λ x3 : var0 A,
+                                                                 UnderLets.to_expr (fx <-- x ($x3);
+                                                                                    UnderLets.Base fx)) @ x0)
+                                                         end)
+                                                  | (s1 -> d1)%ctype =>
+                                                      fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                                      UnderLets.Base
+                                                        (#(ListMap) @
+                                                         (λ x3 : var0 A,
+                                                          UnderLets.to_expr (fx <-- x ($x3);
+                                                                             UnderLets.Base fx)) @ x0)
+                                                  end (reflect x1)
+                                              | (s1 -> d1)%ctype =>
+                                                  fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                                  UnderLets.Base
+                                                    (#(ListMap) @ (λ x3 : var0 A,
+                                                                   UnderLets.to_expr (fx <-- x ($x3);
+                                                                                      UnderLets.Base fx)) @ x0)
+                                              end (reflect x2)
                                           | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
                                             (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _
                                             (@App _ s0 _ #(@NatRect _) _) _ | @App _ s _ (@App _ s0 _ #(NatEqb) _) _ | @App _ s _
@@ -2140,52 +2297,77 @@ fun var : type -> Type =>
                                                        UnderLets.to_expr (fx <-- x ($x2);
                                                                           UnderLets.Base fx)) @ x0)
                                   | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
-                                      type.try_make_transport_cps (expr var0) s (List A)
-                                        (fun tr1 : option (expr var0 s -> expr var0 (List A)) =>
-                                         match tr1 with
-                                         | Some tr2 =>
-                                             type.try_make_transport_cps (expr var0) s0 A
-                                               (fun tr3 : option (expr var0 s0 -> expr var0 A) =>
-                                                match tr3 with
-                                                | Some tr4 =>
-                                                    (fv <-- (fx <-- x (tr4 x2);
-                                                             UnderLets.Base
-                                                               (fx :: #(ListMap) @ (λ v : var0 A,
-                                                                                    UnderLets.to_expr (x ($v))) @ tr2 x1));
-                                                     type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty)
-                                                       (List B)
-                                                       (fun
-                                                          tr5 : option
-                                                                  (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) ->
-                                                                   expr var0 (List B)) =>
-                                                        match tr5 with
-                                                        | Some tr6 =>
-                                                            UnderLets.Base
-                                                              (tr6
-                                                                 (let
-                                                                    (anyexpr_ty, unwrap) as a
-                                                                     return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) :=
-                                                                    fv in
-                                                                  unwrap))
+                                      match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 (List B))) with
+                                      | Base t3 =>
+                                          fun e1 : expr var0 t3 =>
+                                          match s as t4 return (value t4 -> UnderLets var0 (expr var0 (List B))) with
+                                          | Base t4 =>
+                                              fun e2 : expr var0 t4 =>
+                                              type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4
+                                                (List A) e2
+                                                (fun a1 : option (expr var0 (List A)) =>
+                                                 match a1 with
+                                                 | Some xs =>
+                                                     type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 A e1
+                                                       (fun a2 : option (expr var0 A) =>
+                                                        match a2 with
+                                                        | Some x3 =>
+                                                            (fv <-- (fx <-- x x3;
+                                                                     UnderLets.Base
+                                                                       (fx
+                                                                        :: #(ListMap) @ (λ v : var0 A,
+                                                                                         UnderLets.to_expr (x ($v))) @ xs));
+                                                             type.try_make_transport_cps (expr var0)
+                                                               (let (anyexpr_ty, _) := fv in anyexpr_ty) (List B)
+                                                               (fun
+                                                                  a3 : option
+                                                                         (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) ->
+                                                                          expr var0 (List B)) =>
+                                                                match a3 with
+                                                                | Some tr0 =>
+                                                                    UnderLets.Base
+                                                                      (tr0
+                                                                         (let
+                                                                            (anyexpr_ty, unwrap) as a4
+                                                                             return
+                                                                               (expr var0 (let (anyexpr_ty, _) := a4 in anyexpr_ty)) :=
+                                                                            fv in
+                                                                          unwrap))
+                                                                | None =>
+                                                                    UnderLets.Base
+                                                                      (#(ListMap) @
+                                                                       (λ x4 : var0 A,
+                                                                        UnderLets.to_expr (fx <-- x ($x4);
+                                                                                           UnderLets.Base fx)) @ x0)
+                                                                end))%under_lets
                                                         | None =>
                                                             UnderLets.Base
                                                               (#(ListMap) @
                                                                (λ x3 : var0 A,
                                                                 UnderLets.to_expr (fx <-- x ($x3);
                                                                                    UnderLets.Base fx)) @ x0)
-                                                        end))%under_lets
-                                                | None =>
-                                                    UnderLets.Base
-                                                      (#(ListMap) @ (λ x3 : var0 A,
-                                                                     UnderLets.to_expr (fx <-- x ($x3);
-                                                                                        UnderLets.Base fx)) @ x0)
-                                                end)
-                                         | None =>
-                                             UnderLets.Base
-                                               (#(ListMap) @ (λ x3 : var0 A,
-                                                              UnderLets.to_expr (fx <-- x ($x3);
-                                                                                 UnderLets.Base fx)) @ x0)
-                                         end)
+                                                        end)
+                                                 | None =>
+                                                     UnderLets.Base
+                                                       (#(ListMap) @
+                                                        (λ x3 : var0 A,
+                                                         UnderLets.to_expr (fx <-- x ($x3);
+                                                                            UnderLets.Base fx)) @ x0)
+                                                 end)
+                                          | (s1 -> d1)%ctype =>
+                                              fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                              UnderLets.Base
+                                                (#(ListMap) @ (λ x3 : var0 A,
+                                                               UnderLets.to_expr (fx <-- x ($x3);
+                                                                                  UnderLets.Base fx)) @ x0)
+                                          end (reflect x1)
+                                      | (s1 -> d1)%ctype =>
+                                          fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                          UnderLets.Base
+                                            (#(ListMap) @ (λ x3 : var0 A,
+                                                           UnderLets.to_expr (fx <-- x ($x3);
+                                                                              UnderLets.Base fx)) @ x0)
+                                      end (reflect x2)
                                   | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
                                     (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _)
                                     _ | @App _ s _ (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _
@@ -2230,51 +2412,73 @@ fun var : type -> Type =>
                                                              UnderLets.to_expr (fx <-- x ($x2);
                                                                                 UnderLets.Base fx)) @ x0)
                            | @App _ s _ (@App _ s0 _ #(@Cons _) x2) x1 =>
-                               type.try_make_transport_cps (expr var0) s (List A)
-                                 (fun tr0 : option (expr var0 s -> expr var0 (List A)) =>
-                                  match tr0 with
-                                  | Some tr1 =>
-                                      type.try_make_transport_cps (expr var0) s0 A
-                                        (fun tr2 : option (expr var0 s0 -> expr var0 A) =>
-                                         match tr2 with
-                                         | Some tr3 =>
-                                             (fv <-- (fx <-- x (tr3 x2);
-                                                      UnderLets.Base
-                                                        (fx :: #(ListMap) @ (λ v : var0 A,
-                                                                             UnderLets.to_expr (x ($v))) @ tr1 x1));
-                                              type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty)
-                                                (List B)
-                                                (fun
-                                                   tr4 : option
-                                                           (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 (List B))
-                                                 =>
-                                                 match tr4 with
-                                                 | Some tr5 =>
-                                                     UnderLets.Base
-                                                       (tr5
-                                                          (let
-                                                             (anyexpr_ty, unwrap) as a
-                                                              return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
-                                                           unwrap))
+                               match s0 as t3 return (value t3 -> UnderLets var0 (expr var0 (List B))) with
+                               | Base t3 =>
+                                   fun e1 : expr var0 t3 =>
+                                   match s as t4 return (value t4 -> UnderLets var0 (expr var0 (List B))) with
+                                   | Base t4 =>
+                                       fun e2 : expr var0 t4 =>
+                                       type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t4 (List A) e2
+                                         (fun a0 : option (expr var0 (List A)) =>
+                                          match a0 with
+                                          | Some xs =>
+                                              type.try_transport_base_cps (fun x3 : base_type => expr var0 x3) t3 A e1
+                                                (fun a1 : option (expr var0 A) =>
+                                                 match a1 with
+                                                 | Some x3 =>
+                                                     (fv <-- (fx <-- x x3;
+                                                              UnderLets.Base
+                                                                (fx :: #(ListMap) @ (λ v : var0 A,
+                                                                                     UnderLets.to_expr (x ($v))) @ xs));
+                                                      type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty)
+                                                        (List B)
+                                                        (fun
+                                                           a2 : option
+                                                                  (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) ->
+                                                                   expr var0 (List B)) =>
+                                                         match a2 with
+                                                         | Some tr =>
+                                                             UnderLets.Base
+                                                               (tr
+                                                                  (let
+                                                                     (anyexpr_ty, unwrap) as a3
+                                                                      return (expr var0 (let (anyexpr_ty, _) := a3 in anyexpr_ty)) :=
+                                                                     fv in
+                                                                   unwrap))
+                                                         | None =>
+                                                             UnderLets.Base
+                                                               (#(ListMap) @
+                                                                (λ x4 : var0 A,
+                                                                 UnderLets.to_expr (fx <-- x ($x4);
+                                                                                    UnderLets.Base fx)) @ x0)
+                                                         end))%under_lets
                                                  | None =>
                                                      UnderLets.Base
                                                        (#(ListMap) @
                                                         (λ x3 : var0 A,
                                                          UnderLets.to_expr (fx <-- x ($x3);
                                                                             UnderLets.Base fx)) @ x0)
-                                                 end))%under_lets
-                                         | None =>
-                                             UnderLets.Base
-                                               (#(ListMap) @ (λ x3 : var0 A,
-                                                              UnderLets.to_expr (fx <-- x ($x3);
-                                                                                 UnderLets.Base fx)) @ x0)
-                                         end)
-                                  | None =>
-                                      UnderLets.Base
-                                        (#(ListMap) @ (λ x3 : var0 A,
-                                                       UnderLets.to_expr (fx <-- x ($x3);
-                                                                          UnderLets.Base fx)) @ x0)
-                                  end)
+                                                 end)
+                                          | None =>
+                                              UnderLets.Base
+                                                (#(ListMap) @ (λ x3 : var0 A,
+                                                               UnderLets.to_expr (fx <-- x ($x3);
+                                                                                  UnderLets.Base fx)) @ x0)
+                                          end)
+                                   | (s1 -> d1)%ctype =>
+                                       fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                       UnderLets.Base
+                                         (#(ListMap) @ (λ x3 : var0 A,
+                                                        UnderLets.to_expr (fx <-- x ($x3);
+                                                                           UnderLets.Base fx)) @ x0)
+                                   end (reflect x1)
+                               | (s1 -> d1)%ctype =>
+                                   fun _ : value s1 -> UnderLets var0 (value d1) =>
+                                   UnderLets.Base
+                                     (#(ListMap) @ (λ x3 : var0 A,
+                                                    UnderLets.to_expr (fx <-- x ($x3);
+                                                                       UnderLets.Base fx)) @ x0)
+                               end (reflect x2)
                            | @App _ s _ (@App _ s0 _ ($_) _) _ | @App _ s _ (@App _ s0 _ (@Abs _ _ _ _) _) _ | @App _ s _
                              (@App _ s0 _ 0 _) _ | @App _ s _ (@App _ s0 _ #(S) _) _ | @App _ s _ (@App _ s0 _ #(@NatRect _) _) _ | @App
                              _ s _ (@App _ s0 _ #(NatEqb) _) _ | @App _ s _ (@App _ s0 _ #(Add) _) _ | @App _ s _
@@ -2313,21 +2517,21 @@ fun var : type -> Type =>
                  UnderLets.Base
                    (fun x0 : expr var0 (List A) =>
                     type.try_make_transport_base_cps (fun A0 : base_type => expr var0 (List A0)) A A
-                      (fun tr : option (expr var0 (List A) -> expr var0 (List A)) =>
-                       match tr with
-                       | Some tr0 =>
-                           reflect_list_cps (tr0 x) (UnderLets var0 (expr var0 (List A)))
-                             (fun x' : option (list (expr var0 A)) =>
-                              match x' with
-                              | Some x'0 =>
+                      (fun a : option (expr var0 (List A) -> expr var0 (List A)) =>
+                       match a with
+                       | Some tr =>
+                           reflect_list_cps (tr x) (UnderLets var0 (expr var0 (List A)))
+                             (fun a0 : option (list (expr var0 A)) =>
+                              match a0 with
+                              | Some xs =>
                                   reflect_list_cps x0 (UnderLets var0 (expr var0 (List A)))
-                                    (fun x'1 : option (list (expr var0 A)) =>
-                                     match x'1 with
-                                     | Some x'2 =>
+                                    (fun a1 : option (list (expr var0 A)) =>
+                                     match a1 with
+                                     | Some ys =>
                                          type.try_make_transport_base_cps (fun A0 : base_type => expr var0 (List A0)) A A
-                                           (fun tr1 : option (expr var0 (List A) -> expr var0 (List A)) =>
-                                            match tr1 with
-                                            | Some tr2 => UnderLets.Base (tr2 (reify_list (x'0 ++ x'2)))
+                                           (fun a2 : option (expr var0 (List A) -> expr var0 (List A)) =>
+                                            match a2 with
+                                            | Some tr0 => UnderLets.Base (tr0 (reify_list (xs ++ ys)))
                                             | None => UnderLets.Base (x ++ x0)
                                             end)
                                      | None => UnderLets.Base (x ++ x0)
@@ -2342,38 +2546,38 @@ fun var : type -> Type =>
                  UnderLets.Base
                    (fun x0 : expr var0 (List A) =>
                     type.try_make_transport_base_cps (fun A0 : base_type => expr var0 (List A0)) A A
-                      (fun tr : option (expr var0 (List A) -> expr var0 (List A)) =>
-                       match tr with
-                       | Some tr0 =>
-                           reflect_list_cps (tr0 x0) (UnderLets var0 (expr var0 (List B)))
-                             (fun x' : option (list (expr var0 A)) =>
-                              match x' with
-                              | Some x'0 =>
-                                  (fv <-- (fxs <--- map x x'0;
+                      (fun a : option (expr var0 (List A) -> expr var0 (List A)) =>
+                       match a with
+                       | Some tr =>
+                           reflect_list_cps (tr x0) (UnderLets var0 (expr var0 (List B)))
+                             (fun a0 : option (list (expr var0 A)) =>
+                              match a0 with
+                              | Some xs =>
+                                  (fv <-- (fxs <--- map x xs;
                                            UnderLets.Base
                                              (#(ListFoldRight) @ (λ ls1 ls2 : expr var0 (List B),
                                                                   $ls1 ++ $ls2) @ (λ _ : expr var0 ( ),
                                                                                    []) @ $(reify_list fxs)));
                                    type.try_make_transport_cps (expr value) (let (anyexpr_ty, _) := fv in anyexpr_ty)
                                      (List B)
-                                     (fun tr1 : option (expr value (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr value (List B)) =>
-                                      match tr1 with
-                                      | Some tr2 =>
+                                     (fun a1 : option (expr value (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr value (List B)) =>
+                                      match a1 with
+                                      | Some tr0 =>
                                           match fuel with
                                           | 0 =>
                                               e'' <-- nbe
-                                                        (tr2
+                                                        (tr0
                                                            (let
-                                                              (anyexpr_ty, unwrap) as a
-                                                               return (expr value (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
+                                                              (anyexpr_ty, unwrap) as a2
+                                                               return (expr value (let (anyexpr_ty, _) := a2 in anyexpr_ty)) := fv in
                                                             unwrap));
                                               UnderLets.Base e''
                                           | Datatypes.S fuel' =>
                                               e'' <-- dorewrite'' fuel' var0 (List B)
-                                                        (tr2
+                                                        (tr0
                                                            (let
-                                                              (anyexpr_ty, unwrap) as a
-                                                               return (expr value (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
+                                                              (anyexpr_ty, unwrap) as a2
+                                                               return (expr value (let (anyexpr_ty, _) := a2 in anyexpr_ty)) := fv in
                                                             unwrap));
                                               UnderLets.Base e''
                                           end
@@ -2408,47 +2612,45 @@ fun var : type -> Type =>
                           expr var0 x2 ->
                           UnderLets var0 (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) A A
                          (fun
-                            trs : option
-                                    ((expr var0 A ->
-                                      UnderLets var0
-                                        (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
-                                     expr var0 A ->
-                                     UnderLets var0 (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P))))
+                            a : option
+                                  ((expr var0 A ->
+                                    UnderLets var0 (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
+                                   expr var0 A ->
+                                   UnderLets var0 (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P))))
                           =>
-                          match trs with
-                          | Some trs0 =>
+                          match a with
+                          | Some trs =>
                               type.try_make_transport_base_cps
                                 (fun A0 : base_type =>
                                  expr var0 A ->
                                  UnderLets var0 (expr var0 (List A0) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) A
                                 A
                                 (fun
-                                   trs1 : option
-                                            ((expr var0 A ->
-                                              UnderLets var0
-                                                (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
-                                             expr var0 A ->
-                                             UnderLets var0
-                                               (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) =>
-                                 match trs1 with
-                                 | Some trs2 =>
+                                   a0 : option
+                                          ((expr var0 A ->
+                                            UnderLets var0
+                                              (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
+                                           expr var0 A ->
+                                           UnderLets var0
+                                             (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) =>
+                                 match a0 with
+                                 | Some trs0 =>
                                      type.try_make_transport_base_cps
                                        (fun x2 : base_type =>
                                         expr var0 A ->
                                         UnderLets var0
                                           (expr var0 (List A) -> UnderLets var0 (expr var0 x2 -> UnderLets var0 (expr var0 P)))) P P
                                        (fun
-                                          trs3 : option
-                                                   ((expr var0 A ->
-                                                     UnderLets var0
-                                                       (expr var0 (List A) ->
-                                                        UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
-                                                    expr var0 A ->
-                                                    UnderLets var0
-                                                      (expr var0 (List A) ->
-                                                       UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) =>
-                                        match trs3 with
-                                        | Some trs4 =>
+                                          a1 : option
+                                                 ((expr var0 A ->
+                                                   UnderLets var0
+                                                     (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
+                                                  expr var0 A ->
+                                                  UnderLets var0
+                                                    (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P))))
+                                        =>
+                                        match a1 with
+                                        | Some trs1 =>
                                             type.try_make_transport_base_cps
                                               (fun x2 : base_type =>
                                                expr var0 A ->
@@ -2456,28 +2658,28 @@ fun var : type -> Type =>
                                                  (expr var0 (List A) -> UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 x2))))
                                               P P
                                               (fun
-                                                 trd : option
-                                                         ((expr var0 A ->
-                                                           UnderLets var0
-                                                             (expr var0 (List A) ->
-                                                              UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
-                                                          expr var0 A ->
+                                                 a2 : option
+                                                        ((expr var0 A ->
                                                           UnderLets var0
                                                             (expr var0 (List A) ->
-                                                             UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) =>
-                                               match trd with
-                                               | Some trd0 =>
+                                                             UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) ->
+                                                         expr var0 A ->
+                                                         UnderLets var0
+                                                           (expr var0 (List A) ->
+                                                            UnderLets var0 (expr var0 P -> UnderLets var0 (expr var0 P)))) =>
+                                               match a2 with
+                                               | Some trd =>
                                                    reflect_list_cps x1 (UnderLets var0 (expr var0 P))
-                                                     (fun x' : option (list (expr var0 A)) =>
-                                                      match x' with
-                                                      | Some x'0 =>
+                                                     (fun a3 : option (list (expr var0 A)) =>
+                                                      match a3 with
+                                                      | Some xs =>
                                                           (fv <-- (v <-- list_rect
                                                                            (fun _ : list (expr var0 A) => UnderLets var0 (expr var0 P))
                                                                            (x ( ))
-                                                                           (fun (x'1 : expr var0 A) (xs' : list (expr var0 A))
+                                                                           (fun (x' : expr var0 A) (xs' : list (expr var0 A))
                                                                               (rec : UnderLets var0 (expr var0 P)) =>
                                                                             rec0 <-- rec;
-                                                                            f <-- (f <-- (fx <-- trd0 (trs4 (trs2 (trs0 x0))) x'1;
+                                                                            f <-- (f <-- (fx <-- trd (trs1 (trs0 (trs x0))) x';
                                                                                           UnderLets.Base
                                                                                             (fun (x2 : expr var0 (List A))
                                                                                                (x3 : expr var0 P) =>
@@ -2492,21 +2694,21 @@ fun var : type -> Type =>
                                                                                              UnderLets.Base e1));
                                                                                    UnderLets.Base (f (reify_list xs')));
                                                                             e1 <-- f rec0;
-                                                                            UnderLets.Base e1) x'0;
+                                                                            UnderLets.Base e1) xs;
                                                                    UnderLets.Base v);
                                                            type.try_make_transport_cps (expr var0)
                                                              (let (anyexpr_ty, _) := fv in anyexpr_ty) P
                                                              (fun
-                                                                tr : option
+                                                                a4 : option
                                                                        (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) ->
                                                                         expr var0 P) =>
-                                                              match tr with
-                                                              | Some tr0 =>
+                                                              match a4 with
+                                                              | Some tr =>
                                                                   UnderLets.Base
-                                                                    (tr0
+                                                                    (tr
                                                                        (let
-                                                                          (anyexpr_ty, unwrap) as a
-                                                                           return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) :=
+                                                                          (anyexpr_ty, unwrap) as a5
+                                                                           return (expr var0 (let (anyexpr_ty, _) := a5 in anyexpr_ty)) :=
                                                                           fv in
                                                                         unwrap))
                                                               | None =>
@@ -2639,13 +2841,13 @@ fun var : type -> Type =>
                  UnderLets.Base
                    (fun x0 : expr var0 (List A) =>
                     type.try_make_transport_base_cps (fun A0 : base_type => expr var0 (List A0)) A A
-                      (fun tr : option (expr var0 (List A) -> expr var0 (List A)) =>
-                       match tr with
-                       | Some tr0 =>
-                           reflect_list_cps (tr0 x0) (UnderLets var0 (expr var0 (List A * List A)))
-                             (fun x' : option (list (expr var0 A)) =>
-                              match x' with
-                              | Some x'0 =>
+                      (fun a : option (expr var0 (List A) -> expr var0 (List A)) =>
+                       match a with
+                       | Some tr =>
+                           reflect_list_cps (tr x0) (UnderLets var0 (expr var0 (List A * List A)))
+                             (fun a0 : option (list (expr var0 A)) =>
+                              match a0 with
+                              | Some xs =>
                                   (fv <-- (v <-- list_rect (fun _ : list (expr var0 A) => UnderLets var0 (expr value (List A * List A)))
                                                    (UnderLets.Base ([], []))
                                                    (fun (x1 : expr var0 A) (_ : list (expr var0 A))
@@ -2657,31 +2859,30 @@ fun var : type -> Type =>
                                                        (λ g d : expr var0 (List A),
                                                         #(BoolRect) @ (λ _ : expr var0 ( ),
                                                                        ($x1 :: $g, $d)) @ (λ _ : expr var0 ( ),
-                                                                                           ($g, $x1 :: $d)) @ $fx) @ partition_tl0)) x'0;
+                                                                                           ($g, $x1 :: $d)) @ $fx) @ partition_tl0)) xs;
                                            UnderLets.Base v);
                                    type.try_make_transport_cps (expr value) (let (anyexpr_ty, _) := fv in anyexpr_ty)
                                      (List A * List A)
                                      (fun
-                                        tr1 : option
-                                                (expr value (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr value (List A * List A))
-                                      =>
-                                      match tr1 with
-                                      | Some tr2 =>
+                                        a1 : option
+                                               (expr value (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr value (List A * List A)) =>
+                                      match a1 with
+                                      | Some tr0 =>
                                           match fuel with
                                           | 0 =>
                                               e'' <-- nbe
-                                                        (tr2
+                                                        (tr0
                                                            (let
-                                                              (anyexpr_ty, unwrap) as a
-                                                               return (expr value (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
+                                                              (anyexpr_ty, unwrap) as a2
+                                                               return (expr value (let (anyexpr_ty, _) := a2 in anyexpr_ty)) := fv in
                                                             unwrap));
                                               UnderLets.Base e''
                                           | Datatypes.S fuel' =>
                                               e'' <-- dorewrite'' fuel' var0 (List A * List A)%ctype
-                                                        (tr2
+                                                        (tr0
                                                            (let
-                                                              (anyexpr_ty, unwrap) as a
-                                                               return (expr value (let (anyexpr_ty, _) := a in anyexpr_ty)) := fv in
+                                                              (anyexpr_ty, unwrap) as a2
+                                                               return (expr value (let (anyexpr_ty, _) := a2 in anyexpr_ty)) := fv in
                                                             unwrap));
                                               UnderLets.Base e''
                                           end
@@ -2717,12 +2918,12 @@ fun var : type -> Type =>
                            (fv <-- (e1 <-- x ( );
                                     UnderLets.Base e1);
                             type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty) P
-                              (fun tr : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 P) =>
-                               match tr with
-                               | Some tr0 =>
+                              (fun a : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 P) =>
+                               match a with
+                               | Some tr =>
                                    UnderLets.Base
-                                     (tr0
-                                        (let (anyexpr_ty, unwrap) as a return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) :=
+                                     (tr
+                                        (let (anyexpr_ty, unwrap) as a0 return (expr var0 (let (anyexpr_ty, _) := a0 in anyexpr_ty)) :=
                                            fv in
                                          unwrap))
                                | None =>
@@ -2738,12 +2939,12 @@ fun var : type -> Type =>
                            (fv <-- (e1 <-- x0 ( );
                                     UnderLets.Base e1);
                             type.try_make_transport_cps (expr var0) (let (anyexpr_ty, _) := fv in anyexpr_ty) P
-                              (fun tr : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 P) =>
-                               match tr with
-                               | Some tr0 =>
+                              (fun a : option (expr var0 (let (anyexpr_ty, _) := fv in anyexpr_ty) -> expr var0 P) =>
+                               match a with
+                               | Some tr =>
                                    UnderLets.Base
-                                     (tr0
-                                        (let (anyexpr_ty, unwrap) as a return (expr var0 (let (anyexpr_ty, _) := a in anyexpr_ty)) :=
+                                     (tr
+                                        (let (anyexpr_ty, unwrap) as a0 return (expr var0 (let (anyexpr_ty, _) := a0 in anyexpr_ty)) :=
                                            fv in
                                          unwrap))
                                | None =>
