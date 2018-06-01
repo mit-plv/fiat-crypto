@@ -1717,4 +1717,4 @@ fun var : type -> Type =>
 Arguments var, t are implicit and maximally inserted
 Argument scopes are [function_scope ctype_scope expr_scope]
 *)
-Timeout 10 Time Compute dorewrite (#ListPartition @ (λ x, #NatEqb @ $x @ ##1) @ [##0; ##1; ##1; ##2])%expr.
+Timeout 10 Time Eval compute dorewrite (#ListPartition @ (λ x, #NatEqb @ $x @ ##1) @ [##0; ##1; ##1; ##2])%expr.
