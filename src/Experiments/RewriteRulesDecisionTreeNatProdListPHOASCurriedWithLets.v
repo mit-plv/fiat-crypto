@@ -402,15 +402,6 @@ Module type.
   Definition try_transport_cps (P : type -> Type) (t1 t2 : type) (v : P t1) : ~> option (P t2)
     := (tr <-- try_make_transport_cps P t1 t2;
         return (Some (tr v)))%cps.
-
-  Definition try_transport (P : type -> Type) (t1 t2 : type) (v : P t1) : option (P t2)
-    := try_transport_cps P t1 t2 v _ id.
-
-  Definition codomain (t : type) : type
-    := match t with
-       | Base as t => t
-       | Arrow s d => d
-       end.
 End type.
 
 Module UnderLets.
@@ -480,14 +471,11 @@ Section with_var.
        | Arrow s d, _
          => fun f x => @push_lets_value _ d (f <-- f; UnderLets.Base (f x))
        end%under_lets.
-  Definition splice_value'_with_lets {with_lets0 with_lets1 t t'} : value' with_lets0 t -> (value' with_lets1 t -> value_with_lets t') -> value_with_lets t'
-    := match with_lets0, with_lets1, t return value' with_lets0 t -> (value' with_lets1 t -> value_with_lets t') -> value_with_lets t' with
-       | true, true, _
-       | false, false, _
-       | _, _, Arrow _ _
+  Definition splice_value'_with_lets {t t'} : value_with_lets t -> (value t -> value_with_lets t') -> value_with_lets t'
+    := match t return value_with_lets t -> (value t -> value_with_lets t') -> value_with_lets t' with
+       | Arrow _ _
          => fun e k => k e
-       | true, false, Base => fun e k => push_lets_value (e <-- e; UnderLets.Base (k e))
-       | false, true, Base => fun e k => k (UnderLets.Base e)
+       | Base => fun e k => push_lets_value (e <-- e; UnderLets.Base (k e))
        end%under_lets.
   Local Notation "e <---- e' ; f" := (splice_value'_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
 
@@ -1121,7 +1109,7 @@ Arguments cpscall / .
 Arguments invert_Literal / .
 Arguments Base_value' _ !with_lets !t.
 Arguments push_lets_value _ !_ !t.
-Arguments splice_value'_with_lets _ !_ !_ !t.
+Arguments splice_value'_with_lets _ !t.
 Set Printing Depth 1000000.
 Definition dorewrite''' {var}
   := Eval cbv (*-[value reify default_fuel reflect nbe type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
