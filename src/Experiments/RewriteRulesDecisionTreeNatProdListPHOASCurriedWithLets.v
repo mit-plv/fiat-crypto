@@ -457,12 +457,10 @@ Section with_var.
        end.
   Definition value := value' false.
   Definition value_with_lets := value' true.
-  Definition Base_value' {with_lets} {t} : value' with_lets t -> value_with_lets t
-    := match with_lets, t with
-       | false, Base => fun v => UnderLets.Base v
-       | false, _
-       | true, _
-         => fun v => v
+  Definition Base_value {t} : value t -> value_with_lets t
+    := match t with
+       | Base => fun v => UnderLets.Base v
+       | Arrow _ _ => fun v => v
        end.
   Fixpoint push_lets_value {with_lets} {t} : UnderLets (value' with_lets t) -> value_with_lets t
     := match t, with_lets return UnderLets (value' with_lets t) -> value_with_lets t with
@@ -532,20 +530,18 @@ Section with_var.
        | Arrow _ _ => fun _ => k None
        end.
 
-  Definition reveal_rawexpr_cps {T}
-             (k : rawexpr -> T)
-             (e : rawexpr)
-    : T
-    := match e with
-       | rExpr _ e as r
-       | rValue Base e as r
-         => match e with
-            | Ident t idc => k (rIdent idc e)
-            | App s d f x => k (rApp (rExpr f) (rExpr x) e)
-            | _ => k r
-            end
-       | e' => k e'
-       end.
+  Definition reveal_rawexpr_cps (e : rawexpr) : ~> rawexpr
+    := fun T k
+       => match e with
+          | rExpr _ e as r
+          | rValue Base e as r
+            => match e with
+               | Ident t idc => k (rIdent idc e)
+               | App s d f x => k (rApp (rExpr f) (rExpr x) e)
+               | _ => k r
+               end
+          | e' => k e'
+          end.
 
   Fixpoint binding_dataT (p : pattern) : Type
     := match p return Type with
@@ -600,6 +596,7 @@ Section with_var.
             | nil => cont None ctx None
             | ctx0 :: ctx'
               => reveal_rawexpr_cps
+                   ctx0 _
                    (fun ctx0'
                     => match ctx0' with
                        | rIdent t idc t' alt
@@ -633,7 +630,6 @@ Section with_var.
                        | rValue t e
                          => default tt
                        end)
-                   ctx0
             end
        | Swap i d'
          => match swap_list 0 i ctx with
@@ -1043,7 +1039,7 @@ Definition dorewrite
                              push_lets_value
                                (UnderLet (@reify false _ x)
                                          (fun xv => UnderLets.Base (@dorewrite' B (f (reflect ($xv)%expr)))))
-         | Var t v => Base_value' v
+         | Var t v => Base_value v
          | Abs s d f => fun x : value s => @dorewrite' d (f x)
          end%under_lets.
 
@@ -1055,7 +1051,7 @@ Definition dorewrite
                              push_lets_value
                                (UnderLet (@reify false _ x)
                                          (fun xv => UnderLets.Base (@nbe B (f (reflect ($xv)%expr)))))
-         | Var t v => Base_value' v
+         | Var t v => Base_value v
          | Abs s d f => fun x : value s => @nbe d (f x)
          end%under_lets.
   End with_do_again.
@@ -1107,7 +1103,7 @@ Arguments cpsreturn / .
 Arguments cpsbind / .
 Arguments cpscall / .
 Arguments invert_Literal / .
-Arguments Base_value' _ !with_lets !t.
+Arguments Base_value _ !t.
 Arguments push_lets_value _ !_ !t.
 Arguments splice_value'_with_lets _ !t.
 Set Printing Depth 1000000.
@@ -1118,7 +1114,7 @@ Definition dorewrite''' {var}
 Arguments dorewrite''' / .
 Print dorewrite'''.
 Definition dorewrite
-  := Eval cbn [dorewrite''' type.try_transport_cps type.try_make_transport_cps Option.bind value value' Base_value' push_lets_value reify reflect nbe splice_value'_with_lets UnderLets.splice UnderLets.splice_list UnderLets.to_expr cpscall cpsbind cpsreturn (*default_fuel*)] in @dorewrite'''.
+  := Eval cbn [dorewrite''' type.try_transport_cps type.try_make_transport_cps Option.bind value value' Base_value push_lets_value reify reflect nbe splice_value'_with_lets UnderLets.splice UnderLets.splice_list UnderLets.to_expr cpscall cpsbind cpsreturn (*default_fuel*)] in @dorewrite'''.
 Arguments dorewrite {var t} e.
 Local Open Scope expr_scope.
 Arguments expr : clear implicits.
@@ -1129,7 +1125,7 @@ fun var : type -> Type =>
 (fix dorewrite'' (fuel : nat) (t : type) (e : expr (value' false) t) {struct fuel} : value' true t :=
    (fix dorewrite' (t0 : type) (e0 : expr (value' false) t0) {struct e0} : value' true t0 :=
       match e0 in (expr _ t1) return (value' true t1) with
-      | @Var _ t1 v => Base_value' v
+      | @Var _ t1 v => Base_value v
       | @Abs _ s d f => fun x : value' false s => dorewrite' d (f x)
       | #(idc) =>
           match idc in (ident t2) return (value' true t2) with
