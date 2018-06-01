@@ -325,14 +325,8 @@ Inductive expr {var : type -> Type} : type -> Type :=
 | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
 | LetIn {A B} (x : expr A) (f : var A -> expr B) : expr B .
 
-Inductive ptype := pAny | pBase | pArrow (s : type) (d : ptype).
-Bind Scope ptype_scope with ptype.
-Delimit Scope ptype_scope with ptype.
-Infix "->" := pArrow : ptype_scope.
-Notation "'??'" := pBase : ptype_scope.
-
 Inductive pattern : Type :=
-| Wildcard (t : ptype)
+| Wildcard (t : type)
 | pIdent (idc : pident)
 | pApp (f x : pattern).
 
@@ -361,7 +355,7 @@ Delimit Scope pattern_scope with pattern.
 Bind Scope pattern_scope with pattern.
 Notation "#?" := (pIdent pLiteral) : pattern_scope.
 Notation "??{ t }" := (Wildcard t) (format "??{ t }") : pattern_scope.
-Notation "??" := (Wildcard pBase) : pattern_scope.
+Notation "??" := (Wildcard Base) : pattern_scope.
 Notation "# idc" := (pIdent idc) : pattern_scope.
 Infix "@" := pApp : pattern_scope.
 Notation "( )" := (#pTT)%pattern : pattern_scope.
@@ -391,8 +385,6 @@ Notation "x' <-- v ; C" := (cpsbind v%cps (fun x' T k => match x' with Some x' =
     like this for NBE (normalization by evaluation), which we use for
     reducing applications of lambdas, to work.  So we jump through
     many hoops to cast across types. *)
-(** TODO: Would it work to operate on syntax trees which are only
-    typed by their arrow structure, and nothing else?  Would it help? *)
 Module type.
   Fixpoint try_make_transport_cps (P : type -> Type) (t1 t2 : type) : ~> option (P t1 -> P t2)
     := match t1, t2 with
@@ -567,64 +559,18 @@ Section with_var.
        | e' => k e'
        end.
 
-  Inductive quant_type := qforall | qexists.
-
-  Fixpoint ptype_interp_cps (quant : quant_type) (t : ptype) (kt : type -> type) (K : type -> Type) : Type
-    := match t with
-       | pBase
-         => K (kt Base)
-       | pAny
-         => match quant with
-            | qforall => forall t : type, K (kt t)
-            | qexists => { t : type & K (kt t) }
-            end
-       | pArrow t d => @ptype_interp_cps quant d (fun d => kt (t -> d)%ctype) K
-       end.
-
-  Definition ptype_interp (quant : quant_type) (t : ptype) (K : Type -> Type) : Type
-    := ptype_interp_cps quant t id (fun t => K (value t)).
-
   Fixpoint binding_dataT (p : pattern) : Type
     := match p return Type with
-       | Wildcard t => ptype_interp qexists t id
+       | Wildcard t => value t
        | pIdent idc => if pident_beq pLiteral idc then nat else unit
        | pApp f x => binding_dataT f * binding_dataT x
        end%type.
-
-  Fixpoint bind_value_cps {t1 t2}
-           (kt : type -> type)
-           (K := fun t => value (kt t))
-           (v : K t2)
-           {struct t1}
-    : ~> option (ptype_interp_cps qexists t1 kt value)
-    := match t1 return ~> option (ptype_interp_cps qexists t1 kt value) with
-       | pBase
-         => (e <-- type.try_transport_cps _ _ _ v;
-               return (Some e))
-       | pAny => (return (Some (existT _ t2 v)))
-       | pArrow s d
-         => fun T k
-            => match t2 return K t2 -> T with
-               | Base => fun _ => k None
-               | Arrow s' d'
-                 => fun v
-                    => type.try_transport_cps
-                         (fun s => K (s -> _)%ctype) s' s v _
-                         (fun v'
-                          => match v' with
-                             | Some v''
-                               => @bind_value_cps
-                                    d d' (fun d => kt (s -> d)%ctype) v'' T k
-                             | None => k None
-                             end)
-               end v
-       end%cps.
 
   Fixpoint bind_data_cps (e : rawexpr) (p : pattern)
     : ~> option (binding_dataT p)
     := match p, e return ~> option (binding_dataT p) with
        | Wildcard t, _
-         => bind_value_cps id (value_of_rawexpr e)
+         => type.try_transport_cps _ _ _ (value_of_rawexpr e)
        | pIdent pidc, rIdent _ idc _ _
          => (if pident_beq pLiteral pidc as b return ~> option (if b then nat else unit)
              then return (invert_Literal idc)
@@ -819,7 +765,7 @@ Section with_var.
   Definition refine_pattern_app (p : nat * list pattern) : option (nat * list pattern)
     := match p with
        | (n, Wildcard _::ps)
-         => Some (n, Wildcard pAny :: Wildcard pAny :: ps)
+         => Some (n, Wildcard ?? :: Wildcard ?? :: ps) (* dummy arguments to [Wildcard] *)
        | (n, pApp f x :: ps)
          => Some (n, f :: x :: ps)
        | (_, pIdent _::_)
@@ -900,30 +846,17 @@ Section with_var.
 
   Fixpoint with_bindingsT (p : pattern) (T : Type)
     := match p return Type with
-       | Wildcard t => ptype_interp qforall t (fun eT => eT -> T)
+       | Wildcard t => value t -> T
        | pIdent pLiteral => nat -> T
        | pApp f x => with_bindingsT f (with_bindingsT x T)
        | pIdent _ => T
        end.
 
-  Fixpoint lift_ptype_interp_cps {A B : Type} {quant kt} (F : A -> B) {t}
-    : ptype_interp_cps quant t kt (fun eT => value eT -> A)
-      -> ptype_interp_cps quant t kt (fun eT => value eT -> B)
-    := match t, quant return ptype_interp_cps quant t kt (fun eT => value eT -> A)
-                             -> ptype_interp_cps quant t kt (fun eT => value eT -> B) with
-       | pAny, qforall => fun f t x => F (f t x)
-       | pAny, qexists => fun tf => existT (fun t => value (kt t) -> B)
-                                           _
-                                           (fun x => F (projT2 tf x))
-       | pBase, _ => fun f t => F (f t)
-       | pArrow s d, _
-         => @lift_ptype_interp_cps _ _ _ (fun d => kt (_ -> d)%ctype) F d
-       end.
-
   Fixpoint lift_with_bindings {p} {A B : Type} (F : A -> B) {struct p} : with_bindingsT p A -> with_bindingsT p B
     := match p return with_bindingsT p A -> with_bindingsT p B with
-       | Wildcard t => lift_ptype_interp_cps F
-       | pIdent pLiteral => fun f e => F (f e)
+       | Wildcard _
+       | pIdent pLiteral
+         => fun f e => F (f e)
        | pApp f x
          => @lift_with_bindings
               f _ _
@@ -932,24 +865,11 @@ Section with_var.
          => F
        end.
 
-  Fixpoint app_ptype_interp_cps {T : Type} {kt : type -> type} {K : type -> Type}
-           {t}
-    : ptype_interp_cps qforall t kt (fun eT => K eT -> T)
-      -> ptype_interp_cps qexists t kt K -> T
-    := match t return ptype_interp_cps qforall t kt (fun eT => K eT -> T)
-                      -> ptype_interp_cps qexists t kt K -> T with
-       | pAny => fun f tv => f _ (projT2 tv)
-       | pBase => fun f v => f v
-       | pArrow s d
-         => @app_ptype_interp_cps T (fun d => kt (_ -> d)%ctype) K d
-       end.
-
   Fixpoint app_binding_data {T p} : forall (f : with_bindingsT p T) (v : binding_dataT p), T
     := match p return forall (f : with_bindingsT p T) (v : binding_dataT p), T with
+       | Wildcard _
        | pIdent pLiteral
          => fun f => f
-       | Wildcard t
-         => app_ptype_interp_cps
        | pApp f x
          => fun F '(vf, vx)
             => @app_binding_data _ x (@app_binding_data _ f F vf) vx
@@ -1180,8 +1100,6 @@ Arguments option_map _ _ _ !_ / .
 Arguments swap_list _ !_ !_ !_ / .
 Arguments set_nth _ !_ _ !_ / .
 Arguments lift_with_bindings / .
-Arguments bind_value_cps / .
-Arguments app_ptype_interp_cps / .
 Arguments app_binding_data / .
 Arguments type_of_rawexpr / .
 Arguments expr_of_rawexpr / .
@@ -1196,9 +1114,6 @@ Arguments cast / .
 Arguments castv / .
 Arguments ret / .
 Arguments oret / .
-Arguments lift_ptype_interp_cps / .
-Arguments ptype_interp / .
-Arguments ptype_interp_cps / .
 Arguments default_fuel / .
 Arguments cpsreturn / .
 Arguments cpsbind / .
@@ -1210,7 +1125,7 @@ Arguments splice_value'_with_lets _ !_ !_ !t.
 Set Printing Depth 1000000.
 Definition dorewrite''' {var}
   := Eval cbv (*-[value reify default_fuel reflect nbe type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id cpscall cpsbind cpsreturn orb projT1 projT2 nth_error set_nth update_nth app_binding_data app_ptype_interp_cps bind_data_cps binding_dataT bind_value_cps cast castv dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_ptype_interp_cps lift_with_bindings orb_pident oret or_opt_pident pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps value_of_rawexpr with_bindingsT value_with_lets value value_with_lets fst snd invert_Literal pident_beq]
+          [id cpscall cpsbind cpsreturn orb projT1 projT2 nth_error set_nth update_nth app_binding_data bind_data_cps binding_dataT cast castv dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_with_bindings orb_pident oret or_opt_pident pident_ident_beq pident_of_ident reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps value_of_rawexpr with_bindingsT value_with_lets value value_with_lets fst snd invert_Literal pident_beq]
     in @dorewrite'' var default_fuel.
 Arguments dorewrite''' / .
 Print dorewrite'''.
@@ -1256,7 +1171,7 @@ fun var : type -> Type =>
                   match x0 with
                   | 0 => UnderLets.Base x
                   | @App _ s0 _ #(S) x1 =>
-                      type.try_make_transport_cps (fun t3 : type => value' false t3) s0 ??
+                      type.try_make_transport_cps (value' false) s0 ??
                         (fun a : option (value' false s0 -> expr var ??) =>
                          match a with
                          | Some tr => UnderLets.Base ((x + tr (reflect x1)).+1)
@@ -1277,7 +1192,7 @@ fun var : type -> Type =>
                   | 0 => UnderLets.Base x
                   | ##(n0) => UnderLets.Base ##(n + n0)
                   | @App _ s _ #(S) x1 =>
-                      type.try_make_transport_cps (fun t4 : type => value' false t4) s ??
+                      type.try_make_transport_cps (value' false) s ??
                         (fun a : option (value' false s -> expr var ??) =>
                          match a with
                          | Some tr => UnderLets.Base (##(Datatypes.S n) + tr (reflect x1))
@@ -1298,7 +1213,7 @@ fun var : type -> Type =>
                   | ##(n) =>
                       match f with
                       | #(S) =>
-                          type.try_make_transport_cps (fun t4 : type => value' false t4) s ??
+                          type.try_make_transport_cps (value' false) s ??
                             (fun a : option (value' false s -> expr var ??) =>
                              match a with
                              | Some tr => UnderLets.Base (tr (reflect x1) + ##(Datatypes.S n))
@@ -1309,11 +1224,11 @@ fun var : type -> Type =>
                   | @App _ s0 _ #(S) x2 =>
                       match f with
                       | #(S) =>
-                          type.try_make_transport_cps (fun t4 : type => value' false t4) s ??
+                          type.try_make_transport_cps (value' false) s ??
                             (fun a : option (value' false s -> expr var ??) =>
                              match a with
                              | Some tr =>
-                                 type.try_make_transport_cps (fun t4 : type => value' false t4) s0 ??
+                                 type.try_make_transport_cps (value' false) s0 ??
                                    (fun a0 : option (value' false s0 -> expr var ??) =>
                                     match a0 with
                                     | Some tr0 => UnderLets.Base (((tr (reflect x1) + tr0 (reflect x2)).+1).+1)
@@ -1321,52 +1236,24 @@ fun var : type -> Type =>
                                     end)
                              | None => UnderLets.Base (x + x0)
                              end)
-                      | @Abs _ _ _ _ | _ @ _ | @LetIn _ _ _ _ _ =>
-                          type.try_make_transport_cps (fun t3 : type => value' false t3) s0 ??
-                            (fun a : option (value' false s0 -> expr var ??) =>
-                             match a with
-                             | Some tr => UnderLets.Base ((x + tr (reflect x2)).+1)
-                             | None => UnderLets.Base (x + x0)
-                             end)
                       | _ =>
-                          type.try_make_transport_cps (fun t4 : type => value' false t4) s0 ??
+                          type.try_make_transport_cps (value' false) s0 ??
                             (fun a : option (value' false s0 -> expr var ??) =>
                              match a with
                              | Some tr => UnderLets.Base ((x + tr (reflect x2)).+1)
                              | None => UnderLets.Base (x + x0)
                              end)
                       end
-                  | @App _ s0 _ ($_) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(NatRect) _ | @App _ s0 _ #(NatEqb) _ | @App _ s0 _ #
-                    (Add) _ | @App _ s0 _ #(Pair) _ | @App _ s0 _ #(Fst) _ | @App _ s0 _ #(Snd) _ | @App _ s0 _ #
-                    (MatchPair) _ | @App _ s0 _ [] _ | @App _ s0 _ #(Cons) _ | @App _ s0 _ #(ListMap) _ | @App _ s0 _ #
-                    (ListApp) _ | @App _ s0 _ #(ListFlatMap) _ | @App _ s0 _ #(ListRect) _ | @App _ s0 _ #(ListFoldRight) _ | @App _ s0
-                    _ #(ListPartition) _ | @App _ s0 _ ( ) _ | @App _ s0 _ #(iTrue) _ | @App _ s0 _ #(iFalse) _ | @App _ s0 _
-                    #(BoolRect) _ | @App _ s0 _ ##(_) _ =>
+                  | @App _ s0 _ ($_) _ | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ 0 _ | @App _ s0 _ #(NatRect) _ | @App _ s0 _
+                    #(NatEqb) _ | @App _ s0 _ #(Add) _ | @App _ s0 _ #(Pair) _ | @App _ s0 _ #(Fst) _ | @App _ s0 _ #
+                    (Snd) _ | @App _ s0 _ #(MatchPair) _ | @App _ s0 _ [] _ | @App _ s0 _ #(Cons) _ | @App _ s0 _ #
+                    (ListMap) _ | @App _ s0 _ #(ListApp) _ | @App _ s0 _ #(ListFlatMap) _ | @App _ s0 _ #(ListRect) _ | @App _ s0 _
+                    #(ListFoldRight) _ | @App _ s0 _ #(ListPartition) _ | @App _ s0 _ ( ) _ | @App _ s0 _ #(iTrue) _ | @App _ s0 _
+                    #(iFalse) _ | @App _ s0 _ #(BoolRect) _ | @App _ s0 _ ##(_) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _
+                    (@LetIn _ _ _ _ _) _ =>
                       match f with
                       | #(S) =>
-                          type.try_make_transport_cps (fun t4 : type => value' false t4) s ??
-                            (fun a : option (value' false s -> expr var ??) =>
-                             match a with
-                             | Some tr => UnderLets.Base ((tr (reflect x1) + x0).+1)
-                             | None => UnderLets.Base (x + x0)
-                             end)
-                      | _ => UnderLets.Base (x + x0)
-                      end
-                  | @App _ s0 _ (@Abs _ _ _ _) _ | @App _ s0 _ (_ @ _) _ | @App _ s0 _ (@LetIn _ _ _ _ _) _ =>
-                      match f with
-                      | #(S) =>
-                          type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
-                            (fun a : option (value' false s -> expr var ??) =>
-                             match a with
-                             | Some tr => UnderLets.Base ((tr (reflect x1) + x0).+1)
-                             | None => UnderLets.Base (x + x0)
-                             end)
-                      | _ => UnderLets.Base (x + x0)
-                      end
-                  | @Abs _ _ _ _ | @LetIn _ _ _ _ _ =>
-                      match f with
-                      | #(S) =>
-                          type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
+                          type.try_make_transport_cps (value' false) s ??
                             (fun a : option (value' false s -> expr var ??) =>
                              match a with
                              | Some tr => UnderLets.Base ((tr (reflect x1) + x0).+1)
@@ -1377,7 +1264,7 @@ fun var : type -> Type =>
                   | _ =>
                       match f with
                       | #(S) =>
-                          type.try_make_transport_cps (fun t4 : type => value' false t4) s ??
+                          type.try_make_transport_cps (value' false) s ??
                             (fun a : option (value' false s -> expr var ??) =>
                              match a with
                              | Some tr => UnderLets.Base ((tr (reflect x1) + x0).+1)
@@ -1390,7 +1277,7 @@ fun var : type -> Type =>
                   match x0 with
                   | 0 => UnderLets.Base x
                   | @App _ s _ #(S) x2 =>
-                      type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
+                      type.try_make_transport_cps (value' false) s ??
                         (fun a : option (value' false s -> expr var ??) =>
                          match a with
                          | Some tr => UnderLets.Base ((x + tr (reflect x2)).+1)
@@ -1409,7 +1296,7 @@ fun var : type -> Type =>
                   match x0 with
                   | 0 => UnderLets.Base x
                   | @App _ s _ #(S) x1 =>
-                      type.try_make_transport_cps (fun t4 : type => value' false t4) s ??
+                      type.try_make_transport_cps (value' false) s ??
                         (fun a : option (value' false s -> expr var ??) =>
                          match a with
                          | Some tr => UnderLets.Base ((x + tr (reflect x1)).+1)
@@ -1430,11 +1317,11 @@ fun var : type -> Type =>
               fun x : expr var ?? =>
               match x with
               | @App _ s _ (@App _ s0 _ #(Pair) x1) _ =>
-                  type.try_make_transport_cps (fun t3 : type => value' false t3) s0 ??
+                  type.try_make_transport_cps (value' false) s0 ??
                     (fun a : option (value' false s0 -> expr var ??) =>
                      match a with
                      | Some tr =>
-                         type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
+                         type.try_make_transport_cps (value' false) s ??
                            (fun a0 : option (value' false s -> expr var ??) =>
                             match a0 with
                             | Some _ => UnderLets.Base (tr (reflect x1))
@@ -1460,11 +1347,11 @@ fun var : type -> Type =>
               fun x : expr var ?? =>
               match x with
               | @App _ s _ (@App _ s0 _ #(Pair) _) x0 =>
-                  type.try_make_transport_cps (fun t3 : type => value' false t3) s0 ??
+                  type.try_make_transport_cps (value' false) s0 ??
                     (fun a : option (value' false s0 -> expr var ??) =>
                      match a with
                      | Some _ =>
-                         type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
+                         type.try_make_transport_cps (value' false) s ??
                            (fun a0 : option (value' false s -> expr var ??) =>
                             match a0 with
                             | Some tr0 => UnderLets.Base (tr0 (reflect x0))
@@ -1493,11 +1380,11 @@ fun var : type -> Type =>
                   UnderLets.Base (#(MatchPair) @ (λ x2 x3 : var ??%ctype,
                                                   UnderLets.to_expr (x ($x2) ($x3))) @ x0)
               | @App _ s _ (@App _ s0 _ #(Pair) x2) x1 =>
-                  type.try_make_transport_cps (fun t3 : type => value' false t3) s0 ??
+                  type.try_make_transport_cps (value' false) s0 ??
                     (fun a : option (value' false s0 -> expr var ??) =>
                      match a with
                      | Some tr =>
-                         type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
+                         type.try_make_transport_cps (value' false) s ??
                            (fun a0 : option (value' false s -> expr var ??) =>
                             match a0 with
                             | Some tr0 => (fv <-- x (tr (reflect x2)) (tr0 (reflect x1));
@@ -1546,11 +1433,11 @@ fun var : type -> Type =>
                          UnderLets.Base (#(ListMap) @ (λ x2 : var ??%ctype,
                                                        UnderLets.to_expr (x ($x2))) @ x0)
                      | @App _ s _ (@App _ s0 _ #(Cons) x2) x1 =>
-                         type.try_make_transport_cps (fun t3 : type => value' false t3) s0 ??
+                         type.try_make_transport_cps (value' false) s0 ??
                            (fun a0 : option (value' false s0 -> expr var ??) =>
                             match a0 with
                             | Some tr =>
-                                type.try_make_transport_cps (fun t3 : type => value' false t3) s ??
+                                type.try_make_transport_cps (value' false) s ??
                                   (fun a1 : option (value' false s -> expr var ??) =>
                                    match a1 with
                                    | Some tr0 =>
@@ -1707,4 +1594,4 @@ fun var : type -> Type =>
 Arguments var, t are implicit and maximally inserted
 Argument scopes are [function_scope ctype_scope expr_scope]
 *)
-Timeout 10 Time Eval compute dorewrite (#ListPartition @ (λ x, #NatEqb @ $x @ ##1) @ [##0; ##1; ##1; ##2])%expr.
+Timeout 10 Time Eval compute in dorewrite (#ListPartition @ (λ x, #NatEqb @ $x @ ##1) @ [##0; ##1; ##1; ##2])%expr.
