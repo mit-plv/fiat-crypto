@@ -421,10 +421,6 @@ Module type.
        end.
 End type.
 
-Record > anyexpr {var : type -> Type}
-  := wrap { anyexpr_ty : type ; unwrap :> @expr var anyexpr_ty }.
-Arguments wrap {_ _} _.
-
 Module UnderLets.
   Section with_var.
     Context {var : type -> Type}.
@@ -466,9 +462,7 @@ Notation "x <--- y ; f" := (UnderLets.splice_list y (fun x => f%under_lets)) : u
 Section with_var.
   Context {var : type -> Type}.
   Local Notation topexpr := expr.
-  Local Notation topanyexpr := anyexpr.
   Local Notation expr := (@expr var).
-  Local Notation anyexpr := (@anyexpr var).
   Local Notation UnderLets := (@UnderLets var).
 
   Fixpoint value' (with_lets : bool) (t : type)
@@ -481,21 +475,12 @@ Section with_var.
   Definition value := value' false.
   Definition value_with_lets := value' true.
   Definition Base_value' {with_lets} {t} : value' with_lets t -> value_with_lets t
-    := match t, with_lets with
-       | Base, false => fun v => UnderLets.Base v
-       | Base, true => fun v => v
-       | Arrow s d, _ => fun v => v
+    := match with_lets, t with
+       | false, Base => fun v => UnderLets.Base v
+       | false, _
+       | true, _
+         => fun v => v
        end.
-  Definition splice_value'_with_lets {T with_lets0 with_lets1 t} : value' with_lets0 t -> (value' with_lets1 t -> UnderLets T) -> UnderLets T
-    := match t, with_lets0, with_lets1 return value' with_lets0 t -> (value' with_lets1 t -> UnderLets T) -> UnderLets T with
-       | _, true, true
-       | _, false, false
-         => fun e k => k e
-       | Base, true, false => fun e k => e <-- e; k e
-       | Base, false, true => fun e k => k (UnderLets.Base e)
-       | Arrow s d,_ , _ => fun f k => k f
-       end%under_lets.
-  Local Notation "e <---- e' ; f" := (splice_value'_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
   Fixpoint push_lets_value {with_lets} {t} : UnderLets (value' with_lets t) -> value_with_lets t
     := match t, with_lets return UnderLets (value' with_lets t) -> value_with_lets t with
        | Base, true => fun e => e <-- e; e
@@ -503,6 +488,16 @@ Section with_var.
        | Arrow s d, _
          => fun f x => @push_lets_value _ d (f <-- f; UnderLets.Base (f x))
        end%under_lets.
+  Definition splice_value'_with_lets {with_lets0 with_lets1 t t'} : value' with_lets0 t -> (value' with_lets1 t -> value_with_lets t') -> value_with_lets t'
+    := match with_lets0, with_lets1, t return value' with_lets0 t -> (value' with_lets1 t -> value_with_lets t') -> value_with_lets t' with
+       | true, true, _
+       | false, false, _
+       | _, _, Arrow _ _
+         => fun e k => k e
+       | true, false, Base => fun e k => push_lets_value (e <-- e; UnderLets.Base (k e))
+       | false, true, Base => fun e k => k (UnderLets.Base e)
+       end%under_lets.
+  Local Notation "e <---- e' ; f" := (splice_value'_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
 
   Fixpoint reify {with_lets} {t} : value' with_lets t -> expr t
     := match t, with_lets return value' with_lets t -> expr t with
@@ -731,11 +726,11 @@ Section with_var.
 
   Definition eval_rewrite_rules
              {ivar}
-             (do_again : forall t, @topexpr ivar t -> UnderLets (expr t))
+             (do_again : @topexpr ivar Base -> UnderLets (expr Base))
              (maybe_do_again
-              := fun (should_do_again : bool) t
-                 => if should_do_again return ((@topexpr (if should_do_again then ivar else var) t) -> UnderLets (expr t))
-                    then do_again t
+              := fun (should_do_again : bool)
+                 => if should_do_again return ((@topexpr (if should_do_again then ivar else var) Base) -> UnderLets (expr Base))
+                    then do_again
                     else UnderLets.Base)
              (d : decision_tree)
              (rew : rewrite_rulesT' ivar)
@@ -758,12 +753,12 @@ Section with_var.
                                      => match fv return UnderLets (expr (type_of_rawexpr e)) with
                                         | Some (existT should_do_again fv)
                                           => (fv <-- fv;
+                                               fv <-- maybe_do_again should_do_again fv;
                                                type.try_transport_cps
-                                                 _ _ _ (unwrap fv) _
+                                                 _ _ _ fv _
                                                  (fun fv'
                                                   => match fv', default_on_rewrite_failure with
-                                                    | Some fv'', _
-                                                      => maybe_do_again should_do_again _ fv''
+                                                    | Some fv'', _ => UnderLets.Base fv''
                                                     | None, Some default => default tt
                                                     | None, None => UnderLets.Base (expr_of_rawexpr e)
                                                     end))%under_lets
@@ -777,7 +772,7 @@ Section with_var.
                   | None => UnderLets.Base (expr_of_rawexpr e)
                   end
              | _, _ => UnderLets.Base (expr_of_rawexpr e)
-             end).
+            end).
 
   Local Notation enumerate ls
     := (List.combine (List.seq 0 (List.length ls)) ls).
@@ -1118,7 +1113,7 @@ Definition dorewrite
   Definition default_fuel := Eval compute in List.length rewrite_rules.
 
   Section with_do_again.
-    Context (do_again : forall t, @topexpr value t -> UnderLets (expr t)).
+    Context (do_again : @topexpr value Base -> UnderLets (expr Base)).
 
     Definition dorewrite1 (e : rawexpr) : UnderLets (expr (type_of_rawexpr e))
       := eval_rewrite_rules do_again dtree rewrite_rules e.
@@ -1135,11 +1130,11 @@ Definition dorewrite
       := match e in topexpr t return value_with_lets t with
          | Ident t idc
            => eta_ident_cps idc (fun t' idc' => do_rewrite_ident t' (rIdent idc' #idc') (fun _ => id))
-         | App s d f x => push_lets_value (let f : value s -> value_with_lets d := @dorewrite' _ f in x <---- @dorewrite' _ x; UnderLets.Base (f x))
-         | LetIn A B x f => push_lets_value
-                              (x <---- @dorewrite' A x;
-                                 UnderLet (@reify false _ x)
-                                          (fun xv => UnderLets.Base (@dorewrite' B (f (reflect ($xv)%expr)))))
+         | App s d f x => let f : value s -> value_with_lets d := @dorewrite' _ f in x <---- @dorewrite' _ x; f x
+         | LetIn A B x f => x <---- @dorewrite' A x;
+                             push_lets_value
+                               (UnderLet (@reify false _ x)
+                                         (fun xv => UnderLets.Base (@dorewrite' B (f (reflect ($xv)%expr)))))
          | Var t v => Base_value' v
          | Abs s d f => fun x : value s => @dorewrite' d (f x)
          end%under_lets.
@@ -1147,11 +1142,11 @@ Definition dorewrite
     Fixpoint nbe {t} (e : @topexpr value t) : value_with_lets t
       := match e in topexpr t return value_with_lets t with
          | Ident t idc => reflect (Ident idc)
-         | App s d f x => push_lets_value (let f : value s -> value_with_lets d := @nbe _ f in x <---- @nbe _ x; UnderLets.Base (f x))
-         | LetIn A B x f => push_lets_value
-                              (x <---- @nbe A x;
-                                 UnderLet (@reify false _ x)
-                                          (fun xv => UnderLets.Base (@nbe B (f (reflect ($xv)%expr)))))
+         | App s d f x => let f : value s -> value_with_lets d := @nbe _ f in x <---- @nbe _ x; f x
+         | LetIn A B x f => x <---- @nbe A x;
+                             push_lets_value
+                               (UnderLet (@reify false _ x)
+                                         (fun xv => UnderLets.Base (@nbe B (f (reflect ($xv)%expr)))))
          | Var t v => Base_value' v
          | Abs s d f => fun x : value s => @nbe d (f x)
          end%under_lets.
@@ -1159,11 +1154,10 @@ Definition dorewrite
 
   Fixpoint dorewrite'' (fuel : nat) {t} e : value_with_lets t
     := @dorewrite'
-         (fun t' e'
+         (fun e'
           => match fuel with
-             | Datatypes.O
-               => (e'' <---- nbe e'; UnderLets.Base (@reify false _ e''))
-             | Datatypes.S fuel' => e'' <---- @dorewrite'' fuel' t' e'; UnderLets.Base (@reify false _ e'')
+             | Datatypes.O => nbe e'
+             | Datatypes.S fuel' => @dorewrite'' fuel' Base e'
              end%under_lets)
          t e.
 End with_var.
@@ -1189,8 +1183,6 @@ Arguments lift_with_bindings / .
 Arguments bind_value_cps / .
 Arguments app_ptype_interp_cps / .
 Arguments app_binding_data / .
-Arguments anyexpr_ty / .
-Arguments unwrap / .
 Arguments type_of_rawexpr / .
 Arguments expr_of_rawexpr / .
 Arguments reveal_rawexpr_cps / .
@@ -1213,10 +1205,12 @@ Arguments cpsbind / .
 Arguments cpscall / .
 Arguments invert_Literal / .
 Arguments Base_value' _ !with_lets !t.
+Arguments push_lets_value _ !_ !t.
+Arguments splice_value'_with_lets _ !_ !_ !t.
 Set Printing Depth 1000000.
 Definition dorewrite''' {var}
   := Eval cbv (*-[value reify default_fuel reflect nbe type.try_transport_base_cps type.try_make_transport_base_cps type.try_make_transport_cps Nat.add List.map list_rect reify reflect reify_list reflect_list_cps List.app]*) (* but we also need to exclude things in the rhs of the rewrite rule *)
-          [id cpscall cpsbind cpsreturn orb projT1 projT2 nth_error set_nth update_nth anyexpr_ty app_binding_data app_ptype_interp_cps bind_data_cps binding_dataT bind_value_cps cast castv dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_ptype_interp_cps lift_with_bindings orb_pident oret or_opt_pident pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps unwrap value_of_rawexpr with_bindingsT value_with_lets value value_with_lets fst snd invert_Literal pident_beq]
+          [id cpscall cpsbind cpsreturn orb projT1 projT2 nth_error set_nth update_nth app_binding_data app_ptype_interp_cps bind_data_cps binding_dataT bind_value_cps cast castv dorewrite' dorewrite'' dorewrite1 do_rewrite_ident dtree eta_ident_cps eval_decision_tree eval_rewrite_rules expr_of_rawexpr lift_ptype_interp_cps lift_with_bindings orb_pident oret or_opt_pident pident_ident_beq pident_of_ident ptype_interp ptype_interp_cps reveal_rawexpr_cps rewrite_rules rValueOrExpr swap_list type_of_rawexpr type.try_transport_cps value_of_rawexpr with_bindingsT value_with_lets value value_with_lets fst snd invert_Literal pident_beq]
     in @dorewrite'' var default_fuel.
 Arguments dorewrite''' / .
 Print dorewrite'''.
@@ -1619,12 +1613,11 @@ fun var : type -> Type =>
                                 (#(ListFoldRight) @ (λ ls1 ls2 : expr var ??,
                                                      $ls1 ++ $ls2) @ (λ _ : expr var ??,
                                                                       []) @ $(reify_list fxs)));
-                      match fuel with
-                      | 0 => e1 <-- nbe fv;
-                             UnderLets.Base e1
-                      | Datatypes.S fuel' => e1 <-- dorewrite'' fuel' ??%ctype fv;
-                                             UnderLets.Base e1
-                      end)%under_lets
+                      fv0 <-- match fuel with
+                              | 0 => nbe fv
+                              | Datatypes.S fuel' => dorewrite'' fuel' ??%ctype fv
+                              end;
+                      UnderLets.Base fv0)%under_lets
                  | None => UnderLets.Base (#(ListFlatMap) @ (λ x1 : var ??%ctype,
                                                              UnderLets.to_expr (x ($x1))) @ x0)
                  end)
@@ -1672,12 +1665,11 @@ fun var : type -> Type =>
                                     #(BoolRect) @ (λ _ : expr var ??,
                                                    ($x1 :: $g, $d)) @ (λ _ : expr var ??,
                                                                        ($g, $x1 :: $d)) @ $fx) @ partition_tl0)) xs;
-                      match fuel with
-                      | 0 => e1 <-- nbe fv;
-                             UnderLets.Base e1
-                      | Datatypes.S fuel' => e1 <-- dorewrite'' fuel' ??%ctype fv;
-                                             UnderLets.Base e1
-                      end)%under_lets
+                      fv0 <-- match fuel with
+                              | 0 => nbe fv
+                              | Datatypes.S fuel' => dorewrite'' fuel' ??%ctype fv
+                              end;
+                      UnderLets.Base fv0)%under_lets
                  | None => UnderLets.Base (#(ListPartition) @ (λ x1 : var ??%ctype,
                                                                UnderLets.to_expr (x ($x1))) @ x0)
                  end)
@@ -1704,13 +1696,11 @@ fun var : type -> Type =>
               end
           | Literal n => UnderLets.Base ##(n)
           end
-      | @App _ s d f x =>
-          push_lets_value
-            (splice_value'_with_lets (dorewrite' s x) (fun x0 : value' false s => UnderLets.Base (dorewrite' (s -> d)%ctype f x0)))
+      | @App _ s d f x => splice_value'_with_lets (dorewrite' s x) (fun x0 : value' false s => dorewrite' (s -> d)%ctype f x0)
       | @LetIn _ A B x f =>
-          push_lets_value
-            (splice_value'_with_lets (dorewrite' A x)
-               (fun x0 : value' false A => UnderLet (reify x0) (fun xv : var A => UnderLets.Base (dorewrite' B (f (reflect ($xv)))))))
+          splice_value'_with_lets (dorewrite' A x)
+            (fun x0 : value' false A =>
+             push_lets_value (UnderLet (reify x0) (fun xv : var A => UnderLets.Base (dorewrite' B (f (reflect ($xv)))))))
       end) t e) default_fuel
      : forall (var : type -> Type) (t : type), expr (value' false) t -> value' true t
 
