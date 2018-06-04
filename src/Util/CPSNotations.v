@@ -34,3 +34,11 @@ Notation "A ~> R" := (A -> ~>R) : type_scope.
 Definition cpsreturn {T} (x:T) := x.
 (** [return x] passes [x] to the continuation implicit in the previous notations. *)
 Notation "'return' x" := (cpsreturn (fun {T} (continuation:_->T) => continuation x)) : cps_scope.
+
+Definition cpsbind {A B} (v:~> A) (f:A ~> B) : ~> B
+  := fun T k => (a <- v; fa <- f a; k fa)%cps.
+Notation "x' <--- v ; C" := (cpsbind v%cps (fun x' => C%cps)) : cps_scope.
+
+Definition cps_option_bind {A B} (v:~> option A) (f:A ~> option B) : ~> option B
+  := cpsbind v (fun x' T k => match x' with Some x' => f x' T k | None => k None end).
+Notation "x' <-- v ; C" := (cps_option_bind v%cps (fun x' => C%cps)) : cps_scope.
