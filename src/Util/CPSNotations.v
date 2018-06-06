@@ -1,4 +1,5 @@
 Require Import Crypto.Util.Notations.
+Local Set Universe Polymorphism.
 
 (** [x <- f ; C] encodes a call to function [f] with [C] as the
   continuation. In [C], [x] refers to the output of [f]. *)
