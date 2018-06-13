@@ -4,6 +4,7 @@
     [eq].  We build up enough lemmas about this structure to deal
     nicely with proofs of equality that come up in practice in this
     project. *)
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Isomorphism.
 Require Import Crypto.Util.HProp.
 
@@ -142,3 +143,11 @@ Proof. destruct H; reflexivity. Defined.
 Lemma eq_match_const {A P x y} (p : x = y :> A) k
   : match p return P with eq_refl => k end = k.
 Proof. case p; reflexivity. Defined.
+
+Lemma fg_equal {A B} (f g : A -> B) (x y : A)
+  : f = g -> x = y -> f x = g y.
+Proof. intros; subst; reflexivity. Defined.
+
+Lemma fg_equal_rel {A B R} (f g : A -> B) (x y : A)
+  : (pointwise_relation _ R) f g -> x = y -> R (f x) (g y).
+Proof. cbv [pointwise_relation]; intros; subst; trivial. Qed.

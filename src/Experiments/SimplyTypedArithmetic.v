@@ -21,6 +21,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
@@ -32,6 +33,9 @@ Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SubstEvars.
+Require Crypto.Util.Strings.String.
+Require Import Crypto.Util.Strings.Decimal.
+Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
@@ -41,6 +45,9 @@ Require Import Crypto.Util.ZUtil Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Require Import Crypto.Util.ZUtil.EquivModulo.
+Require Import Crypto.Util.Tactics.DebugPrint.
+Require Import Crypto.Util.CPSNotations.
+Require Import Crypto.Util.Equality.
 Import ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
@@ -188,7 +195,7 @@ Module Positional. Section Positional.
   (* SKIP over this: zeros, add_to_nth *)
   Local Ltac push := autorewrite with push_eval push_map distr_length
     push_flat_map push_fold_right push_nth_default cancel_pair natsimplify.
-  Definition zeros n : list Z := List.repeat 0 n.
+  Definition zeros n : list Z := repeat 0 n.
   Lemma length_zeros n : length (zeros n) = n. Proof. cbv [zeros]; distr_length. Qed.
   Hint Rewrite length_zeros : distr_length.
   Lemma eval_zeros n : eval n (zeros n) = 0.
@@ -967,7 +974,7 @@ Module Columns.
 
     Section FromAssociational.
       (* nils *)
-      Definition nils n : list (list Z) := List.repeat nil n.
+      Definition nils n : list (list Z) := repeat nil n.
       Lemma length_nils n : length (nils n) = n. Proof. cbv [nils]. distr_length. Qed.
       Hint Rewrite length_nils : distr_length.
       Lemma eval_nils n : eval n (nils n) = 0.
@@ -1139,7 +1146,7 @@ Module Rows.
         fold_right (fun _ (state : cols * rows) =>
                       let cols'_row := extract_row (fst state) in
                       (fst cols'_row, snd state ++ [snd cols'_row])
-                   ) start_state (List.repeat 0 n).
+                   ) start_state (repeat 0 n).
 
       Definition from_columns (inp : cols) : rows := snd (from_columns' (max_column_size inp) (inp, [])).
 
@@ -2732,7 +2739,7 @@ Module Compilers.
                | List_seq => curry2 List.seq
                | List_combine A B => curry2 (@List.combine (type.interp A) (type.interp B))
                | List_map A B => curry2 (@List.map (type.interp A) (type.interp B))
-               | List_repeat A => curry2 (@List.repeat (type.interp A))
+               | List_repeat A => curry2 (@repeat (type.interp A))
                | List_flat_map A B => curry2 (@List.flat_map (type.interp A) (type.interp B))
                | List_partition A => curry2 (@List.partition (type.interp A))
                | List_app A => curry2 (@List.app (type.interp A))
@@ -2832,7 +2839,7 @@ Module Compilers.
               let rA := type.reify A in
               mkAppIdent (@ident.List_length rA) x
             | List.seq ?x ?y  => mkAppIdent ident.List_seq (x, y)
-            | @List.repeat ?A ?x ?y
+            | @repeat ?A ?x ?y
               => let rA := type.reify A in
                  mkAppIdent (@ident.List_repeat rA) (x, y)
             | @LetIn.Let_In ?A (fun _ => ?B) ?x ?f
@@ -7406,14 +7413,6 @@ Section rcarry_mul.
   End make_ring.
 End rcarry_mul.
 
-(** TODO: MOVE ME *)
-Lemma fg_equal {A B} (f g : A -> B) (x y : A)
-  : f = g -> x = y -> f x = g y.
-Proof. intros; subst; reflexivity. Defined.
-Lemma fg_equal_rel {A B R} (f g : A -> B) (x y : A)
-  : (pointwise_relation _ R) f g -> x = y -> R (f x) (g y).
-Proof. cbv [pointwise_relation]; intros; subst; trivial. Qed.
-
 Ltac peel_interp_app _ :=
   lazymatch goal with
   | [ |- ?R' (?InterpE ?arg) (?f ?arg) ]
@@ -11802,7 +11801,7 @@ Module SaturatedSolinas.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp type.Z)
-      := List.repeat bound n.
+      := repeat bound n.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
       : Pipeline.ErrorT T
