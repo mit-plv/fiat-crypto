@@ -1,6 +1,8 @@
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.PrimitiveProd.
 
+Import Primitive.Notations.
+
 Fixpoint hlist {A} (P : A -> Type) (ls : list A) : Type
   := match ls return Type with
      | nil => unit
