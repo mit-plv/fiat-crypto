@@ -4,6 +4,11 @@ Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
 
 Delimit Scope zrange_scope with zrange.
+(* COQBUG(https://github.com/coq/coq/issues/7835) *)
+(*
+Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
+*)
 Record zrange := { lower : Z ; upper : Z }.
 Bind Scope zrange_scope with zrange.
 Local Open Scope Z_scope.
@@ -74,8 +79,22 @@ Proof.
     | abstract (right; intro H; inversion_zrange; tauto).. ].
 Defined.
 
+Definition zrange_beq (x y : zrange) : bool
+  := (Z.eqb (lower x) (lower y) && Z.eqb (upper x) (upper y)).
+Lemma zrange_bl (x y : zrange) (H : zrange_beq x y = true) : x = y.
+Proof.
+  cbv [zrange_beq] in *; rewrite Bool.andb_true_iff, !Z.eqb_eq in *.
+  destruct x, y, H; simpl in *; subst; reflexivity.
+Qed.
+Lemma zrange_lb (x y : zrange) (H : x = y) : zrange_beq x y = true.
+Proof.
+  cbv [zrange_beq] in *; rewrite Bool.andb_true_iff, !Z.eqb_eq in *.
+  subst; split; reflexivity.
+Qed.
+
 Module Export Notations.
   Delimit Scope zrange_scope with zrange.
   Notation "r[ l ~> u ]" := {| lower := l ; upper := u |} : zrange_scope.
   Infix "<=?" := is_tighter_than_bool : zrange_scope.
+  Infix "=?" := zrange_beq : zrange_scope.
 End Notations.
