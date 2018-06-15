@@ -204,6 +204,24 @@ Proof.
  ...
 Qed.*)
 
+Definition decimal_string_of_Z (v : Z) : string
+  := match v with
+     | Zpos p => decimal_string_of_pos p
+     | Z0 => "0"
+     | Zneg p => String "-" (decimal_string_of_pos p)
+     end.
+
+Definition Z_of_decimal_string (s : string) : Z
+  := if string_beq s "0"
+     then Z0
+     else match s with
+          | String sgn v
+            => if ascii_beq sgn "-"
+               then Zneg (pos_of_decimal_string v)
+               else Zpos (pos_of_decimal_string s)
+          | _ => Zpos (pos_of_decimal_string s)
+          end.
+
 Example decimal_string_of_pos_1 : decimal_string_of_pos 1 = "1" := eq_refl.
 Example decimal_string_of_pos_2 : decimal_string_of_pos 2 = "2" := eq_refl.
 Example decimal_string_of_pos_3 : decimal_string_of_pos 3 = "3" := eq_refl.
