@@ -6450,6 +6450,7 @@ src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/DefaultedTypes.v
 src/Util/Equality.v
+src/Util/ErrorT.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FixedWordSizes.v
@@ -6516,6 +6517,7 @@ src/Util/Strings/Decimal.v
 src/Util/Strings/Equality.v
 src/Util/Strings/HexString.v
 src/Util/Strings/OctalString.v
+src/Util/Strings/Show.v
 src/Util/Strings/String.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CacheTerm.v
@@ -6563,6 +6565,7 @@ src/Util/Tactics/VM.v
 src/Util/ZRange/BasicLemmas.v
 src/Util/ZRange/CornersMonotoneBounds.v
 src/Util/ZRange/Operations.v
+src/Util/ZRange/Show.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/AddModulo.v
 src/Util/ZUtil/CC.v
