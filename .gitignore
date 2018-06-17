@@ -14,6 +14,9 @@ auto-save-list
 tramp
 .\#*
 
+# misc
+*.pyc
+
 # coq
 *.aux
 *.d
