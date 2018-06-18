@@ -25,7 +25,7 @@ Axiom string_length : string -> int.
 Axiom string_get : string -> int -> Ascii.ascii.
 Axiom sys_argv : list string.
 Axiom string_init : int -> (int -> Ascii.ascii) -> string.
-Axiom raise_failure : forall A, string -> A.
+Axiom raise_Failure : forall A, string -> A.
 
 Extract Inductive int
 => int [ "0" "Pervasives.succ" ]
@@ -39,7 +39,7 @@ Extract Inlined Constant string_length => "String.length".
 Extract Inlined Constant string_get => "String.get".
 Extract Constant sys_argv => "Array.to_list Sys.argv".
 Extract Inlined Constant string_init => "String.init".
-Extract Constant raise_failure => "fun x -> Printf.printf ""%s\n\n%!"" x; raise (Failure x)".
+Extract Constant raise_Failure => "fun x -> raise (Failure x)".
 
 Fixpoint nat_of_int (x : int) : nat
   := match x with
@@ -77,16 +77,28 @@ Fixpoint list_iter {A} (f : A -> unit) (ls : list A) : unit
      | nil => tt
      end.
 
+Definition printf_list_string (strs : list String.string) : unit
+  := list_iter
+       (fun ls
+        => list_iter printf_char (String.to_list ls))
+       strs.
+Definition printf_list_string_with_newlines (strs : list String.string) : unit
+  := match strs with
+     | nil => printf_list_string nil
+     | str :: strs => printf_list_string (str :: List.map (String.String Ascii.NewLine) strs)
+     end.
+
+Definition raise_failure {A} (msg : list String.string) : A
+  := seq (fun _ => printf_list_string_with_newlines msg)
+         (fun _ => raise_Failure _ (string_of_Coq_string (String.concat String.NewLine msg))).
+
 Module UnsaturatedSolinas.
   Definition main : unit
     := let argv := List.map string_to_Coq_string sys_argv in
        ForExtraction.UnsaturatedSolinas.PipelineMain
          argv
-         (fun res => list_iter
-                       (fun ls
-                        => list_iter printf_char (String.to_list ls))
-                       res)
-         (fun err => raise_failure _ (string_of_Coq_string err)).
+         printf_list_string
+         raise_failure.
 End UnsaturatedSolinas.
 
 Module SaturatedSolinas.
@@ -94,9 +106,6 @@ Module SaturatedSolinas.
     := let argv := List.map string_to_Coq_string sys_argv in
        ForExtraction.SaturatedSolinas.PipelineMain
          argv
-         (fun res => list_iter
-                    (fun ls
-                     => list_iter printf_char (String.to_list ls))
-                    res)
-         (fun err => raise_failure _ (string_of_Coq_string err)).
+         printf_list_string
+         raise_failure.
 End SaturatedSolinas.

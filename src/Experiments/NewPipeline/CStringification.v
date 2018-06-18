@@ -218,6 +218,10 @@ Module Compilers.
                           ++ show_f
                     end%list)
                end.
+          Global Instance show_lines_expr {t} : ShowLines (@expr.expr base_type ident (fun _ => string) t)
+            := fun with_parens e => snd (@show_expr_lines t e 1%positive with_parens).
+          Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base_type ident t)
+            := fun with_parens e => show_lines with_parens (e _).
           Global Instance show_expr {t} : Show (@expr.expr base_type ident (fun _ => string) t)
             := fun with_parens e => String.concat NewLine (snd (@show_expr_lines t e 1%positive with_parens)).
           Global Instance show_Expr {t} : Show (@expr.Expr base_type ident t)

@@ -46,7 +46,7 @@ Module UnsaturatedSolinas.
               (prog::argv)
               (fun res => printf_string
                          (String.concat "" res))
-              (fun err => raise_failure _ err)).
+              (fun err => raise_failure _ (String.concat String.NewLine err))).
 End UnsaturatedSolinas.
 
 Module SaturatedSolinas.
@@ -58,5 +58,5 @@ Module SaturatedSolinas.
               (prog::argv)
               (fun res => printf_string
                          (String.concat "" res))
-              (fun err => raise_failure _ err)).
+              (fun err => raise_failure _ (String.concat String.NewLine err))).
 End SaturatedSolinas.

@@ -547,37 +547,39 @@ Module Pipeline.
                     (fun '(b1, b2) => "The bounds " ++ show false b1 ++ " are looser than the expected bounds " ++ show false b2)
                     bs)).
 
-    Global Instance show_ErrorMessage : Show ErrorMessage
+    Global Instance show_lines_ErrorMessage : ShowLines ErrorMessage
       := fun parens e
-         => maybe_wrap_parens
+         => maybe_wrap_parens_lines
               parens
               match e with
               | Computed_bounds_are_not_tight_enough t computed_bounds expected_bounds syntax_tree arg_bounds
-                => ("Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")." ++ NewLine)
-                     ++ (explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds ++ NewLine)
-                     ++ match ToString.C.ToFunctionString
-                                "f" syntax_tree None arg_bounds with
-                        | Some E_str
-                          => ("When doing bounds analysis on the syntax tree:" ++ NewLine)
-                               ++ E_str ++ NewLine
-                               ++ "with input bounds " ++ show true arg_bounds ++ "." ++ NewLine
-                        | None => "(Unprintible syntax tree used in bounds analysis)" ++ NewLine
-                        end
-              | Bounds_analysis_failed => "Bounds analysis failed."
+                => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
+                      ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
+                      ++ match ToString.C.ToFunctionLines
+                                 "f" syntax_tree None arg_bounds with
+                         | Some E_lines
+                           => ["When doing bounds analysis on the syntax tree:"]
+                                ++ E_lines ++ [""]
+                                ++ ["with input bounds " ++ show true arg_bounds ++ "." ++ NewLine]%string
+                         | None => ["(Unprintible syntax tree used in bounds analysis)" ++ NewLine]%string
+                         end)%list
+              | Bounds_analysis_failed => ["Bounds analysis failed."]
               | Type_too_complicated_for_cps t
-                => "Type too complicated for cps: " ++ show false t
+                => ["Type too complicated for cps: " ++ show false t]
               | Value_not_leZ descr lhs rhs
-                => "Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs
+                => ["Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs]
               | Value_not_leQ descr lhs rhs
-                => "Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs
+                => ["Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs]
               | Value_not_ltZ descr lhs rhs
-                => "Value not < (" ++ descr ++ ") : expected " ++ show false lhs ++ " < " ++ show false rhs
+                => ["Value not < (" ++ descr ++ ") : expected " ++ show false lhs ++ " < " ++ show false rhs]
               | Values_not_provably_distinctZ descr lhs rhs
-                => "Values not provalby distinct (" ++ descr ++ ") : expected " ++ show true lhs ++ " ≠ " ++ show true rhs
+                => ["Values not provalby distinct (" ++ descr ++ ") : expected " ++ show true lhs ++ " ≠ " ++ show true rhs]
               | Values_not_provably_equalZ descr lhs rhs
-                => "Values not provalby equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs
-              | Stringification_failed t e => "Stringification failed on the syntax tree:" ++ NewLine ++ show false e
+                => ["Values not provalby equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs]
+              | Stringification_failed t e => ["Stringification failed on the syntax tree:"] ++ show_lines false e
               end.
+    Local Instance show_ErrorMessage : Show ErrorMessage
+      := fun parens err => String.concat NewLine (show_lines parens err).
   End show.
 
   Definition invert_result {T} (v : ErrorT T)
