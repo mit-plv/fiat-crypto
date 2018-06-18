@@ -1,14 +1,27 @@
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.QArith.QArith_base.
+Require Import Coq.Lists.List.
 Require Import Coq.Strings.String Coq.Strings.Ascii.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.Decimal.
-Local Open Scope string_scope.
+Import ListNotations. Local Open Scope list_scope. Local Open Scope string_scope.
 
 Class Show T := show : bool (* parens *) -> T -> string.
+Class ShowLines T := show_lines : bool -> T -> list string.
 
 Definition maybe_wrap_parens (parens : bool) (s : string)
   := if parens then "(" ++ s ++ ")" else s.
+
+Definition maybe_wrap_parens_lines (parens : bool) (s : list string)
+  := match s, parens with
+     | s, false => s
+     | nil, _ => nil
+     | [s], _ => [maybe_wrap_parens parens s]
+     | s, true => "(" :: List.map (String " ") s ++ [")"]
+     end%list.
+
+Global Instance show_lines_of_show {T} `{Show T} : ShowLines T | 1000
+  := fun parens v => [show parens v].
 
 Global Instance show_unit : Show unit := fun _ _ => "tt".
 Global Instance show_True : Show True := fun _ _ => "I".
@@ -30,6 +43,41 @@ Global Instance show_prod {A B} `{Show A, Show B} : Show (A * B)
   := fun _ '(a, b) => "(" ++ show false a ++ ", " ++ show true b ++ ")".
 Global Instance show_string : Show string := fun _ s => """" ++ s ++ """".
 Global Instance show_ascii : Show ascii := fun _ ch => String "'" (String ch "'").
+
+Global Instance show_lines_option {T} `{ShowLines T} : ShowLines (option T)
+  := fun p v
+     => match v with
+        | Some v
+          => maybe_wrap_parens_lines
+               p
+               match show_lines true v with
+               | [s] => ["Show " ++ s]
+               | s => "Show"::List.map (String " ") s
+               end
+        | None => ["None"]
+        end.
+Global Instance show_lines_list {T} `{ShowLines T} : ShowLines (list T)
+  := fun _ ls
+     => let ls := List.map (show_lines false) ls in
+        (if List.forallb
+              (fun lines => Nat.eqb (List.length lines) 1)
+              ls
+         then ["[" ++ String.concat ", " (List.map (String.concat String.NewLine) ls) ++ "]"]%string
+         else ["["] ++ match ls with
+                       | nil => ["]"]
+                       | x :: xs
+                         => (List.map (String " ") x)
+                              ++ (List.flat_map
+                                    (fun x' => "," :: List.map (String " ") x')
+                                    xs)
+                              ++ ["]"]
+                       end)%list.
+Global Instance show_lines_prod {A B} `{ShowLines A, ShowLines B} : ShowLines (A * B)
+  := fun _ '(a, b)
+     => match show_lines false a, show_lines true b with
+        | [a], [b] => ["(" ++ a ++ ", " ++ b ++ ")"]%string
+        | a, b => ["("] ++ a ++ [", "] ++ b ++ [")"]
+        end%list.
 
 Module Export Decimal.
   Global Instance show_positive : Show positive

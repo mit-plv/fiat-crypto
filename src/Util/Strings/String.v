@@ -282,3 +282,5 @@ Proof.
     apply f_equal; auto. }
   {
 Abort.
+
+Notation NewLine := (String Ascii.NewLine "").
