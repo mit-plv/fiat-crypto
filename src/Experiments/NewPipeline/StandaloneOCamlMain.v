@@ -85,12 +85,13 @@ Definition printf_list_string (strs : list String.string) : unit
 Definition printf_list_string_with_newlines (strs : list String.string) : unit
   := match strs with
      | nil => printf_list_string nil
-     | str :: strs => printf_list_string (str :: List.map (String.String Ascii.NewLine) strs)
+     | str :: strs => printf_list_string (str :: List.map (String.String Ascii.NewLine) strs
+                                              ++ [String.NewLine; String.NewLine])%list
      end.
 
 Definition raise_failure {A} (msg : list String.string) : A
   := seq (fun _ => printf_list_string_with_newlines msg)
-         (fun _ => raise_Failure _ (string_of_Coq_string (String.concat String.NewLine msg))).
+         (fun _ => raise_Failure _ (string_of_Coq_string "Synthesis failed")).
 
 Module UnsaturatedSolinas.
   Definition main : unit
