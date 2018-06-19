@@ -1092,7 +1092,17 @@ Module Compilers.
                  => fun rout '(e, r) '(offset, roffset)
                    => let rin := option_map integer_promote_type r in
                      match invert_literal offset with
-                     | Some offset => ret (cast_down_if_needed rout (Z_shiftr offset @@ e, rin))
+                     | Some offset
+                       => (** N.B. We must cast the expression up to a
+                              large enough type to fit 2^offset
+                              (importantly, not just 2^offset-1),
+                              because C considers it to be undefined
+                              behavior to shift >= width of the type.
+                              We should probably figure out how to not
+                              generate these things in the first
+                              place... *)
+                       let '(e', rin') := Zcast_up_if_needed (Some (int.of_zrange_relaxed r[0~>2^offset]%zrange)) (e, rin) in
+                       ret (cast_down_if_needed rout (Z_shiftr offset @@ e', rin'))
                      | None => inr ["Invalid right-shift by a non-literal"]%string
                      end
                | ident.Z_shiftl
@@ -1100,8 +1110,21 @@ Module Compilers.
                    => let rin := option_map integer_promote_type r in
                      match invert_literal offset with
                      | Some offset
-                       => let '(e', rin') := cast_up_if_needed rout (e, rin) in
-                         ret (cast_down_if_needed rout (Z_shiftl offset @@ e', rin'))
+                       => (** N.B. We must cast the expression up to a
+                              large enough type to fit 2^offset
+                              (importantly, not just 2^offset-1),
+                              because C considers it to be undefined
+                              behavior to shift >= width of the type.
+                              We should probably figure out how to not
+                              generate these things in the first
+                              place... *)
+                       let rpre_out := int.of_zrange_relaxed r[0~>2^offset]%zrange in
+                       let rpre_out := match rout with
+                                       | Some rout => Some (ToString.C.int.union rout rpre_out)
+                                       | None => Some rpre_out
+                                       end in
+                       let '(e', rin') := Zcast_up_if_needed rpre_out (e, rin) in
+                       ret (cast_down_if_needed rout (Z_shiftl offset @@ e', rin'))
                      | None => inr ["Invalid left-shift by a non-literal"]%string
                      end
                | ident.Z_bneg
@@ -1442,16 +1465,19 @@ Module Compilers.
                       else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (" ++ show false (int.of_zrange_relaxed r[0~>2^s-1]) ++ "), but found a " ++ show false ty ++ "."]%string
                  end.
 
+          Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
+            := option_map (int.union (int.of_zrange_relaxed r[0~>2^lgs-1])) t.
+
           Let recognize_3arg_2ref_ident
                      (do_bounds_check : bool)
                      (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
                      (idc : ident.ident t)
                      (rout : option int.type * option int.type)
                      (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
-            : ErrT (arith_expr (type.Zptr * type.Zptr) -> expr)
+            : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
             := let _ := @PHOAS.expr.partially_show_expr in
                let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt))) := args in
-               match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT (arith_expr (type.Zptr * type.Zptr) -> expr)
+               match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
                with
                | Some s, ident.Z_mul_split
                  => (_ ,, _ ,, _ ,, _
@@ -1459,7 +1485,8 @@ Module Compilers.
                     bounds_check do_bounds_check "second argument to" idc s e2v r2,
                     bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                     bounds_check do_bounds_check "second return value of" idc s e2v (snd rout);
-                      inl (fun retptr => [Call (Z_mul_split s @@ (retptr, (e1, e2)))%Cexpr]))
+                       inl ((round_up_to_split_type s (fst rout), round_up_to_split_type s (snd rout)),
+                            fun retptr => [Call (Z_mul_split s @@ (retptr, (e1, e2)))%Cexpr]))
                | Some s, ident.Z_add_get_carry as idc
                | Some s, ident.Z_sub_get_borrow as idc
                  => let idc' : ident _ _ := invert_Some match idc with
@@ -1472,7 +1499,8 @@ Module Compilers.
                     bounds_check do_bounds_check "second argument to" idc s e2v r2,
                     bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                     bounds_check do_bounds_check "second return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout);
-                      inl (fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
+                      inl ((round_up_to_split_type s (fst rout), snd rout),
+                           fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
                | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                end.
@@ -1483,10 +1511,10 @@ Module Compilers.
                      (idc : ident.ident t)
                      (rout : option int.type * option int.type)
                      (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
-            : ErrT (arith_expr (type.Zptr * type.Zptr) -> expr)
+            : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
             := let _ := @PHOAS.expr.partially_show_expr in
                let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), ((e3v, (e3, r3)), tt)))) := args in
-               match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT (arith_expr (type.Zptr * type.Zptr) -> expr)
+               match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
                with
                | Some s, ident.Z_add_with_get_carry as idc
                | Some s, ident.Z_sub_with_get_borrow as idc
@@ -1501,7 +1529,8 @@ Module Compilers.
                          bounds_check do_bounds_check "third argument to" idc s e2v r2,
                          bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                          bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
-                      inl (fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
+                      inl ((round_up_to_split_type s (fst rout), snd rout),
+                           fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
                | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                end.
@@ -1512,7 +1541,7 @@ Module Compilers.
                 (idc : ident.ident t)
                 (rout : option int.type * option int.type)
                 (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t),
-              ErrT (arith_expr (type.Zptr * type.Zptr) -> expr)
+              ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
             := match t with
                | (type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base (base.type.Z * base.type.Z))%etype
                  => recognize_3arg_2ref_ident
@@ -1585,7 +1614,8 @@ Module Compilers.
                match invert_AppIdent_curried e with
                | Some (existT t (idc, args))
                  => args <- arith_expr_of_PHOAS_args args;
-                     idce <- recognize_2ref_ident do_bounds_check idc (rout1, rout2) args;
+                      idce <- recognize_2ref_ident do_bounds_check idc (rout1, rout2) args;
+                      let '((rout1, rout2), idce) := idce in
                      v1,, v2 <- (declare_name (show false idc) count make_name rout1,
                                 declare_name (show false idc) (Pos.succ count) make_name rout2);
                      let '(decls1, n1, retv1) := v1 in
@@ -1638,7 +1668,7 @@ Module Compilers.
                      (make_name : positive -> option string)
                      (v : var_data d)
             : ErrT expr
-            := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS] in
+            := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type] in
                 match type.try_transport base.try_make_transport_cps _ _ s' e1 with
                 | Some e1 => make_uniform_assign_expr_of_PHOAS do_bounds_check e1 e2 count make_name v
                 | None => inr [report_type_mismatch s' s]

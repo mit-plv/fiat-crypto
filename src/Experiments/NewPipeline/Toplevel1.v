@@ -36,6 +36,7 @@ Require Import Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.CC.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
+Require Import Crypto.Util.ZUtil.ModInv.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.Show.
@@ -261,6 +262,230 @@ Module Ring.
   End ring_goal.
 End Ring.
 
+(** NOTE: Module MontgomeryStyleRing SHOULD NOT depend on any compilers things *)
+Module MontgomeryStyleRing.
+  Local Notation is_bounded_by0 r v
+    := ((lower r <=? v) && (v <=? upper r)).
+  Local Notation is_bounded_by0o r
+    := (match r with Some r' => fun v' => is_bounded_by0 r' v' | None => fun _ => true end).
+  Local Notation is_bounded_by bounds ls
+    := (fold_andb_map (fun r v'' => is_bounded_by0o r v'') bounds ls).
+  Local Notation is_bounded_by1 bounds ls
+    := (andb (is_bounded_by bounds (@fst _ unit ls)) true).
+  Local Notation is_bounded_by2 bounds ls
+    := (andb (is_bounded_by bounds (fst ls)) (is_bounded_by1 bounds (snd ls))).
+
+  Lemma length_is_bounded_by bounds ls
+    : is_bounded_by bounds ls = true -> length ls = length bounds.
+  Proof.
+    intro H.
+    apply fold_andb_map_length in H; congruence.
+  Qed.
+
+  Section ring_goal.
+    Context (limbwidth_num limbwidth_den : Z)
+            (n : nat)
+            (s : Z)
+            (c : list (Z * Z))
+            (bounds : list (option zrange))
+            (length_bounds : length bounds = n).
+    Local Notation weight := (weight limbwidth_num limbwidth_den).
+    Local Notation eval := (Positional.eval weight n).
+    Let prime_bound : zrange
+      := r[0~>(s - Associational.eval c - 1)]%zrange.
+    Let m := Z.to_pos (s - Associational.eval c).
+    Context (m_eq : Z.pos m = s - Associational.eval c)
+            (sc_pos : 0 < s - Associational.eval c)
+            (valid : list Z -> Prop)
+            (from_montgomery_mod : list Z -> list Z)
+            (Hfrom_montgomery_mod
+             : forall v, valid v -> valid (from_montgomery_mod v))
+            (Interp_rfrom_montgomeryv : list Z -> list Z)
+            (HInterp_rfrom_montgomeryv : forall arg,
+                is_bounded_by1 bounds arg = true
+                -> is_bounded_by bounds (Interp_rfrom_montgomeryv (fst arg)) = true
+                   /\ Interp_rfrom_montgomeryv (fst arg) = from_montgomery_mod (fst arg))
+            (mulmod : list Z -> list Z -> list Z)
+            (Hmulmod
+             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (mulmod a b)) mod (s - Associational.eval c)
+                                            = (eval (from_montgomery_mod a) * eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+               /\ (forall a (_ : valid a) b (_ : valid b), valid (mulmod a b)))
+            (Interp_rmulv : list Z -> list Z -> list Z)
+            (HInterp_rmulv : forall arg,
+                is_bounded_by2 bounds arg = true
+                -> is_bounded_by bounds (Interp_rmulv (fst arg) (fst (snd arg))) = true
+                   /\ Interp_rmulv (fst arg) (fst (snd arg)) = mulmod (fst arg) (fst (snd arg)))
+            (addmod : list Z -> list Z -> list Z)
+            (Haddmod
+             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (addmod a b)) mod (s - Associational.eval c)
+                                                   = (eval (from_montgomery_mod a) + eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+               /\ (forall a (_ : valid a) b (_ : valid b), valid (addmod a b)))
+            (Interp_raddv : list Z -> list Z -> list Z)
+            (HInterp_raddv : forall arg,
+                is_bounded_by2 bounds arg = true
+                -> is_bounded_by bounds (Interp_raddv (fst arg) (fst (snd arg))) = true
+                   /\ Interp_raddv (fst arg) (fst (snd arg)) = addmod (fst arg) (fst (snd arg)))
+            (submod : list Z -> list Z -> list Z)
+            (Hsubmod
+             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (submod a b)) mod (s - Associational.eval c)
+                                                   = (eval (from_montgomery_mod a) - eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+               /\ (forall a (_ : valid a) b (_ : valid b), valid (submod a b)))
+            (Interp_rsubv : list Z -> list Z -> list Z)
+            (HInterp_rsubv : forall arg,
+                is_bounded_by2 bounds arg = true
+                -> is_bounded_by bounds (Interp_rsubv (fst arg) (fst (snd arg))) = true
+                   /\ Interp_rsubv (fst arg) (fst (snd arg)) = submod (fst arg) (fst (snd arg)))
+            (oppmod : list Z -> list Z)
+            (Hoppmod
+             : (forall a (_ : valid a), eval (from_montgomery_mod (oppmod a)) mod (s - Associational.eval c)
+                                   = (-eval (from_montgomery_mod a)) mod (s - Associational.eval c))
+               /\ (forall a (_ : valid a), valid (oppmod a)))
+            (Interp_roppv : list Z -> list Z)
+            (HInterp_roppv : forall arg,
+                is_bounded_by1 bounds arg = true
+                -> is_bounded_by bounds (Interp_roppv (fst arg)) = true
+                   /\ Interp_roppv (fst arg) = oppmod (fst arg))
+            (zeromod : list Z)
+            (Hzeromod
+             : (eval (from_montgomery_mod zeromod)) mod (s - Associational.eval c)
+               = 0 mod (s - Associational.eval c)
+               /\ valid zeromod)
+            (Interp_rzerov : list Z)
+            (HInterp_rzerov : is_bounded_by bounds Interp_rzerov = true
+                              /\ Interp_rzerov = zeromod)
+            (onemod : list Z)
+            (Honemod
+             : (eval (from_montgomery_mod onemod)) mod (s - Associational.eval c)
+                = 1 mod (s - Associational.eval c)
+               /\ valid onemod)
+            (Interp_ronev : list Z)
+            (HInterp_ronev : is_bounded_by bounds Interp_ronev = true
+                              /\ Interp_ronev = onemod)
+            (encodemod : Z -> list Z)
+            (Hencodemod
+             : (forall v, 0 <= v < s - Associational.eval c -> eval (from_montgomery_mod (encodemod v)) mod (s - Associational.eval c) = v mod (s - Associational.eval c))
+               /\ (forall v, 0 <= v < s - Associational.eval c -> valid (encodemod v)))
+            (Interp_rencodev : Z -> list Z)
+            (HInterp_rencodev : forall arg,
+                is_bounded_by0 prime_bound (@fst _ unit arg) && true = true
+                -> is_bounded_by bounds (Interp_rencodev (fst arg)) = true
+                   /\ Interp_rencodev (fst arg) = encodemod (fst arg)).
+
+    Local Notation T := (list Z) (only parsing).
+    Local Notation encoded_ok ls
+      := (is_bounded_by bounds ls = true /\ valid ls) (only parsing).
+    Local Notation encoded_okf := (fun ls => encoded_ok ls) (only parsing).
+
+    Definition Fdecode (v : T) : F m
+      := F.of_Z m (Positional.eval weight n (Interp_rfrom_montgomeryv v)).
+    Definition T_eq (x y : T)
+      := Fdecode x = Fdecode y.
+
+    Definition encodedT := sig encoded_okf.
+
+    Definition ring_mul (x y : T) : T
+      := Interp_rmulv x y.
+    Definition ring_add (x y : T) : T := Interp_raddv x y.
+    Definition ring_sub (x y : T) : T := Interp_rsubv x y.
+    Definition ring_opp (x : T) : T := Interp_roppv x.
+    Definition ring_encode (x : F m) : T := Interp_rencodev (F.to_Z x).
+
+    Definition GoodT : Prop
+      := @subsetoid_ring
+           (list Z) encoded_okf T_eq
+           Interp_rzerov Interp_ronev ring_opp ring_add ring_sub ring_mul
+         /\ @is_subsetoid_homomorphism
+              (F m) (fun _ => True) eq 1%F F.add F.mul
+              (list Z) encoded_okf T_eq Interp_ronev ring_add ring_mul ring_encode
+         /\ @is_subsetoid_homomorphism
+              (list Z) encoded_okf T_eq Interp_ronev ring_add ring_mul
+              (F m) (fun _ => True) eq 1%F F.add F.mul
+              Fdecode.
+
+    Hint Rewrite ->@F.to_Z_add : push_FtoZ.
+    Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
+    Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
+    Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+
+    Lemma Fm_bounded_alt (x : F m)
+      : (0 <=? F.to_Z x) && (F.to_Z x <=? Z.pos m - 1) = true.
+    Proof using m_eq.
+      clear -m_eq.
+      destruct x as [x H]; cbn [F.to_Z proj1_sig].
+      pose proof (Z.mod_pos_bound x (Z.pos m)).
+      rewrite andb_true_iff; split; Z.ltb_to_lt; lia.
+    Qed.
+
+    Lemma Fm_bounded_alt' (x : F m)
+      : 0 <= F.to_Z x < Z.pos m.
+    Proof using m_eq.
+      clear -m_eq.
+      destruct x as [x H]; cbn [F.to_Z proj1_sig].
+      pose proof (Z.mod_pos_bound x (Z.pos m)).
+      split; Z.ltb_to_lt; lia.
+    Qed.
+
+    Lemma Good : GoodT.
+    Proof.
+      split_and.
+      repeat match goal with
+             | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
+             end.
+      eapply subsetoid_ring_by_ring_isomorphism;
+        cbv [ring_opp ring_add ring_sub ring_mul ring_encode F.sub] in *;
+        repeat match goal with
+               | [ H : forall arg : _ * unit, _ |- _ ] => specialize (fun arg => H (arg, tt))
+               | [ H : forall arg : _ * (_ * unit), _ |- _ ] => specialize (fun a b => H (a, (b, tt)))
+               | _ => progress cbn [fst snd] in *
+               | _ => solve [ auto using andb_true_intro, conj with nocore ]
+               | _ => progress intros
+               | [ H : is_bounded_by _ _ = true /\ _ |- _ ] => destruct H
+               | [ |- is_bounded_by _ _ = true /\ _ ] => split
+               | [ H : _ |- is_bounded_by _ _ = true ] => apply H
+               | [ H : _ |- valid _ ] => rewrite H
+               | [ H : context[valid _] |- valid _ ] => apply H
+               | [ |- _ <-> _ ] => reflexivity
+               | [ |- ?x = ?x ] => reflexivity
+               | [ |- _ = _ :> Z ] => first [ reflexivity | rewrite <- m_eq; reflexivity ]
+               | [ H : context[?x] |- Fdecode ?x = _ ] => rewrite H
+               | [ H : context[?x _] |- Fdecode (?x _) = _ ] => rewrite H
+               | [ H : context[?x _ _] |- Fdecode (?x _ _) = _ ] => rewrite H
+               | _ => progress cbv [Fdecode]
+               | [ |- _ = _ :> F _ ] => apply F.eq_to_Z_iff
+               | _ => progress autorewrite with push_FtoZ
+               | _ => rewrite m_eq
+               | [ H : context[?f (?x _ _)] |- context[eval (?f (?x _ _))] ] => rewrite H
+               | [ H : context[?f (?x _)] |- context[eval (?f (?x _))] ] => rewrite H
+               | [ H : context[?f ?x] |- context[eval (?f ?x)] ] => rewrite H
+               | [ H : context[?x _ _] |- context[eval (?x _ _)] ] => rewrite H
+               | [ H : context[?x _] |- context[eval (?x _)] ] => rewrite H
+               | [ H : context[?x] |- context[eval ?x] ] => rewrite H
+               | [ H : context[?y _ _ = ?x _ _], H' : context[is_bounded_by _ (?y _ _) = true]
+                   |- is_bounded_by _ (?x _ _) = true ]
+                 => rewrite <- H; [ apply H' | .. ]
+               | [ H : context[?y _ = ?x _], H' : context[is_bounded_by _ (?y _) = true]
+                   |- is_bounded_by _ (?x _) = true ]
+                 => rewrite <- H; [ apply H' | .. ]
+               | [ H : context[?y = ?x], H' : context[is_bounded_by _ ?y = true]
+                   |- is_bounded_by _ ?x = true ]
+                 => rewrite <- H; [ apply H' | .. ]
+               | [ |- context[List.length ?x] ]
+                 => erewrite (length_is_bounded_by _ x)
+                   by eauto using andb_true_intro, conj with nocore
+               | [ |- _ = _ :> Z ]
+                 => push_Zmod; reflexivity
+               | _ => pull_Zmod; rewrite Z.add_opp_r
+               | _ => rewrite expanding_id_id
+               | [ |- context[F.to_Z _ mod (_ - _)] ]
+                 => rewrite <- m_eq, F.mod_to_Z
+               | _ => rewrite <- m_eq; apply Fm_bounded_alt
+               | _ => rewrite <- m_eq; apply Fm_bounded_alt'
+               | [ |- context[andb _ true] ] => rewrite andb_true_r
+               end.
+    Qed.
+  End ring_goal.
+End MontgomeryStyleRing.
+
 Import Associational Positional.
 
 Import
@@ -289,13 +514,14 @@ Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
 
+
 Module Pipeline.
   Import GeneralizeVar.
   Inductive ErrorMessage :=
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.base.option.interp (type.final_codomain t))
       (syntax_tree : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-  | Type_too_complicated_for_cps (t : type)
+  | No_modular_inverse (descr : string) (v : Z) (m : Z)
   | Value_not_leZ (descr : string) (lhs rhs : Z)
   | Value_not_leQ (descr : string) (lhs rhs : Q)
   | Value_not_ltZ (descr : string) (lhs rhs : Z)
@@ -395,8 +621,8 @@ Module Pipeline.
                            => (["(Unprintible syntax tree used in bounds analysis)" ++ String.NewLine]%string)
                                ++ ["Stringification failed on the syntax tree:"] ++ show_lines false syntax_tree ++ [errs]
                          end)%list
-              | Type_too_complicated_for_cps t
-                => ["Type too complicated for cps: " ++ show false t]
+              | No_modular_inverse descr v m
+                => ["Could not compute a modular inverse (" ++ descr ++ ") for " ++ show false v ++ " mod " ++ show false m]
               | Value_not_leZ descr lhs rhs
                 => ["Value not ≤ (" ++ descr ++ ") : expected " ++ show false lhs ++ " ≤ " ++ show false rhs]
               | Value_not_leQ descr lhs rhs
@@ -437,6 +663,7 @@ Module Pipeline.
     := (*let E := expr.Uncurry E in*)
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
       let E := PartialEvaluate E in
+      let E := RewriteRules.RewriteArith E in
       (* Note that DCE evaluates the expr with two different [var]
          arguments, and so results in a pipeline that is 2x slower
          unless we pass through a uniformly concrete [var] type
@@ -448,7 +675,10 @@ Module Pipeline.
       let E := FromFlat e in
       let E := if with_subst01 then Subst01.Subst01 E else E in
       let E := UnderLets.LetBindReturn E in
-      let E := PartialEvaluate E in (* after inlining, see if any new rewrite redexes are available *)
+      let E := RewriteRules.RewriteArith E in (* after inlining, see if any new rewrite redexes are available *)
+      dlet_nd e := ToFlat E in
+      let E := FromFlat e in
+      let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
       let E := ReassociateSmallConstants.Reassociate (2^8) E in
       let E := match translate_to_fancy with
                | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high E
@@ -823,12 +1053,12 @@ Derive to_bytes_gen
                         (bitwidth : Z)
                         (m_enc : list Z)
                         (f : list Z),
-                    Interp (t:=reify_type_of to_bytesmod)
+                    Interp (t:=reify_type_of freeze_to_bytesmod)
                            to_bytes_gen limbwidth_num limbwidth_den n bitwidth m_enc f
-                    = to_bytesmod limbwidth_num limbwidth_den n bitwidth m_enc f)
+                    = freeze_to_bytesmod limbwidth_num limbwidth_den n bitwidth m_enc f)
        As to_bytes_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = to_bytesmod _ _ _ _ _ _) => simple apply to_bytes_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = freeze_to_bytesmod _ _ _ _ _ _) => simple apply to_bytes_gen_correct : reify_gen_cache.
 
 Derive from_bytes_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
@@ -1152,7 +1382,7 @@ Module Import UnsaturatedSolinas.
       := BoundsPipeline_with_bytes_no_subst01_correct
            (Some tight_bounds, tt)
            prime_bytes_bounds
-           (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc).
+           (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc).
 
     Definition srfrom_bytes prefix
       := BoundsPipelineToStrings_with_bytes_no_subst01
@@ -1373,8 +1603,8 @@ Module Import UnsaturatedSolinas.
                 (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=to_bytesT) (@ZRange.type.option.is_bounded_by) (Some tight_bounds, tt) f = true),
                  ((ZRange.type.base.option.is_bounded_by prime_bytes_bounds (type.app_curried (Interp rto_bytesv) f) = true
                    /\ (forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rto_bytesv) f
-                                               = type.app_curried (t:=to_bytesT) (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f))
-                  /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f)) = (Positional.eval (weight (Qnum limbwidth) (Z.pos (Qden limbwidth))) n (fst f) mod m))).
+                                               = type.app_curried (t:=to_bytesT) (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f))
+                  /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f)) = (Positional.eval (weight (Qnum limbwidth) (Z.pos (Qden limbwidth))) n (fst f) mod m))).
 
       (** XXX TODO MOVE ME *)
       Lemma fold_andb_map_snoc A B f x xs y ys
@@ -1448,7 +1678,7 @@ Module Import UnsaturatedSolinas.
           { apply Hto_bytesv; assumption. }
           { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
             rewrite Bool.andb_true_iff in *; split_and'.
-            etransitivity; [ apply eval_to_bytesmod | f_equal; (eassumption || (symmetry; eassumption)) ];
+            etransitivity; [ apply eval_freeze_to_bytesmod | f_equal; (eassumption || (symmetry; eassumption)) ];
               auto; try omega.
             { erewrite Ring.length_is_bounded_by by eassumption; assumption. }
             { lazymatch goal with
@@ -1833,6 +2063,739 @@ Goal False.
 *)
 Abort.
 *)
+
+Module WordByWordMontgomery.
+  Import Arithmetic.WordByWordMontgomery.
+  Derive mul_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (m' : Z)
+                          (f g : list Z),
+                      Interp (t:=reify_type_of mulmod)
+                             mul_gen bitwidth n m m' f g
+                      = mulmod bitwidth n m m' f g)
+         As mul_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = mulmod _ _ _ _ _ _) => simple apply mul_gen_correct : reify_gen_cache.
+
+  Derive square_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (m' : Z)
+                          (f : list Z),
+                      Interp (t:=reify_type_of squaremod)
+                             square_gen bitwidth n m m' f
+                      = squaremod bitwidth n m m' f)
+         As square_gen_correct.
+  Proof.
+    Time cache_reify ().
+    (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
+    (*
+    intros; etransitivity; [ | cbv [squaremod]; apply mul_gen_correct ].
+    subst square_gen.
+    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f f):list Z) in refine (r @ mul_gen)%Expr)).
+    reflexivity.
+     *)
+  Time Qed.
+  Hint Extern 1 (_ = squaremod _ _ _ _ _) => simple apply square_gen_correct : reify_gen_cache.
+
+  Derive encode_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (m' : Z)
+                          (v : Z),
+                      Interp (t:=reify_type_of encodemod)
+                             encode_gen bitwidth n m m' v
+                      = encodemod bitwidth n m m' v)
+         As encode_gen_correct.
+  Proof.
+    Time cache_reify ().
+    (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
+    (*
+    intros; etransitivity; [ | cbv [encodemod]; apply mul_gen_correct ].
+    subst encode_gen; revert bitwidth n m m' v.
+    lazymatch goal with
+    | [ |- forall bw n m m' v, ?interp ?ev bw n m m' v = ?interp' mul_gen bw n m m' (@?A bw n m m' v) (@?B bw n m m' v) ]
+      => let rv := constr:(fun F bw n m m' v => (F bw n m m' (A bw n m m' v) (B bw n m m' v)):list Z) in
+         intros;
+           instantiate (1:=ltac:(let r := Reify rv in
+                                 refine (r @ mul_gen)%Expr))
+    end.
+    reflexivity.
+     *)
+  Time Qed.
+  Hint Extern 1 (_ = encodemod _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+
+  Derive add_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (f g : list Z),
+                      Interp (t:=reify_type_of addmod)
+                             add_gen bitwidth n m f g
+                      = addmod bitwidth n m f g)
+         As add_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
+
+  Derive sub_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (f g : list Z),
+                      Interp (t:=reify_type_of submod)
+                             sub_gen bitwidth n m f g
+                      = submod bitwidth n m f g)
+         As sub_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = submod _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
+
+  Derive opp_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (f : list Z),
+                      Interp (t:=reify_type_of oppmod)
+                             opp_gen bitwidth n m f
+                      = oppmod bitwidth n m f)
+         As opp_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = oppmod _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
+
+  Derive from_montgomery_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (m' : Z)
+                          (f : list Z),
+                      Interp (t:=reify_type_of from_montgomery_mod)
+                             from_montgomery_gen bitwidth n m m' f
+                      = from_montgomery_mod bitwidth n m m' f)
+         As from_montgomery_gen_correct.
+  Proof.
+    Time cache_reify ().
+    (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
+    (*
+    intros; etransitivity; [ | cbv [from_montgomery_mod]; apply mul_gen_correct ].
+    subst from_montgomery_gen.
+    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f (onemod bitwidth n)):list Z) in refine (r @ mul_gen)%Expr)).
+    reflexivity.
+     *)
+  Qed.
+  Hint Extern 1 (_ = from_montgomery_mod _ _ _ _ _) => simple apply from_montgomery_gen_correct : reify_gen_cache.
+
+  Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
+  Definition onemod bitwidth n m m' := encodemod bitwidth n m m' 1.
+  Derive zero_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (m' : Z),
+                      Interp (t:=reify_type_of zeromod)
+                             zero_gen bitwidth n m m'
+                      = zeromod bitwidth n m m')
+         As zero_gen_correct.
+  Proof.
+    (* Time cache_reify (). *)
+    (* we do something faster *)
+    intros; etransitivity; [ | cbv [zeromod]; apply encode_gen_correct ].
+    subst zero_gen.
+    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) => (F bitwidth n m m' 0):list Z) in refine (r @ encode_gen)%Expr)).
+    reflexivity.
+  Qed.
+  Hint Extern 1 (_ = zeromod _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
+
+  Derive one_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (m : Z)
+                          (m' : Z),
+                      Interp (t:=reify_type_of onemod)
+                             one_gen bitwidth n m m'
+                      = onemod bitwidth n m m')
+         As one_gen_correct.
+  Proof.
+    (* Time cache_reify (). *)
+    (* we do something faster *)
+    intros; etransitivity; [ | cbv [onemod]; apply encode_gen_correct ].
+    subst one_gen.
+    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) => (F bitwidth n m m' 1):list Z) in refine (r @ encode_gen)%Expr)).
+    reflexivity.
+  Qed.
+  Hint Extern 1 (_ = onemod _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
+
+  Derive nonzero_gen
+         SuchThat (forall (f : list Z),
+                      Interp (t:=reify_type_of nonzeromod)
+                             nonzero_gen f
+                      = nonzeromod f)
+         As nonzero_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = nonzeromod _) => simple apply nonzero_gen_correct : reify_gen_cache.
+
+  Derive to_bytes_gen
+         SuchThat (forall (bitwidth : Z)
+                          (n : nat)
+                          (f : list Z),
+                      Interp (t:=reify_type_of to_bytesmod)
+                             to_bytes_gen bitwidth n f
+                      = to_bytesmod bitwidth n f)
+         As to_bytes_gen_correct.
+  Proof. cache_reify (). Qed.
+  Hint Extern 1 (_ = to_bytesmod _ _ _) => simple apply to_bytes_gen_correct : reify_gen_cache.
+
+  Section rcarry_mul.
+    Context (s : Z)
+            (c : list (Z * Z))
+            (machine_wordsize : Z).
+
+    Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let m := s - Associational.eval c.
+    Let r := 2^machine_wordsize.
+    Let r' := match Z.modinv r m with
+              | Some r' => r'
+              | None => 0
+              end.
+    Let m' := match Z.modinv (-m) r with
+              | Some m' => m'
+              | None => 0
+              end.
+    Let n_bytes := bytes_n machine_wordsize 1 n.
+    Let prime_upperbound_list : list Z
+      := encode (UniformWeight.uweight machine_wordsize) n s c (s-1).
+    Let prime_bytes_upperbound_list : list Z
+      := encode (weight 8 1) n_bytes s c (s-1).
+    Let upperbounds : list Z := prime_upperbound_list.
+    Definition prime_bound : ZRange.type.option.interp (base.type.Z)
+      := Some r[0~>(s - Associational.eval c - 1)]%zrange.
+    Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
+    Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
+    Definition saturated_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n).
+
+    Definition m_enc : list Z
+      := encode (UniformWeight.uweight machine_wordsize) n s c (s-Associational.eval c).
+
+    Definition relax_zrange_of_machine_wordsize
+      := relax_zrange_gen [1; machine_wordsize; 2 * machine_wordsize]%Z.
+
+    Definition relax_zrange_of_machine_wordsize_with_bytes
+      := relax_zrange_gen [1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+
+    Let relax_zrange := relax_zrange_of_machine_wordsize.
+    Let relax_zrange_with_bytes := relax_zrange_of_machine_wordsize_with_bytes.
+    Definition bounds : list (ZRange.type.option.interp base.type.Z)
+      := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+
+    (** Note: If you change the name or type signature of this
+        function, you will need to update the code in CLI.v *)
+    Definition check_args {T} (res : Pipeline.ErrorT T)
+      : Pipeline.ErrorT T
+      := fold_right
+           (fun '(b, e) k => if b:bool then Error e else k)
+           res
+           [(negb (1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize);
+              ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0" 0 (Associational.eval c));
+              ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
+              ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
+              ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
+              ((r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m);
+              (negb ((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1);
+              (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
+              (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
+              (negb (1 <? s - Associational.eval c), Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 1" 1 (s - Associational.eval c))].
+
+    Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
+
+    Notation BoundsPipelineToStrings prefix name comment rop in_bounds out_bounds
+      := ((prefix ++ name)%string,
+          Pipeline.BoundsPipelineToStrings
+            true (* static *) prefix (prefix ++ name)%string comment%string%list
+            (*false*) true None
+            relax_zrange
+            rop%Expr in_bounds out_bounds).
+
+    Notation BoundsPipeline_correct in_bounds out_bounds op
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
+          => @Pipeline.BoundsPipeline_correct_trans
+               (*false*) true None
+               relax_zrange
+               (relax_zrange_gen_good _)
+               _
+               rop
+               in_bounds
+               out_bounds
+               op
+               Hrop rv)
+           (only parsing).
+
+    Notation BoundsPipelineToStrings_no_subst01 prefix name comment rop in_bounds out_bounds
+      := ((prefix ++ name)%string,
+          Pipeline.BoundsPipelineToStrings
+            true (* static *) prefix (prefix ++ name)%string comment%string%list
+            (*false*) false None
+            relax_zrange
+            rop%Expr in_bounds out_bounds).
+
+    Notation BoundsPipeline_no_subst01_correct in_bounds out_bounds op
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
+          => @Pipeline.BoundsPipeline_correct_trans
+               (*false*) false None
+               relax_zrange
+               (relax_zrange_gen_good _)
+               _
+               rop
+               in_bounds
+               out_bounds
+               op
+               Hrop rv)
+           (only parsing).
+
+    Notation BoundsPipelineToStrings_with_bytes_no_subst01 prefix name comment rop in_bounds out_bounds
+      := ((prefix ++ name)%string,
+          Pipeline.BoundsPipelineToStrings
+            true (* static *) prefix (prefix ++ name)%string comment%string%list
+            (*false*) false None
+            relax_zrange_with_bytes
+            rop%Expr in_bounds out_bounds).
+
+    Notation BoundsPipeline_with_bytes_no_subst01_correct in_bounds out_bounds op
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
+          => @Pipeline.BoundsPipeline_correct_trans
+               (*false*) false None
+               relax_zrange_with_bytes
+               (relax_zrange_gen_good _)
+               _
+               rop
+               in_bounds
+               out_bounds
+               op
+               Hrop rv)
+           (only parsing).
+
+    (* N.B. We only need [rmul] if we want to extract the Pipeline; otherwise we can just use [rmul_correct] *)
+    Definition srmul prefix
+      := BoundsPipelineToStrings_no_subst01
+           prefix "mul" []
+           (mul_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+           (Some bounds, (Some bounds, tt))
+           (Some bounds).
+
+    Definition rmul_correct
+      := BoundsPipeline_no_subst01_correct
+           (Some bounds, (Some bounds, tt))
+           (Some bounds)
+           (mulmod machine_wordsize n m m').
+
+    Definition srsquare prefix
+      := BoundsPipelineToStrings_no_subst01
+           prefix "square" []
+           (square_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+           (Some bounds, tt)
+           (Some bounds).
+
+    Definition rsquare_correct
+      := BoundsPipeline_no_subst01_correct
+           (Some bounds, tt)
+           (Some bounds)
+           (squaremod machine_wordsize n m m').
+
+    Definition sradd prefix
+      := BoundsPipelineToStrings
+           prefix "add" []
+           (add_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
+           (Some bounds, (Some bounds, tt))
+           (Some bounds).
+
+    Definition radd_correct
+      := BoundsPipeline_correct
+           (Some bounds, (Some bounds, tt))
+           (Some bounds)
+           (addmod machine_wordsize n m).
+
+    Definition srsub prefix
+      := BoundsPipelineToStrings
+           prefix "sub" []
+           (sub_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
+           (Some bounds, (Some bounds, tt))
+           (Some bounds).
+
+    Definition rsub_correct
+      := BoundsPipeline_correct
+           (Some bounds, (Some bounds, tt))
+           (Some bounds)
+           (submod machine_wordsize n m).
+
+    Definition sropp prefix
+      := BoundsPipelineToStrings
+           prefix "opp" []
+           (opp_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
+           (Some bounds, tt)
+           (Some bounds).
+
+    Definition ropp_correct
+      := BoundsPipeline_correct
+           (Some bounds, tt)
+           (Some bounds)
+           (oppmod machine_wordsize n m).
+
+    Definition srfrom_montgomery prefix
+      := BoundsPipelineToStrings
+           prefix "from_montgomery" []
+           (from_montgomery_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+           (Some bounds, tt)
+           (Some bounds).
+
+    Definition rfrom_montgomery_correct
+      := BoundsPipeline_correct
+           (Some bounds, tt)
+           (Some bounds)
+           (from_montgomery_mod machine_wordsize n m m').
+
+    Definition srnonzero prefix
+      := BoundsPipelineToStrings
+           prefix "nonzero" []
+           nonzero_gen
+           (Some bounds, tt)
+           (Some r[0~>r-1]%zrange).
+
+    Definition rnonzero_correct
+      := BoundsPipeline_correct
+           (Some bounds, tt)
+           (Some r[0~>r-1]%zrange)
+           nonzeromod.
+
+    Definition srselectznz prefix
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix "selectznz" []
+           selectznz_gen
+           (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
+           saturated_bounds.
+
+    Definition rselectznz_correct
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
+           saturated_bounds
+           Positional.select.
+
+    Definition srto_bytes prefix
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix "to_bytes" []
+           (to_bytes_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+           (prime_bounds, tt)
+           prime_bytes_bounds.
+
+    Definition rto_bytes_correct
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (prime_bounds, tt)
+           prime_bytes_bounds
+           (to_bytesmod machine_wordsize n).
+
+    Definition srfrom_bytes prefix
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix "from_bytes" []
+           (from_bytes_gen
+              @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify n)
+           (prime_bytes_bounds, tt)
+           prime_bounds.
+
+    Definition rfrom_bytes_correct
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (prime_bytes_bounds, tt)
+           prime_bounds
+           (from_bytesmod machine_wordsize 1 n).
+
+    Definition rencode_correct
+      := BoundsPipeline_correct
+           (prime_bound, tt)
+           (Some bounds)
+           (encodemod machine_wordsize n m m').
+
+    Definition rzero_correct
+      := BoundsPipeline_correct
+           tt
+           (Some bounds)
+           (zeromod machine_wordsize n m m').
+
+    Definition rone_correct
+      := BoundsPipeline_correct
+           tt
+           (Some bounds)
+           (onemod machine_wordsize n m m').
+
+    Notation srmulx := (srmulx machine_wordsize).
+    Notation srmulx_correct := (srmulx_correct machine_wordsize).
+    Notation sraddcarryx := (sraddcarryx machine_wordsize).
+    Notation sraddcarryx_correct := (sraddcarryx_correct machine_wordsize).
+    Notation srsubborrowx := (srsubborrowx machine_wordsize).
+    Notation srsubborrowx_correct := (srsubborrowx_correct machine_wordsize).
+    Notation srcmovznz := (srcmovznz machine_wordsize).
+    Notation srcmovznz_correct := (srcmovznz_correct machine_wordsize).
+
+    (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
+    Definition rmul_correctT rv : Prop
+      := type_of_strip_3arrow (@rmul_correct rv).
+    Definition rsquare_correctT rv : Prop
+      := type_of_strip_3arrow (@rsquare_correct rv).
+    Definition radd_correctT rv : Prop
+      := type_of_strip_3arrow (@radd_correct rv).
+    Definition rsub_correctT rv : Prop
+      := type_of_strip_3arrow (@rsub_correct rv).
+    Definition rfrom_montgomery_correctT rv : Prop
+      := type_of_strip_3arrow (@rfrom_montgomery_correct rv).
+    Definition ropp_correctT rv : Prop
+      := type_of_strip_3arrow (@ropp_correct rv).
+    Definition rnonzero_correctT rv : Prop
+      := type_of_strip_3arrow (@rnonzero_correct rv).
+    Definition rselectznz_correctT rv : Prop
+      := type_of_strip_3arrow (@rselectznz_correct rv).
+    Definition rto_bytes_correctT rv : Prop
+      := type_of_strip_3arrow (@rto_bytes_correct rv).
+    Definition rfrom_bytes_correctT rv : Prop
+      := type_of_strip_3arrow (@rfrom_bytes_correct rv).
+    Definition rencode_correctT rv : Prop
+      := type_of_strip_3arrow (@rencode_correct rv).
+    Definition rzero_correctT rv : Prop
+      := type_of_strip_3arrow (@rzero_correct rv).
+    Definition rone_correctT rv : Prop
+      := type_of_strip_3arrow (@rone_correct rv).
+
+    Section make_ring.
+      Let mv : positive := Z.to_pos (s - Associational.eval c).
+      Context (curve_good : check_args (Success tt) = Success tt)
+              {rmulv} (Hrmulv : rmul_correctT rmulv)
+              {raddv} (Hraddv : radd_correctT raddv)
+              {rsubv} (Hrsubv : rsub_correctT rsubv)
+              {rfrom_montgomeryv} (Hrfrom_montgomeryv : rfrom_montgomery_correctT rfrom_montgomeryv)
+              {roppv} (Hroppv : ropp_correctT roppv)
+              {rzerov} (Hrzerov : rzero_correctT rzerov)
+              {ronev} (Hronev : rone_correctT ronev)
+              {rencodev} (Hrencodev : rencode_correctT rencodev)
+              {rnonzerov} (Hrnonzerov : rnonzero_correctT rnonzerov)
+              {rto_bytesv} (Hto_bytesv : rto_bytes_correctT rto_bytesv)
+              {rfrom_bytesv} (Hfrom_bytesv : rfrom_bytes_correctT rfrom_bytesv).
+
+      Local Ltac use_curve_good_t :=
+        repeat first [ assumption
+                     | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
+                     | reflexivity
+                     | lia
+                     | rewrite interp_reify_list, ?map_map
+                     | rewrite map_ext with (g:=id), map_id
+                     | progress distr_length
+                     | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
+                     | progress cbv [Qle] in *
+                     | progress cbn -[reify_list] in *
+                     | progress intros
+                     | solve [ auto ] ].
+
+      Lemma use_curve_good
+        : Z.pos mv = s - Associational.eval c
+          /\ Z.pos mv <> 0
+          /\ s - Associational.eval c <> 0
+          /\ s <> 0
+          /\ 0 < machine_wordsize
+          /\ n <> 0%nat
+          /\ List.length bounds = n
+          /\ List.length bounds = n
+          /\ 0 < 1 <= machine_wordsize
+          /\ 0 < Associational.eval c < s
+          /\ (r * r') mod m = 1
+          /\ (m * m') mod r = (-1) mod r
+          /\ 0 < machine_wordsize
+          /\ 1 < m
+          /\ m < r^n.
+      Proof.
+        clear -curve_good.
+        cbv [check_args fold_right] in curve_good.
+        cbv [bounds prime_bound m_enc prime_bounds] in *.
+        break_innermost_match_hyps; try discriminate.
+        rewrite negb_false_iff in *.
+        Z.ltb_to_lt.
+        rewrite NPeano.Nat.eqb_neq in *.
+        intros.
+        cbv [Qnum Qden Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *.
+        rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.
+        specialize_by lia.
+        repeat match goal with H := _ |- _ => subst H end.
+        repeat match goal with
+               | [ H : list_beq _ _ _ _ = true |- _ ] => apply internal_list_dec_bl in H; [ | intros; Z.ltb_to_lt; omega.. ]
+               end.
+        repeat apply conj.
+        { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+      Qed.
+
+      (** TODO: Find a better place to put the spec for [to_bytes] *)
+      Definition GoodT : Prop
+        := @MontgomeryStyleRing.GoodT
+             machine_wordsize 1
+             n s c
+             bounds
+             (valid machine_wordsize n m)
+             (Interp rfrom_montgomeryv)
+             (Interp rmulv)
+             (Interp raddv)
+             (Interp rsubv)
+             (Interp roppv)
+             (Interp rzerov)
+             (Interp ronev)
+             (Interp rencodev)
+           /\ (let to_bytesT := (base.type.list base.type.Z -> base.type.list base.type.Z)%etype in
+              forall f
+                (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=to_bytesT) (@ZRange.type.option.is_bounded_by) (prime_bounds, tt) f = true),
+                ((ZRange.type.base.option.is_bounded_by prime_bytes_bounds (type.app_curried (Interp rto_bytesv) f) = true
+                  /\ (forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rto_bytesv) f
+                                                    = type.app_curried (t:=to_bytesT) (to_bytesmod machine_wordsize n) f))
+                 /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (to_bytesmod machine_wordsize n) f)) = (Positional.eval (weight machine_wordsize 1) n (fst f) mod m)))
+           /\ (forall f
+                 (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=(base.type.list base.type.Z -> base.type.Z)%etype) (@ZRange.type.option.is_bounded_by) (Some bounds, tt) f = true), (Interp rnonzerov (fst f) = 0) <-> ((@eval machine_wordsize n (from_montgomery_mod machine_wordsize n m m' (fst f))) mod m = 0)).
+
+      (** XXX TODO MOVE ME *)
+      Local Opaque valid addmod submod oppmod encodemod mulmod from_montgomery_mod nonzeromod.
+      Theorem Good : GoodT.
+      Proof.
+        pose proof use_curve_good; destruct_head'_and; destruct_head_hnf' ex.
+        split; [ | split ].
+        { eapply MontgomeryStyleRing.Good;
+            lazymatch goal with
+            | [ H : ?P ?rop |- context[expr.Interp _ ?rop] ]
+              => intros;
+                  let H1 := fresh in
+                  let H2 := fresh in
+                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | eapply H2 ] ] ];
+                    solve [ exact tt | eassumption | reflexivity ]
+            | _ => idtac
+            end;
+            repeat first [ eassumption
+                         | eapply mulmod_correct
+                         | eapply addmod_correct
+                         | eapply submod_correct
+                         | eapply oppmod_correct
+                         | eapply encodemod_correct
+                         | eapply from_montgomery_mod_correct
+                         | eapply nonzeromod_correct
+                         | intros; apply conj
+                         | omega ]. }
+        { cbv zeta; intros f Hf; split.
+          { apply Hto_bytesv; assumption. }
+          { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
+            rewrite Bool.andb_true_iff in *; split_and'.
+            apply to_bytesmod_correct; eauto; [].
+            split; cbv [small].
+            admit.
+            admit. } }
+        { intros.
+          split; [ intro H'; eapply nonzeromod_correct;
+                   [ .. | rewrite <- H'; symmetry; eapply Hrnonzerov ]
+                 | etransitivity; [ apply Hrnonzerov | eapply nonzeromod_correct; [ .. | eassumption ] ] ];
+          try eassumption.
+          admit.
+          admit. }
+      Admitted.
+    End make_ring.
+
+    Section for_stringification.
+      Definition aggregate_infos {A B C} (ls : list (A * ErrorT B (C * ToString.C.ident_infos))) : ToString.C.ident_infos
+        := fold_right
+             ToString.C.ident_info_union
+             ToString.C.ident_info_empty
+             (List.map
+                (fun '(_, res) => match res with
+                               | Success (_, infos) => infos
+                               | Error _ => ToString.C.ident_info_empty
+                               end)
+                ls).
+
+      Definition extra_synthesis (function_name_prefix : string) (infos : ToString.C.ident_infos)
+        : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t
+        := let ls_addcarryx := List.flat_map
+                                 (fun lg_split:positive => [sraddcarryx function_name_prefix lg_split; srsubborrowx function_name_prefix lg_split])
+                                 (PositiveSet.elements (ToString.C.addcarryx_lg_splits infos)) in
+           let ls_mulx := List.map
+                            (fun lg_split:positive => srmulx function_name_prefix lg_split)
+                            (PositiveSet.elements (ToString.C.mulx_lg_splits infos)) in
+           let ls_cmov := List.map
+                            (fun bitwidth:positive => srcmovznz function_name_prefix bitwidth)
+                            (PositiveSet.elements (ToString.C.cmovznz_bitwidths infos)) in
+           let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
+           let infos := aggregate_infos ls in
+           (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+            ToString.C.bitwidths_used infos).
+
+      Local Open Scope string_scope.
+      Local Open Scope list_scope.
+
+      Definition known_functions
+        := [("mul", srmul);
+              ("square", srsquare);
+              ("add", sradd);
+              ("sub", srsub);
+              ("opp", sropp);
+              ("from_montgomery", srfrom_montgomery);
+              ("nonzero", srnonzero);
+              ("selectznz", srselectznz);
+              ("to_bytes", srto_bytes);
+              ("from_bytes", srfrom_bytes)].
+
+      Definition synthesize_of_name (function_name_prefix : string) (name : string)
+        : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
+        := fold_right
+             (fun v default
+              => match v with
+                | Some res => res
+                | None => default
+                end)
+             ((name,
+               Error
+                 (Pipeline.Invalid_argument
+                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ String.concat ", " (List.map (@fst _ _) known_functions)))))
+             (map
+                (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
+                known_functions).
+
+      (** Note: If you change the name or type signature of this
+          function, you will need to update the code in CLI.v *)
+      Definition Synthesize (function_name_prefix : string) (requests : list string)
+        : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+        := let ls := match requests with
+                     | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
+                     | requests => List.map (synthesize_of_name function_name_prefix) requests
+                     end in
+           let infos := aggregate_infos ls in
+           let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
+           (extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+            PositiveSet.union extra_bit_widths (ToString.C.bitwidths_used infos)).
+    End for_stringification.
+  End rcarry_mul.
+End WordByWordMontgomery.
 
 Module SaturatedSolinas.
   Section MulMod.
