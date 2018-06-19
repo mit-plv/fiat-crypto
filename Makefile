@@ -232,7 +232,13 @@ endif
 OTHERFLAGS += -w "-notation-overridden"
 endif
 
-COQPATH?=${CURDIR}/$(COQPRIME_FOLDER)/src
+ifneq ($(filter /cygdrive/%,$(CURDIR)),)
+CURDIR_SAFE := $(shell cygpath -m "$(CURDIR)")
+else
+CURDIR_SAFE := $(CURDIR)
+endif
+
+COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src
 export COQPATH
 
 coqprime:
