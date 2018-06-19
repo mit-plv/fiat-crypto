@@ -189,12 +189,12 @@ Module Positional. Section Positional.
   Definition zeros n : list Z := repeat 0 n.
   Lemma length_zeros n : length (zeros n) = n. Proof. cbv [zeros]; distr_length. Qed.
   Hint Rewrite length_zeros : distr_length.
-  Lemma eval_zeros n : eval n (zeros n) = 0.
+  Lemma eval_combine_zeros ls n : Associational.eval (List.combine ls (zeros n)) = 0.
   Proof.
-    cbv [eval Associational.eval to_associational zeros].
-    rewrite <- (seq_length n 0) at 2.
-    generalize dependent (List.seq 0 n); intro xs.
-    induction xs; simpl; nsatz.                               Qed.
+    cbv [Associational.eval zeros].
+    revert n; induction ls, n; simpl; rewrite ?IHls; nsatz.   Qed.
+  Lemma eval_zeros n : eval n (zeros n) = 0.
+  Proof. apply eval_combine_zeros.                            Qed.
   Definition add_to_nth i x (ls : list Z) : list Z
     := ListUtil.update_nth i (fun y => x + y) ls.
   Lemma length_add_to_nth i x ls : length (add_to_nth i x ls) = length ls.
@@ -216,7 +216,7 @@ Module Positional. Section Positional.
            | _ => progress (apply Zminus_eq; ring_simplify)
            | _ => rewrite <-ListUtil.map_nth_default_always
            end; lia.                                          Qed.
-  Hint Rewrite @eval_add_to_nth eval_zeros : push_eval.
+  Hint Rewrite @eval_add_to_nth eval_zeros eval_combine_zeros : push_eval.
 
   Definition place (t:Z*Z) (i:nat) : nat * Z :=
     nat_rect
@@ -254,6 +254,24 @@ Module Positional. Section Positional.
   Lemma length_from_associational n p : length (from_associational n p) = n.
   Proof. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
   Hint Rewrite length_from_associational : distr_length.
+
+  Definition extend_to_length (n_in n_out : nat) (p:list Z) : list Z :=
+    p ++ zeros (n_out - n_in).
+  Lemma eval_extend_to_length n_in n_out p :
+    length p = n_in -> (n_in <= n_out)%nat ->
+    eval n_out (extend_to_length n_in n_out p) = eval n_in p.
+  Proof.
+    cbv [eval extend_to_length to_associational]; intros.
+    replace (seq 0 n_out) with (seq 0 (n_in + (n_out - n_in))) by (f_equal; omega).
+    rewrite seq_add, map_app, combine_app_samelength, Associational.eval_app;
+      push; omega.
+  Qed.
+  Hint Rewrite eval_extend_to_length : push_eval.
+  Lemma length_eval_extend_to_length n_in n_out p :
+    length p = n_in -> (n_in <= n_out)%nat ->
+    length (extend_to_length n_in n_out p) = n_out.
+  Proof. cbv [extend_to_length]; intros; distr_length.        Qed.
+  Hint Rewrite length_eval_extend_to_length : distr_length.
 
   Section mulmod.
     Context (s:Z) (s_nz:s <> 0)
