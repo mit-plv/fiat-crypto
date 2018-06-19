@@ -239,6 +239,47 @@ void fesub(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
 *)
 End X25519_64.
 
+Module P224_64.
+  Definition s := 2^224.
+  Definition c :=  [(2^96, 1); (1,-1)].
+  Definition machine_wordsize := 128.
+
+  Derive mulmod
+         SuchThat (SaturatedSolinas.rmulmod_correctT s c machine_wordsize mulmod)
+         As mulmod_correct.
+  Proof. Time solve_rmulmod machine_wordsize. Time Qed.
+
+  Import PrintingNotations.
+  Open Scope expr_scope.
+  Set Printing Width 100000.
+  Set Printing Depth 100000.
+
+  Local Notation "'mul128' '(' x ',' y ')'" :=
+    (#(Z_cast2 (uint128, _)%core) @ (#(Z_mul_split_concrete 340282366920938463463374607431768211456) @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'add128' '(' x ',' y ')'" :=
+    (#(Z_cast2 (uint128, bool)%core) @ (#(Z_add_get_carry_concrete 340282366920938463463374607431768211456) @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'adc128' '(' c ',' x ',' y ')'" :=
+    (#(Z_cast2 (uint128, bool)%core) @ (#(Z_add_with_get_carry_concrete 340282366920938463463374607431768211456) @ c @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'sub128' '(' x ',' y ')'" :=
+    (#(Z_cast2 (uint128, bool)%core) @ (#(Z_sub_get_borrow_concrete 340282366920938463463374607431768211456) @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'sbb128' '(' c ',' x ',' y ')'" :=
+    (#(Z_cast2 (uint128, bool)%core) @ (#(Z_sub_with_get_borrow_concrete 340282366920938463463374607431768211456) @ c @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'mul64' '(' x ',' y ')'" :=
+    (#(Z_cast2 (uint64, _)%core) @ (#(Z_mul_split_concrete 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'add64' '(' x ',' y ')'" :=
+    (#(Z_cast2 (uint64, bool)%core) @ (#(Z_add_get_carry_concrete 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'adc64' '(' c ',' x ',' y ')'" :=
+    (#(Z_cast2 (uint64, bool)%core) @ (#(Z_add_with_get_carry_concrete 18446744073709551616) @ c @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'adx64' '(' c ',' x ',' y ')'" :=
+    (#(Z_cast bool) @ (#Z_add_with_carry @ c @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'sub64' '(' x ',' y ')'" :=
+    (#(Z_cast2 (uint64, bool)%core) @ (#(Z_sub_get_borrow_concrete 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
+  Local Notation "'sbb64' '(' c ',' x ',' y ')'" :=
+    (#(Z_cast2 (uint64, bool)%core) @ (#(Z_sub_with_get_borrow_concrete 18446744073709551616) @ c @ x @ y))%expr (at level 50) : expr_scope.
+  Set Printing Width 1000000.
+  Print mulmod.
+End P224_64.
+
 Module P192_64.
   Definition s := 2^192.
   Definition c :=  [(2^64, 1); (1,1)].

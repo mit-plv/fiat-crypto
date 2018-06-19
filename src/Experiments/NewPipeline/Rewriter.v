@@ -1418,6 +1418,8 @@ In the RHS, the follow notation applies:
 
                 ; make_rewrite_step (* _step, so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
                     (#pident.Z_cast2 @ (??{ℤ}, ??{ℤ})) (fun r x y => (#(ident.Z_cast (fst r)) @ $x, #(ident.Z_cast (snd r)) @ $y))
+
+                ; make_rewrite (-??{ℤ}) (fun e => ret (UnderLets.UnderLet e (fun v => UnderLets.Base (-$v)))  when  negb (SubstVarLike.is_var_fst_snd_pair_opp e)) (* inline negation when the rewriter wouldn't already inline it *)
               ]%list%pattern%cps%option%under_lets%Z%bool.
 
       Definition dtree'
