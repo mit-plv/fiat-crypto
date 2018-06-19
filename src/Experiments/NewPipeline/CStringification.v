@@ -79,98 +79,115 @@ Module Compilers.
       Module ident.
         Definition bitwidth_to_string (v : Z) : string
           := (if v =? 2^Z.log2 v then "2^" ++ decimal_string_of_Z (Z.log2 v) else HexString.of_Z v).
+        Definition show_range_or_ctype (v : zrange) : string
+          := if (v.(lower) =? 0) && (v.(upper) =? 2^(Z.log2 (v.(upper) + 1)) - 1)
+             then ("uint" ++ decimal_string_of_Z (Z.log2 (v.(upper) + 1)) ++ "_t")%string
+             else let lg2 := 1 + Z.log2 (-v.(lower)) in
+                  if (v.(lower) =? -2^(lg2-1)) && (v.(upper) =? 2^(lg2-1)-1)
+                  then ("int" ++ decimal_string_of_Z lg2 ++ "_t")%string
+                  else show false v.
+        Definition show_compact_Z (with_parens : bool) (v : Z) : string
+          := let is_neg := v <? 0 in
+             (if is_neg then "-" else "")
+               ++ (let v := Z.abs v in
+                   (if v <=? 2^8
+                    then decimal_string_of_Z v
+                    else if v =? 2^(Z.log2 v)
+                         then "2^" ++ (decimal_string_of_Z (Z.log2 v))
+                         else if v =? 2^(Z.log2_up v) - 1
+                              then maybe_wrap_parens is_neg ("2^" ++ (decimal_string_of_Z (Z.log2_up v)) ++ "-1")
+                              else Hex.show_Z with_parens v)).
         Global Instance show_ident {t} : Show (ident.ident t)
           := fun with_parens idc
              => match idc with
-               | ident.Literal t v => show with_parens v
-               | ident.Nat_succ => "Nat.succ"
-               | ident.Nat_pred => "Nat.pred"
-               | ident.Nat_max => "Nat.max"
-               | ident.Nat_mul => "Nat.mul"
-               | ident.Nat_add => "Nat.add"
-               | ident.Nat_sub => "Nat.sub"
-               | ident.nil t => "[]"
-               | ident.cons t => "(::)"
-               | ident.pair A B => "(,)"
-               | ident.fst A B => "fst"
-               | ident.snd A B => "snd"
-               | ident.pair_rect A B T => "pair_rect"
-               | ident.bool_rect T => "bool_rect"
-               | ident.nat_rect P => "nat_rect"
-               | ident.list_rect A P => "list_rect"
-               | ident.list_case A P => "list_case"
-               | ident.List_length T => "length"
-               | ident.List_seq => "seq"
-               | ident.List_repeat A => "repeat"
-               | ident.List_combine A B => "combine"
-               | ident.List_map A B => "map"
-               | ident.List_app A => "(++)"
-               | ident.List_rev A => "rev"
-               | ident.List_flat_map A B => "flat_map"
-               | ident.List_partition A => "partition"
-               | ident.List_fold_right A B => "fold_right"
-               | ident.List_update_nth T => "update_nth"
-               | ident.List_nth_default T => "nth_default"
-               | ident.Z_add => "(+)"
-               | ident.Z_mul => "( * )"
-               | ident.Z_pow => "(^)"
-               | ident.Z_sub => "(-)"
-               | ident.Z_opp => "-"
-               | ident.Z_div => "(/)"
-               | ident.Z_modulo => "(mod)"
-               | ident.Z_eqb => "(=)"
-               | ident.Z_leb => "(≤)"
-               | ident.Z_of_nat => "(ℕ→ℤ)"
-               | ident.Z_shiftr offset => "(>> " ++ decimal_string_of_Z offset ++ ")"
-               | ident.Z_shiftl offset => "(<< " ++ decimal_string_of_Z offset ++ ")"
-               | ident.Z_land mask => "(& " ++ HexString.of_Z mask ++ ")"
-               | ident.Z_mul_split => "Z.mul_split"
-               | ident.Z_mul_split_concrete s => maybe_wrap_parens with_parens ("Z.mul_split " ++ bitwidth_to_string s)
-               | ident.Z_add_get_carry => "Z.add_get_carry"
-               | ident.Z_add_get_carry_concrete s => maybe_wrap_parens with_parens ("Z.add_get_carry " ++ bitwidth_to_string s)
-               | ident.Z_add_with_carry => "Z.add_with_carry"
-               | ident.Z_add_with_get_carry => "Z.add_with_get_carry"
-               | ident.Z_add_with_get_carry_concrete s => maybe_wrap_parens with_parens ("Z.add_with_get_carry " ++ bitwidth_to_string s)
-               | ident.Z_sub_get_borrow => "Z.sub_get_borrow"
-               | ident.Z_sub_get_borrow_concrete s => maybe_wrap_parens with_parens ("Z.sub_get_borrow " ++ bitwidth_to_string s)
-               | ident.Z_sub_with_get_borrow => "Z.sub_with_get_borrow"
-               | ident.Z_sub_with_get_borrow_concrete s => maybe_wrap_parens with_parens ("Z.sub_with_get_borrow " ++ bitwidth_to_string s)
-               | ident.Z_zselect => "Z.zselect"
-               | ident.Z_add_modulo => "Z.add_modulo"
-               | ident.Z_rshi => "Z.rshi"
-               | ident.Z_rshi_concrete s offset => maybe_wrap_parens with_parens ("Z.rshi " ++ bitwidth_to_string s ++ " " ++ decimal_string_of_Z offset)
-               | ident.Z_cc_m => "Z.cc_m"
-               | ident.Z_cc_m_concrete s => maybe_wrap_parens with_parens ("Z.cc_m " ++ bitwidth_to_string s)
-               | ident.Z_neg_snd => "Z.neg_snd"
-               | ident.Z_cast range => "(" ++ show false range ++ ")"
-               | ident.Z_cast2 range => "(" ++ show false range ++ ")"
-               | ident.fancy_add log2wordmax imm
-                 => maybe_wrap_parens with_parens ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-               | ident.fancy_addc log2wordmax imm
-                 => maybe_wrap_parens with_parens ("fancy.addc 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-               | ident.fancy_sub log2wordmax imm
-                 => maybe_wrap_parens with_parens ("fancy.sub 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-               | ident.fancy_subb log2wordmax imm
-                 => maybe_wrap_parens with_parens ("fancy.subb 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-               | ident.fancy_mulll log2wordmax
-                 => maybe_wrap_parens with_parens ("fancy.mulll 2^" ++ decimal_string_of_Z log2wordmax)
-               | ident.fancy_mullh log2wordmax
-                 => maybe_wrap_parens with_parens ("fancy.mullh 2^" ++ decimal_string_of_Z log2wordmax)
-               | ident.fancy_mulhl log2wordmax
-                 => maybe_wrap_parens with_parens ("fancy.mulhl 2^" ++ decimal_string_of_Z log2wordmax)
-               | ident.fancy_mulhh log2wordmax
-                 => maybe_wrap_parens with_parens ("fancy.mulhh 2^" ++ decimal_string_of_Z log2wordmax)
-               | ident.fancy_rshi log2wordmax x
-                 => maybe_wrap_parens with_parens ("fancy.rshi 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ decimal_string_of_Z x)
-               | ident.fancy_selc => "fancy.selc"
-               | ident.fancy_selm log2wordmax
-                 => maybe_wrap_parens with_parens ("fancy.selm 2^" ++ decimal_string_of_Z log2wordmax)
-               | ident.fancy_sell => "fancy.sell"
-               | ident.fancy_addm => "fancy.addm"
-               end.
+                | ident.Literal base.type.Z v => show_compact_Z with_parens v
+                | ident.Literal t v => show with_parens v
+                | ident.Nat_succ => "Nat.succ"
+                | ident.Nat_pred => "Nat.pred"
+                | ident.Nat_max => "Nat.max"
+                | ident.Nat_mul => "Nat.mul"
+                | ident.Nat_add => "Nat.add"
+                | ident.Nat_sub => "Nat.sub"
+                | ident.nil t => "[]"
+                | ident.cons t => "(::)"
+                | ident.pair A B => "(,)"
+                | ident.fst A B => "fst"
+                | ident.snd A B => "snd"
+                | ident.pair_rect A B T => "pair_rect"
+                | ident.bool_rect T => "bool_rect"
+                | ident.nat_rect P => "nat_rect"
+                | ident.list_rect A P => "list_rect"
+                | ident.list_case A P => "list_case"
+                | ident.List_length T => "length"
+                | ident.List_seq => "seq"
+                | ident.List_repeat A => "repeat"
+                | ident.List_combine A B => "combine"
+                | ident.List_map A B => "map"
+                | ident.List_app A => "(++)"
+                | ident.List_rev A => "rev"
+                | ident.List_flat_map A B => "flat_map"
+                | ident.List_partition A => "partition"
+                | ident.List_fold_right A B => "fold_right"
+                | ident.List_update_nth T => "update_nth"
+                | ident.List_nth_default T => "nth"
+                | ident.Z_add => "(+)"
+                | ident.Z_mul => "( * )"
+                | ident.Z_pow => "(^)"
+                | ident.Z_sub => "(-)"
+                | ident.Z_opp => "-"
+                | ident.Z_div => "(/)"
+                | ident.Z_modulo => "(mod)"
+                | ident.Z_eqb => "(=)"
+                | ident.Z_leb => "(≤)"
+                | ident.Z_of_nat => "(ℕ→ℤ)"
+                | ident.Z_shiftr offset => "(>> " ++ decimal_string_of_Z offset ++ ")"
+                | ident.Z_shiftl offset => "(<< " ++ decimal_string_of_Z offset ++ ")"
+                | ident.Z_land mask => "(& " ++ HexString.of_Z mask ++ ")"
+                | ident.Z_mul_split => "Z.mul_split"
+                | ident.Z_mul_split_concrete s => maybe_wrap_parens with_parens ("Z.mul_split " ++ bitwidth_to_string s)
+                | ident.Z_add_get_carry => "Z.add_get_carry"
+                | ident.Z_add_get_carry_concrete s => maybe_wrap_parens with_parens ("Z.add_get_carry " ++ bitwidth_to_string s)
+                | ident.Z_add_with_carry => "Z.add_with_carry"
+                | ident.Z_add_with_get_carry => "Z.add_with_get_carry"
+                | ident.Z_add_with_get_carry_concrete s => maybe_wrap_parens with_parens ("Z.add_with_get_carry " ++ bitwidth_to_string s)
+                | ident.Z_sub_get_borrow => "Z.sub_get_borrow"
+                | ident.Z_sub_get_borrow_concrete s => maybe_wrap_parens with_parens ("Z.sub_get_borrow " ++ bitwidth_to_string s)
+                | ident.Z_sub_with_get_borrow => "Z.sub_with_get_borrow"
+                | ident.Z_sub_with_get_borrow_concrete s => maybe_wrap_parens with_parens ("Z.sub_with_get_borrow " ++ bitwidth_to_string s)
+                | ident.Z_zselect => "Z.zselect"
+                | ident.Z_add_modulo => "Z.add_modulo"
+                | ident.Z_rshi => "Z.rshi"
+                | ident.Z_rshi_concrete s offset => maybe_wrap_parens with_parens ("Z.rshi " ++ bitwidth_to_string s ++ " " ++ decimal_string_of_Z offset)
+                | ident.Z_cc_m => "Z.cc_m"
+                | ident.Z_cc_m_concrete s => maybe_wrap_parens with_parens ("Z.cc_m " ++ bitwidth_to_string s)
+                | ident.Z_neg_snd => "Z.neg_snd"
+                | ident.Z_cast range => "(" ++ show_range_or_ctype range ++ ")"
+                | ident.Z_cast2 (r1, r2) => "(" ++ show_range_or_ctype r1 ++ ", " ++ show_range_or_ctype r2 ++ ")"
+                | ident.fancy_add log2wordmax imm
+                  => maybe_wrap_parens with_parens ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
+                | ident.fancy_addc log2wordmax imm
+                  => maybe_wrap_parens with_parens ("fancy.addc 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
+                | ident.fancy_sub log2wordmax imm
+                  => maybe_wrap_parens with_parens ("fancy.sub 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
+                | ident.fancy_subb log2wordmax imm
+                  => maybe_wrap_parens with_parens ("fancy.subb 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
+                | ident.fancy_mulll log2wordmax
+                  => maybe_wrap_parens with_parens ("fancy.mulll 2^" ++ decimal_string_of_Z log2wordmax)
+                | ident.fancy_mullh log2wordmax
+                  => maybe_wrap_parens with_parens ("fancy.mullh 2^" ++ decimal_string_of_Z log2wordmax)
+                | ident.fancy_mulhl log2wordmax
+                  => maybe_wrap_parens with_parens ("fancy.mulhl 2^" ++ decimal_string_of_Z log2wordmax)
+                | ident.fancy_mulhh log2wordmax
+                  => maybe_wrap_parens with_parens ("fancy.mulhh 2^" ++ decimal_string_of_Z log2wordmax)
+                | ident.fancy_rshi log2wordmax x
+                  => maybe_wrap_parens with_parens ("fancy.rshi 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ decimal_string_of_Z x)
+                | ident.fancy_selc => "fancy.selc"
+                | ident.fancy_selm log2wordmax
+                  => maybe_wrap_parens with_parens ("fancy.selm 2^" ++ decimal_string_of_Z log2wordmax)
+                | ident.fancy_sell => "fancy.sell"
+                | ident.fancy_addm => "fancy.addm"
+                end.
       End ident.
-
-      Local Notation NewLine := (String "010" "") (only parsing).
 
       Module expr.
         Section with_base_type.
@@ -223,7 +240,7 @@ Module Compilers.
           Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base_type ident t)
             := fun with_parens e => show_lines with_parens (e _).
           Global Instance show_expr {t} : Show (@expr.expr base_type ident (fun _ => string) t)
-            := fun with_parens e => String.concat NewLine (snd (@show_expr_lines t e 1%positive with_parens)).
+            := fun with_parens e => String.concat String.NewLine (snd (@show_expr_lines t e 1%positive with_parens)).
           Global Instance show_Expr {t} : Show (@expr.Expr base_type ident t)
             := fun with_parens e => show with_parens (e _).
         End with_base_type.
@@ -1390,8 +1407,6 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings body)))
               ++ ["}"])%list.
 
-      Local Notation NewLine := (String "010" "") (only parsing).
-
       Definition ToFunctionLines (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
@@ -1403,7 +1418,7 @@ Module Compilers.
 
       Definition LinesToString (lines : list string)
         : string
-        := String.concat NewLine lines.
+        := String.concat String.NewLine lines.
 
       Definition ToFunctionString (name : string)
                  {t}
