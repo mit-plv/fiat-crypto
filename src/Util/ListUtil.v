@@ -1201,6 +1201,14 @@ Proof.
       rewrite Nat.add_succ_r; reflexivity. }
 Qed.
 
+Lemma seq_len_0 a : seq a 0 = nil. Proof. reflexivity. Qed.
+Lemma seq_add start a b : seq start (a + b) = seq start a ++ seq (start + a) b.
+Proof.
+  revert start b; induction a as [|a IHa]; cbn; intros start b.
+  { f_equal; omega. }
+  { rewrite IHa; do 3 f_equal; omega. }
+Qed.
+
 Lemma fold_right_and_True_forall_In_iff : forall {T} (l : list T) (P : T -> Prop),
   (forall x, In x l -> P x) <-> fold_right and True (map P l).
 Proof.
