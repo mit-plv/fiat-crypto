@@ -659,7 +659,7 @@ Module Compilers.
                => fun rout '(e, r)
                  => let rin := option_map integer_promote_type r in
                    let '(e', rin') := cast_up_if_needed rout (e, rin) in
-                   Some (cast_down_if_needed rout (Z_shiftr offset @@ e', rin'))
+                   Some (cast_down_if_needed rout (Z_shiftl offset @@ e', rin'))
              | ident.Z_land mask
                => fun rout '(e, r)
                  => Some (cast_down_if_needed
