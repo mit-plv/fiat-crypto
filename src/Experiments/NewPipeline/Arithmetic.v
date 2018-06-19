@@ -1615,8 +1615,10 @@ Module Rows.
       (* TODO: Although cleaner, using Positional.negate snd inserts
       dlets which prevent add-opp=>sub transformation in partial
       evaluation. Should probably either make partial evaluation
-      handle that or remove the dlet in
-      Positional.from_associational. *)
+      handle that or remove the dlet in Positional.from_associational.
+
+      NOTE(from jgross): I think partial evaluation now handles that
+      fine; we should check this. *)
       Definition sub n p q := flatten n [p; map (fun x => dlet y := x in Z.opp y) q].
 
       Hint Rewrite eval_cons eval_nil using solve [auto] : push_eval.
