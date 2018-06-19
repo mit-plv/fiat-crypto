@@ -39,7 +39,7 @@ static void fiat_25519_addcarryx_u26(uint32_t* out1, fiat_25519_uint1* out2, fia
  */
 static void fiat_25519_subborrowx_u26(uint32_t* out1, fiat_25519_uint1* out2, fiat_25519_uint1 arg1, uint32_t arg2, uint32_t arg3) {
   int32_t x1 = ((int32_t)(arg2 - arg1) - (int32_t)arg3);
-  fiat_25519_int1 x2 = (fiat_25519_int1)(x1 >> 26);
+  fiat_25519_int1 x2 = (fiat_25519_int1)((uint32_t)x1 >> 26);
   uint32_t x3 = (x1 & UINT32_C(0x3ffffff));
   *out1 = x3;
   *out2 = (fiat_25519_uint1)(0x0 - x2);
@@ -73,7 +73,7 @@ static void fiat_25519_addcarryx_u25(uint32_t* out1, fiat_25519_uint1* out2, fia
  */
 static void fiat_25519_subborrowx_u25(uint32_t* out1, fiat_25519_uint1* out2, fiat_25519_uint1 arg1, uint32_t arg2, uint32_t arg3) {
   int32_t x1 = ((int32_t)(arg2 - arg1) - (int32_t)arg3);
-  fiat_25519_int1 x2 = (fiat_25519_int1)(x1 >> 25);
+  fiat_25519_int1 x2 = (fiat_25519_int1)((uint32_t)x1 >> 25);
   uint32_t x3 = (x1 & UINT32_C(0x1ffffff));
   *out1 = x3;
   *out2 = (fiat_25519_uint1)(0x0 - x2);

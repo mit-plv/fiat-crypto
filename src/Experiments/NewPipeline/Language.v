@@ -524,10 +524,17 @@ Module Compilers.
         | match ?x with nil => ?N | cons a b => @?C a b end
           => let T := type of term in
              reify_rec (@list_case _ (fun _ => T) N C x)
-        | let x := ?a in @?b x
+        | let x := ?a in ?b
           => let A := type of a in
-             let B := lazymatch type of b with forall x, @?B x => B end in
-             reify_rec (b a) (*(@Let_In A B a b)*)
+             let T := type of term in
+             let rec_val := match constr:(Set) with
+                            | _ => let v := constr:((fun x : A => b) a) in
+                                   let __ := type of v in (* ensure that the abstraction is well-typed, i.e., that we're not relying on the value of the let to well-type the body *)
+                                   v
+                            | _ => constr:(match a return T with x => b end) (* if we do rely on the body of [x] to well-type [b], then just inline it *)
+                            end in
+             (*let B := lazymatch type of b with forall x, @?B x => B end in*)
+             reify_rec rec_val (*(@Let_In A B a b)*)
         | @Let_In ?A ?B ?a ?b
           => let ra := reify_rec a in
              let rb := reify_rec b in
@@ -1047,36 +1054,60 @@ Module Compilers.
           => let rA := base.reify A in
              let rB := base.reify B in
              then_tac (@ident.pair rA rB)
-        | @Datatypes.bool_rect (fun _ => ?T) ?Ptrue ?Pfalse
-          => reify_rec (@Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
+        | @Datatypes.bool_rect ?T0 ?Ptrue ?Pfalse
+          => lazymatch (eval cbv beta in T0) with
+            | fun _ => ?T => reify_rec (@Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
+            | T0 => else_tac ()
+            | ?T' => reify_rec (@Datatypes.bool_rect T' Ptrue Pfalse)
+            end
         | @Thunked.bool_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.bool_rect rT)
-        | @Datatypes.prod_rect ?A ?B (fun _ => ?T)
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             let rT := base.reify T in
-             then_tac (@ident.prod_rect rA rB rT)
-        | @Datatypes.nat_rect (fun _ => ?T) ?P0
-          => lazymatch T with
-             | _ -> _ => else_tac ()
-             | _ => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+        | @Datatypes.prod_rect ?A ?B ?T0
+          => lazymatch (eval cbv beta in T0) with
+            | fun _ => ?T
+              => let rA := base.reify A in
+                let rB := base.reify B in
+                let rT := base.reify T in
+                then_tac (@ident.prod_rect rA rB rT)
+            | T0 => else_tac ()
+            | ?T' => reify_rec (@Datatypes.prod_rect A B T')
+            end
+        | @Datatypes.nat_rect ?T0 ?P0
+          => lazymatch (eval cbv beta in T0) with
+             | fun _ => _ -> _ => else_tac ()
+             | fun _ => ?T => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+             | T0 => else_tac ()
+             | ?T' => reify_rec (@Datatypes.nat_rect T' P0)
              end
-        | @Datatypes.nat_rect (fun _ => ?P -> ?Q)
-          => let rP := base.reify P in
-             let rQ := base.reify Q in
-             then_tac (@ident.nat_rect_arrow rP rQ)
+        | @Datatypes.nat_rect ?T0
+          => lazymatch (eval cbv beta in T0) with
+            | (fun _ => ?P -> ?Q)
+              => let rP := base.reify P in
+                let rQ := base.reify Q in
+                then_tac (@ident.nat_rect_arrow rP rQ)
+             | T0 => else_tac ()
+             | ?T' => reify_rec (@Datatypes.nat_rect T')
+            end
         | @Thunked.nat_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.nat_rect rT)
-        | @Datatypes.list_rect ?A (fun _ => ?T) ?Pnil
-          => reify_rec (@Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
+        | @Datatypes.list_rect ?A ?T0 ?Pnil
+          => lazymatch (eval cbv beta in T0) with
+            | fun _ => ?T => reify_rec (@Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
+            | T0 => else_tac ()
+            | ?T' => reify_rec (@Datatypes.list_rect A T' Pnil)
+            end
         | @Thunked.list_rect ?A ?T
           => let rA := base.reify A in
              let rT := base.reify T in
              then_tac (@ident.list_rect rA rT)
-        | @ListUtil.list_case ?A (fun _ => ?T) ?Pnil
-          => reify_rec (@Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
+        | @ListUtil.list_case ?A ?T0 ?Pnil
+          => lazymatch (eval cbv beta in T0) with
+            | fun _ => ?T => reify_rec (@Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
+            | T0 => else_tac ()
+            | ?T' => reify_rec (@ListUtil.list_case A T' Pnil)
+            end
         | @Thunked.list_case ?A ?T
           => let rA := base.reify A in
              let rT := base.reify T in

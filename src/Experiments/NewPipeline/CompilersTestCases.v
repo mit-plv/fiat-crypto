@@ -43,21 +43,21 @@ Module testrewrite.
   Import expr.
   Import ident.
 
-  Eval compute in RewriteRules.Rewrite (fun var =>
+  Eval compute in RewriteRules.RewriteNBE (fun var =>
                           (#ident.fst @ (expr_let x := ##10 in ($x, $x)))%expr).
 
   Notation "x + y" := (@expr.Ident base.type ident _ _ ident.Z_add @ x @ y)%expr : expr_scope.
 
-  Eval compute in RewriteRules.Rewrite (fun var =>
+  Eval compute in RewriteRules.RewriteNBE (fun var =>
                           ((\ x , expr_let y := ##5 in #ident.fst @ $x + (#ident.fst @ $x + ($y + $y)))
                              @ (##1, ##1))%expr).
 
-  Eval compute in RewriteRules.Rewrite (fun var =>
+  Eval compute in RewriteRules.RewriteNBE (fun var =>
                           ((\ x , expr_let y := ##5 in $y + ($y + (#ident.fst @ $x + #ident.snd @ $x)))
                              @ (##1, ##7))%expr).
 
 
-  Eval cbv in partial.eval_with_bound (RewriteRules.Rewrite (fun var =>
+  Eval cbv in partial.eval_with_bound (RewriteRules.RewriteNBE (fun var =>
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr) _)
                 (Some r[0~>100]%zrange, tt).

@@ -102,6 +102,15 @@ Module UnsaturatedSolinas.
          raise_failure.
 End UnsaturatedSolinas.
 
+Module WordByWordMontgomery.
+  Definition main : unit
+    := let argv := List.map string_to_Coq_string sys_argv in
+       ForExtraction.WordByWordMontgomery.PipelineMain
+         argv
+         printf_list_string
+         raise_failure.
+End WordByWordMontgomery.
+
 Module SaturatedSolinas.
   Definition main : unit
     := let argv := List.map string_to_Coq_string sys_argv in

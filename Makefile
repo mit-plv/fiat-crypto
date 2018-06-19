@@ -466,7 +466,8 @@ build-selected-bench: $(SELECTED_MEASURE_BINARIES)
 
 STANDALONE := \
 	unsaturated_solinas \
-	saturated_solinas
+	saturated_solinas \
+	word_by_word_montgomery
 
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%.ml) : %.ml : %.v src/Experiments/NewPipeline/StandaloneOCamlMain.vo
 	$(SHOW)'COQC $< > $@'
@@ -490,18 +491,26 @@ standalone-haskell: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell
 standalone-ocaml: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%)
 
 UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c
+WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
+WORD_BY_WORD_MONTGOMERY := src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery
 .PHONY: c-files
-c-files: $(UNSATURATED_SOLINAS_C_FILES)
+c-files: $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
 
 $(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS)
+
+$(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY)
 
 curve25519_64.c:
 	$(UNSATURATED_SOLINAS) '25519' '5' '2^255' '1,19' '64' $(FUNCTIONS_FOR_25519) > $@
 
 curve25519_32.c:
 	$(UNSATURATED_SOLINAS) '25519' '10' '2^255' '1,19' '32' $(FUNCTIONS_FOR_25519) > $@
+
+# 2^256 - 2^224 + 2^192 + 2^96 - 1
+p256_64.c p256_32.c : p256_%.c :
+	$(WORD_BY_WORD_MONTGOMERY) 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '$*' > $@
 
 clean::
 	rm -f Makefile.coq remake_curves.log src/Specific/.autgenerated-deps

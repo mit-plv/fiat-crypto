@@ -49,6 +49,18 @@ Module UnsaturatedSolinas.
               (fun err => raise_failure _ (String.concat String.NewLine err))).
 End UnsaturatedSolinas.
 
+Module WordByWordMontgomery.
+  Definition main : IO_unit
+    := cast_io
+         (argv <- getArgs;
+            prog <- getProgName;
+            ForExtraction.WordByWordMontgomery.PipelineMain
+              (prog::argv)
+              (fun res => printf_string
+                         (String.concat "" res))
+              (fun err => raise_failure _ (String.concat String.NewLine err))).
+End WordByWordMontgomery.
+
 Module SaturatedSolinas.
   Definition main : IO_unit
     := cast_io
