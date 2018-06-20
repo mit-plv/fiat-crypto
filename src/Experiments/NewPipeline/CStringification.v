@@ -137,27 +137,191 @@ Module Compilers.
         Global Instance show {base_type} {S : Show base_type} : Show (type.type base_type) := show_type.
       End type.
 
+      Definition bitwidth_to_string (v : Z) : string
+        := (if v =? 2^Z.log2 v then "2^" ++ decimal_string_of_Z (Z.log2 v) else HexString.of_Z v).
+      Definition show_range_or_ctype (v : zrange) : string
+        := if (v.(lower) =? 0) && (v.(upper) =? 2^(Z.log2 (v.(upper) + 1)) - 1)
+           then ("uint" ++ decimal_string_of_Z (Z.log2 (v.(upper) + 1)) ++ "_t")%string
+           else let lg2 := 1 + Z.log2 (-v.(lower)) in
+                if (v.(lower) =? -2^(lg2-1)) && (v.(upper) =? 2^(lg2-1)-1)
+                then ("int" ++ decimal_string_of_Z lg2 ++ "_t")%string
+                else show false v.
+      Definition show_compact_Z (with_parens : bool) (v : Z) : string
+        := let is_neg := v <? 0 in
+           (if is_neg then "-" else "")
+             ++ (let v := Z.abs v in
+                 (if v <=? 2^8
+                  then decimal_string_of_Z v
+                  else if v =? 2^(Z.log2 v)
+                       then "2^" ++ (decimal_string_of_Z (Z.log2 v))
+                       else if v =? 2^(Z.log2_up v) - 1
+                            then maybe_wrap_parens is_neg ("2^" ++ (decimal_string_of_Z (Z.log2_up v)) ++ "-1")
+                            else Hex.show_Z with_parens v)).
+
+      Fixpoint make_castb {t} : ZRange.type.base.option.interp t -> option string
+        := match t with
+           | base.type.Z => option_map show_range_or_ctype
+           | base.type.type_base t => fun _ => None
+           | base.type.prod A B
+             => fun '(r1, r2)
+                => match @make_castb A r1, @make_castb B r2 with
+                   | Some c1, Some c2 => Some (c1 ++ ", " ++ c2)
+                   | None, Some c => Some ("??, " ++ c)
+                   | Some c, None => Some (c ++ ", ??")
+                   | None, None => None
+                   end
+           | base.type.list A => fun _ => None
+           end.
+      Fixpoint make_cast {t} : ZRange.type.option.interp t -> option string
+        := match t with
+           | type.base t => @make_castb t
+           | type.arrow _ _ => fun _ => None
+           end.
+
+      Definition maybe_wrap_cast (with_cast : bool) {t} (xr : (nat -> string) * ZRange.type.option.interp t) (lvl : nat) : string
+        := match with_cast, make_cast (snd xr) with
+           | true, Some c => "(" ++ c ++ ")" ++ fst xr 10%nat
+           | _, _ => fst xr lvl
+           end.
+
+      Fixpoint show_application (with_casts : bool) {t : type} (f : nat -> string) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t)
+        : nat -> string
+        := match t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> nat -> string with
+           | type.base _ => fun 'tt lvl => f lvl
+           | type.arrow s d
+             => fun '(x, xs) lvl
+                => @show_application
+                     with_casts d
+                     (fun lvl'
+                      => maybe_wrap_parens (Nat.ltb lvl' 11) (f 11%nat ++ " @ " ++ maybe_wrap_cast with_casts x 10%nat))
+                     xs
+                     lvl
+           end args.
+
       Module ident.
-        Definition bitwidth_to_string (v : Z) : string
-          := (if v =? 2^Z.log2 v then "2^" ++ decimal_string_of_Z (Z.log2 v) else HexString.of_Z v).
-        Definition show_range_or_ctype (v : zrange) : string
-          := if (v.(lower) =? 0) && (v.(upper) =? 2^(Z.log2 (v.(upper) + 1)) - 1)
-             then ("uint" ++ decimal_string_of_Z (Z.log2 (v.(upper) + 1)) ++ "_t")%string
-             else let lg2 := 1 + Z.log2 (-v.(lower)) in
-                  if (v.(lower) =? -2^(lg2-1)) && (v.(upper) =? 2^(lg2-1)-1)
-                  then ("int" ++ decimal_string_of_Z lg2 ++ "_t")%string
-                  else show false v.
-        Definition show_compact_Z (with_parens : bool) (v : Z) : string
-          := let is_neg := v <? 0 in
-             (if is_neg then "-" else "")
-               ++ (let v := Z.abs v in
-                   (if v <=? 2^8
-                    then decimal_string_of_Z v
-                    else if v =? 2^(Z.log2 v)
-                         then "2^" ++ (decimal_string_of_Z (Z.log2 v))
-                         else if v =? 2^(Z.log2_up v) - 1
-                              then maybe_wrap_parens is_neg ("2^" ++ (decimal_string_of_Z (Z.log2_up v)) ++ "-1")
-                              else Hex.show_Z with_parens v)).
+        Definition show_ident_lvl (with_casts : bool) {t} (idc : ident.ident t)
+          : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t)
+          := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
+             | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
+             | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
+             | ident.Nat_succ => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".+1"), ZRange.type.base.option.None)
+             | ident.Nat_pred => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".-1"), ZRange.type.base.option.None)
+             | ident.Nat_max => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ("Nat.max " ++ x 9%nat ++ " " ++ y 9%nat), ZRange.type.base.option.None)
+             | ident.Nat_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " *ℕ " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " +ℕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " -ℕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
+             | ident.cons t => fun '(x, ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (maybe_wrap_cast with_casts x 59%nat ++ " :: " ++ y 60%nat), ZRange.type.base.option.None)
+             | ident.pair A B => fun '(x, (y, tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts x 201%nat ++ ", " ++ maybe_wrap_cast with_casts y 200%nat), ZRange.type.base.option.None)
+             | ident.fst A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₁", fst xr)
+             | ident.snd A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₂", snd xr)
+             | ident.prod_rect A B T => fun '((f, fr), ((p, pr), tt)) => (fun _ => "match " ++ p 200%nat ++ " with " ++ f 200%nat ++ " end", ZRange.type.base.option.None)
+             | ident.bool_rect T => fun '(t, (f, ((b, br), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 200) ("if " ++ b 200%nat ++ " then " ++ maybe_wrap_cast with_casts t 200%nat ++ " else " ++ maybe_wrap_cast with_casts f 200%nat), ZRange.type.base.option.None)
+             | ident.nat_rect P
+               => fun args => (show_application with_casts (fun _ => "nat_rect") args, ZRange.type.base.option.None)
+             | ident.list_rect A P
+               => fun args => (show_application with_casts (fun _ => "list_rect") args, ZRange.type.base.option.None)
+             | ident.list_case A P
+               => fun args => (show_application with_casts (fun _ => "list_case") args, ZRange.type.base.option.None)
+             | ident.List_length T
+               => fun args => (show_application with_casts (fun _ => "len") args, ZRange.type.base.option.None)
+             | ident.List_seq
+               => fun args => (show_application with_casts (fun _ => "seq") args, ZRange.type.base.option.None)
+             | ident.List_repeat A
+               => fun args => (show_application with_casts (fun _ => "repeat") args, ZRange.type.base.option.None)
+             | ident.List_combine A B
+               => fun args => (show_application with_casts (fun _ => "combine") args, ZRange.type.base.option.None)
+             | ident.List_map A B
+               => fun args => (show_application with_casts (fun _ => "map") args, ZRange.type.base.option.None)
+             | ident.List_app A
+               => fun '((xs, xsr), ((ys, ysr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (xs 59%nat ++ " ++ " ++ ys 60%nat), ZRange.type.base.option.None)
+             | ident.List_rev A
+               => fun args => (show_application with_casts (fun _ => "rev") args, ZRange.type.base.option.None)
+             | ident.List_flat_map A B
+               => fun args => (show_application with_casts (fun _ => "flat_map") args, ZRange.type.base.option.None)
+             | ident.List_partition A
+               => fun args => (show_application with_casts (fun _ => "partition") args, ZRange.type.base.option.None)
+             | ident.List_fold_right A B
+               => fun args => (show_application with_casts (fun _ => "fold_right") args, ZRange.type.base.option.None)
+             | ident.List_update_nth T
+               => fun args => (show_application with_casts (fun _ => "update_nth") args, ZRange.type.base.option.None)
+             | ident.List_nth_default T
+               => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[" ++ i 200%nat ++ "]"), ZRange.type.base.option.None)
+             | ident.Z_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " * " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Z_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " + " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " - " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_pow => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " ^ " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_opp => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 35) ("-" ++ x 35%nat), ZRange.type.base.option.None)
+             | ident.Z_bneg => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("!" ++ x 75%nat), ZRange.type.base.option.None)
+             | ident.Z_lnot_modulo => fun '((x, xr), ((m, mr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("~" ++ x 75%nat ++ (if with_casts then " (mod " ++ m 200%nat ++ ")" else "")), ZRange.type.base.option.None)
+             | ident.Z_div => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " / " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Z_modulo => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " mod " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Z_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " = " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_leb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≤ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_geb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≥ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_log2
+               => fun args => (show_application with_casts (fun _ => "Z.log2") args, ZRange.type.base.option.None)
+             | ident.Z_log2_up
+               => fun args => (show_application with_casts (fun _ => "Z.log2_up") args, ZRange.type.base.option.None)
+             | ident.Z_of_nat
+               => fun args => (show_application with_casts (fun _ => "(ℕ→ℤ)") args, ZRange.type.base.option.None)
+             | ident.Z_to_nat
+               => fun args => (show_application with_casts (fun _ => "(ℤ→ℕ)") args, ZRange.type.base.option.None)
+             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " & " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " | " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_mul_split
+               => fun args => (show_application with_casts (fun _ => "Z.mul_split") args, ZRange.type.base.option.None)
+             | ident.Z_add_get_carry
+               => fun args => (show_application with_casts (fun _ => "Z.add_get_carry") args, ZRange.type.base.option.None)
+             | ident.Z_add_with_carry
+               => fun args => (show_application with_casts (fun _ => "Z.add_with_carry") args, ZRange.type.base.option.None)
+             | ident.Z_add_with_get_carry
+               => fun args => (show_application with_casts (fun _ => "Z.add_with_get_carry") args, ZRange.type.base.option.None)
+             | ident.Z_sub_get_borrow
+               => fun args => (show_application with_casts (fun _ => "Z.sub_get_borrow") args, ZRange.type.base.option.None)
+             | ident.Z_sub_with_get_borrow
+               => fun args => (show_application with_casts (fun _ => "Z.sub_with_get_borrow") args, ZRange.type.base.option.None)
+             | ident.Z_zselect
+               => fun args => (show_application with_casts (fun _ => "Z.zselect") args, ZRange.type.base.option.None)
+             | ident.Z_add_modulo
+               => fun args => (show_application with_casts (fun _ => "Z.add_modulo") args, ZRange.type.base.option.None)
+             | ident.Z_rshi
+               => fun args => (show_application with_casts (fun _ => "Z.rshi") args, ZRange.type.base.option.None)
+             | ident.Z_cc_m
+               => fun args => (show_application with_casts (fun _ => "Z.cc_m") args, ZRange.type.base.option.None)
+             | ident.Z_cast range
+               => fun '((x, xr), tt) => (x, Some range)
+             | ident.Z_cast2 (r1, r2)
+               => fun '((x, xr), tt) => (x, (Some r1, Some r2))
+             | ident.fancy_add log2wordmax imm
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
+             | ident.fancy_addc log2wordmax imm
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.addc 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
+             | ident.fancy_sub log2wordmax imm
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.sub 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
+             | ident.fancy_subb log2wordmax imm
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.subb 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
+             | ident.fancy_mulll log2wordmax
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mulll 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
+             | ident.fancy_mullh log2wordmax
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mullh 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
+             | ident.fancy_mulhl log2wordmax
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mulhl 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
+             | ident.fancy_mulhh log2wordmax
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mulhh 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
+             | ident.fancy_rshi log2wordmax x
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.rshi 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ decimal_string_of_Z x)) args, ZRange.type.base.option.None)
+             | ident.fancy_selc
+               => fun args => (show_application with_casts (fun _ => "fancy.selc") args, ZRange.type.base.option.None)
+             | ident.fancy_selm log2wordmax
+               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.selm 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
+             | ident.fancy_sell
+               => fun args => (show_application with_casts (fun _ => "fancy.sell") args, ZRange.type.base.option.None)
+             | ident.fancy_addm
+               => fun args => (show_application with_casts (fun _ => "fancy.addm") args, ZRange.type.base.option.None)
+             end.
         Global Instance show_ident {t} : Show (ident.ident t)
           := fun with_parens idc
              => match idc with
@@ -250,74 +414,162 @@ Module Compilers.
       End ident.
 
       Module expr.
-        Section with_base_type.
-          Context {base_type} {ident : type.type base_type -> Type}
-                  {show_base_type : Show base_type}
-                  {show_ident : forall t, Show (ident t)}.
-          Fixpoint show_expr_lines {t} (e : @expr.expr base_type ident (fun _ => string) t) (idx : positive) (with_parens : bool) : positive * list string
-            := match e with
-               | expr.Ident t idc
-                 => (idx, [show with_parens idc])
-               | expr.Var t v
-                 => (idx, [v])
+        Local Notation show_ident := ident.show_ident.
+        Local Notation show_ident_lvl := ident.show_ident_lvl.
+        Fixpoint get_eta_cps_args {A} (t : type) (idx : positive) {struct t}
+          : (type.for_each_lhs_of_arrow (fun y => (nat -> string) * ZRange.type.option.interp y)%type t -> positive -> A) -> list string * A
+          := match t with
+             | type.arrow s d
+               => fun k
+                  => let n := "x" ++ decimal_string_of_pos idx in
+                     let '(args, show_f) := @get_eta_cps_args A d (Pos.succ idx) (fun arglist => k (((fun _ => n), ZRange.type.option.None), arglist)) in
+                     (n :: args, show_f)
+             | type.base _
+               => fun k => (nil, k tt idx)
+             end.
+        Section helper.
+          Context (k : forall t, @expr.expr base.type ident (fun _ => string) t -> type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> positive -> (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)).
+          Fixpoint show_eta_abs_cps' {t} (idx : positive) (e : @expr.expr base.type ident (fun _ => string) t)
+            : (positive * (list string * (nat -> list string))) * ZRange.type.base.option.interp (type.final_codomain t)
+            := match e in expr.expr t return (unit -> _ * ZRange.type.base.option.interp (type.final_codomain t)) -> _ * ZRange.type.base.option.interp (type.final_codomain t) with
                | expr.Abs s d f
-                 => (idx,
-                    let n := "x" ++ decimal_string_of_pos idx in
-                    let '(_, show_f) := @show_expr_lines _ (f n) (Pos.succ idx) false in
-                    match show_f with
-                    | nil => ["(λ " ++ n ++ ", (* NOTHING‽ *))"]%string
-                    | show_f::nil
-                      => ["(λ " ++ n ++ ", " ++ show_f ++ ")"]%string
-                    | show_f
-                      => ["(λ " ++ n ++ ","]%string ++ (List.map (String " ") show_f) ++ [")"]
-                    end%list)
-               | expr.App s d f x
-                 => let '(idx, show_f) := @show_expr_lines _ f idx false in
-                   let '(idx, show_x) := @show_expr_lines _ x idx true in
-                   (idx, match show_f, show_x with
-                         | [show_f], [show_x] => [maybe_wrap_parens with_parens (show_f ++ " @ " ++ show_x)]
-                         | _, _ => ["("] ++ show_f ++ [") @ ("] ++ show_x ++ [")"]
-                         end%list)
-               | expr.LetIn A B x f
-                 => let n := "x" ++ decimal_string_of_pos idx in
-                   let '(_, show_x) := @show_expr_lines _ x idx false in
-                   let '(idx, show_f) := @show_expr_lines _ (f n) (Pos.succ idx) false in
-                   let expr_let_line := "expr_let " ++ n ++ " := " in
-                   (idx,
-                    match show_x with
-                    | nil => [expr_let_line ++ "(* NOTHING‽ *) in"]%string ++ show_f
-                    | show_x::nil => [expr_let_line ++ show_x ++ " in"]%string ++ show_f
-                    | show_x::rest
-                      => ([expr_let_line ++ show_x]%string)
-                          ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
-                                       rest)
-                          ++ ["in"]
-                          ++ show_f
-                    end%list)
-               end.
-          Fixpoint show_var_expr {var t} (with_parens : bool) (e : @expr.expr base_type ident var t) : string
-            := match e with
-               | expr.Ident t idc => show with_parens idc
-               | expr.Var t v => maybe_wrap_parens with_parens ("VAR_(" ++ show false t ++ ")")
-               | expr.Abs s d f => "λ_(" ++ show false t ++ ")"
-               | expr.App s d f x
-                 => let show_f := @show_var_expr _ _ false f in
-                    let show_x := @show_var_expr _ _ true x in
-                    maybe_wrap_parens with_parens (show_f ++ " @ " ++ show_x)
-               | expr.LetIn A B x f
-                 => let show_x := @show_var_expr _ _ false x in
-                    maybe_wrap_parens with_parens ("expr_let _ := " ++ show_x ++ " in _")
-               end%string.
-          Definition partially_show_expr {var t} : Show (@expr.expr base_type ident var t) := show_var_expr.
-          Global Instance show_lines_expr {t} : ShowLines (@expr.expr base_type ident (fun _ => string) t)
-            := fun with_parens e => snd (@show_expr_lines t e 1%positive with_parens).
-          Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base_type ident t)
-            := fun with_parens e => show_lines with_parens (e _).
-          Global Instance show_expr {t} : Show (@expr.expr base_type ident (fun _ => string) t)
-            := fun with_parens e => String.concat String.NewLine (snd (@show_expr_lines t e 1%positive with_parens)).
-          Global Instance show_Expr {t} : Show (@expr.Expr base_type ident t)
-            := fun with_parens e => show with_parens (e _).
-        End with_base_type.
+                 => fun _
+                    => let n := "x" ++ decimal_string_of_pos idx in
+                       let '(_, (args, show_f), r) := @show_eta_abs_cps' d (Pos.succ idx) (f n) in
+                       (idx,
+                        (n :: args, show_f),
+                        r)
+               | _
+                 => fun default
+                    => default tt
+               end (fun _
+                    => let '(args, (idx, show_f, r)) := get_eta_cps_args _ idx (@k _ e) in
+                       ((idx, (args, show_f)), r)).
+          Definition show_eta_abs_cps (with_casts : bool) {t} (idx : positive) (e : @expr.expr base.type ident (fun _ => string) t) (extraargs : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t)
+            : (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
+            := let '(idx, (args, show_f), r) := @show_eta_abs_cps' t idx e in
+               let argstr := String.concat " " args in
+               (idx,
+                fun lvl
+                => match show_f lvl with
+                   | nil => [show_application with_casts (fun _ => "(λ " ++ argstr ++ ", (* NOTHING‽ *))") extraargs 11%nat]%string
+                   | show_f::nil
+                     => [show_application with_casts (fun _ => "(λ " ++ argstr ++ ", " ++ show_f ++ ")") extraargs 11%nat]%string
+                   | show_f
+                     => ["(λ " ++ argstr ++ ","]%string ++ (List.map (fun v => String " " (String " " v)) show_f) ++ [")" ++ show_application with_casts (fun _ => "") extraargs 11%nat]%string
+                   end%list,
+                   r).
+          Definition show_eta_cps {t} (idx : positive) (e : @expr.expr base.type ident (fun _ => string) t)
+            : (positive * (nat -> list string)) * ZRange.type.option.interp t
+            := let '(idx, (args, show_f), r) := @show_eta_abs_cps' t idx e in
+               let argstr := String.concat " " args in
+               (idx,
+                (fun lvl
+                 => match args, show_f lvl with
+                    | nil, show_f => show_f
+                    | _, nil => ["(λ " ++ argstr ++ ", (* NOTHING‽ *))"]%string
+                    | _, show_f::nil
+                      => ["(λ " ++ argstr ++ ", " ++ show_f ++ ")"]%string
+                    | _, show_f
+                      => ["(λ " ++ argstr ++ ","]%string ++ (List.map (fun v => String " " (String " " v)) show_f) ++ [")"]
+                    end%list),
+                match t return ZRange.type.base.option.interp (type.final_codomain t) -> ZRange.type.option.interp t with
+                | type.base _ => fun r => r
+                | type.arrow _ _ => fun _ => ZRange.type.option.None
+                end r).
+        End helper.
+
+        Fixpoint show_expr_lines (with_casts : bool) {t} (e : @expr.expr base.type ident (fun _ => string) t) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t) (idx : positive) {struct e} : (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
+          := match e in expr.expr t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t) with
+             | expr.Ident t idc
+               => fun args => let '(v, r) := @show_ident_lvl with_casts t idc args in
+                              (idx, fun lvl => [v lvl], r)
+             | expr.Var t v
+               => fun args => (idx, fun lvl => [show_application with_casts (fun _ => v) args lvl], ZRange.type.base.option.None)
+             | expr.Abs s d f as e
+               => fun args
+                  => show_eta_abs_cps (fun t e args idx => let '(idx, v, r) := @show_expr_lines with_casts t e args idx in (idx, fun _ => v 200%nat, r)) with_casts idx e args
+             | expr.App s d f x
+               => fun args
+                  => let '(idx', x', xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
+                     @show_expr_lines
+                       with_casts _ f
+                       (((fun lvl => String.concat String.NewLine (x' lvl)), xr),
+                        args)
+                       idx
+             | expr.LetIn A (type.base B) x f
+               => fun 'tt
+                  => let n := "x" ++ decimal_string_of_pos idx in
+                     let '(_, show_x, xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
+                     let '(idx, show_f, fr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) (Pos.succ idx) (f n) in
+                     let ty_str := match make_cast xr with
+                                   | Some c => " : " ++ c
+                                   | None => ""
+                                   end in
+                     let expr_let_line := "expr_let " ++ n ++ ty_str ++ " := " in
+                     (idx,
+                      (fun lvl
+                       => match show_x 200%nat with
+                          | nil => [expr_let_line ++ "(* NOTHING‽ *) in"]%string ++ show_f 200%nat
+                          | show_x::nil => [expr_let_line ++ show_x ++ " in"]%string ++ show_f 200%nat
+                          | show_x::rest
+                            => ([expr_let_line ++ show_x]%string)
+                                 ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
+                                              rest)
+                                 ++ ["in"]
+                                 ++ show_f 200%nat
+                          end%list),
+                      fr)
+             | expr.LetIn A B x f
+               => fun args
+                  => let n := "x" ++ decimal_string_of_pos idx in
+                     let '(_, show_x, xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
+                     let '(idx, show_f, fr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) (Pos.succ idx) (f n) in
+                     let ty_str := match make_cast xr with
+                                   | Some c => " : " ++ c
+                                   | None => ""
+                                   end in
+                     let expr_let_line := "expr_let " ++ n ++ ty_str ++ " := " in
+                     (idx,
+                      (fun lvl
+                       => (["("]
+                             ++ (map
+                                   (String " ")
+                                   match show_x 200%nat with
+                                   | nil => [expr_let_line ++ "(* NOTHING‽ *) in"]%string ++ show_f 200%nat
+                                   | show_x::nil => [expr_let_line ++ show_x ++ " in"]%string ++ show_f 200%nat
+                                   | show_x::rest
+                                     => ([expr_let_line ++ show_x]%string)
+                                          ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
+                                                       rest)
+                                          ++ ["in"]
+                                          ++ show_f 200%nat
+                                   end%list)
+                             ++ [")"; show_application with_casts (fun _ => "") args 11%nat])%list),
+                      ZRange.type.base.option.None)
+             end args.
+        Fixpoint show_var_expr {var t} (with_parens : bool) (e : @expr.expr base.type ident var t) : string
+          := match e with
+             | expr.Ident t idc => show with_parens idc
+             | expr.Var t v => maybe_wrap_parens with_parens ("VAR_(" ++ show false t ++ ")")
+             | expr.Abs s d f => "λ_(" ++ show false t ++ ")"
+             | expr.App s d f x
+               => let show_f := @show_var_expr _ _ false f in
+                  let show_x := @show_var_expr _ _ true x in
+                  maybe_wrap_parens with_parens (show_f ++ " @ " ++ show_x)
+             | expr.LetIn A B x f
+               => let show_x := @show_var_expr _ _ false x in
+                  maybe_wrap_parens with_parens ("expr_let _ := " ++ show_x ++ " in _")
+             end%string.
+        Definition partially_show_expr {var t} : Show (@expr.expr base.type ident var t) := show_var_expr.
+        Global Instance show_lines_expr {t} : ShowLines (@expr.expr base.type ident (fun _ => string) t)
+          := fun with_parens e => let '(_, v, _) := show_eta_cps (fun t e args idx => @show_expr_lines true t e args idx) 1%positive e in v (if with_parens then 0%nat else 201%nat).
+        Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base.type ident t)
+          := fun with_parens e => show_lines with_parens (e _).
+        Global Instance show_expr {t} : Show (@expr.expr base.type ident (fun _ => string) t)
+          := fun with_parens e => String.concat String.NewLine (show_lines with_parens e).
+        Global Instance show_Expr {t} : Show (@expr.Expr base.type ident t)
+          := fun with_parens e => show with_parens (e _).
       End expr.
     End PHOAS.
 
@@ -859,9 +1111,9 @@ Module Compilers.
                              let rin' := Some ty in
                              let '(e, _) := Zcast_up_if_needed rin' (e, r) in
                              ret (cast_down_if_needed rout (cast_up_if_needed rout (Z_lnot ty @@ e, rin')))
-                         | None => inr ["Invalid modulus for Z.lneg (not 2^(2^_)): " ++ show false modulus]%string
+                         | None => inr ["Invalid modulus for Z.lnot (not 2^(2^_)): " ++ show false modulus]%string
                          end
-                     | None => inr ["Invalid non-literal modulus for Z.lneg"]%string
+                     | None => inr ["Invalid non-literal modulus for Z.lnot"]%string
                      end
                | ident.pair A B
                  => fun _ _ _ => inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string
