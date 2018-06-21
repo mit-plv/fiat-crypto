@@ -629,7 +629,14 @@ Module Compilers.
                                                    end in
                                          constr:(I : I)
                                     end in
-                             reify_rec term)
+                             match constr:(Set) with
+                             | _ => reify_rec term
+                             | _ => let __ := match goal with
+                                              | _ => idtac "Error: Failed to reify" term' "via unfolding";
+                                                     fail 2 "Failed to reify" term' "via unfolding"
+                                              end in
+                                    constr:(I : I)
+                             end)
               end)
         end
       end.
@@ -739,7 +746,6 @@ Module Compilers.
       Section with_scope.
         Import base.type.
         Notation type := ttype.
-
         (* N.B. [ident] must have essentially flat structure for the
            python script constructing [pattern.ident] to work *)
         Inductive ident : type -> Type :=
@@ -779,30 +785,29 @@ Module Compilers.
         | Z_opp : ident (Z -> Z)
         | Z_div : ident (Z -> Z -> Z)
         | Z_modulo : ident (Z -> Z -> Z)
+        | Z_log2 : ident (Z -> Z)
+        | Z_log2_up : ident (Z -> Z)
         | Z_eqb : ident (Z -> Z -> bool)
         | Z_leb : ident (Z -> Z -> bool)
+        | Z_geb : ident (Z -> Z -> bool)
         | Z_of_nat : ident (nat -> Z)
-        | Z_shiftr (offset : BinInt.Z) : ident (Z -> Z)
-        | Z_shiftl (offset : BinInt.Z) : ident (Z -> Z)
-        | Z_land (mask : BinInt.Z) : ident (Z -> Z)
+        | Z_to_nat : ident (Z -> nat)
+        | Z_shiftr : ident (Z -> Z -> Z)
+        | Z_shiftl : ident (Z -> Z -> Z)
+        | Z_land : ident (Z -> Z -> Z)
+        | Z_lor : ident (Z -> Z -> Z)
+        | Z_bneg : ident (Z -> Z)
+        | Z_lnot_modulo : ident (Z -> Z -> Z)
         | Z_mul_split : ident (Z -> Z -> Z -> Z * Z)
-        | Z_mul_split_concrete (s:BinInt.Z) : ident (Z -> Z -> Z * Z)
         | Z_add_get_carry : ident (Z -> Z -> Z -> (Z * Z))
-        | Z_add_get_carry_concrete (s:BinInt.Z) : ident (Z -> Z -> (Z * Z))
         | Z_add_with_carry : ident (Z -> Z -> Z -> Z)
         | Z_add_with_get_carry : ident (Z -> Z -> Z -> Z -> (Z * Z))
-        | Z_add_with_get_carry_concrete (s:BinInt.Z) : ident (Z -> Z -> Z -> Z * Z)
         | Z_sub_get_borrow : ident (Z -> Z -> Z -> (Z * Z))
-        | Z_sub_get_borrow_concrete (s:BinInt.Z) : ident (Z -> Z -> Z * Z)
         | Z_sub_with_get_borrow : ident (Z -> Z -> Z -> Z -> (Z * Z))
-        | Z_sub_with_get_borrow_concrete (s:BinInt.Z) : ident (Z -> Z -> Z -> Z * Z)
         | Z_zselect : ident (Z -> Z -> Z -> Z)
         | Z_add_modulo : ident (Z -> Z -> Z -> Z)
         | Z_rshi : ident (Z -> Z -> Z -> Z -> Z)
-        | Z_rshi_concrete (s offset:BinInt.Z) : ident (Z -> Z -> Z)
         | Z_cc_m : ident (Z -> Z -> Z)
-        | Z_cc_m_concrete (s:BinInt.Z) : ident (Z -> Z)
-        | Z_neg_snd : ident ((Z * Z) -> Z * Z) (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template; N.B. the type signature here says "given any amount of information about a thing of type [ℤ * ℤ], we promise to return a concrete pair of some amount of information about a thing of type ℤ and a thing of type ℤ" *)
         | Z_cast (range : zrange) : ident (Z -> Z)
         | Z_cast2 (range : zrange * zrange) : ident ((Z * Z) -> (Z * Z))
         | fancy_add (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z -> Z * Z)
@@ -907,28 +912,27 @@ Module Compilers.
              | Z_modulo => Z.modulo
              | Z_eqb => Z.eqb
              | Z_leb => Z.leb
+             | Z_geb => Z.geb
+             | Z_log2 => Z.log2
+             | Z_log2_up => Z.log2_up
              | Z_of_nat => Z.of_nat
-             | Z_shiftr offset => fun v => Z.shiftr v offset
-             | Z_shiftl offset => fun v => Z.shiftl v offset
-             | Z_land mask => fun v => Z.land v mask
+             | Z_to_nat => Z.to_nat
+             | Z_shiftr => Z.shiftr
+             | Z_shiftl => Z.shiftl
+             | Z_land => Z.land
+             | Z_lor => Z.lor
              | Z_mul_split => Z.mul_split
-             | Z_mul_split_concrete s => Z.mul_split s
              | Z_add_get_carry => Z.add_get_carry_full
-             | Z_add_get_carry_concrete s => Z.add_get_carry_full s
              | Z_add_with_carry => Z.add_with_carry
              | Z_add_with_get_carry => Z.add_with_get_carry_full
-             | Z_add_with_get_carry_concrete s => Z.add_with_get_carry_full s
              | Z_sub_get_borrow => Z.sub_get_borrow_full
-             | Z_sub_get_borrow_concrete s => Z.sub_get_borrow_full s
              | Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
-             | Z_sub_with_get_borrow_concrete s => Z.sub_with_get_borrow_full s
              | Z_zselect => Z.zselect
              | Z_add_modulo => Z.add_modulo
+             | Z_bneg => Z.bneg
+             | Z_lnot_modulo => Z.lnot_modulo
              | Z_rshi => Z.rshi
-             | Z_rshi_concrete s offset => fun x y => Z.rshi s x y offset
              | Z_cc_m => Z.cc_m
-             | Z_cc_m_concrete s => Z.cc_m s
-             | Z_neg_snd => fun '(x, y) => (x, -y) (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template *)
              | Z_cast r => cast r
              | Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
              | fancy_add _ _ as idc
@@ -1110,7 +1114,17 @@ Module Compilers.
         | Z.modulo => then_tac ident.Z_modulo
         | Z.eqb => then_tac ident.Z_eqb
         | Z.leb => then_tac ident.Z_leb
+        | Z.geb => then_tac ident.Z_geb
+        | Z.log2 => then_tac ident.Z_log2
+        | Z.log2_up => then_tac ident.Z_log2_up
+        | Z.shiftl => then_tac ident.Z_shiftl
+        | Z.shiftr => then_tac ident.Z_shiftr
+        | Z.land => then_tac ident.Z_land
+        | Z.lor => then_tac ident.Z_lor
+        | Z.bneg => then_tac ident.Z_bneg
+        | Z.lnot_modulo => then_tac ident.Z_lnot_modulo
         | Z.of_nat => then_tac ident.Z_of_nat
+        | Z.to_nat => then_tac ident.Z_to_nat
         | Z.mul_split => then_tac ident.Z_mul_split
         | Z.add_get_carry_full => then_tac ident.Z_add_get_carry
         | Z.add_with_carry => then_tac ident.Z_add_with_carry
@@ -1166,8 +1180,10 @@ Module Compilers.
       Notation "x + y" := (#Z_add @ x @ y)%expr : expr_scope.
       Notation "x / y" := (#Z_div @ x @ y)%expr : expr_scope.
       Notation "x * y" := (#Z_mul @ x @ y)%expr : expr_scope.
-      Notation "x >> y" := (#(Z_shiftr y) @ x)%expr : expr_scope.
-      Notation "x << y" := (#(Z_shiftl y) @ x)%expr : expr_scope.
+      Notation "x >> y" := (#Z_shiftr @ x @ y)%expr : expr_scope.
+      Notation "x << y" := (#Z_shiftl @ x @ y)%expr : expr_scope.
+      Notation "x &' y" := (#Z_land @ x @ y)%expr : expr_scope.
+      Notation "x || y" := (#Z_lor @ x @ y)%expr : expr_scope.
       Notation "x 'mod' y" := (#Z_modulo @ x @ y)%expr : expr_scope.
       Notation "- x" := (#Z_opp @ x)%expr : expr_scope.
     End Notations.
@@ -1262,6 +1278,22 @@ Module Compilers.
            | e
              => fun v => @App_curried _ e (type.map_for_each_lhs_of_arrow (fun _ v => expr.Var v) v)
            end.
+      Fixpoint invert_App_curried {t} (e : expr t)
+        : type.for_each_lhs_of_arrow expr t -> { t' : _ & expr t' * type.for_each_lhs_of_arrow expr t' }%type
+        := match e in expr.expr t return type.for_each_lhs_of_arrow expr t -> { t' : _ & expr t' * type.for_each_lhs_of_arrow expr t' }%type with
+           | expr.App s d f x
+             => fun args
+                => @invert_App_curried _ f (x, args)
+           | e => fun args => existT _ _ (e, args)
+           end.
+      Definition invert_AppIdent_curried {t} (e : expr t)
+        : option { t' : _ & ident t' * type.for_each_lhs_of_arrow expr t' }%type
+        := match t return expr t -> _ with
+           | type.base _ => fun e => let 'existT t (f, args) := invert_App_curried e tt in
+                                     (idc <- invert_Ident f;
+                                        Some (existT _ t (idc, args)))%option
+           | _ => fun _ => None
+           end e.
     End with_var_gen.
 
     Section with_var.

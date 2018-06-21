@@ -44,6 +44,14 @@ Module X25519_64.
          SuchThat (ropp_correctT n s c machine_wordsize base_51_opp)
          As base_51_opp_correct.
   Proof. Time solve_ropp machine_wordsize. Time Qed.
+  Derive base_51_to_bytes
+         SuchThat (rto_bytes_correctT n s c machine_wordsize base_51_to_bytes)
+         As base_51_to_bytes_correct.
+  Proof. Time solve_rto_bytes machine_wordsize. Time Qed.
+  Derive base_51_from_bytes
+         SuchThat (rfrom_bytes_correctT n s c machine_wordsize base_51_from_bytes)
+         As base_51_from_bytes_correct.
+  Proof. Time solve_rfrom_bytes machine_wordsize. Time Qed.
   Derive base_51_encode
          SuchThat (rencode_correctT n s c machine_wordsize base_51_encode)
          As base_51_encode_correct.
@@ -60,7 +68,7 @@ Module X25519_64.
     : check_args n s c machine_wordsize (ErrorT.Success tt) = ErrorT.Success tt.
   Proof. vm_compute; reflexivity. Qed.
 
-  Definition base_51_good : GoodT n s c
+  Definition base_51_good : GoodT n s c machine_wordsize
     := Good n s c machine_wordsize
             base_51_curve_good
             base_51_carry_mul_correct
@@ -71,7 +79,9 @@ Module X25519_64.
             base_51_opp_correct
             base_51_zero_correct
             base_51_one_correct
-            base_51_encode_correct.
+            base_51_encode_correct
+            base_51_to_bytes_correct
+            base_51_from_bytes_correct.
 
   Print Assumptions base_51_good.
   Import PrintingNotations.
@@ -141,7 +151,7 @@ fun var : type -> Type =>
 *)
 
   Compute Compilers.ToString.C.ToFunctionString
-          "fecarry_mul" base_51_carry_mul
+          "" "fecarry_mul" base_51_carry_mul
           None (Some loose_bounds, (Some loose_bounds, tt)).
   (*
 void fecarry_mul(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
@@ -160,7 +170,7 @@ void fecarry_mul(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
 }
 *)
   Compute Compilers.ToString.C.ToFunctionString
-          "fesub" base_51_sub
+          "" "fesub" base_51_sub
           None (Some tight_bounds, (Some tight_bounds, tt)).
 (*
 void fesub(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
@@ -203,6 +213,14 @@ Module X25519_32.
          SuchThat (ropp_correctT n s c machine_wordsize base_25p5_opp)
          As base_25p5_opp_correct.
   Proof. Time solve_ropp machine_wordsize. Time Qed.
+  Derive base_25p5_to_bytes
+         SuchThat (rto_bytes_correctT n s c machine_wordsize base_25p5_to_bytes)
+         As base_25p5_to_bytes_correct.
+  Proof. Time solve_rto_bytes machine_wordsize. Time Qed.
+  Derive base_25p5_from_bytes
+         SuchThat (rfrom_bytes_correctT n s c machine_wordsize base_25p5_from_bytes)
+         As base_25p5_from_bytes_correct.
+  Proof. Time solve_rfrom_bytes machine_wordsize. Time Qed.
   Derive base_25p5_encode
          SuchThat (rencode_correctT n s c machine_wordsize base_25p5_encode)
          As base_25p5_encode_correct.
@@ -219,7 +237,7 @@ Module X25519_32.
     : check_args n s c machine_wordsize (ErrorT.Success tt) = ErrorT.Success tt.
   Proof. vm_compute; reflexivity. Qed.
 
-  Definition base_25p5_good : GoodT n s c
+  Definition base_25p5_good : GoodT n s c machine_wordsize
     := Good n s c machine_wordsize
             base_25p5_curve_good
             base_25p5_carry_mul_correct
@@ -230,7 +248,9 @@ Module X25519_32.
             base_25p5_opp_correct
             base_25p5_zero_correct
             base_25p5_one_correct
-            base_25p5_encode_correct.
+            base_25p5_encode_correct
+            base_25p5_to_bytes_correct
+            base_25p5_from_bytes_correct.
 
   Print Assumptions base_25p5_good.
   Import PrintingNotations.
@@ -416,11 +436,11 @@ Module P192_64.
   Set Printing Depth 100000.
 
   Local Notation "'mul64' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint64, _)%core) @ (#(Z_mul_split_concrete 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint64, _)%core) @ (#Z_mul_split @ #(ident.Literal (t:=base.type.Z) 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'add64' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint64, bool)%core) @ (#(Z_add_get_carry_concrete 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint64, bool)%core) @ (#Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) 18446744073709551616) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'adc64' '(' c ',' x ',' y ')'" :=
-    (#(Z_cast2 (uint64, bool)%core) @ (#(Z_add_with_get_carry_concrete 18446744073709551616) @ c @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint64, bool)%core) @ (#Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) 18446744073709551616) @ c @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'adx64' '(' c ',' x ',' y ')'" :=
     (#(Z_cast bool) @ (#Z_add_with_carry @ c @ x @ y))%expr (at level 50) : expr_scope.
 
@@ -486,11 +506,11 @@ Module P192_32.
   Set Printing Depth 100000.
 
   Local Notation "'mul32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, _)%core) @ (#(Z_mul_split_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, _)%core) @ (#Z_mul_split @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'add32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_add_get_carry_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'adc32' '(' c ',' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_add_with_get_carry_concrete 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
 
   Print mulmod.
   (*
@@ -684,15 +704,15 @@ Module P384_32.
   Set Printing Depth 100000.
 
   Local Notation "'mul32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, _)%core) @ (#(Z_mul_split_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, _)%core) @ (#Z_mul_split @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'add32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_add_get_carry_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'adc32' '(' c ',' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_add_with_get_carry_concrete 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'sub32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_sub_get_borrow_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_sub_get_borrow @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'sbb32' '(' c ',' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_sub_with_get_borrow_concrete 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_sub_with_get_borrow @ #(ident.Literal (t:=base.type.Z) 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
 
   Print mulmod.
 
@@ -716,11 +736,11 @@ Module P256_32.
   Set Printing Width 100000.
 
   Local Notation "'mul32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, _)%core) @ (#(Z_mul_split_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, _)%core) @ (#Z_mul_split @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'add32' '(' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_add_get_carry_concrete 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ x @ y))%expr (at level 50) : expr_scope.
   Local Notation "'adc32' '(' c ',' x ',' y ')'" :=
-    (#(Z_cast2 (uint32, bool)%core) @ (#(Z_add_with_get_carry_concrete 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
+    (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
 
   (* Print is too slow *)
 

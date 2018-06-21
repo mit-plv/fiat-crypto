@@ -487,6 +487,19 @@ standalone: standalone-haskell standalone-ocaml
 standalone-haskell: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%)
 standalone-ocaml: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%)
 
+UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c
+UNSATURATED_SOLINAS := src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
+.PHONY: c-files
+c-files: $(UNSATURATED_SOLINAS_C_FILES)
+
+$(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS)
+
+curve25519_64.c:
+	$(UNSATURATED_SOLINAS) '25519' '5' '2^255' '1,19' '64' > $@
+
+curve25519_32.c:
+	$(UNSATURATED_SOLINAS) '25519' '10' '2^255' '1,19' '32' > $@
+
 clean::
 	rm -f Makefile.coq remake_curves.log src/Specific/.autgenerated-deps
 
