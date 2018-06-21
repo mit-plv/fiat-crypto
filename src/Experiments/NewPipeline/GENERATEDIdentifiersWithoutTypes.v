@@ -9,396 +9,550 @@ Module Compilers.
   Module pattern.
     Module ident.
       Set Boolean Equality Schemes.
-      (*Print Compilers.ident.ident.*)
-      (*Show Match Compilers.ident.ident.*)
+      (*
+      Set Printing Coercions.
+      Redirect "/tmp/pr" Print Compilers.ident.ident.
+      Redirect "/tmp/sm" Show Match Compilers.ident.ident.
+      *)
       (*
 <<<
 #!/usr/bin/env python2
-import re
+import re, os
 
-print_ident = r"""Inductive ident : Compilers.type Compilers.base.type.type -> Set :=
+print_ident = r"""Inductive ident : defaults.type -> Set :=
     Literal : forall t : base.type.base,
-              base.interp (Compilers.base.type.type_base t) ->
-              ident ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base t))
+              base.interp (base.type.type_base t) ->
+              ident
+                ((fun x : base.type => type.base x) (base.type.type_base t))
   | Nat_succ : ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat))
   | Nat_pred : ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat))
   | Nat_max : ident
-                ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
+                ((fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat))
   | Nat_mul : ident
-                ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
+                ((fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat))
   | Nat_add : ident
-                ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
+                ((fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat))
   | Nat_sub : ident
-                ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                 (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
-  | nil : forall t : Compilers.base.type.type, ident ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list t))
-  | cons : forall t : Compilers.base.type.type,
+                ((fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat) ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.nat))
+  | nil : forall t : base.type,
+          ident ((fun x : base.type => type.base x) (base.type.list t))
+  | cons : forall t : base.type,
            ident
-             ((fun x : Compilers.base.type.type => type.base x) t ->
-              (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list t) ->
-              (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list t))%etype
-  | pair : forall A B : Compilers.base.type.type,
+             ((fun x : base.type => type.base x) t ->
+              (fun x : base.type => type.base x) (base.type.list t) ->
+              (fun x : base.type => type.base x) (base.type.list t))
+  | pair : forall A B : base.type,
            ident
-             ((fun x : Compilers.base.type.type => type.base x) A ->
-              (fun x : Compilers.base.type.type => type.base x) B -> (fun x : Compilers.base.type.type => type.base x) (A * B)%etype)%etype
-  | fst : forall A B : Compilers.base.type.type,
+             ((fun x : base.type => type.base x) A ->
+              (fun x : base.type => type.base x) B ->
+              (fun x : base.type => type.base x) (A * B)%etype)
+  | fst : forall A B : base.type,
           ident
-            ((fun x : Compilers.base.type.type => type.base x) (A * B)%etype -> (fun x : Compilers.base.type.type => type.base x) A)%etype
-  | snd : forall A B : Compilers.base.type.type,
+            ((fun x : base.type => type.base x) (A * B)%etype ->
+             (fun x : base.type => type.base x) A)
+  | snd : forall A B : base.type,
           ident
-            ((fun x : Compilers.base.type.type => type.base x) (A * B)%etype -> (fun x : Compilers.base.type.type => type.base x) B)%etype
-  | pair_rect : forall A B T : Compilers.base.type.type,
+            ((fun x : base.type => type.base x) (A * B)%etype ->
+             (fun x : base.type => type.base x) B)
+  | pair_rect : forall A B T : base.type,
                 ident
-                  (((fun x : Compilers.base.type.type => type.base x) A ->
-                    (fun x : Compilers.base.type.type => type.base x) B -> (fun x : Compilers.base.type.type => type.base x) T) ->
-                   (fun x : Compilers.base.type.type => type.base x) (A * B)%etype ->
-                   (fun x : Compilers.base.type.type => type.base x) T)%etype
-  | bool_rect : forall T : Compilers.base.type.type,
+                  (((fun x : base.type => type.base x) A ->
+                    (fun x : base.type => type.base x) B ->
+                    (fun x : base.type => type.base x) T) ->
+                   (fun x : base.type => type.base x) (A * B)%etype ->
+                   (fun x : base.type => type.base x) T)
+  | bool_rect : forall T : base.type,
                 ident
-                  (((fun x : Compilers.base.type.type => type.base x) ()%etype -> (fun x : Compilers.base.type.type => type.base x) T) ->
-                   ((fun x : Compilers.base.type.type => type.base x) ()%etype -> (fun x : Compilers.base.type.type => type.base x) T) ->
-                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.bool) ->
-                   (fun x : Compilers.base.type.type => type.base x) T)%etype
-  | nat_rect : forall P : Compilers.base.type.type,
+                  (((fun x : base.type => type.base x) ()%etype ->
+                    (fun x : base.type => type.base x) T) ->
+                   ((fun x : base.type => type.base x) ()%etype ->
+                    (fun x : base.type => type.base x) T) ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.bool) ->
+                   (fun x : base.type => type.base x) T)
+  | nat_rect : forall P : base.type,
                ident
-                 (((fun x : Compilers.base.type.type => type.base x) ()%etype -> (fun x : Compilers.base.type.type => type.base x) P) ->
-                  ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                   (fun x : Compilers.base.type.type => type.base x) P -> (fun x : Compilers.base.type.type => type.base x) P) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                  (fun x : Compilers.base.type.type => type.base x) P)%etype
-  | list_rect : forall A P : Compilers.base.type.type,
+                 (((fun x : base.type => type.base x) ()%etype ->
+                   (fun x : base.type => type.base x) P) ->
+                  ((fun x : base.type => type.base x)
+                     (base.type.type_base base.type.nat) ->
+                   (fun x : base.type => type.base x) P ->
+                   (fun x : base.type => type.base x) P) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat) ->
+                  (fun x : base.type => type.base x) P)
+  | list_rect : forall A P : base.type,
                 ident
-                  (((fun x : Compilers.base.type.type => type.base x) ()%etype -> (fun x : Compilers.base.type.type => type.base x) P) ->
-                   ((fun x : Compilers.base.type.type => type.base x) A ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                    (fun x : Compilers.base.type.type => type.base x) P -> (fun x : Compilers.base.type.type => type.base x) P) ->
-                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                   (fun x : Compilers.base.type.type => type.base x) P)%etype
-  | list_case : forall A P : Compilers.base.type.type,
+                  (((fun x : base.type => type.base x) ()%etype ->
+                    (fun x : base.type => type.base x) P) ->
+                   ((fun x : base.type => type.base x) A ->
+                    (fun x : base.type => type.base x) (base.type.list A) ->
+                    (fun x : base.type => type.base x) P ->
+                    (fun x : base.type => type.base x) P) ->
+                   (fun x : base.type => type.base x) (base.type.list A) ->
+                   (fun x : base.type => type.base x) P)
+  | list_case : forall A P : base.type,
                 ident
-                  (((fun x : Compilers.base.type.type => type.base x) ()%etype -> (fun x : Compilers.base.type.type => type.base x) P) ->
-                   ((fun x : Compilers.base.type.type => type.base x) A ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                    (fun x : Compilers.base.type.type => type.base x) P) ->
-                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                   (fun x : Compilers.base.type.type => type.base x) P)%etype
-  | List_length : forall T : Compilers.base.type.type,
+                  (((fun x : base.type => type.base x) ()%etype ->
+                    (fun x : base.type => type.base x) P) ->
+                   ((fun x : base.type => type.base x) A ->
+                    (fun x : base.type => type.base x) (base.type.list A) ->
+                    (fun x : base.type => type.base x) P) ->
+                   (fun x : base.type => type.base x) (base.type.list A) ->
+                   (fun x : base.type => type.base x) P)
+  | List_length : forall T : base.type,
                   ident
-                    ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list T) ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat))%etype
+                    ((fun x : base.type => type.base x) (base.type.list T) ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.nat))
   | List_seq : ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                  (fun x : Compilers.base.type.type => type.base x)
-                    (Compilers.base.type.list (Compilers.base.type.type_base base.type.nat)))%etype
-  | List_repeat : forall A : Compilers.base.type.type,
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.list (base.type.type_base base.type.nat)))
+  | List_repeat : forall A : base.type,
                   ident
-                    ((fun x : Compilers.base.type.type => type.base x) A ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A))%etype
-  | List_combine : forall A B : Compilers.base.type.type,
+                    ((fun x : base.type => type.base x) A ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.nat) ->
+                     (fun x : base.type => type.base x) (base.type.list A))
+  | List_combine : forall A B : base.type,
                    ident
-                     ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                      (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list B) ->
-                      (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list (A * B)))%etype
-  | List_map : forall A B : Compilers.base.type.type,
+                     ((fun x : base.type => type.base x) (base.type.list A) ->
+                      (fun x : base.type => type.base x) (base.type.list B) ->
+                      (fun x : base.type => type.base x)
+                        (base.type.list (A * B)))
+  | List_map : forall A B : base.type,
                ident
-                 (((fun x : Compilers.base.type.type => type.base x) A -> (fun x : Compilers.base.type.type => type.base x) B) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list B))%etype
-  | List_app : forall A : Compilers.base.type.type,
+                 (((fun x : base.type => type.base x) A ->
+                   (fun x : base.type => type.base x) B) ->
+                  (fun x : base.type => type.base x) (base.type.list A) ->
+                  (fun x : base.type => type.base x) (base.type.list B))
+  | List_app : forall A : base.type,
                ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A))%etype
-  | List_rev : forall A : Compilers.base.type.type,
+                 ((fun x : base.type => type.base x) (base.type.list A) ->
+                  (fun x : base.type => type.base x) (base.type.list A) ->
+                  (fun x : base.type => type.base x) (base.type.list A))
+  | List_rev : forall A : base.type,
                ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A))%etype
-  | List_flat_map : forall A B : Compilers.base.type.type,
+                 ((fun x : base.type => type.base x) (base.type.list A) ->
+                  (fun x : base.type => type.base x) (base.type.list A))
+  | List_flat_map : forall A B : base.type,
                     ident
-                      (((fun x : Compilers.base.type.type => type.base x) A ->
-                        (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list B)) ->
-                       (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                       (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list B))%etype
-  | List_partition : forall A : Compilers.base.type.type,
+                      (((fun x : base.type => type.base x) A ->
+                        (fun x : base.type => type.base x) (base.type.list B)) ->
+                       (fun x : base.type => type.base x) (base.type.list A) ->
+                       (fun x : base.type => type.base x) (base.type.list B))
+  | List_partition : forall A : base.type,
                      ident
-                       (((fun x : Compilers.base.type.type => type.base x) A ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.bool)) ->
-                        (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list A) ->
-                        (fun x : Compilers.base.type.type => type.base x)
-                          (Compilers.base.type.list A * Compilers.base.type.list A)%etype)%etype
-  | List_fold_right : forall A B : Compilers.base.type.type,
+                       (((fun x : base.type => type.base x) A ->
+                         (fun x : base.type => type.base x)
+                           (base.type.type_base base.type.bool)) ->
+                        (fun x : base.type => type.base x) (base.type.list A) ->
+                        (fun x : base.type => type.base x)
+                          (base.type.list A * base.type.list A)%etype)
+  | List_fold_right : forall A B : base.type,
                       ident
-                        (((fun x : Compilers.base.type.type => type.base x) B ->
-                          (fun x : Compilers.base.type.type => type.base x) A -> (fun x : Compilers.base.type.type => type.base x) A) ->
-                         (fun x : Compilers.base.type.type => type.base x) A ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list B) ->
-                         (fun x : Compilers.base.type.type => type.base x) A)%etype
-  | List_update_nth : forall T : Compilers.base.type.type,
+                        (((fun x : base.type => type.base x) B ->
+                          (fun x : base.type => type.base x) A ->
+                          (fun x : base.type => type.base x) A) ->
+                         (fun x : base.type => type.base x) A ->
+                         (fun x : base.type => type.base x)
+                           (base.type.list B) ->
+                         (fun x : base.type => type.base x) A)
+  | List_update_nth : forall T : base.type,
                       ident
-                        ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                         ((fun x : Compilers.base.type.type => type.base x) T -> (fun x : Compilers.base.type.type => type.base x) T) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list T) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list T))%etype
-  | List_nth_default : forall T : Compilers.base.type.type,
+                        ((fun x : base.type => type.base x)
+                           (base.type.type_base base.type.nat) ->
+                         ((fun x : base.type => type.base x) T ->
+                          (fun x : base.type => type.base x) T) ->
+                         (fun x : base.type => type.base x)
+                           (base.type.list T) ->
+                         (fun x : base.type => type.base x)
+                           (base.type.list T))
+  | List_nth_default : forall T : base.type,
                        ident
-                         ((fun x : Compilers.base.type.type => type.base x) T ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.list T) ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                          (fun x : Compilers.base.type.type => type.base x) T)%etype
+                         ((fun x : base.type => type.base x) T ->
+                          (fun x : base.type => type.base x)
+                            (base.type.list T) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.nat) ->
+                          (fun x : base.type => type.base x) T)
   | Z_add : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
   | Z_mul : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
   | Z_pow : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
   | Z_sub : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
   | Z_opp : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
   | Z_div : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
   | Z_modulo : ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z))
+  | Z_log2 : ident
+               ((fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z))
+  | Z_log2_up : ident
+                  ((fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z) ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z))
   | Z_eqb : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.bool))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.bool))
   | Z_leb : ident
-              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.bool))%etype
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.bool))
+  | Z_geb : ident
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.bool))
   | Z_of_nat : ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.nat) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
-  | Z_shiftr : Z ->
-               ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
-  | Z_shiftl : Z ->
-               ident
-                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
-  | Z_land : Z ->
-             ident
-               ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z))
+  | Z_to_nat : ident
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.nat))
+  | Z_shiftr : ident
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z))
+  | Z_shiftl : ident
+                 ((fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z) ->
+                  (fun x : base.type => type.base x)
+                    (base.type.type_base base.type.Z))
+  | Z_land : ident
+               ((fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z))
+  | Z_lor : ident
+              ((fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z) ->
+               (fun x : base.type => type.base x)
+                 (base.type.type_base base.type.Z))
+  | Z_bneg : ident
+               ((fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z))
+  | Z_lnot_modulo : ident
+                      ((fun x : base.type => type.base x)
+                         (base.type.type_base base.type.Z) ->
+                       (fun x : base.type => type.base x)
+                         (base.type.type_base base.type.Z) ->
+                       (fun x : base.type => type.base x)
+                         (base.type.type_base base.type.Z))
   | Z_mul_split : ident
-                    ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                     (fun x : Compilers.base.type.type => type.base x)
-                       (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
-  | Z_mul_split_concrete : Z ->
-                           ident
-                             ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                              (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                              (fun x : Compilers.base.type.type => type.base x)
-                                (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                    ((fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z) ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z) ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z) ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z *
+                        base.type.type_base base.type.Z)%etype)
   | Z_add_get_carry : ident
-                        ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                         (fun x : Compilers.base.type.type => type.base x)
-                           (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
-  | Z_add_get_carry_concrete : Z ->
-                               ident
-                                 ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                  (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                  (fun x : Compilers.base.type.type => type.base x)
-                                    (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                        ((fun x : base.type => type.base x)
+                           (base.type.type_base base.type.Z) ->
+                         (fun x : base.type => type.base x)
+                           (base.type.type_base base.type.Z) ->
+                         (fun x : base.type => type.base x)
+                           (base.type.type_base base.type.Z) ->
+                         (fun x : base.type => type.base x)
+                           (base.type.type_base base.type.Z *
+                            base.type.type_base base.type.Z)%etype)
   | Z_add_with_carry : ident
-                         ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                         ((fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z))
   | Z_add_with_get_carry : ident
-                             ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                              (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                              (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                              (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                              (fun x : Compilers.base.type.type => type.base x)
-                                (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
-  | Z_add_with_get_carry_concrete : Z ->
-                                    ident
-                                      ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                       (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                       (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                       (fun x : Compilers.base.type.type => type.base x)
-                                         (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                             ((fun x : base.type => type.base x)
+                                (base.type.type_base base.type.Z) ->
+                              (fun x : base.type => type.base x)
+                                (base.type.type_base base.type.Z) ->
+                              (fun x : base.type => type.base x)
+                                (base.type.type_base base.type.Z) ->
+                              (fun x : base.type => type.base x)
+                                (base.type.type_base base.type.Z) ->
+                              (fun x : base.type => type.base x)
+                                (base.type.type_base base.type.Z *
+                                 base.type.type_base base.type.Z)%etype)
   | Z_sub_get_borrow : ident
-                         ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                          (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                          (fun x : Compilers.base.type.type => type.base x)
-                            (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
-  | Z_sub_get_borrow_concrete : Z ->
-                                ident
-                                  ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                   (fun x : Compilers.base.type.type => type.base x)
-                                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                         ((fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z) ->
+                          (fun x : base.type => type.base x)
+                            (base.type.type_base base.type.Z *
+                             base.type.type_base base.type.Z)%etype)
   | Z_sub_with_get_borrow : ident
-                              ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                               (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                               (fun x : Compilers.base.type.type => type.base x)
-                                 (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
-  | Z_sub_with_get_borrow_concrete : Z ->
-                                     ident
-                                       ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                        (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                        (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                                        (fun x : Compilers.base.type.type => type.base x)
-                                          (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                              ((fun x : base.type => type.base x)
+                                 (base.type.type_base base.type.Z) ->
+                               (fun x : base.type => type.base x)
+                                 (base.type.type_base base.type.Z) ->
+                               (fun x : base.type => type.base x)
+                                 (base.type.type_base base.type.Z) ->
+                               (fun x : base.type => type.base x)
+                                 (base.type.type_base base.type.Z) ->
+                               (fun x : base.type => type.base x)
+                                 (base.type.type_base base.type.Z *
+                                  base.type.type_base base.type.Z)%etype)
   | Z_zselect : ident
-                  ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                   (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                  ((fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z) ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z) ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z) ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z))
   | Z_add_modulo : ident
-                     ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                      (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                      (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                      (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                     ((fun x : base.type => type.base x)
+                        (base.type.type_base base.type.Z) ->
+                      (fun x : base.type => type.base x)
+                        (base.type.type_base base.type.Z) ->
+                      (fun x : base.type => type.base x)
+                        (base.type.type_base base.type.Z) ->
+                      (fun x : base.type => type.base x)
+                        (base.type.type_base base.type.Z))
   | Z_rshi : ident
-               ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
-  | Z_rshi_concrete : Z ->
-                      Z ->
-                      ident
-                        ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+               ((fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z))
   | Z_cc_m : ident
-               ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
-  | Z_cc_m_concrete : Z ->
-                      ident
-                        ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                         (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
-  | Z_neg_snd : ident
-                  ((fun x : Compilers.base.type.type => type.base x)
-                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                   (fun x : Compilers.base.type.type => type.base x)
-                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+               ((fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z))
   | Z_cast : zrange ->
              ident
-               ((fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z) ->
-                (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+               ((fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z) ->
+                (fun x : base.type => type.base x)
+                  (base.type.type_base base.type.Z))
   | Z_cast2 : zrange * zrange ->
               ident
-                ((fun x : Compilers.base.type.type => type.base x)
-                   (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                 (fun x : Compilers.base.type.type => type.base x)
-                   (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                ((fun x : base.type => type.base x)
+                   (base.type.type_base base.type.Z *
+                    base.type.type_base base.type.Z)%etype ->
+                 (fun x : base.type => type.base x)
+                   (base.type.type_base base.type.Z *
+                    base.type.type_base base.type.Z)%etype)
   | fancy_add : Z ->
                 Z ->
                 ident
-                  ((fun x : Compilers.base.type.type => type.base x)
-                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                   (fun x : Compilers.base.type.type => type.base x)
-                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                  ((fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z *
+                      base.type.type_base base.type.Z)%etype ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z *
+                      base.type.type_base base.type.Z)%etype)
   | fancy_addc : Z ->
                  Z ->
                  ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z *
-                       Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype)
   | fancy_sub : Z ->
                 Z ->
                 ident
-                  ((fun x : Compilers.base.type.type => type.base x)
-                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                   (fun x : Compilers.base.type.type => type.base x)
-                     (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                  ((fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z *
+                      base.type.type_base base.type.Z)%etype ->
+                   (fun x : base.type => type.base x)
+                     (base.type.type_base base.type.Z *
+                      base.type.type_base base.type.Z)%etype)
   | fancy_subb : Z ->
                  Z ->
                  ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z *
-                       Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype)
   | fancy_mulll : Z ->
                   ident
-                    ((fun x : Compilers.base.type.type => type.base x)
-                       (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                    ((fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z *
+                        base.type.type_base base.type.Z)%etype ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z))
   | fancy_mullh : Z ->
                   ident
-                    ((fun x : Compilers.base.type.type => type.base x)
-                       (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                    ((fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z *
+                        base.type.type_base base.type.Z)%etype ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z))
   | fancy_mulhl : Z ->
                   ident
-                    ((fun x : Compilers.base.type.type => type.base x)
-                       (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                    ((fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z *
+                        base.type.type_base base.type.Z)%etype ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z))
   | fancy_mulhh : Z ->
                   ident
-                    ((fun x : Compilers.base.type.type => type.base x)
-                       (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                     (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                    ((fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z *
+                        base.type.type_base base.type.Z)%etype ->
+                     (fun x : base.type => type.base x)
+                       (base.type.type_base base.type.Z))
   | fancy_rshi : Z ->
                  Z ->
                  ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z))
   | fancy_selc : ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z *
-                       Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z))
   | fancy_selm : Z ->
                  ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z *
-                       Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z))
   | fancy_sell : ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z *
-                       Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z))
   | fancy_addm : ident
-                   ((fun x : Compilers.base.type.type => type.base x)
-                      (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z *
-                       Compilers.base.type.type_base base.type.Z)%etype ->
-                    (fun x : Compilers.base.type.type => type.base x) (Compilers.base.type.type_base base.type.Z))%etype
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z *
+                       base.type.type_base base.type.Z)%etype ->
+                    (fun x : base.type => type.base x)
+                      (base.type.type_base base.type.Z))
+
 """
 show_match_ident = r"""match # with
  | ident.Literal t v =>
@@ -437,30 +591,29 @@ show_match_ident = r"""match # with
  | ident.Z_opp =>
  | ident.Z_div =>
  | ident.Z_modulo =>
+ | ident.Z_log2 =>
+ | ident.Z_log2_up =>
  | ident.Z_eqb =>
  | ident.Z_leb =>
+ | ident.Z_geb =>
  | ident.Z_of_nat =>
- | ident.Z_shiftr offset =>
- | ident.Z_shiftl offset =>
- | ident.Z_land mask =>
+ | ident.Z_to_nat =>
+ | ident.Z_shiftr =>
+ | ident.Z_shiftl =>
+ | ident.Z_land =>
+ | ident.Z_lor =>
+ | ident.Z_bneg =>
+ | ident.Z_lnot_modulo =>
  | ident.Z_mul_split =>
- | ident.Z_mul_split_concrete s =>
  | ident.Z_add_get_carry =>
- | ident.Z_add_get_carry_concrete s =>
  | ident.Z_add_with_carry =>
  | ident.Z_add_with_get_carry =>
- | ident.Z_add_with_get_carry_concrete s =>
  | ident.Z_sub_get_borrow =>
- | ident.Z_sub_get_borrow_concrete s =>
  | ident.Z_sub_with_get_borrow =>
- | ident.Z_sub_with_get_borrow_concrete s =>
  | ident.Z_zselect =>
  | ident.Z_add_modulo =>
  | ident.Z_rshi =>
- | ident.Z_rshi_concrete s offset =>
  | ident.Z_cc_m =>
- | ident.Z_cc_m_concrete s =>
- | ident.Z_neg_snd =>
  | ident.Z_cast range =>
  | ident.Z_cast2 range =>
  | ident.fancy_add log2wordmax imm =>
@@ -479,6 +632,13 @@ show_match_ident = r"""match # with
  end
 
 """
+remake = False
+if remake:
+  assert(os.path.exists('/tmp/pr.out'))
+  assert(os.path.exists('/tmp/sm.out'))
+  with open('/tmp/pr.out', 'r') as f: print_ident = re.sub(r'^For.*\n', '', f.read(), flags=re.MULTILINE)
+  with open('/tmp/sm.out', 'r') as f: show_match_ident = f.read()
+
 prefix = 'Compilers.'
 indent = '      '
 exts = ('Unit', 'Z', 'Bool', 'Nat')
@@ -500,7 +660,7 @@ ttypes = ([[] for ty in tys]
           + [get_dep_types(case)
              for case in print_ident.replace('\n', ' ').split('|')[1:]])
 ctypes = ([['base.interp ' + ty] for ty in tys]
-          + [[i.strip() for i in re.sub(r'forall [^:]+ : %sbase.type.type,' % prefix, '', i[i.find(':')+1:i.find('ident')]).strip(' ->').split('->') if i.strip()]
+          + [[i.strip() for i in re.sub(r'forall [^:]+ : base.type,', '', i[i.find(':')+1:i.find('ident')]).strip(' ->').split('->') if i.strip()]
              for i in print_ident.replace('\n', ' ').split('|')[1:]])
 crettypes = ([('%sident.ident (type.base (%sbase.type.type_base ' + ty + '))') % (prefix, prefix) for ty in tys]
              + [prefix + 'ident.' + re.sub(r'\(fun x : [^ ]+ => ([^ ]+) x\)', r'\1', re.sub('  +', ' ', i[i.find('ident'):]))
@@ -517,18 +677,28 @@ Module Compilers.
   Module pattern.
     Module ident.
       Set Boolean Equality Schemes.
-      (*Print Compilers.ident.ident.*)
-      (*Show Match Compilers.ident.ident.*)
+      (""" + """*
+      Set Printing Coercions.
+      Redirect "/tmp/pr" Print Compilers.ident.ident.
+      Redirect "/tmp/sm" Show Match Compilers.ident.ident.
+      *""" + """)
 """
 
-def addnewline(s): return s + '\n'
+def addnewline(s): return re.sub(r' +$', '', s + '\n', flags=re.MULTILINE)
+
+def get_updated_contents():
+  contents = open(__file__).read()
+  contents = re.sub(r'^remake = True', r'remake = False', contents, flags=re.MULTILINE)
+  contents = re.sub(r'^print_ident = r""".*?"""', r'print_ident = r"""' + print_ident + r'"""', contents, flags=re.MULTILINE | re.DOTALL)
+  contents = re.sub(r'^show_match_ident = r""".*?"""', r'show_match_ident = r"""' + show_match_ident + r'"""', contents, flags=re.MULTILINE | re.DOTALL)
+  return contents
 
 retcode += addnewline(r"""%s(*
 <<<
 %s
 >>>
 %s*)
-""" % (indent, open(__file__).read(), indent))
+""" % (indent, get_updated_contents(), indent))
 retcode += addnewline(r"""%sInductive ident :=
 %s| %s.
 """ % (indent, indent, ('\n' + indent + '| ').join(pctors)))
@@ -628,7 +798,7 @@ def do_adjust_type(ctor, ctype):
 retcode += addnewline((r"""%sDefinition type_of (pidc : ident) : full_types pidc -> %stype %sbase.type
   := match pidc return full_types pidc -> _ with
      | %s
-     end.
+     end%%etype.
 """ % (indent, prefix, prefix,
        '\n     | '.join(pctor + ' => '
                         + 'fun ' + ('_ => ' if len(ttype + ctype) == 0 else ((ctor[-1] + ' => ') if len(ttype + ctype) == 1 else "arg => let '(%s) := eta%d arg in " % (', '.join(ctor[-len(ttype + ctype):]), len(ttype + ctype)))) + cretty.replace(prefix + 'ident.ident ', '')
@@ -710,30 +880,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | Z_opp
       | Z_div
       | Z_modulo
+      | Z_log2
+      | Z_log2_up
       | Z_eqb
       | Z_leb
+      | Z_geb
       | Z_of_nat
+      | Z_to_nat
       | Z_shiftr
       | Z_shiftl
       | Z_land
+      | Z_lor
+      | Z_bneg
+      | Z_lnot_modulo
       | Z_mul_split
-      | Z_mul_split_concrete
       | Z_add_get_carry
-      | Z_add_get_carry_concrete
       | Z_add_with_carry
       | Z_add_with_get_carry
-      | Z_add_with_get_carry_concrete
       | Z_sub_get_borrow
-      | Z_sub_get_borrow_concrete
       | Z_sub_with_get_borrow
-      | Z_sub_with_get_borrow_concrete
       | Z_zselect
       | Z_add_modulo
       | Z_rshi
-      | Z_rshi_concrete
       | Z_cc_m
-      | Z_cc_m_concrete
-      | Z_neg_snd
       | Z_cast
       | Z_cast2
       | fancy_add
@@ -791,30 +960,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp, Z_opp
            | Z_div, Z_div
            | Z_modulo, Z_modulo
+           | Z_log2, Z_log2
+           | Z_log2_up, Z_log2_up
            | Z_eqb, Z_eqb
            | Z_leb, Z_leb
+           | Z_geb, Z_geb
            | Z_of_nat, Z_of_nat
+           | Z_to_nat, Z_to_nat
            | Z_shiftr, Z_shiftr
            | Z_shiftl, Z_shiftl
            | Z_land, Z_land
+           | Z_lor, Z_lor
+           | Z_bneg, Z_bneg
+           | Z_lnot_modulo, Z_lnot_modulo
            | Z_mul_split, Z_mul_split
-           | Z_mul_split_concrete, Z_mul_split_concrete
            | Z_add_get_carry, Z_add_get_carry
-           | Z_add_get_carry_concrete, Z_add_get_carry_concrete
            | Z_add_with_carry, Z_add_with_carry
            | Z_add_with_get_carry, Z_add_with_get_carry
-           | Z_add_with_get_carry_concrete, Z_add_with_get_carry_concrete
            | Z_sub_get_borrow, Z_sub_get_borrow
-           | Z_sub_get_borrow_concrete, Z_sub_get_borrow_concrete
            | Z_sub_with_get_borrow, Z_sub_with_get_borrow
-           | Z_sub_with_get_borrow_concrete, Z_sub_with_get_borrow_concrete
            | Z_zselect, Z_zselect
            | Z_add_modulo, Z_add_modulo
            | Z_rshi, Z_rshi
-           | Z_rshi_concrete, Z_rshi_concrete
            | Z_cc_m, Z_cc_m
-           | Z_cc_m_concrete, Z_cc_m_concrete
-           | Z_neg_snd, Z_neg_snd
            | Z_cast, Z_cast
            | Z_cast2, Z_cast2
            | fancy_add, fancy_add
@@ -870,30 +1038,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp, _
            | Z_div, _
            | Z_modulo, _
+           | Z_log2, _
+           | Z_log2_up, _
            | Z_eqb, _
            | Z_leb, _
+           | Z_geb, _
            | Z_of_nat, _
+           | Z_to_nat, _
            | Z_shiftr, _
            | Z_shiftl, _
            | Z_land, _
+           | Z_lor, _
+           | Z_bneg, _
+           | Z_lnot_modulo, _
            | Z_mul_split, _
-           | Z_mul_split_concrete, _
            | Z_add_get_carry, _
-           | Z_add_get_carry_concrete, _
            | Z_add_with_carry, _
            | Z_add_with_get_carry, _
-           | Z_add_with_get_carry_concrete, _
            | Z_sub_get_borrow, _
-           | Z_sub_get_borrow_concrete, _
            | Z_sub_with_get_borrow, _
-           | Z_sub_with_get_borrow_concrete, _
            | Z_zselect, _
            | Z_add_modulo, _
            | Z_rshi, _
-           | Z_rshi_concrete, _
            | Z_cc_m, _
-           | Z_cc_m_concrete, _
-           | Z_neg_snd, _
            | Z_cast, _
            | Z_cast2, _
            | fancy_add, _
@@ -911,7 +1078,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | fancy_addm, _
              => fun T k => k None
            end%cps.
-      
+
       Definition eta_ident_cps {T : Compilers.type Compilers.base.type -> Type} {t} (idc : Compilers.ident.ident t)
                  (f : forall t', Compilers.ident.ident t' -> T t')
         : T t
@@ -955,30 +1122,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_opp => f _ Compilers.ident.Z_opp
            | Compilers.ident.Z_div => f _ Compilers.ident.Z_div
            | Compilers.ident.Z_modulo => f _ Compilers.ident.Z_modulo
+           | Compilers.ident.Z_log2 => f _ Compilers.ident.Z_log2
+           | Compilers.ident.Z_log2_up => f _ Compilers.ident.Z_log2_up
            | Compilers.ident.Z_eqb => f _ Compilers.ident.Z_eqb
            | Compilers.ident.Z_leb => f _ Compilers.ident.Z_leb
+           | Compilers.ident.Z_geb => f _ Compilers.ident.Z_geb
            | Compilers.ident.Z_of_nat => f _ Compilers.ident.Z_of_nat
-           | Compilers.ident.Z_shiftr offset => f _ (@Compilers.ident.Z_shiftr offset)
-           | Compilers.ident.Z_shiftl offset => f _ (@Compilers.ident.Z_shiftl offset)
-           | Compilers.ident.Z_land mask => f _ (@Compilers.ident.Z_land mask)
+           | Compilers.ident.Z_to_nat => f _ Compilers.ident.Z_to_nat
+           | Compilers.ident.Z_shiftr => f _ Compilers.ident.Z_shiftr
+           | Compilers.ident.Z_shiftl => f _ Compilers.ident.Z_shiftl
+           | Compilers.ident.Z_land => f _ Compilers.ident.Z_land
+           | Compilers.ident.Z_lor => f _ Compilers.ident.Z_lor
+           | Compilers.ident.Z_bneg => f _ Compilers.ident.Z_bneg
+           | Compilers.ident.Z_lnot_modulo => f _ Compilers.ident.Z_lnot_modulo
            | Compilers.ident.Z_mul_split => f _ Compilers.ident.Z_mul_split
-           | Compilers.ident.Z_mul_split_concrete s => f _ (@Compilers.ident.Z_mul_split_concrete s)
            | Compilers.ident.Z_add_get_carry => f _ Compilers.ident.Z_add_get_carry
-           | Compilers.ident.Z_add_get_carry_concrete s => f _ (@Compilers.ident.Z_add_get_carry_concrete s)
            | Compilers.ident.Z_add_with_carry => f _ Compilers.ident.Z_add_with_carry
            | Compilers.ident.Z_add_with_get_carry => f _ Compilers.ident.Z_add_with_get_carry
-           | Compilers.ident.Z_add_with_get_carry_concrete s => f _ (@Compilers.ident.Z_add_with_get_carry_concrete s)
            | Compilers.ident.Z_sub_get_borrow => f _ Compilers.ident.Z_sub_get_borrow
-           | Compilers.ident.Z_sub_get_borrow_concrete s => f _ (@Compilers.ident.Z_sub_get_borrow_concrete s)
            | Compilers.ident.Z_sub_with_get_borrow => f _ Compilers.ident.Z_sub_with_get_borrow
-           | Compilers.ident.Z_sub_with_get_borrow_concrete s => f _ (@Compilers.ident.Z_sub_with_get_borrow_concrete s)
            | Compilers.ident.Z_zselect => f _ Compilers.ident.Z_zselect
            | Compilers.ident.Z_add_modulo => f _ Compilers.ident.Z_add_modulo
            | Compilers.ident.Z_rshi => f _ Compilers.ident.Z_rshi
-           | Compilers.ident.Z_rshi_concrete s offset => f _ (@Compilers.ident.Z_rshi_concrete s offset)
            | Compilers.ident.Z_cc_m => f _ Compilers.ident.Z_cc_m
-           | Compilers.ident.Z_cc_m_concrete s => f _ (@Compilers.ident.Z_cc_m_concrete s)
-           | Compilers.ident.Z_neg_snd => f _ Compilers.ident.Z_neg_snd
            | Compilers.ident.Z_cast range => f _ (@Compilers.ident.Z_cast range)
            | Compilers.ident.Z_cast2 range => f _ (@Compilers.ident.Z_cast2 range)
            | Compilers.ident.fancy_add log2wordmax imm => f _ (@Compilers.ident.fancy_add log2wordmax imm)
@@ -995,7 +1161,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.fancy_sell => f _ Compilers.ident.fancy_sell
            | Compilers.ident.fancy_addm => f _ Compilers.ident.fancy_addm
            end.
-      
+
       Definition of_typed_ident {t} (idc : Compilers.ident.ident t) : ident
         := match idc with
            | Compilers.ident.LiteralUnit v => LiteralUnit
@@ -1037,30 +1203,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_opp => Z_opp
            | Compilers.ident.Z_div => Z_div
            | Compilers.ident.Z_modulo => Z_modulo
+           | Compilers.ident.Z_log2 => Z_log2
+           | Compilers.ident.Z_log2_up => Z_log2_up
            | Compilers.ident.Z_eqb => Z_eqb
            | Compilers.ident.Z_leb => Z_leb
+           | Compilers.ident.Z_geb => Z_geb
            | Compilers.ident.Z_of_nat => Z_of_nat
-           | Compilers.ident.Z_shiftr offset => Z_shiftr
-           | Compilers.ident.Z_shiftl offset => Z_shiftl
-           | Compilers.ident.Z_land mask => Z_land
+           | Compilers.ident.Z_to_nat => Z_to_nat
+           | Compilers.ident.Z_shiftr => Z_shiftr
+           | Compilers.ident.Z_shiftl => Z_shiftl
+           | Compilers.ident.Z_land => Z_land
+           | Compilers.ident.Z_lor => Z_lor
+           | Compilers.ident.Z_bneg => Z_bneg
+           | Compilers.ident.Z_lnot_modulo => Z_lnot_modulo
            | Compilers.ident.Z_mul_split => Z_mul_split
-           | Compilers.ident.Z_mul_split_concrete s => Z_mul_split_concrete
            | Compilers.ident.Z_add_get_carry => Z_add_get_carry
-           | Compilers.ident.Z_add_get_carry_concrete s => Z_add_get_carry_concrete
            | Compilers.ident.Z_add_with_carry => Z_add_with_carry
            | Compilers.ident.Z_add_with_get_carry => Z_add_with_get_carry
-           | Compilers.ident.Z_add_with_get_carry_concrete s => Z_add_with_get_carry_concrete
            | Compilers.ident.Z_sub_get_borrow => Z_sub_get_borrow
-           | Compilers.ident.Z_sub_get_borrow_concrete s => Z_sub_get_borrow_concrete
            | Compilers.ident.Z_sub_with_get_borrow => Z_sub_with_get_borrow
-           | Compilers.ident.Z_sub_with_get_borrow_concrete s => Z_sub_with_get_borrow_concrete
            | Compilers.ident.Z_zselect => Z_zselect
            | Compilers.ident.Z_add_modulo => Z_add_modulo
            | Compilers.ident.Z_rshi => Z_rshi
-           | Compilers.ident.Z_rshi_concrete s offset => Z_rshi_concrete
            | Compilers.ident.Z_cc_m => Z_cc_m
-           | Compilers.ident.Z_cc_m_concrete s => Z_cc_m_concrete
-           | Compilers.ident.Z_neg_snd => Z_neg_snd
            | Compilers.ident.Z_cast range => Z_cast
            | Compilers.ident.Z_cast2 range => Z_cast2
            | Compilers.ident.fancy_add log2wordmax imm => fancy_add
@@ -1077,7 +1242,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.fancy_sell => fancy_sell
            | Compilers.ident.fancy_addm => fancy_addm
            end.
-      
+
       Definition arg_types (idc : ident) : option Type
         := match idc return option Type with
            | LiteralUnit => @Some Type (base.interp Compilers.base.type.unit)
@@ -1119,30 +1284,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp => None
            | Z_div => None
            | Z_modulo => None
+           | Z_log2 => None
+           | Z_log2_up => None
            | Z_eqb => None
            | Z_leb => None
+           | Z_geb => None
            | Z_of_nat => None
-           | Z_shiftr => @Some Type Z
-           | Z_shiftl => @Some Type Z
-           | Z_land => @Some Type Z
+           | Z_to_nat => None
+           | Z_shiftr => None
+           | Z_shiftl => None
+           | Z_land => None
+           | Z_lor => None
+           | Z_bneg => None
+           | Z_lnot_modulo => None
            | Z_mul_split => None
-           | Z_mul_split_concrete => @Some Type Z
            | Z_add_get_carry => None
-           | Z_add_get_carry_concrete => @Some Type Z
            | Z_add_with_carry => None
            | Z_add_with_get_carry => None
-           | Z_add_with_get_carry_concrete => @Some Type Z
            | Z_sub_get_borrow => None
-           | Z_sub_get_borrow_concrete => @Some Type Z
            | Z_sub_with_get_borrow => None
-           | Z_sub_with_get_borrow_concrete => @Some Type Z
            | Z_zselect => None
            | Z_add_modulo => None
            | Z_rshi => None
-           | Z_rshi_concrete => @Some Type (Z * Z)
            | Z_cc_m => None
-           | Z_cc_m_concrete => @Some Type Z
-           | Z_neg_snd => None
            | Z_cast => @Some Type zrange
            | Z_cast2 => @Some Type (zrange * zrange)
            | fancy_add => @Some Type (Z * Z)
@@ -1159,7 +1323,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | fancy_sell => None
            | fancy_addm => None
            end%type.
-      
+
       Definition full_types (idc : ident) : Type
         := match idc return Type with
            | LiteralUnit => base.interp Compilers.base.type.unit
@@ -1172,28 +1336,28 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Nat_mul => unit
            | Nat_add => unit
            | Nat_sub => unit
-           | nil => Compilers.base.type.type
-           | cons => Compilers.base.type.type
-           | pair => Compilers.base.type.type * Compilers.base.type.type
-           | fst => Compilers.base.type.type * Compilers.base.type.type
-           | snd => Compilers.base.type.type * Compilers.base.type.type
-           | pair_rect => Compilers.base.type.type * Compilers.base.type.type * Compilers.base.type.type
-           | bool_rect => Compilers.base.type.type
-           | nat_rect => Compilers.base.type.type
-           | list_rect => Compilers.base.type.type * Compilers.base.type.type
-           | list_case => Compilers.base.type.type * Compilers.base.type.type
-           | List_length => Compilers.base.type.type
+           | nil => base.type
+           | cons => base.type
+           | pair => base.type * base.type
+           | fst => base.type * base.type
+           | snd => base.type * base.type
+           | pair_rect => base.type * base.type * base.type
+           | bool_rect => base.type
+           | nat_rect => base.type
+           | list_rect => base.type * base.type
+           | list_case => base.type * base.type
+           | List_length => base.type
            | List_seq => unit
-           | List_repeat => Compilers.base.type.type
-           | List_combine => Compilers.base.type.type * Compilers.base.type.type
-           | List_map => Compilers.base.type.type * Compilers.base.type.type
-           | List_app => Compilers.base.type.type
-           | List_rev => Compilers.base.type.type
-           | List_flat_map => Compilers.base.type.type * Compilers.base.type.type
-           | List_partition => Compilers.base.type.type
-           | List_fold_right => Compilers.base.type.type * Compilers.base.type.type
-           | List_update_nth => Compilers.base.type.type
-           | List_nth_default => Compilers.base.type.type
+           | List_repeat => base.type
+           | List_combine => base.type * base.type
+           | List_map => base.type * base.type
+           | List_app => base.type
+           | List_rev => base.type
+           | List_flat_map => base.type * base.type
+           | List_partition => base.type
+           | List_fold_right => base.type * base.type
+           | List_update_nth => base.type
+           | List_nth_default => base.type
            | Z_add => unit
            | Z_mul => unit
            | Z_pow => unit
@@ -1201,30 +1365,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp => unit
            | Z_div => unit
            | Z_modulo => unit
+           | Z_log2 => unit
+           | Z_log2_up => unit
            | Z_eqb => unit
            | Z_leb => unit
+           | Z_geb => unit
            | Z_of_nat => unit
-           | Z_shiftr => Z
-           | Z_shiftl => Z
-           | Z_land => Z
+           | Z_to_nat => unit
+           | Z_shiftr => unit
+           | Z_shiftl => unit
+           | Z_land => unit
+           | Z_lor => unit
+           | Z_bneg => unit
+           | Z_lnot_modulo => unit
            | Z_mul_split => unit
-           | Z_mul_split_concrete => Z
            | Z_add_get_carry => unit
-           | Z_add_get_carry_concrete => Z
            | Z_add_with_carry => unit
            | Z_add_with_get_carry => unit
-           | Z_add_with_get_carry_concrete => Z
            | Z_sub_get_borrow => unit
-           | Z_sub_get_borrow_concrete => Z
            | Z_sub_with_get_borrow => unit
-           | Z_sub_with_get_borrow_concrete => Z
            | Z_zselect => unit
            | Z_add_modulo => unit
            | Z_rshi => unit
-           | Z_rshi_concrete => Z * Z
            | Z_cc_m => unit
-           | Z_cc_m_concrete => Z
-           | Z_neg_snd => unit
            | Z_cast => zrange
            | Z_cast2 => zrange * zrange
            | fancy_add => Z * Z
@@ -1241,7 +1404,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | fancy_sell => unit
            | fancy_addm => unit
            end%type.
-      
+
       Definition bind_args {t} (idc : Compilers.ident.ident t) : match arg_types (of_typed_ident idc) return Type with Some t => t | None => unit end
         := match idc return match arg_types (of_typed_ident idc) return Type with Some t => t | None => unit end with
            | Compilers.ident.LiteralUnit v => v
@@ -1283,30 +1446,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_opp => tt
            | Compilers.ident.Z_div => tt
            | Compilers.ident.Z_modulo => tt
+           | Compilers.ident.Z_log2 => tt
+           | Compilers.ident.Z_log2_up => tt
            | Compilers.ident.Z_eqb => tt
            | Compilers.ident.Z_leb => tt
+           | Compilers.ident.Z_geb => tt
            | Compilers.ident.Z_of_nat => tt
-           | Compilers.ident.Z_shiftr offset => offset
-           | Compilers.ident.Z_shiftl offset => offset
-           | Compilers.ident.Z_land mask => mask
+           | Compilers.ident.Z_to_nat => tt
+           | Compilers.ident.Z_shiftr => tt
+           | Compilers.ident.Z_shiftl => tt
+           | Compilers.ident.Z_land => tt
+           | Compilers.ident.Z_lor => tt
+           | Compilers.ident.Z_bneg => tt
+           | Compilers.ident.Z_lnot_modulo => tt
            | Compilers.ident.Z_mul_split => tt
-           | Compilers.ident.Z_mul_split_concrete s => s
            | Compilers.ident.Z_add_get_carry => tt
-           | Compilers.ident.Z_add_get_carry_concrete s => s
            | Compilers.ident.Z_add_with_carry => tt
            | Compilers.ident.Z_add_with_get_carry => tt
-           | Compilers.ident.Z_add_with_get_carry_concrete s => s
            | Compilers.ident.Z_sub_get_borrow => tt
-           | Compilers.ident.Z_sub_get_borrow_concrete s => s
            | Compilers.ident.Z_sub_with_get_borrow => tt
-           | Compilers.ident.Z_sub_with_get_borrow_concrete s => s
            | Compilers.ident.Z_zselect => tt
            | Compilers.ident.Z_add_modulo => tt
            | Compilers.ident.Z_rshi => tt
-           | Compilers.ident.Z_rshi_concrete s offset => (s, offset)
            | Compilers.ident.Z_cc_m => tt
-           | Compilers.ident.Z_cc_m_concrete s => s
-           | Compilers.ident.Z_neg_snd => tt
            | Compilers.ident.Z_cast range => range
            | Compilers.ident.Z_cast2 range => range
            | Compilers.ident.fancy_add log2wordmax imm => (log2wordmax, imm)
@@ -1323,7 +1485,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.fancy_sell => tt
            | Compilers.ident.fancy_addm => tt
            end%cps.
-      
+
       Definition invert_bind_args {t} (idc : Compilers.ident.ident t) (pidc : ident) : option (full_types pidc)
         := match pidc, idc return option (full_types pidc) with
            | LiteralUnit, Compilers.ident.LiteralUnit v => Some v
@@ -1365,30 +1527,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp, Compilers.ident.Z_opp => Some tt
            | Z_div, Compilers.ident.Z_div => Some tt
            | Z_modulo, Compilers.ident.Z_modulo => Some tt
+           | Z_log2, Compilers.ident.Z_log2 => Some tt
+           | Z_log2_up, Compilers.ident.Z_log2_up => Some tt
            | Z_eqb, Compilers.ident.Z_eqb => Some tt
            | Z_leb, Compilers.ident.Z_leb => Some tt
+           | Z_geb, Compilers.ident.Z_geb => Some tt
            | Z_of_nat, Compilers.ident.Z_of_nat => Some tt
-           | Z_shiftr, Compilers.ident.Z_shiftr offset => Some offset
-           | Z_shiftl, Compilers.ident.Z_shiftl offset => Some offset
-           | Z_land, Compilers.ident.Z_land mask => Some mask
+           | Z_to_nat, Compilers.ident.Z_to_nat => Some tt
+           | Z_shiftr, Compilers.ident.Z_shiftr => Some tt
+           | Z_shiftl, Compilers.ident.Z_shiftl => Some tt
+           | Z_land, Compilers.ident.Z_land => Some tt
+           | Z_lor, Compilers.ident.Z_lor => Some tt
+           | Z_bneg, Compilers.ident.Z_bneg => Some tt
+           | Z_lnot_modulo, Compilers.ident.Z_lnot_modulo => Some tt
            | Z_mul_split, Compilers.ident.Z_mul_split => Some tt
-           | Z_mul_split_concrete, Compilers.ident.Z_mul_split_concrete s => Some s
            | Z_add_get_carry, Compilers.ident.Z_add_get_carry => Some tt
-           | Z_add_get_carry_concrete, Compilers.ident.Z_add_get_carry_concrete s => Some s
            | Z_add_with_carry, Compilers.ident.Z_add_with_carry => Some tt
            | Z_add_with_get_carry, Compilers.ident.Z_add_with_get_carry => Some tt
-           | Z_add_with_get_carry_concrete, Compilers.ident.Z_add_with_get_carry_concrete s => Some s
            | Z_sub_get_borrow, Compilers.ident.Z_sub_get_borrow => Some tt
-           | Z_sub_get_borrow_concrete, Compilers.ident.Z_sub_get_borrow_concrete s => Some s
            | Z_sub_with_get_borrow, Compilers.ident.Z_sub_with_get_borrow => Some tt
-           | Z_sub_with_get_borrow_concrete, Compilers.ident.Z_sub_with_get_borrow_concrete s => Some s
            | Z_zselect, Compilers.ident.Z_zselect => Some tt
            | Z_add_modulo, Compilers.ident.Z_add_modulo => Some tt
            | Z_rshi, Compilers.ident.Z_rshi => Some tt
-           | Z_rshi_concrete, Compilers.ident.Z_rshi_concrete s offset => Some (s, offset)
            | Z_cc_m, Compilers.ident.Z_cc_m => Some tt
-           | Z_cc_m_concrete, Compilers.ident.Z_cc_m_concrete s => Some s
-           | Z_neg_snd, Compilers.ident.Z_neg_snd => Some tt
            | Z_cast, Compilers.ident.Z_cast range => Some range
            | Z_cast2, Compilers.ident.Z_cast2 range => Some range
            | fancy_add, Compilers.ident.fancy_add log2wordmax imm => Some (log2wordmax, imm)
@@ -1443,30 +1604,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp, _
            | Z_div, _
            | Z_modulo, _
+           | Z_log2, _
+           | Z_log2_up, _
            | Z_eqb, _
            | Z_leb, _
+           | Z_geb, _
            | Z_of_nat, _
+           | Z_to_nat, _
            | Z_shiftr, _
            | Z_shiftl, _
            | Z_land, _
+           | Z_lor, _
+           | Z_bneg, _
+           | Z_lnot_modulo, _
            | Z_mul_split, _
-           | Z_mul_split_concrete, _
            | Z_add_get_carry, _
-           | Z_add_get_carry_concrete, _
            | Z_add_with_carry, _
            | Z_add_with_get_carry, _
-           | Z_add_with_get_carry_concrete, _
            | Z_sub_get_borrow, _
-           | Z_sub_get_borrow_concrete, _
            | Z_sub_with_get_borrow, _
-           | Z_sub_with_get_borrow_concrete, _
            | Z_zselect, _
            | Z_add_modulo, _
            | Z_rshi, _
-           | Z_rshi_concrete, _
            | Z_cc_m, _
-           | Z_cc_m_concrete, _
-           | Z_neg_snd, _
            | Z_cast, _
            | Z_cast2, _
            | fancy_add, _
@@ -1484,7 +1644,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | fancy_addm, _
              => None
            end%cps.
-      
+
       Local Notation eta2 x := (Datatypes.fst x, Datatypes.snd x) (only parsing).
       Local Notation eta3 x := (eta2 (Datatypes.fst x), Datatypes.snd x) (only parsing).
 
@@ -1494,82 +1654,81 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | LiteralZ => fun v => (type.base (Compilers.base.type.type_base Compilers.base.type.Z))
            | LiteralBool => fun v => (type.base (Compilers.base.type.type_base Compilers.base.type.bool))
            | LiteralNat => fun v => (type.base (Compilers.base.type.type_base Compilers.base.type.nat))
-           | Nat_succ => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | Nat_pred => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | Nat_max => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | Nat_mul => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | Nat_add => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | Nat_sub => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | nil => fun t => (type.base (Compilers.base.type.list t)) 
-           | cons => fun t => (type.base t -> type.base (Compilers.base.type.list t) -> type.base (Compilers.base.type.list t))%etype 
-           | pair => fun arg => let '(A, B) := eta2 arg in (type.base A -> type.base B -> type.base (A * B)%etype)%etype 
-           | fst => fun arg => let '(A, B) := eta2 arg in (type.base (A * B)%etype -> type.base A)%etype 
-           | snd => fun arg => let '(A, B) := eta2 arg in (type.base (A * B)%etype -> type.base B)%etype 
-           | pair_rect => fun arg => let '(A, B, T) := eta3 arg in ((type.base A -> type.base B -> type.base T) -> type.base (A * B)%etype -> type.base T)%etype 
-           | bool_rect => fun T => ((type.base ()%etype -> type.base T) -> (type.base ()%etype -> type.base T) -> type.base (Compilers.base.type.type_base base.type.bool) -> type.base T)%etype 
-           | nat_rect => fun P => ((type.base ()%etype -> type.base P) -> (type.base (Compilers.base.type.type_base base.type.nat) -> type.base P -> type.base P) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base P)%etype 
-           | list_rect => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (Compilers.base.type.list A) -> type.base P -> type.base P) -> type.base (Compilers.base.type.list A) -> type.base P)%etype 
-           | list_case => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (Compilers.base.type.list A) -> type.base P) -> type.base (Compilers.base.type.list A) -> type.base P)%etype 
-           | List_length => fun T => (type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.type_base base.type.nat))%etype 
-           | List_seq => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.list (Compilers.base.type.type_base base.type.nat)))%etype 
-           | List_repeat => fun A => (type.base A -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.list A))%etype 
-           | List_combine => fun arg => let '(A, B) := eta2 arg in (type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list B) -> type.base (Compilers.base.type.list (A * B)))%etype 
-           | List_map => fun arg => let '(A, B) := eta2 arg in ((type.base A -> type.base B) -> type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list B))%etype 
-           | List_app => fun A => (type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list A))%etype 
-           | List_rev => fun A => (type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list A))%etype 
-           | List_flat_map => fun arg => let '(A, B) := eta2 arg in ((type.base A -> type.base (Compilers.base.type.list B)) -> type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list B))%etype 
-           | List_partition => fun A => ((type.base A -> type.base (Compilers.base.type.type_base base.type.bool)) -> type.base (Compilers.base.type.list A) -> type.base (Compilers.base.type.list A * Compilers.base.type.list A)%etype)%etype 
-           | List_fold_right => fun arg => let '(A, B) := eta2 arg in ((type.base B -> type.base A -> type.base A) -> type.base A -> type.base (Compilers.base.type.list B) -> type.base A)%etype 
-           | List_update_nth => fun T => (type.base (Compilers.base.type.type_base base.type.nat) -> (type.base T -> type.base T) -> type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.list T))%etype 
-           | List_nth_default => fun T => (type.base T -> type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base T)%etype 
-           | Z_add => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_mul => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_pow => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_sub => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_opp => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_div => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_modulo => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_eqb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%etype 
-           | Z_leb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%etype 
-           | Z_of_nat => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_shiftr => fun offset => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_shiftl => fun offset => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_land => fun mask => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_mul_split => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_mul_split_concrete => fun s => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_add_get_carry => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_add_get_carry_concrete => fun s => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_add_with_carry => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_add_with_get_carry => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_add_with_get_carry_concrete => fun s => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_sub_get_borrow => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_sub_get_borrow_concrete => fun s => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_sub_with_get_borrow => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_sub_with_get_borrow_concrete => fun s => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_zselect => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_add_modulo => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_rshi => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_rshi_concrete => fun arg => let '(s, offset) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_cc_m => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_cc_m_concrete => fun s => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_neg_snd => fun _ => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | Z_cast => fun range => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | Z_cast2 => fun range => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | fancy_add => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | fancy_addc => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | fancy_sub => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | fancy_subb => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%etype 
-           | fancy_mulll => fun log2wordmax => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_mullh => fun log2wordmax => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_mulhl => fun log2wordmax => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_mulhh => fun log2wordmax => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_rshi => fun arg => let '(log2wordmax, x) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_selc => fun _ => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_selm => fun log2wordmax => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_sell => fun _ => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           | fancy_addm => fun _ => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z))%etype 
-           end.
-      
+           | Nat_succ => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))
+           | Nat_pred => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))
+           | Nat_max => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))
+           | Nat_mul => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))
+           | Nat_add => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))
+           | Nat_sub => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))
+           | nil => fun t => (type.base (base.type.list t))
+           | cons => fun t => (type.base t -> type.base (base.type.list t) -> type.base (base.type.list t))
+           | pair => fun arg => let '(A, B) := eta2 arg in (type.base A -> type.base B -> type.base (A * B)%etype)
+           | fst => fun arg => let '(A, B) := eta2 arg in (type.base (A * B)%etype -> type.base A)
+           | snd => fun arg => let '(A, B) := eta2 arg in (type.base (A * B)%etype -> type.base B)
+           | pair_rect => fun arg => let '(A, B, T) := eta3 arg in ((type.base A -> type.base B -> type.base T) -> type.base (A * B)%etype -> type.base T)
+           | bool_rect => fun T => ((type.base ()%etype -> type.base T) -> (type.base ()%etype -> type.base T) -> type.base (base.type.type_base base.type.bool) -> type.base T)
+           | nat_rect => fun P => ((type.base ()%etype -> type.base P) -> (type.base (base.type.type_base base.type.nat) -> type.base P -> type.base P) -> type.base (base.type.type_base base.type.nat) -> type.base P)
+           | list_rect => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (base.type.list A) -> type.base P -> type.base P) -> type.base (base.type.list A) -> type.base P)
+           | list_case => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (base.type.list A) -> type.base P) -> type.base (base.type.list A) -> type.base P)
+           | List_length => fun T => (type.base (base.type.list T) -> type.base (base.type.type_base base.type.nat))
+           | List_seq => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.list (base.type.type_base base.type.nat)))
+           | List_repeat => fun A => (type.base A -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.list A))
+           | List_combine => fun arg => let '(A, B) := eta2 arg in (type.base (base.type.list A) -> type.base (base.type.list B) -> type.base (base.type.list (A * B)))
+           | List_map => fun arg => let '(A, B) := eta2 arg in ((type.base A -> type.base B) -> type.base (base.type.list A) -> type.base (base.type.list B))
+           | List_app => fun A => (type.base (base.type.list A) -> type.base (base.type.list A) -> type.base (base.type.list A))
+           | List_rev => fun A => (type.base (base.type.list A) -> type.base (base.type.list A))
+           | List_flat_map => fun arg => let '(A, B) := eta2 arg in ((type.base A -> type.base (base.type.list B)) -> type.base (base.type.list A) -> type.base (base.type.list B))
+           | List_partition => fun A => ((type.base A -> type.base (base.type.type_base base.type.bool)) -> type.base (base.type.list A) -> type.base (base.type.list A * base.type.list A)%etype)
+           | List_fold_right => fun arg => let '(A, B) := eta2 arg in ((type.base B -> type.base A -> type.base A) -> type.base A -> type.base (base.type.list B) -> type.base A)
+           | List_update_nth => fun T => (type.base (base.type.type_base base.type.nat) -> (type.base T -> type.base T) -> type.base (base.type.list T) -> type.base (base.type.list T))
+           | List_nth_default => fun T => (type.base T -> type.base (base.type.list T) -> type.base (base.type.type_base base.type.nat) -> type.base T)
+           | Z_add => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_mul => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_pow => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_sub => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_opp => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_div => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_modulo => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_log2 => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_log2_up => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_eqb => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))
+           | Z_leb => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))
+           | Z_geb => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))
+           | Z_of_nat => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.Z))
+           | Z_to_nat => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.nat))
+           | Z_shiftr => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_shiftl => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_land => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_lor => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_bneg => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_lnot_modulo => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_mul_split => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | Z_add_get_carry => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | Z_add_with_carry => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_add_with_get_carry => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | Z_sub_get_borrow => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | Z_sub_with_get_borrow => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | Z_zselect => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_add_modulo => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_rshi => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_cc_m => fun _ => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_cast => fun range => (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))
+           | Z_cast2 => fun range => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | fancy_add => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | fancy_addc => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | fancy_sub => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | fancy_subb => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)
+           | fancy_mulll => fun log2wordmax => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_mullh => fun log2wordmax => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_mulhl => fun log2wordmax => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_mulhh => fun log2wordmax => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_rshi => fun arg => let '(log2wordmax, x) := eta2 arg in (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_selc => fun _ => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_selm => fun log2wordmax => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_sell => fun _ => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           | fancy_addm => fun _ => (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype -> type.base (base.type.type_base base.type.Z))
+           end%etype.
+
       Definition to_typed (pidc : ident) : forall args : full_types pidc, Compilers.ident.ident (type_of pidc args)
         := match pidc return forall args : full_types pidc, Compilers.ident.ident (type_of pidc args) with
            | LiteralUnit => fun v => @Compilers.ident.LiteralUnit v
@@ -1611,30 +1770,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Z_opp => fun _ => @Compilers.ident.Z_opp
            | Z_div => fun _ => @Compilers.ident.Z_div
            | Z_modulo => fun _ => @Compilers.ident.Z_modulo
+           | Z_log2 => fun _ => @Compilers.ident.Z_log2
+           | Z_log2_up => fun _ => @Compilers.ident.Z_log2_up
            | Z_eqb => fun _ => @Compilers.ident.Z_eqb
            | Z_leb => fun _ => @Compilers.ident.Z_leb
+           | Z_geb => fun _ => @Compilers.ident.Z_geb
            | Z_of_nat => fun _ => @Compilers.ident.Z_of_nat
-           | Z_shiftr => fun offset => @Compilers.ident.Z_shiftr offset
-           | Z_shiftl => fun offset => @Compilers.ident.Z_shiftl offset
-           | Z_land => fun mask => @Compilers.ident.Z_land mask
+           | Z_to_nat => fun _ => @Compilers.ident.Z_to_nat
+           | Z_shiftr => fun _ => @Compilers.ident.Z_shiftr
+           | Z_shiftl => fun _ => @Compilers.ident.Z_shiftl
+           | Z_land => fun _ => @Compilers.ident.Z_land
+           | Z_lor => fun _ => @Compilers.ident.Z_lor
+           | Z_bneg => fun _ => @Compilers.ident.Z_bneg
+           | Z_lnot_modulo => fun _ => @Compilers.ident.Z_lnot_modulo
            | Z_mul_split => fun _ => @Compilers.ident.Z_mul_split
-           | Z_mul_split_concrete => fun s => @Compilers.ident.Z_mul_split_concrete s
            | Z_add_get_carry => fun _ => @Compilers.ident.Z_add_get_carry
-           | Z_add_get_carry_concrete => fun s => @Compilers.ident.Z_add_get_carry_concrete s
            | Z_add_with_carry => fun _ => @Compilers.ident.Z_add_with_carry
            | Z_add_with_get_carry => fun _ => @Compilers.ident.Z_add_with_get_carry
-           | Z_add_with_get_carry_concrete => fun s => @Compilers.ident.Z_add_with_get_carry_concrete s
            | Z_sub_get_borrow => fun _ => @Compilers.ident.Z_sub_get_borrow
-           | Z_sub_get_borrow_concrete => fun s => @Compilers.ident.Z_sub_get_borrow_concrete s
            | Z_sub_with_get_borrow => fun _ => @Compilers.ident.Z_sub_with_get_borrow
-           | Z_sub_with_get_borrow_concrete => fun s => @Compilers.ident.Z_sub_with_get_borrow_concrete s
            | Z_zselect => fun _ => @Compilers.ident.Z_zselect
            | Z_add_modulo => fun _ => @Compilers.ident.Z_add_modulo
            | Z_rshi => fun _ => @Compilers.ident.Z_rshi
-           | Z_rshi_concrete => fun arg => match eta2 arg as args' return Compilers.ident.ident (type_of Z_rshi_concrete args') with (s, offset) => @Compilers.ident.Z_rshi_concrete s offset end
            | Z_cc_m => fun _ => @Compilers.ident.Z_cc_m
-           | Z_cc_m_concrete => fun s => @Compilers.ident.Z_cc_m_concrete s
-           | Z_neg_snd => fun _ => @Compilers.ident.Z_neg_snd
            | Z_cast => fun range => @Compilers.ident.Z_cast range
            | Z_cast2 => fun range => @Compilers.ident.Z_cast2 range
            | fancy_add => fun arg => match eta2 arg as args' return Compilers.ident.ident (type_of fancy_add args') with (log2wordmax, imm) => @Compilers.ident.fancy_add log2wordmax imm end
@@ -1651,7 +1809,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | fancy_sell => fun _ => @Compilers.ident.fancy_sell
            | fancy_addm => fun _ => @Compilers.ident.fancy_addm
            end.
-      
+
       Definition retype_ident {t} (idc : Compilers.ident.ident t) : match arg_types (of_typed_ident idc) return Type with Some t => t | None => unit end -> Compilers.ident.ident t
         := match idc in Compilers.ident.ident t return match arg_types (of_typed_ident idc) return Type with Some t => t | None => unit end -> Compilers.ident.ident t with
            | Compilers.ident.LiteralUnit v => (fun v => @Compilers.ident.LiteralUnit v) : match arg_types (of_typed_ident (@Compilers.ident.LiteralUnit v)) return Type with Some t => t | None => unit end -> _ (* COQBUG(https://github.com/coq/coq/issues/7726) *)
@@ -1693,30 +1851,29 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_opp => fun _ => @Compilers.ident.Z_opp
            | Compilers.ident.Z_div => fun _ => @Compilers.ident.Z_div
            | Compilers.ident.Z_modulo => fun _ => @Compilers.ident.Z_modulo
+           | Compilers.ident.Z_log2 => fun _ => @Compilers.ident.Z_log2
+           | Compilers.ident.Z_log2_up => fun _ => @Compilers.ident.Z_log2_up
            | Compilers.ident.Z_eqb => fun _ => @Compilers.ident.Z_eqb
            | Compilers.ident.Z_leb => fun _ => @Compilers.ident.Z_leb
+           | Compilers.ident.Z_geb => fun _ => @Compilers.ident.Z_geb
            | Compilers.ident.Z_of_nat => fun _ => @Compilers.ident.Z_of_nat
-           | Compilers.ident.Z_shiftr offset => fun offset => @Compilers.ident.Z_shiftr offset
-           | Compilers.ident.Z_shiftl offset => fun offset => @Compilers.ident.Z_shiftl offset
-           | Compilers.ident.Z_land mask => fun mask => @Compilers.ident.Z_land mask
+           | Compilers.ident.Z_to_nat => fun _ => @Compilers.ident.Z_to_nat
+           | Compilers.ident.Z_shiftr => fun _ => @Compilers.ident.Z_shiftr
+           | Compilers.ident.Z_shiftl => fun _ => @Compilers.ident.Z_shiftl
+           | Compilers.ident.Z_land => fun _ => @Compilers.ident.Z_land
+           | Compilers.ident.Z_lor => fun _ => @Compilers.ident.Z_lor
+           | Compilers.ident.Z_bneg => fun _ => @Compilers.ident.Z_bneg
+           | Compilers.ident.Z_lnot_modulo => fun _ => @Compilers.ident.Z_lnot_modulo
            | Compilers.ident.Z_mul_split => fun _ => @Compilers.ident.Z_mul_split
-           | Compilers.ident.Z_mul_split_concrete s => fun s => @Compilers.ident.Z_mul_split_concrete s
            | Compilers.ident.Z_add_get_carry => fun _ => @Compilers.ident.Z_add_get_carry
-           | Compilers.ident.Z_add_get_carry_concrete s => fun s => @Compilers.ident.Z_add_get_carry_concrete s
            | Compilers.ident.Z_add_with_carry => fun _ => @Compilers.ident.Z_add_with_carry
            | Compilers.ident.Z_add_with_get_carry => fun _ => @Compilers.ident.Z_add_with_get_carry
-           | Compilers.ident.Z_add_with_get_carry_concrete s => fun s => @Compilers.ident.Z_add_with_get_carry_concrete s
            | Compilers.ident.Z_sub_get_borrow => fun _ => @Compilers.ident.Z_sub_get_borrow
-           | Compilers.ident.Z_sub_get_borrow_concrete s => fun s => @Compilers.ident.Z_sub_get_borrow_concrete s
            | Compilers.ident.Z_sub_with_get_borrow => fun _ => @Compilers.ident.Z_sub_with_get_borrow
-           | Compilers.ident.Z_sub_with_get_borrow_concrete s => fun s => @Compilers.ident.Z_sub_with_get_borrow_concrete s
            | Compilers.ident.Z_zselect => fun _ => @Compilers.ident.Z_zselect
            | Compilers.ident.Z_add_modulo => fun _ => @Compilers.ident.Z_add_modulo
            | Compilers.ident.Z_rshi => fun _ => @Compilers.ident.Z_rshi
-           | Compilers.ident.Z_rshi_concrete s offset => fun arg => let '(s, offset) := eta2 arg in @Compilers.ident.Z_rshi_concrete s offset
            | Compilers.ident.Z_cc_m => fun _ => @Compilers.ident.Z_cc_m
-           | Compilers.ident.Z_cc_m_concrete s => fun s => @Compilers.ident.Z_cc_m_concrete s
-           | Compilers.ident.Z_neg_snd => fun _ => @Compilers.ident.Z_neg_snd
            | Compilers.ident.Z_cast range => fun range => @Compilers.ident.Z_cast range
            | Compilers.ident.Z_cast2 range => fun range => @Compilers.ident.Z_cast2 range
            | Compilers.ident.fancy_add log2wordmax imm => fun arg => let '(log2wordmax, imm) := eta2 arg in @Compilers.ident.fancy_add log2wordmax imm
@@ -1733,8 +1890,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.fancy_sell => fun _ => @Compilers.ident.fancy_sell
            | Compilers.ident.fancy_addm => fun _ => @Compilers.ident.fancy_addm
            end.
-      
-      
+
+
       (*===*)
     End ident.
   End pattern.

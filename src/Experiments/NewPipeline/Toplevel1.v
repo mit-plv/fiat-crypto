@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.derive.Derive.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Strings.String.
+Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
@@ -286,132 +287,6 @@ Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
 
 Axiom admit_pf : False.
 Notation admit := (match admit_pf with end).
-Ltac cache_reify _ :=
-  intros;
-  etransitivity;
-  [
-  | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
-    Reify_rhs ();
-    reflexivity ];
-  subst_evars;
-  reflexivity.
-
-Create HintDb reify_gen_cache.
-
-Derive carry_mul_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f g : list Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (idxs : list nat),
-                    Interp (t:=reify_type_of carry_mulmod)
-                           carry_mul_gen limbwidth_num limbwidth_den s c n idxs f g
-                    = carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)
-       As carry_mul_gen_correct.
-Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
-
-Derive carry_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f : list Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (idxs : list nat),
-                    Interp (t:=reify_type_of carrymod)
-                           carry_gen limbwidth_num limbwidth_den s c n idxs f
-                    = carrymod limbwidth_num limbwidth_den s c n idxs f)
-       As carry_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
-
-Derive encode_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (v : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of encodemod)
-                           encode_gen limbwidth_num limbwidth_den s c n v
-                    = encodemod limbwidth_num limbwidth_den s c n v)
-       As encode_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
-
-Derive add_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f g : list Z)
-                        (n : nat),
-                    Interp (t:=reify_type_of addmod)
-                           add_gen limbwidth_num limbwidth_den n f g
-                    = addmod limbwidth_num limbwidth_den n f g)
-       As add_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
-Derive sub_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (coef : Z)
-                        (f g : list Z),
-                    Interp (t:=reify_type_of submod)
-                           sub_gen limbwidth_num limbwidth_den s c n coef f g
-                    = submod limbwidth_num limbwidth_den s c n coef f g)
-       As sub_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
-
-Derive opp_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (coef : Z)
-                        (f : list Z),
-                    Interp (t:=reify_type_of oppmod)
-                           opp_gen limbwidth_num limbwidth_den s c n coef f
-                    = oppmod limbwidth_num limbwidth_den s c n coef f)
-       As opp_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
-
-Definition zeromod limbwidth_num limbwidth_den n s c := encodemod limbwidth_num limbwidth_den n s c 0.
-Definition onemod limbwidth_num limbwidth_den n s c := encodemod limbwidth_num limbwidth_den n s c 1.
-
-Derive zero_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of zeromod)
-                           zero_gen limbwidth_num limbwidth_den s c n
-                    = zeromod limbwidth_num limbwidth_den s c n)
-       As zero_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
-
-Derive one_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of onemod)
-                           one_gen limbwidth_num limbwidth_den s c n
-                    = onemod limbwidth_num limbwidth_den s c n)
-       As one_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
-
-Derive id_gen
-       SuchThat (forall (ls : list Z),
-                    Interp (t:=reify_type_of (@id (list Z)))
-                           id_gen ls
-                    = id ls)
-       As id_gen_correct.
-Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = id _) => simple apply id_gen_correct : reify_gen_cache.
 
 Module Pipeline.
   Import GeneralizeVar.
@@ -426,59 +301,13 @@ Module Pipeline.
   | Value_not_ltZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
-  | Stringification_failed {t} (e : @Compilers.defaults.Expr t).
+  | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
+  | Stringification_failed {t} (e : @Compilers.defaults.Expr t) (err : string).
 
   Notation ErrorT := (ErrorT ErrorMessage).
 
   Section show.
     Local Open Scope string_scope.
-    Definition show_prim_zrange_opt_interp {t:base.type.base}
-      : Show (ZRange.type.base.option.interp t)
-      := match t return Show (ZRange.type.base.option.interp t) with
-         | base.type.unit => _
-         | base.type.Z => _
-         | base.type.nat => _
-         | base.type.bool => _
-         end.
-    Global Existing Instance show_prim_zrange_opt_interp.
-    Fixpoint show_base_zrange_opt_interp {t} : Show (ZRange.type.base.option.interp t)
-      := fun parens
-         => match t return ZRange.type.base.option.interp t -> string with
-            | base.type.type_base t
-              => fun v : ZRange.type.base.option.interp t
-                 => @show_prim_zrange_opt_interp t parens v
-            | base.type.prod A B
-              => fun '(a, b)
-                 => "(" ++ @show_base_zrange_opt_interp A false a
-                        ++ ", " ++ @show_base_zrange_opt_interp B true b
-                        ++ ")"
-            | base.type.list A
-              => fun v : option (list (ZRange.type.option.interp A))
-                 => show parens v
-            end.
-    Global Existing Instance show_base_zrange_opt_interp.
-    Definition show_zrange_opt_interp {t} : Show (ZRange.type.option.interp t)
-      := fun parens
-         => match t return ZRange.type.option.interp t -> string with
-            | type.base t
-              => fun v : ZRange.type.base.option.interp t
-                 => show parens v
-            | type.arrow s d => fun _ => "λ"
-            end.
-    Global Existing Instance show_zrange_opt_interp.
-    Fixpoint show_for_each_lhs_of_arrow {base_type} (f : type.type base_type -> Type) (show_f : forall t, Show (f t)) (t : type.type base_type) (p : bool) : type.for_each_lhs_of_arrow f t -> string
-      := match t return type.for_each_lhs_of_arrow f t -> string with
-         | type.base t => fun (tt : unit) => show p tt
-         | type.arrow s d
-           => fun '((x, xs) : f s * type.for_each_lhs_of_arrow f d)
-              => let _ : Show (f s) := show_f s in
-                 let _ : Show (type.for_each_lhs_of_arrow f d) := @show_for_each_lhs_of_arrow base_type f show_f d in
-                 show p (x, xs)
-         end.
-    Global Instance: forall {base_type f show_f t}, Show (type.for_each_lhs_of_arrow f t) := @show_for_each_lhs_of_arrow.
-
-    Local Notation NewLine := (String "010" "") (only parsing).
-
     Fixpoint find_too_loose_base_bounds {t}
       : ZRange.type.base.option.interp t -> ZRange.type.base.option.interp t-> bool * list (nat * nat) * list (zrange * zrange)
       := match t return ZRange.type.base.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange) with
@@ -536,7 +365,7 @@ Module Pipeline.
       : string
       := let '(none_some, lens, bs) := find_too_loose_bounds b1 b2 in
          String.concat
-           NewLine
+           String.NewLine
            ((if none_some then "Found None where Some was expected"::nil else nil)
               ++ (List.map
                     (A:=nat*nat)
@@ -556,12 +385,14 @@ Module Pipeline.
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
                       ++ match ToString.C.ToFunctionLines
-                                 "f" syntax_tree None arg_bounds with
-                         | Some E_lines
+                                 "" "f" syntax_tree None arg_bounds ZRange.type.base.option.None with
+                         | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
                                 ++ E_lines ++ [""]
-                                ++ ["with input bounds " ++ show true arg_bounds ++ "." ++ NewLine]%string
-                         | None => ["(Unprintible syntax tree used in bounds analysis)" ++ NewLine]%string
+                                ++ ["with input bounds " ++ show true arg_bounds ++ "." ++ String.NewLine]%string
+                         | inr errs
+                           => (["(Unprintible syntax tree used in bounds analysis)" ++ String.NewLine]%string)
+                               ++ ["Stringification failed on the syntax tree:"] ++ show_lines false syntax_tree ++ [errs]
                          end)%list
               | Bounds_analysis_failed => ["Bounds analysis failed."]
               | Type_too_complicated_for_cps t
@@ -573,13 +404,14 @@ Module Pipeline.
               | Value_not_ltZ descr lhs rhs
                 => ["Value not < (" ++ descr ++ ") : expected " ++ show false lhs ++ " < " ++ show false rhs]
               | Values_not_provably_distinctZ descr lhs rhs
-                => ["Values not provalby distinct (" ++ descr ++ ") : expected " ++ show true lhs ++ " ≠ " ++ show true rhs]
+                => ["Values not provably distinct (" ++ descr ++ ") : expected " ++ show true lhs ++ " ≠ " ++ show true rhs]
               | Values_not_provably_equalZ descr lhs rhs
-                => ["Values not provalby equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs]
-              | Stringification_failed t e => ["Stringification failed on the syntax tree:"] ++ show_lines false e
+              | Values_not_provably_equal_listZ descr lhs rhs
+                => ["Values not provably equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs]
+              | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines false e ++ [err]
               end.
     Local Instance show_ErrorMessage : Show ErrorMessage
-      := fun parens err => String.concat NewLine (show_lines parens err).
+      := fun parens err => String.concat String.NewLine (show_lines parens err).
   End show.
 
   Definition invert_result {T} (v : ErrorT T)
@@ -630,6 +462,7 @@ Module Pipeline.
       end.
 
   Definition BoundsPipelineToStrings
+             (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -639,7 +472,7 @@ Module Pipeline.
              (E : Expr t)
              arg_bounds
              out_bounds
-    : ErrorT (list string)
+    : ErrorT (list string * ToString.C.ident_infos)
     := let E := BoundsPipeline
                   (*with_dead_code_elimination*)
                   with_subst01
@@ -648,15 +481,16 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.C.ToFunctionLines
-                                  name E' None arg_bounds in
+                                  type_prefix name E' None arg_bounds out_bounds in
                       match E with
-                      | Some E => Success E
-                      | None => Error (Stringification_failed E')
+                      | inl E => Success E
+                      | inr err => Error (Stringification_failed E' err)
                       end
        | Error err => Error err
        end.
 
   Definition BoundsPipelineToString
+             (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -666,16 +500,16 @@ Module Pipeline.
              (E : Expr t)
              arg_bounds
              out_bounds
-    : ErrorT string
+    : ErrorT (string * ToString.C.ident_infos)
     := let E := BoundsPipelineToStrings
-                  name
+                  type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
                   relax_zrange
                   E arg_bounds out_bounds in
        match E with
-       | Success E => Success (ToString.C.LinesToString E)
+       | Success (E, types_used) => Success (ToString.C.LinesToString E, types_used)
        | Error err => Error err
        end.
 
@@ -802,6 +636,205 @@ Proof.
         try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
 Qed.
 
+Ltac cache_reify _ :=
+  intros;
+  etransitivity;
+  [
+  | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
+    Reify_rhs ();
+    reflexivity ];
+  subst_evars;
+  reflexivity.
+
+Create HintDb reify_gen_cache.
+
+Derive carry_mul_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (f g : list Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z))
+                        (idxs : list nat),
+                    Interp (t:=reify_type_of carry_mulmod)
+                           carry_mul_gen limbwidth_num limbwidth_den s c n idxs f g
+                    = carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)
+       As carry_mul_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
+
+Derive carry_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (f : list Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z))
+                        (idxs : list nat),
+                    Interp (t:=reify_type_of carrymod)
+                           carry_gen limbwidth_num limbwidth_den s c n idxs f
+                    = carrymod limbwidth_num limbwidth_den s c n idxs f)
+       As carry_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
+
+Derive encode_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (v : Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of encodemod)
+                           encode_gen limbwidth_num limbwidth_den s c n v
+                    = encodemod limbwidth_num limbwidth_den s c n v)
+       As encode_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+
+Derive add_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (f g : list Z)
+                        (n : nat),
+                    Interp (t:=reify_type_of addmod)
+                           add_gen limbwidth_num limbwidth_den n f g
+                    = addmod limbwidth_num limbwidth_den n f g)
+       As add_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
+
+Derive sub_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z))
+                        (coef : Z)
+                        (f g : list Z),
+                    Interp (t:=reify_type_of submod)
+                           sub_gen limbwidth_num limbwidth_den s c n coef f g
+                    = submod limbwidth_num limbwidth_den s c n coef f g)
+       As sub_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
+Derive opp_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z))
+                        (coef : Z)
+                        (f : list Z),
+                    Interp (t:=reify_type_of oppmod)
+                           opp_gen limbwidth_num limbwidth_den s c n coef f
+                    = oppmod limbwidth_num limbwidth_den s c n coef f)
+       As opp_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
+Definition zeromod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 0.
+Definition onemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 1.
+Definition primemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n (s - Associational.eval c).
+Derive zero_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of zeromod)
+                           zero_gen limbwidth_num limbwidth_den s c n
+                    = zeromod limbwidth_num limbwidth_den s c n)
+       As zero_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
+
+Derive one_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of onemod)
+                           one_gen limbwidth_num limbwidth_den s c n
+                    = onemod limbwidth_num limbwidth_den s c n)
+       As one_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
+
+Derive prime_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z)),
+                    Interp (t:=reify_type_of primemod)
+                           prime_gen limbwidth_num limbwidth_den s c n
+                    = primemod limbwidth_num limbwidth_den s c n)
+       As prime_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = primemod _ _ _ _ _) => simple apply prime_gen_correct : reify_gen_cache.
+
+Derive id_gen
+       SuchThat (forall (ls : list Z),
+                    Interp (t:=reify_type_of (@id (list Z)))
+                           id_gen ls
+                    = id ls)
+       As id_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = id _) => simple apply id_gen_correct : reify_gen_cache.
+
+Derive to_bytes_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (bitwidth : Z)
+                        (m_enc : list Z)
+                        (f : list Z),
+                    Interp (t:=reify_type_of to_bytesmod)
+                           to_bytes_gen limbwidth_num limbwidth_den n bitwidth m_enc f
+                    = to_bytesmod limbwidth_num limbwidth_den n bitwidth m_enc f)
+       As to_bytes_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = to_bytesmod _ _ _ _ _ _) => simple apply to_bytes_gen_correct : reify_gen_cache.
+
+Derive from_bytes_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (n : nat)
+                        (f : list Z),
+                    Interp (t:=reify_type_of from_bytesmod)
+                           from_bytes_gen limbwidth_num limbwidth_den n f
+                    = from_bytesmod limbwidth_num limbwidth_den n f)
+       As from_bytes_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = from_bytesmod _ _ _ _) => simple apply from_bytes_gen_correct : reify_gen_cache.
+
+Derive mulx_gen
+       SuchThat (forall (s x y : Z),
+                    Interp (t:=reify_type_of mulx)
+                           mulx_gen s x y
+                    = mulx s x y)
+       As mulx_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = mulx _ _ _) => simple apply mulx_gen_correct : reify_gen_cache.
+
+Derive addcarryx_gen
+       SuchThat (forall (s c x y : Z),
+                    Interp (t:=reify_type_of addcarryx)
+                           addcarryx_gen s c x y
+                    = addcarryx s c x y)
+       As addcarryx_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = addcarryx _ _ _ _) => simple apply addcarryx_gen_correct : reify_gen_cache.
+
+Derive subborrowx_gen
+       SuchThat (forall (s c x y : Z),
+                    Interp (t:=reify_type_of subborrowx)
+                           subborrowx_gen s c x y
+                    = subborrowx s c x y)
+       As subborrowx_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = subborrowx _ _ _ _) => simple apply subborrowx_gen_correct : reify_gen_cache.
+
+Derive cmovznz_gen
+       SuchThat (forall (bitwidth cond z nz : Z),
+                    Interp (t:=reify_type_of cmovznz)
+                           cmovznz_gen bitwidth cond z nz
+                    = cmovznz bitwidth cond z nz)
+       As cmovznz_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = cmovznz _ _ _ _) => simple apply cmovznz_gen_correct : reify_gen_cache.
+
+
 (** XXX TODO: Translate Jade's python script *)
 Module Import UnsaturatedSolinas.
   Section rcarry_mul.
@@ -813,42 +846,66 @@ Module Import UnsaturatedSolinas.
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (seq 0 n ++ [0; 1])%list%nat.
     Let coef := 2.
+    Let n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
+    Let prime_upperbound_list : list Z
+      := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c (s-1).
+    Let prime_bytes_upperbound_list : list Z
+      := encode (weight 8 1) n_bytes s c (s-1).
     Let tight_upperbounds : list Z
       := List.map
            (fun v : Z => Qceiling (11/10 * v))
-           (encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c (s-1)).
+           prime_upperbound_list.
     Definition prime_bound : ZRange.type.option.interp (base.type.Z)
       := Some r[0~>(s - Associational.eval c - 1)]%zrange.
+    Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
+
+    Definition m_enc : list Z
+      := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c (s-Associational.eval c).
 
     Definition relax_zrange_of_machine_wordsize
       := relax_zrange_gen [machine_wordsize; 2 * machine_wordsize]%Z.
 
+    Definition relax_zrange_of_machine_wordsize_with_bytes
+      := relax_zrange_gen [1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+
     Let relax_zrange := relax_zrange_of_machine_wordsize.
+    Let relax_zrange_with_bytes := relax_zrange_of_machine_wordsize_with_bytes.
     Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
       := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
     Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
       := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
 
+
     (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
     Definition check_args {T} (res : Pipeline.ErrorT T)
       : Pipeline.ErrorT T
-      := if negb (Qle_bool 1 limbwidth)%Q
-         then Error (Pipeline.Value_not_leQ "1 ≤ limbwidth" 1%Q limbwidth)
-         else if (negb (0 <? s - Associational.eval c))%Z
-              then Error (Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 0" 0 (s - Associational.eval c))
-              else if (s =? 0)%Z
-                   then Error (Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
-                   else if (n =? 0)%nat
-                        then Error (Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0%nat)
-                        else if (negb (0 <? machine_wordsize))
-                             then Error (Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
-                             else res.
+      := fold_right
+           (fun '(b, e) k => if b:bool then Error e else k)
+           res
+           [(negb (Qle_bool 1 limbwidth)%Q, Pipeline.Value_not_leQ "limbwidth < 1" 1%Q limbwidth);
+              ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0" 0 (Associational.eval c));
+              ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
+              ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
+              ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
+              ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize);
+              (let v1 := s in
+               let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
+               (negb (v1 =? v2), Pipeline.Values_not_provably_equalZ "s ≠ weight n (needed for to_bytes)" v1 v2));
+              (let v1 := (map (Z.land (Z.ones machine_wordsize)) m_enc) in
+               let v2 := m_enc in
+               (negb (list_beq _ Z.eqb v1 v2), Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2));
+              (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
+               let v2 := s - Associational.eval c in
+               (negb (v1 =? v2)%Z, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2))].
 
     Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
-    Notation BoundsPipeline rop in_bounds out_bounds
-      := (Pipeline.BoundsPipeline
+    Notation BoundsPipelineToStrings prefix name rop in_bounds out_bounds
+      := ((prefix ++ name)%string,
+          Pipeline.BoundsPipelineToStrings
+            prefix (prefix ++ name)%string
             (*false*) true None
             relax_zrange
             rop%Expr in_bounds out_bounds).
@@ -867,9 +924,32 @@ Module Import UnsaturatedSolinas.
               Hrop rv)
            (only parsing).
 
+    Notation BoundsPipelineToStrings_with_bytes_no_subst01 prefix name rop in_bounds out_bounds
+      := ((prefix ++ name)%string,
+          Pipeline.BoundsPipelineToStrings
+            prefix (prefix ++ name)%string
+            (*false*) false None
+            relax_zrange_with_bytes
+            rop%Expr in_bounds out_bounds).
+
+    Notation BoundsPipeline_with_bytes_no_subst01_correct in_bounds out_bounds op
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
+          => @Pipeline.BoundsPipeline_correct_trans
+              (*false*) false None
+              relax_zrange_with_bytes
+              (relax_zrange_gen_good _)
+              _
+              rop
+              in_bounds
+              out_bounds
+              op
+              Hrop rv)
+           (only parsing).
+
     (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
-    Definition rcarry_mul
-      := BoundsPipeline
+    Definition srcarry_mul prefix
+      := BoundsPipelineToStrings
+           prefix "carry_mul"
            (carry_mul_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
            (Some loose_bounds, (Some loose_bounds, tt))
@@ -881,8 +961,9 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds)
            (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
-    Definition rcarry
-      := BoundsPipeline
+    Definition srcarry prefix
+      := BoundsPipelineToStrings
+           prefix "carry"
            (carry_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
            (Some loose_bounds, tt)
@@ -894,8 +975,9 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds)
            (carrymod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
-    Definition rrelax
-      := BoundsPipeline
+    Definition srrelax prefix
+      := BoundsPipelineToStrings
+           prefix "relax"
            id_gen
            (Some tight_bounds, tt)
            (Some loose_bounds).
@@ -906,8 +988,9 @@ Module Import UnsaturatedSolinas.
            (Some loose_bounds)
            (@id (list Z)).
 
-    Definition radd
-      := BoundsPipeline
+    Definition sradd prefix
+      := BoundsPipelineToStrings
+           prefix "add"
            (add_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
            (Some tight_bounds, (Some tight_bounds, tt))
@@ -919,8 +1002,9 @@ Module Import UnsaturatedSolinas.
            (Some loose_bounds)
            (addmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
-    Definition rsub
-      := BoundsPipeline
+    Definition srsub prefix
+      := BoundsPipelineToStrings
+           prefix "sub"
            (sub_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
            (Some tight_bounds, (Some tight_bounds, tt))
@@ -932,8 +1016,9 @@ Module Import UnsaturatedSolinas.
            (Some loose_bounds)
            (submod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n coef).
 
-    Definition ropp
-      := BoundsPipeline
+    Definition sropp prefix
+      := BoundsPipelineToStrings
+           prefix "opp"
            (opp_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
            (Some tight_bounds, tt)
@@ -944,6 +1029,34 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds, tt)
            (Some loose_bounds)
            (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n coef).
+
+    Definition srto_bytes prefix
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix "to_bytes"
+           (to_bytes_gen
+              @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
+           (Some tight_bounds, tt)
+           prime_bytes_bounds.
+
+    Definition rto_bytes_correct
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some tight_bounds, tt)
+           prime_bytes_bounds
+           (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc).
+
+    Definition srfrom_bytes prefix
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix "from_bytes"
+           (from_bytes_gen
+              @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
+           (prime_bytes_bounds, tt)
+           (Some tight_bounds).
+
+    Definition rfrom_bytes_correct
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (prime_bytes_bounds, tt)
+           (Some tight_bounds)
+           (from_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n).
 
     Definition rencode_correct
       := BoundsPipeline_correct
@@ -963,6 +1076,62 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds)
            (onemod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n).
 
+    Definition srmulx prefix (s : Z)
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix ("mulx_u" ++ decimal_string_of_Z s)
+           (mulx_gen
+              @ GallinaReify.Reify s)
+           (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
+           (Some r[0~>2^s-1], Some r[0~>2^s-1])%zrange.
+
+    Definition srmulx_correct (s : Z)
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
+           (Some r[0~>2^s-1], Some r[0~>2^s-1])%zrange
+           (mulx s).
+
+    Definition sraddcarryx prefix (s : Z)
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix ("addcarryx_u" ++ decimal_string_of_Z s)
+           (addcarryx_gen
+              @ GallinaReify.Reify s)
+           (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+           (Some r[0~>2^s-1], Some r[0~>1])%zrange.
+
+    Definition sraddcarryx_correct (s : Z)
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+           (Some r[0~>2^s-1], Some r[0~>1])%zrange
+           (addcarryx s).
+
+    Definition srsubborrowx prefix (s : Z)
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix ("subborrowx_u" ++ decimal_string_of_Z s)
+           (subborrowx_gen
+              @ GallinaReify.Reify s)
+           (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+           (Some r[0~>2^s-1], Some r[0~>1])%zrange.
+
+    Definition srsubborrowx_correct (s : Z)
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+           (Some r[0~>2^s-1], Some r[0~>1])%zrange
+           (subborrowx s).
+
+    Definition srcmovznz prefix (s : Z)
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix ("cmovznz_u" ++ decimal_string_of_Z s)
+           (cmovznz_gen
+              @ GallinaReify.Reify s)
+           (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+           (Some r[0~>2^s-1])%zrange.
+
+    Definition srcmovznz_correct (s : Z)
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+           (Some r[0~>2^s-1])%zrange
+           (cmovznz s).
+
     (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
     Definition rcarry_mul_correctT rv : Prop
       := type_of_strip_3arrow (@rcarry_mul_correct rv).
@@ -976,6 +1145,10 @@ Module Import UnsaturatedSolinas.
       := type_of_strip_3arrow (@rsub_correct rv).
     Definition ropp_correctT rv : Prop
       := type_of_strip_3arrow (@ropp_correct rv).
+    Definition rto_bytes_correctT rv : Prop
+      := type_of_strip_3arrow (@rto_bytes_correct rv).
+    Definition rfrom_bytes_correctT rv : Prop
+      := type_of_strip_3arrow (@rfrom_bytes_correct rv).
     Definition rencode_correctT rv : Prop
       := type_of_strip_3arrow (@rencode_correct rv).
     Definition rzero_correctT rv : Prop
@@ -994,10 +1167,13 @@ Module Import UnsaturatedSolinas.
               {roppv} (Hroppv : ropp_correctT roppv)
               {rzerov} (Hrzerov : rzero_correctT rzerov)
               {ronev} (Hronev : rone_correctT ronev)
-              {rencodev} (Hrencodev : rencode_correctT rencodev).
+              {rencodev} (Hrencodev : rencode_correctT rencodev)
+              {rto_bytesv} (Hto_bytesv : rto_bytes_correctT rto_bytesv)
+              {rfrom_bytesv} (Hfrom_bytesv : rfrom_bytes_correctT rfrom_bytesv).
 
       Local Ltac use_curve_good_t :=
-        repeat first [ progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
+        repeat first [ assumption
+                     | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
                      | reflexivity
                      | lia
                      | rewrite interp_reify_list, ?map_map
@@ -1018,11 +1194,16 @@ Module Import UnsaturatedSolinas.
           /\ n <> 0%nat
           /\ List.length tight_bounds = n
           /\ List.length loose_bounds = n
-          /\ 0 < Qden limbwidth <= Qnum limbwidth.
+          /\ 0 < Qden limbwidth <= Qnum limbwidth
+          /\ s = weight (Qnum limbwidth) (QDen limbwidth) n
+          /\ map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc
+          /\ eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc = s - Associational.eval c
+          /\ Datatypes.length m_enc = n
+          /\ 0 < Associational.eval c < s.
       Proof.
         clear -curve_good.
-        cbv [check_args] in curve_good.
-        cbv [tight_bounds loose_bounds prime_bound] in *.
+        cbv [check_args fold_right] in curve_good.
+        cbv [tight_bounds loose_bounds prime_bound m_enc] in *.
         break_innermost_match_hyps; try discriminate.
         rewrite negb_false_iff in *.
         Z.ltb_to_lt.
@@ -1033,8 +1214,17 @@ Module Import UnsaturatedSolinas.
         rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.
         specialize_by lia.
         repeat match goal with H := _ |- _ => subst H end.
+        repeat match goal with
+               | [ H : list_beq _ _ _ _ = true |- _ ] => apply internal_list_dec_bl in H; [ | intros; Z.ltb_to_lt; omega.. ]
+               end.
         repeat apply conj.
-        { destruct (s - Associational.eval c); cbn; lia. }
+        { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
+        { use_curve_good_t. }
         { use_curve_good_t. }
         { use_curve_good_t. }
         { use_curve_good_t. }
@@ -1046,6 +1236,7 @@ Module Import UnsaturatedSolinas.
         { use_curve_good_t. }
       Qed.
 
+      (** TODO: Find a better place to put the spec for [to_bytes] *)
       Definition GoodT : Prop
         := @Ring.GoodT
              (Qnum limbwidth)
@@ -1060,59 +1251,155 @@ Module Import UnsaturatedSolinas.
              (Interp roppv)
              (Interp rzerov)
              (Interp ronev)
-             (Interp rencodev).
+             (Interp rencodev)
+           /\ (let to_bytesT := (base.type.list base.type.Z -> base.type.list base.type.Z)%etype in
+              forall f
+                (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=to_bytesT) (@ZRange.type.option.is_bounded_by) (Some tight_bounds, tt) f = true),
+                 ((ZRange.type.base.option.is_bounded_by prime_bytes_bounds (type.app_curried (Interp rto_bytesv) f) = true
+                   /\ (forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rto_bytesv) f
+                                               = type.app_curried (t:=to_bytesT) (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f))
+                  /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f)) = (Positional.eval (weight (Qnum limbwidth) (Z.pos (Qden limbwidth))) n (fst f) mod m))).
 
       Theorem Good : GoodT.
       Proof.
         pose proof use_curve_good; destruct_head'_and; destruct_head_hnf' ex.
-        eapply Ring.Good;
-          lazymatch goal with
-          | [ H : ?P ?rop |- context[expr.Interp _ ?rop] ]
-            => intros;
-                let H1 := fresh in
-                let H2 := fresh in
-                unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | eapply H2 ] ] ];
-                  solve [ exact tt | eassumption | reflexivity ]
-          | _ => idtac
-          end;
-          repeat first [ assumption
-                       | intros; apply eval_carry_mulmod
-                       | intros; apply eval_carrymod
-                       | intros; apply eval_addmod
-                       | intros; apply eval_submod
-                       | intros; apply eval_oppmod
-                       | intros; apply eval_encodemod
-                       | apply conj ].
-      Qed.
+        split.
+        { eapply Ring.Good;
+            lazymatch goal with
+            | [ H : ?P ?rop |- context[expr.Interp _ ?rop] ]
+              => intros;
+                  let H1 := fresh in
+                  let H2 := fresh in
+                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | eapply H2 ] ] ];
+                    solve [ exact tt | eassumption | reflexivity ]
+            | _ => idtac
+            end;
+            repeat first [ assumption
+                         | intros; apply eval_carry_mulmod
+                         | intros; apply eval_carrymod
+                         | intros; apply eval_addmod
+                         | intros; apply eval_submod
+                         | intros; apply eval_oppmod
+                         | intros; apply eval_encodemod
+                         | apply conj ]. }
+        { cbv zeta; intros f Hf; split.
+          { apply Hto_bytesv; assumption. }
+          { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
+            rewrite Bool.andb_true_iff in *; split_and'.
+            etransitivity; [ apply eval_to_bytesmod | f_equal; (eassumption || (symmetry; eassumption)) ];
+              auto; try omega.
+            { erewrite Ring.length_is_bounded_by by eassumption; assumption. }
+            { lazymatch goal with
+              | [ H : eval _ _ _ = ?x |- _ <= _ < 2 * ?x ] => rewrite <- H
+              end.
+              cbv [m_enc tight_bounds tight_upperbounds prime_upperbound_list] in H15 |- *.
+              Lemma fold_andb_map_snoc A B f x xs y ys
+                : @fold_andb_map A B f (xs ++ [x]) (ys ++ [y]) = @fold_andb_map A B f xs ys && f x y.
+              Proof.
+                clear.
+                revert ys; induction xs as [|x' xs'], ys as [|y' ys']; cbn;
+                  rewrite ?Bool.andb_true_r, ?Bool.andb_false_r;
+                  try (destruct ys'; cbn; rewrite Bool.andb_false_r);
+                  try (destruct xs'; cbn; rewrite Bool.andb_false_r);
+                  try reflexivity.
+                rewrite IHxs', Bool.andb_assoc; reflexivity.
+              Qed.
+              Lemma eval_is_bounded_by wt n' bounds bounds' f
+                    (H : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) bounds f = true)
+                    (Hb : bounds = Some (List.map (@Some _) bounds'))
+                    (Hblen : length bounds' = n')
+                    (Hwt : forall i, List.In i (seq 0 n') -> 0 <= wt i)
+                : eval wt n' (List.map lower bounds') <= eval wt n' f <= eval wt n' (List.map upper bounds').
+              Proof.
+                clear -H Hb Hblen Hwt.
+                setoid_rewrite in_seq in Hwt.
+                subst bounds.
+                pose proof H as H'; apply fold_andb_map_length in H'.
+                revert dependent bounds'; intro bounds'.
+                revert dependent f; intro f.
+                rewrite <- (List.rev_involutive bounds'), <- (List.rev_involutive f);
+                  generalize (List.rev bounds') (List.rev f); clear bounds' f; intros bounds f; revert bounds f.
+                induction n' as [|n IHn], bounds as [|b bounds], f as [|f fs]; intros;
+                  cbn [length rev map] in *; distr_length.
+                { rewrite !map_app in *; cbn [map] in *.
+                  erewrite !eval_snoc by (distr_length; eauto).
+                  cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *.
+                  specialize_by (intros; auto with omega).
+                  specialize (Hwt n); specialize_by omega.
+                  repeat first [ progress Bool.split_andb
+                               | rewrite Nat.add_1_r in *
+                               | rewrite fold_andb_map_snoc in *
+                               | rewrite Nat.succ_inj_wd in *
+                               | progress Z.ltb_to_lt
+                               | progress cbn [In seq] in *
+                               | match goal with
+                                 | [ H : length _ = ?v |- _ ] => rewrite H in *
+                                 | [ H : ?v = length _ |- _ ] => rewrite <- H in *
+                                 end ].
+                  split; apply Z.add_le_mono; try apply IHn; auto; distr_length; nia. }
+              Qed.
+              eapply eval_is_bounded_by with (wt:=weight (Qnum limbwidth) (QDen limbwidth)) in H15.
+              2:rewrite <- (map_map _ (@Some _)); reflexivity.
+              2:distr_length; reflexivity.
+              rewrite ?map_map in *.
+              cbn [lower upper] in *.
+              split.
+              { etransitivity; [ erewrite <- eval_zeros; [ | apply weight_0, wprops ] | apply H15 ].
+                apply Z.eq_le_incl; f_equal.
+                admit.
+                omega. }
+              { eapply Z.le_lt_trans; [ apply H15 | ].
+                assert (Hlen : length (encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1)) = n) by distr_length.
+                revert Hlen.
+                generalize ((encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1))).
+                intro ls.
+                clear.
+                revert ls.
+                clearbody limbwidth.
+                induction n as [|n' IHn'], ls as [|l ls]; cbn [length]; intros; try omega.
+                admit.
+                cbn [map].
+                admit. }
+              admit. }
+      Admitted.
     End make_ring.
 
     Section for_stringification.
-      Local Open Scope string_scope.
+      Definition aggregate_infos {A B C} (ls : list (A * ErrorT B (C * ToString.C.ident_infos))) : ToString.C.ident_infos
+        := fold_right
+             ToString.C.ident_info_union
+             ToString.C.ident_info_empty
+             (List.map
+                (fun '(_, res) => match res with
+                               | Success (_, infos) => infos
+                               | Error _ => ToString.C.ident_info_empty
+                               end)
+                ls).
 
-      Let ToFunLines t name E arg_bounds
-        := (name,
-            match E with
-            | Success E'
-              => let E := @ToString.C.ToFunctionLines
-                            name t E' None arg_bounds in
-                match E with
-                | Some E => Success E
-                | None => Error (Pipeline.Stringification_failed E')
-                end
-            | Error err => Error err
-            end).
+      Definition extra_synthesis (function_name_prefix : string) (infos : ToString.C.ident_infos)
+        : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t
+        := let ls_addcarryx := List.flat_map
+                                 (fun lg_split:positive => [sraddcarryx function_name_prefix lg_split; srsubborrowx function_name_prefix lg_split])
+                                 (PositiveSet.elements (ToString.C.addcarryx_lg_splits infos)) in
+           let ls_mulx := List.map
+                            (fun lg_split:positive => srmulx function_name_prefix lg_split)
+                            (PositiveSet.elements (ToString.C.mulx_lg_splits infos)) in
+           let ls_cmov := List.map
+                            (fun bitwidth:positive => srcmovznz function_name_prefix bitwidth)
+                            (PositiveSet.elements (ToString.C.cmovznz_bitwidths infos)) in
+           let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
+           let infos := aggregate_infos ls in
+           (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+            ToString.C.bitwidths_used infos).
 
       (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-      Definition Synthesize (function_name_prefix : string) : list (string * Pipeline.ErrorT (list string))
-        := let loose_bounds := Some loose_bounds in
-           let tight_bounds := Some tight_bounds in
-           let fe op := (function_name_prefix ++ op)%string in
-           [(ToFunLines _ (fe "carry_mul") rcarry_mul (loose_bounds, (loose_bounds, tt)));
-              (ToFunLines _ (fe "carry") rcarry (loose_bounds, tt));
-              (ToFunLines _ (fe "add") radd (tight_bounds, (tight_bounds, tt)));
-              (ToFunLines _ (fe "sub") rsub (tight_bounds, (tight_bounds, tt)));
-              (ToFunLines _ (fe "opp") ropp (tight_bounds, tt))].
+      Definition Synthesize (function_name_prefix : string) : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+        := let ls := List.map (fun sr => sr function_name_prefix) [srcarry_mul; srcarry; sradd; srsub; sropp; srto_bytes; srfrom_bytes] in
+           let infos := aggregate_infos ls in
+           let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
+           (extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+            PositiveSet.union extra_bit_widths (ToString.C.bitwidths_used infos)).
     End for_stringification.
   End rcarry_mul.
 End UnsaturatedSolinas.
@@ -1193,6 +1480,8 @@ Ltac solve_rcarry := solve_rop rcarry_correct.
 Ltac solve_radd := solve_rop radd_correct.
 Ltac solve_rsub := solve_rop rsub_correct.
 Ltac solve_ropp := solve_rop ropp_correct.
+Ltac solve_rto_bytes := solve_rop rto_bytes_correct.
+Ltac solve_rfrom_bytes := solve_rop rfrom_bytes_correct.
 Ltac solve_rencode := solve_rop rencode_correct.
 Ltac solve_rrelax := solve_rop rrelax_correct.
 Ltac solve_rzero := solve_rop rzero_correct.
@@ -1239,16 +1528,20 @@ Module PrintingNotations.
   Notation "x -₃₂ y"
     := (#(ident.Z_cast uint32) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
   Notation "( out_t )( v >> count )"
-    := ((#(ident.Z_cast out_t) @ (#(ident.Z_shiftr count) @ v))%expr)
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_shiftr @ v @ count))%expr)
          (format "( out_t )( v  >>  count )") : expr_scope.
   Notation "( out_t )( v << count )"
-    := ((#(ident.Z_cast out_t) @ (#(ident.Z_shiftl count) @ v))%expr)
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_shiftl @ v @ count))%expr)
          (format "( out_t )( v  <<  count )") : expr_scope.
   Notation "( range )( v )"
     := ((#(ident.Z_cast range) @ $v)%expr)
          (format "( range )( v )") : expr_scope.
+  Notation "( mask & ( out_t )( v ) )"
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_land @ #(ident.Literal (t:=base.type.Z) mask) @ v))%expr)
+         (format "( mask  &  ( out_t )( v ) )")
+       : expr_scope.
   Notation "( ( out_t )( v ) & mask )"
-    := ((#(ident.Z_cast out_t) @ (#(ident.Z_land mask) @ v))%expr)
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_land @ v @ #(ident.Literal (t:=base.type.Z) mask)))%expr)
          (format "( ( out_t )( v )  &  mask )")
        : expr_scope.
 
@@ -1327,17 +1620,17 @@ Module PrintingNotations.
   (* TODO: come up with a better notation for arithmetic with carries
   that still distinguishes it from arithmetic without carries? *)
   Local Notation "'TwoPow256'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 (only parsing).
-  Notation "'ADD_256' ( x ,  y )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#(ident.Z_add_get_carry_concrete TwoPow256) @ x @ y))%expr : expr_scope.
-  Notation "'ADD_128' ( x ,  y )" := (#(ident.Z_cast2 (uint128, bool)%core) @ (#(ident.Z_add_get_carry_concrete TwoPow256) @ x @ y))%expr : expr_scope.
-  Notation "'ADDC_256' ( x ,  y ,  z )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#(ident.Z_add_with_get_carry_concrete TwoPow256) @ x @ y @ z))%expr : expr_scope.
-  Notation "'ADDC_128' ( x ,  y ,  z )" := (#(ident.Z_cast2 (uint128, bool)%core) @ (#(ident.Z_add_with_get_carry_concrete TwoPow256) @ x @ y @ z))%expr : expr_scope.
-  Notation "'SUB_256' ( x ,  y )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#(ident.Z_sub_get_borrow_concrete TwoPow256) @ x @ y))%expr : expr_scope.
-  Notation "'SUBB_256' ( x ,  y , z )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#(ident.Z_sub_with_get_borrow_concrete TwoPow256) @ x @ y @ z))%expr : expr_scope.
+  Notation "'ADD_256' ( x ,  y )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y))%expr : expr_scope.
+  Notation "'ADD_128' ( x ,  y )" := (#(ident.Z_cast2 (uint128, bool)%core) @ (#ident.Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y))%expr : expr_scope.
+  Notation "'ADDC_256' ( x ,  y ,  z )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y @ z))%expr : expr_scope.
+  Notation "'ADDC_128' ( x ,  y ,  z )" := (#(ident.Z_cast2 (uint128, bool)%core) @ (#ident.Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y @ z))%expr : expr_scope.
+  Notation "'SUB_256' ( x ,  y )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_sub_get_borrow @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y))%expr : expr_scope.
+  Notation "'SUBB_256' ( x ,  y , z )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_sub_with_get_borrow @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y @ z))%expr : expr_scope.
   Notation "'ADDM' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (#ident.Z_add_modulo @ x @ y @ z))%expr : expr_scope.
-  Notation "'RSHI' ( x ,  y ,  z )" := (#(ident.Z_cast _) @ (#(ident.Z_rshi_concrete _ z) @ x @ y))%expr : expr_scope.
+  Notation "'RSHI' ( x ,  y ,  z )" := (#(ident.Z_cast _) @ (#ident.Z_rshi @ _ @ x @ y @ z))%expr : expr_scope.
   Notation "'SELC' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (ident.Z_zselect @ x @ y @ z))%expr : expr_scope.
-  Notation "'SELM' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (ident.Z_zselect @ (#(Z_cast bool) @ (Z_cc_m_concrete _) @ x) @ y @ z))%expr : expr_scope.
-  Notation "'SELL' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (#ident.Z_zselect @ (#(Z_cast bool) @ (#(Z_land 1) @ x)) @ y @ z))%expr : expr_scope.
+  Notation "'SELM' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (ident.Z_zselect @ (#(Z_cast bool) @ (#Z_cc_m @ _) @ x) @ y @ z))%expr : expr_scope.
+  Notation "'SELL' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (#ident.Z_zselect @ (#(Z_cast bool) @ (#Z_land @ #(ident.Literal (t:=base.type.Z 1)) @ x)) @ y @ z))%expr : expr_scope.
 End PrintingNotations.
 
 (*
@@ -1459,8 +1752,10 @@ Module SaturatedSolinas.
                         then Error (Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
                         else res.
 
-  Notation BoundsPipeline rop in_bounds out_bounds
-    := (Pipeline.BoundsPipeline
+  Notation BoundsPipelineToStrings prefix name rop in_bounds out_bounds
+    := ((prefix ++ name)%string,
+        Pipeline.BoundsPipelineToStrings
+          prefix (prefix ++ name)%string
           (*false*) false None
           relax_zrange
           rop%Expr in_bounds out_bounds).
@@ -1485,8 +1780,9 @@ Module SaturatedSolinas.
          (Some boundsn)
          (mulmod' s c machine_wordsize n nreductions).
 
-  Definition rmulmod
-    := BoundsPipeline
+  Definition srmulmod prefix
+    := BoundsPipelineToStrings
+         prefix "mulmod"
          (mulmod_gen @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
@@ -1496,28 +1792,41 @@ Module SaturatedSolinas.
       := type_of_strip_3arrow (@rmulmod_correct rv).
 
     Section for_stringification.
-      Local Open Scope string_scope.
+      Definition aggregate_infos {A B C} (ls : list (A * ErrorT B (C * ToString.C.ident_infos))) : ToString.C.ident_infos
+        := fold_right
+             ToString.C.ident_info_union
+             ToString.C.ident_info_empty
+             (List.map
+                (fun '(_, res) => match res with
+                               | Success (_, infos) => infos
+                               | Error _ => ToString.C.ident_info_empty
+                               end)
+                ls).
 
-      Let ToFunLines t name E arg_bounds
-        := (name,
-            match E with
-            | Success E'
-              => let E := @ToString.C.ToFunctionLines
-                           name t E' None arg_bounds in
-                match E with
-                | Some E => Success E
-                | None => Error (Pipeline.Stringification_failed E')
-                end
-            | Error err => Error err
-            end).
+      Definition extra_synthesis (function_name_prefix : string) (infos : ToString.C.ident_infos)
+        : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t
+        := let ls_addcarryx := List.flat_map
+                                 (fun lg_split:positive => [sraddcarryx machine_wordsize function_name_prefix lg_split; srsubborrowx machine_wordsize function_name_prefix lg_split])
+                                 (PositiveSet.elements (ToString.C.addcarryx_lg_splits infos)) in
+           let ls_mulx := List.map
+                            (fun lg_split:positive => srmulx machine_wordsize function_name_prefix lg_split)
+                            (PositiveSet.elements (ToString.C.mulx_lg_splits infos)) in
+           let ls_cmov := List.map
+                            (fun bitwidth:positive => srcmovznz machine_wordsize function_name_prefix bitwidth)
+                            (PositiveSet.elements (ToString.C.cmovznz_bitwidths infos)) in
+           let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
+           let infos := aggregate_infos ls in
+           (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+            ToString.C.bitwidths_used infos).
 
       (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-      Definition Synthesize (function_name_prefix : string) : list (string * Pipeline.ErrorT (list string))
-        := let loose_bounds := Some loose_bounds in
-           let tight_bounds := Some tight_bounds in
-           let fe op := (function_name_prefix ++ op)%string in
-           [(ToFunLines _ (fe "mulmod") rmulmod (Some boundsn, (Some boundsn, tt)))].
+      Definition Synthesize (function_name_prefix : string) : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+        := let ls := List.map (fun sr => sr function_name_prefix) [srmulmod] in
+           let infos := aggregate_infos ls in
+           let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
+           (extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+            PositiveSet.union extra_bit_widths (ToString.C.bitwidths_used infos)).
     End for_stringification.
   End rmulmod.
 End SaturatedSolinas.
@@ -2318,3 +2627,64 @@ Time Compute
               exact r)
                (None, (Some (repeat (@None _) 5), tt))
                ZRange.type.base.option.None).
+
+Compute
+     (Pipeline.BoundsPipeline
+        true None (relax_zrange_gen [64; 128])
+        ltac:(let r := Reify (fun f => carry_mulmod 51 1 (2^255) [(1,19)] 5 (seq 0 5 ++ [0; 1])%list%nat f f) in
+              exact r)
+               (Some (repeat (@None _) 5), tt)
+               ZRange.type.base.option.None).
+
+Compute
+  (Pipeline.BoundsPipelineToString
+     "fiat_" "fiat_mulx_u64"
+        true None (relax_zrange_gen [64; 128])
+        ltac:(let r := Reify (mulx 64) in
+              exact r)
+               (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt))%zrange
+               (Some r[0~>2^64-1], Some r[0~>2^64-1])%zrange).
+
+Compute
+  (Pipeline.BoundsPipelineToString
+     "fiat_" "fiat_addcarryx_u64"
+        true None (relax_zrange_gen [1; 64; 128])
+        ltac:(let r := Reify (addcarryx 64) in
+              exact r)
+               (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
+               (Some r[0~>2^64-1], Some r[0~>1])%zrange).
+
+Compute
+  (Pipeline.BoundsPipelineToString
+     "fiat_" "fiat_addcarryx_u51"
+        true None (relax_zrange_gen [1; 64; 128])
+        ltac:(let r := Reify (addcarryx 51) in
+              exact r)
+               (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
+               (Some r[0~>2^51-1], Some r[0~>1])%zrange).
+
+Compute
+  (Pipeline.BoundsPipelineToString
+     "fiat_" "fiat_subborrowx_u64"
+        true None (relax_zrange_gen [1; 64; 128])
+        ltac:(let r := Reify (subborrowx 64) in
+              exact r)
+               (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
+               (Some r[0~>2^64-1], Some r[0~>1])%zrange).
+Compute
+  (Pipeline.BoundsPipelineToString
+     "fiat_" "fiat_subborrowx_u51"
+        true None (relax_zrange_gen [1; 64; 128])
+        ltac:(let r := Reify (subborrowx 51) in
+              exact r)
+               (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
+               (Some r[0~>2^51-1], Some r[0~>1])%zrange).
+
+Compute
+  (Pipeline.BoundsPipelineToString
+     "fiat_" "fiat_cmovznz64"
+        true None (relax_zrange_gen [1; 64; 128])
+        ltac:(let r := Reify (cmovznz 64) in
+              exact r)
+               (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
+               (Some r[0~>2^64-1])%zrange).

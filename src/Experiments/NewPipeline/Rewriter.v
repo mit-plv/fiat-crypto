@@ -80,6 +80,9 @@ Module Compilers.
       Notation "x + y" := (#ident.Z_add @ x @ y) : pattern_scope.
       Notation "x / y" := (#ident.Z_div @ x @ y) : pattern_scope.
       Notation "x * y" := (#ident.Z_mul @ x @ y) : pattern_scope.
+      Notation "x >> y" := (#ident.Z_shiftr @ x @ y) : pattern_scope.
+      Notation "x << y" := (#ident.Z_shiftl @ x @ y) : pattern_scope.
+      Notation "x &' y" := (#ident.Z_land @ x @ y) : pattern_scope.
       Notation "x 'mod' y" := (#ident.Z_modulo @ x @ y)%pattern : pattern_scope.
       Notation "- x" := (#ident.Z_opp @ x) : pattern_scope.
     End Notations.
@@ -1293,19 +1296,11 @@ In the RHS, the follow notation applies:
                 ; make_rewrite ((-??{ℤ}) *   ??{ℤ} ) (fun x y => -(x * y))
                 ; make_rewrite (  ??{ℤ}  * (-??{ℤ})) (fun x y => -(x * y))
 
-                ; make_rewrite (??{ℤ} * #?ℤ) (fun x y => x << (Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
-                ; make_rewrite (#?ℤ * ??{ℤ}) (fun y x => x << (Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
-                ; make_rewrite (??{ℤ} / #?ℤ) (fun x y => x >> (Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
-                ; make_rewrite (??{ℤ} mod #?ℤ) (fun x y => #(ident.Z_land (y-1)) @ x  when  Z.eqb y (2^Z.log2 y))
+                ; make_rewrite (??{ℤ} * #?ℤ) (fun x y => x << ##(Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
+                ; make_rewrite (#?ℤ * ??{ℤ}) (fun y x => x << ##(Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
+                ; make_rewrite (??{ℤ} / #?ℤ) (fun x y => x >> ##(Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
+                ; make_rewrite (??{ℤ} mod #?ℤ) (fun x y =>  x &' ##(y-1)%Z  when  Z.eqb y (2^Z.log2 y))
                 ; make_rewrite (-(-??{ℤ})) (fun v => v)
-
-                (** TODO(jadep): These next two are only here for demonstration purposes; remove them once you no longer need it as a template *)
-                (* if it's a concrete pair, we can opp the second value *)
-                ; make_rewrite (#pident.Z_neg_snd @ (??{ℤ}, ??{ℤ})) (fun x y => (x, -y))
-                (* if it's not a concrete pair, let-bind the pair and negate the second element *)
-                ; make_rewrite
-                    (#pident.Z_neg_snd @ ??{ℤ * ℤ})
-                    (fun xy => ret (UnderLets.UnderLet xy (fun xyv => UnderLets.Base (#ident.fst @ $xyv, -(#ident.snd @ $xyv)))))
 
                 ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (##0, ##0)%Z  when  Z.eqb xx 0)
                 ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (##0, ##0)%Z  when  Z.eqb xx 0)
@@ -1314,104 +1309,69 @@ In the RHS, the follow notation applies:
                 ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (-y, ##0%Z)  when  Z.eqb xx (-1))
                 ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (-y, ##0%Z)  when  Z.eqb xx (-1))
 
-                ; make_rewrite (#pident.Z_add_get_carry @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0%Z)  when  Z.eqb xx 0)
-                ; make_rewrite (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0%Z)  when  Z.eqb xx 0)
+                ; make_rewrite (#pident.Z_add_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0)  when  xx =? 0)
+                ; make_rewrite (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0)  when  xx =? 0)
 
-                ; make_rewrite (#pident.Z_add_with_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun c x y => x + y  when  Z.eqb c 0)
-
+                ; make_rewrite (#pident.Z_add_with_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun cc x y => x + y  when  cc =? 0)
 
                 ; make_rewrite
                     (#pident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s cc xx y => (y, ##0)  when   (cc =? 0) && (xx =? 0))
                 ; make_rewrite
                     (#pident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s cc y xx => (y, ##0)  when   (cc =? 0) && (xx =? 0))
                 ; make_rewrite (* carry = 0: ADC x y -> ADD x y *)
-                    (#pident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??{ℤ} @ ??{ℤ})
-                    (fun s cc x y => #(ident.Z_add_get_carry_concrete s) @ x @ y  when  cc =? 0)
+                    (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ ??{ℤ})
+                    (fun s cc x y => #ident.Z_add_get_carry @ s @ x @ y  when  cc =? 0)
                 ; make_rewrite (* ADC 0 0 -> (ADX 0 0, 0) *)
-                    (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ #?ℤ @ #?ℤ)
-                    (fun s c xx yy => #ident.Z_add_with_carry @ ##s @ ##xx @ ##yy  when  (xx =? 0) && (yy =? 0))
+                    (#pident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ @ #?ℤ)
+                    (fun s c xx yy => #ident.Z_add_with_carry @ s @ ##xx @ ##yy  when  (xx =? 0) && (yy =? 0))
 
                 ; make_rewrite
-                    (#pident.Z_add_get_carry @ #?ℤ @ (-??{ℤ}) @ ??{ℤ})
+                    (#pident.Z_add_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ})
                     (fun s y x => ret (UnderLets.UnderLet
-                                         (#(ident.Z_sub_get_borrow_concrete s) @ x @ y)
+                                         (#ident.Z_sub_get_borrow @ s @ x @ y)
                                          (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
                 ; make_rewrite
-                    (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (-??{ℤ}))
+                    (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ (-??{ℤ}))
                     (fun s x y => ret (UnderLets.UnderLet
-                                         (#(ident.Z_sub_get_borrow_concrete s) @ x @ y)
-                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
-
-
-                ; make_rewrite
-                    (#pident.Z_add_with_get_carry @ #?ℤ @ (-??{ℤ}) @ (-??{ℤ}) @ ??{ℤ})
-                    (fun s c y x => ret (UnderLets.UnderLet
-                                           (#(ident.Z_sub_with_get_borrow_concrete s) @ c @ x @ y)
-                                           (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
-                ; make_rewrite
-                    (#pident.Z_add_with_get_carry @ #?ℤ @ (-??{ℤ}) @ ??{ℤ} @ (-??{ℤ}))
-                    (fun s c x y => ret (UnderLets.UnderLet
-                                           (#(ident.Z_sub_with_get_borrow_concrete s) @ c @ x @ y)
-                                           (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
-
-                ; make_rewrite
-                    (#pident.Z_add_get_carry_concrete @ (-??{ℤ}) @ ??{ℤ})
-                    (fun s y x => ret (UnderLets.UnderLet
-                                         (#(ident.Z_sub_get_borrow_concrete s) @ x @ y)
+                                         (#ident.Z_sub_get_borrow @ s @ x @ y)
                                          (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
                 ; make_rewrite
-                    (#pident.Z_add_get_carry_concrete @ ??{ℤ} @ (-??{ℤ}))
-                    (fun s x y => ret (UnderLets.UnderLet
-                                         (#(ident.Z_sub_get_borrow_concrete s) @ x @ y)
-                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
-                ; make_rewrite
-                    (#pident.Z_add_get_carry_concrete @ #?ℤ @ ??{ℤ})
+                    (#pident.Z_add_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ})
                     (fun s yy x => ret (UnderLets.UnderLet
-                                         (#(ident.Z_sub_get_borrow_concrete s) @ x @ ##(-yy)%Z)
+                                         (#ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z)
                                          (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                        when  yy <=? 0)
                 ; make_rewrite
-                    (#pident.Z_add_get_carry_concrete @ ??{ℤ} @ #?ℤ)
+                    (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ)
                     (fun s x yy => ret (UnderLets.UnderLet
-                                          (#(ident.Z_sub_get_borrow_concrete s) @ x @ ##(-yy)%Z)
+                                          (#ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z)
                                           (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                        when  yy <=? 0)
 
 
                 ; make_rewrite
-                    (#pident.Z_add_with_get_carry_concrete @ (-??{ℤ}) @ (-??{ℤ}) @ ??{ℤ})
+                    (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ (-??{ℤ}) @ ??{ℤ})
                     (fun s c y x => ret (UnderLets.UnderLet
-                                           (#(ident.Z_sub_with_get_borrow_concrete s) @ c @ x @ y)
+                                           (#ident.Z_sub_with_get_borrow @ s @ c @ x @ y)
                                            (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
                 ; make_rewrite
-                    (#pident.Z_add_with_get_carry_concrete @ (-??{ℤ}) @ ??{ℤ} @ (-??{ℤ}))
+                    (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ} @ (-??{ℤ}))
                     (fun s c x y => ret (UnderLets.UnderLet
-                                           (#(ident.Z_sub_with_get_borrow_concrete s) @ c @ x @ y)
+                                           (#ident.Z_sub_with_get_borrow @ s @ c @ x @ y)
                                            (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
                 ; make_rewrite
-                    (#pident.Z_add_with_get_carry_concrete @ (-??{ℤ}) @ #?ℤ @ ??{ℤ})
+                    (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ #?ℤ @ ??{ℤ})
                     (fun s c yy x => ret (UnderLets.UnderLet
-                                            (#(ident.Z_sub_with_get_borrow_concrete s) @ c @ x @ ##(-yy)%Z)
+                                            (#ident.Z_sub_with_get_borrow @ s @ c @ x @ ##(-yy)%Z)
                                             (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                          when  yy <=? 0)
                 ; make_rewrite
-                    (#pident.Z_add_with_get_carry_concrete @ (-??{ℤ}) @ ??{ℤ} @ #?ℤ)
+                    (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ} @ #?ℤ)
                     (fun s c x yy => ret (UnderLets.UnderLet
-                                            (#(ident.Z_sub_with_get_borrow_concrete s) @ c @ x @ ##(-yy)%Z)
+                                            (#ident.Z_sub_with_get_borrow @ s @ c @ x @ ##(-yy)%Z)
                                             (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                          when  yy <=? 0)
 
-                ; make_rewrite (#pident.Z_add_get_carry_concrete @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0)  when  xx =? 0)
-                ; make_rewrite (#pident.Z_add_get_carry_concrete @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0)  when  xx =? 0)
-
-                (** XXX TODO: Do we still need the _concrete versions? *)
-                ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun s x y => #(ident.Z_mul_split_concrete s) @ x @ y)
-                ; make_rewrite (#pident.Z_rshi @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ #?ℤ) (fun x y z a => #(ident.Z_rshi_concrete x a) @ y @ z)
-                ; make_rewrite (#pident.Z_cc_m @ #?ℤ @ ??{ℤ}) (fun x y => #(ident.Z_cc_m_concrete x) @ y)
-                ; make_rewrite (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun s x y => #(ident.Z_add_get_carry_concrete s) @ x @ y)
-                ; make_rewrite (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ}) (fun s c x y => #(ident.Z_add_with_get_carry_concrete s) @ c @ x @ y)
-                ; make_rewrite (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun s x y => #(ident.Z_sub_get_borrow_concrete s) @ x @ y)
-                ; make_rewrite (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ}) (fun s x y b => #(ident.Z_sub_with_get_borrow_concrete s) @ x @ y @ b)
 
                 ; make_rewrite_step (* _step, so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
                     (#pident.Z_cast2 @ (??{ℤ}, ??{ℤ})) (fun r x y => (#(ident.Z_cast (fst r)) @ $x, #(ident.Z_cast (snd r)) @ $y))
@@ -1458,19 +1418,19 @@ In the RHS, the follow notation applies:
 (Z.add_get_carry_concrete 2^256) @@ (?x, ?y)        --> (add 0) @@ (y, x)
 *)
               make_rewrite
-                (#pident.Z_add_get_carry_concrete @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ}))
-                (fun s x offset y => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                (fun s x y offset => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry_concrete @ (#pident.Z_shiftl @ ??{ℤ}) @ ??{ℤ})
-                  (fun s offset y x => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_get_carry @ #?ℤ @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (fun s y offset x => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry_concrete @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun s x offset y => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun s x y offset => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry_concrete @ (#pident.Z_shiftr @ ??{ℤ}) @ ??{ℤ})
-                  (fun s offset y x => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_get_carry @ #?ℤ @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (fun s y offset x => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry_concrete @ ??{ℤ} @ ??{ℤ})
+                  (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ})
                   (fun s x y => #(ident.fancy_add (Z.log2 s) 0) @ (x, y)  when  s =? 2^Z.log2 s)
 (*
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (addc 128) @@ (c, x, y)
@@ -1480,19 +1440,19 @@ In the RHS, the follow notation applies:
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y)        --> (addc 0) @@ (c, y, x)
  *)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry_concrete @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ}))
-                  (fun s c x offset y => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                  (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry_concrete @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ}) @ ??{ℤ})
-                  (fun s c offset y x => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry_concrete @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun s c x offset y => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry_concrete @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ}) @ ??{ℤ})
-                  (fun s c offset y x => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry_concrete @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun s c x y => #(ident.fancy_addc (Z.log2 s) 0) @ (c, x, y)  when  s =? 2^Z.log2 s)
 (*
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y << 128) --> (sub 128) @@ (x, y)
@@ -1500,13 +1460,13 @@ In the RHS, the follow notation applies:
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y)        --> (sub 0) @@ (y, x)
  *)
               ; make_rewrite
-                  (#pident.Z_sub_get_borrow_concrete @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ}))
-                  (fun s x offset y => #(ident.fancy_sub (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                  (fun s x y offset => #(ident.fancy_sub (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_get_borrow_concrete @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun s x offset y => #(ident.fancy_sub (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun s x y offset => #(ident.fancy_sub (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_get_borrow_concrete @ ??{ℤ} @ ??{ℤ})
+                  (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ})
                   (fun s x y => #(ident.fancy_sub (Z.log2 s) 0) @ (x, y)  when  s =? 2^Z.log2 s)
 (*
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (subb 128) @@ (c, x, y)
@@ -1514,29 +1474,32 @@ In the RHS, the follow notation applies:
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y)        --> (subb 0) @@ (c, y, x)
  *)
               ; make_rewrite
-                  (#pident.Z_sub_with_get_borrow_concrete @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ}))
-                  (fun s b x offset y => #(ident.fancy_subb (Z.log2 s) offset) @ (b, x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                  (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) offset) @ (b, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_with_get_borrow_concrete @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun s b x offset y => #(ident.fancy_subb (Z.log2 s) (-offset)) @ (b, x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) (-offset)) @ (b, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_with_get_borrow_concrete @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                  (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun s b x y => #(ident.fancy_subb (Z.log2 s) 0) @ (b, x, y)  when  s =? 2^Z.log2 s)
               (*(Z.rshi_concrete 2^256 ?n) @@ (?c, ?x, ?y) --> (rshi n) @@ (x, y)*)
               ; make_rewrite
-                  (#pident.Z_rshi_concrete @ ??{ℤ} @ ??{ℤ})
-                  (fun '((s, n)%core) x y => #(ident.fancy_rshi (Z.log2 s) n) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pident.Z_rshi @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ #?ℤ)
+                  (fun s x y n => #(ident.fancy_rshi (Z.log2 s) n) @ (x, y)  when  s =? 2^Z.log2 s)
 (*
 Z.zselect @@ (Z.cc_m_concrete 2^256 ?c, ?x, ?y) --> selm @@ (c, x, y)
 Z.zselect @@ (?c &' 1, ?x, ?y)                  --> sell @@ (c, x, y)
 Z.zselect @@ (?c, ?x, ?y)                       --> selc @@ (c, x, y)
  *)
               ; make_rewrite
-                  (#pident.Z_zselect @ (#pident.Z_cc_m_concrete @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
+                  (#pident.Z_zselect @ (#pident.Z_cc_m @ #?ℤ @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
                   (fun s c x y => #(ident.fancy_selm (Z.log2 s)) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_zselect @ (#pident.Z_land @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
+                  (#pident.Z_zselect @ (#pident.Z_land @ #?ℤ @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
                   (fun mask c x y => #ident.fancy_sell @ (c, x, y)  when  mask =? 1)
+              ; make_rewrite
+                  (#pident.Z_zselect @ (#pident.Z_land @ ??{ℤ} @ #?ℤ) @ ??{ℤ} @ ??{ℤ})
+                  (fun c mask x y => #ident.fancy_sell @ (c, x, y)  when  mask =? 1)
               ; make_rewrite
                   (#pident.Z_zselect @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun c x y => #ident.fancy_selc @ (c, x, y))
@@ -1552,45 +1515,72 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
  *)
               (* literal on left *)
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_land @ ??{ℤ}))
+                  (#?ℤ * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (fun x y mask => let s := (2*Z.log2_up mask)%Z in x <---- invert_low s x; #(ident.fancy_mulll s) @ (##x, y)  when  (mask =? 2^(s/2)-1))
+              ; make_rewrite
+                  (#?ℤ * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun x mask y => let s := (2*Z.log2_up mask)%Z in x <---- invert_low s x; #(ident.fancy_mulll s) @ (##x, y)  when  (mask =? 2^(s/2)-1))
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun x offset y => let s := (2*offset)%Z in x <---- invert_low s x; #(ident.fancy_mullh s) @ (##x, y))
+                  (#?ℤ * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun x y offset => let s := (2*offset)%Z in x <---- invert_low s x; #(ident.fancy_mullh s) @ (##x, y))
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_land @ ??{ℤ}))
+                  (#?ℤ * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun x mask y => let s := (2*Z.log2_up mask)%Z in x <---- invert_high s x; #(ident.fancy_mulhl s) @ (##x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun x offset y => let s := (2*offset)%Z in x <---- invert_high s x; #(ident.fancy_mulhh s) @ (##x, y))
+                  (#?ℤ * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (fun x y mask => let s := (2*Z.log2_up mask)%Z in x <---- invert_high s x; #(ident.fancy_mulhl s) @ (##x, y)  when  mask =? 2^(s/2)-1)
+              ; make_rewrite
+                  (#?ℤ * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun x y offset => let s := (2*offset)%Z in x <---- invert_high s x; #(ident.fancy_mulhh s) @ (##x, y))
 
               (* literal on right *)
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ}) * #?ℤ)
+                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * #?ℤ)
                   (fun mask x y => let s := (2*Z.log2_up mask)%Z in y <---- invert_low s y; #(ident.fancy_mulll s) @ (x, ##y)  when  (mask =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ}) * #?ℤ)
+                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  (fun x mask y => let s := (2*Z.log2_up mask)%Z in y <---- invert_low s y; #(ident.fancy_mulll s) @ (x, ##y)  when  (mask =? 2^(s/2)-1))
+              ; make_rewrite
+                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * #?ℤ)
                   (fun mask x y => let s := (2*Z.log2_up mask)%Z in y <---- invert_high s y; #(ident.fancy_mullh s) @ (x, ##y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ}) * #?ℤ)
-                  (fun offset x y => let s := (2*offset)%Z in y <---- invert_low s y; #(ident.fancy_mulhl s) @ (x, ##y))
+                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  (fun x mask y => let s := (2*Z.log2_up mask)%Z in y <---- invert_high s y; #(ident.fancy_mullh s) @ (x, ##y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ}) * #?ℤ)
-                  (fun offset x y => let s := (2*offset)%Z in y <---- invert_high s y; #(ident.fancy_mulhh s) @ (x, ##y))
+                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  (fun x offset y => let s := (2*offset)%Z in y <---- invert_low s y; #(ident.fancy_mulhl s) @ (x, ##y))
+              ; make_rewrite
+                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  (fun x offset y => let s := (2*offset)%Z in y <---- invert_high s y; #(ident.fancy_mulhh s) @ (x, ##y))
 
               (* no literal *)
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ}) * (#pident.Z_land @ ??{ℤ}))
+                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun mask1 x mask2 y => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ}) * (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun mask x offset y => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
+                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  (fun x mask1 mask2 y => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ}) * (#pident.Z_land @ ??{ℤ}))
-                  (fun offset x mask y => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
+                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (fun mask1 x y mask2 => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ}) * (#pident.Z_shiftr @ ??{ℤ}))
-                  (fun offset1 x offset2 y => let s := (2*offset1)%Z in #(ident.fancy_mulhh s) @ (x, y)  when  offset1 =? offset2)
+                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (fun x mask1 y mask2 => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
+              ; make_rewrite
+                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun mask x y offset => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
+              ; make_rewrite
+                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun x mask y offset => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
+              ; make_rewrite
+                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  (fun x offset mask y => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
+              ; make_rewrite
+                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (fun x offset y mask => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
+              ; make_rewrite
+                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (fun x offset1 y offset2 => let s := (2*offset1)%Z in #(ident.fancy_mulhh s) @ (x, y)  when  offset1 =? offset2)
 
             ]%list%pattern%cps%option%under_lets%Z%bool.
 

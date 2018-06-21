@@ -3,6 +3,7 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Experiments.NewPipeline.Language.
@@ -100,6 +101,19 @@ Module Compilers.
                     => (@Some A a, @Some B b)
                | _ => fun _ => tt
                end.
+          Fixpoint lift_Some {t} : interp t -> option (base.interp t)
+            := match t with
+               | base.type.Z
+               | base.type.nat
+               | base.type.bool
+                 => fun x => x
+               | base.type.unit
+                 => fun x => Datatypes.Some tt
+               | base.type.list A
+                 => fun ls => ls <- ls; ls <-- List.map (@lift_Some A) ls; Datatypes.Some ls
+               | base.type.prod A B
+                 => fun '(a, b) => a <- @lift_Some A a; b <- @lift_Some B b; Datatypes.Some (a, b)
+               end%option.
           (** Keep data about list length and nat value, but not zrange *)
           Fixpoint strip_ranges {t} : interp t -> interp t
             := match t with
@@ -257,12 +271,12 @@ Module Compilers.
              end.
         Fixpoint Some {t : type base.type} : type.interp t -> interp t
           := match t with
-             | type.base x =>@base.option.Some x
+             | type.base x => @base.option.Some x
              | type.arrow s d => fun _ _ => @None d
              end.
         Fixpoint strip_ranges {t : type base.type} : interp t -> interp t
           := match t with
-             | type.base x =>@base.option.strip_ranges x
+             | type.base x => @base.option.strip_ranges x
              | type.arrow s d => fun f x => @strip_ranges d (f x)
              end.
         Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
@@ -347,6 +361,8 @@ Module Compilers.
                => option_map (ident.interp idc)
              | ident.Z_of_nat as idc
                => option_map (fun n => r[Z.of_nat n~>Z.of_nat n]%zrange)
+             | ident.Z_to_nat as idc
+               => fun v => v <- to_literal v; Some (ident.interp idc v)
              | ident.List_length _
                => option_map (@List.length _)
              | ident.Nat_max as idc
@@ -385,13 +401,25 @@ Module Compilers.
                    end
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
-             | ident.Z_cc_m as idc
+             | ident.Z_geb as idc
              | ident.Z_pow as idc
              | ident.Z_modulo as idc
                => fun x y => match to_literal x, to_literal y with
                              | Some x, Some y => of_literal (ident.interp idc x y)
                              | _, _ => ZRange.type.base.option.None
                              end
+             | ident.Z_bneg as idc
+               => fun x => match to_literal x with
+                           | Some x => of_literal (ident.interp idc x)
+                           | None => Datatypes.Some r[0~>1]
+                           end
+             | ident.Z_lnot_modulo as idc
+               => fun v m
+                 => match to_literal m, to_literal v with
+                   | Some m, Some v => of_literal (ident.interp idc v m)
+                   | Some m, None => Some r[0 ~> m]
+                   | _, _ => None
+                   end
              | ident.bool_rect _
                => fun t f b
                  => match b with
@@ -447,20 +475,6 @@ Module Compilers.
                    end
              | ident.List_update_nth _
                => fun n f ls => ls <- ls; n <- n; Some (update_nth n f ls)
-             | ident.Z_mul_split as idc
-             | ident.Z_add_get_carry as idc
-             | ident.Z_sub_get_borrow as idc
-               => fun x y z => match to_literal x, to_literal y, to_literal z with
-                               | Some x, Some y, Some z => of_literal (ident.interp idc x y z)
-                               | _, _, _ => ZRange.type.base.option.None
-                               end
-             | ident.Z_add_with_get_carry as idc
-             | ident.Z_sub_with_get_borrow as idc
-             | ident.Z_rshi as idc
-               => fun x y z w => match to_literal x, to_literal y, to_literal z, to_literal w with
-                                 | Some x, Some y, Some z, Some w => of_literal (ident.interp idc x y z w)
-                                 | _, _, _, _ => ZRange.type.base.option.None
-                                 end
              | ident.nil t => Some nil
              | ident.cons t => fun x => option_map (cons x)
              | ident.pair A B => pair
@@ -473,70 +487,78 @@ Module Compilers.
                => fun ls1 ls2 => ls1 <- ls1; ls2 <- ls2; Some (List.app ls1 ls2)
              | ident.List_rev _ => option_map (@List.rev _)
              | ident.Z_opp as idc
-             | ident.Z_shiftr _ as idc
-             | ident.Z_shiftl _ as idc
-             | ident.Z_cc_m_concrete _ as idc
+             | ident.Z_log2 as idc
+             | ident.Z_log2_up as idc
                => fun x => x <- x; Some (ZRange.two_corners (ident.interp idc) x)
              | ident.Z_add as idc
              | ident.Z_mul as idc
              | ident.Z_sub as idc
              | ident.Z_div as idc
-             | ident.Z_rshi_concrete _ _ as idc
+             | ident.Z_shiftr as idc
+             | ident.Z_shiftl as idc
                => fun x y => x <- x; y <- y; Some (ZRange.four_corners (ident.interp idc) x y)
              | ident.Z_add_with_carry as idc
                => fun x y z => x <- x; y <- y; z <- z; Some (ZRange.eight_corners (ident.interp idc) x y z)
-             | ident.Z_land mask
-               => option_map (ZRange.land_bounds r[mask~>mask])
-             | ident.Z_mul_split_concrete split_at
-               => fun x y
-                 => match x, y with
-                   | Some x, Some y
+             | ident.Z_cc_m as idc
+               => fun s x => s <- to_literal s; x <- x; Some (ZRange.two_corners (ident.interp idc s) x)
+             | ident.Z_rshi as idc
+               => fun s x y offset
+                 => s <- to_literal s; x <- x; y <- y; offset <- to_literal offset;
+                     Some (ZRange.four_corners (fun x' y' => ident.interp idc s x' y' offset) x y)
+             | ident.Z_land
+               => fun x y => x <- x; y <- y; Some (ZRange.land_bounds x y)
+             | ident.Z_lor
+               => fun x y => x <- x; y <- y; Some (ZRange.lor_bounds x y)
+             | ident.Z_mul_split
+               => fun split_at x y
+                 => match to_literal split_at, x, y with
+                   | Some split_at, Some x, Some y
                      => ZRange.type.base.option.Some
                          (t:=base.type.Z*base.type.Z)
                          (ZRange.split_bounds (ZRange.four_corners Z.mul x y) split_at)
-                   | _, _ => ZRange.type.base.option.None
+                   | _, _, _ => ZRange.type.base.option.None
                    end
-             | ident.Z_add_get_carry_concrete split_at
-               => fun x y
-                 => match x, y with
-                   | Some x, Some y
+             | ident.Z_add_get_carry
+               => fun split_at x y
+                 => match to_literal split_at, x, y with
+                   | Some split_at, Some x, Some y
                      => ZRange.type.base.option.Some
                          (t:=base.type.Z*base.type.Z)
                          (ZRange.split_bounds (ZRange.four_corners Z.add x y) split_at)
-                   | _, _ => ZRange.type.base.option.None
+                   | _, _, _ => ZRange.type.base.option.None
                    end
-             | ident.Z_add_with_get_carry_concrete split_at
-               => fun x y z
-                 => match x, y, z with
-                   | Some x, Some y, Some z
+             | ident.Z_add_with_get_carry
+               => fun split_at x y z
+                 => match to_literal split_at, x, y, z with
+                   | Some split_at, Some x, Some y, Some z
                      => ZRange.type.base.option.Some
                          (t:=base.type.Z*base.type.Z)
                          (ZRange.split_bounds
                             (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
                             split_at)
-                   | _, _, _ => ZRange.type.base.option.None
+                   | _, _, _, _ => ZRange.type.base.option.None
                    end
-             | ident.Z_sub_get_borrow_concrete split_at
-               => fun x y
-                 => match x, y with
-                   | Some x, Some y
+             | ident.Z_sub_get_borrow
+               => fun split_at x y
+                 => match to_literal split_at, x, y with
+                   | Some split_at, Some x, Some y
                      => ZRange.type.base.option.Some
                          (t:=base.type.Z*base.type.Z)
                          (let b := ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at in
                           (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
                           (fst b, ZRange.opp (snd b)))
-                   | _, _ => ZRange.type.base.option.None
+                   | _, _, _ => ZRange.type.base.option.None
                    end
-             | ident.Z_sub_with_get_borrow_concrete split_at
-               => fun x y z
-                 => match x, y, z with
-                   | Some x, Some y, Some z
+             | ident.Z_sub_with_get_borrow
+               => fun split_at x y z
+                 => match to_literal split_at, x, y, z with
+                   | Some split_at, Some x, Some y, Some z
                      => ZRange.type.base.option.Some
                          (t:=base.type.Z*base.type.Z)
                          (let b := ZRange.split_bounds (ZRange.eight_corners (fun x y z => (y - z - x)%Z) x y z) split_at in
                           (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
                           (fst b, ZRange.opp (snd b)))
-                   | _, _, _ => ZRange.type.base.option.None
+                   | _, _, _, _ => ZRange.type.base.option.None
                    end
              | ident.Z_zselect
                => fun _ y z => y <- y; z <- z; Some (ZRange.union y z)
@@ -549,8 +571,6 @@ Module Compilers.
                               (ZRange.four_corners Z.add x y)
                               (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
                                                     x y m)))
-             | ident.Z_neg_snd (** TODO(jadep): This is only here for demonstration purposes; remove it once you no longer need it as a template *)
-               => fun '(a, b) => (a, option_map ZRange.opp b)
              | ident.Z_cast range
                => fun r : option zrange
                  => Some match r with
