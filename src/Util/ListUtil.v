@@ -11,6 +11,8 @@ Require Export Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 
+Scheme Equality for list.
+
 Definition list_case
            {A} (P : list A -> Type) (N : P nil) (C : forall x xs, P (cons x xs))
            (ls : list A)
