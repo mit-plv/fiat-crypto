@@ -121,14 +121,12 @@ Module Z.
 
   Definition mul_split_at_bitwidth_cps {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T) : T
     := dlet xy := x * y in
-        f (match bitwidth with
-           | Z.pos _ | Z0 => Z.land xy (Z.ones bitwidth)
-           | Z.neg _ => xy mod 2^bitwidth
-           end,
-           match bitwidth with
-           | Z.pos _ | Z0 => Z.shiftr xy bitwidth
-           | Z.neg _ => xy / 2^bitwidth
-           end).
+        f (if Z.geb bitwidth 0
+           then Z.land xy (Z.ones bitwidth)
+           else xy mod 2^bitwidth,
+           if Z.geb bitwidth 0
+           then Z.shiftr xy bitwidth
+           else xy / 2^bitwidth).
   Definition mul_split_at_bitwidth_cps_correct {T} (bitwidth : Z) (x y : Z) (f : Z * Z -> T)
     : @mul_split_at_bitwidth_cps T bitwidth x y f = f (Z.mul_split_at_bitwidth bitwidth x y)
     := eq_refl.

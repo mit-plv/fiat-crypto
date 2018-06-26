@@ -31,7 +31,7 @@ Module Z.
   Definition add_with_carry (c : Z) (x y : Z) : Z
     := c + x + y.
   Definition add_with_get_carry (bitwidth : Z) (c : Z) (x y : Z) : Z * Z
-    := get_carry bitwidth (add_with_carry c x y).
+    := dlet v := add_with_carry c x y in get_carry bitwidth v.
   Definition add_get_carry (bitwidth : Z) (x y : Z) : Z * Z
     := add_with_get_carry bitwidth 0 x y.
 
@@ -41,7 +41,7 @@ Module Z.
   Definition sub_with_borrow (c : Z) (x y : Z) : Z
     := add_with_carry (-c) x (-y).
   Definition sub_with_get_borrow (bitwidth : Z) (c : Z) (x y : Z) : Z * Z
-    := get_borrow bitwidth (sub_with_borrow c x y).
+    := dlet v := sub_with_borrow c x y in get_borrow bitwidth v.
   Definition sub_get_borrow (bitwidth : Z) (x y : Z) : Z * Z
     := sub_with_get_borrow bitwidth 0 x y.
 
@@ -66,14 +66,12 @@ Module Z.
 
   Definition mul_split_at_bitwidth (bitwidth : Z) (x y : Z) : Z * Z
     := dlet xy := x * y in
-        (match bitwidth with
-         | Z.pos _ | Z0 => xy &' Z.ones bitwidth
-         | Z.neg _ => xy mod 2^bitwidth
-         end,
-         match bitwidth with
-         | Z.pos _ | Z0 => xy >> bitwidth
-         | Z.neg _ => xy / 2^bitwidth
-         end).
+       (if Z.geb bitwidth 0
+        then xy &' Z.ones bitwidth
+        else xy mod 2^bitwidth,
+        if Z.geb bitwidth 0
+        then xy >> bitwidth
+        else xy / 2^bitwidth).
   Definition mul_split (s x y : Z) : Z * Z
     := if s =? 2^Z.log2 s
        then mul_split_at_bitwidth (Z.log2 s) x y
