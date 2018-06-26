@@ -68,6 +68,9 @@ Proof.
   split; intro H; (repeat let x := fresh in intro x; specialize (H x)); omega.
 Qed.
 
+Definition is_bounded_by_bool (v : Z) (x : zrange) : bool
+  := ((lower x <=? v) && (v <=? upper x))%bool%Z.
+
 Definition is_tighter_than_bool (x y : zrange) : bool
   := ((lower y <=? lower x) && (upper x <=? upper y))%bool%Z.
 

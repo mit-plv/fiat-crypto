@@ -78,6 +78,12 @@ Module ZRange.
           => let (lx, ux) := x in
              let (ly, uy) := y in
              {| lower := Z.min 0 (Z.min lx ly) ; upper := Z.max 0 (Z.min ux uy) |}).
+  Definition lor_bounds : zrange -> zrange -> zrange
+    := extremization_bounds
+         (fun x y
+          => let (lx, ux) := x in
+             let (ly, uy) := y in
+             {| lower := Z.max lx ly ; upper := upper_lor_land_bounds ux uy |}).
 
   Definition split_bounds (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
     if upper r <? split_at
@@ -87,4 +93,9 @@ Module ZRange.
                 {| lower := lower r / split_at; upper := (upper r / split_at) |} )
     else ( {| lower := 0; upper := split_at - 1 |},
            {| lower := lower r / split_at; upper := (upper r / split_at) |} ).
+
+  Definition good (r : zrange) : Prop
+    := lower r <= upper r.
+  Definition goodb (r : zrange) : bool
+    := (lower r <=? upper r)%Z.
 End ZRange.
