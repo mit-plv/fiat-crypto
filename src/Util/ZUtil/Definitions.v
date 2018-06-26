@@ -76,4 +76,16 @@ Module Z.
     := if s =? 2^Z.log2 s
        then mul_split_at_bitwidth (Z.log2 s) x y
        else ((x * y) mod s, (x * y) / s).
+
+  (** Boolean negation *)
+  Definition bneg (v : Z) : Z
+    := if dec (v = 0) then 1 else 0.
+
+  (** Logical negation, modulo a bitwidth *)
+  Definition lneg (bitwidth : Z) (v : Z) : Z
+    := (-v) mod 2^bitwidth.
+  Definition lneg_full (s : Z) (v : Z) : Z
+    := if s =? 2^Z.log2 s
+       then lneg (Z.log2 s) v
+       else (-v) mod s.
 End Z.
