@@ -174,6 +174,9 @@ Proof.
                      | progress change (2^1)%Z with 2%Z in *
                      | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r, ?Z.opp_involutive, ?Z.shiftr_0_r
                      | progress rewrite ?Z.land_ones by lia
+                     | match goal with
+                       | [ H : (?bitwidth < 0)%Z, H' : context[(2^?bitwidth)%Z] |- _ ] => is_var bitwidth; destruct bitwidth; cbn in H
+                       end
                      | progress autorewrite with Zshift_to_pow in *
                      | rewrite !Z.sub_with_borrow_to_add_get_carry
                      | progress cbv [Z.add_with_carry]

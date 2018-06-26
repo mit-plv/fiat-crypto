@@ -31,6 +31,7 @@ Require Export Crypto.Util.Tactics.SetoidSubst.
 Require Export Crypto.Util.Tactics.SideConditionsBeforeToAfter.
 Require Export Crypto.Util.Tactics.SimplifyProjections.
 Require Export Crypto.Util.Tactics.SimplifyRepeatedIfs.
+Require Export Crypto.Util.Tactics.SpecializeAllWays.
 Require Export Crypto.Util.Tactics.SpecializeBy.
 Require Export Crypto.Util.Tactics.SplitInContext.
 Require Export Crypto.Util.Tactics.SubstEvars.
