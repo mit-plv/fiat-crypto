@@ -1,8 +1,10 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Classes.RelationClasses.
 Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
@@ -12,6 +14,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Module ZRange.
   Import Operations.ZRange.
   Local Open Scope zrange_scope.
+  Local Coercion is_true : bool >-> Sortclass.
 
   Local Notation eta v := r[ lower v ~> upper v ].
 
@@ -73,4 +76,15 @@ Module ZRange.
     : (forall v, is_bounded_by_bool v r1 = true -> is_bounded_by_bool v r2 = true)
       <-> (is_tighter_than_bool r1 r2 = true).
   Proof. rewrite is_bounded_by_iff_is_tighter_than; intuition (congruence || auto). Qed.
+
+  Global Instance is_tighter_than_bool_Reflexive : Reflexive is_tighter_than_bool.
+  Proof.
+    cbv [is_tighter_than_bool is_true]; cbn [lower upper]; repeat intro.
+    rewrite ?Bool.andb_true_iff, ?Z.leb_le_iff in *; repeat apply conj; reflexivity.
+  Qed.
+  Global Instance is_tighter_than_bool_Transitive : Transitive is_tighter_than_bool.
+  Proof.
+    cbv [is_tighter_than_bool is_true]; cbn [lower upper]; repeat intro.
+    rewrite ?Bool.andb_true_iff, ?Z.leb_le_iff in *; repeat apply conj; etransitivity; destruct_head'_and; eassumption.
+  Qed.
 End ZRange.
