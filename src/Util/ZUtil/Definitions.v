@@ -13,6 +13,14 @@ Module Z.
   Definition add_modulo x y modulus :=
     if (modulus <=? x + y) then (x + y) - modulus else (x + y).
 
+  (** Logical negation, modulo a number *)
+  Definition lnot_modulo (v : Z) (modulus : Z) : Z
+    := Z.lnot v mod modulus.
+
+  (** Boolean negation *)
+  Definition bneg (v : Z) : Z
+    := if dec (v = 0) then 1 else 0.
+
   (* most significant bit *)
   Definition cc_m s x := if dec (2 ^ (Z.log2 s) = s) then x >> (Z.log2 s - 1) else x / (s / 2).
 
@@ -76,16 +84,4 @@ Module Z.
     := if s =? 2^Z.log2 s
        then mul_split_at_bitwidth (Z.log2 s) x y
        else ((x * y) mod s, (x * y) / s).
-
-  (** Boolean negation *)
-  Definition bneg (v : Z) : Z
-    := if dec (v = 0) then 1 else 0.
-
-  (** Logical negation, modulo a bitwidth *)
-  Definition lneg (bitwidth : Z) (v : Z) : Z
-    := (-v) mod 2^bitwidth.
-  Definition lneg_full (s : Z) (v : Z) : Z
-    := if s =? 2^Z.log2 s
-       then lneg (Z.log2 s) v
-       else (-v) mod s.
 End Z.
