@@ -119,7 +119,7 @@ Local Ltac apply_is_bounded_by_truncation_bounds :=
     => apply is_bounded_by_truncation_bounds'
   end.
 Local Ltac handle_mul :=
-  apply ZRange.monotone_four_corners_genb; try (split; auto);
+  apply (ZRange.monotone_four_corners_genb Z.mul); try (split; auto);
   unfold Basics.flip;
   let x := fresh "x" in
   intro x;
@@ -161,13 +161,13 @@ Proof.
                      => generalize dependent (interpToZ x); clear x; intros
                    | [ |- _ /\ True ] => split; [ | tauto ]
                    end ].
-  { apply (@ZRange.monotone_four_corners true true _ _); split; auto. }
-  { apply (@ZRange.monotone_four_corners true false _ _); split; auto. }
+  { apply (@ZRange.monotone_four_corners true true Z.add _); split; auto. }
+  { apply (@ZRange.monotone_four_corners true false Z.sub _); split; auto. }
   { handle_mul. }
-  { apply ZRange.monotone_four_corners_genb; try (split; auto);
+  { apply (ZRange.monotone_four_corners_genb Z.shiftl); try (split; auto);
       [ eexists; apply Z.shiftl_le_Proper1
       | exists true; apply Z.shiftl_le_Proper2 ]. }
-  { apply ZRange.monotone_four_corners_genb; try (split; auto);
+  { apply (ZRange.monotone_four_corners_genb Z.shiftr); try (split; auto);
       [ eexists; apply Z.shiftr_le_Proper1
       | exists true; apply Z.shiftr_le_Proper2 ]. }
   { cbv [Bounds.land Bounds.extremization_bounds]; break_innermost_match;
@@ -197,14 +197,14 @@ Proof.
   { apply Z.mod_bound_min_max; auto. }
   { handle_mul. }
   { auto with zarith. }
-  { apply (@ZRange.monotone_eight_corners true true true _ _ _); split; auto. }
-  { apply (@ZRange.monotone_eight_corners true true true _ _ _); split; auto. }
+  { apply (@ZRange.monotone_eight_corners true true true Z.add_with_carry _ _); split; auto. }
+  { apply (@ZRange.monotone_eight_corners true true true Z.add_with_carry _ _); split; auto. }
   { apply Z.mod_bound_min_max; auto. }
-  { apply (@ZRange.monotone_eight_corners true true true _ _ _); split; auto. }
+  { apply (@ZRange.monotone_eight_corners true true true Z.add_with_carry _ _); split; auto. }
   { auto with zarith. }
-  { apply (@ZRange.monotone_eight_corners false true false _ _ _); split; auto. }
-  { apply (@ZRange.monotone_eight_corners false true false _ _ _); split; auto. }
+  { apply (@ZRange.monotone_eight_corners false true false Z.sub_with_borrow _ _); split; auto. }
+  { apply (@ZRange.monotone_eight_corners false true false Z.sub_with_borrow _ _); split; auto. }
   { apply Z.mod_bound_min_max; auto. }
-  { apply (@ZRange.monotone_eight_corners false true false _ _ _); split; auto. }
+  { apply (@ZRange.monotone_eight_corners false true false Z.sub_with_borrow _ _); split; auto. }
   { auto with zarith. }
 Qed.
