@@ -75,14 +75,15 @@ Module Associational.
       _
       nil
       (fun t ts acc
-       => ((fst t * fst t, snd t * snd t)
-             :: (map (fun t'
-                      => (fst t * fst t', 2 * snd t * snd t'))
-                     ts))
+       => (dlet two_t2 := 2 * snd t in
+               (fst t * fst t, snd t * snd t)
+                 :: (map (fun t'
+                          => (fst t * fst t', two_t2 * snd t'))
+                         ts))
             ++ acc)
       p.
   Lemma eval_square p : eval (square p) = eval p * eval p.
-  Proof. induction p; cbn [square list_rect]; push; nsatz.    Qed.
+  Proof. induction p; cbv [square list_rect Let_In]; push; nsatz. Qed.
   Hint Rewrite eval_square : push_eval.
 
   Definition negate_snd (p:list (Z*Z)) : list (Z*Z) :=
