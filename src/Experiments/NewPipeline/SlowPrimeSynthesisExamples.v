@@ -213,6 +213,8 @@ Module X25519_32.
          SuchThat (ropp_correctT n s c machine_wordsize base_25p5_opp)
          As base_25p5_opp_correct.
   Proof. Time solve_ropp machine_wordsize. Time Qed.
+  (* These are very, very, very slow *)
+  (*
   Derive base_25p5_to_bytes
          SuchThat (rto_bytes_correctT n s c machine_wordsize base_25p5_to_bytes)
          As base_25p5_to_bytes_correct.
@@ -221,6 +223,7 @@ Module X25519_32.
          SuchThat (rfrom_bytes_correctT n s c machine_wordsize base_25p5_from_bytes)
          As base_25p5_from_bytes_correct.
   Proof. Time solve_rfrom_bytes machine_wordsize. Time Qed.
+   *)
   Derive base_25p5_encode
          SuchThat (rencode_correctT n s c machine_wordsize base_25p5_encode)
          As base_25p5_encode_correct.
@@ -237,6 +240,7 @@ Module X25519_32.
     : check_args n s c machine_wordsize (ErrorT.Success tt) = ErrorT.Success tt.
   Proof. vm_compute; reflexivity. Qed.
 
+  (*
   Definition base_25p5_good : GoodT n s c machine_wordsize
     := Good n s c machine_wordsize
             base_25p5_curve_good
@@ -251,8 +255,10 @@ Module X25519_32.
             base_25p5_encode_correct
             base_25p5_to_bytes_correct
             base_25p5_from_bytes_correct.
-
+   *)
+  (*
   Print Assumptions base_25p5_good.
+   *)
   Import PrintingNotations.
   Set Printing Width 80.
   Print base_25p5_carry_mul.
