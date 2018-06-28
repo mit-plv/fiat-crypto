@@ -1296,8 +1296,8 @@ In the RHS, the follow notation applies:
                 ; make_rewrite ((-??{ℤ}) *   ??{ℤ} ) (fun x y => -(x * y))
                 ; make_rewrite (  ??{ℤ}  * (-??{ℤ})) (fun x y => -(x * y))
 
-                ; make_rewrite (??{ℤ} * #?ℤ) (fun x y => x << ##(Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
-                ; make_rewrite (#?ℤ * ??{ℤ}) (fun y x => x << ##(Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
+                ; make_rewrite (??{ℤ} * #?ℤ) (fun x y => x << ##(Z.log2 y)  when  (y =? (2^Z.log2 y)) && (negb (y =? 2)))
+                ; make_rewrite (#?ℤ * ??{ℤ}) (fun y x => x << ##(Z.log2 y)  when  (y =? (2^Z.log2 y)) && (negb (y =? 2)))
                 ; make_rewrite (??{ℤ} / #?ℤ) (fun x y => x >> ##(Z.log2 y)  when  Z.eqb y (2^Z.log2 y))
                 ; make_rewrite (??{ℤ} mod #?ℤ) (fun x y =>  x &' ##(y-1)%Z  when  Z.eqb y (2^Z.log2 y))
                 ; make_rewrite (-(-??{ℤ})) (fun v => v)
