@@ -986,7 +986,7 @@ Module Import UnsaturatedSolinas.
 
     (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
     Definition srcarry_mul prefix
-      := BoundsPipelineToStrings
+      := BoundsPipelineToStrings_no_subst01
            prefix "carry_mul"
            (carry_mul_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -994,7 +994,7 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds).
 
     Definition rcarry_mul_correct
-      := BoundsPipeline_correct
+      := BoundsPipeline_no_subst01_correct
            (Some loose_bounds, (Some loose_bounds, tt))
            (Some tight_bounds)
            (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
