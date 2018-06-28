@@ -1827,20 +1827,21 @@ Module Compilers.
              => fun '(absurd, _) => match absurd : Empty_set with end
            end%list.
 
-      Definition to_function_lines (prefix : string) (name : string)
+      Definition to_function_lines (static : bool) (prefix : string) (name : string)
                  {t}
-
                  (f : type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
         : list string
         := let '(args, rets, body) := f in
-           (((("void "
+           (((((if static then "static " else "")
+                 ++ "void "
                  ++ name ++ "("
                  ++ (String.concat ", " (to_retarg_list prefix rets ++ to_arg_list_for_each_lhs_of_arrow prefix args))
                  ++ ") {")%string)
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
-      Definition ToFunctionLines (prefix : string) (name : string)
+      (** TODO: Allow "static" to be configurable? *)
+      Definition ToFunctionLines (static := true) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
@@ -1854,7 +1855,7 @@ Module Compilers.
                         ++ [" * Output Bounds:"]
                         ++ List.map (fun v => " *   " ++ v)%string (bound_to_string outdata outbounds)
                         ++ [" */"]
-                        ++ to_function_lines prefix name (indata, outdata, f))%list,
+                        ++ to_function_lines static prefix name (indata, outdata, f))%list,
                      collect_infos f)
            | inr nil
              => inr ("Unknown internal error in converting " ++ name ++ " to C")%string
