@@ -151,7 +151,7 @@ fun var : type -> Type =>
 *)
 
   Compute Compilers.ToString.C.ToFunctionString
-          "" "fecarry_mul" base_51_carry_mul
+          true "" "fecarry_mul" base_51_carry_mul
           None (Some loose_bounds, (Some loose_bounds, tt)).
   (*
 void fecarry_mul(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
@@ -170,7 +170,7 @@ void fecarry_mul(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
 }
 *)
   Compute Compilers.ToString.C.ToFunctionString
-          "" "fesub" base_51_sub
+          true "" "fesub" base_51_sub
           None (Some tight_bounds, (Some tight_bounds, tt)).
 (*
 void fesub(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
