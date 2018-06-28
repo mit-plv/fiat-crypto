@@ -943,6 +943,28 @@ Module Import UnsaturatedSolinas.
                Hrop rv)
            (only parsing).
 
+    Notation BoundsPipelineToStrings_no_subst01 prefix name rop in_bounds out_bounds
+      := ((prefix ++ name)%string,
+          Pipeline.BoundsPipelineToStrings
+            true (* static *) prefix (prefix ++ name)%string
+            (*false*) false None
+            relax_zrange
+            rop%Expr in_bounds out_bounds).
+
+    Notation BoundsPipeline_no_subst01_correct in_bounds out_bounds op
+      := (fun rv (rop : Expr (reify_type_of op)) Hrop
+          => @Pipeline.BoundsPipeline_correct_trans
+               (*false*) false None
+               relax_zrange
+               (relax_zrange_gen_good _)
+               _
+               rop
+               in_bounds
+               out_bounds
+               op
+               Hrop rv)
+           (only parsing).
+
     Notation BoundsPipelineToStrings_with_bytes_no_subst01 prefix name rop in_bounds out_bounds
       := ((prefix ++ name)%string,
           Pipeline.BoundsPipelineToStrings
@@ -981,7 +1003,7 @@ Module Import UnsaturatedSolinas.
            (carry_mulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
     Definition srcarry_square prefix
-      := BoundsPipelineToStrings
+      := BoundsPipelineToStrings_no_subst01
            prefix "carry_square"
            (carry_square_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
@@ -989,7 +1011,7 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds).
 
     Definition rcarry_square_correct
-      := BoundsPipeline_correct
+      := BoundsPipeline_no_subst01_correct
            (Some loose_bounds, tt)
            (Some tight_bounds)
            (carry_squaremod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
