@@ -10,8 +10,6 @@ Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Option.
@@ -37,7 +35,6 @@ Require Import Crypto.Util.ZUtil Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Equality.
 Import ListNotations. Local Open Scope Z_scope.
