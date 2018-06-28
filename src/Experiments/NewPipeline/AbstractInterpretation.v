@@ -480,7 +480,7 @@ Module Compilers.
              | ident.pair A B => pair
              | ident.fst A B => fst
              | ident.snd A B => snd
-             | ident.pair_rect A B P => fun f '(a, b) => f a b
+             | ident.prod_rect A B P => fun f '(a, b) => f a b
              | ident.List_map _ _
                => fun f ls => ls <- ls; Some (List.map f ls)
              | ident.List_app _

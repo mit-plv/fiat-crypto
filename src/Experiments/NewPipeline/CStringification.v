@@ -174,7 +174,7 @@ Module Compilers.
                 | ident.pair A B => "(,)"
                 | ident.fst A B => "fst"
                 | ident.snd A B => "snd"
-                | ident.pair_rect A B T => "pair_rect"
+                | ident.prod_rect A B T => "prod_rect"
                 | ident.bool_rect T => "bool_rect"
                 | ident.nat_rect P => "nat_rect"
                 | ident.list_rect A P => "list_rect"
@@ -876,7 +876,7 @@ Module Compilers.
                | ident.Nat_mul
                | ident.Nat_add
                | ident.Nat_sub
-               | ident.pair_rect _ _ _
+               | ident.prod_rect _ _ _
                | ident.bool_rect _
                | ident.nat_rect _
                | ident.list_rect _ _
