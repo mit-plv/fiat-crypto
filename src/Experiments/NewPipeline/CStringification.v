@@ -1840,8 +1840,7 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
-      (** TODO: Allow "static" to be configurable? *)
-      Definition ToFunctionLines (static := true) (prefix : string) (name : string)
+      Definition ToFunctionLines (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
@@ -1869,14 +1868,14 @@ Module Compilers.
         : string
         := String.concat String.NewLine lines.
 
-      Definition ToFunctionString (prefix : string) (name : string)
+      Definition ToFunctionString (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.final_codomain t))
         : (string * ident_infos) + string
-        := match ToFunctionLines prefix name e name_list inbounds outbounds with
+        := match ToFunctionLines static prefix name e name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.
