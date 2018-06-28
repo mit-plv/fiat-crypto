@@ -39,6 +39,7 @@ Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.Show.
+Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Experiments.NewPipeline.Arithmetic.
 Require Crypto.Experiments.NewPipeline.Language.
 Require Crypto.Experiments.NewPipeline.UnderLets.
@@ -302,7 +303,8 @@ Module Pipeline.
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
-  | Stringification_failed {t} (e : @Compilers.defaults.Expr t) (err : string).
+  | Stringification_failed {t} (e : @Compilers.defaults.Expr t) (err : string)
+  | Invalid_argument (msg : string).
 
   Notation ErrorT := (ErrorT ErrorMessage).
 
@@ -409,6 +411,8 @@ Module Pipeline.
               | Values_not_provably_equal_listZ descr lhs rhs
                 => ["Values not provably equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs]
               | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines false e ++ [err]
+              | Invalid_argument msg
+                => ["Invalid argument:" ++ msg]%string
               end.
     Local Instance show_ErrorMessage : Show ErrorMessage
       := fun parens err => String.concat String.NewLine (show_lines parens err).
@@ -677,6 +681,20 @@ Derive carry_square_gen
        As carry_square_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = carry_squaremod _ _ _ _ _ _ _) => simple apply carry_square_gen_correct : reify_gen_cache.
+
+Derive carry_scmul_gen
+       SuchThat (forall (limbwidth_num limbwidth_den : Z)
+                        (x : Z) (f : list Z)
+                        (n : nat)
+                        (s : Z)
+                        (c : list (Z * Z))
+                        (idxs : list nat),
+                    Interp (t:=reify_type_of carry_scmulmod)
+                           carry_scmul_gen limbwidth_num limbwidth_den s c n idxs x f
+                    = carry_scmulmod limbwidth_num limbwidth_den s c n idxs x f)
+       As carry_scmul_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Hint Extern 1 (_ = carry_scmulmod _ _ _ _ _ _ _ _) => simple apply carry_scmul_gen_correct : reify_gen_cache.
 
 Derive carry_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
@@ -1013,6 +1031,20 @@ Module Import UnsaturatedSolinas.
            (Some tight_bounds)
            (carry_squaremod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs).
 
+    Definition srcarry_scmul_const prefix (x : Z)
+      := BoundsPipelineToStrings_no_subst01
+           prefix ("carry_scmul_" ++ decimal_string_of_Z x)
+           (carry_scmul_gen
+              @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify x)
+           (Some loose_bounds, tt)
+           (Some tight_bounds).
+
+    Definition rcarry_scmul_const_correct (x : Z)
+      := BoundsPipeline_no_subst01_correct
+           (Some loose_bounds, tt)
+           (Some tight_bounds)
+           (carry_scmulmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n idxs x).
+
     Definition srcarry prefix
       := BoundsPipelineToStrings
            prefix "carry"
@@ -1187,6 +1219,10 @@ Module Import UnsaturatedSolinas.
     (* we need to strip off [Hrv : ... = Pipeline.Success rv] and related arguments *)
     Definition rcarry_mul_correctT rv : Prop
       := type_of_strip_3arrow (@rcarry_mul_correct rv).
+    Definition rcarry_square_correctT rv : Prop
+      := type_of_strip_3arrow (@rcarry_square_correct rv).
+    Definition rcarry_scmul_const_correctT x rv : Prop
+      := type_of_strip_3arrow (@rcarry_scmul_const_correct x rv).
     Definition rcarry_correctT rv : Prop
       := type_of_strip_3arrow (@rcarry_correct rv).
     Definition rrelax_correctT rv : Prop
@@ -1444,10 +1480,50 @@ Module Import UnsaturatedSolinas.
            (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
             ToString.C.bitwidths_used infos).
 
+      Local Open Scope string_scope.
+      Local Open Scope list_scope.
+
+      Definition known_functions
+        := [("carry_mul", srcarry_mul);
+              ("carry_square", srcarry_square);
+              ("carry", srcarry);
+              ("add", sradd);
+              ("sub", srsub);
+              ("opp", sropp);
+              ("to_bytes", srto_bytes);
+              ("from_bytes", srfrom_bytes)].
+
+      Definition synthesize_of_name (function_name_prefix : string) (name : string)
+        : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
+        := fold_right
+             (fun v default
+              => match v with
+                | Some res => res
+                | None => default
+                end)
+             ((name,
+               Error
+                 (Pipeline.Invalid_argument
+                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal."))))
+             ((map
+                 (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
+                 known_functions)
+                ++ [if prefix "carry_scmul" name
+                    then let sc := substring (String.length "carry_scmul") (String.length name) name in
+                         let scZ := Z_of_decimal_string sc in
+                         if string_beq sc (decimal_string_of_Z scZ)
+                         then Some (srcarry_scmul_const function_name_prefix scZ)
+                         else None
+                    else None]).
+
       (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-      Definition Synthesize (function_name_prefix : string) : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
-        := let ls := List.map (fun sr => sr function_name_prefix) [srcarry_mul; srcarry_square; srcarry; sradd; srsub; sropp; srto_bytes; srfrom_bytes] in
+      Definition Synthesize (function_name_prefix : string) (requests : list string)
+        : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+        := let ls := match requests with
+                     | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
+                     | requests => List.map (synthesize_of_name function_name_prefix) requests
+                     end in
            let infos := aggregate_infos ls in
            let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
            (extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
@@ -1871,10 +1947,36 @@ Module SaturatedSolinas.
            (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
             ToString.C.bitwidths_used infos).
 
+      Local Open Scope string_scope.
+      Local Open Scope list_scope.
+
+      Definition known_functions
+        := [("mulmod", srmulmod)].
+
+      Definition synthesize_of_name (function_name_prefix : string) (name : string)
+        : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
+        := fold_right
+             (fun v default
+              => match v with
+                | Some res => res
+                | None => default
+                end)
+             ((name,
+               Error
+                 (Pipeline.Invalid_argument
+                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ String.concat ", " (List.map (@fst _ _) known_functions) ++ "."))))
+             (map
+                (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
+                known_functions).
+
       (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-      Definition Synthesize (function_name_prefix : string) : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
-        := let ls := List.map (fun sr => sr function_name_prefix) [srmulmod] in
+      Definition Synthesize (function_name_prefix : string) (requests : list string)
+        : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+        := let ls := match requests with
+                     | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
+                     | requests => List.map (synthesize_of_name function_name_prefix) requests
+                     end in
            let infos := aggregate_infos ls in
            let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
            (extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
