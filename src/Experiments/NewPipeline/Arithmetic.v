@@ -455,6 +455,7 @@ Module Positional. Section Positional.
       := let ca := add n balance a in
          let _b := negate_snd b in
          add n ca _b.
+
     Lemma eval_sub a b
       : (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
         (List.length a = n) -> (List.length b = n) ->
@@ -650,6 +651,25 @@ Section mod_ops.
           by auto; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carry_squaremod; reflexivity.
+  Qed.
+
+  Derive carry_scmulmod
+         SuchThat (forall (x : Z) (f : list Z)
+                          (Hf : length f = n),
+                      (eval weight n (carry_scmulmod x f)) mod (s - Associational.eval c)
+                      = (x * eval weight n f) mod (s - Associational.eval c))
+         As eval_carry_scmulmod.
+  Proof.
+    intros.
+    push_Zmod.
+    rewrite <-eval_encode with (s:=s) (c:=c) (x:=x) (weight:=weight) (n:=n) by auto.
+    pull_Zmod.
+    rewrite<-eval_mulmod with (s:=s) (c:=c) by (auto; distr_length).
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    subst carry_scmulmod; reflexivity.
   Qed.
 
   Derive carrymod
