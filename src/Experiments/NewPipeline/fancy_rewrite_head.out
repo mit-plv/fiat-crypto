@@ -43,14 +43,14 @@ match idc in (ident t) return (Compile.value' true t) with
 | @ident.snd A B =>
     fun x : expr (type.base (A * B)%etype) =>
     UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
-| @ident.pair_rect A B T =>
+| @ident.prod_rect A B T =>
     fun
       (x : expr (type.base A) ->
            expr (type.base B) ->
            UnderLets.UnderLets base.type ident var (expr (type.base T)))
       (x0 : expr (type.base (A * B)%etype)) =>
     UnderLets.Base
-      (#(ident.pair_rect)%expr @
+      (#(ident.prod_rect)%expr @
        (λ (x1 : var (type.base A))(x2 : var (type.base B)),
         UnderLets.to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat
 | @ident.bool_rect T =>

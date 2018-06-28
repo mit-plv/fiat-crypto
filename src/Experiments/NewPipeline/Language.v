@@ -5,6 +5,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
@@ -517,13 +518,9 @@ Module Compilers.
         | match ?b with true => ?t | false => ?f end
           => let T := type of term in
              reify_rec (@bool_rect (fun _ => T) t f b)
-        | match ?x with Datatypes.pair a b => ?f end
-          => let x' := fresh in
-             let T := type of x in
-             reify_rec ((fun x' : T
-                         => match Datatypes.fst x, Datatypes.snd x return _ with
-                            | a, b => f
-                            end) x)
+        | match ?x with Datatypes.pair a b => @?f a b end
+          => let T := type of term in
+             reify_rec (@prod_rect _ _ (fun _ => T) f x)
         | match ?x with nil => ?N | cons a b => @?C a b end
           => let T := type of term in
              reify_rec (@list_case _ (fun _ => T) N C x)
@@ -761,7 +758,7 @@ Module Compilers.
         | pair {A B:base.type} : ident (A -> B -> A * B)
         | fst {A B} : ident (A * B -> A)
         | snd {A B} : ident (A * B -> B)
-        | pair_rect {A B T:base.type} : ident ((A -> B -> T) -> A * B -> T)
+        | prod_rect {A B T:base.type} : ident ((A -> B -> T) -> A * B -> T)
         | bool_rect {T:base.type} : ident ((unit -> T) -> (unit -> T) -> bool -> T)
         | nat_rect {P:base.type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
         | list_rect {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
@@ -882,7 +879,7 @@ Module Compilers.
              | pair A B => Datatypes.pair
              | fst A B => Datatypes.fst
              | snd A B => Datatypes.snd
-             | pair_rect A B T => fun f '((a, b) : base.interp A * base.interp B) => f a b
+             | prod_rect A B T => fun f '((a, b) : base.interp A * base.interp B) => f a b
              | bool_rect T
                => fun t f => Datatypes.bool_rect _ (t tt) (f tt)
              | nat_rect P
@@ -968,8 +965,6 @@ Module Compilers.
 
     (** TODO: MOVE ME? *)
     Module Thunked.
-      Definition pair_rect {A B} P (f : A -> B -> P) (x : A * B) : P
-        := let '(a, b) := x in f a b.
       Definition bool_rect P (t f : Datatypes.unit -> P) (b : bool) : P
         := Datatypes.bool_rect (fun _ => P) (t tt) (f tt) b.
       Definition list_rect {A} P (N : Datatypes.unit -> P) (C : A -> list A -> P -> P) (ls : list A) : P
@@ -1050,6 +1045,11 @@ Module Compilers.
         | @Thunked.bool_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.bool_rect rT)
+        | @Datatypes.prod_rect ?A ?B (fun _ => ?T)
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             let rT := base.reify T in
+             then_tac (@ident.prod_rect rA rB rT)
         | @Datatypes.nat_rect (fun _ => ?T) ?P0
           => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
         | @Thunked.nat_rect ?T

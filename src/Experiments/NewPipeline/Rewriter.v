@@ -1167,7 +1167,7 @@ In the RHS, the follow notation applies:
                         then t ##tt
                         else f ##tt)
                 ; make_rewrite
-                    (#pident.pair_rect @ ??{?? -> ?? -> ??} @ (??, ??))
+                    (#pident.prod_rect @ ??{?? -> ?? -> ??} @ (??, ??))
                     (fun _ _ _ f _ x _ y
                      => x <- castbe x; y <- castbe y; ret (f x y))
                 ; make_rewrite
@@ -1192,7 +1192,7 @@ In the RHS, the follow notation applies:
                           ([], [])
                           (fun x tl partition_tl
                            => fx <-- f x;
-                                (#ident.pair_rect
+                                (#ident.prod_rect
                                   @ (λ g d, #ident.bool_rect
                                              @ (λ _, ($x :: $g, $d))
                                              @ (λ _, ($g, $x :: $d))

@@ -355,7 +355,7 @@ match idc in (ident t) return (Compile.value' true t) with
         UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
     | _ => UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
     end
-| @ident.pair_rect A B T =>
+| @ident.prod_rect A B T =>
     fun
       (x : expr (type.base A) ->
            expr (type.base B) ->
@@ -365,7 +365,7 @@ match idc in (ident t) return (Compile.value' true t) with
     | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
       @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ =>
         UnderLets.Base
-          (#(ident.pair_rect)%expr @
+          (#(ident.prod_rect)%expr @
            (λ (x2 : var (type.base A))(x3 : var (type.base B)),
             UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0)%expr_pat
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(idc)%expr_pat x2) x1 =>
@@ -442,7 +442,7 @@ match idc in (ident t) return (Compile.value' true t) with
                                                 unwrap))
                                       | None =>
                                           UnderLets.Base
-                                            (#(ident.pair_rect)%expr @
+                                            (#(ident.prod_rect)%expr @
                                              (λ (x5 : var (type.base A))
                                               (x6 : var (type.base B)),
                                               UnderLets.to_expr
@@ -450,7 +450,7 @@ match idc in (ident t) return (Compile.value' true t) with
                                       end))%under_lets
                               | None =>
                                   UnderLets.Base
-                                    (#(ident.pair_rect)%expr @
+                                    (#(ident.prod_rect)%expr @
                                      (λ (x5 : var (type.base A))(x6 : 
                                                                  var
                                                                    (type.base
@@ -460,7 +460,7 @@ match idc in (ident t) return (Compile.value' true t) with
                               end)
                        | None =>
                            UnderLets.Base
-                             (#(ident.pair_rect)%expr @
+                             (#(ident.prod_rect)%expr @
                               (λ (x4 : var (type.base A))(x5 : var
                                                                  (type.base B)),
                                UnderLets.to_expr (x ($x4) ($x5)))%expr @ x0)%expr_pat
@@ -469,49 +469,49 @@ match idc in (ident t) return (Compile.value' true t) with
                     fun _ : Compile.value' false s1 -> Compile.value' true d1
                     =>
                     UnderLets.Base
-                      (#(ident.pair_rect)%expr @
+                      (#(ident.prod_rect)%expr @
                        (λ (x3 : var (type.base A))(x4 : var (type.base B)),
                         UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
                 end (Compile.reflect x1)
             | (s1 -> d1)%ptype =>
                 fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
                 UnderLets.Base
-                  (#(ident.pair_rect)%expr @
+                  (#(ident.prod_rect)%expr @
                    (λ (x3 : var (type.base A))(x4 : var (type.base B)),
                     UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
             end (Compile.reflect x2)
         | None =>
             UnderLets.Base
-              (#(ident.pair_rect)%expr @
+              (#(ident.prod_rect)%expr @
                (λ (x3 : var (type.base A))(x4 : var (type.base B)),
                 UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
         end
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
       _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ =>
         UnderLets.Base
-          (#(ident.pair_rect)%expr @
+          (#(ident.prod_rect)%expr @
            (λ (x3 : var (type.base A))(x4 : var (type.base B)),
             UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
       @expr.App _ _ _ s _
       (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
         UnderLets.Base
-          (#(ident.pair_rect)%expr @
+          (#(ident.prod_rect)%expr @
            (λ (x4 : var (type.base A))(x5 : var (type.base B)),
             UnderLets.to_expr (x ($x4) ($x5)))%expr @ x0)%expr_pat
     | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
         UnderLets.Base
-          (#(ident.pair_rect)%expr @
+          (#(ident.prod_rect)%expr @
            (λ (x3 : var (type.base A))(x4 : var (type.base B)),
             UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
     | @expr.LetIn _ _ _ _ _ _ _ =>
         UnderLets.Base
-          (#(ident.pair_rect)%expr @
+          (#(ident.prod_rect)%expr @
            (λ (x2 : var (type.base A))(x3 : var (type.base B)),
             UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0)%expr_pat
     | _ =>
         UnderLets.Base
-          (#(ident.pair_rect)%expr @
+          (#(ident.prod_rect)%expr @
            (λ (x1 : var (type.base A))(x2 : var (type.base B)),
             UnderLets.to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat
     end
@@ -1471,7 +1471,7 @@ match idc in (ident t) return (Compile.value' true t) with
                                      rec' <-- rec;
                                      fx <-- id x x1;
                                      UnderLets.Base
-                                       (#(ident.pair_rect)%expr @
+                                       (#(ident.prod_rect)%expr @
                                         (λ g
                                             d : expr
                                                   (type.base
