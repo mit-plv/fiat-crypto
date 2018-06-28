@@ -70,6 +70,21 @@ Module Associational.
   Proof. induction p; cbv [mul]; push; nsatz.                 Qed.
   Hint Rewrite eval_mul : push_eval.
 
+  Definition square (p:list (Z*Z)) : list (Z*Z) :=
+    list_rect
+      _
+      nil
+      (fun t ts acc
+       => ((fst t * fst t, snd t * snd t)
+             :: (map (fun t'
+                      => (fst t * fst t', 2 * snd t * snd t'))
+                     ts))
+            ++ acc)
+      p.
+  Lemma eval_square p : eval (square p) = eval p * eval p.
+  Proof. induction p; cbn [square list_rect]; push; nsatz.    Qed.
+  Hint Rewrite eval_square : push_eval.
+
   Definition negate_snd (p:list (Z*Z)) : list (Z*Z) :=
     map (fun cx => (fst cx, -snd cx)) p.
   Lemma eval_negate_snd p : eval (negate_snd p) = - eval p.
@@ -289,8 +304,22 @@ Module Positional. Section Positional.
     destruct f, g; simpl in *; [ right; subst n | left; try omega.. ].
     clear; cbv -[Associational.reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
+
+    Definition squaremod (n:nat) (a:list Z) : list Z
+      := let a_a := to_associational n a in
+         let aa_a := Associational.square a_a in
+         let aam_a := Associational.reduce s c aa_a in
+         from_associational n aam_a.
+    Lemma eval_squaremod n (f:list Z)
+          (Hf : length f = n) :
+      eval n (squaremod n f) mod (s - Associational.eval c)
+      = (eval n f * eval n f) mod (s - Associational.eval c).
+    Proof. cbv [squaremod]; push; trivial.
+    destruct f; simpl in *; [ right; subst n | left; try omega.. ].
+    clear; cbv -[Associational.reduce].
+    induction c as [|?? IHc]; simpl; trivial.                 Qed.
   End mulmod.
-  Hint Rewrite @eval_mulmod : push_eval.
+  Hint Rewrite @eval_mulmod @eval_squaremod : push_eval.
 
   Definition add (n:nat) (a b:list Z) : list Z
     := let a_a := to_associational n a in
@@ -604,6 +633,22 @@ Section mod_ops.
           by auto; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carry_mulmod; reflexivity.
+  Qed.
+
+  Derive carry_squaremod
+         SuchThat (forall (f : list Z)
+                          (Hf : length f = n),
+                      (eval weight n (carry_squaremod f)) mod (s - Associational.eval c)
+                      = (eval weight n f * eval weight n f) mod (s - Associational.eval c))
+         As eval_carry_squaremod.
+  Proof.
+    intros.
+    rewrite <-eval_squaremod with (s:=s) (c:=c) by auto.
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    subst carry_squaremod; reflexivity.
   Qed.
 
   Derive carrymod

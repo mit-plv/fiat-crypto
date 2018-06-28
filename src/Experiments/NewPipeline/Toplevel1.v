@@ -664,9 +664,6 @@ Derive carry_mul_gen
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
 
-Definition carry_squaremod limbwidth_num limbwidth_den s c n idxs f : list Z
-  := carry_mulmod limbwidth_num limbwidth_den s c n idxs f f.
-
 Derive carry_square_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (f : list Z)
