@@ -808,6 +808,15 @@ Derive id_gen
 Proof. cache_reify (). Qed.
 Hint Extern 1 (_ = id _) => simple apply id_gen_correct : reify_gen_cache.
 
+Derive selectznz_gen
+       SuchThat (forall (cond : Z) (f g : list Z),
+                    Interp (t:=reify_type_of Positional.select)
+                           selectznz_gen cond f g
+                    = Positional.select cond f g)
+       As selectznz_gen_correct.
+Proof. cache_reify (). Qed.
+Hint Extern 1 (_ = Positional.select _ _ _) => simple apply selectznz_gen_correct : reify_gen_cache.
+
 Derive to_bytes_gen
        SuchThat (forall (limbwidth_num limbwidth_den : Z)
                         (n : nat)
@@ -891,8 +900,12 @@ Module Import UnsaturatedSolinas.
            prime_upperbound_list.
     Definition prime_bound : ZRange.type.option.interp (base.type.Z)
       := Some r[0~>(s - Associational.eval c - 1)]%zrange.
+    Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
     Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
       := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
+    Definition saturated_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n).
 
     Definition m_enc : list Z
       := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c (s-Associational.eval c).
@@ -1114,6 +1127,19 @@ Module Import UnsaturatedSolinas.
            (Some loose_bounds)
            (oppmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) s c n coef).
 
+    Definition srselectznz prefix
+      := BoundsPipelineToStrings_with_bytes_no_subst01
+           prefix "selectznz"
+           selectznz_gen
+           (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
+           saturated_bounds.
+
+    Definition rselectznz_correct
+      := BoundsPipeline_with_bytes_no_subst01_correct
+           (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
+           saturated_bounds
+           Positional.select.
+
     Definition srto_bytes prefix
       := BoundsPipelineToStrings_with_bytes_no_subst01
            prefix "to_bytes"
@@ -1233,6 +1259,8 @@ Module Import UnsaturatedSolinas.
       := type_of_strip_3arrow (@rsub_correct rv).
     Definition ropp_correctT rv : Prop
       := type_of_strip_3arrow (@ropp_correct rv).
+    Definition rselectznz_correctT rv : Prop
+      := type_of_strip_3arrow (@rselectznz_correct rv).
     Definition rto_bytes_correctT rv : Prop
       := type_of_strip_3arrow (@rto_bytes_correct rv).
     Definition rfrom_bytes_correctT rv : Prop
@@ -1490,6 +1518,7 @@ Module Import UnsaturatedSolinas.
               ("add", sradd);
               ("sub", srsub);
               ("opp", sropp);
+              ("selectznz", srselectznz);
               ("to_bytes", srto_bytes);
               ("from_bytes", srfrom_bytes)].
 

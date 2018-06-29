@@ -488,7 +488,7 @@ standalone-haskell: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell
 standalone-ocaml: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%)
 
 UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c
-FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp to_bytes from_bytes
+FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
 .PHONY: c-files
 c-files: $(UNSATURATED_SOLINAS_C_FILES)
