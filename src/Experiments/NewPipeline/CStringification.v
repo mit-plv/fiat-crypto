@@ -1840,7 +1840,7 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
-      Definition ToFunctionLines (static : bool) (prefix : string) (name : string)
+      Definition ToFunctionLines (static : bool) (prefix : string) (name : string) (comment : list string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
@@ -1849,7 +1849,9 @@ Module Compilers.
         : (list string * ident_infos) + string
         := match ExprOfPHOAS e name_list inbounds with
            | inl (indata, outdata, f)
-             => inl ((["/*"; " * Input Bounds:"]
+             => inl ((["/*"]
+                        ++ (List.map (fun s => " * " ++ s)%string comment)
+                        ++ [" * Input Bounds:"]
                         ++ List.map (fun v => " *   " ++ v)%string (input_bounds_to_string indata inbounds)
                         ++ [" * Output Bounds:"]
                         ++ List.map (fun v => " *   " ++ v)%string (bound_to_string outdata outbounds)
@@ -1868,14 +1870,14 @@ Module Compilers.
         : string
         := String.concat String.NewLine lines.
 
-      Definition ToFunctionString (static : bool) (prefix : string) (name : string)
+      Definition ToFunctionString (static : bool) (prefix : string) (name : string) (comment : list string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.final_codomain t))
         : (string * ident_infos) + string
-        := match ToFunctionLines static prefix name e name_list inbounds outbounds with
+        := match ToFunctionLines static prefix name comment e name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.

@@ -387,7 +387,7 @@ Module Pipeline.
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
                       ++ match ToString.C.ToFunctionLines
-                                 false (* static *) "" "f" syntax_tree None arg_bounds ZRange.type.base.option.None with
+                                 false (* static *) "" "f" nil syntax_tree None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
                                 ++ E_lines ++ [""]
@@ -469,6 +469,7 @@ Module Pipeline.
              (static : bool)
              (type_prefix : string)
              (name : string)
+             (comment : list string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -486,7 +487,7 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.C.ToFunctionLines
-                                  static type_prefix name E' None arg_bounds out_bounds in
+                                  static type_prefix name comment E' None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
                       | inr err => Error (Stringification_failed E' err)
@@ -498,6 +499,7 @@ Module Pipeline.
              (static : bool)
              (type_prefix : string)
              (name : string)
+             (comment : list string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -508,7 +510,7 @@ Module Pipeline.
              out_bounds
     : ErrorT (string * ToString.C.ident_infos)
     := let E := BoundsPipelineToStrings
-                  static type_prefix name
+                  static type_prefix name comment
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
@@ -949,10 +951,10 @@ Module Import UnsaturatedSolinas.
 
     Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
 
-    Notation BoundsPipelineToStrings prefix name rop in_bounds out_bounds
+    Notation BoundsPipelineToStrings prefix name comment rop in_bounds out_bounds
       := ((prefix ++ name)%string,
           Pipeline.BoundsPipelineToStrings
-            true (* static *) prefix (prefix ++ name)%string
+            true (* static *) prefix (prefix ++ name)%string comment%string%list
             (*false*) true None
             relax_zrange
             rop%Expr in_bounds out_bounds).
@@ -971,10 +973,10 @@ Module Import UnsaturatedSolinas.
                Hrop rv)
            (only parsing).
 
-    Notation BoundsPipelineToStrings_no_subst01 prefix name rop in_bounds out_bounds
+    Notation BoundsPipelineToStrings_no_subst01 prefix name comment rop in_bounds out_bounds
       := ((prefix ++ name)%string,
           Pipeline.BoundsPipelineToStrings
-            true (* static *) prefix (prefix ++ name)%string
+            true (* static *) prefix (prefix ++ name)%string comment%string%list
             (*false*) false None
             relax_zrange
             rop%Expr in_bounds out_bounds).
@@ -993,10 +995,10 @@ Module Import UnsaturatedSolinas.
                Hrop rv)
            (only parsing).
 
-    Notation BoundsPipelineToStrings_with_bytes_no_subst01 prefix name rop in_bounds out_bounds
+    Notation BoundsPipelineToStrings_with_bytes_no_subst01 prefix name comment rop in_bounds out_bounds
       := ((prefix ++ name)%string,
           Pipeline.BoundsPipelineToStrings
-            true (* static *) prefix (prefix ++ name)%string
+            true (* static *) prefix (prefix ++ name)%string comment%string%list
             (*false*) false None
             relax_zrange_with_bytes
             rop%Expr in_bounds out_bounds).
@@ -1018,7 +1020,7 @@ Module Import UnsaturatedSolinas.
     (* N.B. We only need [rcarry_mul] if we want to extract the Pipeline; otherwise we can just use [rcarry_mul_correct] *)
     Definition srcarry_mul prefix
       := BoundsPipelineToStrings_no_subst01
-           prefix "carry_mul"
+           prefix "carry_mul" []
            (carry_mul_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
            (Some loose_bounds, (Some loose_bounds, tt))
@@ -1032,7 +1034,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srcarry_square prefix
       := BoundsPipelineToStrings_no_subst01
-           prefix "carry_square"
+           prefix "carry_square" []
            (carry_square_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
            (Some loose_bounds, tt)
@@ -1046,7 +1048,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srcarry_scmul_const prefix (x : Z)
       := BoundsPipelineToStrings_no_subst01
-           prefix ("carry_scmul_" ++ decimal_string_of_Z x)
+           prefix ("carry_scmul_" ++ decimal_string_of_Z x) []
            (carry_scmul_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify x)
            (Some loose_bounds, tt)
@@ -1060,7 +1062,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srcarry prefix
       := BoundsPipelineToStrings
-           prefix "carry"
+           prefix "carry" []
            (carry_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
            (Some loose_bounds, tt)
@@ -1074,7 +1076,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srrelax prefix
       := BoundsPipelineToStrings
-           prefix "relax"
+           prefix "relax" []
            id_gen
            (Some tight_bounds, tt)
            (Some loose_bounds).
@@ -1087,7 +1089,7 @@ Module Import UnsaturatedSolinas.
 
     Definition sradd prefix
       := BoundsPipelineToStrings
-           prefix "add"
+           prefix "add" []
            (add_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
            (Some tight_bounds, (Some tight_bounds, tt))
@@ -1101,7 +1103,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srsub prefix
       := BoundsPipelineToStrings
-           prefix "sub"
+           prefix "sub" []
            (sub_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
            (Some tight_bounds, (Some tight_bounds, tt))
@@ -1115,7 +1117,7 @@ Module Import UnsaturatedSolinas.
 
     Definition sropp prefix
       := BoundsPipelineToStrings
-           prefix "opp"
+           prefix "opp" []
            (opp_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
            (Some tight_bounds, tt)
@@ -1129,7 +1131,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srselectznz prefix
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix "selectznz"
+           prefix "selectznz" []
            selectznz_gen
            (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
            saturated_bounds.
@@ -1142,7 +1144,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srto_bytes prefix
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix "to_bytes"
+           prefix "to_bytes" []
            (to_bytes_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
            (Some tight_bounds, tt)
@@ -1156,7 +1158,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srfrom_bytes prefix
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix "from_bytes"
+           prefix "from_bytes" []
            (from_bytes_gen
               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
            (prime_bytes_bounds, tt)
@@ -1188,7 +1190,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srmulx prefix (s : Z)
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix ("mulx_u" ++ decimal_string_of_Z s)
+           prefix ("mulx_u" ++ decimal_string_of_Z s) []
            (mulx_gen
               @ GallinaReify.Reify s)
            (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
@@ -1202,7 +1204,7 @@ Module Import UnsaturatedSolinas.
 
     Definition sraddcarryx prefix (s : Z)
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix ("addcarryx_u" ++ decimal_string_of_Z s)
+           prefix ("addcarryx_u" ++ decimal_string_of_Z s) []
            (addcarryx_gen
               @ GallinaReify.Reify s)
            (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
@@ -1216,7 +1218,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srsubborrowx prefix (s : Z)
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix ("subborrowx_u" ++ decimal_string_of_Z s)
+           prefix ("subborrowx_u" ++ decimal_string_of_Z s) []
            (subborrowx_gen
               @ GallinaReify.Reify s)
            (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
@@ -1230,7 +1232,7 @@ Module Import UnsaturatedSolinas.
 
     Definition srcmovznz prefix (s : Z)
       := BoundsPipelineToStrings_with_bytes_no_subst01
-           prefix ("cmovznz_u" ++ decimal_string_of_Z s)
+           prefix ("cmovznz_u" ++ decimal_string_of_Z s) []
            (cmovznz_gen
               @ GallinaReify.Reify s)
            (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
@@ -1909,10 +1911,10 @@ Module SaturatedSolinas.
                         then Error (Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
                         else res.
 
-  Notation BoundsPipelineToStrings prefix name rop in_bounds out_bounds
+  Notation BoundsPipelineToStrings prefix name comment rop in_bounds out_bounds
     := ((prefix ++ name)%string,
         Pipeline.BoundsPipelineToStrings
-          true (* static *) prefix (prefix ++ name)%string
+          true (* static *) prefix (prefix ++ name)%string comment%string%list
           (*false*) false None
           relax_zrange
           rop%Expr in_bounds out_bounds).
@@ -1939,7 +1941,7 @@ Module SaturatedSolinas.
 
   Definition srmulmod prefix
     := BoundsPipelineToStrings
-         prefix "mulmod"
+         prefix "mulmod" []
          (mulmod_gen @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn).
@@ -2821,7 +2823,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_mulx_u64"
+     true "fiat_" "fiat_mulx_u64" []
         true None (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (mulx 64) in
               exact r)
@@ -2830,7 +2832,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_addcarryx_u64"
+     true "fiat_" "fiat_addcarryx_u64" []
         true None (relax_zrange_gen [1; 64; 128])
         ltac:(let r := Reify (addcarryx 64) in
               exact r)
@@ -2839,7 +2841,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_addcarryx_u51"
+     true "fiat_" "fiat_addcarryx_u51" []
         true None (relax_zrange_gen [1; 64; 128])
         ltac:(let r := Reify (addcarryx 51) in
               exact r)
@@ -2848,7 +2850,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_subborrowx_u64"
+     true "fiat_" "fiat_subborrowx_u64" []
         true None (relax_zrange_gen [1; 64; 128])
         ltac:(let r := Reify (subborrowx 64) in
               exact r)
@@ -2856,7 +2858,7 @@ Compute
                (Some r[0~>2^64-1], Some r[0~>1])%zrange).
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_subborrowx_u51"
+     true "fiat_" "fiat_subborrowx_u51" []
         true None (relax_zrange_gen [1; 64; 128])
         ltac:(let r := Reify (subborrowx 51) in
               exact r)
@@ -2865,7 +2867,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_cmovznz64"
+     true "fiat_" "fiat_cmovznz64" []
         true None (relax_zrange_gen [1; 64; 128])
         ltac:(let r := Reify (cmovznz 64) in
               exact r)
