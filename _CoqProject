@@ -6607,6 +6607,7 @@ src/Util/ZUtil/Pow2Mod.v
 src/Util/ZUtil/Quot.v
 src/Util/ZUtil/Rshi.v
 src/Util/ZUtil/Sgn.v
+src/Util/ZUtil/Sorting.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v
 src/Util/ZUtil/Testbit.v
