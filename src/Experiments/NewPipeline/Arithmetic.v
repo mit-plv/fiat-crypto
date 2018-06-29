@@ -235,10 +235,10 @@ Module Associational.
                       then div_s
                              (if fst t' <=? fst t
                               then mul two_c_t [t']
-                              else mul [t] two_c_t)
+                              else mul [t] two_c_t')
                       else (if fst t' <=? fst t
                             then mul two_t [t']
-                            else mul [t] two_t))
+                            else mul [t] two_t'))
                   ts)
             ++ acc)
       p.
@@ -246,6 +246,11 @@ Module Associational.
     : eval (reduce_square s c p) mod (s - eval c)
       = (eval p * eval p) mod (s - eval c).
   Proof.
+    cbv [reduce_square Let_In let_bind_for_reduce_square]; cbn [map].
+    induction p as [|a p IHp]; cbn [list_rect map]; push; [ reflexivity | ].
+    rewrite Z.mul_add_distr_r, !Z.mul_add_distr_l.
+    rewrite !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo]; [ clear IHp | assumption ].
+
     (*rewrite <- (eval_sort p).
     cbv [reduce_square Let_In]; generalize (RevWeightSort.sort p) (RevWeightSort.StronglySorted_sort p _); clear p; intros p Hpsort.
     induction Hpsort; cbn [list_rect]; push; [ nsatz | ].
