@@ -224,8 +224,9 @@ Module Associational.
     list_rect
       _
       nil
-      (fun '(t, c_t, two_c_t, two_t) ts acc
-       => (if (fst t mod s =? 0)
+      (fun t ts acc
+       => let '(t, c_t, two_c_t, two_t) := t in
+          (if (fst t mod s =? 0)
            then div_s (mul c_t [t])
            else mul [t] [t])
             ++ (flat_map
