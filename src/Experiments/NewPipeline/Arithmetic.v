@@ -138,10 +138,14 @@ Module Associational.
     eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
   Proof. rewrite eval_snd_split, eval_fst_partition by assumption; cbv [split Let_In]; cbn [fst snd]; omega. Qed.
 
+  Lemma reduction_rule' b s c (modulus_nz:s-c<>0) :
+    (s * b) mod (s - c) = (c * b) mod (s - c).
+  Proof. replace (s * b) with ((c*b) + b*(s-c)) by nsatz.
+    rewrite Z.add_mod,Z_mod_mult,Z.add_0_r,Z.mod_mod;trivial. Qed.
+
   Lemma reduction_rule a b s c (modulus_nz:s-c<>0) :
     (a + s * b) mod (s - c) = (a + c * b) mod (s - c).
-  Proof. replace (a + s * b) with ((a + c*b) + b*(s-c)) by nsatz.
-    rewrite Z.add_mod,Z_mod_mult,Z.add_0_r,Z.mod_mod;trivial. Qed.
+  Proof. apply Z.add_mod_Proper; [ reflexivity | apply reduction_rule', modulus_nz ]. Qed.
 
   Definition reduce (s:Z) (c:list _) (p:list _) : list (Z*Z) :=
     let lo_hi := split s p in fst lo_hi ++ mul c (snd lo_hi).
@@ -226,8 +230,8 @@ Module Associational.
       nil
       (fun t ts acc
        => let '(t, c_t, two_c_t, two_t) := t in
-          (if (fst t mod s =? 0)
-           then div_s (mul c_t [t])
+          (if ((fst t * fst t) mod s =? 0)
+           then div_s (mul [t] c_t)
            else mul [t] [t])
             ++ (flat_map
                   (fun '(t', c_t', two_c_t', two_t')
@@ -242,59 +246,78 @@ Module Associational.
                   ts)
             ++ acc)
       p.
+  Lemma eval_map_mul_div s a b c (s_nz:s <> 0) (a_mod : a mod s = 0)
+    : eval (map (fun x => (a * (a * fst x) / s, b * (b * snd x))) c) = ((a / s) * a) * (b * b) * eval c.
+  Proof.
+    rewrite <- eval_map_mul; apply f_equal, map_ext; intro.
+    Z.div_mod_to_quot_rem; f_equal; nia.
+  Qed.
+  Hint Rewrite eval_map_mul_div : push_eval.
+
+  Lemma eval_reduce_square_exact s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0)
+    : eval (reduce_square s c p) = eval (reduce s c (square p)).
+  Proof.
+    cbv [reduce_square Let_In let_bind_for_reduce_square reduce square split]; cbn [map].
+    push; auto; [].
+    induction p as [|a p IHp]; cbn [list_rect map]; push; [ nsatz | rewrite IHp; clear IHp ].
+    cbn [List.app mul flat_map map]; push; cbn [fst snd]; auto; [].
+    Lemma partition_app A (f : A -> bool) (a b : list A)
+      : partition f (a ++ b) = (fst (partition f a) ++ fst (partition f b),
+                                snd (partition f a) ++ snd (partition f b)).
+    Proof.
+      revert b; induction a, b; cbn; rewrite ?app_nil_r; eta_expand; try reflexivity.
+      rewrite !IHa; cbn; break_match; reflexivity.
+    Qed.
+    Lemma flat_map_map A B C (f : A -> B) (g : B -> list C) (xs : list A)
+      : flat_map g (map f xs) = flat_map (fun x => g (f x)) xs.
+    Proof. induction xs as [|x xs IHxs]; cbn; congruence. Qed.
+    rewrite !partition_app, !map_map, !flat_map_map, !app_nil_r; cbn [fst snd].
+    destruct (fst a mod s =? 0) eqn:Has; Z.ltb_to_lt.
+    (*
+    rewrite !(Z.mul_mod_full (fst a) _ s), Has;
+      autorewrite with zsimplify_const; change (0 =? 0) with true; cbv beta iota.
+    all: push.
+    Focus 2.
+    { rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
+      ring_simplify; rewrite <- !Z.add_assoc; do 2 (f_equal; []).
+
+      SearchAbout Proper flat_map.
+      About flat_map_ext.
+      shelve. }
+    {
+      SearchAbout flat_map map.
+      f_equal.
+
+      { repeat (f_equal; []).
+      f_equal.
+    break_match; Z.ltb_to_lt; push.
+    all:cbn [fst snd].
+    cbn
+    rewrite !Z.add_assoc.
+    f_equal.
+    Focus 2.
+    2:reflexivity.
+    SearchAbout
+    break_inn
+    f_equal.
+    f_equal.
+    rewrite IHp.
+    rewrite Z.mul_add_distr_r, !Z.mul_add_distr_l.
+    rewrite !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo]; [ clear IHp | assumption ].
+    rewrite <- !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo].
+    { break_match; Z.ltb_to_lt; cbn [mul flat_map map]; push; [ | f_equal; nsatz ].
+      rewrite !map_map; cbn [fst snd].
+      transitivity (eval (map (fun x => ((fst a * (fst a / s)) * fst x, (snd a * snd a) * snd x)) c) mod (s - eval c)).
+      { f_equal; autorewrite with zsimplify_const; f_equal; apply map_ext; intro.
+        rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
+        apply f_equal2; nia. }
+      { push; rewrite !Z.mul_assoc, <- (Z.mul_comm (eval c)), <- reduction_rule' by assumption.
+        f_equal; Z.div_mod_to_quot_rem; nia. } }
+    {*) Admitted.
   Lemma eval_reduce_square s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0)
     : eval (reduce_square s c p) mod (s - eval c)
       = (eval p * eval p) mod (s - eval c).
-  Proof.
-    cbv [reduce_square Let_In let_bind_for_reduce_square]; cbn [map].
-    induction p as [|a p IHp]; cbn [list_rect map]; push; [ reflexivity | ].
-    rewrite Z.mul_add_distr_r, !Z.mul_add_distr_l.
-    rewrite !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo]; [ clear IHp | assumption ].
-
-    (*rewrite <- (eval_sort p).
-    cbv [reduce_square Let_In]; generalize (RevWeightSort.sort p) (RevWeightSort.StronglySorted_sort p _); clear p; intros p Hpsort.
-    induction Hpsort; cbn [list_rect]; push; [ nsatz | ].
-    rewrite Z.mul_add_distr_r, !Z.mul_add_distr_l, !Z.add_assoc.
-    apply Z.add_mod_Proper; cbv [Z.equiv_modulo]; [ clear IHHpsort | exact IHHpsort ].
-    break_innermost_match_step; Z.ltb_to_lt; push; [ f_equal; nsatz | ].
-
-    SearchAbout partition.
-
-    rewrite <- !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo].
-
-    { break_match; Z.ltb_to_lt; push; try (f_equal; nsatz).
-
-      repeat match goal with H : context[Z.modulo] |- _ => revert H end.
-      Z.div_mod_to_quot_rem; nsatz.
-    break_match; push; try (f_equal; nsatz); Z.ltb_to_lt; autorewrite with zsimplify_const.
-
-
-    {
-      Focus 2.
-      rewrite ?(Z.mul_comm (fst _) (snd _)), <- !Z.mul_assoc.
-      Z.rewrite_mod_small.
-      push_Zmod;
-        rewrite <- Z.mul_mod_full; Z.rewrite_mod_small; pull_Zmod.
-
-      pull_Zmod.
-      SearchAbout ((_ mod _) * (_ mod _)).
-
-      SearchAbout
-
-    cbn [mul map].
-    2:apply IHHpsort.
-    rewrite Z
-    break_innermost_match; Z.ltb_to_lt; push.
-
-    cbn [filter].
-    SearchAbout filter cons.
-    apply Z.add_mod_Proper; cbv [Z.equiv_modulo].
-    Focus 2.
-    2:
-    SearchAbout Proper Z.equiv_modulo.
-    SearchAbout ((_ + _) mod _).
-    eta_expand; push.
-                                                         nsatz.*)Admitted.
+  Proof. rewrite eval_reduce_square_exact by assumption; push; auto. Qed.
   Hint Rewrite eval_reduce_square : push_eval.
 
   Definition bind_snd (p : list (Z*Z)) :=
