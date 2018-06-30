@@ -81,3 +81,6 @@ Ltac split_andb_in_context_step :=
        change (x = true /\ y = true) with (is_true x /\ is_true y) in H
   end.
 Ltac split_andb_in_context := repeat split_andb_in_context_step.
+
+Lemma if_const A (b : bool) (x : A) : (if b then x else x) = x.
+Proof. case b; reflexivity. Qed.
