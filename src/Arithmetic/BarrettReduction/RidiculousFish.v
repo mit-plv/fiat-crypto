@@ -32,7 +32,7 @@ Definition wrap (bits val : Z) : Z := val mod 2^bits.
 
 (** A [word] is a C data type with a specified bit size. *)
 Inductive word (bits : Z) :=
-| Word : Z -> word bits.
+| Word (v : Z).
 
 Definition to_Z {bits : Z} (a : word bits) : Z :=
   match a with Word v => v end.
