@@ -238,22 +238,138 @@ Module Associational.
                    => if ((fst t * fst t') mod s =? 0)
                       then div_s
                              (if fst t' <=? fst t
-                              then mul two_c_t [t']
+                              then mul [t'] two_c_t
                               else mul [t] two_c_t')
                       else (if fst t' <=? fst t
-                            then mul two_t [t']
+                            then mul [t'] two_t
                             else mul [t] two_t'))
                   ts)
             ++ acc)
       p.
-  Lemma eval_map_mul_div s a b c (s_nz:s <> 0) (a_mod : a mod s = 0)
-    : eval (map (fun x => (a * (a * fst x) / s, b * (b * snd x))) c) = ((a / s) * a) * (b * b) * eval c.
+  Lemma eval_map_mul_div s a b c (s_nz:s <> 0) (a_mod : (a*a) mod s = 0)
+    : eval (map (fun x => ((a * (a * fst x)) / s, b * (b * snd x))) c) = ((a * a) / s) * (b * b) * eval c.
   Proof.
     rewrite <- eval_map_mul; apply f_equal, map_ext; intro.
-    Z.div_mod_to_quot_rem; f_equal; nia.
+    rewrite !Z.mul_assoc.
+    rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
+    f_equal; nia.
   Qed.
-  Hint Rewrite eval_map_mul_div : push_eval.
+  Hint Rewrite eval_map_mul_div using solve [ auto ] : push_eval.
 
+  Lemma eval_map_mul_div' s a b c (s_nz:s <> 0) (a_mod : (a*a) mod s = 0)
+    : eval (map (fun x => (((a * a) * fst x) / s, (b * b) * snd x)) c) = ((a * a) / s) * (b * b) * eval c.
+  Proof. rewrite <- eval_map_mul_div by assumption; f_equal; apply map_ext; intro; Z.div_mod_to_quot_rem; f_equal; nia. Qed.
+  Hint Rewrite eval_map_mul_div' using solve [ auto ] : push_eval.
+
+  (** XXX TODO: MOVE ME *)
+  Lemma partition_app A (f : A -> bool) (a b : list A)
+    : partition f (a ++ b) = (fst (partition f a) ++ fst (partition f b),
+                              snd (partition f a) ++ snd (partition f b)).
+  Proof.
+    revert b; induction a, b; cbn; rewrite ?app_nil_r; eta_expand; try reflexivity.
+    rewrite !IHa; cbn; break_match; reflexivity.
+  Qed.
+  Lemma flat_map_map A B C (f : A -> B) (g : B -> list C) (xs : list A)
+    : flat_map g (map f xs) = flat_map (fun x => g (f x)) xs.
+  Proof. induction xs; cbn; congruence. Qed.
+  Lemma flat_map_singleton A B (f : A -> B) (xs : list A)
+    : flat_map (fun x => cons (f x) nil) xs = map f xs.
+  Proof. induction xs; cbn; congruence. Qed.
+  Lemma flat_map_ext A B (f g : A -> list B) xs (H : forall x, In x xs -> f x = g x)
+    : flat_map f xs = flat_map g xs.
+  Proof. induction xs; cbn in *; [ reflexivity | rewrite IHxs; f_equal ]; intros; intuition auto. Qed.
+  Global Instance flat_map_Proper A B : Proper (pointwise_relation _ eq ==> eq ==> eq) (@flat_map A B).
+  Proof. repeat intro; subst; apply flat_map_ext; auto. Qed.
+
+  Lemma eval_flat_map_if A (f : A -> bool) g h p
+    : eval (flat_map (fun x => if f x then g x else h x) p)
+      = eval (flat_map g (fst (partition f p))) + eval (flat_map h (snd (partition f p))).
+  Proof.
+    induction p; cbn [flat_map partition fst snd]; eta_expand; break_match; cbn [fst snd]; push;
+      nsatz.
+  Qed.
+  Hint Rewrite eval_flat_map_if : push_eval.
+
+  Lemma eval_if (b : bool) p q : eval (if b then p else q) = if b then eval p else eval q.
+  Proof. case b; reflexivity. Qed.
+  Hint Rewrite eval_if : push_eval.
+
+  Local Existing Instances pointwise_map flat_map_Proper.
+  Ltac make_rel do_pointwise T :=
+    lazymatch T with
+    | (?A -> ?B)
+      => let RA := make_rel true A in
+         let RB := make_rel do_pointwise B in
+         let default _ := constr:(@respectful A B RA RB) in
+         lazymatch do_pointwise with
+         | true => lazymatch RA with
+                   | eq => constr:(@pointwise_relation A B RB)
+                   | _ => default ()
+                   end
+         | _ => default ()
+         end
+    | (forall a : ?A, ?B)
+      => let B' := fresh in
+         constr:(@forall_relation A (fun a : A => B) (fun a : A => match B with B' => ltac:(let B'' := (eval cbv delta [B'] in B') in
+                                                                                            let RB := make_rel do_pointwise B in
+                                                                                            exact RB) end))
+    | _ => constr:(@eq T)
+    end.
+  Ltac make_eq_rel T :=
+    lazymatch T with
+    | (?A -> ?B)
+      => let RB := make_eq_rel B in
+         constr:(@respectful A B (@eq A) RB)
+    | (forall a : ?A, ?B)
+      => let B' := fresh in
+         constr:(@forall_relation A (fun a : A => B) (fun a : A => match B with B' => ltac:(let B'' := (eval cbv delta [B'] in B') in
+                                                                                            let RB := make_eq_rel B in
+                                                                                            exact RB) end))
+    | _ => constr:(@eq T)
+    end.
+  Ltac solve_Proper_eq :=
+    match goal with
+    | [ |- @Proper ?A ?R ?f ]
+      => let R' := make_eq_rel A in
+         unify R R';
+         apply (@reflexive_proper A R')
+    end.
+  Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
+  Global Instance list_rect_Proper A P : Proper (eq ==> pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq)) ==> eq ==> eq) (@list_rect A (fun _ => P)).
+  Proof.
+    intros N N' HN C C' HC xs ys Hxs; subst N' ys.
+    induction xs; cbn; trivial; rewrite IHxs; apply HC.
+  Qed.
+  Lemma if_const A (b : bool) (x : A) : (if b then x else x) = x.
+  Proof. case b; reflexivity. Qed.
+  Lemma partition_map A B (f : B -> bool) (g : A -> B) xs
+    : partition f (map g xs) = (map g (fst (partition (fun x => f (g x)) xs)),
+                                map g (snd (partition (fun x => f (g x)) xs))).
+  Proof. induction xs; cbn; [ | rewrite !IHxs ]; break_match; reflexivity. Qed.
+  Lemma map_fst_partition A B (f : B -> bool) (g : A -> B) xs
+    : map g (fst (partition (fun x => f (g x)) xs)) = fst (partition f (map g xs)).
+  Proof. rewrite partition_map; reflexivity. Qed.
+  Lemma map_snd_partition A B (f : B -> bool) (g : A -> B) xs
+    : map g (snd (partition (fun x => f (g x)) xs)) = snd (partition f (map g xs)).
+  Proof. rewrite partition_map; reflexivity. Qed.
+  Lemma partition_In A (f:A -> bool) xs : forall x, @In A x xs <-> @In A x (if f x then fst (partition f xs) else snd (partition f xs)).
+  Proof.
+    intro x; destruct (f x) eqn:?; split; intros; repeat apply conj; revert dependent x;
+      (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
+      congruence.
+  Qed.
+  Lemma fst_partition_In A f xs : forall x, @In A x (fst (partition f xs)) <-> f x = true /\ @In A x xs.
+  Proof.
+    intro x; split; intros; repeat apply conj; revert dependent x;
+      (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
+      congruence.
+  Qed.
+  Lemma snd_partition_In A f xs : forall x, @In A x (snd (partition f xs)) <-> f x = false /\ @In A x xs.
+  Proof.
+    intro x; split; intros; repeat apply conj; revert dependent x;
+      (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
+      congruence.
+  Qed.
   Lemma eval_reduce_square_exact s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0)
     : eval (reduce_square s c p) = eval (reduce s c (square p)).
   Proof.
@@ -261,59 +377,43 @@ Module Associational.
     push; auto; [].
     induction p as [|a p IHp]; cbn [list_rect map]; push; [ nsatz | rewrite IHp; clear IHp ].
     cbn [List.app mul flat_map map]; push; cbn [fst snd]; auto; [].
-    Lemma partition_app A (f : A -> bool) (a b : list A)
-      : partition f (a ++ b) = (fst (partition f a) ++ fst (partition f b),
-                                snd (partition f a) ++ snd (partition f b)).
-    Proof.
-      revert b; induction a, b; cbn; rewrite ?app_nil_r; eta_expand; try reflexivity.
-      rewrite !IHa; cbn; break_match; reflexivity.
-    Qed.
-    Lemma flat_map_map A B C (f : A -> B) (g : B -> list C) (xs : list A)
-      : flat_map g (map f xs) = flat_map (fun x => g (f x)) xs.
-    Proof. induction xs as [|x xs IHxs]; cbn; congruence. Qed.
-    rewrite !partition_app, !map_map, !flat_map_map, !app_nil_r; cbn [fst snd].
-    destruct (fst a mod s =? 0) eqn:Has; Z.ltb_to_lt.
-    (*
-    rewrite !(Z.mul_mod_full (fst a) _ s), Has;
-      autorewrite with zsimplify_const; change (0 =? 0) with true; cbv beta iota.
-    all: push.
-    Focus 2.
-    { rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
-      ring_simplify; rewrite <- !Z.add_assoc; do 2 (f_equal; []).
-
-      SearchAbout Proper flat_map.
-      About flat_map_ext.
-      shelve. }
-    {
-      SearchAbout flat_map map.
+    rewrite !partition_app, !map_map, !flat_map_map, !app_nil_r; cbn [fst snd map flat_map].
+    progress repeat setoid_rewrite app_nil_r.
+    progress repeat setoid_rewrite flat_map_singleton.
+    progress repeat setoid_rewrite map_map.
+    progress cbn [fst snd].
+    progress repeat setoid_rewrite Z.mul_1_r.
+    progress repeat setoid_rewrite Z.mul_assoc.
+    progress repeat setoid_rewrite (Z.mul_comm (fst a)).
+    progress repeat setoid_rewrite (Z.mul_comm (snd a)).
+    progress repeat setoid_rewrite if_const.
+    progress repeat setoid_rewrite map_map.
+    progress repeat setoid_rewrite <- (Z.mul_comm 2).
+    progress repeat setoid_rewrite Z.mul_assoc.
+    progress repeat setoid_rewrite <- (Z.mul_comm (snd a)).
+    progress repeat setoid_rewrite Z.mul_assoc.
+    rewrite !partition_map.
+    progress cbn [fst snd].
+    rewrite !eval_flat_map_if, !flat_map_singleton.
+    push.
+    apply Zminus_eq; ring_simplify.
+    simple refine (let pf := _ in _); [ shelve | | clearbody pf ]; cycle 1.
+    { break_innermost_match; Z.ltb_to_lt; push; ring_simplify;
+        rewrite !map_map; cbn [fst snd];
+          rewrite ?Z.mul_opp_l, (Z.mul_comm (eval c)), <- eval_mul;
+          cbv [mul];
+          rewrite flat_map_map; cbn [fst snd].
+      { exact pf. }
+      { omega. } }
+    { rewrite Z.add_opp_l.
+      apply Zeq_minus.
       f_equal.
-
-      { repeat (f_equal; []).
-      f_equal.
-    break_match; Z.ltb_to_lt; push.
-    all:cbn [fst snd].
-    cbn
-    rewrite !Z.add_assoc.
-    f_equal.
-    Focus 2.
-    2:reflexivity.
-    SearchAbout
-    break_inn
-    f_equal.
-    f_equal.
-    rewrite IHp.
-    rewrite Z.mul_add_distr_r, !Z.mul_add_distr_l.
-    rewrite !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo]; [ clear IHp | assumption ].
-    rewrite <- !Z.add_assoc; apply Z.add_mod_Proper; cbv [Z.equiv_modulo].
-    { break_match; Z.ltb_to_lt; cbn [mul flat_map map]; push; [ | f_equal; nsatz ].
-      rewrite !map_map; cbn [fst snd].
-      transitivity (eval (map (fun x => ((fst a * (fst a / s)) * fst x, (snd a * snd a) * snd x)) c) mod (s - eval c)).
-      { f_equal; autorewrite with zsimplify_const; f_equal; apply map_ext; intro.
-        rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
-        apply f_equal2; nia. }
-      { push; rewrite !Z.mul_assoc, <- (Z.mul_comm (eval c)), <- reduction_rule' by assumption.
-        f_equal; Z.div_mod_to_quot_rem; nia. } }
-    {*) Admitted.
+      apply flat_map_ext; intro x.
+      rewrite fst_partition_In; intros [? ?]; Z.ltb_to_lt.
+      apply map_ext; intro.
+      rewrite !Z.Z_divide_div_mul_exact' by auto using Znumtheory.Zmod_divide.
+      f_equal; nia. }
+  Qed.
   Lemma eval_reduce_square s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0)
     : eval (reduce_square s c p) mod (s - eval c)
       = (eval p * eval p) mod (s - eval c).
