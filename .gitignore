@@ -104,3 +104,14 @@ third_party/openssl-nistz256-adx/measure
 third_party/openssl-nistz256-amd64/measure
 third_party/openssl-nistz256/measure
 third_party/curve25519-donna-c64/measure
+src/Experiments/NewPipeline/ExtractionHaskell/saturated_solinas
+src/Experiments/NewPipeline/ExtractionHaskell/unsaturated_solinas
+src/Experiments/NewPipeline/ExtractionHaskell/*.hi
+src/Experiments/NewPipeline/ExtractionHaskell/*.hs
+src/Experiments/NewPipeline/ExtractionHaskell/*.o
+src/Experiments/NewPipeline/ExtractionOCaml/saturated_solinas
+src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
+src/Experiments/NewPipeline/ExtractionOCaml/*.cmi
+src/Experiments/NewPipeline/ExtractionOCaml/*.cmx
+src/Experiments/NewPipeline/ExtractionOCaml/*.ml
+src/Experiments/NewPipeline/ExtractionOCaml/*.o
