@@ -1378,6 +1378,52 @@ Module Import UnsaturatedSolinas.
                                                = type.app_curried (t:=to_bytesT) (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f))
                   /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f)) = (Positional.eval (weight (Qnum limbwidth) (Z.pos (Qden limbwidth))) n (fst f) mod m))).
 
+      (** XXX TODO MOVE ME *)
+      Lemma fold_andb_map_snoc A B f x xs y ys
+        : @fold_andb_map A B f (xs ++ [x]) (ys ++ [y]) = @fold_andb_map A B f xs ys && f x y.
+      Proof.
+        clear.
+        revert ys; induction xs as [|x' xs'], ys as [|y' ys']; cbn;
+          rewrite ?Bool.andb_true_r, ?Bool.andb_false_r;
+          try (destruct ys'; cbn; rewrite Bool.andb_false_r);
+          try (destruct xs'; cbn; rewrite Bool.andb_false_r);
+          try reflexivity.
+        rewrite IHxs', Bool.andb_assoc; reflexivity.
+      Qed.
+      Lemma eval_is_bounded_by wt n' bounds bounds' f
+            (H : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) bounds f = true)
+            (Hb : bounds = Some (List.map (@Some _) bounds'))
+            (Hblen : length bounds' = n')
+            (Hwt : forall i, List.In i (seq 0 n') -> 0 <= wt i)
+        : eval wt n' (List.map lower bounds') <= eval wt n' f <= eval wt n' (List.map upper bounds').
+      Proof.
+        clear -H Hb Hblen Hwt.
+        setoid_rewrite in_seq in Hwt.
+        subst bounds.
+        pose proof H as H'; apply fold_andb_map_length in H'.
+        revert dependent bounds'; intro bounds'.
+        revert dependent f; intro f.
+        rewrite <- (List.rev_involutive bounds'), <- (List.rev_involutive f);
+          generalize (List.rev bounds') (List.rev f); clear bounds' f; intros bounds f; revert bounds f.
+        induction n' as [|n IHn], bounds as [|b bounds], f as [|f fs]; intros;
+          cbn [length rev map] in *; distr_length.
+        { rewrite !map_app in *; cbn [map] in *.
+          erewrite !eval_snoc by (distr_length; eauto).
+          cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *.
+          specialize_by (intros; auto with omega).
+          specialize (Hwt n); specialize_by omega.
+          repeat first [ progress Bool.split_andb
+                       | rewrite Nat.add_1_r in *
+                       | rewrite fold_andb_map_snoc in *
+                       | rewrite Nat.succ_inj_wd in *
+                       | progress Z.ltb_to_lt
+                       | progress cbn [In seq] in *
+                       | match goal with
+                         | [ H : length _ = ?v |- _ ] => rewrite H in *
+                         | [ H : ?v = length _ |- _ ] => rewrite <- H in *
+                         end ].
+          split; apply Z.add_le_mono; try apply IHn; auto; distr_length; nia. }
+      Qed.
       Theorem Good : GoodT.
       Proof.
         pose proof use_curve_good; destruct_head'_and; destruct_head_hnf' ex.
@@ -1411,51 +1457,6 @@ Module Import UnsaturatedSolinas.
               | [ H : eval _ _ _ = ?x |- _ <= _ < 2 * ?x ] => rewrite <- H
               end.
               cbv [m_enc tight_bounds tight_upperbounds prime_upperbound_list] in H15 |- *.
-              Lemma fold_andb_map_snoc A B f x xs y ys
-                : @fold_andb_map A B f (xs ++ [x]) (ys ++ [y]) = @fold_andb_map A B f xs ys && f x y.
-              Proof.
-                clear.
-                revert ys; induction xs as [|x' xs'], ys as [|y' ys']; cbn;
-                  rewrite ?Bool.andb_true_r, ?Bool.andb_false_r;
-                  try (destruct ys'; cbn; rewrite Bool.andb_false_r);
-                  try (destruct xs'; cbn; rewrite Bool.andb_false_r);
-                  try reflexivity.
-                rewrite IHxs', Bool.andb_assoc; reflexivity.
-              Qed.
-              Lemma eval_is_bounded_by wt n' bounds bounds' f
-                    (H : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) bounds f = true)
-                    (Hb : bounds = Some (List.map (@Some _) bounds'))
-                    (Hblen : length bounds' = n')
-                    (Hwt : forall i, List.In i (seq 0 n') -> 0 <= wt i)
-                : eval wt n' (List.map lower bounds') <= eval wt n' f <= eval wt n' (List.map upper bounds').
-              Proof.
-                clear -H Hb Hblen Hwt.
-                setoid_rewrite in_seq in Hwt.
-                subst bounds.
-                pose proof H as H'; apply fold_andb_map_length in H'.
-                revert dependent bounds'; intro bounds'.
-                revert dependent f; intro f.
-                rewrite <- (List.rev_involutive bounds'), <- (List.rev_involutive f);
-                  generalize (List.rev bounds') (List.rev f); clear bounds' f; intros bounds f; revert bounds f.
-                induction n' as [|n IHn], bounds as [|b bounds], f as [|f fs]; intros;
-                  cbn [length rev map] in *; distr_length.
-                { rewrite !map_app in *; cbn [map] in *.
-                  erewrite !eval_snoc by (distr_length; eauto).
-                  cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *.
-                  specialize_by (intros; auto with omega).
-                  specialize (Hwt n); specialize_by omega.
-                  repeat first [ progress Bool.split_andb
-                               | rewrite Nat.add_1_r in *
-                               | rewrite fold_andb_map_snoc in *
-                               | rewrite Nat.succ_inj_wd in *
-                               | progress Z.ltb_to_lt
-                               | progress cbn [In seq] in *
-                               | match goal with
-                                 | [ H : length _ = ?v |- _ ] => rewrite H in *
-                                 | [ H : ?v = length _ |- _ ] => rewrite <- H in *
-                                 end ].
-                  split; apply Z.add_le_mono; try apply IHn; auto; distr_length; nia. }
-              Qed.
               eapply eval_is_bounded_by with (wt:=weight (Qnum limbwidth) (QDen limbwidth)) in H15.
               2:rewrite <- (map_map _ (@Some _)); reflexivity.
               2:distr_length; reflexivity.
