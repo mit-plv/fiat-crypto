@@ -269,7 +269,7 @@ Module Associational.
     induction p; cbn [flat_map partition fst snd]; eta_expand; break_match; cbn [fst snd]; push;
       nsatz.
   Qed.
-  Hint Rewrite eval_flat_map_if : push_eval.
+  (*Local Hint Rewrite eval_flat_map_if : push_eval.*) (* this should be [Local], but that doesn't work *)
 
   Lemma eval_if (b : bool) p q : eval (if b then p else q) = if b then eval p else eval q.
   Proof. case b; reflexivity. Qed.
