@@ -19,6 +19,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sum.
+Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
@@ -261,26 +262,6 @@ Module Associational.
   Proof. rewrite <- eval_map_mul_div by assumption; f_equal; apply map_ext; intro; Z.div_mod_to_quot_rem; f_equal; nia. Qed.
   Hint Rewrite eval_map_mul_div' using solve [ auto ] : push_eval.
 
-  (** XXX TODO: MOVE ME *)
-  Lemma partition_app A (f : A -> bool) (a b : list A)
-    : partition f (a ++ b) = (fst (partition f a) ++ fst (partition f b),
-                              snd (partition f a) ++ snd (partition f b)).
-  Proof.
-    revert b; induction a, b; cbn; rewrite ?app_nil_r; eta_expand; try reflexivity.
-    rewrite !IHa; cbn; break_match; reflexivity.
-  Qed.
-  Lemma flat_map_map A B C (f : A -> B) (g : B -> list C) (xs : list A)
-    : flat_map g (map f xs) = flat_map (fun x => g (f x)) xs.
-  Proof. induction xs; cbn; congruence. Qed.
-  Lemma flat_map_singleton A B (f : A -> B) (xs : list A)
-    : flat_map (fun x => cons (f x) nil) xs = map f xs.
-  Proof. induction xs; cbn; congruence. Qed.
-  Lemma flat_map_ext A B (f g : A -> list B) xs (H : forall x, In x xs -> f x = g x)
-    : flat_map f xs = flat_map g xs.
-  Proof. induction xs; cbn in *; [ reflexivity | rewrite IHxs; f_equal ]; intros; intuition auto. Qed.
-  Global Instance flat_map_Proper A B : Proper (pointwise_relation _ eq ==> eq ==> eq) (@flat_map A B).
-  Proof. repeat intro; subst; apply flat_map_ext; auto. Qed.
-
   Lemma eval_flat_map_if A (f : A -> bool) g h p
     : eval (flat_map (fun x => if f x then g x else h x) p)
       = eval (flat_map g (fst (partition f p))) + eval (flat_map h (snd (partition f p))).
@@ -294,82 +275,9 @@ Module Associational.
   Proof. case b; reflexivity. Qed.
   Hint Rewrite eval_if : push_eval.
 
-  Local Existing Instances pointwise_map flat_map_Proper.
-  Ltac make_rel do_pointwise T :=
-    lazymatch T with
-    | (?A -> ?B)
-      => let RA := make_rel true A in
-         let RB := make_rel do_pointwise B in
-         let default _ := constr:(@respectful A B RA RB) in
-         lazymatch do_pointwise with
-         | true => lazymatch RA with
-                   | eq => constr:(@pointwise_relation A B RB)
-                   | _ => default ()
-                   end
-         | _ => default ()
-         end
-    | (forall a : ?A, ?B)
-      => let B' := fresh in
-         constr:(@forall_relation A (fun a : A => B) (fun a : A => match B with B' => ltac:(let B'' := (eval cbv delta [B'] in B') in
-                                                                                            let RB := make_rel do_pointwise B in
-                                                                                            exact RB) end))
-    | _ => constr:(@eq T)
-    end.
-  Ltac make_eq_rel T :=
-    lazymatch T with
-    | (?A -> ?B)
-      => let RB := make_eq_rel B in
-         constr:(@respectful A B (@eq A) RB)
-    | (forall a : ?A, ?B)
-      => let B' := fresh in
-         constr:(@forall_relation A (fun a : A => B) (fun a : A => match B with B' => ltac:(let B'' := (eval cbv delta [B'] in B') in
-                                                                                            let RB := make_eq_rel B in
-                                                                                            exact RB) end))
-    | _ => constr:(@eq T)
-    end.
-  Ltac solve_Proper_eq :=
-    match goal with
-    | [ |- @Proper ?A ?R ?f ]
-      => let R' := make_eq_rel A in
-         unify R R';
-         apply (@reflexive_proper A R')
-    end.
-  Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
-  Global Instance list_rect_Proper A P : Proper (eq ==> pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq)) ==> eq ==> eq) (@list_rect A (fun _ => P)).
-  Proof.
-    intros N N' HN C C' HC xs ys Hxs; subst N' ys.
-    induction xs; cbn; trivial; rewrite IHxs; apply HC.
-  Qed.
-  Lemma if_const A (b : bool) (x : A) : (if b then x else x) = x.
-  Proof. case b; reflexivity. Qed.
-  Lemma partition_map A B (f : B -> bool) (g : A -> B) xs
-    : partition f (map g xs) = (map g (fst (partition (fun x => f (g x)) xs)),
-                                map g (snd (partition (fun x => f (g x)) xs))).
-  Proof. induction xs; cbn; [ | rewrite !IHxs ]; break_match; reflexivity. Qed.
-  Lemma map_fst_partition A B (f : B -> bool) (g : A -> B) xs
-    : map g (fst (partition (fun x => f (g x)) xs)) = fst (partition f (map g xs)).
-  Proof. rewrite partition_map; reflexivity. Qed.
-  Lemma map_snd_partition A B (f : B -> bool) (g : A -> B) xs
-    : map g (snd (partition (fun x => f (g x)) xs)) = snd (partition f (map g xs)).
-  Proof. rewrite partition_map; reflexivity. Qed.
-  Lemma partition_In A (f:A -> bool) xs : forall x, @In A x xs <-> @In A x (if f x then fst (partition f xs) else snd (partition f xs)).
-  Proof.
-    intro x; destruct (f x) eqn:?; split; intros; repeat apply conj; revert dependent x;
-      (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
-      congruence.
-  Qed.
-  Lemma fst_partition_In A f xs : forall x, @In A x (fst (partition f xs)) <-> f x = true /\ @In A x xs.
-  Proof.
-    intro x; split; intros; repeat apply conj; revert dependent x;
-      (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
-      congruence.
-  Qed.
-  Lemma snd_partition_In A f xs : forall x, @In A x (snd (partition f xs)) <-> f x = false /\ @In A x xs.
-  Proof.
-    intro x; split; intros; repeat apply conj; revert dependent x;
-      (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
-      congruence.
-  Qed.
+  Local Existing Instances list_rect_Proper pointwise_map flat_map_Proper.
+  Local Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
+
   Lemma eval_reduce_square_exact s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0)
     : eval (reduce_square s c p) = eval (reduce s c (square p)).
   Proof.
