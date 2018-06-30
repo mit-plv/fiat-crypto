@@ -72,9 +72,8 @@ Module Compilers.
   End Reify.
 
   Module type.
-    Inductive type (base_type : Type) := base (t : base_type) | arrow (s d : type base_type).
-    Global Arguments base {_}.
-    Global Arguments arrow {_} s d.
+    Inductive type {base_type : Type} := base (t : base_type) | arrow (s d : type).
+    Global Arguments type : clear implicits.
 
     Fixpoint final_codomain {base_type} (t : type base_type) : base_type
       := match t with

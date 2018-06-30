@@ -14,9 +14,8 @@ Require Import Crypto.Util.Notations.
 *)
 
 Module type.
-  Inductive type (base_type : Type) := base (t : base_type) | arrow (s d : type base_type).
-  Global Arguments base {_}.
-  Global Arguments arrow {_} s d.
+  Inductive type {base_type : Type} := base (t : base_type) | arrow (s d : type).
+  Global Arguments type : clear implicits.
 
   Fixpoint for_each_lhs_of_arrow {base_type} (f : type base_type -> Type) (t : type base_type) : Type
     := match t with
@@ -204,8 +203,9 @@ Module ident.
     | Cast {T} (upper_bound : upperboundT T) : pident (#T -> #T)%ptype
     .
 
-    Inductive wident (pident : ptype -> Type) : type -> Type :=
-    | wrap {T} (idc : pident T) : wident pident (parametric.subst T).
+    Inductive wident {pident : ptype -> Type} : type -> Type :=
+    | wrap {T} (idc : pident T) : wident (parametric.subst T).
+    Global Arguments wident : clear implicits.
     Definition ident := wident pident.
     Definition pwrap {T} (idc : pident T) : ident _ := @wrap pident T idc.
   End with_base.
