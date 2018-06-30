@@ -1,4 +1,5 @@
 (** * Fixes *)
+Require Import Coq.Classes.Morphisms.
 Require Export Crypto.Util.GlobalSettings.
 
 (** Coq is poorly designed in some ways.  We fix some of these issues
@@ -38,3 +39,50 @@ Proof.
     | rewrite <- H ];
     constructor.
 Defined.
+
+(** Typeclass resolution is stupid.  So we write a tactic that makes
+    it less stupid.  We may occasionally have to redeclare the
+    instance, because, unfortunately, instance priorities cannot be
+    negative (which is also stupid). *)
+(* We don't actually have function extensionality
+Ltac make_rel do_pointwise T :=
+  lazymatch T with
+  | (?A -> ?B)
+    => let RA := make_rel true A in
+      let RB := make_rel do_pointwise B in
+      let default _ := constr:(@respectful A B RA RB) in
+      lazymatch do_pointwise with
+      | true => lazymatch RA with
+               | eq => constr:(@pointwise_relation A B RB)
+               | _ => default ()
+               end
+      | _ => default ()
+      end
+  | (forall a : ?A, ?B)
+    => let B' := fresh in
+      constr:(@forall_relation A (fun a : A => B) (fun a : A => match B with B' => ltac:(let B'' := (eval cbv delta [B'] in B') in
+                                                                                  let RB := make_rel do_pointwise B in
+                                                                                  exact RB) end))
+  | _ => constr:(@eq T)
+  end.
+*)
+Ltac make_eq_rel T :=
+  lazymatch T with
+  | (?A -> ?B)
+    => let RB := make_eq_rel B in
+      constr:(@respectful A B (@eq A) RB)
+  | (forall a : ?A, ?B)
+    => let B' := fresh in
+      constr:(@forall_relation A (fun a : A => B) (fun a : A => match B with B' => ltac:(let B'' := (eval cbv delta [B'] in B') in
+                                                                                  let RB := make_eq_rel B in
+                                                                                  exact RB) end))
+  | _ => constr:(@eq T)
+  end.
+Ltac solve_Proper_eq :=
+  match goal with
+  | [ |- @Proper ?A ?R ?f ]
+    => let R' := make_eq_rel A in
+      unify R R';
+      apply (@reflexive_proper A R')
+  end.
+Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
