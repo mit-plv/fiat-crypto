@@ -1969,3 +1969,14 @@ Proof.
     (induction xs as [|x' xs IHxs]; cbn; [ | destruct (f x') eqn:?, (partition f xs) ]; cbn in *; subst; intuition (subst; auto));
     congruence.
 Qed.
+
+Lemma list_rect_map A B P (f : A -> B) N C ls
+  : @list_rect B P N C (map f ls) = @list_rect A (fun ls => P (map f ls)) N (fun x xs rest => C (f x) (map f xs) rest) ls.
+Proof. induction ls as [|x xs IHxs]; cbn; [ | rewrite IHxs ]; reflexivity. Qed.
+Lemma flat_map_app A B (f : A -> list B) xs ys
+  : flat_map f (xs ++ ys) = flat_map f xs ++ flat_map f ys.
+Proof. induction xs as [|x xs IHxs]; cbn; rewrite ?IHxs, <- ?app_assoc; reflexivity. Qed.
+Hint Rewrite flat_map_app : push_flat_map.
+Lemma map_flat_map A B C (f : A -> list B) (g : B -> C) xs
+  : map g (flat_map f xs) = flat_map (fun x => map g (f x)) xs.
+Proof. induction xs as [|x xs IHxs]; cbn; rewrite ?map_app; congruence. Qed.
