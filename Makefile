@@ -87,6 +87,7 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Specific/X25519/C32/fe%.vo \
 	src/Experiments/NewPipeline/Toplevel2.vo \
 	src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.vo \
+	src/Experiments/SimplyTypedArithmetic.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
