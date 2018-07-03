@@ -6,6 +6,7 @@ Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Pointed.
 Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Decidable.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.DestructHead.
@@ -2019,3 +2020,31 @@ Proof. revert v; induction xs; cbn; intros; congruence. Qed.
 Lemma fold_right_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
   : fold_right F v (flat_map f xs) = fold_right (fun x y => fold_right F y (f x)) v xs.
 Proof. revert v; induction xs; cbn; intros; rewrite ?fold_right_app; congruence. Qed.
+
+Lemma fold_right_id_ext A B f v xs : (forall x y, f x y = y) -> @fold_right A B f v xs = v.
+Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
+Lemma nth_default_repeat A (v:A) n (d:A) i : nth_default d (repeat v n) i = if dec (i < n)%nat then v else d.
+Proof.
+  revert i; induction n as [|n IHn], i; cbn; try reflexivity.
+  rewrite nth_default_cons_S, IHn; do 2 edestruct dec; try reflexivity; omega.
+Qed.
+Lemma fold_right_if_dec_eq_seq A start len i f (x v : A)
+  : ((start <= i < start + len)%nat -> f i v = x)
+    -> (forall j v, (i <> j)%nat -> f j v = v)
+    -> fold_right f v (seq start len) = if dec (start <= i < start + len)%nat then x else v.
+Proof.
+  revert start v; induction len as [|len IHlen]; intros start v H H'; [ | rewrite seq_snoc, fold_right_app; cbn [fold_right] ].
+  { edestruct dec; try reflexivity; omega. }
+  { destruct (dec (i = (start + len)%nat)); subst; [ | rewrite H' by omega ];
+      rewrite IHlen; eauto; intros; clear IHlen;
+        repeat match goal with
+               | _ => reflexivity
+               | _ => omega
+               | _ => progress subst
+               | _ => progress specialize_by omega
+               | [ H : context[dec ?P] |- _ ] => destruct (dec P)
+               | [ |- context[dec ?P] ] => destruct (dec P)
+               | [ H : f _ _ = _ |- _ ] => rewrite H
+               | [ H : forall j, f j ?v = _ |- context[f _ ?v] ] => rewrite H
+               end. }
+Qed.

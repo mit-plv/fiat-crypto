@@ -278,4 +278,35 @@ Module Z.
                                    => assert (q0 = q1) by nia; subst q0
                                  end ] ].
   Qed.
+
+  Lemma mod_mod_0_0_eq x y : x mod y = 0 -> y mod x = 0 -> x = y \/ x = - y \/ x = 0 \/ y = 0.
+  Proof.
+    destruct (Z_zerop x), (Z_zerop y); eauto.
+    Z.div_mod_to_quot_rem; subst.
+    rewrite ?Z.add_0_r in *.
+    match goal with
+    | [ H : ?x = ?x * ?q * ?q' |- _ ]
+      => assert (q * q' = 1) by nia;
+          destruct_head'_or;
+          first [ assert (q < 0) by nia
+                | assert (0 < q) by nia ];
+          first [ assert (q' < 0) by nia
+                | assert (0 < q') by nia ]
+    end;
+      nia.
+  Qed.
+  Lemma mod_mod_0_0_eq_pos x y : 0 < x -> 0 < y -> x mod y = 0 -> y mod x = 0 -> x = y.
+  Proof. intros ?? H0 H1; pose proof (mod_mod_0_0_eq x y H0 H1); omega. Qed.
+  Lemma mod_mod_trans x y z : y <> 0 -> x mod y = 0 -> y mod z = 0 -> x mod z = 0.
+  Proof.
+    destruct (Z_zerop x), (Z_zerop z); subst; autorewrite with zsimplify_const; auto; intro.
+    Z.generalize_div_eucl x y.
+    Z.generalize_div_eucl y z.
+    intros; subst.
+    rewrite ?Z.add_0_r in *.
+    rewrite <- Z.mul_assoc.
+    rewrite <- Zmult_mod_idemp_l, Z_mod_same_full.
+    autorewrite with zsimplify_const.
+    reflexivity.
+  Qed.
 End Z.
