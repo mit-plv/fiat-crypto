@@ -1980,3 +1980,42 @@ Hint Rewrite flat_map_app : push_flat_map.
 Lemma map_flat_map A B C (f : A -> list B) (g : B -> C) xs
   : map g (flat_map f xs) = flat_map (fun x => map g (f x)) xs.
 Proof. induction xs as [|x xs IHxs]; cbn; rewrite ?map_app; congruence. Qed.
+
+Lemma combine_map_map A B C D (f : A -> B) (g : C -> D) xs ys
+  : combine (map f xs) (map g ys) = map (fun ab => (f (fst ab), g (snd ab))) (combine xs ys).
+Proof. revert ys; induction xs, ys; cbn; congruence. Qed.
+Lemma combine_map_l A B C (f : A -> B) xs ys
+  : @combine B C (map f xs) ys = map (fun ab => (f (fst ab), snd ab)) (combine xs ys).
+Proof. rewrite <- combine_map_map with (f:=f) (g:=fun x => x), map_id; reflexivity. Qed.
+Lemma combine_map_r A B C (f : B -> C) xs ys
+  : @combine A C xs (map f ys) = map (fun ab => (fst ab, f (snd ab))) (combine xs ys).
+Proof. rewrite <- combine_map_map with (g:=f) (f:=fun x => x), map_id; reflexivity. Qed.
+Lemma combine_same A xs
+  : @combine A A xs xs = map (fun x => (x, x)) xs.
+Proof. induction xs; cbn; congruence. Qed.
+Lemma if_singleton A (b:bool) (x y : A) : (if b then [x] else [y]) = [if b then x else y].
+Proof. now case b. Qed.
+Lemma flat_map_if_In A B (b : A -> bool) (f g : A -> list B) xs (b' : bool)
+  : (forall v, In v xs -> b v = b') -> flat_map (fun x => if b x then f x else g x) xs = if b' then flat_map f xs else flat_map g xs.
+Proof. induction xs as [|x xs IHxs]; cbn; [ | intro H; rewrite IHxs, H by eauto ]; case b'; reflexivity. Qed.
+Lemma flat_map_if_In_sumbool A B X Y (b : forall a : A, sumbool (X a) (Y a)) (f g : A -> list B) xs (b' : bool)
+  : (forall v, In v xs -> (if b v then true else false) = b') -> flat_map (fun x => if b x then f x else g x) xs = if b' then flat_map f xs else flat_map g xs.
+Proof.
+  intro H; erewrite <- flat_map_if_In by refine H.
+  apply flat_map_Proper; [ intro | reflexivity ]; break_innermost_match; reflexivity.
+Qed.
+Lemma map_if_In A B (b : A -> bool) (f g : A -> B) xs (b' : bool)
+  : (forall v, In v xs -> b v = b') -> map (fun x => if b x then f x else g x) xs = if b' then map f xs else map g xs.
+Proof. induction xs as [|x xs IHxs]; cbn; [ | intro H; rewrite IHxs, H by eauto ]; case b'; reflexivity. Qed.
+Lemma map_if_In_sumbool A B X Y (b : forall a : A, sumbool (X a) (Y a)) (f g : A -> B) xs (b' : bool)
+  : (forall v, In v xs -> (if b v then true else false) = b') -> map (fun x => if b x then f x else g x) xs = if b' then map f xs else map g xs.
+Proof.
+  intro H; erewrite <- map_if_In by refine H.
+  apply map_ext_in; intro; break_innermost_match; reflexivity.
+Qed.
+Lemma fold_right_map A B C (f : A -> B) xs (F : _ -> _ -> C) v
+  : fold_right F v (map f xs) = fold_right (fun x y => F (f x) y) v xs.
+Proof. revert v; induction xs; cbn; intros; congruence. Qed.
+Lemma fold_right_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
+  : fold_right F v (flat_map f xs) = fold_right (fun x y => fold_right F y (f x)) v xs.
+Proof. revert v; induction xs; cbn; intros; rewrite ?fold_right_app; congruence. Qed.
