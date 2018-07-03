@@ -1993,7 +1993,7 @@ Proof. rewrite <- combine_map_map with (g:=f) (f:=fun x => x), map_id; reflexivi
 Lemma combine_same A xs
   : @combine A A xs xs = map (fun x => (x, x)) xs.
 Proof. induction xs; cbn; congruence. Qed.
-Lemma if_singleton A (b:bool) (x y : A) : (if b then [x] else [y]) = [if b then x else y].
+Lemma if_singleton A (b:bool) (x y : A) : (if b then x::nil else y::nil) = (if b then x else y)::nil.
 Proof. now case b. Qed.
 Lemma flat_map_if_In A B (b : A -> bool) (f g : A -> list B) xs (b' : bool)
   : (forall v, In v xs -> b v = b') -> flat_map (fun x => if b x then f x else g x) xs = if b' then flat_map f xs else flat_map g xs.
