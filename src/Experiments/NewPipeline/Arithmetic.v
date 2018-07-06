@@ -2608,6 +2608,8 @@ Section freeze_mod_ops.
   Definition wprops_bytes := (@wprops 8 1 ltac:(lia)).
   Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
 
+  Local Hint Immediate (wprops).
+  Local Hint Immediate (wprops_bytes).
   Local Hint Immediate (weight_0 wprops).
   Local Hint Immediate (weight_positive wprops).
   Local Hint Immediate (weight_multiples wprops).
@@ -2626,8 +2628,15 @@ Section freeze_mod_ops.
   Definition from_bytes (v : list Z)
     := BaseConversion.convert_bases bytes_weight weight bytes_n n v.
 
+  (** TODO: We should probably prove that BaseConversion.convert_bases
+      partitions, so that we don't end up doing a needless [flatten ∘
+      from_associational ∘ to_associational] just be be able to prove
+      that the result partitions.  See
+      https://github.com/JasonGross/fiat-crypto/tree/zzz-wip-better-arith-proofs
+      for some partial work in this direction. *)
   Definition to_bytesmod (f : list Z) : list Z
-    := to_bytes' (freeze weight n (Z.ones bitwidth) m_enc f).
+    := let v := to_bytes' (freeze weight n (Z.ones bitwidth) m_enc f) in
+       fst (Rows.flatten bytes_weight bytes_n (Rows.from_associational bytes_weight bytes_n (Positional.to_associational bytes_weight bytes_n v))).
 
   Definition from_bytesmod (f : list Z) : list Z
     := from_bytes f.
@@ -2637,15 +2646,34 @@ Section freeze_mod_ops.
         (Hf : length f = n)
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
       (eval bytes_weight bytes_n (to_bytesmod f)) = (eval weight n f) mod m
-      /\ to_bytesmod f = to_bytes' (Rows.partition weight n (Positional.eval weight n f mod m)).
+      /\ to_bytesmod f = Rows.partition bytes_weight bytes_n (Positional.eval weight n f mod m).
   Proof.
     intros; subst m s; split.
-    { erewrite <- eval_freeze with (weight := weight) (n:=n) (mask:=Z.ones bitwidth) (m:=m_enc) ; auto using wprops.
-      erewrite <- BaseConversion.eval_convert_bases with (sw:=weight) (dw:=bytes_weight) (sn:=n) (dn:=bytes_n) (p:=freeze _ _ _ _ _)
-        by (cbv [bytes_n]; auto using wprops_bytes; distr_length; auto using wprops).
-      reflexivity. }
     { cbv [to_bytesmod].
-      erewrite freeze_partitions by eauto using wprops.
+      rewrite Rows.flatten_mod by eauto using Rows.length_from_associational.
+      rewrite Rows.eval_from_associational by (cbv [bytes_n]; eauto with omega).
+      rewrite eval_to_associational.
+      cbv [to_bytes'].
+      rewrite BaseConversion.eval_convert_bases
+        by (cbv [bytes_n]; auto using wprops_bytes; distr_length; auto using wprops).
+      erewrite eval_freeze by eauto using wprops.
+      rewrite (Z.mod_small (_ mod _)); [ reflexivity | ].
+      split; [ | eapply Z.lt_le_trans ]; [ apply Z.mod_pos_bound; omega.. | ].
+      transitivity (weight n); [ omega | ].
+      cbv [weight bytes_n].
+      Z.peel_le.
+      rewrite Z.log2_up_pow2 by (Z.div_mod_to_quot_rem; nia).
+      autorewrite with push_Zof_nat.
+      rewrite Z2Nat.id by (Z.div_mod_to_quot_rem; nia).
+      Z.div_mod_to_quot_rem; nia. }
+    { cbv [to_bytesmod].
+      rewrite Rows.flatten_partitions' by eauto using wprops, Rows.length_from_associational.
+      rewrite Rows.eval_from_associational by (cbv [bytes_n]; eauto with omega).
+      rewrite eval_to_associational.
+      cbv [to_bytes'].
+      rewrite BaseConversion.eval_convert_bases
+        by (cbv [bytes_n]; auto using wprops_bytes; distr_length; auto using wprops).
+      erewrite eval_freeze by eauto using wprops.
       reflexivity. }
   Qed.
 
