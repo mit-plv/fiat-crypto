@@ -1,5 +1,8 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.ZArith.Znumtheory.
 Require Import Crypto.Util.ZUtil.Tactics.CompareToSgn.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
@@ -187,4 +190,72 @@ Module Z.
     intros; rewrite !Z.div_div by omega.
     f_equal; ring.
   Qed.
+
+  Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
+  Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
+  Hint Resolve div_lt_upper_bound' : zarith.
+
+  Lemma div_cross_le_abs a b c' d : c' <> 0 -> d <> 0 -> a * Z.sgn c' * Z.abs d <= b * Z.sgn d * Z.abs c' -> a / c' <= b / d.
+  Proof.
+    clear.
+    destruct c', d; cbn [Z.abs Z.sgn];
+      rewrite ?Zdiv_0_r, ?Z.mul_0_r, ?Z.mul_0_l, ?Z.mul_1_l, ?Z.mul_1_r;
+      try lia; intros ?? H;
+        Z.div_mod_to_quot_rem;
+        subst.
+    all: repeat match goal with
+                | [ H : context[_ * -1] |- _ ] => rewrite (Z.mul_add_distr_r _ _ (-1)), <- ?(Z.mul_comm (-1)), ?Z.mul_assoc in H
+                | [ H : context[-1 * _] |- _ ] => rewrite (Z.mul_add_distr_l (-1)), <- ?(Z.mul_comm (-1)), ?Z.mul_assoc in H
+                | [ H : context[-1 * Z.neg ?x] |- _ ] => rewrite (Z.mul_comm (-1) (Z.neg x)), <- Z.opp_eq_mul_m1 in H
+                | [ H : context[-1 * ?x] |- _ ] => rewrite (Z.mul_comm (-1) x), <- Z.opp_eq_mul_m1 in H
+                | [ H : context[-Z.neg _] |- _ ] => cbn [Z.opp] in H
+                end.
+    all:lazymatch goal with
+        | [ H : (Z.pos ?p * ?q + ?r) * Z.pos ?p' <= (Z.pos ?p' * ?q' + ?r') * Z.pos ?p |- _ ]
+          => let H' := fresh in
+             assert (H' : q <= q' + (r' * Z.pos p - r * Z.pos p') / (Z.pos p * Z.pos p')) by (Z.div_mod_to_quot_rem; nia);
+               revert H'
+        end.
+    all:Z.div_mod_to_quot_rem; nia.
+  Qed.
+
+  Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->
+    a / b > 0.
+  Proof.
+    intros; rewrite Z.gt_lt_iff.
+    apply Z.div_str_pos.
+    split; intuition auto with omega.
+    apply Z.divide_pos_le; try (apply Zmod_divide); omega.
+  Qed.
+
+  Lemma div_opp_l_complete a b (Hb : b <> 0) : -a/b = -(a/b) - (if Z_zerop (a mod b) then 0 else 1).
+  Proof.
+    destruct (Z_zerop (a mod b)); autorewrite with zsimplify push_Zopp; reflexivity.
+  Qed.
+
+  Lemma div_opp_l_complete' a b (Hb : b <> 0) : -(a/b) = -a/b + (if Z_zerop (a mod b) then 0 else 1).
+  Proof.
+    destruct (Z_zerop (a mod b)); autorewrite with zsimplify pull_Zopp; lia.
+  Qed.
+
+  Hint Rewrite Z.div_opp_l_complete using zutil_arith : pull_Zopp.
+  Hint Rewrite Z.div_opp_l_complete' using zutil_arith : push_Zopp.
+
+  Lemma div_opp a : a <> 0 -> -a / a = -1.
+  Proof.
+    intros; autorewrite with pull_Zopp zsimplify; lia.
+  Qed.
+
+  Hint Rewrite Z.div_opp using zutil_arith : zsimplify.
+
+  Lemma div_sub_1_0 x : x > 0 -> (x - 1) / x = 0.
+  Proof. auto with zarith lia. Qed.
+
+  Hint Rewrite div_sub_1_0 using zutil_arith : zsimplify.
+
+  Lemma div_same' a b : b <> 0 -> a = b -> a / b = 1.
+  Proof.
+    intros; subst; auto with zarith.
+  Qed.
+  Hint Resolve div_same' : zarith.
 End Z.
