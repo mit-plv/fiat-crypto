@@ -1759,7 +1759,7 @@ Module BaseConversion.
       eval dw dn (convert_bases sn dn p) = eval sw sn p.
     Proof.
       cbv [convert_bases]; intros.
-      rewrite eval_chained_carries_no_reduce; auto using ZUtil.Z.positive_is_nonzero.
+      rewrite eval_chained_carries_no_reduce; auto using Z.positive_is_nonzero.
       rewrite eval_from_associational; auto.
     Qed.
 

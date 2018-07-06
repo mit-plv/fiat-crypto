@@ -13,6 +13,7 @@ Require Import Coq.Lists.List.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.ZUtil.Definitions.
 Require Export Crypto.Util.ZUtil.Div.
+Require Export Crypto.Util.ZUtil.Le.
 Require Export Crypto.Util.ZUtil.EquivModulo.
 Require Export Crypto.Util.ZUtil.Hints.
 Require Export Crypto.Util.ZUtil.Land.
@@ -30,25 +31,8 @@ Import Nat.
 Local Open Scope Z.
 
 Module Z.
-  Lemma div_lt_upper_bound' a b q : 0 < b -> a < q * b -> a / b < q.
-  Proof. intros; apply Z.div_lt_upper_bound; nia. Qed.
-  Hint Resolve div_lt_upper_bound' : zarith.
-
   Lemma mul_comm3 x y z : x * (y * z) = y * (x * z).
   Proof. lia. Qed.
-
-  Lemma positive_is_nonzero : forall x, x > 0 -> x <> 0.
-  Proof. intros; omega. Qed.
-  Hint Resolve positive_is_nonzero : zarith.
-
-  Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->
-    a / b > 0.
-  Proof.
-    intros; rewrite Z.gt_lt_iff.
-    apply Z.div_str_pos.
-    split; intuition auto with omega.
-    apply Z.divide_pos_le; try (apply Zmod_divide); omega.
-  Qed.
 
   Lemma pos_pow_nat_pos : forall x n,
     Z.pos x ^ Z.of_nat n > 0.
@@ -59,7 +43,7 @@ Module Z.
   Qed.
 
   (** TODO: Should we get rid of this duplicate? *)
-  Notation gt0_neq0 := positive_is_nonzero (only parsing).
+  Notation gt0_neq0 := Z.positive_is_nonzero (only parsing).
 
   Lemma pow_Z2N_Zpow : forall a n, 0 <= a ->
     ((Z.to_nat a) ^ n = Z.to_nat (a ^ Z.of_nat n)%Z)%nat.
@@ -708,19 +692,6 @@ Module Z.
   Lemma sub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.
   Proof. lia. Qed.
 
-  Lemma div_opp_l_complete a b (Hb : b <> 0) : -a/b = -(a/b) - (if Z_zerop (a mod b) then 0 else 1).
-  Proof.
-    destruct (Z_zerop (a mod b)); autorewrite with zsimplify push_Zopp; reflexivity.
-  Qed.
-
-  Lemma div_opp_l_complete' a b (Hb : b <> 0) : -(a/b) = -a/b + (if Z_zerop (a mod b) then 0 else 1).
-  Proof.
-    destruct (Z_zerop (a mod b)); autorewrite with zsimplify pull_Zopp; lia.
-  Qed.
-
-  Hint Rewrite Z.div_opp_l_complete using zutil_arith : pull_Zopp.
-  Hint Rewrite Z.div_opp_l_complete' using zutil_arith : push_Zopp.
-
   Lemma shiftl_opp_l a n
     : Z.shiftl (-a) n = - Z.shiftl a n - (if Z_zerop (a mod 2 ^ (- n)) then 0 else 1).
   Proof.
@@ -746,18 +717,6 @@ Module Z.
   Qed.
   Hint Rewrite shiftr_opp_l : push_Zshift.
   Hint Rewrite <- shiftr_opp_l : pull_Zshift.
-
-  Lemma div_opp a : a <> 0 -> -a / a = -1.
-  Proof.
-    intros; autorewrite with pull_Zopp zsimplify; lia.
-  Qed.
-
-  Hint Rewrite Z.div_opp using zutil_arith : zsimplify.
-
-  Lemma div_sub_1_0 x : x > 0 -> (x - 1) / x = 0.
-  Proof. auto with zarith lia. Qed.
-
-  Hint Rewrite div_sub_1_0 using zutil_arith : zsimplify.
 
   Lemma sub_pos_bound_div a b X : 0 <= a < X -> 0 <= b < X -> -1 <= (a - b) / X <= 0.
   Proof.
@@ -804,12 +763,6 @@ Module Z.
     nia.
   Qed.
   Hint Resolve mod_eq_le_to_eq : zarith.
-
-  Lemma div_same' a b : b <> 0 -> a = b -> a / b = 1.
-  Proof.
-    intros; subst; auto with zarith.
-  Qed.
-  Hint Resolve div_same' : zarith.
 
   Lemma mod_eq_le_div_1 a b : 0 < a <= b -> a mod b = 0 -> a / b = 1.
   Proof. auto with zarith. Qed.
