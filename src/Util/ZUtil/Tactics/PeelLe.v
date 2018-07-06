@@ -33,7 +33,7 @@ Module Z.
       => first [ apply Z.mul_le_mono_nonneg_r; [ zutil_arith | ]
                | apply Z.mul_le_mono_nonpos_r; [ zutil_arith | ] ]
     | [ |- -_ <= -_ ]
-      => apply Z.opp_le_mono
+      => apply -> Z.opp_le_mono
     | [ |- _ / ?x <= _ / ?x ]
       => apply Z.div_le_mono; [ zutil_arith | ]
     | [ |- ?x / _ <= ?x / _ ]
