@@ -20,7 +20,7 @@ Module Z.
            | [ H : context[(_ mod _)%Z] |- _ ]
              => revert H
            end.
-    Z.div_mod_to_quot_rem.
+    Z.div_mod_to_quot_rem_in_goal.
     lazymatch goal with
     | [ H : a = (?x * ?n * ?q) + _, H' : a = (?n * ?q') + _ |- _ ]
       => assert (q' = x * q) by nia; subst q'; nia

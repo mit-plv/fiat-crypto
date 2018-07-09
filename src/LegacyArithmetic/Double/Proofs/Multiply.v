@@ -89,7 +89,7 @@ Section tuple2.
       Z.rewrite_mod_small.
       push_Zmod; pull_Zmod.
       apply f_equal2; [ | reflexivity ].
-      Z.div_mod_to_quot_rem; nia.
+      Z.div_mod_to_quot_rem_in_goal; nia.
     Qed.
 
     Lemma decode_mul_double_function x y

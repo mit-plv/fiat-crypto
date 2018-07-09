@@ -56,11 +56,11 @@ Proof.
   assert (0 < 2 ^ k) by auto with zarith.
   assert (0 < 2^n * 2^k) by nia.
   autorewrite with Zshift_to_pow push_Zpow.
-  rewrite <- (Zmod_small ((z0 mod _) + _) (2^k * 2^n)) by (Z.div_mod_to_quot_rem; nia).
+  rewrite <- (Zmod_small ((z0 mod _) + _) (2^k * 2^n)) by (Z.div_mod_to_quot_rem_in_goal; nia).
   rewrite <- !Z.mul_mod_distr_r by lia.
   rewrite !(Z.mul_comm (2^k)); pull_Zmod.
   split; [ | apply f_equal2 ];
-    Z.div_mod_to_quot_rem; nia.
+    Z.div_mod_to_quot_rem_in_goal; nia.
 Qed.
 Section carry_sub_is_good.
   Context (n k z0 z1 : Z)
@@ -93,10 +93,10 @@ Section carry_sub_is_good.
     assert (0 < 2 ^ k) by auto with zarith.
     assert (0 < 2^n * 2^k) by nia.
     autorewrite with Zshift_to_pow push_Zpow.
-    rewrite <- (Zmod_small ((z0 mod _) + _) (2^k * 2^n)) by (Z.div_mod_to_quot_rem; nia).
+    rewrite <- (Zmod_small ((z0 mod _) + _) (2^k * 2^n)) by (Z.div_mod_to_quot_rem_in_goal; nia).
     rewrite <- !Z.mul_mod_distr_r by lia.
     rewrite !(Z.mul_comm (2^k)); pull_Zmod.
-    apply f_equal2; Z.div_mod_to_quot_rem; break_match; Z.ltb_to_lt; try reflexivity;
+    apply f_equal2; Z.div_mod_to_quot_rem_in_goal; break_match; Z.ltb_to_lt; try reflexivity;
       match goal with
       | [ q : Z |- _ = _ :> Z ]
         => first [ cut (q = -1); [ intro; subst; ring | nia ]

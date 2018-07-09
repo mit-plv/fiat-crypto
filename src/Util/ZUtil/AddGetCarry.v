@@ -38,7 +38,7 @@ Module Z.
         reflexivity. }
       { f_equal.
         { push_Zmod; pull_Zmod; apply f_equal2; omega. }
-        { Z.div_mod_to_quot_rem; nia. } }
+        { Z.div_mod_to_quot_rem_in_goal; nia. } }
       { subst; autorewrite with zsimplify; f_equal; omega. }
     Qed.
 

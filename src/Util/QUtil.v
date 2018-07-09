@@ -6,23 +6,23 @@ Local Open Scope Z_scope.
 
 Lemma Qfloor_le_add a b :  Qfloor a + Qfloor b <= Qfloor (a + b).
   destruct a as [x y], b as [a b]; cbv [Qceiling Qfloor Qplus Qopp QArith_base.Qden QArith_base.Qnum].
-  Z.div_mod_to_quot_rem; nia.
+  Z.div_mod_to_quot_rem_in_goal; nia.
 Qed.
 
 Lemma Qceiling_le_add a b : Qceiling (a + b) <= Qceiling a + Qceiling b.
   destruct a as [x y], b as [a b]; cbv [Qceiling Qfloor Qplus Qopp QArith_base.Qden QArith_base.Qnum].
-  Z.div_mod_to_quot_rem. nia.
+  Z.div_mod_to_quot_rem_in_goal. nia.
 Qed.
 
 Lemma add_floor_l_le_ceiling a b : Qfloor a + Qceiling b <= Qceiling (a + b).
   destruct a as [x y], b as [a b]; cbv [Qceiling Qfloor Qplus Qopp QArith_base.Qden QArith_base.Qnum].
-  Z.div_mod_to_quot_rem; nia.
+  Z.div_mod_to_quot_rem_in_goal; nia.
 Qed.
 
 Lemma Zle_floor_ceiling  a : Z.le (Qfloor a) (Qceiling a).
   pose proof Qle_floor_ceiling.
   destruct a as [x y]; cbv [Qceiling Qfloor Qplus Qopp QArith_base.Qden QArith_base.Qnum].
-  Z.div_mod_to_quot_rem; nia.
+  Z.div_mod_to_quot_rem_in_goal; nia.
 Qed.
 
 Section pow_ceil_mul_nat.

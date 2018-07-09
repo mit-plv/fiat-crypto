@@ -5,7 +5,7 @@ Local Open Scope Z_scope.
 
 Module Z.
   Local Ltac simplify_div_tac :=
-    intros; Z.div_mod_to_quot_rem; nia.
+    intros; Z.div_mod_to_quot_rem_in_goal; nia.
   (* Naming Convention: [X] for thing being divided by, [p] for plus,
      [m] for minus, [d] for div, and [_] to separate parentheses and
      multiplication. *)

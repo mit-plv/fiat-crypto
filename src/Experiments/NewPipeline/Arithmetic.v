@@ -175,7 +175,7 @@ Module Associational.
     | _ => progress nsatz                                end. Qed.
   Lemma eval_splitQ s p (s_nz:Qnum s<>0) :
     eval (fst (splitQ s p)) + (Qnum s * eval (snd (splitQ s p))) / Zpos (Qden s) = eval p.
-  Proof. rewrite eval_snd_splitQ, eval_fst_partition by assumption; cbv [splitQ Let_In]; cbn [fst snd]; Z.div_mod_to_quot_rem; nia. Qed.
+  Proof. rewrite eval_snd_splitQ, eval_fst_partition by assumption; cbv [splitQ Let_In]; cbn [fst snd]; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
   Lemma eval_splitQ_mul s p (s_nz:Qnum s<>0) :
     eval (fst (splitQ s p)) * Zpos (Qden s) + (Qnum s * eval (snd (splitQ s p))) = eval p * Zpos (Qden s).
   Proof. rewrite eval_snd_splitQ, eval_fst_partition by assumption; cbv [splitQ Let_In]; cbn [fst snd]; nia. Qed.
@@ -270,7 +270,7 @@ Module Associational.
 
   Lemma eval_map_mul_div' s a b c (s_nz:s <> 0) (a_mod : (a*a) mod s = 0)
     : eval (map (fun x => (((a * a) * fst x) / s, (b * b) * snd x)) c) = ((a * a) / s) * (b * b) * eval c.
-  Proof. rewrite <- eval_map_mul_div by assumption; f_equal; apply map_ext; intro; Z.div_mod_to_quot_rem; f_equal; nia. Qed.
+  Proof. rewrite <- eval_map_mul_div by assumption; f_equal; apply map_ext; intro; Z.div_mod_to_quot_rem_in_goal; f_equal; nia. Qed.
   Hint Rewrite eval_map_mul_div' using solve [ auto ] : push_eval.
 
   Lemma eval_flat_map_if A (f : A -> bool) g h p
@@ -932,7 +932,7 @@ Section mod_ops.
     cut (1 < weight 1); [ lia | ].
     cbv [weight Z.of_nat]; autorewrite with zsimplify_fast.
     apply Z.pow_gt_1; [ omega | ].
-    Z.div_mod_to_quot_rem; nia.
+    Z.div_mod_to_quot_rem_in_goal; nia.
   Qed.
 
   Derive carry_mulmod
@@ -1183,7 +1183,7 @@ Module Saturated.
 
     Lemma div_step a b c d : 0 < a -> 0 < b ->
                              (c / a + d) / b = (a * d + c) / (a * b).
-    Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
+    Proof. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
 
     Lemma add_mod_div_multiple a b n m:
       n > 0 ->
@@ -2662,10 +2662,10 @@ Section freeze_mod_ops.
       transitivity (weight n); [ omega | ].
       cbv [weight bytes_n].
       Z.peel_le.
-      rewrite Z.log2_up_pow2 by (Z.div_mod_to_quot_rem; nia).
+      rewrite Z.log2_up_pow2 by (Z.div_mod_to_quot_rem_in_goal; nia).
       autorewrite with push_Zof_nat.
-      rewrite Z2Nat.id by (Z.div_mod_to_quot_rem; nia).
-      Z.div_mod_to_quot_rem; nia. }
+      rewrite Z2Nat.id by (Z.div_mod_to_quot_rem_in_goal; nia).
+      Z.div_mod_to_quot_rem_in_goal; nia. }
     { cbv [to_bytesmod].
       rewrite Rows.flatten_partitions' by eauto using wprops, Rows.length_from_associational.
       rewrite Rows.eval_from_associational by (cbv [bytes_n]; eauto with omega).

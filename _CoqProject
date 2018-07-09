@@ -6615,10 +6615,12 @@ src/Util/ZUtil/Testbit.v
 src/Util/ZUtil/Z2Nat.v
 src/Util/ZUtil/ZSimplify.v
 src/Util/ZUtil/Zselect.v
+src/Util/ZUtil/Div/Bootstrap.v
 src/Util/ZUtil/Hints/Core.v
 src/Util/ZUtil/Hints/PullPush.v
 src/Util/ZUtil/Hints/ZArith.v
 src/Util/ZUtil/Hints/Ztestbit.v
+src/Util/ZUtil/Modulo/Bootstrap.v
 src/Util/ZUtil/Modulo/PullPush.v
 src/Util/ZUtil/Tactics/CompareToSgn.v
 src/Util/ZUtil/Tactics/DivModToQuotRem.v

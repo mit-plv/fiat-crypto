@@ -138,7 +138,7 @@ Lemma wrap_bound (a b : Z) (H : 0 < a) :
   0 <= wrap a b < 2^a.
 Proof.
   unfold wrap.
-  Z.div_mod_to_quot_rem.
+  Z.div_mod_to_quot_rem_in_goal.
   lia.
 Qed.
 
@@ -147,7 +147,7 @@ Lemma remove_outer_wrap (a a' b : Z) (H : 0 < a' <= a) :
 Proof.
   unfold wrap.
   apply Z.mod_small.
-  Z.div_mod_to_quot_rem.
+  Z.div_mod_to_quot_rem_in_goal.
   assert (2^a' <= 2^a) by (apply Z.pow_le_mono_r; lia).
   lia.
 Qed.
@@ -185,7 +185,7 @@ Qed.
 
 Lemma a_minus_b_div_2_plus_b (a b : Z) (H : a >= b) :
   (a - b) / 2 + b = (a + b) / 2.
-Proof. Z.div_mod_to_quot_rem; lia. Qed.
+Proof. Z.div_mod_to_quot_rem_in_goal; lia. Qed.
 
 Lemma p_bound (d bits : Z) (Hbits : 0 < bits) (H : 1 < d < 2^bits) :
   0 < Z.log2_up d <= bits.
@@ -218,11 +218,11 @@ Qed.
 
 Lemma division_shrinks (a b c : Z) (Hb : 0 < b) (H : 0 <= a < c) :
   a / b < c.
-Proof. Z.div_mod_to_quot_rem; nia. Qed.
+Proof. Z.div_mod_to_quot_rem_in_goal; nia. Qed.
 
 Lemma mul_div_ceil_ge (a b : Z) (Hb : 0 < b) :
   a <= b * ((a + b - 1) / b).
-Proof. Z.div_mod_to_quot_rem; nia. Qed.
+Proof. Z.div_mod_to_quot_rem_in_goal; nia. Qed.
 
 (** This is the main theorem this algorithm relies on. *)
 Lemma division_algorithm (bits n d k : Z)
@@ -380,6 +380,6 @@ Proof.
 
     (* And finish with the main theorem. *)
     rewrite (division_algorithm 32) by lia;
-    Z.div_mod_to_quot_rem;
+    Z.div_mod_to_quot_rem_in_goal;
     nia.
 Qed.

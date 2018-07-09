@@ -159,7 +159,7 @@ Module Z.
            + if c <? 0 then - X ((a / b) mod c) (a mod (c * b)) ((a mod (c * b)) / b) a b c (a / b) else 0.
   Proof.
     intros; break_match; Z.ltb_to_lt; rewrite ?Z.sub_0_r, ?Z.add_0_r;
-      assert (0 <> c * b) by nia; Z.div_mod_to_quot_rem; subst;
+      assert (0 <> c * b) by nia; Z.div_mod_to_quot_rem_in_goal; subst;
         destruct_head'_or; destruct_head'_and;
           try assert (b < 0) by omega;
           try assert (c < 0) by omega;
@@ -259,7 +259,7 @@ Module Z.
   Proof.
     destruct (Z_dec d 0) as [ [?|?] | ? ];
       try solve [ subst; autorewrite with zsimplify; simpl; split; reflexivity
-                | repeat first [ progress Z.div_mod_to_quot_rem
+                | repeat first [ progress Z.div_mod_to_quot_rem_in_goal
                                | progress subst
                                | progress break_innermost_match
                                | progress Z.ltb_to_lt
@@ -282,7 +282,7 @@ Module Z.
   Lemma mod_mod_0_0_eq x y : x mod y = 0 -> y mod x = 0 -> x = y \/ x = - y \/ x = 0 \/ y = 0.
   Proof.
     destruct (Z_zerop x), (Z_zerop y); eauto.
-    Z.div_mod_to_quot_rem; subst.
+    Z.div_mod_to_quot_rem_in_goal; subst.
     rewrite ?Z.add_0_r in *.
     match goal with
     | [ H : ?x = ?x * ?q * ?q' |- _ ]
