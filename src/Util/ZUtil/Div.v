@@ -201,7 +201,7 @@ Module Z.
     destruct c', d; cbn [Z.abs Z.sgn];
       rewrite ?Zdiv_0_r, ?Z.mul_0_r, ?Z.mul_0_l, ?Z.mul_1_l, ?Z.mul_1_r;
       try lia; intros ?? H;
-        Z.div_mod_to_quot_rem;
+        Z.div_mod_to_quot_rem_in_goal;
         subst.
     all: repeat match goal with
                 | [ H : context[_ * -1] |- _ ] => rewrite (Z.mul_add_distr_r _ _ (-1)), <- ?(Z.mul_comm (-1)), ?Z.mul_assoc in H
@@ -213,10 +213,10 @@ Module Z.
     all:lazymatch goal with
         | [ H : (Z.pos ?p * ?q + ?r) * Z.pos ?p' <= (Z.pos ?p' * ?q' + ?r') * Z.pos ?p |- _ ]
           => let H' := fresh in
-             assert (H' : q <= q' + (r' * Z.pos p - r * Z.pos p') / (Z.pos p * Z.pos p')) by (Z.div_mod_to_quot_rem; nia);
+             assert (H' : q <= q' + (r' * Z.pos p - r * Z.pos p') / (Z.pos p * Z.pos p')) by (Z.div_mod_to_quot_rem_in_goal; nia);
                revert H'
         end.
-    all:Z.div_mod_to_quot_rem; nia.
+    all:Z.div_mod_to_quot_rem_in_goal; nia.
   Qed.
 
   Lemma div_positive_gt_0 : forall a b, a > 0 -> b > 0 -> a mod b = 0 ->

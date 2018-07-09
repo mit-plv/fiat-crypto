@@ -1,4 +1,6 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.ZUtil.Div.Bootstrap.
+Require Import Crypto.Util.ZUtil.Modulo.Bootstrap.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
@@ -12,18 +14,22 @@ Module Z.
   Ltac generalize_div_eucl x y :=
     let H := fresh in
     let H' := fresh in
-    assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
-    generalize (Z.div_mod x y H'); clear H';
-    first [ assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
-            generalize (Z.mod_pos_bound x y H'); clear H'
-          | assert (H' : y < 0) by div_mod_to_quot_rem_inequality_solver;
-            generalize (Z.mod_neg_bound x y H'); clear H'
-          | assert (H' : y < 0 \/ 0 < y) by (apply Z.neg_pos_cases; div_mod_to_quot_rem_inequality_solver);
-            let H'' := fresh in
-            assert (H'' : y < x mod y <= 0 \/ 0 <= x mod y < y)
-              by (destruct H'; [ left; apply Z.mod_neg_bound; assumption
-                               | right; apply Z.mod_pos_bound; assumption ]);
-            clear H'; revert H'' ];
+    first
+      [ assert (H' : y <> 0) by div_mod_to_quot_rem_inequality_solver;
+        generalize (Z.div_mod x y H'); clear H';
+        first [ assert (H' : 0 < y) by div_mod_to_quot_rem_inequality_solver;
+                generalize (Z.mod_pos_bound x y H'); clear H'
+              | assert (H' : y < 0) by div_mod_to_quot_rem_inequality_solver;
+                generalize (Z.mod_neg_bound x y H'); clear H'
+              | assert (H' : y = 0) by div_mod_to_quot_rem_inequality_solver;
+                generalize (Z.div_0_r_eq x y H') (Z.mod_0_r_eq x y H'); clear H'
+              | assert (H' : y < 0 \/ 0 < y) by (apply Z.neg_pos_cases; div_mod_to_quot_rem_inequality_solver);
+                let H'' := fresh in
+                assert (H'' : y < x mod y <= 0 \/ 0 <= x mod y < y)
+                  by (destruct H'; [ left; apply Z.mod_neg_bound; assumption
+                                   | right; apply Z.mod_pos_bound; assumption ]);
+                clear H'; revert H'' ]
+      | generalize (Z.div_mod_cases x y) ];
     let q := fresh "q" in
     let r := fresh "r" in
     set (q := x / y) in *;
@@ -36,5 +42,12 @@ Module Z.
     | [ |- context[?x mod ?y] ] => generalize_div_eucl x y
     end.
 
-  Ltac div_mod_to_quot_rem := repeat div_mod_to_quot_rem_step; intros.
+  Ltac div_mod_to_quot_rem_hyps_step :=
+    match goal with
+    | [ H : context[?x / ?y] |- _ ] => generalize_div_eucl x y
+    | [ H : context[?x mod ?y] |- _ ] => generalize_div_eucl x y
+    end.
+
+  Ltac div_mod_to_quot_rem := repeat first [ div_mod_to_quot_rem_step | div_mod_to_quot_rem_hyps_step ]; intros.
+  Ltac div_mod_to_quot_rem_in_goal := repeat div_mod_to_quot_rem_step; intros.
 End Z.

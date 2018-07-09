@@ -145,8 +145,8 @@ Section barrett.
         pose proof (Z.mod_pos_bound (b ^ (2*k)) n).
         assert (0 < b ^ (k - offset)) by auto with zarith.
         assert (a/n < b ^ k) by auto using Z.div_lt_upper_bound with zarith.
-        assert (b ^ (2 * k) - m * n = b ^ (2 * k) mod n) by (subst m; Z.div_mod_to_quot_rem; nia).
-        autorewrite with push_Zpow in *; Z.div_mod_to_quot_rem; nia.
+        assert (b ^ (2 * k) - m * n = b ^ (2 * k) mod n) by (subst m; Z.div_mod_to_quot_rem_in_goal; nia).
+        autorewrite with push_Zpow in *; Z.div_mod_to_quot_rem_in_goal; nia.
       Qed.
 
       Lemma helper_2 : n * (a / n) - b ^ (k - offset) < b ^ (k - offset) * (a / b ^ (k - offset)).
@@ -154,7 +154,7 @@ Section barrett.
         pose proof (Z.mod_pos_bound a n).
         pose proof (Z.mod_pos_bound a (b ^ (k - offset))).
         assert (0 < b ^ (k - offset)) by auto with zarith.
-        Z.div_mod_to_quot_rem; lia.
+        Z.div_mod_to_quot_rem_in_goal; lia.
       Qed.
 
       Let epsilon := (a / n) * b ^ (k+offset) - (a / b ^ (k - offset)) * m.
@@ -162,7 +162,7 @@ Section barrett.
       Lemma q_epsilon : q = (a / n) + (- epsilon) / b ^ (k + offset).
       Proof.
         subst q epsilon.
-        autorewrite with push_Zpow in *; do 2 Z.div_mod_to_quot_rem; nia.
+        autorewrite with push_Zpow in *; do 2 Z.div_mod_to_quot_rem_in_goal; nia.
       Qed.
 
       Lemma epsilon_lower : - b ^ (k + offset) < epsilon.
@@ -170,7 +170,7 @@ Section barrett.
         pose proof q_epsilon as Hq_epsilon.
         rewrite (proj2_sig q_nice) in Hq_epsilon.
         cut (- epsilon / b ^ (k + offset) <= 0);
-          [ Z.div_mod_to_quot_rem | break_match_hyps ]; nia.
+          [ Z.div_mod_to_quot_rem_in_goal | break_match_hyps ]; nia.
       Qed.
 
       Lemma m_pos : 0 < m.
@@ -192,7 +192,7 @@ Section barrett.
         exists (0 <? epsilon).
         rewrite q_epsilon.
         pose proof epsilon_bound. pose proof epsilon_lower.
-        break_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem; nia.
+        break_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem_in_goal; nia.
       Qed.
 
       Lemma q_bound : a / n - 1 <= q.

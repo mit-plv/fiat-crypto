@@ -2441,10 +2441,10 @@ Module BarrettReduction.
     Proof.
       cbv [mul_high Let_In]; rewrite Z.pow_add_r, Z.pow_1_r by omega; intros.
       assert (4 <= 2 ^ k) by (transitivity (Z.pow 2 2); auto with zarith).
-      assert (0 <= x * y / 2^k < 2^k*2^k) by (Z.div_mod_to_quot_rem; nia).
+      assert (0 <= x * y / 2^k < 2^k*2^k) by (Z.div_mod_to_quot_rem_in_goal; nia).
 
       rewrite mul_high_idea with (a:=x) (b:=y) (a0 := low a) (a1 := high a) (b0 := low b) (b1 := high b) in *
-        by (push_rep; Z.div_mod_to_quot_rem; lia).
+        by (push_rep; Z.div_mod_to_quot_rem_in_goal; lia).
 
       push_rep. subst a0b1.
       assert (y / 2 ^ k < 2) by (apply Z.div_lt_upper_bound; omega).
@@ -2453,7 +2453,7 @@ Module BarrettReduction.
 
       eapply represents_trans.
       { repeat (apply wideadd_represents;
-                [ | apply represents_small; Z.div_mod_to_quot_rem; nia| ]).
+                [ | apply represents_small; Z.div_mod_to_quot_rem_in_goal; nia| ]).
         erewrite represents_high; [ | apply widemul_represents; solve [ auto with zarith ] ].
         { apply represents_add; try reflexivity; solve [auto with zarith]. }
         { match goal with H : 0 <= ?x + ?y < ?z |- 0 <= ?x < ?z =>
@@ -2518,7 +2518,7 @@ Module BarrettReduction.
         (* assertions to help arith tactics *)
         pose proof x_bounds.
         assert (2^k * M < 2 ^ (2*k)) by (rewrite <-Z.add_diag, Z.pow_add_r; nia).
-        assert (0 <= x / (2 ^ k * (2 ^ k / 2)) < 2) by (Z.div_mod_to_quot_rem; auto with nia).
+        assert (0 <= x / (2 ^ k * (2 ^ k / 2)) < 2) by (Z.div_mod_to_quot_rem_in_goal; auto with nia).
         assert (0 < 2 ^ k / 2) by Z.zero_bounds.
         assert (2 ^ (k - 1) <> 0) by auto with zarith.
         assert (2 < 2 ^ k) by (eapply Z.le_lt_trans with (m:=2 ^ 1); auto with zarith).

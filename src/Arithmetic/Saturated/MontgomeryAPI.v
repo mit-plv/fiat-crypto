@@ -395,7 +395,7 @@ Section API.
       eapply small_left_append; eauto.
       rewrite @B.Positional.sat_add_div by omega.
       repeat match goal with H:_|-_=> unique pose proof (eval_small _ _ H) end.
-      cbv [eval] in *; Z.div_mod_to_quot_rem; nia.
+      cbv [eval] in *; Z.div_mod_to_quot_rem_in_goal; nia.
     Qed.
 
     Lemma small_join0 {n} b : small b -> small (@join0 n b).

@@ -891,7 +891,7 @@ Module Z.
   Hint Rewrite sub_mod_mod_0 : zsimplify.
 
   Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
-  Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
+  Proof. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
   Hint Rewrite div_between using zutil_arith : zsimplify.
 
   Lemma mod_small_n n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a mod b = a - n * b.
@@ -1371,7 +1371,7 @@ Module Z.
                => solve [ transitivity (-0); auto with zarith ]
              end.
     { repeat match goal with H : context[_ mod _] |- _ => revert H end;
-        Z.div_mod_to_quot_rem; nia. }
+        Z.div_mod_to_quot_rem_in_goal; nia. }
   Qed.
 
   Lemma shiftl_le_Proper1 x
@@ -1424,7 +1424,7 @@ Module Z.
                   assert (Hn : x <> y) by congruence;
                     assert (x < y) by omega; clear H Hn
              | _ => solve [ repeat match goal with H : context[_ mod _] |- _ => revert H end;
-                            Z.div_mod_to_quot_rem; subst;
+                            Z.div_mod_to_quot_rem_in_goal; subst;
                             lazymatch goal with
                             | [ |- _ <= (?a * ?q + ?r) * ?q' ]
                               => transitivity (q * (a * q') + r * q');
@@ -1438,10 +1438,10 @@ Module Z.
       assert (1 < 2^(y'-y)) by auto with zarith.
       assert (0 < x / 2^y)
         by (repeat match goal with H : context[_ mod _] |- _ => revert H end;
-            Z.div_mod_to_quot_rem; nia).
+            Z.div_mod_to_quot_rem_in_goal; nia).
       assert (2^y <= x)
         by (repeat match goal with H : context[_ / _] |- _ => revert H end;
-            Z.div_mod_to_quot_rem; nia).
+            Z.div_mod_to_quot_rem_in_goal; nia).
       match goal with
       | [ |- ?x + 1 <= ?y ] => cut (x < y); [ omega | ]
       end.

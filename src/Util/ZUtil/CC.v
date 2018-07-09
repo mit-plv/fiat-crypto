@@ -27,6 +27,6 @@ Module Z.
            | _ => apply Z.div_lt_upper_bound
            | _ => solve [Z.zero_bounds]
            end.
-    Z.div_mod_to_quot_rem; lia.
+    Z.div_mod_to_quot_rem_in_goal; lia.
   Qed.
 End Z.
