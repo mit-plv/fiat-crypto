@@ -5,6 +5,7 @@
 /* s = 0x8000000000000000000000000000000000000000000000000000000000000000 (from "2^255") */
 /* c = [(1, 19)] (from "1,19") */
 /* machine_wordsize = 32 (from "32") */
+/* use_saturated_bounds = false (from "false") */
 
 #include <stdint.h>
 typedef unsigned char fiat_25519_uint1;

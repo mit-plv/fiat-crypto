@@ -5,6 +5,7 @@
 /* s = 0x20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 (from "2^521") */
 /* c = [(1, 1)] (from "1,1") */
 /* machine_wordsize = 64 (from "64") */
+/* use_saturated_bounds = false (from "false") */
 
 #include <stdint.h>
 typedef unsigned char fiat_p521_uint1;

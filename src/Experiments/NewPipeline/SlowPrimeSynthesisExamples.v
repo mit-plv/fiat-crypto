@@ -16,60 +16,61 @@ Module X25519_64.
   Definition s := 2^255.
   Definition c := [(1, 19)].
   Definition machine_wordsize := 64.
-  Local Notation tight_bounds := (tight_bounds n s c).
-  Local Notation loose_bounds := (loose_bounds n s c).
+
+  Local Notation tight_bounds := (tight_bounds n s c machine_wordsize false).
+  Local Notation loose_bounds := (loose_bounds n s c machine_wordsize false).
   Local Notation prime_bound := (prime_bound s c).
 
   Derive base_51_relax
-         SuchThat (rrelax_correctT n s c machine_wordsize base_51_relax)
+         SuchThat (rrelax_correctT n s c machine_wordsize false base_51_relax)
          As base_51_relax_correct.
   Proof. Time solve_rrelax machine_wordsize. Time Qed.
   Derive base_51_carry_mul
-         SuchThat (rcarry_mul_correctT n s c machine_wordsize base_51_carry_mul)
+         SuchThat (rcarry_mul_correctT n s c machine_wordsize false base_51_carry_mul)
          As base_51_carry_mul_correct.
   Proof. Time solve_rcarry_mul machine_wordsize. Time Qed.
   Derive base_51_carry
-         SuchThat (rcarry_correctT n s c machine_wordsize base_51_carry)
+         SuchThat (rcarry_correctT n s c machine_wordsize false base_51_carry)
          As base_51_carry_correct.
   Proof. Time solve_rcarry machine_wordsize. Time Qed.
   Derive base_51_add
-         SuchThat (radd_correctT n s c machine_wordsize base_51_add)
+         SuchThat (radd_correctT n s c machine_wordsize false base_51_add)
          As base_51_add_correct.
   Proof. Time solve_radd machine_wordsize. Time Qed.
   Derive base_51_sub
-         SuchThat (rsub_correctT n s c machine_wordsize base_51_sub)
+         SuchThat (rsub_correctT n s c machine_wordsize false base_51_sub)
          As base_51_sub_correct.
   Proof. Time solve_rsub machine_wordsize. Time Qed.
   Derive base_51_opp
-         SuchThat (ropp_correctT n s c machine_wordsize base_51_opp)
+         SuchThat (ropp_correctT n s c machine_wordsize false base_51_opp)
          As base_51_opp_correct.
   Proof. Time solve_ropp machine_wordsize. Time Qed.
   Derive base_51_to_bytes
-         SuchThat (rto_bytes_correctT n s c machine_wordsize base_51_to_bytes)
+         SuchThat (rto_bytes_correctT n s c machine_wordsize false base_51_to_bytes)
          As base_51_to_bytes_correct.
   Proof. Time solve_rto_bytes machine_wordsize. Time Qed.
   Derive base_51_from_bytes
-         SuchThat (rfrom_bytes_correctT n s c machine_wordsize base_51_from_bytes)
+         SuchThat (rfrom_bytes_correctT n s c machine_wordsize false base_51_from_bytes)
          As base_51_from_bytes_correct.
   Proof. Time solve_rfrom_bytes machine_wordsize. Time Qed.
   Derive base_51_encode
-         SuchThat (rencode_correctT n s c machine_wordsize base_51_encode)
+         SuchThat (rencode_correctT n s c machine_wordsize false base_51_encode)
          As base_51_encode_correct.
   Proof. Time solve_rencode machine_wordsize. Time Qed.
   Derive base_51_zero
-         SuchThat (rzero_correctT n s c machine_wordsize base_51_zero)
+         SuchThat (rzero_correctT n s c machine_wordsize false base_51_zero)
          As base_51_zero_correct.
   Proof. Time solve_rzero machine_wordsize. Time Qed.
   Derive base_51_one
-         SuchThat (rone_correctT n s c machine_wordsize base_51_one)
+         SuchThat (rone_correctT n s c machine_wordsize false base_51_one)
          As base_51_one_correct.
   Proof. Time solve_rone machine_wordsize. Time Qed.
   Lemma base_51_curve_good
     : check_args n s c machine_wordsize (ErrorT.Success tt) = ErrorT.Success tt.
   Proof. vm_compute; reflexivity. Qed.
 
-  Definition base_51_good : GoodT n s c machine_wordsize
-    := Good n s c machine_wordsize
+  Definition base_51_good : GoodT n s c machine_wordsize false
+    := Good n s c machine_wordsize false
             base_51_curve_good
             base_51_carry_mul_correct
             base_51_carry_correct
@@ -190,50 +191,50 @@ Module X25519_32.
   Definition machine_wordsize := 32.
 
   Derive base_25p5_relax
-         SuchThat (rrelax_correctT n s c machine_wordsize base_25p5_relax)
+         SuchThat (rrelax_correctT n s c machine_wordsize false base_25p5_relax)
          As base_25p5_relax_correct.
   Proof. Time solve_rrelax machine_wordsize. Time Qed.
   Derive base_25p5_carry_mul
-         SuchThat (rcarry_mul_correctT n s c machine_wordsize base_25p5_carry_mul)
+         SuchThat (rcarry_mul_correctT n s c machine_wordsize false base_25p5_carry_mul)
          As base_25p5_carry_mul_correct.
   Proof. Time solve_rcarry_mul machine_wordsize. Time Qed.
   Derive base_25p5_carry
-         SuchThat (rcarry_correctT n s c machine_wordsize base_25p5_carry)
+         SuchThat (rcarry_correctT n s c machine_wordsize false base_25p5_carry)
          As base_25p5_carry_correct.
   Proof. Time solve_rcarry machine_wordsize. Time Qed.
   Derive base_25p5_add
-         SuchThat (radd_correctT n s c machine_wordsize base_25p5_add)
+         SuchThat (radd_correctT n s c machine_wordsize false base_25p5_add)
          As base_25p5_add_correct.
   Proof. Time solve_radd machine_wordsize. Time Qed.
   Derive base_25p5_sub
-         SuchThat (rsub_correctT n s c machine_wordsize base_25p5_sub)
+         SuchThat (rsub_correctT n s c machine_wordsize false base_25p5_sub)
          As base_25p5_sub_correct.
   Proof. Time solve_rsub machine_wordsize. Time Qed.
   Derive base_25p5_opp
-         SuchThat (ropp_correctT n s c machine_wordsize base_25p5_opp)
+         SuchThat (ropp_correctT n s c machine_wordsize false base_25p5_opp)
          As base_25p5_opp_correct.
   Proof. Time solve_ropp machine_wordsize. Time Qed.
   (* These are very, very, very slow *)
   (*
   Derive base_25p5_to_bytes
-         SuchThat (rto_bytes_correctT n s c machine_wordsize base_25p5_to_bytes)
+         SuchThat (rto_bytes_correctT n s c machine_wordsize false base_25p5_to_bytes)
          As base_25p5_to_bytes_correct.
   Proof. Time solve_rto_bytes machine_wordsize. Time Qed.
   Derive base_25p5_from_bytes
-         SuchThat (rfrom_bytes_correctT n s c machine_wordsize base_25p5_from_bytes)
+         SuchThat (rfrom_bytes_correctT n s c machine_wordsize false base_25p5_from_bytes)
          As base_25p5_from_bytes_correct.
   Proof. Time solve_rfrom_bytes machine_wordsize. Time Qed.
    *)
   Derive base_25p5_encode
-         SuchThat (rencode_correctT n s c machine_wordsize base_25p5_encode)
+         SuchThat (rencode_correctT n s c machine_wordsize false base_25p5_encode)
          As base_25p5_encode_correct.
   Proof. Time solve_rencode machine_wordsize. Time Qed.
   Derive base_25p5_zero
-         SuchThat (rzero_correctT n s c machine_wordsize base_25p5_zero)
+         SuchThat (rzero_correctT n s c machine_wordsize false base_25p5_zero)
          As base_25p5_zero_correct.
   Proof. Time solve_rzero machine_wordsize. Time Qed.
   Derive base_25p5_one
-         SuchThat (rone_correctT n s c machine_wordsize base_25p5_one)
+         SuchThat (rone_correctT n s c machine_wordsize false base_25p5_one)
          As base_25p5_one_correct.
   Proof. Time solve_rone machine_wordsize. Time Qed.
   Lemma base_25p5_curve_good
@@ -241,8 +242,8 @@ Module X25519_32.
   Proof. vm_compute; reflexivity. Qed.
 
   (*
-  Definition base_25p5_good : GoodT n s c machine_wordsize
-    := Good n s c machine_wordsize
+  Definition base_25p5_good : GoodT n s c machine_wordsize false
+    := Good n s c machine_wordsize false
             base_25p5_curve_good
             base_25p5_carry_mul_correct
             base_25p5_carry_correct

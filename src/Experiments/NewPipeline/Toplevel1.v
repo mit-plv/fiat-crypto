@@ -1310,7 +1310,8 @@ Module Import UnsaturatedSolinas.
     Context (n : nat)
             (s : Z)
             (c : list (Z * Z))
-            (machine_wordsize : Z).
+            (machine_wordsize : Z)
+            (use_saturated_bounds : bool).
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (seq 0 n ++ [0; 1])%list%nat.
@@ -1345,9 +1346,13 @@ Module Import UnsaturatedSolinas.
     Let relax_zrange := relax_zrange_of_machine_wordsize.
     Let relax_zrange_with_bytes := relax_zrange_of_machine_wordsize_with_bytes.
     Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
-      := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
+      := if use_saturated_bounds
+         then invert_Some saturated_bounds
+         else List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
     Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
-      := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
+      := if use_saturated_bounds
+         then invert_Some saturated_bounds
+         else List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
 
 
     (** Note: If you change the name or type signature of this
@@ -1722,8 +1727,9 @@ Module Import UnsaturatedSolinas.
                      | reflexivity
                      | lia
                      | rewrite expr.interp_reify_list, ?map_map
-                     | rewrite map_ext with (g:=id), map_id
+                     | progress destruct_head'_bool
                      | progress distr_length
+                     | rewrite map_ext with (g:=id), map_id
                      | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
                      | progress cbv [Qle] in *
                      | progress cbn -[reify_list] in *
@@ -1873,16 +1879,29 @@ Module Import UnsaturatedSolinas.
             { lazymatch goal with
               | [ H : eval _ _ _ = ?x |- _ <= _ < 2 * ?x ] => rewrite <- H
               end.
-              cbv [m_enc tight_bounds tight_upperbounds prime_upperbound_list] in H15 |- *.
+              cbv [m_enc tight_bounds tight_upperbounds prime_upperbound_list saturated_bounds invert_Some] in H15 |- *.
               eapply eval_is_bounded_by with (wt:=weight (Qnum limbwidth) (QDen limbwidth)) in H15.
-              2:rewrite <- (map_map _ (@Some _)); reflexivity.
+              2:rewrite <- (map_map _ (@Some _)), <- (map_repeat (@Some _)), (Bool.pull_bool_if (map (@Some _))); reflexivity.
               2:distr_length; reflexivity.
-              rewrite ?map_map in *.
-              cbn [lower upper] in *.
+              repeat match goal with
+                     | [ H : context[List.length (if _ then _ else _)] |- _ ]
+                       => rewrite <- (Bool.pull_bool_if (@List.length _)) in H;
+                            progress autorewrite with distr_length in H
+                     | [ H : context[map ?f (if _ then _ else _)] |- _ ]
+                       => rewrite <- (Bool.pull_bool_if (map f)) in H
+                     | [ H : context[map _ (map _ _)] |- _ ] => rewrite map_map in H
+                     | [ H : context[map _ (List.repeat _ _)] |- _ ]
+                       => rewrite map_repeat in H
+                     | [ H : context[map (fun _ => ?v) ?ls] |- _ ]
+                       => rewrite map_const in H
+                     | [ H : context[match ?b with true => ?x | false => ?x end] |- _ ]
+                       => rewrite (@Bool.if_const _ b x) in H
+                     | _ => progress cbn [upper lower] in *
+                     | _ => progress autorewrite with distr_length in *
+                     end.
               split.
               { etransitivity; [ erewrite <- eval_zeros | apply H15 ].
-                apply Z.eq_le_incl; f_equal.
-                repeat match goal with H : _ |- _ => revert H end; exact admit. }
+                apply Z.eq_le_incl; f_equal. }
               { eapply Z.le_lt_trans; [ apply H15 | ].
                 assert (Hlen : length (encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1)) = n) by distr_length.
                 revert Hlen.
