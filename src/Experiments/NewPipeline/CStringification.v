@@ -122,7 +122,10 @@ Module Compilers.
                => fun with_parens '((x, xs) : f s * type.for_each_lhs_of_arrow f d)
                   => let _ : Show (f s) := show_f s in
                      let _ : Show (type.for_each_lhs_of_arrow f d) := @show_for_each_lhs_of_arrow base_type f show_f d in
-                     show with_parens (x, xs)
+                     match d with
+                     | type.base _ => show with_parens x
+                     | type.arrow _ _ => maybe_wrap_parens with_parens (show true x ++ ", " ++ show false xs)
+                     end
              end.
         Global Existing Instance show_for_each_lhs_of_arrow.
 
@@ -184,18 +187,15 @@ Module Compilers.
            | _, _ => fst xr lvl
            end.
 
-      Fixpoint show_application (with_casts : bool) {t : type} (f : nat -> string) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t)
+      Definition show_application (with_casts : bool) {t : type} (f : nat -> string) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t)
         : nat -> string
         := match t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> nat -> string with
            | type.base _ => fun 'tt lvl => f lvl
            | type.arrow s d
-             => fun '(x, xs) lvl
-                => @show_application
-                     with_casts d
-                     (fun lvl'
-                      => maybe_wrap_parens (Nat.ltb lvl' 11) (f 11%nat ++ " @ " ++ maybe_wrap_cast with_casts x 10%nat))
-                     xs
-                     lvl
+             => fun xs lvl
+                => let _ : forall t, Show ((nat -> string) * ZRange.type.option.interp t)%type
+                       := (fun t with_parens x => maybe_wrap_cast with_casts x 10%nat) in
+                   maybe_wrap_parens (Nat.ltb lvl 11) (f 11%nat ++ show true xs)
            end args.
 
       Module ident.
@@ -506,16 +506,17 @@ Module Compilers.
                                    | Some c => " : " ++ c
                                    | None => ""
                                    end in
-                     let expr_let_line := "expr_let " ++ n ++ ty_str ++ " := " in
+                     let expr_let_line := "expr_let " ++ n ++ " := " in
                      (idx,
                       (fun lvl
                        => match show_x 200%nat with
-                          | nil => [expr_let_line ++ "(* NOTHING‽ *) in"]%string ++ show_f 200%nat
-                          | show_x::nil => [expr_let_line ++ show_x ++ " in"]%string ++ show_f 200%nat
+                          | nil => [expr_let_line ++ "(* NOTHING‽ *) (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
+                          | show_x::nil => [expr_let_line ++ show_x ++ " (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
                           | show_x::rest
                             => ([expr_let_line ++ show_x]%string)
                                  ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
                                               rest)
+                                 ++ ["(*" ++ ty_str ++ " *)"]%string
                                  ++ ["in"]
                                  ++ show_f 200%nat
                           end%list),
@@ -529,19 +530,20 @@ Module Compilers.
                                    | Some c => " : " ++ c
                                    | None => ""
                                    end in
-                     let expr_let_line := "expr_let " ++ n ++ ty_str ++ " := " in
+                     let expr_let_line := "expr_let " ++ n ++ " := " in
                      (idx,
                       (fun lvl
                        => (["("]
                              ++ (map
                                    (String " ")
                                    match show_x 200%nat with
-                                   | nil => [expr_let_line ++ "(* NOTHING‽ *) in"]%string ++ show_f 200%nat
-                                   | show_x::nil => [expr_let_line ++ show_x ++ " in"]%string ++ show_f 200%nat
+                                   | nil => [expr_let_line ++ "(* NOTHING‽ *) (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
+                                   | show_x::nil => [expr_let_line ++ show_x ++ " (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
                                    | show_x::rest
                                      => ([expr_let_line ++ show_x]%string)
                                           ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
                                                        rest)
+                                          ++ ["(*" ++ ty_str ++ " *)"]%string
                                           ++ ["in"]
                                           ++ show_f 200%nat
                                    end%list)
@@ -562,8 +564,9 @@ Module Compilers.
                   maybe_wrap_parens with_parens ("expr_let _ := " ++ show_x ++ " in _")
              end%string.
         Definition partially_show_expr {var t} : Show (@expr.expr base.type ident var t) := show_var_expr.
+        Local Notation default_with_casts := false.
         Global Instance show_lines_expr {t} : ShowLines (@expr.expr base.type ident (fun _ => string) t)
-          := fun with_parens e => let '(_, v, _) := show_eta_cps (fun t e args idx => @show_expr_lines true t e args idx) 1%positive e in v (if with_parens then 0%nat else 201%nat).
+          := fun with_parens e => let '(_, v, _) := show_eta_cps (fun t e args idx => @show_expr_lines default_with_casts t e args idx) 1%positive e in v (if with_parens then 0%nat else 201%nat).
         Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base.type ident t)
           := fun with_parens e => show_lines with_parens (e _).
         Global Instance show_expr {t} : Show (@expr.expr base.type ident (fun _ => string) t)
@@ -1412,18 +1415,22 @@ Module Compilers.
                | _ => fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string
                end.
 
-          Definition bounds_check (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
+          Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
             : ErrT unit
-            := let _ := @PHOAS.expr.partially_show_expr in
-               match found with
-               | None => inr ["Missing range on " ++ descr ++ " " ++ show true idc ++ ": " ++ show true ev]%string
-               | Some ty
-                 => if int.is_tighter_than ty (int.of_zrange_relaxed r[0~>2^s-1])
-                   then ret tt
-                   else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (" ++ show false (int.of_zrange_relaxed r[0~>2^s-1]) ++ "), but found a " ++ show false ty ++ "."]%string
-               end.
+            := if negb do_bounds_check
+               then ret tt
+               else
+                 let _ := @PHOAS.expr.partially_show_expr in
+                 match found with
+                 | None => inr ["Missing range on " ++ descr ++ " " ++ show true idc ++ ": " ++ show true ev]%string
+                 | Some ty
+                   => if int.is_tighter_than ty (int.of_zrange_relaxed r[0~>2^s-1])
+                      then ret tt
+                      else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (" ++ show false (int.of_zrange_relaxed r[0~>2^s-1]) ++ "), but found a " ++ show false ty ++ "."]%string
+                 end.
 
           Let recognize_3arg_2ref_ident
+                     (do_bounds_check : bool)
                      (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
                      (idc : ident.ident t)
                      (rout : option int.type * option int.type)
@@ -1435,10 +1442,10 @@ Module Compilers.
                with
                | Some s, ident.Z_mul_split
                  => (_ ,, _ ,, _ ,, _
-                      <- bounds_check "first argument to" idc s e1v r1,
-                    bounds_check "second argument to" idc s e2v r2,
-                    bounds_check "first return value of" idc s e2v (fst rout),
-                    bounds_check "second return value of" idc s e2v (snd rout);
+                      <- bounds_check do_bounds_check "first argument to" idc s e1v r1,
+                    bounds_check do_bounds_check "second argument to" idc s e2v r2,
+                    bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
+                    bounds_check do_bounds_check "second return value of" idc s e2v (snd rout);
                       inl (fun retptr => [Call (Z_mul_split s @@ (retptr, (e1, e2)))%Cexpr]))
                | Some s, ident.Z_add_get_carry as idc
                | Some s, ident.Z_sub_get_borrow as idc
@@ -1448,16 +1455,17 @@ Module Compilers.
                                                        | _ => None
                                                        end in
                    (_ ,, _ ,, _ ,, _
-                      <- bounds_check "first argument to" idc s e1v r1,
-                    bounds_check "second argument to" idc s e2v r2,
-                    bounds_check "first return value of" idc s e2v (fst rout),
-                    bounds_check "second return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout);
+                      <- bounds_check do_bounds_check "first argument to" idc s e1v r1,
+                    bounds_check do_bounds_check "second argument to" idc s e2v r2,
+                    bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
+                    bounds_check do_bounds_check "second return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout);
                       inl (fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
                | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                end.
 
           Let recognize_4arg_2ref_ident
+                     (do_bounds_check : bool)
                      (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
                      (idc : ident.ident t)
                      (rout : option int.type * option int.type)
@@ -1475,11 +1483,11 @@ Module Compilers.
                                                        | _ => None
                                                        end in
                    (_ ,, _ ,, _ ,, _ ,, _
-                      <- (bounds_check "first (carry) argument to" idc 1 e1v r1,
-                         bounds_check "second argument to" idc s e2v r2,
-                         bounds_check "third argument to" idc s e2v r2,
-                         bounds_check "first return value of" idc s e2v (fst rout),
-                         bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
+                      <- (bounds_check do_bounds_check "first (carry) argument to" idc 1 e1v r1,
+                         bounds_check do_bounds_check "second argument to" idc s e2v r2,
+                         bounds_check do_bounds_check "third argument to" idc s e2v r2,
+                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
+                         bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
                       inl (fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
                | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
@@ -1487,7 +1495,8 @@ Module Compilers.
 
           Let recognize_2ref_ident
                      {t}
-            : forall (idc : ident.ident t)
+            : forall (do_bounds_check : bool)
+                (idc : ident.ident t)
                 (rout : option int.type * option int.type)
                 (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t),
               ErrT (arith_expr (type.Zptr * type.Zptr) -> expr)
@@ -1496,7 +1505,7 @@ Module Compilers.
                  => recognize_3arg_2ref_ident
                | (type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base (base.type.Z * base.type.Z))%etype
                  => recognize_4arg_2ref_ident
-               | _ => fun idc rout args => inr ["Unrecognized type for function call: " ++ show false t ++ " (when trying to handle the identifer " ++ show false idc ++ ")"]%string
+               | _ => fun do_bounds_check idc rout args => inr ["Unrecognized type for function call: " ++ show false t ++ " (when trying to handle the identifer " ++ show false idc ++ ")"]%string
                end.
 
           Definition declare_name
@@ -1549,6 +1558,7 @@ Module Compilers.
                end.
 
           Let make_assign_arg_2ref
+                     (do_bounds_check : bool)
                      (e : @Compilers.expr.expr base.type ident.ident var_data (base.type.Z * base.type.Z))
                      (count : positive)
                      (make_name : positive -> option string)
@@ -1562,7 +1572,7 @@ Module Compilers.
                match invert_AppIdent_curried e with
                | Some (existT t (idc, args))
                  => args <- arith_expr_of_PHOAS_args args;
-                     idce <- recognize_2ref_ident idc (rout1, rout2) args;
+                     idce <- recognize_2ref_ident do_bounds_check idc (rout1, rout2) args;
                      v1,, v2 <- (declare_name (show false idc) count make_name rout1,
                                 declare_name (show false idc) (Pos.succ count) make_name rout2);
                      let '(decls1, n1, retv1) := v1 in
@@ -1572,6 +1582,7 @@ Module Compilers.
                end.
 
           Let make_assign_arg_ref
+                     (do_bounds_check : bool)
                      {t}
             : forall (e : @Compilers.expr.expr base.type ident.ident var_data t)
                 (count : positive)
@@ -1580,7 +1591,7 @@ Module Compilers.
             := let _ := @PHOAS.expr.partially_show_expr in
                match t with
                | type.base base.type.Z => make_assign_arg_1ref_opt
-               | type.base (base.type.Z * base.type.Z)%etype => make_assign_arg_2ref
+               | type.base (base.type.Z * base.type.Z)%etype => make_assign_arg_2ref do_bounds_check
                | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show false t ++ " (with expression " ++ show true e ++ ")"]
                end.
 
@@ -1592,6 +1603,7 @@ Module Compilers.
                end%positive.
 
           Let make_uniform_assign_expr_of_PHOAS
+                     (do_bounds_check : bool)
                      {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
                      {d} (e2 : var_data s -> var_data d -> ErrT expr)
                      (count : positive)
@@ -1599,13 +1611,14 @@ Module Compilers.
                      (vd : var_data d)
             : ErrT expr
             := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
-               e1_vs <- make_assign_arg_ref e1 count make_name;
+               e1_vs <- make_assign_arg_ref do_bounds_check e1 count make_name;
                  let '(e1, vs) := e1_vs in
                  e2 <- e2 vs vd;
                    ret (e1 ++ e2)%list.
 
           (* See above comment about extraction issues *)
           Definition make_assign_expr_of_PHOAS
+                     (do_bounds_check : bool)
                      {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
                      {s' d} (e2 : var_data s' -> var_data d -> ErrT expr)
                      (count : positive)
@@ -1614,11 +1627,12 @@ Module Compilers.
             : ErrT expr
             := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS] in
                 match type.try_transport base.try_make_transport_cps _ _ s' e1 with
-                | Some e1 => make_uniform_assign_expr_of_PHOAS e1 e2 count make_name v
+                | Some e1 => make_uniform_assign_expr_of_PHOAS do_bounds_check e1 e2 count make_name v
                 | None => inr [report_type_mismatch s' s]
                 end.
 
           Fixpoint expr_of_base_PHOAS
+                   (do_bounds_check : bool)
                    {t}
                    (e : @Compilers.expr.expr base.type ident.ident var_data t)
                    (count : positive)
@@ -1628,8 +1642,9 @@ Module Compilers.
             := match e in expr.expr t return var_data t -> ErrT expr with
                | expr.LetIn (type.base s) d e1 e2
                  => make_assign_expr_of_PHOAS
+                      do_bounds_check
                      e1
-                     (fun vs vd => @expr_of_base_PHOAS d (e2 vs) (size_of_type s + count)%positive make_name vd)
+                     (fun vs vd => @expr_of_base_PHOAS do_bounds_check d (e2 vs) (size_of_type s + count)%positive make_name vd)
                      count make_name
                | expr.LetIn (type.arrow _ _) _ _ _ as e
                | expr.Var _ _ as e
@@ -1687,6 +1702,7 @@ Module Compilers.
                end.
 
           Fixpoint expr_of_PHOAS'
+                   (do_bounds_check : bool)
                    {t}
                    (e : @Compilers.expr.expr base.type ident.ident var_data t)
                    (make_in_name : positive -> option string)
@@ -1701,13 +1717,13 @@ Module Compilers.
                match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> var_data (type.final_codomain t) -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr) with
                | type.base t
                  => fun e tt vd
-                   => rv <- expr_of_base_PHOAS e (in_to_body_count count) make_name vd;
+                   => rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
                        ret (tt, vd, rv)
                | type.arrow s d
                  => fun e '(inbound, inbounds) vd
                    => match var_data_of_bounds count make_in_name inbound, invert_Abs e with
                      | Some (count, vs), Some f
-                       => retv <- @expr_of_PHOAS' d (f vs) make_in_name make_name inbounds vd count in_to_body_count;
+                       => retv <- @expr_of_PHOAS' do_bounds_check d (f vs) make_in_name make_name inbounds vd count in_to_body_count;
                            let '(vss, vd, rv) := retv in
                            ret (vs, vss, vd, rv)
                      | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show false s]%string%list
@@ -1716,6 +1732,7 @@ Module Compilers.
                end%core%expr e inbounds out_data.
 
           Definition expr_of_PHOAS
+                     (do_bounds_check : bool)
                      {t}
                      (e : @Compilers.expr.expr base.type ident.ident var_data t)
                      (make_in_name : positive -> option string)
@@ -1730,11 +1747,12 @@ Module Compilers.
                | Some vd
                  => let '(count, vd) := vd in
                    let count := out_to_in_count count in
-                   @expr_of_PHOAS' t e make_in_name make_name inbounds vd count in_to_body_count
+                   @expr_of_PHOAS' do_bounds_check t e make_in_name make_name inbounds vd count in_to_body_count
                | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show false (type.final_codomain t)]%string
                end.
 
           Definition ExprOfPHOAS
+                     (do_bounds_check : bool)
                      {t}
                      (e : @Compilers.expr.Expr base.type ident.ident t)
                      (name_list : option (list string))
@@ -1752,7 +1770,7 @@ Module Compilers.
                                             | Some _ => fun p : positive => p
                                             | None => fun _ : positive => 1%positive
                                             end in
-                expr_of_PHOAS (e _) make_in_name make_out_name make_name inbounds outbounds 1 reset_if_names_given reset_if_names_given).
+                expr_of_PHOAS do_bounds_check (e _) make_in_name make_out_name make_name inbounds outbounds 1 reset_if_names_given reset_if_names_given).
         End with_bind.
       End OfPHOAS.
 
@@ -2092,14 +2110,14 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
-      Definition ToFunctionLines (static : bool) (prefix : string) (name : string) (comment : list string)
+      Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string) (comment : list string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
         : (list string * ident_infos) + string
-        := match ExprOfPHOAS e name_list inbounds with
+        := match ExprOfPHOAS do_bounds_check e name_list inbounds with
            | inl (indata, outdata, f)
              => inl ((["/*"]
                         ++ (List.map (fun s => " * " ++ s)%string comment)
@@ -2122,14 +2140,14 @@ Module Compilers.
         : string
         := String.concat String.NewLine lines.
 
-      Definition ToFunctionString (static : bool) (prefix : string) (name : string) (comment : list string)
+      Definition ToFunctionString (do_bounds_check : bool) (static : bool) (prefix : string) (name : string) (comment : list string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.final_codomain t))
         : (string * ident_infos) + string
-        := match ToFunctionLines static prefix name comment e name_list inbounds outbounds with
+        := match ToFunctionLines do_bounds_check static prefix name comment e name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.

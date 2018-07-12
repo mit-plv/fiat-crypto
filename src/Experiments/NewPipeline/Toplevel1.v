@@ -295,7 +295,6 @@ Module Pipeline.
   | Computed_bounds_are_not_tight_enough
       {t} (computed_bounds expected_bounds : ZRange.type.base.option.interp (type.final_codomain t))
       (syntax_tree : Expr t) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-  | Bounds_analysis_failed
   | Type_too_complicated_for_cps (t : type)
   | Value_not_leZ (descr : string) (lhs rhs : Z)
   | Value_not_leQ (descr : string) (lhs rhs : Q)
@@ -387,7 +386,7 @@ Module Pipeline.
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
                       ++ match ToString.C.ToFunctionLines
-                                 false (* static *) "" "f" nil syntax_tree None arg_bounds ZRange.type.base.option.None with
+                                 false (* do extra bounds check *) false (* static *) "" "f" nil syntax_tree None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
                                 ++ E_lines ++ [""]
@@ -396,7 +395,6 @@ Module Pipeline.
                            => (["(Unprintible syntax tree used in bounds analysis)" ++ String.NewLine]%string)
                                ++ ["Stringification failed on the syntax tree:"] ++ show_lines false syntax_tree ++ [errs]
                          end)%list
-              | Bounds_analysis_failed => ["Bounds analysis failed."]
               | Type_too_complicated_for_cps t
                 => ["Type too complicated for cps: " ++ show false t]
               | Value_not_leZ descr lhs rhs
@@ -487,7 +485,7 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.C.ToFunctionLines
-                                  static type_prefix name comment E' None arg_bounds out_bounds in
+                                  true static type_prefix name comment E' None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
                       | inr err => Error (Stringification_failed E' err)
