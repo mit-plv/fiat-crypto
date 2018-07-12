@@ -3,7 +3,6 @@ Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Experiments.NewPipeline.Arithmetic.
 Require Import Crypto.Experiments.NewPipeline.Toplevel1.
-Require Import Crypto.Experiments.NewPipeline.Toplevel2.
 Require Import Crypto.Experiments.NewPipeline.CStringification.
 
 Require Import Crypto.Util.Notations.
