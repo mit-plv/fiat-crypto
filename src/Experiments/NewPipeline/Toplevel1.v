@@ -3115,6 +3115,10 @@ Module SaturatedSolinas.
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
+    Let prime_upperbound_list : list Z
+      := encode (weight machine_wordsize 1) n s c (s-1).
+    Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
+      := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
 
     (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -3155,16 +3159,16 @@ Module SaturatedSolinas.
 
   Definition rmulmod_correct
     := BoundsPipeline_correct
-         (Some boundsn, (Some boundsn, tt))
-         (Some boundsn)
+         (prime_bounds, (prime_bounds, tt))
+         prime_bounds
          (mulmod' s c machine_wordsize n nreductions).
 
   Definition srmulmod prefix
     := BoundsPipelineToStrings
          prefix "mulmod" []
          (mulmod_gen @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)
-         (Some boundsn, (Some boundsn, tt))
-         (Some boundsn).
+         (prime_bounds, (prime_bounds, tt))
+         prime_bounds.
 
     Notation type_of_strip_3arrow := ((fun (d : Prop) (_ : forall A B C, d) => d) _).
     Definition rmulmod_correctT rv : Prop
