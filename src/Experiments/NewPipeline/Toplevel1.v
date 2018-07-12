@@ -1310,7 +1310,9 @@ Module Import UnsaturatedSolinas.
     Context (n : nat)
             (s : Z)
             (c : list (Z * Z))
-            (machine_wordsize : Z).
+            (machine_wordsize : Z)
+            (tight_upperbound_multiplier : Q)
+            (loose_extra_upperbound_multiplier : Q).
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (seq 0 n ++ [0; 1])%list%nat.
@@ -1322,7 +1324,7 @@ Module Import UnsaturatedSolinas.
       := encode (weight 8 1) n_bytes s c (s-1).
     Let tight_upperbounds : list Z
       := List.map
-           (fun v : Z => Qceiling (11/10 * v))
+           (fun v : Z => Qceiling (tight_upperbound_multiplier * v))
            prime_upperbound_list.
     Definition prime_bound : ZRange.type.option.interp (base.type.Z)
       := Some r[0~>(s - Associational.eval c - 1)]%zrange.
@@ -1347,7 +1349,7 @@ Module Import UnsaturatedSolinas.
     Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
       := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
     Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
-      := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
+      := List.map (fun u:Z => Some r[0 ~> Qceiling (loose_extra_upperbound_multiplier*u)]%zrange) tight_upperbounds.
 
 
     (** Note: If you change the name or type signature of this
