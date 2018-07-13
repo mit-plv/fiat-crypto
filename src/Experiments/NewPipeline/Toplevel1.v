@@ -1583,7 +1583,7 @@ Ltac peel_interp_app _ :=
                  => reflexivity
                | [ |- ?R (Interp ?ev) ?c ]
                  => let rc := constr:(GallinaReify.Reify c) in
-                    unify ev rc; vm_compute; reflexivity
+                    unify ev rc; native_compute; reflexivity
                end ] ]
   end.
 Ltac pre_cache_reify _ :=
@@ -1610,22 +1610,22 @@ Ltac do_inline_cache_reify do_if_not_cached :=
   | .. ].
 
 (* TODO: MOVE ME *)
-Ltac vm_compute_lhs_reflexivity :=
+Ltac native_compute_lhs_reflexivity :=
   lazymatch goal with
   | [ |- ?LHS = ?RHS ]
-    => let x := (eval vm_compute in LHS) in
+    => let x := (eval native_compute in LHS) in
        (* we cannot use the unify tactic, which just gives "not
           unifiable" as the error message, because we want to see the
           terms that were not unifable.  See also
           COQBUG(https://github.com/coq/coq/issues/7291) *)
        let _unify := constr:(ltac:(reflexivity) : RHS = x) in
-       vm_cast_no_check (eq_refl x)
+       native_cast_no_check (eq_refl x)
   end.
 
 Ltac solve_rop' rop_correct do_if_not_cached machine_wordsizev :=
   eapply rop_correct with (machine_wordsize:=machine_wordsizev);
   [ do_inline_cache_reify do_if_not_cached
-  | subst_evars; vm_compute_lhs_reflexivity (* lazy; reflexivity *) ].
+  | subst_evars; native_compute_lhs_reflexivity (* lazy; reflexivity *) ].
 Ltac solve_rop_nocache rop_correct :=
   solve_rop' rop_correct ltac:(fun _ => idtac).
 Ltac solve_rop rop_correct :=
