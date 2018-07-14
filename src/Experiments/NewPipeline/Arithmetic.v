@@ -157,6 +157,16 @@ Module Associational.
          rewrite <-reduction_rule, eval_split; trivial.      Qed.
   Hint Rewrite eval_reduce : push_eval.
 
+  Lemma eval_reduce_adjusted s c p w c' (s_nz:s<>0) (modulus_nz:s-eval c<>0)
+        (w_mod:w mod s = 0) (w_nz:w <> 0) (Hc' : eval c' = (w / s) * eval c) :
+    eval (reduce w c' p) mod (s - eval c) = eval p mod (s - eval c).
+  Proof using Type.
+    cbv [reduce]; push.
+    rewrite Hc', <- (Z.mul_comm (eval c)), <- !Z.mul_assoc, <-reduction_rule by auto.
+    autorewrite with zsimplify_const; rewrite !Z.mul_assoc, Z.mul_div_eq_full, w_mod by auto.
+    autorewrite with zsimplify_const; rewrite eval_split; trivial.
+  Qed.
+
   (*
   Definition splitQ (s:Q) (p:list (Z*Z)) : list (Z*Z) * list (Z*Z)
     := let hi_lo := partition (fun t => (fst t * Zpos (Qden s)) mod (Qnum s) =? 0) p in
