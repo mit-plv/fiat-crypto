@@ -30,6 +30,7 @@ Module Compilers.
 
   Module ToString.
     Local Open Scope string_scope.
+    Local Open Scope Z_scope.
 
     Module Import ZRange.
       Module Export type.
