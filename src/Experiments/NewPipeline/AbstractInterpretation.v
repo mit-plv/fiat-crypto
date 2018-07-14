@@ -437,6 +437,18 @@ Module Compilers.
                          n
                    | None => ZRange.type.base.option.None
                    end
+             | ident.nat_rect_arrow _ _
+               => fun O_case S_case n v
+                 => match n with
+                   | Some n
+                     => nat_rect
+                         _
+                         O_case
+                         (fun n' rec => S_case (Some n') rec)
+                         n
+                         v
+                   | None => ZRange.type.base.option.None
+                   end
              | ident.list_rect _ _
                => fun N C ls
                  => match ls with

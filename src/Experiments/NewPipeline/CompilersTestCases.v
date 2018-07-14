@@ -374,3 +374,20 @@ Module test12.
     exact I.
   Qed.
 End test12.
+Module test13.
+  Example test13 : True.
+  Proof.
+    let v0 := constr:(nat_rect (fun _ => nat -> nat) (fun v => v) (fun n' rec v => (n' + rec (S v))%nat) 3 0%nat) in
+    let v := Reify v0 in
+    pose v as E;
+      pose v0 as exp.
+    vm_compute in E.
+    vm_compute in exp.
+    pose (PartialEvaluate E) as E'.
+    vm_compute in E'.
+    clear E.
+    let r := Reify exp in
+    unify r E'.
+    exact I.
+  Qed.
+End test13.

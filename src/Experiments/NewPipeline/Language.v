@@ -761,6 +761,7 @@ Module Compilers.
         | prod_rect {A B T:base.type} : ident ((A -> B -> T) -> A * B -> T)
         | bool_rect {T:base.type} : ident ((unit -> T) -> (unit -> T) -> bool -> T)
         | nat_rect {P:base.type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
+        | nat_rect_arrow {P Q:base.type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
         | list_rect {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
         | list_case {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P) -> list A -> P)
         | List_length {T} : ident (list T -> nat)
@@ -884,6 +885,8 @@ Module Compilers.
                => fun t f => Datatypes.bool_rect _ (t tt) (f tt)
              | nat_rect P
                => fun O_case S_case => Datatypes.nat_rect _ (O_case tt) S_case
+             | nat_rect_arrow P Q
+               => fun O_case S_case => Datatypes.nat_rect _ O_case S_case
              | list_rect A P
                => fun N_case C_case => Datatypes.list_rect _ (N_case tt) C_case
              | list_case A P
@@ -1051,7 +1054,14 @@ Module Compilers.
              let rT := base.reify T in
              then_tac (@ident.prod_rect rA rB rT)
         | @Datatypes.nat_rect (fun _ => ?T) ?P0
-          => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+          => lazymatch T with
+             | _ -> _ => else_tac ()
+             | _ => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+             end
+        | @Datatypes.nat_rect (fun _ => ?P -> ?Q)
+          => let rP := base.reify P in
+             let rQ := base.reify Q in
+             then_tac (@ident.nat_rect_arrow rP rQ)
         | @Thunked.nat_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.nat_rect rT)

@@ -1240,6 +1240,12 @@ In the RHS, the follow notation applies:
                      => S_case <- @castv _ (@type.base base.type base.type.nat -> type.base P -> type.base P) S_case;
                           ret (nat_rect _ (O_case ##tt) (fun n' rec => rec <-- rec; S_case ##n' rec) n))
                 ; make_rewrite
+                    (#pident.nat_rect_arrow @ ??{?? -> ??} @ ??{base.type.nat -> (?? -> ??) -> (?? -> ??)} @ #?ℕ @ ??)
+                    (fun P Q O_case _ _ _ _ S_case n _ v
+                     => S_case <- @castv _ (@type.base base.type base.type.nat -> (type.base P -> type.base Q) -> (type.base P -> type.base Q)) S_case;
+                          v <- castbe v;
+                          ret (nat_rect _ O_case (fun n' rec v => S_case ##n' rec v) n v))
+                ; make_rewrite
                     (#pident.List_length @ ??{list ??})
                     (fun _ xs => xs <- reflect_list_cps xs; ##(List.length xs))
                 ; make_rewrite
