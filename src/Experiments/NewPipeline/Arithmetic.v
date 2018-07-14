@@ -2114,13 +2114,33 @@ Module Rows.
         let pq_a := Associational.sat_mul base p_a q_a in
         flatten m (from_associational m pq_a).
 
+      (* if [s] is not exactly equal to a weight, we must adjust it to
+         be a weight, so that rather than dividing by s and
+         multiplying by c, we divide by w and multiply by c*(w/s).
+         See
+         https://github.com/mit-plv/fiat-crypto/issues/326#issuecomment-404135131
+         for a bit more discussion *)
+      Definition adjust_s fuel s : Z * bool :=
+        fold_right
+          (fun w_i res
+           => let '(v, found_adjustment) := res in
+              let res := (v, found_adjustment) in
+              if found_adjustment:bool
+              then res
+              else if w_i mod s =? 0
+                   then (w_i, true)
+                   else res)
+          (s, false)
+          (map weight (seq 0 fuel)).
+
       (* TODO : move sat_reduce and repeat_sat_reduce to Saturated.Associational *)
-      Definition sat_reduce base s c (p : list (Z * Z)) :=
-        let lo_hi := Associational.split s p in
-        fst lo_hi ++ (Associational.sat_mul_const base c (snd lo_hi)).
+      Definition sat_reduce base s c n (p : list (Z * Z)) :=
+        let '(s', _) := adjust_s (S (S n)) s in
+        let lo_hi := Associational.split s' p in
+        fst lo_hi ++ (Associational.sat_mul_const base [(1, s'/s)] (Associational.sat_mul_const base c (snd lo_hi))).
 
       Definition repeat_sat_reduce base s c (p : list (Z * Z)) n :=
-        fold_right (fun _ q => sat_reduce base s c q) p (seq 0 n).
+        fold_right (fun _ q => sat_reduce base s c n q) p (seq 0 n).
 
       Definition mulmod base s c n nreductions (p q : list Z) :=
         let p_a := Positional.to_associational weight n p in
@@ -2202,15 +2222,27 @@ Module Rows.
         length (fst (mul base n m p q)) = m.
       Proof using wprops. solver; cbn [fst snd]; distr_length. Qed.
 
-      Lemma eval_sat_reduce base s c p :
+      Lemma adjust_s_invariant fuel s (s_nz:s<>0) :
+        fst (adjust_s fuel s) mod s = 0
+        /\ fst (adjust_s fuel s) <> 0.
+      Proof.
+        cbv [adjust_s]; rewrite fold_right_map; generalize (seq 0 fuel); intro ls; induction ls as [|l ls IHls];
+          cbn.
+        { rewrite Z.mod_same by assumption; auto. }
+        { break_match; cbn in *; auto. }
+      Qed.
+
+      Lemma eval_sat_reduce base s c n p :
         base <> 0 -> s - Associational.eval c <> 0 -> s <> 0 ->
-        Associational.eval (sat_reduce base s c p) mod (s - Associational.eval c)
+        Associational.eval (sat_reduce base s c n p) mod (s - Associational.eval c)
         = Associational.eval p mod (s - Associational.eval c).
-      Proof using Type.
+      Proof using wprops.
         intros; cbv [sat_reduce].
-        autorewrite with push_eval.
-        rewrite <-Associational.reduction_rule by omega.
-        autorewrite with push_eval; reflexivity.
+        lazymatch goal with |- context[adjust_s ?fuel ?s] => destruct (adjust_s_invariant fuel s ltac:(assumption)) as [Hmod ?] end.
+        eta_expand; autorewrite with push_eval zsimplify_const; cbn [fst snd].
+        rewrite !Z.mul_assoc, <- (Z.mul_comm (Associational.eval c)), <- !Z.mul_assoc, <-Associational.reduction_rule by auto.
+        autorewrite with zsimplify_const; rewrite !Z.mul_assoc, Z.mul_div_eq_full, Hmod by auto.
+        autorewrite with zsimplify_const push_eval; trivial.
       Qed.
       Hint Rewrite eval_sat_reduce using auto : push_eval.
 
@@ -2218,7 +2250,7 @@ Module Rows.
         base <> 0 -> s - Associational.eval c <> 0 -> s <> 0 ->
         Associational.eval (repeat_sat_reduce base s c p n) mod (s - Associational.eval c)
         = Associational.eval p mod (s - Associational.eval c).
-      Proof using Type.
+      Proof using wprops.
         intros; cbv [repeat_sat_reduce].
         apply fold_right_invariant; intros; autorewrite with push_eval; auto.
       Qed.
