@@ -1690,13 +1690,6 @@ Module Rows.
         rewrite Columns.length_from_associational in *; auto.
       Qed.
 
-      (* TODO : move *)
-      Lemma max_0_iff a b : Nat.max a b = 0%nat <-> (a = 0%nat /\ b = 0%nat).
-      Proof.
-        destruct a, b; try tauto.
-        rewrite <-Nat.succ_max_distr.
-        split; [ | destruct 1]; congruence.
-      Qed.
       Lemma max_column_size_zero_iff x :
         max_column_size x = 0%nat <-> (forall c, In c x -> c = nil).
       Proof.
