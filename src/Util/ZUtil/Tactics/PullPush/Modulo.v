@@ -78,6 +78,9 @@ Ltac pull_Zmod :=
          | [ |- context[(((-?y) mod ?z)) mod ?z] ]
            => has_no_mod y z;
               rewrite <- (Z.opp_mod_mod y z)
+         | [ |- context[((?x mod ?z)^?y) mod ?z] ]
+           => has_no_mod x z;
+             rewrite <- (Z.pow_mod_full x y z)
          | [ |- context[(?x mod ?z) mod ?z] ]
            => rewrite (Zmod_mod x z)
          | _ => progress autorewrite with pull_Zmod

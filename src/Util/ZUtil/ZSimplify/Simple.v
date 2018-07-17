@@ -3,6 +3,17 @@ Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
 Module Z.
+  Lemma pow_1_l_Zpos a : 1^Zpos a = 1.
+  Proof. apply Z.pow_1_l; lia. Qed.
+  Hint Rewrite pow_1_l_Zpos : zsimplify_fast zsimplify_const zsimplify.
+  Lemma pow_1_l_0 : 1^Z0 = 1. Proof. reflexivity. Qed.
+  Hint Rewrite pow_1_l_0 : zsimplify_fast zsimplify_const zsimplify.
+  Lemma pow_r_Zneg a b : a^Zneg b = 0. Proof. reflexivity. Qed.
+  Hint Rewrite pow_r_Zneg : zsimplify_fast zsimplify_const zsimplify.
+  Lemma pow_1_l_Zof_nat a : 1^Z.of_nat a = 1.
+  Proof. apply Z.pow_1_l; lia. Qed.
+  Hint Rewrite pow_1_l_Zof_nat : zsimplify_fast zsimplify_const zsimplify.
+
   Lemma sub_same_minus (x y : Z) : x - (x - y) = y.
   Proof. lia. Qed.
   Hint Rewrite sub_same_minus : zsimplify.
@@ -78,5 +89,5 @@ Module Z.
 
   Lemma minus_minus_one : - -1 = 1.
   Proof. reflexivity. Qed.
-  Hint Rewrite minus_minus_one : zsimplify.
+  Hint Rewrite minus_minus_one : zsimplify zsimplify_fast zsimplify_const.
 End Z.

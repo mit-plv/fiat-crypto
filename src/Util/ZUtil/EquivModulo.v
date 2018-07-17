@@ -5,6 +5,8 @@ Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
+
 Local Open Scope Z_scope.
 
 Module Z.
