@@ -536,14 +536,15 @@ Module Positional. Section Positional.
 
   Definition place (t:Z*Z) (i:nat) : nat * Z :=
     nat_rect
-      (fun _ => (nat * Z)%type)
-      (O, fst t * snd t)
-      (fun i' place_i'
+      (fun _ => unit -> (nat * Z)%type)
+      (fun _ => (O, fst t * snd t))
+      (fun i' place_i' _
        => let i := S i' in
           if (fst t mod weight i =? 0)
           then (i, let c := fst t / weight i in c * snd t)
-          else place_i')
-      i.
+          else place_i' tt)
+      i
+      tt.
 
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
   Proof. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try omega. Qed.
@@ -1284,12 +1285,12 @@ Module Columns.
         Definition flatten_column (digit: list Z) : (Z * Z) :=
           list_rect (fun _ => (Z * Z)%type) (0,0)
                     (fun xx tl flatten_column_tl =>
-                       list_rect
+                       list_case
                          (fun _ => (Z * Z)%type) (xx mod fw, xx / fw)
-                         (fun yy tl' _ =>
-                            list_rect
+                         (fun yy tl' =>
+                            list_case
                               (fun _ => (Z * Z)%type) (dlet_nd x := xx in dlet_nd y := yy in Z.add_get_carry_full fw x y)
-                              (fun _ _ _ =>
+                              (fun _ _ =>
                                  dlet_nd x := xx in
                                    dlet_nd rec := flatten_column_tl in (* recursively get the sum and carry *)
                                    dlet_nd sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
@@ -1309,7 +1310,7 @@ Module Columns.
 
       Ltac push_fast :=
         repeat match goal with
-               | _ => progress cbv [Let_In]
+               | _ => progress cbv [Let_In list_case]
                | |- context [list_rect _ _ _ ?ls] => rewrite single_list_rect_to_match; destruct ls
                | _ => progress (unfold flatten_step in *; fold flatten_step in * )
                | _ => rewrite Nat.add_1_r
