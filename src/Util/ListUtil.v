@@ -2048,3 +2048,20 @@ Proof.
                | [ H : forall j, f j ?v = _ |- context[f _ ?v] ] => rewrite H
                end. }
 Qed.
+
+Lemma fold_left_push A (x y : A) (f : A -> A -> A)
+      (f_assoc : forall x y z, f (f x y) z = f x (f y z))
+      ls
+  : f x (fold_left f ls y) = fold_left f ls (f x y).
+Proof.
+  revert x y; induction ls as [|l ls IHls]; cbn; [ reflexivity | ].
+  intros; rewrite IHls; f_equal; auto.
+Qed.
+
+Lemma fold_right_push A (x y : A) (f : A -> A -> A)
+      (f_assoc : forall x y z, f (f x y) z = f x (f y z))
+      ls
+  : f (fold_right f x ls) y = fold_right f (f x y) ls.
+Proof.
+  rewrite <- (rev_involutive ls), !fold_left_rev_right, fold_left_push with (f:=fun x y => f y x); auto.
+Qed.

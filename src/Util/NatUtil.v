@@ -392,3 +392,6 @@ Proof.
       end;
         rewrite H'' in *; assumption. } }
 Qed.
+
+Lemma max_0_iff a b : Nat.max a b = 0%nat <-> (a = 0%nat /\ b = 0%nat).
+Proof. omega **. Qed.
