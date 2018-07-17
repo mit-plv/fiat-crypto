@@ -20,6 +20,8 @@ Ltac push_Zmod :=
                     | rewrite (Z.sub_mod_r_push x y z) by Z.NoZMod ]
          | [ |- context[(-?y) mod ?z] ]
            => rewrite (Z.opp_mod_mod_push y z) by Z.NoZMod
+         | [ |- context[(?p^?q) mod ?z] ]
+           => rewrite (Z.pow_mod_push p q z) by Z.NoZMod
          end.
 
 Ltac push_Zmod_hyps :=
@@ -39,6 +41,8 @@ Ltac push_Zmod_hyps :=
                     | rewrite (Z.sub_mod_r_push x y z) in H by Z.NoZMod ]
          | [ H : context[(-?y) mod ?z] |- _ ]
            => rewrite (Z.opp_mod_mod_push y z) in H by Z.NoZMod
+         | [ H : context[(?p^?q) mod ?z] |- _ ]
+           => rewrite (Z.pow_mod_push p q z) in H by Z.NoZMod
          end.
 
 Ltac has_no_mod x z :=
