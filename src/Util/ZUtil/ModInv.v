@@ -34,6 +34,20 @@ def modinv(a, m):
                    | None => None
                    end
        end.
+  Definition egcd_by_wf (wf : well_founded (fun x y => 0 <= x < y)) (a b : Z) : option (Z * Z * Z)
+    := Fix wf (fun _ => Z -> option (Z * Z * Z))
+           (fun a egcd b
+            => (if (0 <? a) as b return ((0 <? a) = b -> _)
+               then fun pf
+                    => match @egcd (b mod a) (Z.mod_pos_bound _ _ (proj1 (Z.ltb_lt _ _) ltac:(eassumption))) a with
+                      | Some (g, y, x) => Some (g, x - (b / a) * y, y)
+                      | None => None
+                      end
+               else fun _
+                    => if a =? 0
+                      then Some (b, 0, 1)
+                      else None) eq_refl)
+           a b.
   Definition modinv_fueled (fuel : nat) (a m : Z) : option Z
     := if a <? 0
        then match egcd fuel (-a) m with
@@ -50,11 +64,35 @@ def modinv(a, m):
                  else Some (x mod m)
             | None => None
             end.
+  Definition modinv_by_wf (wf : well_founded (fun x y => 0 <= x < y)) (a m : Z) : option Z
+    := if a <? 0
+       then match egcd_by_wf wf (-a) m with
+            | Some (g, x, y)
+              => if negb (g =? 1)
+                 then None
+                 else Some ((-x) mod m)
+            | None => None
+            end
+       else match egcd_by_wf wf a m with
+            | Some (g, x, y)
+              => if negb (g =? 1)
+                 then None
+                 else Some (x mod m)
+            | None => None
+            end.
+  Definition modinv_by_wf_fuel (fuel : nat) (a m : Z) : option Z
+    := modinv_by_wf (Acc_intro_generator fuel (Z.lt_wf 0)) a m.
   (** We way over-estimate the fuel by taking [max a m].  We can assume
     that [Z.to_nat (Z.log2 (max a m))] is fast, because we already
     have a ~unary representation of [Z.log2 a] and [Z.log2 m].  It is
     empirically the case that pulling successors off [2^k] is fast, so
     we can use that for fuel. *)
-  Definition modinv (a m : Z) : option Z
+  Definition modinv' (a m : Z) : option Z
     := modinv_fueled (2^Z.to_nat (Z.log2 (Z.max a m))) a m.
+  (** For the actual version, which we want to perform well under
+      [cbv], we will simply add the log2 representations of [a] and
+      [m].  We expect to pull at least about 1 bit off the top each
+      round of the gcd calculation. *)
+  Definition modinv (a m : Z) : option Z
+    := modinv_by_wf (Acc_intro_generator (S (S (Z.to_nat (Z.log2_up (Z.abs a) + Z.log2_up (Z.abs m))))) (Z.lt_wf 0)) a m.
 End Z.
