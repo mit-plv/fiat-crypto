@@ -154,6 +154,18 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                     (base.type.type_base base.type.nat) ->
                   (fun x : base.type => type.base x)
                     (base.type.list (base.type.type_base base.type.nat)))
+  | List_firstn : forall A : base.type,
+                  ident
+                    ((fun x : base.type => type.base x)
+                       (base.type.type_base base.type.nat) ->
+                     (fun x : base.type => type.base x) (base.type.list A) ->
+                     (fun x : base.type => type.base x) (base.type.list A))
+  | List_skipn : forall A : base.type,
+                 ident
+                   ((fun x : base.type => type.base x)
+                      (base.type.type_base base.type.nat) ->
+                    (fun x : base.type => type.base x) (base.type.list A) ->
+                    (fun x : base.type => type.base x) (base.type.list A))
   | List_repeat : forall A : base.type,
                   ident
                     ((fun x : base.type => type.base x) A ->
@@ -589,6 +601,8 @@ show_match_ident = r"""match # with
  | ident.list_case A P =>
  | ident.List_length T =>
  | ident.List_seq =>
+ | ident.List_firstn A =>
+ | ident.List_skipn A =>
  | ident.List_repeat A =>
  | ident.List_combine A B =>
  | ident.List_map A B =>
@@ -879,6 +893,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | list_case
       | List_length
       | List_seq
+      | List_firstn
+      | List_skipn
       | List_repeat
       | List_combine
       | List_map
@@ -960,6 +976,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case, list_case
            | List_length, List_length
            | List_seq, List_seq
+           | List_firstn, List_firstn
+           | List_skipn, List_skipn
            | List_repeat, List_repeat
            | List_combine, List_combine
            | List_map, List_map
@@ -1039,6 +1057,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case, _
            | List_length, _
            | List_seq, _
+           | List_firstn, _
+           | List_skipn, _
            | List_repeat, _
            | List_combine, _
            | List_map, _
@@ -1124,6 +1144,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.list_case A P => f _ (@Compilers.ident.list_case A P)
            | Compilers.ident.List_length T => f _ (@Compilers.ident.List_length T)
            | Compilers.ident.List_seq => f _ Compilers.ident.List_seq
+           | Compilers.ident.List_firstn A => f _ (@Compilers.ident.List_firstn A)
+           | Compilers.ident.List_skipn A => f _ (@Compilers.ident.List_skipn A)
            | Compilers.ident.List_repeat A => f _ (@Compilers.ident.List_repeat A)
            | Compilers.ident.List_combine A B => f _ (@Compilers.ident.List_combine A B)
            | Compilers.ident.List_map A B => f _ (@Compilers.ident.List_map A B)
@@ -1206,6 +1228,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.list_case A P => list_case
            | Compilers.ident.List_length T => List_length
            | Compilers.ident.List_seq => List_seq
+           | Compilers.ident.List_firstn A => List_firstn
+           | Compilers.ident.List_skipn A => List_skipn
            | Compilers.ident.List_repeat A => List_repeat
            | Compilers.ident.List_combine A B => List_combine
            | Compilers.ident.List_map A B => List_map
@@ -1288,6 +1312,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case => None
            | List_length => None
            | List_seq => None
+           | List_firstn => None
+           | List_skipn => None
            | List_repeat => None
            | List_combine => None
            | List_map => None
@@ -1370,6 +1396,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case => base.type * base.type
            | List_length => base.type
            | List_seq => unit
+           | List_firstn => base.type
+           | List_skipn => base.type
            | List_repeat => base.type
            | List_combine => base.type * base.type
            | List_map => base.type * base.type
@@ -1452,6 +1480,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.list_case A P => tt
            | Compilers.ident.List_length T => tt
            | Compilers.ident.List_seq => tt
+           | Compilers.ident.List_firstn A => tt
+           | Compilers.ident.List_skipn A => tt
            | Compilers.ident.List_repeat A => tt
            | Compilers.ident.List_combine A B => tt
            | Compilers.ident.List_map A B => tt
@@ -1534,6 +1564,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case, Compilers.ident.list_case A P => Some (A, P)
            | List_length, Compilers.ident.List_length T => Some T
            | List_seq, Compilers.ident.List_seq => Some tt
+           | List_firstn, Compilers.ident.List_firstn A => Some A
+           | List_skipn, Compilers.ident.List_skipn A => Some A
            | List_repeat, Compilers.ident.List_repeat A => Some A
            | List_combine, Compilers.ident.List_combine A B => Some (A, B)
            | List_map, Compilers.ident.List_map A B => Some (A, B)
@@ -1612,6 +1644,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case, _
            | List_length, _
            | List_seq, _
+           | List_firstn, _
+           | List_skipn, _
            | List_repeat, _
            | List_combine, _
            | List_map, _
@@ -1698,6 +1732,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (base.type.list A) -> type.base P) -> type.base (base.type.list A) -> type.base P)
            | List_length => fun T => (type.base (base.type.list T) -> type.base (base.type.type_base base.type.nat))
            | List_seq => fun _ => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.list (base.type.type_base base.type.nat)))
+           | List_firstn => fun A => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.list A) -> type.base (base.type.list A))
+           | List_skipn => fun A => (type.base (base.type.type_base base.type.nat) -> type.base (base.type.list A) -> type.base (base.type.list A))
            | List_repeat => fun A => (type.base A -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.list A))
            | List_combine => fun arg => let '(A, B) := eta2 arg in (type.base (base.type.list A) -> type.base (base.type.list B) -> type.base (base.type.list (A * B)))
            | List_map => fun arg => let '(A, B) := eta2 arg in ((type.base A -> type.base B) -> type.base (base.type.list A) -> type.base (base.type.list B))
@@ -1780,6 +1816,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | list_case => fun arg => match eta2 arg as args' return Compilers.ident.ident (type_of list_case args') with (A, P) => @Compilers.ident.list_case A P end
            | List_length => fun T => @Compilers.ident.List_length T
            | List_seq => fun _ => @Compilers.ident.List_seq
+           | List_firstn => fun A => @Compilers.ident.List_firstn A
+           | List_skipn => fun A => @Compilers.ident.List_skipn A
            | List_repeat => fun A => @Compilers.ident.List_repeat A
            | List_combine => fun arg => match eta2 arg as args' return Compilers.ident.ident (type_of List_combine args') with (A, B) => @Compilers.ident.List_combine A B end
            | List_map => fun arg => match eta2 arg as args' return Compilers.ident.ident (type_of List_map args') with (A, B) => @Compilers.ident.List_map A B end
@@ -1862,6 +1900,8 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.list_case A P => fun _ => @Compilers.ident.list_case A P
            | Compilers.ident.List_length T => fun _ => @Compilers.ident.List_length T
            | Compilers.ident.List_seq => fun _ => @Compilers.ident.List_seq
+           | Compilers.ident.List_firstn A => fun _ => @Compilers.ident.List_firstn A
+           | Compilers.ident.List_skipn A => fun _ => @Compilers.ident.List_skipn A
            | Compilers.ident.List_repeat A => fun _ => @Compilers.ident.List_repeat A
            | Compilers.ident.List_combine A B => fun _ => @Compilers.ident.List_combine A B
            | Compilers.ident.List_map A B => fun _ => @Compilers.ident.List_map A B

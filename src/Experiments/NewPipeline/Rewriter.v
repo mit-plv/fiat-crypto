@@ -1174,6 +1174,16 @@ In the RHS, the follow notation applies:
                     (??{list ??} ++ ??{list ??})
                     (fun _ xs _ ys => rlist_rect_cast ys (fun x _ xs_ys => x :: xs_ys) xs)
                 ; make_rewrite
+                    (#pident.List_firstn @ #?ℕ @ ??{list ??})
+                    (fun n _ xs
+                     => xs <- reflect_list_cps xs;
+                          reify_list (List.firstn n xs))
+                ; make_rewrite
+                    (#pident.List_skipn @ #?ℕ @ ??{list ??})
+                    (fun n _ xs
+                     => xs <- reflect_list_cps xs;
+                          reify_list (List.skipn n xs))
+                ; make_rewrite
                     (#pident.List_rev @ ??{list ??})
                     (fun _ xs
                      => xs <- reflect_list_cps xs;

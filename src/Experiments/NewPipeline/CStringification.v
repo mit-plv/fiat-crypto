@@ -232,6 +232,10 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "seq") args, ZRange.type.base.option.None)
              | ident.List_repeat A
                => fun args => (show_application with_casts (fun _ => "repeat") args, ZRange.type.base.option.None)
+             | ident.List_firstn A
+               => fun args => (show_application with_casts (fun _ => "firstn") args, ZRange.type.base.option.None)
+             | ident.List_skipn A
+               => fun args => (show_application with_casts (fun _ => "skipn") args, ZRange.type.base.option.None)
              | ident.List_combine A B
                => fun args => (show_application with_casts (fun _ => "combine") args, ZRange.type.base.option.None)
              | ident.List_map A B
@@ -350,6 +354,8 @@ Module Compilers.
                 | ident.List_length T => "length"
                 | ident.List_seq => "seq"
                 | ident.List_repeat A => "repeat"
+                | ident.List_firstn A => "firstn"
+                | ident.List_skipn A => "skipn"
                 | ident.List_combine A B => "combine"
                 | ident.List_map A B => "map"
                 | ident.List_app A => "(++)"
@@ -1144,6 +1150,8 @@ Module Compilers.
                | ident.List_length _
                | ident.List_seq
                | ident.List_repeat _
+               | ident.List_firstn _
+               | ident.List_skipn _
                | ident.List_combine _ _
                | ident.List_map _ _
                | ident.List_app _

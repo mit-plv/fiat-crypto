@@ -766,6 +766,8 @@ Module Compilers.
         | list_case {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P) -> list A -> P)
         | List_length {T} : ident (list T -> nat)
         | List_seq : ident (nat -> nat -> list nat)
+        | List_firstn {A:base.type} : ident (nat -> list A -> list A)
+        | List_skipn {A:base.type} : ident (nat -> list A -> list A)
         | List_repeat {A:base.type} : ident (A -> nat -> list A)
         | List_combine {A B} : ident (list A -> list B -> list (A * B))
         | List_map {A B:base.type} : ident ((A -> B) -> list A -> list B)
@@ -893,6 +895,8 @@ Module Compilers.
                => fun N_case C_case => ListUtil.list_case _ (N_case tt) C_case
              | List_length T => @List.length _
              | List_seq => List.seq
+             | List_firstn A => @List.firstn _
+             | List_skipn A => @List.skipn _
              | List_repeat A => @repeat _
              | List_combine A B => @List.combine _ _
              | List_map A B => @List.map _ _
@@ -1081,6 +1085,12 @@ Module Compilers.
           let rA := base.reify A in
           then_tac (@ident.List_length rA)
         | List.seq => then_tac ident.List_seq
+        | @List.firstn ?A
+          => let rA := base.reify A in
+             then_tac (@ident.List_firstn rA)
+        | @List.skipn ?A
+          => let rA := base.reify A in
+             then_tac (@ident.List_skipn rA)
         | @repeat ?A
           => let rA := base.reify A in
              then_tac (@ident.List_repeat rA)

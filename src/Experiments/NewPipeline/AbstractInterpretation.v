@@ -373,6 +373,10 @@ Module Compilers.
                => fun x y => x <- x; y <- y; rSome (ident.interp idc x y)
              | ident.List_repeat _
                => fun x y => y <- y; Some (repeat x y)
+             | ident.List_firstn _
+               => fun n ls => n <- n; ls <- ls; Some (firstn n ls)
+             | ident.List_skipn _
+               => fun n ls => n <- n; ls <- ls; Some (skipn n ls)
              | ident.List_combine _ _
                => fun x y => x <- x; y <- y; Some (List.combine x y)
              | ident.List_flat_map _ _
