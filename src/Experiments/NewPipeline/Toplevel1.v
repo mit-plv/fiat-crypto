@@ -1583,7 +1583,7 @@ Ltac peel_interp_app _ :=
                  => reflexivity
                | [ |- ?R (Interp ?ev) ?c ]
                  => let rc := constr:(GallinaReify.Reify c) in
-                    unify ev rc; reflexivity
+                    unify ev rc; vm_compute; reflexivity
                end ] ]
   end.
 Ltac pre_cache_reify _ :=
