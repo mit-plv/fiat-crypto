@@ -6,6 +6,9 @@ TIMED?=
 TIMECMD?=
 STDTIME?=/usr/bin/time -f "$* (real: %e, user: %U, sys: %S, mem: %M ko)"
 TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
+TIMECMD_FULL?=
+STDTIME_FULL?=/usr/bin/time -f "$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
+TIMER_FULL=$(if $(TIMED), $(STDTIME_FULL), $(TIMECMD_FULL))
 
 GHC?=ghc
 GHCFLAGS?= # -XStrict
@@ -30,7 +33,7 @@ INSTALLDEFAULTROOT := Crypto
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
 
 FAST_TARGETS += archclean clean cleanall clean-coqprime printenv clean-old update-_CoqProject regenerate-curves Makefile.coq
-SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq regenerate-curves
+SUPER_FAST_TARGETS += update-_CoqProject Makefile.coq regenerate-curves only-test-c-files
 
 SLOW :=
 ifneq ($(filter-out $(SUPER_FAST_TARGETS),$(MAKECMDGOALS)),)
@@ -500,27 +503,70 @@ standalone: standalone-haskell standalone-ocaml
 standalone-haskell: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%)
 standalone-ocaml: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%)
 
-UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c
-WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c
+UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c p521_64.c p521_32.c # p224_solinas_64.c
+WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery
+ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
 .PHONY: c-files
-c-files: $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
+c-files: $(ALL_C_FILES)
 
-$(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS)
+$(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS) # Makefile
 
-$(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY)
+$(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 
+# 2^255 - 19
 curve25519_64.c:
-	$(UNSATURATED_SOLINAS) '25519' '5' '2^255' '1,19' '64' $(FUNCTIONS_FOR_25519) > $@
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '5' '2^255' '1,19' '64' $(FUNCTIONS_FOR_25519) > $@
 
+# 2^255 - 19
 curve25519_32.c:
-	$(UNSATURATED_SOLINAS) '25519' '10' '2^255' '1,19' '32' $(FUNCTIONS_FOR_25519) > $@
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '10' '2^255' '1,19' '32' $(FUNCTIONS_FOR_25519) > $@
+
+# 2^521 - 1
+p521_64.c:
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '9' '2^521' '1,1' '64' > $@
+
+# 2^521 - 1
+p521_32.c:
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '17' '2^521' '1,1' '32' > $@
+
+## 2^224 - 2^96 + 1 ## does not bounds check
+#p224_solinas_64.c:
+#	$(SHOW)'SYNTHESIZE > $@'
+#	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p224' '4' '2^224' '2^96,1;1,-1' '64' > $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 p256_64.c p256_32.c : p256_%.c :
-	$(WORD_BY_WORD_MONTGOMERY) 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '$*' > $@
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '$*' > $@
+
+# 2^256 - 2^32 - 977
+secp256k1_64.c secp256k1_32.c : secp256k1_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'secp256k1' '2^256' '2^32,1;1,977' '$*' > $@
+
+# 2^384 - 2^128 - 2^96 + 2^32 - 1
+p384_64.c p384_32.c : p384_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p384' '2^384' '2^128,1;2^96,1;2^32,-1;1,1' '$*' > $@
+
+# 2^224 - 2^96 + 1
+p224_64.c p224_32.c : p224_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p224' '2^224' '2^96,1;1,-1' '$*' > $@
+
+CFLAGS?=
+.PHONY: only-test-c-files test-c-files
+only-test-c-files test-c-files:
+	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
+
+test-c-files: $(ALL_C_FILES)
 
 clean::
 	rm -f Makefile.coq remake_curves.log src/Specific/.autgenerated-deps
