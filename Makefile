@@ -243,6 +243,7 @@ COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src
 export COQPATH
 
 coqprime:
+	(cd $(COQPRIME_FOLDER) && $(COQBIN)coq_makefile -f _CoqProject -o Makefile)
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
 
 coqprime-all: coqprime
