@@ -8,13 +8,26 @@ match idc in (ident t) return (Compile.value' true t) with
          UnderLets.UnderLets base.type ident var
            (defaults.expr (type.base t0)))
     with
-    | base.type.unit => fun v0 : unit => UnderLets.Base ##(v0)%expr
-    | base.type.Z => fun v0 : Z => UnderLets.Base ##(v0)%expr
-    | base.type.bool => fun v0 : bool => UnderLets.Base ##(v0)%expr
-    | base.type.nat => fun v0 : nat => UnderLets.Base ##(v0)%expr
+    | base.type.unit =>
+        fun v0 : unit =>
+        llet _ := UnderLets.Base ##(v0)%expr in
+        UnderLets.Base ##(v0)%expr
+    | base.type.Z =>
+        fun v0 : Z =>
+        llet _ := UnderLets.Base ##(v0)%expr in
+        UnderLets.Base ##(v0)%expr
+    | base.type.bool =>
+        fun v0 : bool =>
+        llet _ := UnderLets.Base ##(v0)%expr in
+        UnderLets.Base ##(v0)%expr
+    | base.type.nat =>
+        fun v0 : nat =>
+        llet _ := UnderLets.Base ##(v0)%expr in
+        UnderLets.Base ##(v0)%expr
     end v
 | ident.Nat_succ =>
     fun x : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Nat_succ)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -30,12 +43,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Nat.succ args)%expr
-        | None => UnderLets.Base (#(ident.Nat_succ)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Nat_succ)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Nat_pred =>
     fun x : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Nat_pred)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -51,12 +65,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Nat.pred args)%expr
-        | None => UnderLets.Base (#(ident.Nat_pred)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Nat_pred)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Nat_max =>
     fun x x0 : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Nat_max)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -89,17 +104,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(Nat.max args args0)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Nat_max)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Nat_max)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Nat_max)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Nat_max)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Nat_mul =>
     fun x x0 : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Nat_mul)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -132,17 +147,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args * args0)%nat)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Nat_mul)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Nat_mul)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Nat_mul)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Nat_mul)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Nat_add =>
     fun x x0 : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Nat_add)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -175,17 +190,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args + args0)%nat)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Nat_add)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Nat_add)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Nat_add)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Nat_add)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Nat_sub =>
     fun x x0 : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Nat_sub)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -218,25 +233,28 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args - args0)%nat)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Nat_sub)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Nat_sub)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Nat_sub)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Nat_sub)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
-| @ident.nil t => UnderLets.Base []%expr_pat
+| @ident.nil t => llet default := UnderLets.Base []%expr_pat in
+    default
 | @ident.cons t =>
     fun (x : defaults.expr (type.base t))
       (x0 : defaults.expr (type.base (base.type.list t))) =>
-    UnderLets.Base (x :: x0)%expr_pat
+    llet default := UnderLets.Base (x :: x0)%expr_pat in
+    default
 | @ident.pair A B =>
     fun (x : defaults.expr (type.base A)) (x0 : defaults.expr (type.base B))
-    => UnderLets.Base (x, x0)%expr_pat
+    => llet default := UnderLets.Base (x, x0)%expr_pat in
+    default
 | @ident.fst A B =>
     fun x : defaults.expr (type.base (A * B)%etype) =>
+    llet default := UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat in
     match x with
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(idc)%expr_pat x1) x0 =>
         match
@@ -275,32 +293,30 @@ match idc in (ident t) return (Compile.value' true t) with
                                 defaults.expr (type.base A)) =>
                        match a with
                        | Some x' => UnderLets.Base (x' v)
-                       | None =>
-                           UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
+                       | None => default
                        end)
                 | (s1 -> d1)%ptype =>
                     fun _ : Compile.value' false s1 -> Compile.value' true d1
-                    => UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
+                    => default
                 end (Compile.reflect x0)
             | (s1 -> d1)%ptype =>
                 fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
-                UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
+                default
             end (Compile.reflect x1)
-        | None => UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
+        | None => default
         end
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
       _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
       _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App _ _ _
-      s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-        UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
+      s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => default
     | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
       @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
-      (@expr.LetIn _ _ _ _ _ _ _) _ =>
-        UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
-    | _ => UnderLets.Base (#(ident.fst)%expr @ x)%expr_pat
+      (@expr.LetIn _ _ _ _ _ _ _) _ => default
+    | _ => default
     end
 | @ident.snd A B =>
     fun x : defaults.expr (type.base (A * B)%etype) =>
+    llet default := UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat in
     match x with
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(idc)%expr_pat x1) x0 =>
         match
@@ -339,29 +355,26 @@ match idc in (ident t) return (Compile.value' true t) with
                                 defaults.expr (type.base B)) =>
                        match a with
                        | Some x' => UnderLets.Base (x' v0)
-                       | None =>
-                           UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
+                       | None => default
                        end)
                 | (s1 -> d1)%ptype =>
                     fun _ : Compile.value' false s1 -> Compile.value' true d1
-                    => UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
+                    => default
                 end (Compile.reflect x0)
             | (s1 -> d1)%ptype =>
                 fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
-                UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
+                default
             end (Compile.reflect x1)
-        | None => UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
+        | None => default
         end
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
       _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
       _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App _ _ _
-      s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-        UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
+      s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => default
     | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
       @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
-      (@expr.LetIn _ _ _ _ _ _ _) _ =>
-        UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
-    | _ => UnderLets.Base (#(ident.snd)%expr @ x)%expr_pat
+      (@expr.LetIn _ _ _ _ _ _ _) _ => default
+    | _ => default
     end
 | @ident.prod_rect A B T =>
     fun
@@ -370,13 +383,11 @@ match idc in (ident t) return (Compile.value' true t) with
            UnderLets.UnderLets base.type ident var
              (defaults.expr (type.base T)))
       (x0 : defaults.expr (type.base (A * B)%etype)) =>
+    llet default := UnderLets.Base
+                      (#(ident.prod_rect)%expr @
+                       (λ (x1 : var (type.base A))(x2 : var (type.base B)),
+                        UnderLets.to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat in
     match x0 with
-    | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
-      @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ =>
-        UnderLets.Base
-          (#(ident.prod_rect)%expr @
-           (λ (x2 : var (type.base A))(x3 : var (type.base B)),
-            UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0)%expr_pat
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(idc)%expr_pat x2) x1 =>
         match
           match idc with
@@ -451,80 +462,30 @@ match idc in (ident t) return (Compile.value' true t) with
                                                             anyexpr_ty))) :=
                                                   fv in
                                                 unwrap))
-                                      | None =>
-                                          UnderLets.Base
-                                            (#(ident.prod_rect)%expr @
-                                             (λ (x5 : var (type.base A))
-                                              (x6 : var (type.base B)),
-                                              UnderLets.to_expr
-                                                (x ($x5) ($x6)))%expr @ x0)%expr_pat
+                                      | None => default
                                       end))%under_lets
-                              | None =>
-                                  UnderLets.Base
-                                    (#(ident.prod_rect)%expr @
-                                     (λ (x5 : var (type.base A))(x6 : 
-                                                                 var
-                                                                   (type.base
-                                                                    B)),
-                                      UnderLets.to_expr (x ($x5) ($x6)))%expr @
-                                     x0)%expr_pat
+                              | None => default
                               end)
-                       | None =>
-                           UnderLets.Base
-                             (#(ident.prod_rect)%expr @
-                              (λ (x4 : var (type.base A))(x5 : var
-                                                                 (type.base B)),
-                               UnderLets.to_expr (x ($x4) ($x5)))%expr @ x0)%expr_pat
+                       | None => default
                        end)
                 | (s1 -> d1)%ptype =>
                     fun _ : Compile.value' false s1 -> Compile.value' true d1
-                    =>
-                    UnderLets.Base
-                      (#(ident.prod_rect)%expr @
-                       (λ (x3 : var (type.base A))(x4 : var (type.base B)),
-                        UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
+                    => default
                 end (Compile.reflect x1)
             | (s1 -> d1)%ptype =>
                 fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
-                UnderLets.Base
-                  (#(ident.prod_rect)%expr @
-                   (λ (x3 : var (type.base A))(x4 : var (type.base B)),
-                    UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
+                default
             end (Compile.reflect x2)
-        | None =>
-            UnderLets.Base
-              (#(ident.prod_rect)%expr @
-               (λ (x3 : var (type.base A))(x4 : var (type.base B)),
-                UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
+        | None => default
         end
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
-      _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ =>
-        UnderLets.Base
-          (#(ident.prod_rect)%expr @
-           (λ (x3 : var (type.base A))(x4 : var (type.base B)),
-            UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
-    | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
-      @expr.App _ _ _ s _
-      (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-        UnderLets.Base
-          (#(ident.prod_rect)%expr @
-           (λ (x4 : var (type.base A))(x5 : var (type.base B)),
-            UnderLets.to_expr (x ($x4) ($x5)))%expr @ x0)%expr_pat
-    | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
-        UnderLets.Base
-          (#(ident.prod_rect)%expr @
-           (λ (x3 : var (type.base A))(x4 : var (type.base B)),
-            UnderLets.to_expr (x ($x3) ($x4)))%expr @ x0)%expr_pat
-    | @expr.LetIn _ _ _ _ _ _ _ =>
-        UnderLets.Base
-          (#(ident.prod_rect)%expr @
-           (λ (x2 : var (type.base A))(x3 : var (type.base B)),
-            UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0)%expr_pat
-    | _ =>
-        UnderLets.Base
-          (#(ident.prod_rect)%expr @
-           (λ (x1 : var (type.base A))(x2 : var (type.base B)),
-            UnderLets.to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat
+      _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
+      _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App _ _ _
+      s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => default
+    | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
+      @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
+      (@expr.LetIn _ _ _ _ _ _ _) _ => default
+    | _ => default
     end
 | @ident.bool_rect T =>
     fun
@@ -533,6 +494,12 @@ match idc in (ident t) return (Compile.value' true t) with
             UnderLets.UnderLets base.type ident var
               (defaults.expr (type.base T)))
       (x1 : defaults.expr (type.base base.type.bool)) =>
+    llet default := UnderLets.Base
+                      (#(ident.bool_rect)%expr @
+                       (λ x2 : var (type.base base.type.unit),
+                        UnderLets.to_expr (x ($x2)))%expr @
+                       (λ x2 : var (type.base base.type.unit),
+                        UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat in
     match x1 with
     | #(idc)%expr_pat =>
         match
@@ -580,36 +547,11 @@ match idc in (ident t) return (Compile.value' true t) with
                                      (let (anyexpr_ty, _) := a0 in anyexpr_ty))) :=
                             fv in
                           unwrap))
-                | None =>
-                    UnderLets.Base
-                      (#(ident.bool_rect)%expr @
-                       (λ x2 : var (type.base base.type.unit),
-                        UnderLets.to_expr (x ($x2)))%expr @
-                       (λ x2 : var (type.base base.type.unit),
-                        UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+                | None => default
                 end))%under_lets
-        | None =>
-            UnderLets.Base
-              (#(ident.bool_rect)%expr @
-               (λ x2 : var (type.base base.type.unit),
-                UnderLets.to_expr (x ($x2)))%expr @
-               (λ x2 : var (type.base base.type.unit),
-                UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+        | None => default
         end
-    | ($_)%expr | @expr.Abs _ _ _ _ _ _ =>
-        UnderLets.Base
-          (#(ident.bool_rect)%expr @
-           (λ x2 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x2)))%expr @
-           (λ x2 : var (type.base base.type.unit),
-            UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
-    | _ =>
-        UnderLets.Base
-          (#(ident.bool_rect)%expr @
-           (λ x3 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x3)))%expr @
-           (λ x3 : var (type.base base.type.unit),
-            UnderLets.to_expr (x0 ($x3)))%expr @ x1)%expr_pat
+    | _ => default
     end
 | @ident.nat_rect P =>
     fun
@@ -621,6 +563,14 @@ match idc in (ident t) return (Compile.value' true t) with
             UnderLets.UnderLets base.type ident var
               (defaults.expr (type.base P)))
       (x1 : defaults.expr (type.base base.type.nat)) =>
+    llet default := UnderLets.Base
+                      (#(ident.nat_rect)%expr @
+                       (λ x2 : var (type.base base.type.unit),
+                        UnderLets.to_expr (x ($x2)))%expr @
+                       (λ (x2 : var (type.base base.type.nat))(x3 : var
+                                                                    (type.base
+                                                                    P)),
+                        UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat in
     match x1 with
     | #(idc)%expr_pat =>
         match
@@ -682,47 +632,13 @@ match idc in (ident t) return (Compile.value' true t) with
                                             (let (anyexpr_ty, _) := a0 in
                                              anyexpr_ty))) := fv in
                                  unwrap))
-                       | None =>
-                           UnderLets.Base
-                             (#(ident.nat_rect)%expr @
-                              (λ x2 : var (type.base base.type.unit),
-                               UnderLets.to_expr (x ($x2)))%expr @
-                              (λ (x2 : var (type.base base.type.nat))
-                               (x3 : var (type.base P)),
-                               UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+                       | None => default
                        end))%under_lets
-               | None =>
-                   UnderLets.Base
-                     (#(ident.nat_rect)%expr @
-                      (λ x2 : var (type.base base.type.unit),
-                       UnderLets.to_expr (x ($x2)))%expr @
-                      (λ (x2 : var (type.base base.type.nat))(x3 : var
-                                                                    (type.base
-                                                                    P)),
-                       UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+               | None => default
                end)
-        | None =>
-            UnderLets.Base
-              (#(ident.nat_rect)%expr @
-               (λ x2 : var (type.base base.type.unit),
-                UnderLets.to_expr (x ($x2)))%expr @
-               (λ (x2 : var (type.base base.type.nat))(x3 : var (type.base P)),
-                UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+        | None => default
         end
-    | ($_)%expr | @expr.Abs _ _ _ _ _ _ =>
-        UnderLets.Base
-          (#(ident.nat_rect)%expr @
-           (λ x2 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x2)))%expr @
-           (λ (x2 : var (type.base base.type.nat))(x3 : var (type.base P)),
-            UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
-    | _ =>
-        UnderLets.Base
-          (#(ident.nat_rect)%expr @
-           (λ x3 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x3)))%expr @
-           (λ (x3 : var (type.base base.type.nat))(x4 : var (type.base P)),
-            UnderLets.to_expr (x0 ($x3) ($x4)))%expr @ x1)%expr_pat
+    | _ => default
     end
 | @ident.nat_rect_arrow P Q =>
     fun
@@ -738,6 +654,21 @@ match idc in (ident t) return (Compile.value' true t) with
               (defaults.expr (type.base Q)))
       (x1 : defaults.expr (type.base base.type.nat))
       (x2 : defaults.expr (type.base P)) =>
+    llet default := UnderLets.Base
+                      (#(ident.nat_rect_arrow)%expr @
+                       (λ x3 : var (type.base P),
+                        UnderLets.to_expr (x ($x3)))%expr @
+                       (λ (x3 : var (type.base base.type.nat))(x4 : var
+                                                                    (type.base
+                                                                    P ->
+                                                                    type.base
+                                                                    Q)%ptype)
+                        (x5 : var (type.base P)),
+                        UnderLets.to_expr
+                          (x0 ($x3)
+                             (fun x6 : defaults.expr (type.base P) =>
+                              UnderLets.Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+                       x1 @ x2)%expr_pat in
     match x1 with
     | #(idc)%expr_pat =>
         match
@@ -819,100 +750,15 @@ match idc in (ident t) return (Compile.value' true t) with
                                                       a0 in
                                                     anyexpr_ty))) := fv in
                                         unwrap))
-                              | None =>
-                                  UnderLets.Base
-                                    (#(ident.nat_rect_arrow)%expr @
-                                     (λ x3 : var (type.base P),
-                                      UnderLets.to_expr (x ($x3)))%expr @
-                                     (λ (x3 : var (type.base base.type.nat))
-                                      (x4 : var
-                                              (type.base P -> type.base Q)%ptype)
-                                      (x5 : var (type.base P)),
-                                      UnderLets.to_expr
-                                        (x0 ($x3)
-                                           (fun
-                                              x6 : defaults.expr
-                                                     (type.base P) =>
-                                            UnderLets.Base
-                                              ($x4 @ x6)%expr_pat) ($x5)))%expr @
-                                     x1 @ x2)%expr_pat
+                              | None => default
                               end))%under_lets
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.nat_rect_arrow)%expr @
-                             (λ x3 : var (type.base P),
-                              UnderLets.to_expr (x ($x3)))%expr @
-                             (λ (x3 : var (type.base base.type.nat))(x4 : 
-                                                                    var
-                                                                    (type.base
-                                                                    P ->
-                                                                    type.base
-                                                                    Q)%ptype)
-                              (x5 : var (type.base P)),
-                              UnderLets.to_expr
-                                (x0 ($x3)
-                                   (fun x6 : defaults.expr (type.base P) =>
-                                    UnderLets.Base ($x4 @ x6)%expr_pat) 
-                                   ($x5)))%expr @ x1 @ x2)%expr_pat
+                      | None => default
                       end)
-               | None =>
-                   UnderLets.Base
-                     (#(ident.nat_rect_arrow)%expr @
-                      (λ x3 : var (type.base P),
-                       UnderLets.to_expr (x ($x3)))%expr @
-                      (λ (x3 : var (type.base base.type.nat))(x4 : var
-                                                                    (type.base
-                                                                    P ->
-                                                                    type.base
-                                                                    Q)%ptype)
-                       (x5 : var (type.base P)),
-                       UnderLets.to_expr
-                         (x0 ($x3)
-                            (fun x6 : defaults.expr (type.base P) =>
-                             UnderLets.Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
-                      x1 @ x2)%expr_pat
+               | None => default
                end)
-        | None =>
-            UnderLets.Base
-              (#(ident.nat_rect_arrow)%expr @
-               (λ x3 : var (type.base P),
-                UnderLets.to_expr (x ($x3)))%expr @
-               (λ (x3 : var (type.base base.type.nat))(x4 : var
-                                                              (type.base P ->
-                                                               type.base Q)%ptype)
-                (x5 : var (type.base P)),
-                UnderLets.to_expr
-                  (x0 ($x3)
-                     (fun x6 : defaults.expr (type.base P) =>
-                      UnderLets.Base ($x4 @ x6)%expr_pat) ($x5)))%expr @ x1 @
-               x2)%expr_pat
+        | None => default
         end
-    | ($_)%expr | @expr.Abs _ _ _ _ _ _ =>
-        UnderLets.Base
-          (#(ident.nat_rect_arrow)%expr @
-           (λ x3 : var (type.base P),
-            UnderLets.to_expr (x ($x3)))%expr @
-           (λ (x3 : var (type.base base.type.nat))(x4 : var
-                                                          (type.base P ->
-                                                           type.base Q)%ptype)
-            (x5 : var (type.base P)),
-            UnderLets.to_expr
-              (x0 ($x3)
-                 (fun x6 : defaults.expr (type.base P) =>
-                  UnderLets.Base ($x4 @ x6)%expr_pat) ($x5)))%expr @ x1 @ x2)%expr_pat
-    | _ =>
-        UnderLets.Base
-          (#(ident.nat_rect_arrow)%expr @
-           (λ x4 : var (type.base P),
-            UnderLets.to_expr (x ($x4)))%expr @
-           (λ (x4 : var (type.base base.type.nat))(x5 : var
-                                                          (type.base P ->
-                                                           type.base Q)%ptype)
-            (x6 : var (type.base P)),
-            UnderLets.to_expr
-              (x0 ($x4)
-                 (fun x7 : defaults.expr (type.base P) =>
-                  UnderLets.Base ($x5 @ x7)%expr_pat) ($x6)))%expr @ x1 @ x2)%expr_pat
+    | _ => default
     end
 | @ident.list_rect A P =>
     fun
@@ -925,6 +771,18 @@ match idc in (ident t) return (Compile.value' true t) with
             UnderLets.UnderLets base.type ident var
               (defaults.expr (type.base P)))
       (x1 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.list_rect)%expr @
+                       (λ x2 : var (type.base base.type.unit),
+                        UnderLets.to_expr (x ($x2)))%expr @
+                       (λ (x2 : var (type.base A))(x3 : var
+                                                          (type.base
+                                                             (base.type.list
+                                                                A)))(x4 : 
+                                                                    var
+                                                                    (type.base
+                                                                    P)),
+                        UnderLets.to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat in
     Compile.castv x0
       (UnderLets.UnderLets base.type ident var (defaults.expr (type.base P)))
       (fun
@@ -980,40 +838,11 @@ match idc in (ident t) return (Compile.value' true t) with
                                            (let (anyexpr_ty, _) := a0 in
                                             anyexpr_ty))) := fv in
                                 unwrap))
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.list_rect)%expr @
-                             (λ x2 : var (type.base base.type.unit),
-                              UnderLets.to_expr (x ($x2)))%expr @
-                             (λ (x2 : var (type.base A))(x3 : var
-                                                                (type.base
-                                                                   (base.type.list
-                                                                    A)))
-                              (x4 : var (type.base P)),
-                              UnderLets.to_expr (x0 ($x2) ($x3) ($x4)))%expr @
-                             x1)%expr_pat
+                      | None => default
                       end))%under_lets
-              | None =>
-                  UnderLets.Base
-                    (#(ident.list_rect)%expr @
-                     (λ x2 : var (type.base base.type.unit),
-                      UnderLets.to_expr (x ($x2)))%expr @
-                     (λ (x2 : var (type.base A))(x3 : var
-                                                        (type.base
-                                                           (base.type.list A)))
-                      (x4 : var (type.base P)),
-                      UnderLets.to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+              | None => default
               end)
-       | None =>
-           UnderLets.Base
-             (#(ident.list_rect)%expr @
-              (λ x2 : var (type.base base.type.unit),
-               UnderLets.to_expr (x ($x2)))%expr @
-              (λ (x2 : var (type.base A))(x3 : var
-                                                 (type.base
-                                                    (base.type.list A)))
-               (x4 : var (type.base P)),
-               UnderLets.to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+       | None => default
        end)
 | @ident.list_case A P =>
     fun
@@ -1025,6 +854,15 @@ match idc in (ident t) return (Compile.value' true t) with
             UnderLets.UnderLets base.type ident var
               (defaults.expr (type.base P)))
       (x1 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.list_case)%expr @
+                       (λ x2 : var (type.base base.type.unit),
+                        UnderLets.to_expr (x ($x2)))%expr @
+                       (λ (x2 : var (type.base A))(x3 : var
+                                                          (type.base
+                                                             (base.type.list
+                                                                A))),
+                        UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat in
     match x1 with
     | #(idc)%expr_pat =>
         match match idc with
@@ -1057,36 +895,10 @@ match idc in (ident t) return (Compile.value' true t) with
                                      (let (anyexpr_ty, _) := a0 in anyexpr_ty))) :=
                             fv in
                           unwrap))
-                | None =>
-                    UnderLets.Base
-                      (#(ident.list_case)%expr @
-                       (λ x2 : var (type.base base.type.unit),
-                        UnderLets.to_expr (x ($x2)))%expr @
-                       (λ (x2 : var (type.base A))(x3 : var
-                                                          (type.base
-                                                             (base.type.list
-                                                                A))),
-                        UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+                | None => default
                 end))%under_lets
-        | None =>
-            UnderLets.Base
-              (#(ident.list_case)%expr @
-               (λ x2 : var (type.base base.type.unit),
-                UnderLets.to_expr (x ($x2)))%expr @
-               (λ (x2 : var (type.base A))(x3 : var
-                                                  (type.base
-                                                     (base.type.list A))),
-                UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+        | None => default
         end
-    | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
-      @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ =>
-        UnderLets.Base
-          (#(ident.list_case)%expr @
-           (λ x3 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x3)))%expr @
-           (λ (x3 : var (type.base A))(x4 : var
-                                              (type.base (base.type.list A))),
-            UnderLets.to_expr (x0 ($x3) ($x4)))%expr @ x1)%expr_pat
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(idc)%expr_pat x3) x2 =>
         match match idc with
               | @ident.cons t0 => Some t0
@@ -1162,132 +974,43 @@ match idc in (ident t) return (Compile.value' true t) with
                                                             anyexpr_ty))) :=
                                                   fv in
                                                 unwrap))
-                                      | None =>
-                                          UnderLets.Base
-                                            (#(ident.list_case)%expr @
-                                             (λ x6 : var
-                                                       (type.base
-                                                          base.type.unit),
-                                              UnderLets.to_expr (x ($x6)))%expr @
-                                             (λ (x6 : var (type.base A))
-                                              (x7 : var
-                                                      (type.base
-                                                         (base.type.list A))),
-                                              UnderLets.to_expr
-                                                (x0 ($x6) ($x7)))%expr @ x1)%expr_pat
+                                      | None => default
                                       end))%under_lets
-                              | None =>
-                                  UnderLets.Base
-                                    (#(ident.list_case)%expr @
-                                     (λ x6 : var (type.base base.type.unit),
-                                      UnderLets.to_expr (x ($x6)))%expr @
-                                     (λ (x6 : var (type.base A))(x7 : 
-                                                                 var
-                                                                   (type.base
-                                                                    (base.type.list
-                                                                    A))),
-                                      UnderLets.to_expr (x0 ($x6) ($x7)))%expr @
-                                     x1)%expr_pat
+                              | None => default
                               end)
-                       | None =>
-                           UnderLets.Base
-                             (#(ident.list_case)%expr @
-                              (λ x5 : var (type.base base.type.unit),
-                               UnderLets.to_expr (x ($x5)))%expr @
-                              (λ (x5 : var (type.base A))(x6 : var
-                                                                 (type.base
-                                                                    (base.type.list
-                                                                    A))),
-                               UnderLets.to_expr (x0 ($x5) ($x6)))%expr @ x1)%expr_pat
+                       | None => default
                        end)
                 | (s1 -> d1)%ptype =>
                     fun _ : Compile.value' false s1 -> Compile.value' true d1
-                    =>
-                    UnderLets.Base
-                      (#(ident.list_case)%expr @
-                       (λ x4 : var (type.base base.type.unit),
-                        UnderLets.to_expr (x ($x4)))%expr @
-                       (λ (x4 : var (type.base A))(x5 : var
-                                                          (type.base
-                                                             (base.type.list
-                                                                A))),
-                        UnderLets.to_expr (x0 ($x4) ($x5)))%expr @ x1)%expr_pat
+                    => default
                 end (Compile.reflect x2)
             | (s1 -> d1)%ptype =>
                 fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
-                UnderLets.Base
-                  (#(ident.list_case)%expr @
-                   (λ x4 : var (type.base base.type.unit),
-                    UnderLets.to_expr (x ($x4)))%expr @
-                   (λ (x4 : var (type.base A))(x5 : var
-                                                      (type.base
-                                                         (base.type.list A))),
-                    UnderLets.to_expr (x0 ($x4) ($x5)))%expr @ x1)%expr_pat
+                default
             end (Compile.reflect x3)
-        | None =>
-            UnderLets.Base
-              (#(ident.list_case)%expr @
-               (λ x4 : var (type.base base.type.unit),
-                UnderLets.to_expr (x ($x4)))%expr @
-               (λ (x4 : var (type.base A))(x5 : var
-                                                  (type.base
-                                                     (base.type.list A))),
-                UnderLets.to_expr (x0 ($x4) ($x5)))%expr @ x1)%expr_pat
+        | None => default
         end
     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
-      _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ =>
-        UnderLets.Base
-          (#(ident.list_case)%expr @
-           (λ x4 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x4)))%expr @
-           (λ (x4 : var (type.base A))(x5 : var
-                                              (type.base (base.type.list A))),
-            UnderLets.to_expr (x0 ($x4) ($x5)))%expr @ x1)%expr_pat
-    | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
-      @expr.App _ _ _ s _
-      (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-        UnderLets.Base
-          (#(ident.list_case)%expr @
-           (λ x5 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x5)))%expr @
-           (λ (x5 : var (type.base A))(x6 : var
-                                              (type.base (base.type.list A))),
-            UnderLets.to_expr (x0 ($x5) ($x6)))%expr @ x1)%expr_pat
-    | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
-        UnderLets.Base
-          (#(ident.list_case)%expr @
-           (λ x4 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x4)))%expr @
-           (λ (x4 : var (type.base A))(x5 : var
-                                              (type.base (base.type.list A))),
-            UnderLets.to_expr (x0 ($x4) ($x5)))%expr @ x1)%expr_pat
-    | @expr.LetIn _ _ _ _ _ _ _ =>
-        UnderLets.Base
-          (#(ident.list_case)%expr @
-           (λ x3 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x3)))%expr @
-           (λ (x3 : var (type.base A))(x4 : var
-                                              (type.base (base.type.list A))),
-            UnderLets.to_expr (x0 ($x3) ($x4)))%expr @ x1)%expr_pat
-    | _ =>
-        UnderLets.Base
-          (#(ident.list_case)%expr @
-           (λ x2 : var (type.base base.type.unit),
-            UnderLets.to_expr (x ($x2)))%expr @
-           (λ (x2 : var (type.base A))(x3 : var
-                                              (type.base (base.type.list A))),
-            UnderLets.to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+      _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
+      _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App _ _ _
+      s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => default
+    | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr _ |
+      @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
+      (@expr.LetIn _ _ _ _ _ _ _) _ => default
+    | _ => default
     end
 | @ident.List_length T =>
     fun x : defaults.expr (type.base (base.type.list T)) =>
+    llet default := UnderLets.Base (#(ident.List_length)%expr @ x)%expr_pat in
     reflect_list_cps x
       (fun xs : option (list (defaults.expr (type.base T))) =>
        match xs with
        | Some xs0 => UnderLets.Base ##(length xs0)%expr
-       | None => UnderLets.Base (#(ident.List_length)%expr @ x)%expr_pat
+       | None => default
        end)
 | ident.List_seq =>
     fun x x0 : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.List_seq)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -1327,18 +1050,19 @@ match idc in (ident t) return (Compile.value' true t) with
                                     (type.base (base.type.list base.type.nat)))
                           => (x1 :: xs)%expr_pat) []%expr_pat
                          (map (fun v : nat => ##(v)%expr) (seq args args0)))
-                | None =>
-                    UnderLets.Base (#(ident.List_seq)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.List_seq)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.List_seq)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.List_seq)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | @ident.List_firstn A =>
     fun (x : defaults.expr (type.base base.type.nat))
       (x0 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_firstn)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -1371,22 +1095,19 @@ match idc in (ident t) return (Compile.value' true t) with
                       match a with
                       | Some x' =>
                           UnderLets.Base (x' (reify_list (firstn args xs0)))
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_firstn)%expr @ x @ x0)%expr_pat
+                      | None => default
                       end)
-               | None =>
-                   UnderLets.Base
-                     (#(ident.List_firstn)%expr @ x @ x0)%expr_pat
+               | None => default
                end)
-        | None =>
-            UnderLets.Base (#(ident.List_firstn)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.List_firstn)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | @ident.List_skipn A =>
     fun (x : defaults.expr (type.base base.type.nat))
       (x0 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_skipn)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -1419,21 +1140,19 @@ match idc in (ident t) return (Compile.value' true t) with
                       match a with
                       | Some x' =>
                           UnderLets.Base (x' (reify_list (skipn args xs0)))
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_skipn)%expr @ x @ x0)%expr_pat
+                      | None => default
                       end)
-               | None =>
-                   UnderLets.Base
-                     (#(ident.List_skipn)%expr @ x @ x0)%expr_pat
+               | None => default
                end)
-        | None => UnderLets.Base (#(ident.List_skipn)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.List_skipn)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | @ident.List_repeat A =>
     fun (x : defaults.expr (type.base A))
       (x0 : defaults.expr (type.base base.type.nat)) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_repeat)%expr @ x @ x0)%expr_pat in
     match x0 with
     | #(idc)%expr_pat =>
         match
@@ -1460,18 +1179,17 @@ match idc in (ident t) return (Compile.value' true t) with
                         defaults.expr (type.base (base.type.list A))) =>
                match a with
                | Some x' => UnderLets.Base (x' (reify_list (repeat x args)))
-               | None =>
-                   UnderLets.Base
-                     (#(ident.List_repeat)%expr @ x @ x0)%expr_pat
+               | None => default
                end)
-        | None =>
-            UnderLets.Base (#(ident.List_repeat)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.List_repeat)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | @ident.List_combine A B =>
     fun (x : defaults.expr (type.base (base.type.list A)))
       (x0 : defaults.expr (type.base (base.type.list B))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_combine)%expr @ x @ x0)%expr_pat in
     reflect_list_cps x
       (fun xs : option (list (defaults.expr (type.base A))) =>
        match xs with
@@ -1508,16 +1226,11 @@ match idc in (ident t) return (Compile.value' true t) with
                               (reify_list
                                  (map (fun '(x1, y) => (x1, y)%expr_pat)
                                     (combine xs0 ys0))))
-                     | None =>
-                         UnderLets.Base
-                           (#(ident.List_combine)%expr @ x @ x0)%expr_pat
+                     | None => default
                      end)
-              | None =>
-                  UnderLets.Base
-                    (#(ident.List_combine)%expr @ x @ x0)%expr_pat
+              | None => default
               end)
-       | None =>
-           UnderLets.Base (#(ident.List_combine)%expr @ x @ x0)%expr_pat
+       | None => default
        end)
 | @ident.List_map A B =>
     fun
@@ -1525,6 +1238,10 @@ match idc in (ident t) return (Compile.value' true t) with
            UnderLets.UnderLets base.type ident var
              (defaults.expr (type.base B)))
       (x0 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_map)%expr @
+                       (λ x1 : var (type.base A),
+                        UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat in
     Compile.castbe x0
       (UnderLets.UnderLets base.type ident var
          (defaults.expr (type.base (base.type.list B))))
@@ -1585,26 +1302,15 @@ match idc in (ident t) return (Compile.value' true t) with
                                            (let (anyexpr_ty, _) := a0 in
                                             anyexpr_ty))) := fv in
                                 unwrap))
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_map)%expr @
-                             (λ x1 : var (type.base A),
-                              UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+                      | None => default
                       end))%under_lets
-              | None =>
-                  UnderLets.Base
-                    (#(ident.List_map)%expr @
-                     (λ x1 : var (type.base A),
-                      UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+              | None => default
               end)
-       | None =>
-           UnderLets.Base
-             (#(ident.List_map)%expr @
-              (λ x1 : var (type.base A),
-               UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+       | None => default
        end)
 | @ident.List_app A =>
     fun x x0 : defaults.expr (type.base (base.type.list A)) =>
+    llet default := UnderLets.Base (x ++ x0)%expr in
     Compile.castbe x
       (UnderLets.UnderLets base.type ident var
          (defaults.expr (type.base (base.type.list A))))
@@ -1664,14 +1370,15 @@ match idc in (ident t) return (Compile.value' true t) with
                                            (let (anyexpr_ty, _) := a0 in
                                             anyexpr_ty))) := fv in
                                 unwrap))
-                      | None => UnderLets.Base (x ++ x0)%expr
+                      | None => default
                       end))%under_lets
-              | None => UnderLets.Base (x ++ x0)%expr
+              | None => default
               end)
-       | None => UnderLets.Base (x ++ x0)%expr
+       | None => default
        end)
 | @ident.List_rev A =>
     fun x : defaults.expr (type.base (base.type.list A)) =>
+    llet default := UnderLets.Base (#(ident.List_rev)%expr @ x)%expr_pat in
     reflect_list_cps x
       (fun xs : option (list (defaults.expr (type.base A))) =>
        match xs with
@@ -1687,9 +1394,9 @@ match idc in (ident t) return (Compile.value' true t) with
                        defaults.expr (type.base (base.type.list A))) =>
               match a with
               | Some x' => UnderLets.Base (x' (reify_list (rev xs0)))
-              | None => UnderLets.Base (#(ident.List_rev)%expr @ x)%expr_pat
+              | None => default
               end)
-       | None => UnderLets.Base (#(ident.List_rev)%expr @ x)%expr_pat
+       | None => default
        end)
 | @ident.List_flat_map A B =>
     fun
@@ -1697,6 +1404,10 @@ match idc in (ident t) return (Compile.value' true t) with
            UnderLets.UnderLets base.type ident var
              (defaults.expr (type.base (base.type.list B))))
       (x0 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_flat_map)%expr @
+                       (λ x1 : var (type.base A),
+                        UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat in
     Compile.castbe x0
       (UnderLets.UnderLets base.type ident var
          (defaults.expr (type.base (base.type.list B))))
@@ -1755,23 +1466,11 @@ match idc in (ident t) return (Compile.value' true t) with
                       =>
                       match a with
                       | Some x' => UnderLets.Base (x' fv0)
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_flat_map)%expr @
-                             (λ x1 : var (type.base A),
-                              UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+                      | None => default
                       end))%under_lets
-              | None =>
-                  UnderLets.Base
-                    (#(ident.List_flat_map)%expr @
-                     (λ x1 : var (type.base A),
-                      UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+              | None => default
               end)
-       | None =>
-           UnderLets.Base
-             (#(ident.List_flat_map)%expr @
-              (λ x1 : var (type.base A),
-               UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+       | None => default
        end)
 | @ident.List_partition A =>
     fun
@@ -1779,6 +1478,10 @@ match idc in (ident t) return (Compile.value' true t) with
            UnderLets.UnderLets base.type ident var
              (defaults.expr (type.base base.type.bool)))
       (x0 : defaults.expr (type.base (base.type.list A))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_partition)%expr @
+                       (λ x1 : var (type.base A),
+                        UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat in
     Compile.castbe x0
       (UnderLets.UnderLets base.type ident var
          (defaults.expr
@@ -1859,23 +1562,11 @@ match idc in (ident t) return (Compile.value' true t) with
                       =>
                       match a with
                       | Some x' => UnderLets.Base (x' fv0)
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_partition)%expr @
-                             (λ x1 : var (type.base A),
-                              UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+                      | None => default
                       end))%under_lets
-              | None =>
-                  UnderLets.Base
-                    (#(ident.List_partition)%expr @
-                     (λ x1 : var (type.base A),
-                      UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+              | None => default
               end)
-       | None =>
-           UnderLets.Base
-             (#(ident.List_partition)%expr @
-              (λ x1 : var (type.base A),
-               UnderLets.to_expr (x ($x1)))%expr @ x0)%expr_pat
+       | None => default
        end)
 | @ident.List_fold_right A B =>
     fun
@@ -1885,6 +1576,10 @@ match idc in (ident t) return (Compile.value' true t) with
              (defaults.expr (type.base A)))
       (x0 : defaults.expr (type.base A))
       (x1 : defaults.expr (type.base (base.type.list B))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_fold_right)%expr @
+                       (λ (x2 : var (type.base B))(x3 : var (type.base A)),
+                        UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0 @ x1)%expr_pat in
     Compile.castv x
       (UnderLets.UnderLets base.type ident var (defaults.expr (type.base A)))
       (fun
@@ -1937,25 +1632,11 @@ match idc in (ident t) return (Compile.value' true t) with
                                            (let (anyexpr_ty, _) := a0 in
                                             anyexpr_ty))) := fv in
                                 unwrap))
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_fold_right)%expr @
-                             (λ (x2 : var (type.base B))(x3 : var
-                                                                (type.base A)),
-                              UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0 @
-                             x1)%expr_pat
+                      | None => default
                       end))%under_lets
-              | None =>
-                  UnderLets.Base
-                    (#(ident.List_fold_right)%expr @
-                     (λ (x2 : var (type.base B))(x3 : var (type.base A)),
-                      UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0 @ x1)%expr_pat
+              | None => default
               end)
-       | None =>
-           UnderLets.Base
-             (#(ident.List_fold_right)%expr @
-              (λ (x2 : var (type.base B))(x3 : var (type.base A)),
-               UnderLets.to_expr (x ($x2) ($x3)))%expr @ x0 @ x1)%expr_pat
+       | None => default
        end)
 | @ident.List_update_nth T =>
     fun (x : defaults.expr (type.base base.type.nat))
@@ -1963,6 +1644,10 @@ match idc in (ident t) return (Compile.value' true t) with
             UnderLets.UnderLets base.type ident var
               (defaults.expr (type.base T)))
       (x1 : defaults.expr (type.base (base.type.list T))) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_update_nth)%expr @ x @
+                       (λ x2 : var (type.base T),
+                        UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2037,45 +1722,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                                       a0 in
                                                     anyexpr_ty))) := fv in
                                         unwrap))
-                              | None =>
-                                  UnderLets.Base
-                                    (#(ident.List_update_nth)%expr @ x @
-                                     (λ x2 : var (type.base T),
-                                      UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+                              | None => default
                               end))%under_lets
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_update_nth)%expr @ x @
-                             (λ x2 : var (type.base T),
-                              UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+                      | None => default
                       end)
-               | None =>
-                   UnderLets.Base
-                     (#(ident.List_update_nth)%expr @ x @
-                      (λ x2 : var (type.base T),
-                       UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+               | None => default
                end)
-        | None =>
-            UnderLets.Base
-              (#(ident.List_update_nth)%expr @ x @
-               (λ x2 : var (type.base T),
-                UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+        | None => default
         end
-    | ($_)%expr | @expr.Abs _ _ _ _ _ _ =>
-        UnderLets.Base
-          (#(ident.List_update_nth)%expr @ x @
-           (λ x2 : var (type.base T),
-            UnderLets.to_expr (x0 ($x2)))%expr @ x1)%expr_pat
-    | _ =>
-        UnderLets.Base
-          (#(ident.List_update_nth)%expr @ x @
-           (λ x3 : var (type.base T),
-            UnderLets.to_expr (x0 ($x3)))%expr @ x1)%expr_pat
+    | _ => default
     end
 | @ident.List_nth_default T =>
     fun (x : defaults.expr (type.base T))
       (x0 : defaults.expr (type.base (base.type.list T)))
       (x1 : defaults.expr (type.base base.type.nat)) =>
+    llet default := UnderLets.Base
+                      (#(ident.List_nth_default)%expr @ x @ x0 @ x1)%expr_pat in
     match x1 with
     | #(idc)%expr_pat =>
         match
@@ -2094,9 +1756,9 @@ match idc in (ident t) return (Compile.value' true t) with
             Compile.castbe x
               (UnderLets.UnderLets base.type ident var
                  (defaults.expr (type.base T)))
-              (fun default : option (defaults.expr (type.base T)) =>
-               match default with
-               | Some default0 =>
+              (fun default0 : option (defaults.expr (type.base T)) =>
+               match default0 with
+               | Some default1 =>
                    reflect_list_cps x0
                      (fun ls : option (list (defaults.expr (type.base T))) =>
                       match ls with
@@ -2113,30 +1775,20 @@ match idc in (ident t) return (Compile.value' true t) with
                              match a with
                              | Some x' =>
                                  UnderLets.Base
-                                   (x' (nth_default default0 ls0 args))
-                             | None =>
-                                 UnderLets.Base
-                                   (#(ident.List_nth_default)%expr @ x @ x0 @
-                                    x1)%expr_pat
+                                   (x' (nth_default default1 ls0 args))
+                             | None => default
                              end)
-                      | None =>
-                          UnderLets.Base
-                            (#(ident.List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+                      | None => default
                       end)
-               | None =>
-                   UnderLets.Base
-                     (#(ident.List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+               | None => default
                end)
-        | None =>
-            UnderLets.Base
-              (#(ident.List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_add =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x + x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2169,16 +1821,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args + args0)%Z)%expr
-                | None => UnderLets.Base (x + x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x + x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x + x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x + x0)%expr
+    | _ => default
     end
 | ident.Z_mul =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x * x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2211,16 +1864,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args * args0)%Z)%expr
-                | None => UnderLets.Base (x * x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x * x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x * x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x * x0)%expr
+    | _ => default
     end
 | ident.Z_pow =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_pow)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2253,17 +1907,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(args ^ args0)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Z_pow)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Z_pow)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Z_pow)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_pow)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Z_sub =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x - x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2296,16 +1950,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args - args0)%Z)%expr
-                | None => UnderLets.Base (x - x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x - x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x - x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x - x0)%expr
+    | _ => default
     end
 | ident.Z_opp =>
     fun x : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (- x)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2321,12 +1976,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##((- args)%Z)%expr
-        | None => UnderLets.Base (- x)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (- x)%expr
+    | _ => default
     end
 | ident.Z_div =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x / x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2359,16 +2015,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args / args0)%Z)%expr
-                | None => UnderLets.Base (x / x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x / x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x / x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x / x0)%expr
+    | _ => default
     end
 | ident.Z_modulo =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x mod x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2401,16 +2058,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##((args mod args0)%Z)%expr
-                | None => UnderLets.Base (x mod x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x mod x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x mod x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x mod x0)%expr
+    | _ => default
     end
 | ident.Z_log2 =>
     fun x : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_log2)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2426,12 +2084,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Z.log2 args)%expr
-        | None => UnderLets.Base (#(ident.Z_log2)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_log2)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Z_log2_up =>
     fun x : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_log2_up)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2447,12 +2106,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Z.log2_up args)%expr
-        | None => UnderLets.Base (#(ident.Z_log2_up)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_log2_up)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Z_eqb =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_eqb)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2485,17 +2145,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(args =? args0)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Z_eqb)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Z_eqb)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Z_eqb)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_eqb)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Z_leb =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_leb)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2528,17 +2188,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(args <=? args0)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Z_leb)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Z_leb)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Z_leb)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_leb)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Z_geb =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_geb)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2571,17 +2231,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(args >=? args0)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Z_geb)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Z_geb)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Z_geb)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_geb)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Z_of_nat =>
     fun x : defaults.expr (type.base base.type.nat) =>
+    llet default := UnderLets.Base (#(ident.Z_of_nat)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2597,12 +2257,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Z.of_nat args)%expr
-        | None => UnderLets.Base (#(ident.Z_of_nat)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_of_nat)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Z_to_nat =>
     fun x : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_to_nat)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2618,12 +2279,13 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Z.to_nat args)%expr
-        | None => UnderLets.Base (#(ident.Z_to_nat)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_to_nat)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Z_shiftr =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x >> x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2656,16 +2318,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(Z.shiftr args args0)%expr
-                | None => UnderLets.Base (x >> x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x >> x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x >> x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x >> x0)%expr
+    | _ => default
     end
 | ident.Z_shiftl =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x << x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2698,16 +2361,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(Z.shiftl args args0)%expr
-                | None => UnderLets.Base (x << x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x << x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x << x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x << x0)%expr
+    | _ => default
     end
 | ident.Z_land =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x &' x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2740,16 +2404,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(Z.land args args0)%expr
-                | None => UnderLets.Base (x &' x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x &' x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x &' x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x &' x0)%expr
+    | _ => default
     end
 | ident.Z_lor =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (x || x0)%expr in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2782,16 +2447,17 @@ match idc in (ident t) return (Compile.value' true t) with
                   end
                 with
                 | Some args0 => UnderLets.Base ##(Z.lor args args0)%expr
-                | None => UnderLets.Base (x || x0)%expr
+                | None => default
                 end
-            | _ => UnderLets.Base (x || x0)%expr
+            | _ => default
             end
-        | None => UnderLets.Base (x || x0)%expr
+        | None => default
         end
-    | _ => UnderLets.Base (x || x0)%expr
+    | _ => default
     end
 | ident.Z_bneg =>
     fun x : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_bneg)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2807,12 +2473,14 @@ match idc in (ident t) return (Compile.value' true t) with
           end
         with
         | Some args => UnderLets.Base ##(Definitions.Z.bneg args)%expr
-        | None => UnderLets.Base (#(ident.Z_bneg)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_bneg)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Z_lnot_modulo =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_lnot_modulo)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2847,21 +2515,18 @@ match idc in (ident t) return (Compile.value' true t) with
                 | Some args0 =>
                     UnderLets.Base
                       ##(Definitions.Z.lnot_modulo args args0)%expr
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_lnot_modulo)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_lnot_modulo)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base (#(ident.Z_lnot_modulo)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_lnot_modulo)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Z_mul_split =>
     fun x x0 x1 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2917,29 +2582,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                '(a, b) :=
                                 Definitions.Z.mul_split args args0 args1 in
                                 (##(a)%expr, ##(b)%expr)%expr_pat)
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_add_get_carry =>
     fun x x0 x1 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -2995,31 +2653,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                '(a, b) :=
                                 Definitions.Z.add_get_carry_full args args0
                                   args1 in (##(a)%expr, ##(b)%expr)%expr_pat)
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_add_with_carry =>
     fun x x0 x1 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3073,32 +2722,22 @@ match idc in (ident t) return (Compile.value' true t) with
                             UnderLets.Base
                               ##(Definitions.Z.add_with_carry args args0
                                    args1)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_add_with_get_carry =>
     fun x x0 x1 x2 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3176,44 +2815,26 @@ match idc in (ident t) return (Compile.value' true t) with
                                         Definitions.Z.add_with_get_carry_full
                                           args args0 args1 args2 in
                                         (##(a)%expr, ##(b)%expr)%expr_pat)
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.Z_add_with_get_carry)%expr @ x @
-                                       x0 @ x1 @ x2)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.Z_add_with_get_carry)%expr @ x @
-                                   x0 @ x1 @ x2)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @
-                               x1 @ x2)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @ x1 @
-                           x2)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+    | _ => default
     end
 | ident.Z_sub_get_borrow =>
     fun x x0 x1 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3269,32 +2890,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                '(a, b) :=
                                 Definitions.Z.sub_get_borrow_full args args0
                                   args1 in (##(a)%expr, ##(b)%expr)%expr_pat)
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_sub_with_get_borrow =>
     fun x x0 x1 x2 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @ x2)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3372,44 +2983,26 @@ match idc in (ident t) return (Compile.value' true t) with
                                         Definitions.Z.sub_with_get_borrow_full
                                           args args0 args1 args2 in
                                         (##(a)%expr, ##(b)%expr)%expr_pat)
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.Z_sub_with_get_borrow)%expr @
-                                       x @ x0 @ x1 @ x2)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.Z_sub_with_get_borrow)%expr @ x @
-                                   x0 @ x1 @ x2)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @
-                               x1 @ x2)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @
-                           x2)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+    | _ => default
     end
 | ident.Z_zselect =>
     fun x x0 x1 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3462,29 +3055,22 @@ match idc in (ident t) return (Compile.value' true t) with
                         | Some args1 =>
                             UnderLets.Base
                               ##(Definitions.Z.zselect args args0 args1)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_add_modulo =>
     fun x x0 x1 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3537,30 +3123,22 @@ match idc in (ident t) return (Compile.value' true t) with
                         | Some args1 =>
                             UnderLets.Base
                               ##(Definitions.Z.add_modulo args args0 args1)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+    | _ => default
     end
 | ident.Z_rshi =>
     fun x x0 x1 x2 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base
+                      (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3635,38 +3213,25 @@ match idc in (ident t) return (Compile.value' true t) with
                                     UnderLets.Base
                                       ##(Definitions.Z.rshi args args0 args1
                                            args2)%expr
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @
-                                       x2)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+    | _ => default
     end
 | ident.Z_cc_m =>
     fun x x0 : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_cc_m)%expr @ x @ x0)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3700,17 +3265,17 @@ match idc in (ident t) return (Compile.value' true t) with
                 with
                 | Some args0 =>
                     UnderLets.Base ##(Definitions.Z.cc_m args args0)%expr
-                | None =>
-                    UnderLets.Base (#(ident.Z_cc_m)%expr @ x @ x0)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Z_cc_m)%expr @ x @ x0)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Z_cc_m)%expr @ x @ x0)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_cc_m)%expr @ x @ x0)%expr_pat
+    | _ => default
     end
 | ident.Z_cast range =>
     fun x : defaults.expr (type.base base.type.Z) =>
+    llet default := UnderLets.Base (#(ident.Z_cast range)%expr @ x)%expr_pat in
     match x with
     | #(idc)%expr_pat =>
         match
@@ -3728,12 +3293,13 @@ match idc in (ident t) return (Compile.value' true t) with
         | Some args =>
             UnderLets.Base
               ##(ident.cast ident.cast_outside_of_range range args)%expr
-        | None => UnderLets.Base (#(ident.Z_cast range)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_cast range)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.Z_cast2 range =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base (#(ident.Z_cast2 range)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -3788,25 +3354,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                  ident.cast ident.cast_outside_of_range r2 x3))
                                   (args0, args1) in
                                 (##(a)%expr, ##(b)%expr)%expr_pat)
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.Z_cast2 range)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.Z_cast2 range)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base (#(ident.Z_cast2 range)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.Z_cast2 range)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.Z_cast2 range)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.Z_cast2 range)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_add log2wordmax imm =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -3860,33 +3423,24 @@ match idc in (ident t) return (Compile.value' true t) with
                                         (ident.fancy_add log2wordmax imm)))
                                   (args0, args1) in
                                 (##(a)%expr, ##(b)%expr)%expr_pat)
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_add log2wordmax imm)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_addc log2wordmax imm =>
     fun
       x : defaults.expr
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -3978,52 +3532,30 @@ match idc in (ident t) return (Compile.value' true t) with
                                                            log2wordmax imm)))
                                                   (args1, args2, args3) in
                                                 (##(a)%expr, ##(b)%expr)%expr_pat)
-                                        | None =>
-                                            UnderLets.Base
-                                              (#(ident.fancy_addc log2wordmax
-                                                   imm)%expr @ x)%expr_pat
+                                        | None => default
                                         end
-                                    | _ =>
-                                        UnderLets.Base
-                                          (#(ident.fancy_addc log2wordmax imm)%expr @
-                                           x)%expr_pat
+                                    | _ => default
                                     end
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.fancy_addc log2wordmax imm)%expr @
-                                       x)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.fancy_addc log2wordmax imm)%expr @
-                                   x)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_sub log2wordmax imm =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4077,33 +3609,24 @@ match idc in (ident t) return (Compile.value' true t) with
                                         (ident.fancy_sub log2wordmax imm)))
                                   (args0, args1) in
                                 (##(a)%expr, ##(b)%expr)%expr_pat)
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_subb log2wordmax imm =>
     fun
       x : defaults.expr
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4195,52 +3718,30 @@ match idc in (ident t) return (Compile.value' true t) with
                                                            log2wordmax imm)))
                                                   (args1, args2, args3) in
                                                 (##(a)%expr, ##(b)%expr)%expr_pat)
-                                        | None =>
-                                            UnderLets.Base
-                                              (#(ident.fancy_subb log2wordmax
-                                                   imm)%expr @ x)%expr_pat
+                                        | None => default
                                         end
-                                    | _ =>
-                                        UnderLets.Base
-                                          (#(ident.fancy_subb log2wordmax imm)%expr @
-                                           x)%expr_pat
+                                    | _ => default
                                     end
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.fancy_subb log2wordmax imm)%expr @
-                                       x)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.fancy_subb log2wordmax imm)%expr @
-                                   x)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base
-          (#(ident.fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_mulll log2wordmax =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4291,31 +3792,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                       (ident.to_fancy
                                          (ident.fancy_mulll log2wordmax)))
                                    (args0, args1)%core)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_mulll log2wordmax)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_mullh log2wordmax =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4366,31 +3858,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                       (ident.to_fancy
                                          (ident.fancy_mullh log2wordmax)))
                                    (args0, args1)%core)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_mullh log2wordmax)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_mulhl log2wordmax =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4441,31 +3924,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                       (ident.to_fancy
                                          (ident.fancy_mulhl log2wordmax)))
                                    (args0, args1)%core)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_mulhh log2wordmax =>
     fun x : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4516,31 +3990,22 @@ match idc in (ident t) return (Compile.value' true t) with
                                       (ident.to_fancy
                                          (ident.fancy_mulhh log2wordmax)))
                                    (args0, args1)%core)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_rshi log2wordmax x =>
     fun x0 : defaults.expr (type.base (base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat in
     match x0 with
     | (#(idc) @ x2 @ x1)%expr_pat =>
         match
@@ -4591,33 +4056,23 @@ match idc in (ident t) return (Compile.value' true t) with
                                       (ident.to_fancy
                                          (ident.fancy_rshi log2wordmax x)))
                                    (args0, args1)%core)%expr
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+        | None => default
         end
-    | _ =>
-        UnderLets.Base (#(ident.fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+    | _ => default
     end
 | ident.fancy_selc =>
     fun
       x : defaults.expr
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base (#(ident.fancy_selc)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4705,43 +4160,32 @@ match idc in (ident t) return (Compile.value' true t) with
                                                       (ident.to_fancy
                                                          ident.fancy_selc))
                                                    (args1, args2, args3)%core)%expr
-                                        | None =>
-                                            UnderLets.Base
-                                              (#(ident.fancy_selc)%expr @ x)%expr_pat
+                                        | None => default
                                         end
-                                    | _ =>
-                                        UnderLets.Base
-                                          (#(ident.fancy_selc)%expr @ x)%expr_pat
+                                    | _ => default
                                     end
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.fancy_selc)%expr @ x)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.fancy_selc)%expr @ x)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_selc)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_selc)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base (#(ident.fancy_selc)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.fancy_selc)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.fancy_selc)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.fancy_selc)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_selm log2wordmax =>
     fun
       x : defaults.expr
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base
+                      (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4830,51 +4274,31 @@ match idc in (ident t) return (Compile.value' true t) with
                                                          (ident.fancy_selm
                                                             log2wordmax)))
                                                    (args1, args2, args3)%core)%expr
-                                        | None =>
-                                            UnderLets.Base
-                                              (#(ident.fancy_selm log2wordmax)%expr @
-                                               x)%expr_pat
+                                        | None => default
                                         end
-                                    | _ =>
-                                        UnderLets.Base
-                                          (#(ident.fancy_selm log2wordmax)%expr @
-                                           x)%expr_pat
+                                    | _ => default
                                     end
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.fancy_selm log2wordmax)%expr @
-                                       x)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base
-                      (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ =>
-                UnderLets.Base
-                  (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None =>
-            UnderLets.Base
-              (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.fancy_selm log2wordmax)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_sell =>
     fun
       x : defaults.expr
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base (#(ident.fancy_sell)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -4962,43 +4386,31 @@ match idc in (ident t) return (Compile.value' true t) with
                                                       (ident.to_fancy
                                                          ident.fancy_sell))
                                                    (args1, args2, args3)%core)%expr
-                                        | None =>
-                                            UnderLets.Base
-                                              (#(ident.fancy_sell)%expr @ x)%expr_pat
+                                        | None => default
                                         end
-                                    | _ =>
-                                        UnderLets.Base
-                                          (#(ident.fancy_sell)%expr @ x)%expr_pat
+                                    | _ => default
                                     end
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.fancy_sell)%expr @ x)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.fancy_sell)%expr @ x)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_sell)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_sell)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base (#(ident.fancy_sell)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.fancy_sell)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.fancy_sell)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.fancy_sell)%expr @ x)%expr_pat
+    | _ => default
     end
 | ident.fancy_addm =>
     fun
       x : defaults.expr
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
+    llet default := UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat in
     match x with
     | (#(idc) @ x1 @ x0)%expr_pat =>
         match
@@ -5086,38 +4498,25 @@ match idc in (ident t) return (Compile.value' true t) with
                                                       (ident.to_fancy
                                                          ident.fancy_addm))
                                                    (args1, args2, args3)%core)%expr
-                                        | None =>
-                                            UnderLets.Base
-                                              (#(ident.fancy_addm)%expr @ x)%expr_pat
+                                        | None => default
                                         end
-                                    | _ =>
-                                        UnderLets.Base
-                                          (#(ident.fancy_addm)%expr @ x)%expr_pat
+                                    | _ => default
                                     end
-                                | None =>
-                                    UnderLets.Base
-                                      (#(ident.fancy_addm)%expr @ x)%expr_pat
+                                | None => default
                                 end
-                            | _ =>
-                                UnderLets.Base
-                                  (#(ident.fancy_addm)%expr @ x)%expr_pat
+                            | _ => default
                             end
-                        | None =>
-                            UnderLets.Base
-                              (#(ident.fancy_addm)%expr @ x)%expr_pat
+                        | None => default
                         end
-                    | _ =>
-                        UnderLets.Base
-                          (#(ident.fancy_addm)%expr @ x)%expr_pat
+                    | _ => default
                     end
-                | None =>
-                    UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat
+                | None => default
                 end
-            | _ => UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat
+            | _ => default
             end
-        | None => UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat
+        | None => default
         end
-    | _ => UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat
+    | _ => default
     end
 end
      : Compile.value' true t
