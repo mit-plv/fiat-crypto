@@ -331,6 +331,18 @@ Definition set_nth {T} n x (xs:list T)
 Definition splice_nth {T} n (x:T) xs := firstn n xs ++ x :: skipn (S n) xs.
 Hint Unfold splice_nth.
 
+Fixpoint take_while {T} (f : T -> bool) (ls : list T) : list T
+  := match ls with
+     | nil => nil
+     | cons x xs => if f x then x :: @take_while T f xs else nil
+     end.
+
+Fixpoint drop_while {T} (f : T -> bool) (ls : list T) : list T
+  := match ls with
+     | nil => nil
+     | cons x xs => if f x then @drop_while T f xs else x :: xs
+     end.
+
 Ltac boring :=
   simpl; intuition auto with zarith datatypes;
   repeat match goal with
