@@ -484,19 +484,19 @@ STANDALONE := \
 
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%.ml) : %.ml : %.v src/Experiments/NewPipeline/StandaloneOCamlMain.vo
 	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%.hs) : %.hs : %.v src/Experiments/NewPipeline/StandaloneHaskellMain.vo src/Experiments/NewPipeline/haskell.sed
 	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp | sed -f src/Experiments/NewPipeline/haskell.sed > $@ && rm -f $@.tmp
 
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%) : % : %.ml
-	$(TIMER) ocamlopt -o $@ $<
+	$(TIMER_FULL) ocamlopt -o $@ $<
 
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%) : % : %.hs
-	$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
+	$(TIMER_FULL) $(GHC) $(GHCFLAGS) -o $@ $<
 
 standalone: standalone-haskell standalone-ocaml
 
