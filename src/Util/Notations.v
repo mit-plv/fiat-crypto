@@ -90,6 +90,7 @@ Reserved Notation "A <--- X ; B" (at level 70, X at next level, right associativ
 Reserved Notation "A <---- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <----  X ; '/' B ']'").
 Reserved Notation "A <----- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <-----  X ; '/' B ']'").
 Reserved Notation "A ;; B" (at level 70, right associativity, format "'[v' A ;; '/' B ']'").
+Reserved Notation "A ;;; B" (at level 70, right associativity, format "'[v' A ;;; '/' B ']'").
 Reserved Notation "u [ i ]" (at level 30).
 Reserved Notation "v [[ i ]]" (at level 30).
 Reserved Notation "u {{ i }}" (at level 30).
@@ -140,7 +141,13 @@ Reserved Notation "A ~> R" (at level 99).
 Reserved Notation "A --->" (left associativity, at level 65).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
 Reserved Notation "f x" (only printing, at level 10, left associativity).
-Reserved Notation "# x" (at level 0, format "# x").
-Reserved Notation "## x" (at level 0, format "## x").
-Reserved Notation "### x" (at level 0, format "### x").
+(* TODO: Uncomment this block when https://github.com/mit-plv/bbv/pull/13 is merged
+Reserved Notation "$ x" (at level 9, x at level 9, format "$ x").
+Reserved Notation "# x" (at level 55, x at level 9, format "# x"). (* 55, so we don't clash with [_ # _] *)
+ *)
+Reserved Notation "## x" (at level 9, x at level 9, format "## x").
+Reserved Notation "### x" (at level 9, x at level 9, format "### x").
 Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
+
+(* TODO: Remove these when https://github.com/mit-plv/bbv/pull/13 is merged *)
+Reserved Notation "# x" (at level 0, format "# x").
