@@ -40,6 +40,8 @@ Extract Inlined Constant string_get => "String.get".
 Extract Constant sys_argv => "Array.to_list Sys.argv".
 Extract Inlined Constant string_init => "String.init".
 Extract Constant raise_Failure => "fun x -> raise (Failure x)".
+(** Error messages from deeply nested axioms *)
+Extract Constant Rewriter.Compilers.RewriteRules.Compile.ERROR_BAD_REWRITE_RULE => "fun pat e -> failwith ""ERROR BAD REWRITE RULE""".
 
 Fixpoint nat_of_int (x : int) : nat
   := match x with
