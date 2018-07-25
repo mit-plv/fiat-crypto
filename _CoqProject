@@ -250,6 +250,7 @@ src/Experiments/NewPipeline/CStringification.v
 src/Experiments/NewPipeline/CompilersTestCases.v
 src/Experiments/NewPipeline/GENERATEDIdentifiersWithoutTypes.v
 src/Experiments/NewPipeline/Language.v
+src/Experiments/NewPipeline/LanguageInversion.v
 src/Experiments/NewPipeline/MiscCompilerPasses.v
 src/Experiments/NewPipeline/Rewriter.v
 src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.v
