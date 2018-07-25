@@ -8,6 +8,7 @@ Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.UnderLets.
 Require Import Crypto.Experiments.NewPipeline.GENERATEDIdentifiersWithoutTypes.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
@@ -415,66 +416,79 @@ Module Compilers.
              | _, _ => None
              end.
 
-        Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont : option nat -> list rawexpr -> option (unit -> T) -> T) {struct d} : T
+        Definition option_bind' {A B} := @Option.bind A B. (* for help with rewriting *)
+
+        Fixpoint eval_decision_tree {T} (ctx : list rawexpr) (d : decision_tree) (cont : nat -> list rawexpr -> option T) {struct d} : option T
           := match d with
              | TryLeaf k onfailure
-               => cont (Some k) ctx
-                      (Some (fun 'tt => @eval_decision_tree T ctx onfailure cont))
-             | Failure => cont None ctx None
+               => let res := cont k ctx in
+                  match onfailure with
+                  | Failure => res
+                  | _ => res ;; (@eval_decision_tree T ctx onfailure cont)
+                  end
+             | Failure => None
              | Switch icases app_case default_case
                => match ctx with
-                  | nil => cont None ctx None
+                  | nil => None
                   | ctx0 :: ctx'
-                    => let default _ := @eval_decision_tree T ctx default_case cont in
-                       reveal_rawexpr_cps
-                         ctx0 _
-                         (fun ctx0'
-                          => match ctx0' with
-                             | rIdent t idc t' alt
-                               => fold_right
-                                    (fun '(pidc, icase) default 'tt
-                                     => match invert_bind_args _ idc pidc with
-                                        | Some args
-                                          => @eval_decision_tree
-                                               T ctx' icase
-                                               (fun k ctx''
-                                                => cont k (rIdent (pident_to_typed pidc args) alt :: ctx''))
-                                        | None => default tt
-                                        end)
-                                    default
-                                    icases
-                                    tt
-                             | rApp f x t alt
-                               => match app_case with
-                                  | Some app_case
-                                    => @eval_decision_tree
-                                         T (f :: x :: ctx') app_case
-                                         (fun k ctx''
-                                          => match ctx'' with
-                                             | f' :: x' :: ctx'''
-                                               => cont k (rApp f' x' alt :: ctx''')
-                                             | _ => cont None ctx
-                                             end)
-                                  | None => default tt
-                                  end
-                             | rExpr t e
-                             | rValue t e
-                               => default tt
-                             end)
+                    => let res
+                           := reveal_rawexpr_cps
+                                ctx0 _
+                                (fun ctx0'
+                                 => match ctx0' with
+                                    | rIdent t idc t' alt
+                                      => fold_right
+                                           (fun '(pidc, icase) rest
+                                            => let res
+                                                   := option_bind'
+                                                        (invert_bind_args _ idc pidc)
+                                                        (fun args
+                                                         => @eval_decision_tree
+                                                              T ctx' icase
+                                                              (fun k ctx''
+                                                               => cont k (rIdent (pident_to_typed pidc args) alt :: ctx''))) in
+                                               match rest with
+                                               | None => Some res
+                                               | Some rest => Some (res ;; rest)
+                                               end)
+                                           None
+                                           icases;;;
+                                           None
+                                    | rApp f x t alt
+                                      => match app_case with
+                                         | Some app_case
+                                           => @eval_decision_tree
+                                                T (f :: x :: ctx') app_case
+                                                (fun k ctx''
+                                                 => match ctx'' with
+                                                    | f' :: x' :: ctx'''
+                                                      => cont k (rApp f' x' alt :: ctx''')
+                                                    | _ => None
+                                                    end)
+                                         | None => None
+                                         end
+                                    | rExpr t e
+                                    | rValue t e
+                                      => None
+                                    end) in
+                       match default_case with
+                       | Failure => res
+                       | _ => res ;; (@eval_decision_tree T ctx default_case cont)
+                       end
                   end
              | Swap i d'
                => match swap_list 0 i ctx with
-                 | Some ctx'
-                   => @eval_decision_tree
-                       T ctx' d'
-                       (fun k ctx''
-                        => match swap_list 0 i ctx'' with
-                          | Some ctx''' => cont k ctx'''
-                          | None => cont None ctx
-                          end)
-                 | None => cont None ctx None
-                 end
-             end.
+                  | Some ctx'
+                    => @eval_decision_tree
+                         T ctx' d'
+                         (fun k ctx''
+                          => match swap_list 0 i ctx'' with
+                             | Some ctx''' => cont k ctx'''
+                             | None => None
+                             end)
+                  | None => None
+                  end
+             end%option.
 
         Local Notation opt_anyexprP ivar
           := (fun should_do_again : bool => UnderLets (@AnyExpr.anyexpr base.type ident (if should_do_again then ivar else var)))
@@ -488,6 +502,8 @@ Module Compilers.
         Definition rewrite_rulesT
           := (list rewrite_ruleT).
 
+        Definition ERROR_BAD_REWRITE_RULE {t} (pat : pattern) (value : expr t) : expr t. exact value. Qed.
+
         Definition eval_rewrite_rules
                    (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
                    (maybe_do_again
@@ -499,43 +515,33 @@ Module Compilers.
                    (rew : rewrite_rulesT)
                    (e : rawexpr)
           : UnderLets (expr (type_of_rawexpr e))
-          := eval_decision_tree
-               (e::nil) d
-               (fun k ctx default_on_rewrite_failure
-                => match k, ctx return UnderLets (expr (type_of_rawexpr e)) with
-                  | Some k', e'::nil
-                    => match nth_error rew k' return UnderLets (expr (type_of_rawexpr e)) with
-                      | Some (existT p f)
-                        => bind_data_cps
+          := let defaulte := expr_of_rawexpr e in
+             (eval_decision_tree
+                (e::nil) d
+                (fun k ctx
+                 => match ctx return option (UnderLets (expr (type_of_rawexpr e))) with
+                   | e'::nil
+                     => (pf <- nth_error rew k;
+                          let 'existT p f := pf in
+                          bind_data_cps
                             e' p _
                             (fun v
-                             => match v with
-                               | Some v
-                                 => f v _
-                                     (fun fv
-                                      => match fv return UnderLets (expr (type_of_rawexpr e)) with
-                                        | Some (existT should_do_again fv)
-                                          => (fv <-- fv;
-                                               fv <-- maybe_do_again should_do_again _ fv;
-                                               type.try_transport_cps
-                                                 base.try_make_transport_cps _ _ _ fv _
-                                                 (fun fv'
-                                                  => match fv', default_on_rewrite_failure with
-                                                    | Some fv'', _ => UnderLets.Base fv''
-                                                    | None, Some default => default tt
-                                                    | None, None => UnderLets.Base (expr_of_rawexpr e)
-                                                    end))%under_lets
-                                        | None => match default_on_rewrite_failure with
-                                                 | Some default => default tt
-                                                 | None => UnderLets.Base (expr_of_rawexpr e)
-                                                 end
-                                        end)
-                               | None => UnderLets.Base (expr_of_rawexpr e)
-                               end)
-                      | None => UnderLets.Base (expr_of_rawexpr e)
-                      end
-                  | _, _ => UnderLets.Base (expr_of_rawexpr e)
-                   end).
+                             => v <- v;
+                                 f v _
+                                   (fun fv
+                                    => fv <- fv;
+                                        let 'existT should_do_again fv := fv in
+                                        Some
+                                          (fv <-- fv;
+                                             fv <-- maybe_do_again should_do_again _ fv;
+                                             type.try_transport_cps
+                                               base.try_make_transport_cps _ _ _ fv _
+                                               (fun fv'
+                                                => UnderLets.Base
+                                                     (fv' ;;; (ERROR_BAD_REWRITE_RULE p defaulte))))%under_lets)))%option
+                   | _ => None
+                   end);;;
+                (UnderLets.Base defaulte))%option.
 
         Local Notation enumerate ls
           := (List.combine (List.seq 0 (List.length ls)) ls).
@@ -558,12 +564,20 @@ Module Compilers.
                             end)
                (enumerate p).
 
+        Definition starts_with_wildcard : nat * list pattern -> bool
+          := fun '(_, p) => match p with
+                            | pattern.Wildcard _::_ => true
+                            | _ => false
+                            end.
+
+        Definition not_starts_with_wildcard : nat * list pattern -> bool
+          := fun p => negb (starts_with_wildcard p).
+
         Definition filter_pattern_wildcard (p : list (nat * list pattern)) : list (nat * list pattern)
-          := filter (fun '(_, p) => match p with
-                                 | pattern.Wildcard _::_ => true
-                                 | _ => false
-                                 end)
-                    p.
+          := filter starts_with_wildcard p.
+
+        Definition split_at_first_pattern_wildcard (p : list (nat * list pattern)) : list (nat * list pattern) * list (nat * list pattern)
+          := (take_while not_starts_with_wildcard p, drop_while not_starts_with_wildcard p).
 
         Fixpoint get_unique_pattern_ident' (p : list (nat * list pattern)) (so_far : list pident) : list pident
           := match p with
@@ -592,25 +606,23 @@ Module Compilers.
                                   end)
                      p.
 
-        Definition refine_pattern_app (p : nat * list pattern) : option (nat * list pattern)
+        Definition filter_pattern_app (p : nat * list pattern) : option (nat * list pattern)
           := match p with
-             | (n, pattern.Wildcard d::ps)
-               => Some (n, (??{?? -> d} :: ?? :: ps)%list%pattern)
              | (n, pattern.App f x :: ps)
                => Some (n, f :: x :: ps)
              | (_, pattern.Ident _::_)
+             | (_, pattern.Wildcard _::_)
              | (_, nil)
                => None
              end.
 
-        Definition refine_pattern_pident (pidc : pident) (p : nat * list pattern) : option (nat * list pattern)
+        Definition filter_pattern_pident (pidc : pident) (p : nat * list pattern) : option (nat * list pattern)
           := match p with
-             | (n, pattern.Wildcard _::ps)
-               => Some (n, ps)
              | (n, pattern.Ident pidc'::ps)
                => if pident_beq pidc pidc'
                  then Some (n, ps)
                  else None
+             | (_, pattern.Wildcard _::_)
              | (_, pattern.App _ _::_)
              | (_, nil)
                => None
@@ -628,13 +640,14 @@ Module Compilers.
                    => (onfailure <- compile_rewrites ps;
                         Some (TryLeaf n1 onfailure))
                  | Some Datatypes.O
-                   => default_case <- compile_rewrites (filter_pattern_wildcard pattern_matrix);
+                   => let '(pattern_matrix, default_pattern_matrix) := split_at_first_pattern_wildcard pattern_matrix in
+                      default_case <- compile_rewrites default_pattern_matrix;
                         app_case <- (if contains_pattern_app pattern_matrix
-                                     then option_map Some (compile_rewrites (Option.List.map refine_pattern_app pattern_matrix))
+                                     then option_map Some (compile_rewrites (Option.List.map filter_pattern_app pattern_matrix))
                                      else Some None);
                         let pidcs := get_unique_pattern_ident pattern_matrix in
                         let icases := Option.List.map
-                                        (fun pidc => option_map (pair pidc) (compile_rewrites (Option.List.map (refine_pattern_pident pidc) pattern_matrix)))
+                                        (fun pidc => option_map (pair pidc) (compile_rewrites (Option.List.map (filter_pattern_pident pidc) pattern_matrix)))
                                         pidcs in
                         Some (Switch icases app_case default_case)
                  | Some i
@@ -901,8 +914,6 @@ Module Compilers.
         := fun var => @rewrite var (rewrite_head var) fuel t (e _).
     End Compile.
 
-    Module pident := pattern.ident.
-
     Module Make.
       Section make_rewrite_rules.
         Import Compile.
@@ -932,8 +943,8 @@ Module Compilers.
         Local Notation castv := (@castv ident var).
 
         Definition make_base_Literal_pattern (t : base.type.base) : pattern
-          := Eval cbv [pident.of_typed_ident] in
-              pattern.Ident (pident.of_typed_ident (@ident.Literal t DefaultValue.type.base.default)).
+          := Eval cbv [pattern.ident.of_typed_ident] in
+              pattern.Ident (pattern.ident.of_typed_ident (@ident.Literal t DefaultValue.type.base.default)).
 
         Definition bind_base_Literal_pattern (t : base.type.base) : binding_dataT (make_base_Literal_pattern t) ~> base.interp t
           := match t return binding_dataT (make_base_Literal_pattern t) ~> base.interp t with
@@ -952,7 +963,7 @@ Module Compilers.
                     b <- make_Literal_pattern B;
                     Some (existT
                             (fun p : pattern => binding_dataT p ~> base.interp (A * B))
-                            (#pident.pair @ (projT1 a) @ (projT1 b))%pattern
+                            (#pattern.ident.pair @ (projT1 a) @ (projT1 b))%pattern
                             (fun '(args : unit * binding_dataT (projT1 a) * binding_dataT (projT1 b))
                              => (av <--- projT2 a (snd (fst args));
                                   bv <--- projT2 b (snd args);
@@ -983,8 +994,8 @@ Module Compilers.
         Definition make_interp_rewrite'' {t} (idc : ident t) : option rewrite_ruleT
           := make_interp_rewrite'
                t
-               (pattern.Ident (pident.of_typed_ident idc))
-               (fun iargs => return (ident.interp (pident.retype_ident idc iargs)))%cps.
+               (pattern.Ident (pattern.ident.of_typed_ident idc))
+               (fun iargs => return (ident.interp (pattern.ident.retype_ident idc iargs)))%cps.
         (*
         Definition make_interp_rewrite {t} (idc : ident t)
           := invert_Some (make_interp_rewrite'' idc).
@@ -1007,8 +1018,8 @@ Module Compilers.
           | None => (eval cbv [List.rev List.app] in (List.rev so_far))
           end.
         Local Ltac make_valid_interp_rules :=
-          let body := constr:(fun t idc => @pident.eta_ident_cps _ t idc (@make_interp_rewrite'')) in
-          let body := (eval cbv [pident.eta_ident_cps make_interp_rewrite'' make_interp_rewrite' make_Literal_pattern pident.of_typed_ident Option.bind projT1 projT2 cpsbind cpsreturn cpscall ident.interp pident.retype_ident ident.gen_interp bind_base_Literal_pattern make_base_Literal_pattern] in body) in
+          let body := constr:(fun t idc => @pattern.ident.eta_ident_cps _ t idc (@make_interp_rewrite'')) in
+          let body := (eval cbv [pattern.ident.eta_ident_cps make_interp_rewrite'' make_interp_rewrite' make_Literal_pattern pattern.ident.of_typed_ident Option.bind projT1 projT2 cpsbind cpsreturn cpscall ident.interp pattern.ident.retype_ident ident.gen_interp bind_base_Literal_pattern make_base_Literal_pattern] in body) in
           let body := (eval cbn [base.interp binding_dataT pattern.ident.arg_types base.base_interp ident.smart_Literal fold_right map] in body) in
           let retv := get_all_valid_interp_rules_from body (@nil rewrite_ruleT) in
           exact retv.
@@ -1081,10 +1092,10 @@ Module Compilers.
         := (let f' := (@lift_with_bindings p _ _ (fun x:@UnderLetsAnyExprCpsOpt base.type ident value => (x' <-- x; oret (existT (opt_anyexprP value) true x'))%cps) f%expr) in
             make_rewrite'_cps p f').
 
-      Local Notation "x' <- v ; C" := (fun T k => v%cps T (fun x' => match x' with Some x' => (C%cps : UnderLetsAnyExprCpsOpt) T k | None => k None end)) : cps_scope.
+      Local Notation "x' <- v ; C" := (fun T k => v%cps T (fun x' => Option.sequence_return (Compile.option_bind' x' (fun x' => Some ((C%cps : UnderLetsAnyExprCpsOpt) T k))) (k None))) : cps_scope.
       Local Notation "x <-- y ; f" := (UnderLets.splice y (fun x => (f%cps : UnderLetsExpr _))) : cps_scope.
       Local Notation "x <--- y ; f" := (UnderLets.splice_list y (fun x => (f%cps : UnderLetsExpr _))) : cps_scope.
-      Local Notation "x <---- y ; f" := (fun T k => match y with Some x => (f%cps : UnderLetsAnyExprCpsOpt) T k | None => k None end) : cps_scope.
+      Local Notation "x <---- y ; f" := (fun T k => Option.sequence_return (Compile.option_bind' y (fun x => Some ((f%cps : UnderLetsAnyExprCpsOpt) T k))) (k None)) : cps_scope.
 
       Definition rlist_rect {A P}
                  {ivar}
@@ -1157,46 +1168,46 @@ In the RHS, the follow notation applies:
         := Eval cbn [Make.interp_rewrite_rules List.app] in
             Make.interp_rewrite_rules
               ++ [
-                make_rewrite (#pident.fst @ (??, ??)) (fun _ x _ y => x)
-                ; make_rewrite (#pident.snd @ (??, ??)) (fun _ x _ y => y)
-                ; make_rewrite (#pident.List_repeat @ ?? @ #?ℕ) (fun _ x n => reify_list (repeat x n))
+                make_rewrite (#pattern.ident.fst @ (??, ??)) (fun _ x _ y => x)
+                ; make_rewrite (#pattern.ident.snd @ (??, ??)) (fun _ x _ y => y)
+                ; make_rewrite (#pattern.ident.List_repeat @ ?? @ #?ℕ) (fun _ x n => reify_list (repeat x n))
                 ; make_rewrite
-                    (#pident.bool_rect @ ??{() -> ??} @ ??{() -> ??} @ #?𝔹)
+                    (#pattern.ident.bool_rect @ ??{() -> ??} @ ??{() -> ??} @ #?𝔹)
                     (fun _ t _ f b
                      => if b return UnderLetsExpr (type.base (if b then _ else _))
                         then t ##tt
                         else f ##tt)
                 ; make_rewrite
-                    (#pident.prod_rect @ ??{?? -> ?? -> ??} @ (??, ??))
+                    (#pattern.ident.prod_rect @ ??{?? -> ?? -> ??} @ (??, ??))
                     (fun _ _ _ f _ x _ y
                      => x <- castbe x; y <- castbe y; ret (f x y))
                 ; make_rewrite
                     (??{list ??} ++ ??{list ??})
                     (fun _ xs _ ys => rlist_rect_cast ys (fun x _ xs_ys => x :: xs_ys) xs)
                 ; make_rewrite
-                    (#pident.List_firstn @ #?ℕ @ ??{list ??})
+                    (#pattern.ident.List_firstn @ #?ℕ @ ??{list ??})
                     (fun n _ xs
                      => xs <- reflect_list_cps xs;
                           reify_list (List.firstn n xs))
                 ; make_rewrite
-                    (#pident.List_skipn @ #?ℕ @ ??{list ??})
+                    (#pattern.ident.List_skipn @ #?ℕ @ ??{list ??})
                     (fun n _ xs
                      => xs <- reflect_list_cps xs;
                           reify_list (List.skipn n xs))
                 ; make_rewrite
-                    (#pident.List_rev @ ??{list ??})
+                    (#pattern.ident.List_rev @ ??{list ??})
                     (fun _ xs
                      => xs <- reflect_list_cps xs;
                           reify_list (List.rev xs))
                 ; make_rewrite_step
-                    (#pident.List_flat_map @ ??{?? -> list ??} @ ??{list ??})
+                    (#pattern.ident.List_flat_map @ ??{?? -> list ??} @ ??{list ??})
                     (fun _ B f _ xs
                      => rlist_rect_cast
                           []
                           (fun x _ flat_map_tl => fx <-- f x; UnderLets.Base ($fx ++ flat_map_tl))
                           xs)
                 ; make_rewrite_step
-                    (#pident.List_partition @ ??{?? -> base.type.bool} @ ??{list ??})
+                    (#pattern.ident.List_partition @ ??{?? -> base.type.bool} @ ??{list ??})
                     (fun _ f _ xs
                      => rlist_rect_cast
                           ([], [])
@@ -1210,7 +1221,7 @@ In the RHS, the follow notation applies:
                                   @ partition_tl))
                           xs)
                 ; make_rewrite
-                    (#pident.List_fold_right @ ??{?? -> ?? -> ??} @ ?? @ ??{list ??})
+                    (#pattern.ident.List_fold_right @ ??{?? -> ?? -> ??} @ ?? @ ??{list ??})
                     (fun _ _ _ f B init A xs
                      => f <- @castv _ (A -> B -> B)%etype f;
                           rlist_rect
@@ -1218,7 +1229,7 @@ In the RHS, the follow notation applies:
                             (fun x _ y => f x y)
                             xs)
                 ; make_rewrite
-                    (#pident.list_rect @ ??{() -> ??} @ ??{?? -> ?? -> ?? -> ??} @ ??{list ??})
+                    (#pattern.ident.list_rect @ ??{() -> ??} @ ??{?? -> ?? -> ?? -> ??} @ ??{list ??})
                     (fun P Pnil _ _ _ _ Pcons A xs
                      => Pcons <- @castv _ (A -> base.type.list A -> P -> P) Pcons;
                           rlist_rect
@@ -1226,46 +1237,46 @@ In the RHS, the follow notation applies:
                             (fun x' xs' rec => Pcons x' (reify_list xs') rec)
                             xs)
                 ; make_rewrite
-                    (#pident.list_case @ ??{() -> ??} @ ??{?? -> ?? -> ??} @ []) (fun _ Pnil _ _ _ Pcons => ret (Pnil ##tt))
+                    (#pattern.ident.list_case @ ??{() -> ??} @ ??{?? -> ?? -> ??} @ []) (fun _ Pnil _ _ _ Pcons => ret (Pnil ##tt))
                 ; make_rewrite
-                    (#pident.list_case @ ??{() -> ??} @ ??{?? -> ?? -> ??} @ (?? :: ??))
+                    (#pattern.ident.list_case @ ??{() -> ??} @ ??{?? -> ?? -> ??} @ (?? :: ??))
                     (fun _ Pnil _ _ _ Pcons _ x _ xs
                      => x <- castbe x; xs <- castbe xs; ret (Pcons x xs))
                 ; make_rewrite
-                    (#pident.List_map @ ??{?? -> ??} @ ??{list ??})
+                    (#pattern.ident.List_map @ ??{?? -> ??} @ ??{list ??})
                     (fun _ _ f _ xs
                      => rlist_rect_cast
                           []
                           (fun x _ fxs => fx <-- f x; fx :: fxs)
                           xs)
                 ; make_rewrite
-                    (#pident.List_nth_default @ ?? @ ??{list ??} @ #?ℕ)
+                    (#pattern.ident.List_nth_default @ ?? @ ??{list ??} @ #?ℕ)
                     (fun _ default _ ls n
                      => default <- castbe default;
                           ls <- reflect_list_cps ls;
                           nth_default default ls n)
                 ; make_rewrite
-                    (#pident.nat_rect @ ??{() -> ??} @ ??{base.type.nat -> ?? -> ??} @ #?ℕ)
+                    (#pattern.ident.nat_rect @ ??{() -> ??} @ ??{base.type.nat -> ?? -> ??} @ #?ℕ)
                     (fun P O_case _ _ S_case n
                      => S_case <- @castv _ (@type.base base.type base.type.nat -> type.base P -> type.base P) S_case;
                           ret (nat_rect _ (O_case ##tt) (fun n' rec => rec <-- rec; S_case ##n' rec) n))
                 ; make_rewrite
-                    (#pident.nat_rect_arrow @ ??{?? -> ??} @ ??{base.type.nat -> (?? -> ??) -> (?? -> ??)} @ #?ℕ @ ??)
+                    (#pattern.ident.nat_rect_arrow @ ??{?? -> ??} @ ??{base.type.nat -> (?? -> ??) -> (?? -> ??)} @ #?ℕ @ ??)
                     (fun P Q O_case _ _ _ _ S_case n _ v
                      => S_case <- @castv _ (@type.base base.type base.type.nat -> (type.base P -> type.base Q) -> (type.base P -> type.base Q)) S_case;
                           v <- castbe v;
                           ret (nat_rect _ O_case (fun n' rec v => S_case ##n' rec v) n v))
                 ; make_rewrite
-                    (#pident.List_length @ ??{list ??})
+                    (#pattern.ident.List_length @ ??{list ??})
                     (fun _ xs => xs <- reflect_list_cps xs; ##(List.length xs))
                 ; make_rewrite
-                    (#pident.List_combine @ ??{list ??} @ ??{list ??})
+                    (#pattern.ident.List_combine @ ??{list ??} @ ??{list ??})
                     (fun _ xs _ ys
                      => xs <- reflect_list_cps xs;
                           ys <- reflect_list_cps ys;
                           reify_list (List.map (fun '((x, y)%core) => (x, y)) (List.combine xs ys)))
                 ; make_rewrite
-                    (#pident.List_update_nth @ #?ℕ @ ??{?? -> ??} @ ??{list ??})
+                    (#pattern.ident.List_update_nth @ #?ℕ @ ??{?? -> ??} @ ??{list ??})
                     (fun n _ _ f A ls
                      => f <- @castv _ (A -> A) f;
                           ls <- reflect_list_cps ls;
@@ -1278,8 +1289,8 @@ In the RHS, the follow notation applies:
               ]%list%pattern%cps%option%under_lets%Z%bool.
 
       Definition arith_rewrite_rules : rewrite_rulesT
-        := [make_rewrite (#pident.fst @ (??, ??)) (fun _ x _ y => x)
-            ; make_rewrite (#pident.snd @ (??, ??)) (fun _ x _ y => y)
+        := [make_rewrite (#pattern.ident.fst @ (??, ??)) (fun _ x _ y => x)
+            ; make_rewrite (#pattern.ident.snd @ (??, ??)) (fun _ x _ y => y)
             ; make_rewrite (#?ℤ   + ??{ℤ}) (fun z v => v  when  Z.eqb z 0)
             ; make_rewrite (??{ℤ} + #?ℤ  ) (fun v z => v  when  Z.eqb z 0)
             ; make_rewrite (#?ℤ   + (-??{ℤ})) (fun z v => ##z - v  when  Z.gtb z 0)
@@ -1328,31 +1339,31 @@ In the RHS, the follow notation applies:
             ; make_rewrite (??{ℤ} mod #?ℤ) (fun x y => x &' ##(y-1)%Z     when  (y =? (2^Z.log2 y)))
             ; make_rewrite (-(-??{ℤ})) (fun v => v)
 
-            ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (##0, ##0)%Z  when  Z.eqb xx 0)
-            ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (##0, ##0)%Z  when  Z.eqb xx 0)
-            ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0)%Z  when  Z.eqb xx 1)
-            ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0)%Z  when  Z.eqb xx 1)
-            ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (-y, ##0%Z)  when  Z.eqb xx (-1))
-            ; make_rewrite (#pident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (-y, ##0%Z)  when  Z.eqb xx (-1))
+            ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (##0, ##0)%Z  when  Z.eqb xx 0)
+            ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (##0, ##0)%Z  when  Z.eqb xx 0)
+            ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0)%Z  when  Z.eqb xx 1)
+            ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0)%Z  when  Z.eqb xx 1)
+            ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (-y, ##0%Z)  when  Z.eqb xx (-1))
+            ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (-y, ##0%Z)  when  Z.eqb xx (-1))
 
             ; make_rewrite
-                (#pident.Z_add_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ})
+                (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ})
                 (fun s y x => ret (UnderLets.UnderLet
                                      (#ident.Z_sub_get_borrow @ s @ x @ y)
                                      (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
             ; make_rewrite
-                (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ (-??{ℤ}))
+                (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ (-??{ℤ}))
                 (fun s x y => ret (UnderLets.UnderLet
                                      (#ident.Z_sub_get_borrow @ s @ x @ y)
                                      (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
             ; make_rewrite
-                (#pident.Z_add_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ})
+                (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ})
                 (fun s yy x => ret (UnderLets.UnderLet
                                       (#ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z)
                                       (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                    when  yy <? 0)
             ; make_rewrite
-                (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ)
+                (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ)
                 (fun s x yy => ret (UnderLets.UnderLet
                                       (#ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z)
                                       (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
@@ -1360,85 +1371,85 @@ In the RHS, the follow notation applies:
 
 
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ (-??{ℤ}) @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ (-??{ℤ}) @ ??{ℤ})
                 (fun s c y x => ret (UnderLets.UnderLet
                                        (#ident.Z_sub_with_get_borrow @ s @ c @ x @ y)
                                        (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ} @ (-??{ℤ}))
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ} @ (-??{ℤ}))
                 (fun s c x y => ret (UnderLets.UnderLet
                                        (#ident.Z_sub_with_get_borrow @ s @ c @ x @ y)
                                        (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc)))))
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ (-??{ℤ}) @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ (-??{ℤ}) @ ??{ℤ})
                 (fun s cc y x => ret (UnderLets.UnderLet
                                         (#ident.Z_sub_get_borrow @ s @ x @ y)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                      when  cc =? 0)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ (-??{ℤ}) @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ (-??{ℤ}) @ ??{ℤ})
                 (fun s cc y x => ret (UnderLets.UnderLet
                                         (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ y)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                      when  cc <? 0)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ (-??{ℤ}))
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ (-??{ℤ}))
                 (fun s cc x y => ret (UnderLets.UnderLet
                                         (#ident.Z_sub_get_borrow @ s @ x @ y)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                      when  cc =? 0)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ (-??{ℤ}))
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ (-??{ℤ}))
                 (fun s cc x y => ret (UnderLets.UnderLet
                                         (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ y)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                      when  cc <? 0)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ #?ℤ @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ #?ℤ @ ??{ℤ})
                 (fun s c yy x => ret (UnderLets.UnderLet
                                         (#ident.Z_sub_with_get_borrow @ s @ c @ x @ ##(-yy)%Z)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                      when  yy <=? 0)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ} @ #?ℤ)
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ (-??{ℤ}) @ ??{ℤ} @ #?ℤ)
                 (fun s c x yy => ret (UnderLets.UnderLet
                                         (#ident.Z_sub_with_get_borrow @ s @ c @ x @ ##(-yy)%Z)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                      when  yy <=? 0)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ #?ℤ @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ #?ℤ @ ??{ℤ})
                 (fun s cc yy x => ret (UnderLets.UnderLet
                                          (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ ##(-yy)%Z)
                                          (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                       when  (yy <=? 0) && (cc <=? 0) && ((yy + cc) <? 0)) (* at least one must be strictly negative *)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ #?ℤ)
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ #?ℤ)
                 (fun s cc x yy => ret (UnderLets.UnderLet
                                          (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ ##(-yy)%Z)
                                          (fun vc => UnderLets.Base (#ident.fst @ $vc, -(#ident.snd @ $vc))))
                                       when  (yy <=? 0) && (cc <=? 0) && ((yy + cc) <? 0)) (* at least one must be strictly negative *)
 
 
-            ; make_rewrite (#pident.Z_add_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0)  when  xx =? 0)
-            ; make_rewrite (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0)  when  xx =? 0)
+            ; make_rewrite (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ}) (fun s xx y => (y, ##0)  when  xx =? 0)
+            ; make_rewrite (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ) (fun s y xx => (y, ##0)  when  xx =? 0)
 
-            ; make_rewrite (#pident.Z_add_with_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun cc x y => x + y  when  cc =? 0)
-            (*; make_rewrite_step (#pident.Z_add_with_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ}) (fun x y z => $x + $y + $z)*)
+            ; make_rewrite (#pattern.ident.Z_add_with_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ}) (fun cc x y => x + y  when  cc =? 0)
+            (*; make_rewrite_step (#pattern.ident.Z_add_with_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ}) (fun x y z => $x + $y + $z)*)
 
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s cc xx y => (y, ##0)   when   (cc =? 0) && (xx =? 0))
+                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s cc xx y => (y, ##0)   when   (cc =? 0) && (xx =? 0))
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s cc y xx => (y, ##0)   when   (cc =? 0) && (xx =? 0))
+                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s cc y xx => (y, ##0)   when   (cc =? 0) && (xx =? 0))
             (*; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ @ #?ℤ) (fun s c xx yy => (c, ##0) when   (xx =? 0) && (yy =? 0))*)
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ @ #?ℤ) (fun s c xx yy => (c, ##0) when   (xx =? 0) && (yy =? 0))*)
             ; make_rewrite (* carry = 0: ADC x y -> ADD x y *)
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ #?ℤ @ ??{ℤ} @ ??{ℤ})
                 (fun s cc x y => ret (UnderLets.UnderLet
                                         (#ident.Z_add_get_carry @ s @ x @ y)
                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, #ident.snd @ $vc)))
                                      when  cc =? 0)
             ; make_rewrite (* ADC 0 0 -> (ADX 0 0, 0) *) (* except we don't do ADX, because C stringification doesn't handle it *)
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ @ #?ℤ)
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ #?ℤ @ #?ℤ)
                 (fun s c xx yy => ret (UnderLets.UnderLet
                                          (#ident.Z_add_with_get_carry @ s @ c @ ##xx @ ##yy)
                                          (fun vc => UnderLets.Base (#ident.fst @ $vc, ##0)))
@@ -1447,33 +1458,33 @@ In the RHS, the follow notation applies:
 
             (* let-bind any adc/sbb/mulx *)
             ; make_rewrite
-                (#pident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_add_with_get_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                 (fun s c x y => ret (UnderLets.UnderLet (#ident.Z_add_with_get_carry @ s @ c @ x @ y)
                                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, #ident.snd @ $vc))))
             ; make_rewrite
-                (#pident.Z_add_with_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_add_with_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                 (fun c x y => ret (UnderLets.UnderLet (#ident.Z_add_with_carry @ c @ x @ y)
                                                       (fun vc => UnderLets.Base ($vc))))
             ; make_rewrite
-                (#pident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_add_get_carry @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                 (fun s x y => ret (UnderLets.UnderLet (#ident.Z_add_get_carry @ s @ x @ y)
                                                       (fun vc => UnderLets.Base (#ident.fst @ $vc, #ident.snd @ $vc))))
             ; make_rewrite
-                (#pident.Z_sub_with_get_borrow @ ??{ℤ} @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_sub_with_get_borrow @ ??{ℤ} @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                 (fun s c x y => ret (UnderLets.UnderLet (#ident.Z_sub_with_get_borrow @ s @ c @ x @ y)
                                                         (fun vc => UnderLets.Base (#ident.fst @ $vc, #ident.snd @ $vc))))
             ; make_rewrite
-                (#pident.Z_sub_get_borrow @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_sub_get_borrow @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                 (fun s x y => ret (UnderLets.UnderLet (#ident.Z_sub_get_borrow @ s @ x @ y)
                                                       (fun vc => UnderLets.Base (#ident.fst @ $vc, #ident.snd @ $vc))))
             ; make_rewrite
-                (#pident.Z_mul_split @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                (#pattern.ident.Z_mul_split @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                 (fun s x y => ret (UnderLets.UnderLet (#ident.Z_mul_split @ s @ x @ y)
                                                       (fun v => UnderLets.Base (#ident.fst @ $v, #ident.snd @ $v))))
 
 
             ; make_rewrite_step (* _step, so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
-                (#pident.Z_cast2 @ (??{ℤ}, ??{ℤ})) (fun r x y => (#(ident.Z_cast (fst r)) @ $x, #(ident.Z_cast (snd r)) @ $y))
+                (#pattern.ident.Z_cast2 @ (??{ℤ}, ??{ℤ})) (fun r x y => (#(ident.Z_cast (fst r)) @ $x, #(ident.Z_cast (snd r)) @ $y))
 
             ; make_rewrite (-??{ℤ}) (fun e => ret (UnderLets.UnderLet e (fun v => UnderLets.Base (-$v)))  when  negb (SubstVarLike.is_var_fst_snd_pair_opp e)) (* inline negation when the rewriter wouldn't already inline it *)
            ]%list%pattern%cps%option%under_lets%Z%bool.
@@ -1530,19 +1541,19 @@ In the RHS, the follow notation applies:
 (Z.add_get_carry_concrete 2^256) @@ (?x, ?y)        --> (add 0) @@ (y, x)
 *)
               make_rewrite
-                (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (#pattern.ident.Z_shiftl @ ??{ℤ} @ #?ℤ))
                 (fun s x y offset => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry @ #?ℤ @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ (#pattern.ident.Z_shiftl @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
                   (fun s y offset x => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun s x y offset => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry @ #?ℤ @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
                   (fun s y offset x => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ})
                   (fun s x y => #(ident.fancy_add (Z.log2 s) 0) @ (x, y)  when  s =? 2^Z.log2 s)
 (*
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (addc 128) @@ (c, x, y)
@@ -1552,19 +1563,19 @@ In the RHS, the follow notation applies:
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y)        --> (addc 0) @@ (c, y, x)
  *)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pattern.ident.Z_shiftl @ ??{ℤ} @ #?ℤ))
                   (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ (#pattern.ident.Z_shiftl @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
                   (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) @ ??{ℤ})
                   (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun s c x y => #(ident.fancy_addc (Z.log2 s) 0) @ (c, x, y)  when  s =? 2^Z.log2 s)
 (*
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y << 128) --> (sub 128) @@ (x, y)
@@ -1572,13 +1583,13 @@ In the RHS, the follow notation applies:
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y)        --> (sub 0) @@ (y, x)
  *)
               ; make_rewrite
-                  (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ (#pattern.ident.Z_shiftl @ ??{ℤ} @ #?ℤ))
                   (fun s x y offset => #(ident.fancy_sub (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun s x y offset => #(ident.fancy_sub (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ})
                   (fun s x y => #(ident.fancy_sub (Z.log2 s) 0) @ (x, y)  when  s =? 2^Z.log2 s)
 (*
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (subb 128) @@ (c, x, y)
@@ -1586,17 +1597,17 @@ In the RHS, the follow notation applies:
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y)        --> (subb 0) @@ (c, y, x)
  *)
               ; make_rewrite
-                  (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftl @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pattern.ident.Z_shiftl @ ??{ℤ} @ #?ℤ))
                   (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) offset) @ (b, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) (-offset)) @ (b, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun s b x y => #(ident.fancy_subb (Z.log2 s) 0) @ (b, x, y)  when  s =? 2^Z.log2 s)
               (*(Z.rshi_concrete 2^256 ?n) @@ (?c, ?x, ?y) --> (rshi n) @@ (x, y)*)
               ; make_rewrite
-                  (#pident.Z_rshi @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ #?ℤ)
+                  (#pattern.ident.Z_rshi @ #?ℤ @ ??{ℤ} @ ??{ℤ} @ #?ℤ)
                   (fun s x y n => #(ident.fancy_rshi (Z.log2 s) n) @ (x, y)  when  s =? 2^Z.log2 s)
 (*
 Z.zselect @@ (Z.cc_m_concrete 2^256 ?c, ?x, ?y) --> selm @@ (c, x, y)
@@ -1604,20 +1615,20 @@ Z.zselect @@ (?c &' 1, ?x, ?y)                  --> sell @@ (c, x, y)
 Z.zselect @@ (?c, ?x, ?y)                       --> selc @@ (c, x, y)
  *)
               ; make_rewrite
-                  (#pident.Z_zselect @ (#pident.Z_cc_m @ #?ℤ @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_zselect @ (#pattern.ident.Z_cc_m @ #?ℤ @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
                   (fun s c x y => #(ident.fancy_selm (Z.log2 s)) @ (c, x, y)  when  s =? 2^Z.log2 s)
               ; make_rewrite
-                  (#pident.Z_zselect @ (#pident.Z_land @ #?ℤ @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_zselect @ (#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}) @ ??{ℤ} @ ??{ℤ})
                   (fun mask c x y => #ident.fancy_sell @ (c, x, y)  when  mask =? 1)
               ; make_rewrite
-                  (#pident.Z_zselect @ (#pident.Z_land @ ??{ℤ} @ #?ℤ) @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_zselect @ (#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ) @ ??{ℤ} @ ??{ℤ})
                   (fun c mask x y => #ident.fancy_sell @ (c, x, y)  when  mask =? 1)
               ; make_rewrite
-                  (#pident.Z_zselect @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_zselect @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun c x y => #ident.fancy_selc @ (c, x, y))
 (*Z.add_modulo @@ (?x, ?y, ?m) --> addm @@ (x, y, m)*)
               ; make_rewrite
-                  (#pident.Z_add_modulo @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
+                  (#pattern.ident.Z_add_modulo @ ??{ℤ} @ ??{ℤ} @ ??{ℤ})
                   (fun x y m => #ident.fancy_addm @ (x, y, m))
 (*
 Z.mul @@ (?x &' (2^128-1), ?y &' (2^128-1)) --> mulll @@ (x, y)
@@ -1627,71 +1638,71 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
  *)
               (* literal on left *)
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (#?ℤ * (#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ))
                   (fun x y mask => let s := (2*Z.log2_up mask)%Z in x <---- invert_low s x; #(ident.fancy_mulll s) @ (##x, y)  when  (mask =? 2^(s/2)-1))
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  (#?ℤ * (#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun x mask y => let s := (2*Z.log2_up mask)%Z in x <---- invert_low s x; #(ident.fancy_mulll s) @ (##x, y)  when  (mask =? 2^(s/2)-1))
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (#?ℤ * (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun x y offset => let s := (2*offset)%Z in x <---- invert_low s x; #(ident.fancy_mullh s) @ (##x, y))
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  (#?ℤ * (#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun x mask y => let s := (2*Z.log2_up mask)%Z in x <---- invert_high s x; #(ident.fancy_mulhl s) @ (##x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  (#?ℤ * (#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ))
                   (fun x y mask => let s := (2*Z.log2_up mask)%Z in x <---- invert_high s x; #(ident.fancy_mulhl s) @ (##x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  (#?ℤ * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  (#?ℤ * (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun x y offset => let s := (2*offset)%Z in x <---- invert_high s x; #(ident.fancy_mulhh s) @ (##x, y))
 
               (* literal on right *)
               ; make_rewrite
-                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * #?ℤ)
+                  ((#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}) * #?ℤ)
                   (fun mask x y => let s := (2*Z.log2_up mask)%Z in y <---- invert_low s y; #(ident.fancy_mulll s) @ (x, ##y)  when  (mask =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  ((#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ) * #?ℤ)
                   (fun x mask y => let s := (2*Z.log2_up mask)%Z in y <---- invert_low s y; #(ident.fancy_mulll s) @ (x, ##y)  when  (mask =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * #?ℤ)
+                  ((#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}) * #?ℤ)
                   (fun mask x y => let s := (2*Z.log2_up mask)%Z in y <---- invert_high s y; #(ident.fancy_mullh s) @ (x, ##y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  ((#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ) * #?ℤ)
                   (fun x mask y => let s := (2*Z.log2_up mask)%Z in y <---- invert_high s y; #(ident.fancy_mullh s) @ (x, ##y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  ((#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) * #?ℤ)
                   (fun x offset y => let s := (2*offset)%Z in y <---- invert_low s y; #(ident.fancy_mulhl s) @ (x, ##y))
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * #?ℤ)
+                  ((#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) * #?ℤ)
                   (fun x offset y => let s := (2*offset)%Z in y <---- invert_high s y; #(ident.fancy_mulhh s) @ (x, ##y))
 
               (* no literal *)
               ; make_rewrite
-                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  ((#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}) * (#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun mask1 x mask2 y => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  ((#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ) * (#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun x mask1 mask2 y => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  ((#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}) * (#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ))
                   (fun mask1 x y mask2 => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  ((#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ) * (#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ))
                   (fun x mask1 y mask2 => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
               ; make_rewrite
-                  ((#pident.Z_land @ #?ℤ @ ??{ℤ}) * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  ((#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}) * (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun mask x y offset => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_land @ ??{ℤ} @ #?ℤ) * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  ((#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ) * (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun x mask y offset => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ #?ℤ @ ??{ℤ}))
+                  ((#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pattern.ident.Z_land @ #?ℤ @ ??{ℤ}))
                   (fun x offset mask y => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pident.Z_land @ ??{ℤ} @ #?ℤ))
+                  ((#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pattern.ident.Z_land @ ??{ℤ} @ #?ℤ))
                   (fun x offset y mask => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
               ; make_rewrite
-                  ((#pident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pident.Z_shiftr @ ??{ℤ} @ #?ℤ))
+                  ((#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ) * (#pattern.ident.Z_shiftr @ ??{ℤ} @ #?ℤ))
                   (fun x offset1 y offset2 => let s := (2*offset1)%Z in #(ident.fancy_mulhh s) @ (x, y)  when  offset1 =? offset2)
 
             ]%list%pattern%cps%option%under_lets%Z%bool.
@@ -1724,7 +1735,10 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
         := Eval cbv -[fancy_pr2_rewrite_rules
                         base.interp base.try_make_transport_cps
                         type.try_make_transport_cps type.try_transport_cps
+                        pattern.ident.invert_bind_args
+                        Let_In Option.sequence Option.sequence_return
                         UnderLets.splice UnderLets.to_expr
+                        Compile.option_bind'
                         Compile.reflect Compile.reify Compile.reify_and_let_binds_cps UnderLets.reify_and_let_binds_base_cps
                         Compile.value' SubstVarLike.is_var_fst_snd_pair_opp
                      ] in @fancy_rewrite_head0 var invert_low invert_high do_again t idc.
@@ -1749,6 +1763,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                        Compile.lift_pbase_type_interp_cps
                        Compile.lift_ptype_interp_cps
                        Compile.lift_with_bindings
+                       Compile.option_bind'
                        Compile.pbase_type_interp_cps
                        Compile.ptype_interp
                        Compile.ptype_interp_cps
@@ -1772,13 +1787,20 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Arguments base.try_make_base_transport_cps _ !_ !_.
       Local Arguments base.try_make_transport_cps _ !_ !_.
       Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
+      Local Arguments Option.sequence {A} !v1 v2.
+      Local Arguments Option.sequence_return {A} !v1 v2.
+      Local Arguments Option.bind {A B} !_ _.
+      Local Arguments pattern.ident.invert_bind_args {t} !_ !_.
+      Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
       Local Arguments fancy_rewrite_head2 / .
 
       Time Definition fancy_rewrite_head
         := Eval cbn [id
                        fancy_rewrite_head2
                        cpsbind cpscall cps_option_bind cpsreturn
+                       pattern.ident.invert_bind_args
                        Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
+                       Option.sequence Option.sequence_return Option.bind
                        UnderLets.reify_and_let_binds_base_cps
                        UnderLets.splice UnderLets.splice_list UnderLets.to_expr
                        base.interp base.base_interp
@@ -1787,6 +1809,9 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                     ] in fancy_rewrite_head2.
       (* Finished transaction in 13.298 secs (13.283u,0.s) (successful) *)
 
+      Local Set Printing Depth 1000000.
+      Local Set Printing Width 200.
+      Local Notation "'llet' x := v 'in' f" := (Let_In v (fun x => f)).
       Redirect "/tmp/fancy_rewrite_head" Print fancy_rewrite_head.
     End red_fancy.
 
@@ -1800,7 +1825,10 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
         := Eval cbv -[nbe_pr2_rewrite_rules
                         base.interp base.try_make_transport_cps
                         type.try_make_transport_cps type.try_transport_cps
+                        pattern.ident.invert_bind_args
+                        Let_In Option.sequence Option.sequence_return
                         UnderLets.splice UnderLets.to_expr
+                        Compile.option_bind'
                         Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
                         Compile.value'
                         SubstVarLike.is_var_fst_snd_pair_opp
@@ -1823,6 +1851,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                        Compile.eval_decision_tree
                        Compile.eval_rewrite_rules
                        Compile.expr_of_rawexpr
+                       Compile.option_bind'
                        Compile.lift_pbase_type_interp_cps
                        Compile.lift_ptype_interp_cps
                        Compile.lift_with_bindings
@@ -1849,13 +1878,20 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Arguments base.try_make_base_transport_cps _ !_ !_.
       Local Arguments base.try_make_transport_cps _ !_ !_.
       Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
+      Local Arguments Option.sequence {A} !v1 v2.
+      Local Arguments Option.sequence_return {A} !v1 v2.
+      Local Arguments Option.bind {A B} !_ _.
+      Local Arguments pattern.ident.invert_bind_args {t} !_ !_.
+      Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
       Local Arguments nbe_rewrite_head2 / .
 
       Time Definition nbe_rewrite_head
         := Eval cbn [id
                        nbe_rewrite_head2
                        cpsbind cpscall cps_option_bind cpsreturn
+                       pattern.ident.invert_bind_args
                        Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
+                       Option.sequence Option.sequence_return Option.bind
                        UnderLets.reify_and_let_binds_base_cps
                        UnderLets.splice UnderLets.splice_list UnderLets.to_expr
                        base.interp base.base_interp
@@ -1864,6 +1900,9 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                     ] in nbe_rewrite_head2.
       (* Finished transaction in 16.561 secs (16.54u,0.s) (successful) *)
 
+      Local Set Printing Depth 1000000.
+      Local Set Printing Width 200.
+      Local Notation "'llet' x := v 'in' f" := (Let_In v (fun x => f)).
       Redirect "/tmp/nbe_rewrite_head" Print nbe_rewrite_head.
     End red_nbe.
 
@@ -1877,7 +1916,10 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
         := Eval cbv -[arith_pr2_rewrite_rules
                         base.interp base.try_make_transport_cps
                         type.try_make_transport_cps type.try_transport_cps
+                        pattern.ident.invert_bind_args
+                        Let_In Option.sequence Option.sequence_return
                         UnderLets.splice UnderLets.to_expr
+                        Compile.option_bind'
                         Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
                         Compile.value'
                         SubstVarLike.is_var_fst_snd_pair_opp
@@ -1900,6 +1942,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                        Compile.eval_decision_tree
                        Compile.eval_rewrite_rules
                        Compile.expr_of_rawexpr
+                       Compile.option_bind'
                        Compile.lift_pbase_type_interp_cps
                        Compile.lift_ptype_interp_cps
                        Compile.lift_with_bindings
@@ -1926,13 +1969,20 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Arguments base.try_make_base_transport_cps _ !_ !_.
       Local Arguments base.try_make_transport_cps _ !_ !_.
       Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
+      Local Arguments Option.sequence {A} !v1 v2.
+      Local Arguments Option.sequence_return {A} !v1 v2.
+      Local Arguments Option.bind {A B} !_ _.
+      Local Arguments pattern.ident.invert_bind_args {t} !_ !_.
+      Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
       Local Arguments arith_rewrite_head2 / .
 
       Time Definition arith_rewrite_head
         := Eval cbn [id
                        arith_rewrite_head2
                        cpsbind cpscall cps_option_bind cpsreturn
+                       pattern.ident.invert_bind_args
                        Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
+                       Option.sequence Option.sequence_return Option.bind
                        UnderLets.reify_and_let_binds_base_cps
                        UnderLets.splice UnderLets.splice_list UnderLets.to_expr
                        base.interp base.base_interp
@@ -1941,6 +1991,9 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                     ] in arith_rewrite_head2.
       (* Finished transaction in 16.561 secs (16.54u,0.s) (successful) *)
 
+      Local Set Printing Depth 1000000.
+      Local Set Printing Width 200.
+      Local Notation "'llet' x := v 'in' f" := (Let_In v (fun x => f)).
       Redirect "/tmp/arith_rewrite_head" Print arith_rewrite_head.
     End red_arith.
 
