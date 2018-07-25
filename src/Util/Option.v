@@ -10,11 +10,26 @@ Definition bind {A B} (v : option A) (f : A -> option B) : option B
      | None => None
      end.
 
+Definition sequence {A} (v1 v2 : option A) : option A
+  := match v1 with
+     | Some v => Some v
+     | None => v2
+     end.
+Definition sequence_return {A} (v1 : option A) (v2 : A) : A
+  := match v1 with
+     | Some v => v
+     | None => v2
+     end.
+Global Arguments sequence {A} !v1 v2.
+Global Arguments sequence_return {A} !v1 v2.
+
 Module Export Notations.
   Delimit Scope option_scope with option.
   Bind Scope option_scope with option.
 
   Notation "A <- X ; B" := (bind X (fun A => B%option)) : option_scope.
+  Infix ";;" := sequence : option_scope.
+  Infix ";;;" := sequence_return : option_scope.
 End Notations.
 Local Open Scope option_scope.
 
