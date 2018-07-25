@@ -1291,6 +1291,12 @@ Module Compilers.
            | expr.Abs s d f => Some f
            | _ => None
            end.
+      Definition invert_LetIn {t} (e : expr t)
+        : option { s : _ & expr s * (var s -> expr t) }%type
+        := match e with
+           | expr.LetIn A B x f => Some (existT _ A (x, f))
+           | _ => None
+           end.
       Definition invert_App2 {t} (e : expr t)
         : option { ss' : _ & expr (fst ss' -> snd ss' -> t) * expr (fst ss') * expr (snd ss') }%type
         := (e <- invert_App e;
