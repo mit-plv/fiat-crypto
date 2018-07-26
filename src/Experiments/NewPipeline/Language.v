@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
@@ -102,6 +103,12 @@ Module Compilers.
          | base t => base_interp t
          | arrow s d => @interp _ base_interp s -> @interp _ base_interp d
          end.
+
+    Fixpoint eqv {base_type} {base_interp : base_type -> Type} {t : type base_type} : relation (interp base_interp t)
+      := match t with
+         | base t => @eq (base_interp t)
+         | arrow s d => @eqv _ base_interp s ==> @eqv _ base_interp d
+         end%signature.
 
     Fixpoint app_curried {base_type} {f : base_type -> Type} {t : type base_type}
       : interp f t -> for_each_lhs_of_arrow (interp f) t -> f (final_codomain t)
@@ -236,6 +243,7 @@ Module Compilers.
   Delimit Scope etype_scope with etype.
   Bind Scope etype_scope with type.type.
   Infix "->" := type.arrow : etype_scope.
+  Infix "==" := type.eqv : etype_scope.
   Module base.
     Local Notation einterp := type.interp.
     Module type.
