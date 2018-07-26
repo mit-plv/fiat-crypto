@@ -219,13 +219,33 @@ Module test5.
                         x) in
     pose v as E.
     vm_compute in E.
-    pose (ReassociateSmallConstants.Reassociate (2^8) (partial.Eval E)) as E'.
+    pose (RewriteRules.RewriteArith (2^8) (partial.Eval E)) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
          expr.Abs (fun v
               => (expr_let v0 := (#ident.Z_mul @ (#ident.fst @ $v) @ (#ident.Z_mul @ (#ident.snd @ $v) @ #(ident.Literal 13))) in
+                      $v0)%expr))
+      => idtac
+    end.
+    constructor.
+  Qed.
+
+  Example test5_2 : True.
+  Proof.
+    let v := Reify (fun y : (Z * Z)
+                    => dlet_nd x := (2 * (19 * (fst y * snd y))) in
+                        x) in
+    pose v as E.
+    vm_compute in E.
+    pose (RewriteRules.RewriteArith (2^8) (partial.Eval E)) as E'.
+    lazy in E'.
+    clear E.
+    lazymatch (eval cbv delta [E'] in E') with
+    | (fun var =>
+         expr.Abs (fun v
+              => (expr_let v0 := (#ident.Z_mul @ (#ident.fst @ $v) @ (#ident.Z_mul @ (#ident.snd @ $v) @ (#ident.Z_mul @ #(ident.Literal 2) @ #(ident.Literal 19)))) in
                       $v0)%expr))
       => idtac
     end.

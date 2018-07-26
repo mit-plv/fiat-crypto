@@ -1288,7 +1288,7 @@ In the RHS, the follow notation applies:
                                reify_list retv))
               ]%list%pattern%cps%option%under_lets%Z%bool.
 
-      Definition arith_rewrite_rules : rewrite_rulesT
+      Definition arith_rewrite_rules (max_const_val : Z) : rewrite_rulesT
         := [make_rewrite (#pattern.ident.fst @ (??, ??)) (fun _ x _ y => x)
             ; make_rewrite (#pattern.ident.snd @ (??, ??)) (fun _ x _ y => y)
             ; make_rewrite (#?ℤ   + ??{ℤ}) (fun z v => v  when  Z.eqb z 0)
@@ -1314,6 +1314,7 @@ In the RHS, the follow notation applies:
             ; make_rewrite ((-??{ℤ}) -   ??{ℤ} ) (fun x y => -(x + y))
             ; make_rewrite (  ??{ℤ}  - (-??{ℤ})) (fun x y => x + y)
 
+            ; make_rewrite (#?ℤ   *  #?ℤ ) (fun x y => ##((x*y)%Z))
             ; make_rewrite (#?ℤ   * ??{ℤ}) (fun z v => ##0  when  Z.eqb z 0)
             ; make_rewrite (??{ℤ} * #?ℤ  ) (fun v z => ##0  when  Z.eqb z 0)
             ; make_rewrite (#?ℤ   * ??{ℤ}) (fun z v => v  when  Z.eqb z 1)
@@ -1338,6 +1339,12 @@ In the RHS, the follow notation applies:
             ; make_rewrite (??{ℤ} / #?ℤ)   (fun x y => x >> ##(Z.log2 y)  when  (y =? (2^Z.log2 y)))
             ; make_rewrite (??{ℤ} mod #?ℤ) (fun x y => x &' ##(y-1)%Z     when  (y =? (2^Z.log2 y)))
             ; make_rewrite (-(-??{ℤ})) (fun v => v)
+
+            (* We reassociate some multiplication of small constants  *)
+            ; make_rewrite (#?ℤ * (#?ℤ * (??{ℤ} * ??{ℤ}))) (fun c1 c2 x y => (x * (y * (##c1 * ##c2))) when  (Z.abs c1 <=? Z.abs max_const_val) && (Z.abs c2 <=? Z.abs max_const_val))
+            ; make_rewrite (#?ℤ * (??{ℤ} * (??{ℤ} * #?ℤ))) (fun c1 x y c2 => (x * (y * (##c1 * ##c2))) when  (Z.abs c1 <=? Z.abs max_const_val) && (Z.abs c2 <=? Z.abs max_const_val))
+            ; make_rewrite (#?ℤ * (??{ℤ} * ??{ℤ})) (fun c x y => (x * (y * ##c)) when  (Z.abs c <=? Z.abs max_const_val))
+            ; make_rewrite (#?ℤ * ??{ℤ}) (fun c x => (x * ##c) when  (Z.abs c <=? Z.abs max_const_val))
 
             ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??{ℤ}) (fun s xx y => (##0, ##0)%Z  when  Z.eqb xx 0)
             ; make_rewrite (#pattern.ident.Z_mul_split @ #?ℤ @ ??{ℤ} @ #?ℤ) (fun s y xx => (##0, ##0)%Z  when  Z.eqb xx 0)
@@ -1492,13 +1499,13 @@ In the RHS, the follow notation applies:
       Definition nbe_dtree'
         := Eval compute in @compile_rewrites ident var pattern.ident pattern.ident.arg_types pattern.ident.ident_beq 100 nbe_rewrite_rules.
       Definition arith_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident pattern.ident.arg_types pattern.ident.ident_beq 100 arith_rewrite_rules.
+        := Eval compute in @compile_rewrites ident var pattern.ident pattern.ident.arg_types pattern.ident.ident_beq 100 (arith_rewrite_rules 0%Z (* dummy val *)).
       Definition nbe_dtree : decision_tree
         := Eval compute in invert_Some nbe_dtree'.
       Definition arith_dtree : decision_tree
         := Eval compute in invert_Some arith_dtree'.
       Definition nbe_default_fuel := Eval compute in List.length nbe_rewrite_rules.
-      Definition arith_default_fuel := Eval compute in List.length arith_rewrite_rules.
+      Definition arith_default_fuel := Eval compute in List.length (arith_rewrite_rules 0%Z (* dummy val *)).
 
       Import PrimitiveHList.
       (* N.B. The [combine_hlist] call MUST eta-expand
@@ -1518,16 +1525,16 @@ In the RHS, the follow notation applies:
       Definition nbe_pr2_rewrite_rules := Eval hnf in projT2 nbe_split_rewrite_rules.
       Definition nbe_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) nbe_pr1_rewrite_rules nbe_pr2_rewrite_rules.
 
-      Definition arith_split_rewrite_rules := Eval cbv [split_list projT1 projT2 arith_rewrite_rules] in split_list arith_rewrite_rules.
-      Definition arith_pr1_rewrite_rules := Eval hnf in projT1 arith_split_rewrite_rules.
-      Definition arith_pr2_rewrite_rules := Eval hnf in projT2 arith_split_rewrite_rules.
-      Definition arith_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) arith_pr1_rewrite_rules arith_pr2_rewrite_rules.
+      Definition arith_split_rewrite_rules max_const_val := Eval cbv [split_list projT1 projT2 arith_rewrite_rules] in split_list (arith_rewrite_rules max_const_val).
+      Definition arith_pr1_rewrite_rules max_const_val := Eval hnf in projT1 (arith_split_rewrite_rules max_const_val).
+      Definition arith_pr2_rewrite_rules max_const_val := Eval hnf in projT2 (arith_split_rewrite_rules max_const_val).
+      Definition arith_all_rewrite_rules max_const_val := combine_hlist (P:=rewrite_ruleTP) (arith_pr1_rewrite_rules max_const_val) (arith_pr2_rewrite_rules max_const_val).
 
       Definition nbe_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
         := @assemble_identifier_rewriters nbe_dtree nbe_all_rewrite_rules do_again t idc.
 
-      Definition arith_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
-        := @assemble_identifier_rewriters arith_dtree arith_all_rewrite_rules do_again t idc.
+      Definition arith_rewrite_head0 max_const_val do_again {t} (idc : ident t) : value_with_lets t
+        := @assemble_identifier_rewriters arith_dtree (arith_all_rewrite_rules max_const_val) do_again t idc.
 
       Section fancy.
         Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z).
@@ -1907,7 +1914,8 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
     End red_nbe.
 
     Section red_arith.
-      Context {var : type.type base.type -> Type}
+      Context (max_const_val : Z)
+              {var : type.type base.type -> Type}
               (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
                                                 -> UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
               {t} (idc : ident t).
@@ -1923,7 +1931,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                         Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
                         Compile.value'
                         SubstVarLike.is_var_fst_snd_pair_opp
-                     ] in @arith_rewrite_head0 var do_again t idc.
+                     ] in @arith_rewrite_head0 var max_const_val do_again t idc.
       (* Finished transaction in 16.593 secs (16.567u,0.s) (successful) *)
 
       Time Local Definition arith_rewrite_head2
@@ -1999,8 +2007,8 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
 
     Definition RewriteNBE {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (@nbe_rewrite_head) nbe_default_fuel t e.
-    Definition RewriteArith {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (@arith_rewrite_head) arith_default_fuel t e.
+    Definition RewriteArith (max_const_val : Z) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
+      := @Compile.Rewrite (@arith_rewrite_head max_const_val) arith_default_fuel t e.
     Definition RewriteToFancy
                (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t

@@ -663,7 +663,7 @@ Module Pipeline.
     := (*let E := expr.Uncurry E in*)
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
       let E := PartialEvaluate E in
-      let E := RewriteRules.RewriteArith E in
+      let E := RewriteRules.RewriteArith 0 E in
       (* Note that DCE evaluates the expr with two different [var]
          arguments, and so results in a pipeline that is 2x slower
          unless we pass through a uniformly concrete [var] type
@@ -675,11 +675,11 @@ Module Pipeline.
       let E := FromFlat e in
       let E := if with_subst01 then Subst01.Subst01 E else E in
       let E := UnderLets.LetBindReturn E in
-      let E := RewriteRules.RewriteArith E in (* after inlining, see if any new rewrite redexes are available *)
+      let E := RewriteRules.RewriteArith 0 E in (* after inlining, see if any new rewrite redexes are available *)
       dlet_nd e := ToFlat E in
       let E := FromFlat e in
       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-      let E := ReassociateSmallConstants.Reassociate (2^8) E in
+      let E := RewriteRules.RewriteArith (2^8) E in (* reassociate small consts *)
       let E := match translate_to_fancy with
                | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high E
                | None => E

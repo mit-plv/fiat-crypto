@@ -1,5 +1,5 @@
 arith_rewrite_head = 
-match idc in (ident t) return (value' true t) with
+match idc in (ident t) return (Compile.value' true t) with
 | @ident.Literal t v =>
     match
       t as t0
@@ -48,7 +48,7 @@ match idc in (ident t) return (value' true t) with
           match
             s0 as t2
             return
-              (value' false t2 ->
+              (Compile.value' false t2 ->
                option
                  (UnderLets.UnderLets base.type ident var
                     (defaults.expr (type.base A))))
@@ -58,7 +58,7 @@ match idc in (ident t) return (value' true t) with
               match
                 s as t3
                 return
-                  (value' false t3 ->
+                  (Compile.value' false t3 ->
                    option
                      (UnderLets.UnderLets base.type ident var
                         (defaults.expr (type.base A))))
@@ -75,16 +75,18 @@ match idc in (ident t) return (value' true t) with
                         | Some x' => UnderLets.Base (x' v)
                         | None =>
                             UnderLets.Base
-                              (ERROR_BAD_REWRITE_RULE
-                                 (#(pident.fst) @ (??, ??))
+                              (Compile.ERROR_BAD_REWRITE_RULE
+                                 (#(pattern.ident.fst) @ (??, ??))
                                  (#(ident.fst)%expr @ x)%expr_pat)
                         end))
               | (s1 -> d1)%ptype =>
-                  fun _ : value' false s1 -> value' true d1 => None
-              end (reflect x0)
+                  fun _ : Compile.value' false s1 -> Compile.value' true d1
+                  => None
+              end (Compile.reflect x0)
           | (s1 -> d1)%ptype =>
-              fun _ : value' false s1 -> value' true d1 => None
-          end (reflect x1)
+              fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
+              None
+          end (Compile.reflect x1)
       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
         _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
         @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
@@ -106,7 +108,7 @@ match idc in (ident t) return (value' true t) with
           match
             s0 as t2
             return
-              (value' false t2 ->
+              (Compile.value' false t2 ->
                option
                  (UnderLets.UnderLets base.type ident var
                     (defaults.expr (type.base B))))
@@ -116,7 +118,7 @@ match idc in (ident t) return (value' true t) with
               match
                 s as t3
                 return
-                  (value' false t3 ->
+                  (Compile.value' false t3 ->
                    option
                      (UnderLets.UnderLets base.type ident var
                         (defaults.expr (type.base B))))
@@ -133,16 +135,18 @@ match idc in (ident t) return (value' true t) with
                         | Some x' => UnderLets.Base (x' v0)
                         | None =>
                             UnderLets.Base
-                              (ERROR_BAD_REWRITE_RULE
-                                 (#(pident.snd) @ (??, ??))
+                              (Compile.ERROR_BAD_REWRITE_RULE
+                                 (#(pattern.ident.snd) @ (??, ??))
                                  (#(ident.snd)%expr @ x)%expr_pat)
                         end))
               | (s1 -> d1)%ptype =>
-                  fun _ : value' false s1 -> value' true d1 => None
-              end (reflect x0)
+                  fun _ : Compile.value' false s1 -> Compile.value' true d1
+                  => None
+              end (Compile.reflect x0)
           | (s1 -> d1)%ptype =>
-              fun _ : value' false s1 -> value' true d1 => None
-          end (reflect x1)
+              fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
+              None
+          end (Compile.reflect x1)
       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
         _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
         @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
@@ -358,7 +362,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -378,12 +382,13 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1);;
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1);;
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -405,8 +410,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
              _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -421,7 +427,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -441,12 +447,13 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1);;
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1);;
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -468,14 +475,15 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | @expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x2 =>
                _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_opp;
                match
                  s0 as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -492,7 +500,7 @@ match idc in (ident t) return (value' true t) with
                           match
                             s as t3
                             return
-                              (value' false t3 ->
+                              (Compile.value' false t3 ->
                                option
                                  (UnderLets.UnderLets base.type ident var
                                     (defaults.expr (type.base base.type.Z))))
@@ -513,14 +521,16 @@ match idc in (ident t) return (value' true t) with
                                  | None => None
                                  end)
                           | (s1 -> d1)%ptype =>
-                              fun _ : value' false s1 -> value' true d1 =>
-                              None
-                          end (reflect x1)
+                              fun
+                                _ : Compile.value' false s1 ->
+                                    Compile.value' true d1 => None
+                          end (Compile.reflect x1)
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x2)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x2)
            | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _
              (_ @ _)%expr_pat _ | @expr.App _ _ _ s0 _
@@ -538,7 +548,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -555,8 +565,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x1)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x1)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -568,7 +579,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -585,8 +596,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x1)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x1)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -599,6 +611,13 @@ match idc in (ident t) return (value' true t) with
     (((match x with
        | @expr.Ident _ _ _ t idc =>
            args <- pattern.ident.invert_bind_args idc pattern.ident.LiteralZ;
+           match x0 with
+           | @expr.Ident _ _ _ t0 idc0 =>
+               args0 <- pattern.ident.invert_bind_args idc0
+                          pattern.ident.LiteralZ;
+               Some (UnderLets.Base (##(args * args0)%Z)%expr)
+           | _ => None
+           end;;
            (if args =? 0 then Some (UnderLets.Base (##0)%expr) else None)
        | _ => None
        end;;
@@ -624,7 +643,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -644,8 +663,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
              _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -660,7 +680,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -680,8 +700,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | _ => None
            end
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
@@ -723,7 +744,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s0 as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -740,7 +761,7 @@ match idc in (ident t) return (value' true t) with
                           match
                             s as t3
                             return
-                              (value' false t3 ->
+                              (Compile.value' false t3 ->
                                option
                                  (UnderLets.UnderLets base.type ident var
                                     (defaults.expr (type.base base.type.Z))))
@@ -760,14 +781,16 @@ match idc in (ident t) return (value' true t) with
                                  | None => None
                                  end)
                           | (s1 -> d1)%ptype =>
-                              fun _ : value' false s1 -> value' true d1 =>
-                              None
-                          end (reflect x1)
+                              fun
+                                _ : Compile.value' false s1 ->
+                                    Compile.value' true d1 => None
+                          end (Compile.reflect x1)
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x2)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x2)
            | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _
              (_ @ _)%expr_pat _ | @expr.App _ _ _ s0 _
@@ -785,7 +808,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -802,8 +825,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x1)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x1)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -820,7 +844,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -837,8 +861,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x1)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x1)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -849,6 +874,257 @@ match idc in (ident t) return (value' true t) with
            args <- pattern.ident.invert_bind_args idc pattern.ident.LiteralZ;
            (if (args =? 2 ^ Z.log2 args) && negb (args =? 2)
             then Some (UnderLets.Base (x0 << ##(Z.log2 args))%expr)
+            else None);;
+           match x0 with
+           | @expr.App _ _ _ s _
+             (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x2) x1 =>
+               _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_mul;
+               match x2 with
+               | @expr.Ident _ _ _ t1 idc1 =>
+                   args1 <- pattern.ident.invert_bind_args idc1
+                              pattern.ident.LiteralZ;
+                   match x1 with
+                   | @expr.App _ _ _ s1 _
+                     (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t2 idc2) x4)
+                     x3 =>
+                       _ <- pattern.ident.invert_bind_args idc2
+                              pattern.ident.Z_mul;
+                       match
+                         s2 as t3
+                         return
+                           (Compile.value' false t3 ->
+                            option
+                              (UnderLets.UnderLets base.type ident var
+                                 (defaults.expr (type.base base.type.Z))))
+                       with
+                       | type.base t3 =>
+                           fun v : defaults.expr (type.base t3) =>
+                           base.try_make_transport_cps t3 base.type.Z
+                             (fun
+                                a : option
+                                      (defaults.expr (type.base t3) ->
+                                       defaults.expr (type.base base.type.Z))
+                              =>
+                              match a with
+                              | Some x' =>
+                                  match
+                                    s1 as t4
+                                    return
+                                      (Compile.value' false t4 ->
+                                       option
+                                         (UnderLets.UnderLets base.type ident
+                                            var
+                                            (defaults.expr
+                                               (type.base base.type.Z))))
+                                  with
+                                  | type.base t4 =>
+                                      fun v0 : defaults.expr (type.base t4)
+                                      =>
+                                      base.try_make_transport_cps t4
+                                        base.type.Z
+                                        (fun
+                                           a0 : option
+                                                  (defaults.expr
+                                                     (type.base t4) ->
+                                                   defaults.expr
+                                                     (type.base base.type.Z))
+                                         =>
+                                         match a0 with
+                                         | Some x'0 =>
+                                             if
+                                              (Z.abs args <=?
+                                               Z.abs max_const_val) &&
+                                              (Z.abs args1 <=?
+                                               Z.abs max_const_val)
+                                             then
+                                              Some
+                                                (UnderLets.Base
+                                                   (x' v *
+                                                    (x'0 v0 *
+                                                     (##args * ##args1)))%expr)
+                                             else None
+                                         | None => None
+                                         end)
+                                  | (s3 -> d3)%ptype =>
+                                      fun
+                                        _ : Compile.value' false s3 ->
+                                            Compile.value' true d3 => None
+                                  end (Compile.reflect x3)
+                              | None => None
+                              end)
+                       | (s3 -> d3)%ptype =>
+                           fun
+                             _ : Compile.value' false s3 ->
+                                 Compile.value' true d3 => None
+                       end (Compile.reflect x4)
+                   | @expr.App _ _ _ s1 _ (@expr.App _ _ _ s2 _ ($_)%expr _)
+                     _ | @expr.App _ _ _ s1 _
+                     (@expr.App _ _ _ s2 _ (@expr.Abs _ _ _ _ _ _) _) _ |
+                     @expr.App _ _ _ s1 _
+                     (@expr.App _ _ _ s2 _ (_ @ _)%expr_pat _) _ | @expr.App
+                     _ _ _ s1 _
+                     (@expr.App _ _ _ s2 _ (@expr.LetIn _ _ _ _ _ _ _) _)
+                     _ => None
+                   | @expr.App _ _ _ s1 _ #(_)%expr_pat _ | @expr.App _ _ _
+                     s1 _ ($_)%expr _ | @expr.App _ _ _ s1 _
+                     (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s1 _
+                     (@expr.LetIn _ _ _ _ _ _ _) _ => None
+                   | _ => None
+                   end
+               | _ => None
+               end;;
+               match x1 with
+               | (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t1 idc1) x4 @ x3)%expr_pat =>
+                   _ <- pattern.ident.invert_bind_args idc1
+                          pattern.ident.Z_mul;
+                   match x3 with
+                   | @expr.Ident _ _ _ t2 idc2 =>
+                       args2 <- pattern.ident.invert_bind_args idc2
+                                  pattern.ident.LiteralZ;
+                       match
+                         s0 as t3
+                         return
+                           (Compile.value' false t3 ->
+                            option
+                              (UnderLets.UnderLets base.type ident var
+                                 (defaults.expr (type.base base.type.Z))))
+                       with
+                       | type.base t3 =>
+                           fun v : defaults.expr (type.base t3) =>
+                           base.try_make_transport_cps t3 base.type.Z
+                             (fun
+                                a : option
+                                      (defaults.expr (type.base t3) ->
+                                       defaults.expr (type.base base.type.Z))
+                              =>
+                              match a with
+                              | Some x' =>
+                                  match
+                                    s2 as t4
+                                    return
+                                      (Compile.value' false t4 ->
+                                       option
+                                         (UnderLets.UnderLets base.type ident
+                                            var
+                                            (defaults.expr
+                                               (type.base base.type.Z))))
+                                  with
+                                  | type.base t4 =>
+                                      fun v0 : defaults.expr (type.base t4)
+                                      =>
+                                      base.try_make_transport_cps t4
+                                        base.type.Z
+                                        (fun
+                                           a0 : option
+                                                  (defaults.expr
+                                                     (type.base t4) ->
+                                                   defaults.expr
+                                                     (type.base base.type.Z))
+                                         =>
+                                         match a0 with
+                                         | Some x'0 =>
+                                             if
+                                              (Z.abs args <=?
+                                               Z.abs max_const_val) &&
+                                              (Z.abs args2 <=?
+                                               Z.abs max_const_val)
+                                             then
+                                              Some
+                                                (UnderLets.Base
+                                                   (x' v *
+                                                    (x'0 v0 *
+                                                     (##args * ##args2)))%expr)
+                                             else None
+                                         | None => None
+                                         end)
+                                  | (s3 -> d3)%ptype =>
+                                      fun
+                                        _ : Compile.value' false s3 ->
+                                            Compile.value' true d3 => None
+                                  end (Compile.reflect x4)
+                              | None => None
+                              end)
+                       | (s3 -> d3)%ptype =>
+                           fun
+                             _ : Compile.value' false s3 ->
+                                 Compile.value' true d3 => None
+                       end (Compile.reflect x2)
+                   | _ => None
+                   end
+               | (@expr.App _ _ _ s2 _ ($_)%expr _ @ _)%expr_pat |
+                 (@expr.App _ _ _ s2 _ (@expr.Abs _ _ _ _ _ _) _ @ _)%expr_pat |
+                 (@expr.App _ _ _ s2 _ (_ @ _) _ @ _)%expr_pat |
+                 (@expr.App _ _ _ s2 _ (@expr.LetIn _ _ _ _ _ _ _) _ @ _)%expr_pat =>
+                   None
+               | _ => None
+               end;;
+               match
+                 s0 as t2
+                 return
+                   (Compile.value' false t2 ->
+                    option
+                      (UnderLets.UnderLets base.type ident var
+                         (defaults.expr (type.base base.type.Z))))
+               with
+               | type.base t2 =>
+                   fun v : defaults.expr (type.base t2) =>
+                   base.try_make_transport_cps t2 base.type.Z
+                     (fun
+                        a : option
+                              (defaults.expr (type.base t2) ->
+                               defaults.expr (type.base base.type.Z)) =>
+                      match a with
+                      | Some x' =>
+                          match
+                            s as t3
+                            return
+                              (Compile.value' false t3 ->
+                               option
+                                 (UnderLets.UnderLets base.type ident var
+                                    (defaults.expr (type.base base.type.Z))))
+                          with
+                          | type.base t3 =>
+                              fun v0 : defaults.expr (type.base t3) =>
+                              base.try_make_transport_cps t3 base.type.Z
+                                (fun
+                                   a0 : option
+                                          (defaults.expr (type.base t3) ->
+                                           defaults.expr
+                                             (type.base base.type.Z)) =>
+                                 match a0 with
+                                 | Some x'0 =>
+                                     if Z.abs args <=? Z.abs max_const_val
+                                     then
+                                      Some
+                                        (UnderLets.Base
+                                           (x' v * (x'0 v0 * ##args))%expr)
+                                     else None
+                                 | None => None
+                                 end)
+                          | (s1 -> d1)%ptype =>
+                              fun
+                                _ : Compile.value' false s1 ->
+                                    Compile.value' true d1 => None
+                          end (Compile.reflect x1)
+                      | None => None
+                      end)
+               | (s1 -> d1)%ptype =>
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x2)
+           | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ |
+             @expr.App _ _ _ s _
+             (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App _
+             _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App
+             _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _)
+             _ => None
+           | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _
+             ($_)%expr _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ |
+             @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
+           | _ => None
+           end;;
+           (if Z.abs args <=? Z.abs max_const_val
+            then Some (UnderLets.Base (x0 * ##args)%expr)
             else None)
        | _ => None
        end);;
@@ -868,7 +1144,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -888,8 +1164,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
              _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -911,7 +1188,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -931,12 +1208,13 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1);;
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1);;
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -957,8 +1235,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | _ => None
            end
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
@@ -981,7 +1260,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -1003,12 +1282,13 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1);;
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1);;
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -1029,8 +1309,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x1)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x1)
            | _ => None
            end
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
@@ -1052,7 +1333,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s0 as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -1069,7 +1350,7 @@ match idc in (ident t) return (value' true t) with
                           match
                             s as t3
                             return
-                              (value' false t3 ->
+                              (Compile.value' false t3 ->
                                option
                                  (UnderLets.UnderLets base.type ident var
                                     (defaults.expr (type.base base.type.Z))))
@@ -1089,14 +1370,16 @@ match idc in (ident t) return (value' true t) with
                                  | None => None
                                  end)
                           | (s1 -> d1)%ptype =>
-                              fun _ : value' false s1 -> value' true d1 =>
-                              None
-                          end (reflect x1)
+                              fun
+                                _ : Compile.value' false s1 ->
+                                    Compile.value' true d1 => None
+                          end (Compile.reflect x1)
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x2)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x2)
            | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _
              (_ @ _)%expr_pat _ | @expr.App _ _ _ s0 _
@@ -1114,7 +1397,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -1131,8 +1414,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x1)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x1)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1144,7 +1428,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -1161,8 +1445,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x1)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x1)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1178,7 +1463,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr (type.base base.type.Z))))
@@ -1195,8 +1480,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x0)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x0)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1365,7 +1651,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr
@@ -1393,8 +1679,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x2)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x2)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1406,7 +1693,7 @@ match idc in (ident t) return (value' true t) with
            match
              s as t2
              return
-               (value' false t2 ->
+               (Compile.value' false t2 ->
                 option
                   (UnderLets.UnderLets base.type ident var
                      (defaults.expr
@@ -1434,8 +1721,9 @@ match idc in (ident t) return (value' true t) with
                   | None => None
                   end)
            | (s0 -> d0)%ptype =>
-               fun _ : value' false s0 -> value' true d0 => None
-           end (reflect x2)
+               fun _ : Compile.value' false s0 -> Compile.value' true d0 =>
+               None
+           end (Compile.reflect x2)
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1524,7 +1812,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1557,12 +1845,13 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x3);;
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x3);;
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1595,8 +1884,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x3)
            | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
              _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1608,7 +1898,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1641,12 +1931,13 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x3);;
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x3);;
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1679,8 +1970,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x3)
            | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
              _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
@@ -1769,7 +2061,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1787,7 +2079,7 @@ match idc in (ident t) return (value' true t) with
                           match
                             s0 as t3
                             return
-                              (value' false t3 ->
+                              (Compile.value' false t3 ->
                                option
                                  (UnderLets.UnderLets base.type ident var
                                     (defaults.expr
@@ -1821,14 +2113,16 @@ match idc in (ident t) return (value' true t) with
                                  | None => None
                                  end)
                           | (s1 -> d1)%ptype =>
-                              fun _ : value' false s1 -> value' true d1 =>
-                              None
-                          end (reflect x4)
+                              fun
+                                _ : Compile.value' false s1 ->
+                                    Compile.value' true d1 => None
+                          end (Compile.reflect x4)
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x3)
            | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _
              (_ @ _)%expr_pat _ | @expr.App _ _ _ s0 _
@@ -1841,7 +2135,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1859,7 +2153,7 @@ match idc in (ident t) return (value' true t) with
                           match
                             s0 as t3
                             return
-                              (value' false t3 ->
+                              (Compile.value' false t3 ->
                                option
                                  (UnderLets.UnderLets base.type ident var
                                     (defaults.expr
@@ -1893,14 +2187,16 @@ match idc in (ident t) return (value' true t) with
                                  | None => None
                                  end)
                           | (s1 -> d1)%ptype =>
-                              fun _ : value' false s1 -> value' true d1 =>
-                              None
-                          end (reflect x4)
+                              fun
+                                _ : Compile.value' false s1 ->
+                                    Compile.value' true d1 => None
+                          end (Compile.reflect x4)
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x3)
            | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
              (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _
              (_ @ _)%expr_pat _ | @expr.App _ _ _ s0 _
@@ -1914,7 +2210,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1947,8 +2243,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x3)
            | _ => None
            end;;
            match x2 with
@@ -1958,7 +2255,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr
@@ -1991,8 +2288,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s0 -> d0)%ptype =>
-                   fun _ : value' false s0 -> value' true d0 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s0 -> Compile.value' true d0
+                   => None
+               end (Compile.reflect x3)
            | _ => None
            end
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
@@ -2071,7 +2369,7 @@ match idc in (ident t) return (value' true t) with
          match
            s0 as t2
            return
-             (value' false t2 ->
+             (Compile.value' false t2 ->
               option
                 (UnderLets.UnderLets base.type ident var
                    (defaults.expr
@@ -2089,7 +2387,7 @@ match idc in (ident t) return (value' true t) with
                     match
                       s as t3
                       return
-                        (value' false t3 ->
+                        (Compile.value' false t3 ->
                          option
                            (UnderLets.UnderLets base.type ident var
                               (defaults.expr
@@ -2115,13 +2413,16 @@ match idc in (ident t) return (value' true t) with
                            | None => None
                            end)
                     | (s1 -> d1)%ptype =>
-                        fun _ : value' false s1 -> value' true d1 => None
-                    end (reflect x0)
+                        fun
+                          _ : Compile.value' false s1 ->
+                              Compile.value' true d1 => None
+                    end (Compile.reflect x0)
                 | None => None
                 end)
          | (s1 -> d1)%ptype =>
-             fun _ : value' false s1 -> value' true d1 => None
-         end (reflect x1)
+             fun _ : Compile.value' false s1 -> Compile.value' true d1 =>
+             None
+         end (Compile.reflect x1)
      | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
        _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
        _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App _ _
@@ -2184,4 +2485,4 @@ match idc in (ident t) return (value' true t) with
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
     UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat
 end
-     : value' true t
+     : Compile.value' true t

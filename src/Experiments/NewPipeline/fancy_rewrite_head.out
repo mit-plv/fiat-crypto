@@ -1,5 +1,5 @@
 fancy_rewrite_head = 
-match idc in (ident t) return (value' true t) with
+match idc in (ident t) return (Compile.value' true t) with
 | @ident.Literal t v =>
     match
       t as t0
@@ -241,7 +241,7 @@ match idc in (ident t) return (value' true t) with
          match x0 with
          | @expr.App _ _ _ s _
            (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x2) x1 =>
-             (_ <- pattern.ident.invert_bind_args idc0 pident.Z_land;
+             (_ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_land;
               match x1 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -249,7 +249,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -277,8 +277,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x2)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x2)
               | _ => None
               end;;
               match x2 with
@@ -288,7 +290,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -316,12 +318,14 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x1);;
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x1);;
                   match
                     s as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -349,8 +353,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x1)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x1)
               | _ => None
               end;;
               match x1 with
@@ -360,7 +366,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -388,11 +394,13 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x2)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x2)
               | _ => None
               end);;
-             _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+             _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
              match x1 with
              | @expr.Ident _ _ _ t1 idc1 =>
                  args1 <- pattern.ident.invert_bind_args idc1
@@ -400,7 +408,7 @@ match idc in (ident t) return (value' true t) with
                  match
                    s0 as t2
                    return
-                     (value' false t2 ->
+                     (Compile.value' false t2 ->
                       option
                         (UnderLets.UnderLets base.type ident var
                            (defaults.expr (type.base base.type.Z))))
@@ -424,12 +432,14 @@ match idc in (ident t) return (value' true t) with
                         | None => None
                         end)
                  | (s1 -> d1)%ptype =>
-                     fun _ : value' false s1 -> value' true d1 => None
-                 end (reflect x2);;
+                     fun
+                       _ : Compile.value' false s1 -> Compile.value' true d1
+                     => None
+                 end (Compile.reflect x2);;
                  match
                    s0 as t2
                    return
-                     (value' false t2 ->
+                     (Compile.value' false t2 ->
                       option
                         (UnderLets.UnderLets base.type ident var
                            (defaults.expr (type.base base.type.Z))))
@@ -453,8 +463,10 @@ match idc in (ident t) return (value' true t) with
                         | None => None
                         end)
                  | (s1 -> d1)%ptype =>
-                     fun _ : value' false s1 -> value' true d1 => None
-                 end (reflect x2)
+                     fun
+                       _ : Compile.value' false s1 -> Compile.value' true d1
+                     => None
+                 end (Compile.reflect x2)
              | _ => None
              end
          | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ |
@@ -470,7 +482,7 @@ match idc in (ident t) return (value' true t) with
          end
      | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x2) x1 =>
-         (_ <- pattern.ident.invert_bind_args idc pident.Z_land;
+         (_ <- pattern.ident.invert_bind_args idc pattern.ident.Z_land;
           match x2 with
           | @expr.Ident _ _ _ t0 idc0 =>
               args0 <- pattern.ident.invert_bind_args idc0
@@ -482,7 +494,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -510,8 +522,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x1)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x1)
               | _ => None
               end
           | _ => None
@@ -527,7 +541,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -555,8 +569,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x2)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x2)
               | _ => None
               end
           | _ => None
@@ -572,7 +588,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -600,8 +616,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x1)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x1)
               | _ => None
               end
           | _ => None
@@ -617,7 +635,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr (type.base base.type.Z))))
@@ -645,8 +663,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x2)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x2)
               | _ => None
               end
           | _ => None
@@ -658,7 +678,8 @@ match idc in (ident t) return (value' true t) with
               match x0 with
               | @expr.App _ _ _ s1 _
                 (@expr.Ident _ _ _ t1 idc1 @ x4)%expr_pat x3 =>
-                  _ <- pattern.ident.invert_bind_args idc1 pident.Z_land;
+                  _ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_land;
                   match x4 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -666,7 +687,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -684,7 +705,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s1 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -722,14 +743,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x3)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x3)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x1)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x1)
                   | _ => None
                   end
               | @expr.App _ _ _ s1 _ #(_)%expr_pat _ | @expr.App _ _ _ s1 _
@@ -750,7 +773,8 @@ match idc in (ident t) return (value' true t) with
               match x0 with
               | @expr.App _ _ _ s1 _
                 (@expr.Ident _ _ _ t1 idc1 @ x4)%expr_pat x3 =>
-                  _ <- pattern.ident.invert_bind_args idc1 pident.Z_land;
+                  _ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_land;
                   match x4 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -758,7 +782,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s0 as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -776,7 +800,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s1 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -814,14 +838,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x3)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x3)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x2)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x2)
                   | _ => None
                   end
               | @expr.App _ _ _ s1 _ #(_)%expr_pat _ | @expr.App _ _ _ s1 _
@@ -841,7 +867,8 @@ match idc in (ident t) return (value' true t) with
                          pattern.ident.LiteralZ;
               match x0 with
               | (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t1 idc1) x4 @ x3)%expr_pat =>
-                  _ <- pattern.ident.invert_bind_args idc1 pident.Z_land;
+                  _ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_land;
                   match x3 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -849,7 +876,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -867,7 +894,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s2 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -905,14 +932,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x4)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x4)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x1)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x1)
                   | _ => None
                   end
               | (@expr.App _ _ _ s2 _ ($_)%expr _ @ _)%expr_pat |
@@ -930,7 +959,8 @@ match idc in (ident t) return (value' true t) with
                          pattern.ident.LiteralZ;
               match x0 with
               | (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t1 idc1) x4 @ x3)%expr_pat =>
-                  _ <- pattern.ident.invert_bind_args idc1 pident.Z_land;
+                  _ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_land;
                   match x3 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -938,7 +968,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s0 as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -956,7 +986,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s2 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -994,14 +1024,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x4)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x4)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x2)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x2)
                   | _ => None
                   end
               | (@expr.App _ _ _ s2 _ ($_)%expr _ @ _)%expr_pat |
@@ -1019,7 +1051,8 @@ match idc in (ident t) return (value' true t) with
                          pattern.ident.LiteralZ;
               match x0 with
               | (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t1 idc1) x4 @ x3)%expr_pat =>
-                  _ <- pattern.ident.invert_bind_args idc1 pident.Z_shiftr;
+                  _ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_shiftr;
                   match x3 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -1027,7 +1060,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -1045,7 +1078,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s2 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -1078,14 +1111,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x4)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x4)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x1)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x1)
                   | _ => None
                   end
               | (@expr.App _ _ _ s2 _ ($_)%expr _ @ _)%expr_pat |
@@ -1103,7 +1138,8 @@ match idc in (ident t) return (value' true t) with
                          pattern.ident.LiteralZ;
               match x0 with
               | (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t1 idc1) x4 @ x3)%expr_pat =>
-                  _ <- pattern.ident.invert_bind_args idc1 pident.Z_shiftr;
+                  _ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_shiftr;
                   match x3 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -1111,7 +1147,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s0 as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -1129,7 +1165,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s2 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -1162,14 +1198,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x4)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x4)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x2)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x2)
                   | _ => None
                   end
               | (@expr.App _ _ _ s2 _ ($_)%expr _ @ _)%expr_pat |
@@ -1181,7 +1219,7 @@ match idc in (ident t) return (value' true t) with
               end
           | _ => None
           end);;
-         _ <- pattern.ident.invert_bind_args idc pident.Z_shiftr;
+         _ <- pattern.ident.invert_bind_args idc pattern.ident.Z_shiftr;
          match x1 with
          | @expr.Ident _ _ _ t0 idc0 =>
              args0 <- pattern.ident.invert_bind_args idc0
@@ -1193,7 +1231,7 @@ match idc in (ident t) return (value' true t) with
                  match
                    s0 as t2
                    return
-                     (value' false t2 ->
+                     (Compile.value' false t2 ->
                       option
                         (UnderLets.UnderLets base.type ident var
                            (defaults.expr (type.base base.type.Z))))
@@ -1217,12 +1255,14 @@ match idc in (ident t) return (value' true t) with
                         | None => None
                         end)
                  | (s1 -> d1)%ptype =>
-                     fun _ : value' false s1 -> value' true d1 => None
-                 end (reflect x2);;
+                     fun
+                       _ : Compile.value' false s1 -> Compile.value' true d1
+                     => None
+                 end (Compile.reflect x2);;
                  match
                    s0 as t2
                    return
-                     (value' false t2 ->
+                     (Compile.value' false t2 ->
                       option
                         (UnderLets.UnderLets base.type ident var
                            (defaults.expr (type.base base.type.Z))))
@@ -1246,11 +1286,14 @@ match idc in (ident t) return (value' true t) with
                         | None => None
                         end)
                  | (s1 -> d1)%ptype =>
-                     fun _ : value' false s1 -> value' true d1 => None
-                 end (reflect x2)
+                     fun
+                       _ : Compile.value' false s1 -> Compile.value' true d1
+                     => None
+                 end (Compile.reflect x2)
              | @expr.App _ _ _ s1 _
                (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t1 idc1) x4) x3 =>
-                 (_ <- pattern.ident.invert_bind_args idc1 pident.Z_land;
+                 (_ <- pattern.ident.invert_bind_args idc1
+                         pattern.ident.Z_land;
                   match x4 with
                   | @expr.Ident _ _ _ t2 idc2 =>
                       args2 <- pattern.ident.invert_bind_args idc2
@@ -1258,7 +1301,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s0 as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -1276,7 +1319,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s1 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -1309,14 +1352,16 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x3)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x3)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x2)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x2)
                   | _ => None
                   end;;
                   match x3 with
@@ -1326,7 +1371,7 @@ match idc in (ident t) return (value' true t) with
                       match
                         s0 as t3
                         return
-                          (value' false t3 ->
+                          (Compile.value' false t3 ->
                            option
                              (UnderLets.UnderLets base.type ident var
                                 (defaults.expr (type.base base.type.Z))))
@@ -1344,7 +1389,7 @@ match idc in (ident t) return (value' true t) with
                                  match
                                    s2 as t4
                                    return
-                                     (value' false t4 ->
+                                     (Compile.value' false t4 ->
                                       option
                                         (UnderLets.UnderLets base.type ident
                                            var
@@ -1377,17 +1422,20 @@ match idc in (ident t) return (value' true t) with
                                         end)
                                  | (s3 -> d3)%ptype =>
                                      fun
-                                       _ : value' false s3 -> value' true d3
-                                     => None
-                                 end (reflect x4)
+                                       _ : Compile.value' false s3 ->
+                                           Compile.value' true d3 => None
+                                 end (Compile.reflect x4)
                              | None => None
                              end)
                       | (s3 -> d3)%ptype =>
-                          fun _ : value' false s3 -> value' true d3 => None
-                      end (reflect x2)
+                          fun
+                            _ : Compile.value' false s3 ->
+                                Compile.value' true d3 => None
+                      end (Compile.reflect x2)
                   | _ => None
                   end);;
-                 _ <- pattern.ident.invert_bind_args idc1 pident.Z_shiftr;
+                 _ <- pattern.ident.invert_bind_args idc1
+                        pattern.ident.Z_shiftr;
                  match x3 with
                  | @expr.Ident _ _ _ t2 idc2 =>
                      args2 <- pattern.ident.invert_bind_args idc2
@@ -1395,7 +1443,7 @@ match idc in (ident t) return (value' true t) with
                      match
                        s0 as t3
                        return
-                         (value' false t3 ->
+                         (Compile.value' false t3 ->
                           option
                             (UnderLets.UnderLets base.type ident var
                                (defaults.expr (type.base base.type.Z))))
@@ -1413,7 +1461,7 @@ match idc in (ident t) return (value' true t) with
                                 match
                                   s2 as t4
                                   return
-                                    (value' false t4 ->
+                                    (Compile.value' false t4 ->
                                      option
                                        (UnderLets.UnderLets base.type ident
                                           var
@@ -1443,14 +1491,17 @@ match idc in (ident t) return (value' true t) with
                                        | None => None
                                        end)
                                 | (s3 -> d3)%ptype =>
-                                    fun _ : value' false s3 -> value' true d3
-                                    => None
-                                end (reflect x4)
+                                    fun
+                                      _ : Compile.value' false s3 ->
+                                          Compile.value' true d3 => None
+                                end (Compile.reflect x4)
                             | None => None
                             end)
                      | (s3 -> d3)%ptype =>
-                         fun _ : value' false s3 -> value' true d3 => None
-                     end (reflect x2)
+                         fun
+                           _ : Compile.value' false s3 ->
+                               Compile.value' true d3 => None
+                     end (Compile.reflect x2)
                  | _ => None
                  end
              | @expr.App _ _ _ s1 _ (@expr.App _ _ _ s2 _ ($_)%expr _) _ |
@@ -1540,7 +1591,7 @@ match idc in (ident t) return (value' true t) with
           args <- pattern.ident.invert_bind_args idc pattern.ident.LiteralZ;
           match x1 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x3 @ x2)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftl;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftl;
               match x2 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1548,7 +1599,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1573,8 +1624,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x3)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x3)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1586,7 +1639,7 @@ match idc in (ident t) return (value' true t) with
           end;;
           match x0 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x3 @ x2)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftl;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftl;
               match x2 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1594,7 +1647,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1619,8 +1672,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x3)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x3)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1632,7 +1687,7 @@ match idc in (ident t) return (value' true t) with
           end;;
           match x1 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x3 @ x2)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
               match x2 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1640,7 +1695,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1665,8 +1720,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x3)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x3)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1678,7 +1735,7 @@ match idc in (ident t) return (value' true t) with
           end;;
           match x0 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x3 @ x2)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
               match x2 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1686,7 +1743,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1711,8 +1768,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x3)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x3)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1742,7 +1801,7 @@ match idc in (ident t) return (value' true t) with
           args <- pattern.ident.invert_bind_args idc pattern.ident.LiteralZ;
           match x2 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 @ x3)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftl;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftl;
               match x3 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1750,7 +1809,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1775,8 +1834,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x4)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x4)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1788,7 +1849,7 @@ match idc in (ident t) return (value' true t) with
           end;;
           match x1 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 @ x3)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftl;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftl;
               match x3 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1796,7 +1857,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1821,8 +1882,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x4)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x4)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1834,7 +1897,7 @@ match idc in (ident t) return (value' true t) with
           end;;
           match x2 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 @ x3)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
               match x3 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1842,7 +1905,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1867,8 +1930,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x4)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x4)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1880,7 +1945,7 @@ match idc in (ident t) return (value' true t) with
           end;;
           match x1 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 @ x3)%expr_pat =>
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
               match x3 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1888,7 +1953,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -1913,8 +1978,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x4)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x4)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -1942,7 +2009,8 @@ match idc in (ident t) return (value' true t) with
           args <- pattern.ident.invert_bind_args idc pattern.ident.LiteralZ;
           match x1 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x3 @ x2)%expr_pat =>
-              (_ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftl;
+              (_ <- pattern.ident.invert_bind_args idc0
+                      pattern.ident.Z_shiftl;
                match x2 with
                | @expr.Ident _ _ _ t1 idc1 =>
                    args1 <- pattern.ident.invert_bind_args idc1
@@ -1950,7 +2018,7 @@ match idc in (ident t) return (value' true t) with
                    match
                      s0 as t2
                      return
-                       (value' false t2 ->
+                       (Compile.value' false t2 ->
                         option
                           (UnderLets.UnderLets base.type ident var
                              (defaults.expr
@@ -1975,11 +2043,13 @@ match idc in (ident t) return (value' true t) with
                           | None => None
                           end)
                    | (s1 -> d1)%ptype =>
-                       fun _ : value' false s1 -> value' true d1 => None
-                   end (reflect x3)
+                       fun
+                         _ : Compile.value' false s1 ->
+                             Compile.value' true d1 => None
+                   end (Compile.reflect x3)
                | _ => None
                end);;
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
               match x2 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -1987,7 +2057,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -2012,8 +2082,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x3)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x3)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -2040,7 +2112,8 @@ match idc in (ident t) return (value' true t) with
           args <- pattern.ident.invert_bind_args idc pattern.ident.LiteralZ;
           match x2 with
           | (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 @ x3)%expr_pat =>
-              (_ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftl;
+              (_ <- pattern.ident.invert_bind_args idc0
+                      pattern.ident.Z_shiftl;
                match x3 with
                | @expr.Ident _ _ _ t1 idc1 =>
                    args1 <- pattern.ident.invert_bind_args idc1
@@ -2048,7 +2121,7 @@ match idc in (ident t) return (value' true t) with
                    match
                      s0 as t2
                      return
-                       (value' false t2 ->
+                       (Compile.value' false t2 ->
                         option
                           (UnderLets.UnderLets base.type ident var
                              (defaults.expr
@@ -2073,11 +2146,13 @@ match idc in (ident t) return (value' true t) with
                           | None => None
                           end)
                    | (s1 -> d1)%ptype =>
-                       fun _ : value' false s1 -> value' true d1 => None
-                   end (reflect x4)
+                       fun
+                         _ : Compile.value' false s1 ->
+                             Compile.value' true d1 => None
+                   end (Compile.reflect x4)
                | _ => None
                end);;
-              _ <- pattern.ident.invert_bind_args idc0 pident.Z_shiftr;
+              _ <- pattern.ident.invert_bind_args idc0 pattern.ident.Z_shiftr;
               match x3 with
               | @expr.Ident _ _ _ t1 idc1 =>
                   args1 <- pattern.ident.invert_bind_args idc1
@@ -2085,7 +2160,7 @@ match idc in (ident t) return (value' true t) with
                   match
                     s0 as t2
                     return
-                      (value' false t2 ->
+                      (Compile.value' false t2 ->
                        option
                          (UnderLets.UnderLets base.type ident var
                             (defaults.expr
@@ -2110,8 +2185,10 @@ match idc in (ident t) return (value' true t) with
                          | None => None
                          end)
                   | (s1 -> d1)%ptype =>
-                      fun _ : value' false s1 -> value' true d1 => None
-                  end (reflect x4)
+                      fun
+                        _ : Compile.value' false s1 -> Compile.value' true d1
+                      => None
+                  end (Compile.reflect x4)
               | _ => None
               end
           | (@expr.App _ _ _ s0 _ ($_)%expr _ @ _)%expr_pat |
@@ -2137,7 +2214,7 @@ match idc in (ident t) return (value' true t) with
     (((match x with
        | @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x3) x2 =>
-           (_ <- pattern.ident.invert_bind_args idc pident.Z_cc_m;
+           (_ <- pattern.ident.invert_bind_args idc pattern.ident.Z_cc_m;
             match x3 with
             | @expr.Ident _ _ _ t0 idc0 =>
                 args0 <- pattern.ident.invert_bind_args idc0
@@ -2145,7 +2222,7 @@ match idc in (ident t) return (value' true t) with
                 match
                   s as t2
                   return
-                    (value' false t2 ->
+                    (Compile.value' false t2 ->
                      option
                        (UnderLets.UnderLets base.type ident var
                           (defaults.expr (type.base base.type.Z))))
@@ -2169,11 +2246,12 @@ match idc in (ident t) return (value' true t) with
                        | None => None
                        end)
                 | (s1 -> d1)%ptype =>
-                    fun _ : value' false s1 -> value' true d1 => None
-                end (reflect x2)
+                    fun _ : Compile.value' false s1 -> Compile.value' true d1
+                    => None
+                end (Compile.reflect x2)
             | _ => None
             end);;
-           _ <- pattern.ident.invert_bind_args idc pident.Z_land;
+           _ <- pattern.ident.invert_bind_args idc pattern.ident.Z_land;
            match x3 with
            | @expr.Ident _ _ _ t0 idc0 =>
                args0 <- pattern.ident.invert_bind_args idc0
@@ -2181,7 +2259,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -2204,8 +2282,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x2)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x2)
            | _ => None
            end;;
            match x2 with
@@ -2215,7 +2294,7 @@ match idc in (ident t) return (value' true t) with
                match
                  s0 as t2
                  return
-                   (value' false t2 ->
+                   (Compile.value' false t2 ->
                     option
                       (UnderLets.UnderLets base.type ident var
                          (defaults.expr (type.base base.type.Z))))
@@ -2238,8 +2317,9 @@ match idc in (ident t) return (value' true t) with
                       | None => None
                       end)
                | (s1 -> d1)%ptype =>
-                   fun _ : value' false s1 -> value' true d1 => None
-               end (reflect x3)
+                   fun _ : Compile.value' false s1 -> Compile.value' true d1
+                   => None
+               end (Compile.reflect x3)
            | _ => None
            end
        | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
@@ -2340,4 +2420,4 @@ match idc in (ident t) return (value' true t) with
             (type.base (base.type.Z * base.type.Z * base.type.Z)%etype) =>
     UnderLets.Base (#(ident.fancy_addm)%expr @ x)%expr_pat
 end
-     : value' true t
+     : Compile.value' true t

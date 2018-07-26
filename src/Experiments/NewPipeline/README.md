@@ -67,9 +67,6 @@ The files contain:
 - MiscCompilerPasses.v: Defines the passes:
   + EliminateDead (dead code elimination)
   + Subst01 (substitute let-binders used 0 or 1 times)
-  + ReassociateSmallConstants.Reassociate:
-     * (turn expressions of the form ((x * y) * ##v) into (x * (y * ##v)) for
-       small values of v)
 
 - CStringification.v: conversion to C code as strings.  (Depends on
   AbstractInterpretation.v for ZRange utilities.)  Defines the passes:
