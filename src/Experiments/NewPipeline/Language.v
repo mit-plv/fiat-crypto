@@ -243,7 +243,7 @@ Module Compilers.
   Delimit Scope etype_scope with etype.
   Bind Scope etype_scope with type.type.
   Infix "->" := type.arrow : etype_scope.
-  Infix "==" := type.eqv : etype_scope.
+  Infix "==" := type.eqv : type_scope.
   Module base.
     Local Notation einterp := type.interp.
     Module type.
