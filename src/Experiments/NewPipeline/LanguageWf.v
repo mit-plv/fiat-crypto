@@ -200,6 +200,9 @@ Module Compilers.
                   | cbv [respectful]; repeat intro; (apply nat_rect_Proper_nondep || apply list_rect_Proper || apply list_case_Proper); repeat intro; eauto ].
     Qed.
 
+    Global Instance interp_Proper {t} : Proper (@eq (ident t) ==> type.eqv) ident.interp | 1.
+    Proof. intros idc idc' ?; subst idc'; apply eqv_Reflexive_Proper. Qed.
+
     Global Instance eqv_Reflexive {t} : Reflexive (fun idc1 idc2 : ident t => type.eqv (ident.interp idc1) (ident.interp idc2)) | 20.
     Proof. intro; apply eqv_Reflexive_Proper. Qed.
 

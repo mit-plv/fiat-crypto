@@ -260,6 +260,7 @@ src/Experiments/NewPipeline/StandaloneOCamlMain.v
 src/Experiments/NewPipeline/Toplevel1.v
 src/Experiments/NewPipeline/Toplevel2.v
 src/Experiments/NewPipeline/UnderLets.v
+src/Experiments/NewPipeline/UnderLetsWf.v
 src/Experiments/NewPipeline/ExtractionHaskell/saturated_solinas.v
 src/Experiments/NewPipeline/ExtractionHaskell/unsaturated_solinas.v
 src/Experiments/NewPipeline/ExtractionHaskell/word_by_word_montgomery.v
