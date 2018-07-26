@@ -4,7 +4,10 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.HProp.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.FixCoqMistakes.
 
 Import EqNotations.
 Module Compilers.
@@ -27,7 +30,7 @@ Module Compilers.
         Definition encode (x y : type) : x = y -> code x y.
         Proof. intro p; destruct p, x; repeat constructor. Defined.
         Definition decode (x y : type) : code x y -> x = y.
-        Proof. destruct x, y; intro p; try assumption; destruct p; f_equal; assumption. Defined.
+        Proof. destruct x, y; intro p; try assumption; destruct p; (apply f_equal || apply f_equal2); (assumption || reflexivity). Defined.
 
         Definition path_rect {x y : type} (Q : x = y -> Type)
                    (f : forall p, Q (decode x y p))
@@ -51,16 +54,20 @@ Module Compilers.
           | _ /\ _ => destruct H as [H1 H2]
           end.
     Ltac inversion_type_step :=
-      lazymatch goal with
-      | [ H : _ = type.base _ |- _ ]
-        => induction_type_in_using H @path_rect
-      | [ H : type.base _ = _ |- _ ]
-        => induction_type_in_using H @path_rect
-      | [ H : _ = type.arrow _ _ |- _ ]
-        => induction_type_in_using H @path_rect
-      | [ H : type.arrow _ _ = _ |- _ ]
-        => induction_type_in_using H @path_rect
-      end.
+      first [ lazymatch goal with
+              | [ H : ?x = ?x :> type.type _ |- _ ] => clear H
+              | [ H : ?x = ?y :> type.type _ |- _ ] => subst x || subst y
+              end
+            | lazymatch goal with
+              | [ H : _ = type.base _ |- _ ]
+                => induction_type_in_using H @path_rect
+              | [ H : type.base _ = _ |- _ ]
+                => induction_type_in_using H @path_rect
+              | [ H : _ = type.arrow _ _ |- _ ]
+                => induction_type_in_using H @path_rect
+              | [ H : type.arrow _ _ = _ |- _ ]
+                => induction_type_in_using H @path_rect
+              end ].
     Ltac inversion_type := repeat inversion_type_step.
 
     Definition mark {T} (v : T) := v.
@@ -73,7 +80,7 @@ Module Compilers.
       | [ |- forall e' : ?P ?t, @?Q e' ]
         => refine (@preinvert_one_type _ P t Q _)
       end;
-      intros; cbv [mark].
+      intros ? e ?; intros; cbv [mark].
   End type.
 
   Module base.
@@ -93,13 +100,18 @@ Module Compilers.
           Definition encode (x y : base.type) : x = y -> code x y.
           Proof. intro p; destruct p, x; repeat constructor. Defined.
           Definition decode (x y : base.type) : code x y -> x = y.
-          Proof. destruct x, y; intro p; try assumption; destruct p; f_equal; assumption. Defined.
+          Proof. destruct x, y; intro p; try assumption; destruct p; (apply f_equal || apply f_equal2); (assumption || reflexivity). Defined.
 
           Definition path_rect {x y : base.type} (Q : x = y -> Type)
                      (f : forall p, Q (decode x y p))
             : forall p, Q p.
           Proof. intro p; specialize (f (encode x y p)); destruct x, p; exact f. Defined.
       End encode_decode.
+
+      Global Instance base_eq_Decidable : DecidableRel (@eq base.type.base) := base.type.base_eq_dec.
+      Global Instance base_type_eq_Decidable : DecidableRel (@eq base.type.type) := base.type.type_eq_dec.
+      Global Instance base_eq_HProp : IsHPropRel (@eq base.type.base) := _.
+      Global Instance base_type_eq_HProp : IsHPropRel (@eq base.type.type) := _.
 
       Ltac induction_type_in_using H rect :=
         induction H as [H] using (rect _ _);
@@ -116,20 +128,26 @@ Module Compilers.
 
       Ltac inversion_type_step :=
         cbv [defaults.type_base] in *;
-        lazymatch goal with
-        | [ H : _ = base.type.type_base _ |- _ ]
-          => induction_type_in_using H @path_rect
-        | [ H : base.type.type_base _ = _ |- _ ]
-          => induction_type_in_using H @path_rect
-        | [ H : _ = base.type.prod _ _ |- _ ]
-          => induction_type_in_using H @path_rect
-        | [ H : base.type.prod _ _ = _ |- _ ]
-          => induction_type_in_using H @path_rect
-        | [ H : _ = base.type.list _ |- _ ]
-          => induction_type_in_using H @path_rect
-        | [ H : base.type.list _ = _ |- _ ]
-          => induction_type_in_using H @path_rect
-        end.
+        first [ lazymatch goal with
+                | [ H : ?x = ?x :> base.type.type |- _ ] => clear H || eliminate_hprop_eq_helper H base_type_eq_HProp
+                | [ H : ?x = ?x :> base.type.base |- _ ] => clear H || eliminate_hprop_eq_helper H base_eq_HProp
+                | [ H : ?x = ?y :> base.type.type |- _ ] => subst x || subst y
+                | [ H : ?x = ?y :> base.type.base |- _ ] => subst x || subst y
+                end
+              | lazymatch goal with
+                | [ H : _ = base.type.type_base _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : base.type.type_base _ = _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : _ = base.type.prod _ _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : base.type.prod _ _ = _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : _ = base.type.list _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : base.type.list _ = _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                end ].
       Ltac inversion_type := repeat inversion_type_step.
     End type.
   End base.
@@ -207,9 +225,10 @@ Module Compilers.
     Ltac invert_one e :=
       type.generalize_one_eq_var e;
       destruct e;
+      try discriminate;
       type.inversion_type;
       base.type.inversion_type;
-      try discriminate.
+      cbn [type.decode base.type.decode f_equal f_equal2 eq_rect] in *.
 
     Ltac invert_step :=
       match goal with
