@@ -253,6 +253,7 @@ src/Experiments/NewPipeline/Language.v
 src/Experiments/NewPipeline/LanguageInversion.v
 src/Experiments/NewPipeline/LanguageWf.v
 src/Experiments/NewPipeline/MiscCompilerPasses.v
+src/Experiments/NewPipeline/MiscCompilerPassesWf.v
 src/Experiments/NewPipeline/Rewriter.v
 src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.v
 src/Experiments/NewPipeline/StandaloneHaskellMain.v
