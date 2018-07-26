@@ -16,58 +16,6 @@ Module Compilers.
   Import expr.Notations.
   Import invert_expr.
 
-  (** XXX MOVE ME *)
-  Require Import Crypto.Util.Tactics.DestructHead.
-  Require Import Crypto.Util.Sigma.
-  Require Import Crypto.Util.Prod.
-  Ltac wf_safe_t_step :=
-    first [ progress intros
-          | progress subst
-          | progress inversion_sigma
-          | progress inversion_prod
-          | progress cbn [List.In eq_rect] in *
-          | match goal with
-            | [ |- expr.wf _ _ _ ] => constructor
-            end
-          | solve [ eauto using conj, eq_refl, or_introl, or_intror with nocore ]
-          | progress destruct_head'_or
-          | match goal with
-            | [ H : context[expr.wf _ _ _] |- expr.wf _ _ _ ]
-              => eapply H; clear H; eauto with nocore; solve [ repeat wf_safe_t_step ]
-            end ].
-  Ltac wf_unsafe_t_step :=
-    first [ solve [ eauto with nocore ]
-          | match goal with
-            | [ H : context[expr.wf _ _ _] |- expr.wf _ _ _ ]
-              => eapply H; eauto with nocore; match goal with |- ?G => tryif has_evar G then fail else idtac end
-            | [ |- expr.wf _ _ _ ]
-              => eapply expr.wf_Proper_list; [ | solve [ eauto with nocore ] ]
-            end ].
-  Ltac wf_safe_t := repeat wf_safe_t_step.
-  Ltac wf_unsafe_t := repeat wf_unsafe_t_step.
-  Ltac wf_t_step := first [ wf_safe_t_step | wf_unsafe_t_step ].
-  Ltac wf_t := repeat wf_t_step.
-
-  Ltac interp_safe_t_step :=
-    first [ progress intros
-          | progress subst
-          | progress inversion_sigma
-          | progress inversion_prod
-          | progress cbn [List.In eq_rect expr.interp ident.interp type.interp base.interp base.base_interp type.eqv] in *
-          | progress cbv [respectful LetIn.Let_In] in *
-          | solve [ eauto using conj, eq_refl, or_introl, or_intror with nocore ]
-          | progress destruct_head'_or
-          | match goal with
-            | [ |- ident.interp ?x == ident.interp ?x ] => apply ident.eqv_Reflexive
-            | [ |- Proper (fun x y => ident.interp x == ident.interp y) _ ] => apply ident.eqv_Reflexive_Proper
-            | [ H : context[expr.interp _ _ == expr.interp _ _] |- expr.interp _ _ == expr.interp _ _ ]
-              => eapply H; eauto with nocore; solve [ repeat interp_safe_t_step ]
-            end ].
-  Ltac interp_safe_t := repeat interp_safe_t_step.
-  Ltac interp_t_step := first [ interp_safe_t_step ].
-  Ltac interp_t := repeat interp_t_step.
-
-
   Module SubstVarLike.
     Section with_ident.
       Context {base_type : Type}.
