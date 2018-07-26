@@ -6,6 +6,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 
+Import EqNotations.
 Module Compilers.
   Import Language.Compilers.
   Module type.
@@ -33,6 +34,10 @@ Module Compilers.
           : forall p, Q p.
         Proof. intro p; specialize (f (encode x y p)); destruct x, p; exact f. Defined.
       End encode_decode.
+
+      Lemma preinvert_one_type (P : type -> Type) t (Q : P t -> Type)
+        : (forall t' (v : P t') (pf : t' = t), Q (rew [P] pf in v)) -> (forall (v : P t), Q v).
+      Proof. intros H v; apply (H _ _ eq_refl). Qed.
     End with_base.
 
     Ltac induction_type_in_using H rect :=
@@ -57,6 +62,18 @@ Module Compilers.
         => induction_type_in_using H @path_rect
       end.
     Ltac inversion_type := repeat inversion_type_step.
+
+    Definition mark {T} (v : T) := v.
+    Ltac generalize_one_eq_var e :=
+      match goal with
+      | [ |- ?G ] => change (mark G)
+      end;
+      revert dependent e;
+      lazymatch goal with
+      | [ |- forall e' : ?P ?t, @?Q e' ]
+        => refine (@preinvert_one_type _ P t Q _)
+      end;
+      intros; cbv [mark].
   End type.
 
   Module base.
@@ -187,23 +204,8 @@ Module Compilers.
       End encode_decode.
     End with_var.
 
-    Definition mark {T} (v : T) := v.
-    Ltac generalize_one_eq_var_type e :=
-      let t := lazymatch type of e with
-               | ?P (@type.base ?base_type ?t) => constr:(@type.base base_type t)
-               | ?P (@type.arrow ?base_type ?s ?d) => constr:(@type.arrow base_type s d)
-               end in
-      match goal with
-      | [ |- ?G ] => change (mark G)
-      end;
-      revert dependent e;
-      let T := fresh "t" in
-      let HT := fresh "Ht" in
-      first [ remember t as T eqn:HT | remember t as T eqn:HT in * ];
-      intros; cbv [mark].
-
     Ltac invert_one e :=
-      generalize_one_eq_var_type e;
+      type.generalize_one_eq_var e;
       destruct e;
       type.inversion_type;
       base.type.inversion_type;
