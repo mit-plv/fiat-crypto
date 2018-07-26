@@ -24,16 +24,19 @@ Definition list_case
      | cons x xs => C x xs
      end.
 
-Global Instance list_rect_Proper A P : Proper (eq ==> pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq)) ==> eq ==> eq) (@list_rect A (fun _ => P)).
+Global Instance list_rect_Proper_dep {A P} : Proper (eq ==> forall_relation (fun _ => forall_relation (fun _ => forall_relation (fun _ => eq))) ==> forall_relation (fun _ => eq)) (@list_rect A P) | 1.
 Proof.
-  intros N N' HN C C' HC xs ys Hxs; subst N' ys.
-  induction xs; cbn; trivial; rewrite IHxs; apply HC.
+  cbv [forall_relation]; intros N N' ? C C' HC ls; subst N'; revert N.
+  induction ls as [|l ls IHls]; cbn [list_rect]; intro; rewrite ?IHls, ?HC; reflexivity.
 Qed.
-Global Instance list_case_Proper A P : Proper (eq ==> pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq) (@list_case A (fun _ => P)).
+Global Instance list_case_Proper_dep {A P} : Proper (eq ==> forall_relation (fun _ => forall_relation (fun _ => eq)) ==> forall_relation (fun _ => eq)) (@list_case A P) | 1.
 Proof.
-  cbv [pointwise_relation respectful].
-  intros N N' HN C C' HC xs ys Hxs; subst N' ys; destruct xs; cbn; auto.
+  cbv [forall_relation]; intros N N' ? C C' HC ls; subst N'; revert N; destruct ls; eauto.
 Qed.
+Global Instance list_rect_Proper {A P} : Proper (eq ==> pointwise_relation _ (pointwise_relation _ (pointwise_relation _ eq)) ==> eq ==> eq) (@list_rect A (fun _ => P)).
+Proof. repeat intro; subst; apply (@list_rect_Proper_dep A (fun _ => P)); eauto. Qed.
+Global Instance list_case_Proper {A P} : Proper (eq ==> pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq) (@list_case A (fun _ => P)).
+Proof. repeat intro; subst; apply (@list_case_Proper_dep A (fun _ => P)); eauto. Qed.
 
 Create HintDb distr_length discriminated.
 Create HintDb simpl_set_nth discriminated.
@@ -511,6 +514,9 @@ Qed.
 Global Instance update_nth_Proper {T}
   : Proper (eq ==> pointwise_relation _ eq ==> eq ==> eq) (@update_nth T).
 Proof. repeat intro; subst; apply update_nth_ext; trivial. Qed.
+
+Global Instance update_nth_Proper_eq {A} : Proper (eq ==> (eq ==> eq) ==> eq ==> eq) (@update_nth A) | 1.
+Proof. repeat intro; subst; apply update_nth_Proper; repeat intro; eauto. Qed.
 
 Lemma update_nth_id_eq_specific {T} f n
   : forall (xs : list T) (H : forall x, nth_error xs n = Some x -> f x = x),
@@ -1953,6 +1959,25 @@ Lemma flat_map_ext A B (f g : A -> list B) xs (H : forall x, In x xs -> f x = g 
 Proof. induction xs; cbn in *; [ reflexivity | rewrite IHxs; f_equal ]; intros; intuition auto. Qed.
 Global Instance flat_map_Proper A B : Proper (pointwise_relation _ eq ==> eq ==> eq) (@flat_map A B).
 Proof. repeat intro; subst; apply flat_map_ext; auto. Qed.
+
+Global Instance map_Proper_eq {A B} : Proper ((eq ==> eq) ==> eq ==> eq) (@List.map A B) | 1.
+Proof. repeat intro; subst; apply pointwise_map; repeat intro; eauto. Qed.
+Global Instance flat_map_Proper_eq {A B} : Proper ((eq ==> eq) ==> eq ==> eq) (@List.flat_map A B) | 1.
+Proof. repeat intro; subst; apply flat_map_Proper; repeat intro; eauto. Qed.
+Global Instance partition_Proper {A} : Proper (pointwise_relation _ eq ==> eq ==> eq) (@List.partition A).
+Proof.
+  cbv [pointwise_relation]; intros f g Hfg ls ls' ?; subst ls'.
+  induction ls as [|l ls IHls]; cbn [partition]; rewrite ?IHls, ?Hfg; reflexivity.
+Qed.
+Global Instance partition_Proper_eq {A} : Proper ((eq ==> eq) ==> eq ==> eq) (@List.partition A) | 1.
+Proof. repeat intro; subst; apply partition_Proper; repeat intro; eauto. Qed.
+Global Instance fold_right_Proper {A B} : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq ==> eq) (@fold_right A B) | 1.
+Proof.
+  cbv [pointwise_relation]; intros f g Hfg x y ? ls ls' ?; subst y ls'; revert x.
+  induction ls as [|l ls IHls]; cbn [fold_right]; intro; rewrite ?IHls, ?Hfg; reflexivity.
+Qed.
+Global Instance fold_right_Proper_eq {A B} : Proper ((eq ==> eq ==> eq) ==> eq ==> eq ==> eq) (@fold_right A B) | 1.
+Proof. cbv [respectful]; repeat intro; subst; apply fold_right_Proper; repeat intro; eauto. Qed.
 
 Lemma partition_map A B (f : B -> bool) (g : A -> B) xs
   : partition f (map g xs) = (map g (fst (partition (fun x => f (g x)) xs)),

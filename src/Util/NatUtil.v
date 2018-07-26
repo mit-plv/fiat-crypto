@@ -1,5 +1,6 @@
 Require Coq.Logic.Eqdep_dec.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
+Require Import Coq.Classes.Morphisms.
 Require Import Coq.micromega.Lia.
 Import Nat.
 
@@ -58,6 +59,14 @@ Ltac omega_with_min_max_case :=
 Tactic Notation "omega" := coq_omega.
 Tactic Notation "omega" "*" := omega_with_min_max_case.
 Tactic Notation "omega" "**" := omega_with_min_max.
+
+Global Instance nat_rect_Proper {P} : Proper (Logic.eq ==> forall_relation (fun _ => forall_relation (fun _ => Logic.eq)) ==> forall_relation (fun _ => Logic.eq)) (@nat_rect P).
+Proof.
+  cbv [forall_relation]; intros O_case O_case' ? S_case S_case' HS n; subst O_case'; revert O_case.
+  induction n as [|n IHn]; cbn [nat_rect]; intro; rewrite ?IHn, ?HS; reflexivity.
+Qed.
+Global Instance nat_rect_Proper_nondep {P} : Proper (Logic.eq ==> pointwise_relation _ (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) (@nat_rect (fun _ => P)).
+Proof. repeat intro; subst; apply (@nat_rect_Proper (fun _ => P)); eauto. Qed.
 
 Lemma nat_eq_dec_S x y
   : match nat_eq_dec (S x) (S y), nat_eq_dec x y with
