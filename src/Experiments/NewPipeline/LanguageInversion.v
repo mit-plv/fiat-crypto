@@ -187,8 +187,23 @@ Module Compilers.
       End encode_decode.
     End with_var.
 
+    Definition mark {T} (v : T) := v.
+    Ltac generalize_one_eq_var_type e :=
+      let t := lazymatch type of e with
+               | ?P (@type.base ?base_type ?t) => constr:(@type.base base_type t)
+               | ?P (@type.arrow ?base_type ?s ?d) => constr:(@type.arrow base_type s d)
+               end in
+      match goal with
+      | [ |- ?G ] => change (mark G)
+      end;
+      revert dependent e;
+      let T := fresh "t" in
+      let HT := fresh "Ht" in
+      first [ remember t as T eqn:HT | remember t as T eqn:HT in * ];
+      intros; cbv [mark].
+
     Ltac invert_one e :=
-      generalize_eqs_vars e;
+      generalize_one_eq_var_type e;
       destruct e;
       type.inversion_type;
       base.type.inversion_type;
