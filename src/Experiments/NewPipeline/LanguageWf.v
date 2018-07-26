@@ -585,8 +585,15 @@ Module Compilers.
             | [ H : context[expr.interp _ _ == expr.interp _ _] |- expr.interp _ _ == expr.interp _ _ ]
               => eapply H; eauto with nocore; solve [ repeat interp_safe_t_step ]
             end ].
+  Ltac interp_unsafe_t_step :=
+    first [ solve [ eauto with nocore ]
+          | match goal with
+            | [ H : context[expr.interp _ _ == expr.interp _ _] |- expr.interp _ _ == expr.interp _ _ ]
+              => eapply H; eauto with nocore; match goal with |- ?G => tryif has_evar G then fail else idtac end
+            end ].
   Ltac interp_safe_t := repeat interp_safe_t_step.
-  Ltac interp_t_step := first [ interp_safe_t_step ].
+  Ltac interp_unsafe_t := repeat interp_unsafe_t_step.
+  Ltac interp_t_step := first [ interp_safe_t_step | interp_unsafe_t_step ].
   Ltac interp_t := repeat interp_t_step.
 
 

@@ -12,76 +12,6 @@ Require Import Crypto.Util.FixCoqMistakes.
 Import EqNotations.
 Module Compilers.
   Import Language.Compilers.
-  Module type.
-    Section with_base.
-      Context {base_type : Type}.
-      Local Notation type := (type.type base_type).
-
-      Section encode_decode.
-        Definition code (t1 t2 : type) : Prop
-          := match t1, t2 with
-             | type.base t1, type.base t2 => t1 = t2
-             | type.arrow s1 d1, type.arrow s2 d2 => s1 = s2 /\ d1 = d2
-             | type.base _, _
-             | type.arrow _ _, _
-               => False
-             end.
-
-        Definition encode (x y : type) : x = y -> code x y.
-        Proof. intro p; destruct p, x; repeat constructor. Defined.
-        Definition decode (x y : type) : code x y -> x = y.
-        Proof. destruct x, y; intro p; try assumption; destruct p; (apply f_equal || apply f_equal2); (assumption || reflexivity). Defined.
-
-        Definition path_rect {x y : type} (Q : x = y -> Type)
-                   (f : forall p, Q (decode x y p))
-          : forall p, Q p.
-        Proof. intro p; specialize (f (encode x y p)); destruct x, p; exact f. Defined.
-      End encode_decode.
-
-      Lemma preinvert_one_type (P : type -> Type) t (Q : P t -> Type)
-        : (forall t' (v : P t') (pf : t' = t), Q (rew [P] pf in v)) -> (forall (v : P t), Q v).
-      Proof. intros H v; apply (H _ _ eq_refl). Qed.
-    End with_base.
-
-    Ltac induction_type_in_using H rect :=
-      induction H as [H] using (rect _ _ _);
-      cbv [code] in H;
-      let H1 := fresh H in
-      let H2 := fresh H in
-      try lazymatch type of H with
-          | False => exfalso; exact H
-          | True => destruct H
-          | _ /\ _ => destruct H as [H1 H2]
-          end.
-    Ltac inversion_type_step :=
-      first [ lazymatch goal with
-              | [ H : ?x = ?x :> type.type _ |- _ ] => clear H
-              | [ H : ?x = ?y :> type.type _ |- _ ] => subst x || subst y
-              end
-            | lazymatch goal with
-              | [ H : _ = type.base _ |- _ ]
-                => induction_type_in_using H @path_rect
-              | [ H : type.base _ = _ |- _ ]
-                => induction_type_in_using H @path_rect
-              | [ H : _ = type.arrow _ _ |- _ ]
-                => induction_type_in_using H @path_rect
-              | [ H : type.arrow _ _ = _ |- _ ]
-                => induction_type_in_using H @path_rect
-              end ].
-    Ltac inversion_type := repeat inversion_type_step.
-
-    Definition mark {T} (v : T) := v.
-    Ltac generalize_one_eq_var e :=
-      match goal with
-      | [ |- ?G ] => change (mark G)
-      end;
-      revert dependent e;
-      lazymatch goal with
-      | [ |- forall e' : ?P ?t, @?Q e' ]
-        => refine (@preinvert_one_type _ P t Q _)
-      end;
-      intros ? e ?; intros; cbv [mark].
-  End type.
 
   Module base.
     Module type.
@@ -151,6 +81,85 @@ Module Compilers.
       Ltac inversion_type := repeat inversion_type_step.
     End type.
   End base.
+
+  Module type.
+    Section with_base.
+      Context {base_type : Type}.
+      Local Notation type := (type.type base_type).
+
+      Section encode_decode.
+        Definition code (t1 t2 : type) : Prop
+          := match t1, t2 with
+             | type.base t1, type.base t2 => t1 = t2
+             | type.arrow s1 d1, type.arrow s2 d2 => s1 = s2 /\ d1 = d2
+             | type.base _, _
+             | type.arrow _ _, _
+               => False
+             end.
+
+        Definition encode (x y : type) : x = y -> code x y.
+        Proof. intro p; destruct p, x; repeat constructor. Defined.
+        Definition decode (x y : type) : code x y -> x = y.
+        Proof. destruct x, y; intro p; try assumption; destruct p; (apply f_equal || apply f_equal2); (assumption || reflexivity). Defined.
+
+        Definition path_rect {x y : type} (Q : x = y -> Type)
+                   (f : forall p, Q (decode x y p))
+          : forall p, Q p.
+        Proof. intro p; specialize (f (encode x y p)); destruct x, p; exact f. Defined.
+      End encode_decode.
+
+      Lemma preinvert_one_type (P : type -> Type) t (Q : P t -> Type)
+        : (forall t' (v : P t') (pf : t' = t), Q (rew [P] pf in v)) -> (forall (v : P t), Q v).
+      Proof. intros H v; apply (H _ _ eq_refl). Qed.
+    End with_base.
+
+    Ltac induction_type_in_using H rect :=
+      induction H as [H] using (rect _ _ _);
+      cbv [code] in H;
+      let H1 := fresh H in
+      let H2 := fresh H in
+      try lazymatch type of H with
+          | False => exfalso; exact H
+          | True => destruct H
+          | _ /\ _ => destruct H as [H1 H2]
+          end.
+    Ltac inversion_type_step :=
+      first [ lazymatch goal with
+              | [ H : ?x = ?x :> type.type _ |- _ ] => clear H
+              | [ H : ?x = ?y :> type.type _ |- _ ] => subst x || subst y
+              end
+            | lazymatch goal with
+              | [ H : _ = type.base _ |- _ ]
+                => induction_type_in_using H @path_rect
+              | [ H : type.base _ = _ |- _ ]
+                => induction_type_in_using H @path_rect
+              | [ H : _ = type.arrow _ _ |- _ ]
+                => induction_type_in_using H @path_rect
+              | [ H : type.arrow _ _ = _ |- _ ]
+                => induction_type_in_using H @path_rect
+              end ].
+    Ltac inversion_type := repeat inversion_type_step.
+
+    Definition mark {T} (v : T) := v.
+    Ltac generalize_one_eq_var e :=
+      match goal with
+      | [ |- ?G ] => change (mark G)
+      end;
+      revert dependent e;
+      lazymatch goal with
+      | [ |- forall e' : ?P ?t, @?Q e' ]
+        => refine (@preinvert_one_type _ P t Q _)
+      end;
+      intros ? e ?; intros; cbv [mark].
+
+    Ltac invert_one e :=
+      generalize_one_eq_var e;
+      destruct e;
+      try discriminate;
+      type.inversion_type;
+      base.type.inversion_type;
+      cbn [type.decode base.type.decode f_equal f_equal2 eq_rect] in *.
+  End type.
 
   Module expr.
     Section with_var.
@@ -222,34 +231,21 @@ Module Compilers.
       End encode_decode.
     End with_var.
 
-    Ltac invert_one e :=
-      type.generalize_one_eq_var e;
-      destruct e;
-      try discriminate;
-      type.inversion_type;
-      base.type.inversion_type;
-      cbn [type.decode base.type.decode f_equal f_equal2 eq_rect] in *.
-
     Ltac invert_step :=
       match goal with
-      | [ e : expr (type.base _) |- _ ] => invert_one e
-      | [ e : expr (type.arrow _ _) |- _ ] => invert_one e
+      | [ e : expr.expr (type.base _) |- _ ] => type.invert_one e
+      | [ e : expr.expr (defaults.type_base _) |- _ ] => type.invert_one e
+      | [ e : expr.expr (type.arrow _ _) |- _ ] => type.invert_one e
       end.
 
     Ltac invert := repeat invert_step.
 
     Ltac invert_match_step :=
       match goal with
-      | [ |- context[match ?e with expr.Ident _ _ => _ | _ => _ end] ]
-        => invert_one e
-      | [ |- context[match ?e with expr.Var _ _ => _ end] ]
-        => invert_one e
-      | [ |- context[match ?e with expr.App _ _ _ _ => _ end] ]
-        => invert_one e
-      | [ |- context[match ?e with expr.LetIn _ _ _ _ => _ end] ]
-        => invert_one e
-      | [ |- context[match ?e with expr.Abs _ _ _ => _ end] ]
-        => invert_one e
+      | [ H : context[match ?e with expr.Var _ _ => _ | _ => _ end] |- _ ]
+        => type.invert_one e
+      | [ |- context[match ?e with expr.Var _ _ => _ | _ => _ end] ]
+        => type.invert_one e
       end.
 
     Ltac invert_match := repeat invert_match_step.
@@ -308,4 +304,24 @@ Module Compilers.
       end.
     Ltac inversion_expr := repeat inversion_expr_step.
   End expr.
+
+  Module ident.
+    Ltac invert_step :=
+      match goal with
+      | [ e : ident (type.base _) |- _ ] => type.invert_one e
+      | [ e : ident (type.arrow _ _) |- _ ] => type.invert_one e
+      end.
+
+    Ltac invert := repeat invert_step.
+
+    Ltac invert_match_step :=
+      match goal with
+      | [ H : context[match ?e with ident.Literal _ _ => _ | _ => _ end] |- _ ]
+        => type.invert_one e
+      | [ |- context[match ?e with ident.Literal _ _ => _ | _ => _ end] ]
+        => type.invert_one e
+      end.
+
+    Ltac invert_match := repeat invert_match_step.
+  End ident.
 End Compilers.
