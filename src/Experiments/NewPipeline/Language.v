@@ -1405,6 +1405,34 @@ Module Compilers.
            | expr.Ident _ idc => ident.invert_Literal idc
            | _ => None
            end%expr_pat%expr.
+      Definition invert_nil {t} (e : expr (base.type.list t)) : bool
+        := match invert_Ident e with
+           | Some (ident.nil _) => true
+           | _ => false
+           end.
+      Local Notation if_arrow2 f t
+        := (match t return Type with
+            | (a -> b -> c)%etype => f a b c
+            | _ => unit
+            end) (only parsing).
+      Definition invert_cons {t} (e : expr (base.type.list t))
+        : option (expr t * expr (base.type.list t))
+        := match invert_AppIdent2 e with
+           | Some (existT _ (idc, x, y))
+             => match idc in ident.ident t
+                      return if_arrow2 (fun a b c => expr a) t
+                             -> if_arrow2 (fun a b c => expr b) t
+                             -> option match t return Type with
+                                       | (a -> b -> type.base (base.type.list t))
+                                         => (expr t * expr (base.type.list t))%type
+                                       | _ => unit
+                                       end%etype
+                with
+                | ident.cons t => fun x xs => Some (x, xs)
+                | _ => fun _ _ => None
+                end x y
+           | _ => None
+           end.
     End with_var.
 
     Definition reify_list {var} {t : base.type} (ls : list (@expr.expr base.type ident var (type.base t))) : expr (type.base (base.type.list t))
