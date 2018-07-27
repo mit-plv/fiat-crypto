@@ -1245,6 +1245,8 @@ Module Compilers.
       Notation "x || y" := (#Z_lor @ x @ y)%expr : expr_scope.
       Notation "x 'mod' y" := (#Z_modulo @ x @ y)%expr : expr_scope.
       Notation "- x" := (#Z_opp @ x)%expr : expr_scope.
+      Global Arguments interp _ !_.
+      Global Arguments gen_interp _ _ !_.
     End Notations.
   End ident.
   Export ident.Notations.
