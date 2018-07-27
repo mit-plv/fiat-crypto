@@ -1435,12 +1435,6 @@ Module Compilers.
            end.
     End with_var.
 
-    Definition reify_list {var} {t : base.type} (ls : list (@expr.expr base.type ident var (type.base t))) : expr (type.base (base.type.list t))
-      := fold_right
-           (fun x xs => x :: xs)%expr
-           []%expr
-           ls.
-
     Fixpoint reflect_list_cps' {var t} (e : @expr.expr base.type ident var t) {struct e}
       : ~> option (list (@expr.expr base.type ident var (type.base match t return base.type with
                                                                    | type.base (base.type.list t) => t
@@ -1565,27 +1559,16 @@ Module Compilers.
 
   Module GallinaReify.
     Module base.
-      Fixpoint value (t : base.type) : Set
-        := match t with
-           | base.type.unit as t
-           | base.type.Z as t
-           | base.type.bool as t
-           | base.type.nat as t
-             => base.interp t
-           | base.type.prod A B => value A * value B
-           | base.type.list A => list (value A)
-           end%type.
-
       Section reify.
         Context {var : type -> Type}.
         Fixpoint reify {t : base.type} {struct t}
-          : value t -> @expr var t
-          := match t return value t -> expr t with
+          : base.interp t -> @expr var t
+          := match t return base.interp t -> expr t with
              | base.type.prod A B as t
-               => fun '((a, b) : value A * value B)
+               => fun '((a, b) : base.interp A * base.interp B)
                   => (@reify A a, @reify B b)%expr
              | base.type.list A as t
-               => fun x : list (value A)
+               => fun x : list (base.interp A)
                   => reify_list (List.map (@reify A) x)
              | base.type.unit as t
              | base.type.Z as t
@@ -1596,7 +1579,7 @@ Module Compilers.
              end.
       End reify.
 
-      Definition Reify_as (t : base.type) (v : value t) : Expr t
+      Definition Reify_as (t : base.type) (v : base.interp t) : Expr t
         := fun var => reify v.
 
       (** [Reify] does Ltac type inference to get the type *)
@@ -1609,7 +1592,7 @@ Module Compilers.
       Fixpoint value (t : type)
         := match t return Type with
            | type.arrow s d => var s -> value d
-           | type.base t => base.value t
+           | type.base t => base.interp t
            end%type.
     End value.
 

@@ -594,6 +594,13 @@ Module Compilers.
       Qed.
       Lemma reflect_list_Some_nil {t} {e : expr (base.type.list t)} : invert_expr.reflect_list e = Some nil -> e = (#ident.nil)%expr.
       Proof. exact (@reflect_list_Some _ e nil). Qed.
+      Lemma reflect_reify_list {t} {v} : invert_expr.reflect_list (var:=var) (reify_list (t:=t) v) = Some v.
+      Proof.
+        induction v as [|v vs IHvs]; rewrite ?reify_list_cons, ?reify_list_nil, reflect_list_step; [ reflexivity | ].
+        cbn; cbv [option_map]; cbv [type_base] in *; rewrite IHvs; reflexivity.
+      Qed.
+      Lemma reflect_list_Some_iff  {t} {e : expr (base.type.list t)} {v} : invert_expr.reflect_list e = Some v <-> e = reify_list v.
+      Proof. split; intro; subst; apply reflect_reify_list || apply reflect_list_Some; assumption. Qed.
     End with_var2.
 
     Ltac invert_subst_step_helper guard_tac :=

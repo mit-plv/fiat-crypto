@@ -401,8 +401,47 @@ Module Compilers.
                             | progress inversion_wf_one_constr
                             | progress expr.invert_match ].
         Qed.
+
+        Lemma wf_reify {t} v G : expr.wf G (@GallinaReify.base.reify var1 t v) (@GallinaReify.base.reify var2 t v).
+        Proof.
+          induction t; cbn; break_innermost_match; repeat constructor; auto; [].
+          rewrite wf_reify_list, !map_length, combine_map_map, combine_same, map_map; split; auto; intros *; [].
+          cbn [fst snd]; rewrite in_map_iff; intros.
+          repeat first [ progress destruct_head'_and
+                       | progress destruct_head'_ex
+                       | progress inversion_prod
+                       | progress subst
+                       | solve [ eauto ] ].
+        Qed.
       End with_var2.
+
+      Lemma Wf_Reify_as {t} v : expr.Wf (@GallinaReify.base.Reify_as t v).
+      Proof. repeat intro; apply wf_reify. Qed.
+
+      Section interp.
+        Import defaults.
+        Lemma interp_reify_list {t} ls : interp (reify_list (t:=t) ls) = List.map interp ls.
+        Proof.
+          cbv [reify_list]; induction ls as [|l ls IHls]; [ reflexivity | ];
+            cbn [list_rect map expr.interp ident.interp ident.gen_interp]; rewrite <- IHls;
+              reflexivity.
+        Qed.
+
+        Lemma interp_reify {t} v : interp (GallinaReify.base.reify (t:=t) v) = v.
+        Proof.
+          induction t; cbn [GallinaReify.base.reify]; break_innermost_match; cbn; f_equal;
+            rewrite ?interp_reify_list, ?map_map; auto.
+          { etransitivity; [ | apply map_id ]; apply map_ext; auto. }
+        Qed.
+
+        Lemma Interp_Reify_as {t} v : Interp (GallinaReify.base.Reify_as t v) = v.
+        Proof. apply interp_reify. Qed.
+      End interp.
     End invert.
+
+    (** [Reify] is a notation for [Reify_as] + better type inference, so we make [Wf_Reify] available for ease of memory / lookup *)
+    Notation Wf_Reify := Wf_Reify_as.
+    Notation Interp_Reify := Interp_Reify_as.
   End expr.
 
   Local Ltac destructure_step :=
