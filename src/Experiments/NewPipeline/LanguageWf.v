@@ -411,6 +411,8 @@ Module Compilers.
           | solve [ eauto using conj, eq_refl, or_introl, or_intror with nocore ]
           | progress destruct_head'_or
           | match goal with
+            | [ |- context[List.In _ (_ ++ _)%list] ] => rewrite in_app_iff
+            | [ H : context[List.In _ (_ ++ _)%list] |- _ ] => rewrite in_app_iff in H
             | [ H : context[expr.wf _ _ _] |- expr.wf _ _ _ ]
               => eapply H; clear H; eauto with nocore; solve [ repeat wf_safe_t_step ]
             end ].
@@ -441,8 +443,6 @@ Module Compilers.
             | [ |- Proper (fun x y => ident.interp x == ident.interp y) _ ] => apply ident.eqv_Reflexive_Proper
             | [ H : context[expr.interp _ _ == expr.interp _ _] |- expr.interp _ _ == expr.interp _ _ ]
               => eapply H; eauto with nocore; solve [ repeat interp_safe_t_step ]
-            | [ |- context[List.In _ (_ ++ _)] ] => rewrite in_app_iff
-            | [ H : context[List.In _ (_ ++ _)] |- _ ] => rewrite in_app_iff in H
             end ].
   Ltac interp_unsafe_t_step :=
     first [ solve [ eauto with nocore ]
