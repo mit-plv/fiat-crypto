@@ -6,6 +6,9 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.FixCoqMistakes.
 
@@ -80,6 +83,66 @@ Module Compilers.
                 end ].
       Ltac inversion_type := repeat inversion_type_step.
     End type.
+
+    Global Instance Decidable_type_eq : DecidableRel (@eq base.type)
+      := base.type.type_eq_dec.
+
+    Local Ltac t_red :=
+      repeat first [ progress intros
+                   | progress cbn [type.type_beq base.type.type_beq base.type.base_beq base.try_make_transport_cps base.try_make_base_transport_cps eq_rect andb] in *
+                   | progress cbv [cpsreturn cpsbind cps_option_bind Option.bind cpscall] in * ].
+    Local Ltac t :=
+      repeat first [ progress t_red
+                   | reflexivity
+                   | progress split_andb
+                   | progress subst
+                   | progress break_innermost_match
+                   | progress eliminate_hprop_eq
+                   | congruence
+                   | match goal with
+                     | [ H : base.type.type_beq _ _ = true |- _ ] => apply base.type.internal_type_dec_bl in H; auto
+                     | [ H : context[base.type.type_beq ?x ?x] |- _ ] => rewrite base.type.internal_type_dec_lb in H by auto
+                     | [ |- context[base.type.internal_type_dec_bl ?x ?y ?pf] ] => generalize (base.type.internal_type_dec_bl x y pf); intro
+                     | [ H : base.type.base_beq _ _ = true |- _ ] => apply base.type.internal_base_dec_bl in H; auto
+                     | [ H : context[base.type.base_beq ?x ?x] |- _ ] => rewrite base.type.internal_base_dec_lb in H by auto
+                     | [ |- context[base.type.internal_base_dec_bl ?x ?y ?pf] ] => generalize (base.type.internal_base_dec_bl x y pf); intro
+                     | [ H : _ |- _ ] => rewrite H
+                     end ].
+
+    Lemma try_make_base_transport_cps_correct P t1 t2 T k
+      : base.try_make_base_transport_cps P t1 t2 T k
+        = k match Sumbool.sumbool_of_bool (base.type.base_beq t1 t2) with
+            | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_base_dec_bl _ _ pf) in id)
+            | right _ => None
+            end.
+    Proof. revert P t2 T k; induction t1, t2; t. Qed.
+
+    Lemma try_make_transport_cps_correct P t1 t2 T k
+      : base.try_make_transport_cps P t1 t2 T k
+        = k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
+            | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_type_dec_bl _ _ pf) in id)
+            | right _ => None
+            end.
+    Proof. revert P t2 T k; induction t1, t2; t_red; rewrite ?try_make_base_transport_cps_correct; t. Qed.
+
+    Lemma try_transport_cps_correct P t1 t2 v T k
+      : base.try_transport_cps P t1 t2 v T k
+        = k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
+            | left pf => Some (rew [P] (base.type.internal_type_dec_bl _ _ pf) in v)
+            | right _ => None
+            end.
+    Proof.
+      cbv [base.try_transport_cps cpscall cps_option_bind cpsreturn cpsbind Option.bind]; rewrite try_make_transport_cps_correct;
+        t.
+    Qed.
+
+    Lemma try_transport_correct P t1 t2 v
+      : base.try_transport P t1 t2 v
+        = match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
+          | left pf => Some (rew [P] (base.type.internal_type_dec_bl _ _ pf) in v)
+          | right _ => None
+          end.
+    Proof. cbv [base.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
   End base.
 
   Module type.
@@ -159,9 +222,147 @@ Module Compilers.
       type.inversion_type;
       base.type.inversion_type;
       cbn [type.decode base.type.decode f_equal f_equal2 eq_rect] in *.
+
+    Section transport_cps.
+      Context {base_type}
+              (base_type_beq : base_type -> base_type -> bool)
+              (base_type_bl : forall t1 t2, base_type_beq t1 t2 = true -> t1 = t2)
+              (base_type_lb : forall t1 t2, t1 = t2 -> base_type_beq t1 t2 = true)
+              (try_make_transport_base_type_cps : forall (P : base_type -> Type) t1 t2, ~> option (P t1 -> P t2))
+              (try_make_transport_base_type_cps_correct
+               : forall P t1 t2 T k,
+                  try_make_transport_base_type_cps P t1 t2 T k
+                  = k match Sumbool.sumbool_of_bool (base_type_beq t1 t2) with
+                      | left pf => Some (rew [fun t => P t1 -> P t] (base_type_bl _ _ pf) in id)
+                      | right _ => None
+                      end).
+
+      Let base_type_eq_dec : DecidableRel (@eq base_type)
+        := dec_rel_of_bool_dec_rel base_type_beq base_type_bl base_type_lb.
+
+      Local Instance Decidable_type_eq : DecidableRel (@eq (@type.type base_type))
+        := type.type_eq_dec _ base_type_beq base_type_bl base_type_lb.
+
+      Local Ltac t :=
+        repeat first [ progress intros
+                     | progress cbn [type.type_beq type.try_make_transport_cps eq_rect andb] in *
+                     | progress cbv [cpsreturn cpsbind cps_option_bind Option.bind cpscall] in *
+                     | reflexivity
+                     | progress split_andb
+                     | progress subst
+                     | rewrite !try_make_transport_base_type_cps_correct
+                     | progress break_innermost_match
+                     | progress eliminate_hprop_eq
+                     | congruence
+                     | match goal with
+                       | [ H : type.type_beq _ _ _ _ = true |- _ ] => apply type.internal_type_dec_bl in H; auto
+                       | [ H : context[type.type_beq _ _ ?x ?x] |- _ ] => rewrite type.internal_type_dec_lb in H by auto
+                       | [ |- context[base_type_bl ?x ?y ?pf] ] => generalize (base_type_bl x y pf); intro
+                       | [ |- context[type.internal_type_dec_bl ?a ?b ?c ?d ?e ?f] ]
+                         => generalize (type.internal_type_dec_bl a b c d e f); intro
+                       | [ H : _ |- _ ] => rewrite H
+                       end ].
+
+      Lemma try_make_transport_cps_correct P t1 t2 T k
+        : type.try_make_transport_cps try_make_transport_base_type_cps P t1 t2 T k
+          = k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
+              | left pf => Some (rew [fun t => P t1 -> P t] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in id)
+              | right _ => None
+              end.
+      Proof. revert P t2 T k; induction t1, t2; t. Qed.
+
+      Lemma try_transport_cps_correct P t1 t2 v T k
+        : type.try_transport_cps try_make_transport_base_type_cps P t1 t2 v T k
+          = k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
+              | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
+              | right _ => None
+              end.
+      Proof.
+        cbv [type.try_transport_cps cpscall cps_option_bind cpsreturn cpsbind Option.bind]; rewrite try_make_transport_cps_correct;
+          t.
+      Qed.
+
+      Lemma try_transport_correct P t1 t2 v
+        : type.try_transport try_make_transport_base_type_cps P t1 t2 v
+          = match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
+            | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
+            | right _ => None
+            end.
+      Proof. cbv [type.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
+    End transport_cps.
   End type.
 
+  Global Instance Decidable_type_eq : DecidableRel (@eq (@type.type base.type))
+    := type.type_eq_dec _ base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb.
+
+  Ltac type_beq_to_eq :=
+    repeat match goal with
+           | [ H : type.type_beq _ _ _ _ = true |- _ ]
+             => apply type.internal_type_dec_bl in H; [ | apply base.type.internal_type_dec_bl ]
+           | [ H : context[type.type_beq _ _ ?x ?x] |- _ ]
+             => rewrite type.internal_type_dec_lb in H by (reflexivity || exact base.type.internal_type_dec_lb)
+           | [ H : type.type_beq _ _ ?x ?y = true |- _ ]
+             => generalize dependent (type.internal_type_dec_bl _ _ base.type.internal_type_dec_bl _ _ H); clear H; intros
+           | [ |- type.type_beq _ _ _ _ = true ]
+             => apply type.internal_type_dec_lb; [ apply base.type.internal_type_dec_lb | ]
+           | [ H : base.type.type_beq _ _ = true |- _ ]
+             => apply base.type.internal_type_dec_bl in H
+           | [ H : context[base.type.type_beq ?x ?x] |- _ ]
+             => rewrite base.type.internal_type_dec_lb in H by reflexivity
+           | [ H : base.type.type_beq ?x ?y = true |- _ ]
+             => generalize dependent (base.type.internal_type_dec_bl _ _ H); clear H; intros
+           | [ |- base.type.type_beq _ _ = true ]
+             => apply base.type.internal_type_dec_lb
+           | [ H : base.type.type_beq _ _ = true |- _ ]
+             => apply base.type.internal_base_dec_bl in H
+           | [ H : context[base.type.base_beq ?x ?x] |- _ ]
+             => rewrite base.type.internal_base_dec_lb in H by reflexivity
+           | [ H : base.type.base_beq ?x ?y = true |- _ ]
+             => generalize dependent (base.type.internal_base_dec_bl _ _ H); clear H; intros
+           | [ |- base.type.base_beq _ _ = true ]
+             => apply base.type.internal_base_dec_lb
+           end.
+
+  Module ident.
+    Ltac invert_step :=
+      match goal with
+      | [ e : ident (type.base _) |- _ ] => type.invert_one e
+      | [ e : ident (type.arrow _ _) |- _ ] => type.invert_one e
+      end.
+
+    Ltac invert := repeat invert_step.
+
+    Ltac invert_match_step :=
+      match goal with
+      | [ H : context[match ?e with ident.Literal _ _ => _ | _ => _ end] |- _ ]
+        => type.invert_one e
+      | [ |- context[match ?e with ident.Literal _ _ => _ | _ => _ end] ]
+        => type.invert_one e
+      end.
+
+    Ltac invert_match := repeat invert_match_step.
+  End ident.
+
   Module expr.
+    Ltac invert_step :=
+      match goal with
+      | [ e : expr.expr (type.base _) |- _ ] => type.invert_one e
+      | [ e : expr.expr (defaults.type_base _) |- _ ] => type.invert_one e
+      | [ e : expr.expr (type.arrow _ _) |- _ ] => type.invert_one e
+      end.
+
+    Ltac invert := repeat invert_step.
+
+    Ltac invert_match_step :=
+      match goal with
+      | [ H : context[match ?e with expr.Var _ _ => _ | _ => _ end] |- _ ]
+        => type.invert_one e
+      | [ |- context[match ?e with expr.Var _ _ => _ | _ => _ end] ]
+        => type.invert_one e
+      end.
+
+    Ltac invert_match := repeat invert_match_step.
+
     Section with_var.
       Context {base_type : Type}
               {ident var : type.type base_type -> Type}.
@@ -213,6 +414,20 @@ Module Compilers.
         Lemma invert_LetIn_Some {t} {e : expr t} {v} : invert_expr.invert_LetIn e = Some v -> e = expr.LetIn (fst (projT2 v)) (snd (projT2 v)).
         Proof. t. Defined.
 
+        Local Ltac t'' :=
+          cbv [invert_expr.invert_App2 invert_expr.invert_AppIdent2 invert_expr.invert_App invert_expr.invert_AppIdent invert_expr.invert_Ident]; intros;
+          repeat first [ reflexivity
+                       | progress subst
+                       | progress cbn [Option.bind] in *
+                       | progress inversion_option
+                       | progress invert_match_step ].
+        Lemma invert_App2_Some {t} {e : expr t} {v} : invert_expr.invert_App2 e = Some v -> e = expr.App (expr.App (fst (fst (projT2 v))) (snd (fst (projT2 v)))) (snd (projT2 v)).
+        Proof. t''. Qed.
+        Lemma invert_AppIdent_Some {t} {e : expr t} {v} : invert_expr.invert_AppIdent e = Some v -> e = expr.App (expr.Ident (fst (projT2 v))) (snd (projT2 v)).
+        Proof. t''. Qed.
+        Lemma invert_AppIdent2_Some {t} {e : expr t} {v} : invert_expr.invert_AppIdent2 e = Some v -> e = expr.App (expr.App (expr.Ident (fst (fst (projT2 v)))) (snd (fst (projT2 v)))) (snd (projT2 v)).
+        Proof. t''. Qed.
+
         Definition decode {t} (x y : expr t) : code x y -> x = y.
         Proof.
           destruct x; cbn [code]; intro p; symmetry;
@@ -231,32 +446,77 @@ Module Compilers.
       End encode_decode.
     End with_var.
 
-    Ltac invert_step :=
-      match goal with
-      | [ e : expr.expr (type.base _) |- _ ] => type.invert_one e
-      | [ e : expr.expr (defaults.type_base _) |- _ ] => type.invert_one e
-      | [ e : expr.expr (type.arrow _ _) |- _ ] => type.invert_one e
-      end.
+    Section with_var2.
+      Context {var : type base.type -> Type}.
+      Local Notation expr := (@expr base.type ident var).
+      Local Notation try_transportP P := (@type.try_transport base.type (@base.try_make_transport_cps) P _ _).
+      Local Notation try_transport := (try_transportP _).
+      Let type_base (v : base.type) : defaults.type := type.base v.
+      Coercion type_base : base.type >-> type.type.
 
-    Ltac invert := repeat invert_step.
+      Local Ltac t :=
+        repeat first [ progress intros
+                     | progress cbv [type_base] in *
+                     | progress subst
+                     | progress destruct_head'_sig
+                     | progress inversion_option
+                     | progress inversion_prod
+                     | progress cbn [eq_rect f_equal f_equal2 Option.bind fst snd] in *
+                     | discriminate
+                     | reflexivity
+                     | progress type.inversion_type
+                     | progress base.type.inversion_type
+                     | progress invert_match
+                     | progress ident.invert_match
+                     | progress break_innermost_match_hyps
+                     | exists eq_refl; cbn
+                     | progress cbv [type.try_transport type.try_transport_cps type.try_make_transport_cps cpsbind cpscall cps_option_bind cpsreturn id] in *
+                     | rewrite base.try_make_transport_cps_correct in *
+                     | progress type_beq_to_eq
+                     | congruence ].
 
-    Ltac invert_match_step :=
-      match goal with
-      | [ H : context[match ?e with expr.Var _ _ => _ | _ => _ end] |- _ ]
-        => type.invert_one e
-      | [ |- context[match ?e with expr.Var _ _ => _ | _ => _ end] ]
-        => type.invert_one e
-      end.
+      Lemma invert_Z_opp_Some {t} {e : expr t} {v}
+        : invert_expr.invert_Z_opp e = Some v -> { pf : base.type.Z = t :> defaults.type
+                                                | e = rew [expr] pf in (#ident.Z_opp @ (rew [expr] (eq_sym pf) in v))%expr }.
+      Proof. cbv [invert_expr.invert_Z_opp]; intros; t. Qed.
+      Lemma invert_Z_opp_SomeZ {e : expr base.type.Z} {v}
+        : invert_expr.invert_Z_opp e = Some v -> e = (#ident.Z_opp @ v)%expr.
+      Proof. intro H; apply invert_Z_opp_Some in H; t. Qed.
+      Lemma invert_Z_cast_Some {e : expr base.type.Z} {v} : invert_expr.invert_Z_cast e = Some v -> e = (#(ident.Z_cast (fst v)) @ snd v)%expr.
+      Proof. cbv [invert_expr.invert_Z_cast]; t. Qed.
+      Lemma invert_Z_cast2_Some {e : expr (base.type.Z * base.type.Z)} {v}
+        : invert_expr.invert_Z_cast2 e = Some v -> e = (#(ident.Z_cast2 (fst v)) @ snd v)%expr.
+      Proof. cbv [invert_expr.invert_Z_cast2]; t. Qed.
+      Lemma invert_pair_Some {A B} {e : expr (A * B)} {v}
+        : invert_expr.invert_pair e = Some v -> e = (fst v, snd v)%expr.
+      Proof. cbv [invert_expr.invert_pair]; t. Qed.
+      Lemma invert_Literal_Some {t} {e : expr t} {v}
+        : invert_expr.invert_Literal e = Some v -> match t return expr t -> type.interp base.interp t -> Prop with
+                                                  | type.base (base.type.type_base _) => fun e v => e = expr.Ident (ident.Literal v)
+                                                  | _ => fun _ _ => False
+                                                  end e v.
+      Proof. cbv [invert_expr.invert_Literal invert_expr.ident.invert_Literal]; t. Qed.
 
-    Ltac invert_match := repeat invert_match_step.
+      Lemma invert_Literal_Some_base {t : base.type} {e : expr t} {v} : invert_expr.invert_Literal e = Some v -> e = ident.smart_Literal v.
+      Proof. intro H; apply invert_Literal_Some in H; cbv [type_base] in *; break_innermost_match_hyps; subst; try reflexivity; tauto. Qed.
+    End with_var2.
 
     Ltac invert_subst_step_helper guard_tac :=
+      cbv [defaults.type_base] in *;
       match goal with
       | [ H : invert_expr.invert_Var ?e = Some _ |- _ ] => guard_tac H; apply invert_Var_Some in H
       | [ H : invert_expr.invert_Ident ?e = Some _ |- _ ] => guard_tac H; apply invert_Ident_Some in H
       | [ H : invert_expr.invert_LetIn ?e = Some _ |- _ ] => guard_tac H; apply invert_LetIn_Some in H
       | [ H : invert_expr.invert_App ?e = Some _ |- _ ] => guard_tac H; apply invert_App_Some in H
       | [ H : invert_expr.invert_Abs ?e = Some _ |- _ ] => guard_tac H; apply invert_Abs_Some in H
+      | [ H : invert_expr.invert_App2 ?e = Some _ |- _ ] => guard_tac H; apply invert_App2_Some in H
+      | [ H : invert_expr.invert_AppIdent ?e = Some _ |- _ ] => guard_tac H; apply invert_AppIdent_Some in H
+      | [ H : invert_expr.invert_AppIdent2 ?e = Some _ |- _ ] => guard_tac H; apply invert_AppIdent2_Some in H
+      | [ H : invert_expr.invert_Z_opp ?e = Some _ |- _ ] => guard_tac H; first [ apply invert_Z_opp_SomeZ in H | apply invert_Z_opp_Some in H ]
+      | [ H : invert_expr.invert_Z_cast ?e = Some _ |- _ ] => guard_tac H; apply invert_Z_cast_Some in H
+      | [ H : invert_expr.invert_Z_cast2 ?e = Some _ |- _ ] => guard_tac H; apply invert_Z_cast2_Some in H
+      | [ H : invert_expr.invert_pair ?e = Some _ |- _ ] => guard_tac H; apply invert_pair_Some in H
+      | [ H : invert_expr.invert_Literal ?e = Some _ |- _ ] => guard_tac H; apply invert_Literal_Some in H
       end.
     Ltac invert_subst_step :=
       first [ invert_subst_step_helper ltac:(fun _ => idtac)
@@ -304,24 +564,4 @@ Module Compilers.
       end.
     Ltac inversion_expr := repeat inversion_expr_step.
   End expr.
-
-  Module ident.
-    Ltac invert_step :=
-      match goal with
-      | [ e : ident (type.base _) |- _ ] => type.invert_one e
-      | [ e : ident (type.arrow _ _) |- _ ] => type.invert_one e
-      end.
-
-    Ltac invert := repeat invert_step.
-
-    Ltac invert_match_step :=
-      match goal with
-      | [ H : context[match ?e with ident.Literal _ _ => _ | _ => _ end] |- _ ]
-        => type.invert_one e
-      | [ |- context[match ?e with ident.Literal _ _ => _ | _ => _ end] ]
-        => type.invert_one e
-      end.
-
-    Ltac invert_match := repeat invert_match_step.
-  End ident.
 End Compilers.
