@@ -331,6 +331,78 @@ Module Compilers.
       Lemma Wf_Interp_Proper {t} (e : Expr t) : Wf e -> Proper type.eqv (Interp e).
       Proof. repeat intro; apply wf_interp_Proper with (G:=nil); cbn [List.In]; intuition eauto. Qed.
     End for_interp.
+
+    Section invert.
+      Section with_var2.
+        Context {var1 var2 : type.type base.type -> Type}.
+        Local Notation expr1 := (@expr.expr base.type ident.ident var1).
+        Local Notation expr2 := (@expr.expr base.type ident.ident var2).
+
+        Lemma wf_reify_list G {t} e1 e2
+          : @wf _ _ var1 var2 G _ (reify_list (t:=t) e1) (reify_list (t:=t) e2)
+            <-> (List.length e1 = List.length e2
+               /\ forall e1' e2', List.In (e1', e2') (List.combine e1 e2) -> wf G e1' e2').
+        Proof.
+          revert e2; induction e1 as [|e1 e1s IHe1s], e2 as [|e2 e2s];
+            rewrite ?expr.reify_list_cons, ?expr.reify_list_nil; cbn [length combine];
+              repeat first [ progress apply conj
+                           | progress intros
+                           | progress destruct_head'_and
+                           | progress destruct_head'_sig
+                           | progress type.inversion_type
+                           | progress base.type.inversion_type
+                           | congruence
+                           | tauto
+                           | progress cbn [In] in *
+                           | match goal with |- wf _ _ _ => constructor end
+                           | progress inversion_wf_constr
+                           | rewrite IHe1s in *
+                           | progress destruct_head'_or
+                           | solve [ eauto ] ].
+        Qed.
+
+        Lemma wf_reflect_list G {t} e1 e2
+           : @wf _ _ var1 var2 G (type.base (base.type.list t)) e1 e2
+            -> (invert_expr.reflect_list e1 = None <-> invert_expr.reflect_list e2 = None).
+        Proof.
+          destruct (invert_expr.reflect_list e1) eqn:H1, (invert_expr.reflect_list e2) eqn:H2;
+            try (split; congruence); expr.invert_subst;
+              try revert dependent e2; try revert dependent e1;
+                match goal with
+                | [ |- context[Some ?l = None] ]
+                  => induction l as [|x xs IHxs]
+                end;
+                rewrite ?expr.reify_list_cons, ?expr.reify_list_nil;
+                intro; rewrite expr.reflect_list_step; cbv [option_map];
+                  break_innermost_match; try congruence; intros;
+                    lazymatch goal with
+                    | [ |- Some (?x :: ?xs) = None <-> ?P ]
+                      => cut (Some xs = None <-> P); [ intuition congruence | ]
+                    | [ |- ?P <-> Some (?x :: ?xs) = None ]
+                      => cut (P <-> Some xs = None); [ intuition congruence | ]
+                    | _ => idtac
+                    end.
+          all: repeat first [ congruence
+                            | progress inversion_wf_constr
+                            | progress subst
+                            | progress cbv [option_map] in *
+                            | progress destruct_head' False
+                            | progress destruct_head'_sig
+                            | progress destruct_head'_and
+                            | progress inversion_option
+                            | progress inversion_sigma
+                            | progress inversion_prod
+                            | progress type.inversion_type
+                            | progress base.type.inversion_type
+                            | progress break_match_hyps
+                            | progress cbn [fst snd invert_expr.invert_Ident invert_expr.invert_nil invert_expr.invert_cons invert_expr.invert_AppIdent2 invert_expr.invert_Ident invert_expr.invert_App2 invert_expr.invert_App Option.bind fst snd projT1 projT2 eq_rect] in *
+                            | progress expr.invert_subst
+                            | solve [ eauto ]
+                            | progress inversion_wf_one_constr
+                            | progress expr.invert_match ].
+        Qed.
+      End with_var2.
+    End invert.
   End expr.
 
   Local Ltac destructure_step :=
