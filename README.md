@@ -50,7 +50,7 @@ Exploring the code
 
 To add a new prime, add a new line to [`primes.txt`](https://github.com/mit-plv/fiat-crypto/blob/master/primes.txt) with your prime.  Then run
 
-        ./generate_parameters.py; ./src/Specific/remake_curves.sh
+        ./generate_parameters.py; ./src/Specific/CurveParameters/remake_curves.sh
 	
 You will see a bunch of lines starting with `git add`; any `.v` files that show up in these lines must be added to `_CoqProject`.  (If you are working in the git repository, you may simply run the `git add` lines, and then run `make update-_CoqProject`.)  Note that the directory structure involves a textual representation of your prime, call it `${REPRESENTATION_OF_YOUR_PRIME}`.  To build, you can run
 
