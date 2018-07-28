@@ -2464,7 +2464,8 @@ Module Barrett256.
   Proof.
     intros.
     rewrite <-barrett_reduce_correct_specialized by assumption.
-    destruct (barrett_red256_correct (xLow, (xHigh, tt))) as [H1 H2].
+    destruct (barrett_red256_correct (xLow, (xHigh, tt)) (xLow, (xHigh, tt))) as [H1 H2].
+    { repeat split. }
     { cbn -[Z.pow].
       rewrite !andb_true_iff.
       assert (M < 2^machine_wordsize) by (vm_compute; reflexivity).
@@ -2930,7 +2931,8 @@ Module Montgomery256.
   Proof.
     intros.
     rewrite <-montred'_correct_specialized by assumption.
-    destruct (montred256_correct ((lo, hi), tt)) as [H2 H3].
+    destruct (montred256_correct ((lo, hi), tt) ((lo, hi), tt)) as [H2 H3].
+    { repeat split. }
     { cbn -[Z.pow].
       rewrite !andb_true_iff.
       repeat apply conj; Z.ltb_to_lt; trivial; cbv [R N machine_wordsize] in *; lia. }

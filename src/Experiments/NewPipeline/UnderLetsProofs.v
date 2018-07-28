@@ -146,6 +146,9 @@ Module Compilers.
     Proof. apply Interp_SubstVarOrIdent, Hwf. Qed.
   End SubstVarLike.
 
+  Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarFstSndPairOpp SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
+  Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarFstSndPairOpp @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
+
   Module UnderLets.
     Import UnderLets.Compilers.UnderLets.
     Section with_ident.
@@ -456,4 +459,7 @@ Module Compilers.
       Qed.
     End reify.
   End UnderLets.
+
+  Hint Resolve UnderLets.Wf_LetBindReturn : wf.
+  Hint Rewrite @UnderLets.Interp_LetBindReturn : interp.
 End Compilers.
