@@ -26,6 +26,10 @@ Module Compilers.
   Import Language.Compilers.
   Import LanguageInversion.Compilers.
   Import expr.Notations.
+
+  Create HintDb wf discriminated.
+  Create HintDb interp discriminated.
+
   Module type.
     Section eqv.
       Context {base_type} {interp_base_type : base_type -> Type}.
@@ -43,6 +47,37 @@ Module Compilers.
         etransitivity; first [ eassumption | symmetry; eassumption ].
       Qed.
     End eqv.
+
+    Section app_curried_instances.
+      Context {base_type} {base_interp : base_type -> Type}.
+      (* Might want to add the following to make [app_curried_Proper] usable by [setoid_rewrite]? *)
+      (* See https://github.com/coq/coq/issues/8179
+<<
+Lemma PER_valid_l {A} {R : relation A} {HS : Symmetric R} {HT : Transitive R} x y (H : R x y) : Proper R x.
+Proof. hnf; etransitivity; eassumption || symmetry; eassumption. Qed.
+Lemma PER_valid_r {A} {R : relation A} {HS : Symmetric R} {HT : Transitive R} x y (H : R x y) : Proper R y.
+Proof. hnf; etransitivity; eassumption || symmetry; eassumption. Qed.
+Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_l _ R); [ | | solve [ eauto with nocore ] ] : typeclass_instances.
+Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [ eauto with nocore ] ] : typeclass_instances.
+>>
+*)
+      Lemma app_curried_Proper {t}
+        : Proper (@type.eqv base_type base_interp t ==> type.and_for_each_lhs_of_arrow (@type.eqv _ _) ==> eq)
+                 (@type.app_curried base_type base_interp t).
+      Proof.
+        cbv [Proper respectful]; induction t; cbn [type.eqv type.app_curried]; cbv [Proper respectful]; [ intros; subst; reflexivity | ].
+        intros f g Hfg x y [Hxy ?]; eauto.
+      Qed.
+      Global Instance and_for_each_lhs_of_arrow_Reflexive {f} {R} {_ : forall t, Reflexive (R t)} {t}
+        : Reflexive (@type.and_for_each_lhs_of_arrow base_type f f R t).
+      Proof. cbv [Reflexive] in *; induction t; cbn; repeat split; eauto. Qed.
+      Global Instance and_for_each_lhs_of_arrow_Symmetric {f} {R} {_ : forall t, Symmetric (R t)} {t}
+        : Symmetric (@type.and_for_each_lhs_of_arrow base_type f f R t).
+      Proof. cbv [Symmetric] in *; induction t; cbn; repeat split; intuition eauto. Qed.
+      Global Instance and_for_each_lhs_of_arrow_Transitive {f} {R} {_ : forall t, Transitive (R t)} {t}
+        : Transitive (@type.and_for_each_lhs_of_arrow base_type f f R t).
+      Proof. cbv [Transitive] in *; induction t; cbn; repeat split; intuition eauto. Qed.
+    End app_curried_instances.
   End type.
 
   Module ident.
@@ -444,6 +479,11 @@ Module Compilers.
     Notation Interp_Reify := Interp_Reify_as.
   End expr.
 
+  Hint Resolve expr.Wf_Reify : wf.
+  Hint Rewrite @expr.Interp_Reify @expr.interp_reify @expr.interp_reify_list : interp.
+
+  Notation Wf := expr.Wf.
+
   Local Ltac destructure_step :=
     first [ progress subst
           | progress inversion_option
@@ -798,6 +838,10 @@ Module Compilers.
 
   Ltac prove_Wf _ :=
     lazymatch goal with
-    | [ |- expr.Wf ?e ] => apply (@GeneralizeVar.Wf_via_flat _ e); vm_compute; split; reflexivity
+    | [ |- expr.Wf ?e ] => apply (@GeneralizeVar.Wf_via_flat _ e); vm_cast_no_check (conj (eq_refl e) (eq_refl true))
     end.
+
+  Global Hint Extern 0 (?x == ?x) => apply expr.Wf_Interp_Proper : wf interp.
+  Hint Resolve GeneralizeVar.Wf_FromFlat_ToFlat GeneralizeVar.Wf_GeneralizeVar : wf.
+  Hint Rewrite @GeneralizeVar.Interp_GeneralizeVar @GeneralizeVar.Interp_FromFlat_ToFlat : interp.
 End Compilers.

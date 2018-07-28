@@ -143,6 +143,15 @@ Module Compilers.
          | arrow s d => fun x_xs y_ys => R s (fst x_xs) (fst y_ys) && @andb_bool_for_each_lhs_of_arrow _ f g R d (snd x_xs) (snd y_ys)
          end%bool.
 
+    Fixpoint and_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
+             (R : forall t, f t -> g t -> Prop)
+             {t}
+      : for_each_lhs_of_arrow f t -> for_each_lhs_of_arrow g t -> Prop
+      := match t with
+         | base t => fun _ _ => True
+         | arrow s d => fun x_xs y_ys => R s (fst x_xs) (fst y_ys) /\ @and_for_each_lhs_of_arrow _ f g R d (snd x_xs) (snd y_ys)
+         end.
+
     Section interpM.
       Context {base_type} (M : Type -> Type) (base_interp : base_type -> Type).
       (** half-monadic denotation function; denote [type]s into their

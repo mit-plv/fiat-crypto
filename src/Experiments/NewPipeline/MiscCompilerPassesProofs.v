@@ -15,14 +15,6 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ListUtil.
 Import ListNotations. Local Open Scope list_scope.
 
-(*
-
-
-Require Import Crypto.Util.ListUtil Coq.Lists.List.
-Require Import Crypto.Experiments.NewPipeline.Language.
-Require Import Crypto.Util.Notations.
-Import ListNotations. Local Open Scope Z_scope.
-*)
 Module Compilers.
   Import Language.Compilers.
   Import LanguageInversion.Compilers.
@@ -122,6 +114,9 @@ Module Compilers.
     End with_ident.
   End DeadCodeElimination.
 
+  Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf.
+  Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp.
+
   Module Subst01.
     Import MiscCompilerPasses.Compilers.Subst01.
 
@@ -201,4 +196,7 @@ Module Compilers.
       End interp.
     End with_ident.
   End Subst01.
+
+  Hint Resolve Subst01.Wf_Subst01 : wf.
+  Hint Rewrite @Subst01.Interp_Subst01 : interp.
 End Compilers.

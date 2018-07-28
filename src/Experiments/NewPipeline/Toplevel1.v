@@ -45,10 +45,14 @@ Require Import Crypto.Experiments.NewPipeline.Arithmetic.
 Require Crypto.Experiments.NewPipeline.Language.
 Require Crypto.Experiments.NewPipeline.UnderLets.
 Require Crypto.Experiments.NewPipeline.AbstractInterpretation.
-Require Crypto.Experiments.NewPipeline.AbstractInterpretationProofs.
 Require Crypto.Experiments.NewPipeline.Rewriter.
 Require Crypto.Experiments.NewPipeline.MiscCompilerPasses.
 Require Crypto.Experiments.NewPipeline.CStringification.
+Require Crypto.Experiments.NewPipeline.LanguageWf.
+Require Crypto.Experiments.NewPipeline.UnderLetsProofs.
+Require Crypto.Experiments.NewPipeline.MiscCompilerPassesProofs.
+Require Crypto.Experiments.NewPipeline.RewriterProofs.
+Require Crypto.Experiments.NewPipeline.AbstractInterpretationProofs.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -274,6 +278,10 @@ Module MontgomeryStyleRing.
     := (andb (is_bounded_by bounds (@fst _ unit ls)) true).
   Local Notation is_bounded_by2 bounds ls
     := (andb (is_bounded_by bounds (fst ls)) (is_bounded_by1 bounds (snd ls))).
+  Local Notation is_eq1 arg1 arg2
+    := (and ((@fst _ unit arg1) = (@fst _ unit arg2)) True).
+  Local Notation is_eq2 arg1 arg2
+    := (and (fst arg1 = fst arg2) (is_eq1 (snd arg1) (snd arg2))).
 
   Lemma length_is_bounded_by bounds ls
     : is_bounded_by bounds ls = true -> length ls = length bounds.
@@ -301,50 +309,55 @@ Module MontgomeryStyleRing.
             (Hfrom_montgomery_mod
              : forall v, valid v -> valid (from_montgomery_mod v))
             (Interp_rfrom_montgomeryv : list Z -> list Z)
-            (HInterp_rfrom_montgomeryv : forall arg,
-                is_bounded_by1 bounds arg = true
-                -> is_bounded_by bounds (Interp_rfrom_montgomeryv (fst arg)) = true
-                   /\ Interp_rfrom_montgomeryv (fst arg) = from_montgomery_mod (fst arg))
+            (HInterp_rfrom_montgomeryv : forall arg1 arg2,
+                is_eq1 arg1 arg2
+                -> is_bounded_by1 bounds arg1 = true
+                -> is_bounded_by bounds (Interp_rfrom_montgomeryv (fst arg1)) = true
+                   /\ Interp_rfrom_montgomeryv (fst arg1) = from_montgomery_mod (fst arg2))
             (mulmod : list Z -> list Z -> list Z)
             (Hmulmod
              : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (mulmod a b)) mod (s - Associational.eval c)
-                                            = (eval (from_montgomery_mod a) * eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+                                                        = (eval (from_montgomery_mod a) * eval (from_montgomery_mod b)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a) b (_ : valid b), valid (mulmod a b)))
             (Interp_rmulv : list Z -> list Z -> list Z)
-            (HInterp_rmulv : forall arg,
-                is_bounded_by2 bounds arg = true
-                -> is_bounded_by bounds (Interp_rmulv (fst arg) (fst (snd arg))) = true
-                   /\ Interp_rmulv (fst arg) (fst (snd arg)) = mulmod (fst arg) (fst (snd arg)))
+            (HInterp_rmulv : forall arg1 arg2,
+                is_eq2 arg1 arg2
+                -> is_bounded_by2 bounds arg1 = true
+                -> is_bounded_by bounds (Interp_rmulv (fst arg1) (fst (snd arg1))) = true
+                   /\ Interp_rmulv (fst arg1) (fst (snd arg1)) = mulmod (fst arg2) (fst (snd arg2)))
             (addmod : list Z -> list Z -> list Z)
             (Haddmod
              : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (addmod a b)) mod (s - Associational.eval c)
-                                                   = (eval (from_montgomery_mod a) + eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+                                                        = (eval (from_montgomery_mod a) + eval (from_montgomery_mod b)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a) b (_ : valid b), valid (addmod a b)))
             (Interp_raddv : list Z -> list Z -> list Z)
-            (HInterp_raddv : forall arg,
-                is_bounded_by2 bounds arg = true
-                -> is_bounded_by bounds (Interp_raddv (fst arg) (fst (snd arg))) = true
-                   /\ Interp_raddv (fst arg) (fst (snd arg)) = addmod (fst arg) (fst (snd arg)))
+            (HInterp_raddv : forall arg1 arg2,
+                is_eq2 arg1 arg2
+                -> is_bounded_by2 bounds arg1 = true
+                -> is_bounded_by bounds (Interp_raddv (fst arg1) (fst (snd arg1))) = true
+                   /\ Interp_raddv (fst arg1) (fst (snd arg1)) = addmod (fst arg2) (fst (snd arg2)))
             (submod : list Z -> list Z -> list Z)
             (Hsubmod
              : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (submod a b)) mod (s - Associational.eval c)
-                                                   = (eval (from_montgomery_mod a) - eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+                                                        = (eval (from_montgomery_mod a) - eval (from_montgomery_mod b)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a) b (_ : valid b), valid (submod a b)))
             (Interp_rsubv : list Z -> list Z -> list Z)
-            (HInterp_rsubv : forall arg,
-                is_bounded_by2 bounds arg = true
-                -> is_bounded_by bounds (Interp_rsubv (fst arg) (fst (snd arg))) = true
-                   /\ Interp_rsubv (fst arg) (fst (snd arg)) = submod (fst arg) (fst (snd arg)))
+            (HInterp_rsubv : forall arg1 arg2,
+                is_eq2 arg1 arg2
+                -> is_bounded_by2 bounds arg1 = true
+                -> is_bounded_by bounds (Interp_rsubv (fst arg1) (fst (snd arg1))) = true
+                   /\ Interp_rsubv (fst arg1) (fst (snd arg1)) = submod (fst arg2) (fst (snd arg2)))
             (oppmod : list Z -> list Z)
             (Hoppmod
              : (forall a (_ : valid a), eval (from_montgomery_mod (oppmod a)) mod (s - Associational.eval c)
-                                   = (-eval (from_montgomery_mod a)) mod (s - Associational.eval c))
+                                        = (-eval (from_montgomery_mod a)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a), valid (oppmod a)))
             (Interp_roppv : list Z -> list Z)
-            (HInterp_roppv : forall arg,
-                is_bounded_by1 bounds arg = true
-                -> is_bounded_by bounds (Interp_roppv (fst arg)) = true
-                   /\ Interp_roppv (fst arg) = oppmod (fst arg))
+            (HInterp_roppv : forall arg1 arg2,
+                is_eq1 arg1 arg2
+                -> is_bounded_by1 bounds arg1 = true
+                -> is_bounded_by bounds (Interp_roppv (fst arg1)) = true
+                   /\ Interp_roppv (fst arg1) = oppmod (fst arg2))
             (zeromod : list Z)
             (Hzeromod
              : (eval (from_montgomery_mod zeromod)) mod (s - Associational.eval c)
@@ -356,40 +369,37 @@ Module MontgomeryStyleRing.
             (onemod : list Z)
             (Honemod
              : (eval (from_montgomery_mod onemod)) mod (s - Associational.eval c)
-                = 1 mod (s - Associational.eval c)
+               = 1 mod (s - Associational.eval c)
                /\ valid onemod)
             (Interp_ronev : list Z)
             (HInterp_ronev : is_bounded_by bounds Interp_ronev = true
-                              /\ Interp_ronev = onemod)
+                             /\ Interp_ronev = onemod)
             (encodemod : Z -> list Z)
             (Hencodemod
              : (forall v, 0 <= v < s - Associational.eval c -> eval (from_montgomery_mod (encodemod v)) mod (s - Associational.eval c) = v mod (s - Associational.eval c))
                /\ (forall v, 0 <= v < s - Associational.eval c -> valid (encodemod v)))
             (Interp_rencodev : Z -> list Z)
-            (HInterp_rencodev : forall arg,
-                is_bounded_by0 prime_bound (@fst _ unit arg) && true = true
-                -> is_bounded_by bounds (Interp_rencodev (fst arg)) = true
-                   /\ Interp_rencodev (fst arg) = encodemod (fst arg)).
+            (HInterp_rencodev : forall arg1 arg2,
+                is_eq1 arg1 arg2
+                -> is_bounded_by0 prime_bound (@fst _ unit arg1) && true = true
+                -> is_bounded_by bounds (Interp_rencodev (fst arg1)) = true
+                   /\ Interp_rencodev (fst arg1) = encodemod (fst arg2)).
 
     Local Notation T := (list Z) (only parsing).
     Local Notation encoded_ok ls
       := (is_bounded_by bounds ls = true /\ valid ls) (only parsing).
     Local Notation encoded_okf := (fun ls => encoded_ok ls) (only parsing).
-
     Definition Fdecode (v : T) : F m
       := F.of_Z m (Positional.eval weight n (Interp_rfrom_montgomeryv v)).
     Definition T_eq (x y : T)
       := Fdecode x = Fdecode y.
-
     Definition encodedT := sig encoded_okf.
-
     Definition ring_mul (x y : T) : T
       := Interp_rmulv x y.
     Definition ring_add (x y : T) : T := Interp_raddv x y.
     Definition ring_sub (x y : T) : T := Interp_rsubv x y.
     Definition ring_opp (x : T) : T := Interp_roppv x.
     Definition ring_encode (x : F m) : T := Interp_rencodev (F.to_Z x).
-
     Definition GoodT : Prop
       := @subsetoid_ring
            (list Z) encoded_okf T_eq
@@ -401,12 +411,10 @@ Module MontgomeryStyleRing.
               (list Z) encoded_okf T_eq Interp_ronev ring_add ring_mul
               (F m) (fun _ => True) eq 1%F F.add F.mul
               Fdecode.
-
     Hint Rewrite ->@F.to_Z_add : push_FtoZ.
     Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
     Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
     Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
-
     Lemma Fm_bounded_alt (x : F m)
       : (0 <=? F.to_Z x) && (F.to_Z x <=? Z.pos m - 1) = true.
     Proof using m_eq.
@@ -415,7 +423,6 @@ Module MontgomeryStyleRing.
       pose proof (Z.mod_pos_bound x (Z.pos m)).
       rewrite andb_true_iff; split; Z.ltb_to_lt; lia.
     Qed.
-
     Lemma Fm_bounded_alt' (x : F m)
       : 0 <= F.to_Z x < Z.pos m.
     Proof using m_eq.
@@ -424,7 +431,6 @@ Module MontgomeryStyleRing.
       pose proof (Z.mod_pos_bound x (Z.pos m)).
       split; Z.ltb_to_lt; lia.
     Qed.
-
     Lemma Good : GoodT.
     Proof.
       split_and.
@@ -434,8 +440,8 @@ Module MontgomeryStyleRing.
       eapply subsetoid_ring_by_ring_isomorphism;
         cbv [ring_opp ring_add ring_sub ring_mul ring_encode F.sub] in *;
         repeat match goal with
-               | [ H : forall arg : _ * unit, _ |- _ ] => specialize (fun arg => H (arg, tt))
-               | [ H : forall arg : _ * (_ * unit), _ |- _ ] => specialize (fun a b => H (a, (b, tt)))
+               | [ H : forall arg1 arg2 : _ * unit, _ |- _ ] => specialize (fun arg => H (arg, tt) (arg, tt) ltac:(tauto))
+               | [ H : forall arg arg2 : _ * (_ * unit), _ |- _ ] => specialize (fun a b => H (a, (b, tt)) (a, (b, tt)) ltac:(tauto))
                | _ => progress cbn [fst snd] in *
                | _ => solve [ auto using andb_true_intro, conj with nocore ]
                | _ => progress intros
@@ -489,19 +495,27 @@ End MontgomeryStyleRing.
 Import Associational Positional.
 
 Import
+  Crypto.Experiments.NewPipeline.LanguageWf
+  Crypto.Experiments.NewPipeline.UnderLetsProofs
+  Crypto.Experiments.NewPipeline.MiscCompilerPassesProofs
+  Crypto.Experiments.NewPipeline.RewriterProofs
+  Crypto.Experiments.NewPipeline.AbstractInterpretationProofs
   Crypto.Experiments.NewPipeline.Language
   Crypto.Experiments.NewPipeline.UnderLets
   Crypto.Experiments.NewPipeline.AbstractInterpretation
-  Crypto.Experiments.NewPipeline.AbstractInterpretationProofs
   Crypto.Experiments.NewPipeline.Rewriter
   Crypto.Experiments.NewPipeline.MiscCompilerPasses
   Crypto.Experiments.NewPipeline.CStringification.
 
 Import
+  LanguageWf.Compilers
+  UnderLetsProofs.Compilers
+  MiscCompilerPassesProofs.Compilers
+  RewriterProofs.Compilers
+  AbstractInterpretationProofs.Compilers
   Language.Compilers
   UnderLets.Compilers
   AbstractInterpretation.Compilers
-  AbstractInterpretationProofs.Compilers
   Rewriter.Compilers
   MiscCompilerPasses.Compilers
   CStringification.Compilers.
@@ -510,10 +524,6 @@ Import Compilers.defaults.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
-
-Axiom admit_pf : False.
-Notation admit := (match admit_pf with end).
-
 
 Module Pipeline.
   Import GeneralizeVar.
@@ -749,6 +759,14 @@ Module Pipeline.
        | Error err => Error err
        end.
 
+  Local Ltac wf_interp_t :=
+    repeat first [ progress destruct_head'_and
+                 | progress autorewrite with interp
+                 | solve [ auto with interp wf ]
+                 | solve [ typeclasses eauto ]
+                 | break_innermost_match_step
+                 | solve [ auto 100 with wf ] ].
+
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -762,11 +780,19 @@ Module Pipeline.
              out_bounds
              rv
              (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 translate_to_fancy relax_zrange e arg_bounds out_bounds = Success rv)
-    : forall arg
-             (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg = true),
-      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg) = true
-      /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg
-                                 = type.app_curried (Interp e) arg.
+             (Hwf : Wf e)
+             (Hfancy : match translate_to_fancy with
+                       | Some {| invert_low := il ; invert_high := ih |}
+                         => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+                           /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
+                       | None => True
+                       end)
+    : forall arg1 arg2
+             (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+             (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
+      /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
+                                       = type.app_curried (Interp e) arg2.
   Proof.
     cbv [BoundsPipeline Let_In] in *;
       repeat match goal with
@@ -778,15 +804,25 @@ Module Pipeline.
     { intros;
         match goal with
         | [ H : _ = _ |- _ ]
-          => eapply CheckedPartialEvaluateWithBounds_Correct in H;
-              [ destruct H as [H0 H1] | .. ]
+          => let H' := fresh in
+             pose proof H as H';
+               eapply CheckedPartialEvaluateWithBounds_Correct in H';
+               [ destruct H' as [H0 H1] | .. ]
         end;
         [
-        | eassumption || (try reflexivity).. ].
-      subst.
-      split; [ assumption | ].
-      { intros; rewrite H1.
-        exact admit. (* interp correctness *) } }
+        | match goal with
+          | [ |- Wf _ ] => idtac
+          | _ => eassumption || reflexivity
+          end.. ].
+      { subst.
+        split; [ solve [ eauto with nocore ] | ].
+        { intros; rewrite H1; clear H1.
+          transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1).
+          { apply type.app_curried_Proper; [ | symmetry; assumption ].
+            clear dependent arg1; clear dependent arg2; clear dependent out_bounds.
+            wf_interp_t. }
+          { apply Interp_PartialEvaluateWithListInfoFromBounds; auto. } } }
+      { wf_interp_t. } }
   Qed.
 
   Definition BoundsPipeline_correct_transT
@@ -795,16 +831,23 @@ Module Pipeline.
              out_bounds
              (InterpE : type.interp base.interp t)
              (rv : Expr t)
-    := forall arg
-              (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg = true),
-      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg) = true
-      /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg
-                                 = type.app_curried InterpE arg.
+    := forall arg1 arg2
+              (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
+      /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
+                                       = type.app_curried InterpE arg2.
 
   Lemma BoundsPipeline_correct_trans
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
         (translate_to_fancy : option to_fancy_args)
+        (Hfancy : match translate_to_fancy with
+                  | Some {| invert_low := il ; invert_high := ih |}
+                    => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+                      /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
+                  | None => True
+                  end)
         relax_zrange
         (Hrelax
          : forall r r' z : zrange,
@@ -813,16 +856,23 @@ Module Pipeline.
         (e : Expr t)
         arg_bounds out_bounds
         (InterpE : type.interp base.interp t)
-        (InterpE_correct
-         : forall arg
-                  (Harg : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg = true),
-            type.app_curried (Interp e) arg = type.app_curried InterpE arg)
+        (InterpE_correct_and_Wf
+         : (forall arg1 arg2
+                   (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+                   (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+               type.app_curried (Interp e) arg1 = type.app_curried InterpE arg2)
+           /\ Wf e)
         rv
         (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 translate_to_fancy relax_zrange e arg_bounds out_bounds = Success rv)
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
-    intros arg Harg; rewrite <- InterpE_correct by assumption.
-    eapply @BoundsPipeline_correct; eassumption.
+    destruct InterpE_correct_and_Wf as [InterpE_correct Hwf].
+    intros arg1 arg2 Harg12 Harg1; erewrite <- InterpE_correct; [ eapply @BoundsPipeline_correct | .. ];
+      lazymatch goal with
+      | [ |- type.andb_bool_for_each_lhs_of_arrow _ _ _ = true ] => eassumption
+      | _ => try assumption
+      end; try eassumption.
+    etransitivity; try eassumption; symmetry; assumption.
   Qed.
 End Pipeline.
 
@@ -873,239 +923,289 @@ Proof.
 Qed.
 
 Ltac cache_reify _ :=
-  intros;
-  etransitivity;
-  [
-  | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
-    Reify_rhs ();
-    reflexivity ];
-  subst_evars;
-  reflexivity.
+  split;
+  [ intros;
+    etransitivity;
+    [
+    | repeat match goal with |- _ = ?f' ?x => is_var x; apply (f_equal (fun f => f _)) end;
+      Reify_rhs ();
+      reflexivity ];
+    subst_evars;
+    reflexivity
+  | prove_Wf () ].
 
-Create HintDb reify_gen_cache.
+Create HintDb reify_gen_cache discriminated.
+Create HintDb wf_gen_cache discriminated.
+Hint Resolve conj : reify_gen_cache wf_gen_cache.
+Hint Unfold Wf : wf_gen_cache.
 
 Derive carry_mul_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f g : list Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (idxs : list nat),
-                    Interp (t:=reify_type_of carry_mulmod)
-                           carry_mul_gen limbwidth_num limbwidth_den s c n idxs f g
-                    = carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (f g : list Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z))
+                         (idxs : list nat),
+                     Interp (t:=reify_type_of carry_mulmod)
+                            carry_mul_gen limbwidth_num limbwidth_den s c n idxs f g
+                     = carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)
+                 /\ Wf carry_mul_gen)
        As carry_mul_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply carry_mul_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = carry_mulmod _ _ _ _ _ _ _ _) => simple apply (proj1 carry_mul_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 carry_mul_gen_correct) : wf_gen_cache.
 
 Derive carry_square_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f : list Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (idxs : list nat),
-                    Interp (t:=reify_type_of carry_squaremod)
-                           carry_square_gen limbwidth_num limbwidth_den s c n idxs f
-                    = carry_squaremod limbwidth_num limbwidth_den s c n idxs f)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (f : list Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z))
+                         (idxs : list nat),
+                     Interp (t:=reify_type_of carry_squaremod)
+                            carry_square_gen limbwidth_num limbwidth_den s c n idxs f
+                     = carry_squaremod limbwidth_num limbwidth_den s c n idxs f)
+                 /\ Wf carry_square_gen)
        As carry_square_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = carry_squaremod _ _ _ _ _ _ _) => simple apply carry_square_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = carry_squaremod _ _ _ _ _ _ _) => simple apply (proj1 carry_square_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 carry_square_gen_correct) : wf_gen_cache.
 
 Derive carry_scmul_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (x : Z) (f : list Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (idxs : list nat),
-                    Interp (t:=reify_type_of carry_scmulmod)
-                           carry_scmul_gen limbwidth_num limbwidth_den s c n idxs x f
-                    = carry_scmulmod limbwidth_num limbwidth_den s c n idxs x f)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (x : Z) (f : list Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z))
+                         (idxs : list nat),
+                     Interp (t:=reify_type_of carry_scmulmod)
+                            carry_scmul_gen limbwidth_num limbwidth_den s c n idxs x f
+                     = carry_scmulmod limbwidth_num limbwidth_den s c n idxs x f)
+                 /\ Wf carry_scmul_gen)
        As carry_scmul_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = carry_scmulmod _ _ _ _ _ _ _ _) => simple apply carry_scmul_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = carry_scmulmod _ _ _ _ _ _ _ _) => simple apply (proj1 carry_scmul_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 carry_scmul_gen_correct) : wf_gen_cache.
 
 Derive carry_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f : list Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (idxs : list nat),
-                    Interp (t:=reify_type_of carrymod)
-                           carry_gen limbwidth_num limbwidth_den s c n idxs f
-                    = carrymod limbwidth_num limbwidth_den s c n idxs f)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (f : list Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z))
+                         (idxs : list nat),
+                     Interp (t:=reify_type_of carrymod)
+                            carry_gen limbwidth_num limbwidth_den s c n idxs f
+                     = carrymod limbwidth_num limbwidth_den s c n idxs f)
+                 /\ Wf carry_gen)
        As carry_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _) => simple apply carry_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = carrymod _ _ _ _ _ _ _) => simple apply (proj1 carry_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 carry_gen_correct) : wf_gen_cache.
 
 Derive encode_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (v : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of encodemod)
-                           encode_gen limbwidth_num limbwidth_den s c n v
-                    = encodemod limbwidth_num limbwidth_den s c n v)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (v : Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z)),
+                     Interp (t:=reify_type_of encodemod)
+                            encode_gen limbwidth_num limbwidth_den s c n v
+                     = encodemod limbwidth_num limbwidth_den s c n v)
+                 /\ Wf encode_gen)
        As encode_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = encodemod _ _ _ _ _ _) => simple apply (proj1 encode_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 encode_gen_correct) : wf_gen_cache.
 
 Derive add_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (f g : list Z)
-                        (n : nat),
-                    Interp (t:=reify_type_of addmod)
-                           add_gen limbwidth_num limbwidth_den n f g
-                    = addmod limbwidth_num limbwidth_den n f g)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (f g : list Z)
+                         (n : nat),
+                     Interp (t:=reify_type_of addmod)
+                            add_gen limbwidth_num limbwidth_den n f g
+                     = addmod limbwidth_num limbwidth_den n f g)
+                 /\ Wf add_gen)
        As add_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply (proj1 add_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 add_gen_correct) : wf_gen_cache.
 
 Derive sub_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (coef : Z)
-                        (f g : list Z),
-                    Interp (t:=reify_type_of submod)
-                           sub_gen limbwidth_num limbwidth_den s c n coef f g
-                    = submod limbwidth_num limbwidth_den s c n coef f g)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z))
+                         (coef : Z)
+                         (f g : list Z),
+                     Interp (t:=reify_type_of submod)
+                            sub_gen limbwidth_num limbwidth_den s c n coef f g
+                     = submod limbwidth_num limbwidth_den s c n coef f g)
+                 /\ Wf sub_gen)
        As sub_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = submod _ _ _ _ _ _ _ _) => simple apply (proj1 sub_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 sub_gen_correct) : wf_gen_cache.
+
 Derive opp_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z))
-                        (coef : Z)
-                        (f : list Z),
-                    Interp (t:=reify_type_of oppmod)
-                           opp_gen limbwidth_num limbwidth_den s c n coef f
-                    = oppmod limbwidth_num limbwidth_den s c n coef f)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z))
+                         (coef : Z)
+                         (f : list Z),
+                     Interp (t:=reify_type_of oppmod)
+                            opp_gen limbwidth_num limbwidth_den s c n coef f
+                     = oppmod limbwidth_num limbwidth_den s c n coef f)
+                 /\ Wf opp_gen)
        As opp_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = oppmod _ _ _ _ _ _ _) => simple apply (proj1 opp_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 opp_gen_correct) : wf_gen_cache.
+
 Definition zeromod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 0.
 Definition onemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 1.
 Definition primemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n (s - Associational.eval c).
+
 Derive zero_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of zeromod)
-                           zero_gen limbwidth_num limbwidth_den s c n
-                    = zeromod limbwidth_num limbwidth_den s c n)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z)),
+                     Interp (t:=reify_type_of zeromod)
+                            zero_gen limbwidth_num limbwidth_den s c n
+                     = zeromod limbwidth_num limbwidth_den s c n)
+                 /\ Wf zero_gen)
        As zero_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = zeromod _ _ _ _ _) => simple apply (proj1 zero_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 zero_gen_correct) : wf_gen_cache.
 
 Derive one_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of onemod)
-                           one_gen limbwidth_num limbwidth_den s c n
-                    = onemod limbwidth_num limbwidth_den s c n)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z)),
+                     Interp (t:=reify_type_of onemod)
+                            one_gen limbwidth_num limbwidth_den s c n
+                     = onemod limbwidth_num limbwidth_den s c n)
+                 /\ Wf one_gen)
        As one_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = onemod _ _ _ _ _) => simple apply (proj1 one_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 one_gen_correct) : wf_gen_cache.
 
 Derive prime_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (s : Z)
-                        (c : list (Z * Z)),
-                    Interp (t:=reify_type_of primemod)
-                           prime_gen limbwidth_num limbwidth_den s c n
-                    = primemod limbwidth_num limbwidth_den s c n)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (s : Z)
+                         (c : list (Z * Z)),
+                     Interp (t:=reify_type_of primemod)
+                            prime_gen limbwidth_num limbwidth_den s c n
+                     = primemod limbwidth_num limbwidth_den s c n)
+                 /\ Wf prime_gen)
        As prime_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = primemod _ _ _ _ _) => simple apply prime_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = primemod _ _ _ _ _) => simple apply (proj1 prime_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 prime_gen_correct) : wf_gen_cache.
 
 Derive id_gen
-       SuchThat (forall (ls : list Z),
-                    Interp (t:=reify_type_of (@id (list Z)))
-                           id_gen ls
-                    = id ls)
+       SuchThat ((forall (ls : list Z),
+                     Interp (t:=reify_type_of (@id (list Z)))
+                            id_gen ls
+                     = id ls)
+                 /\ Wf id_gen)
        As id_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = id _) => simple apply id_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = id _) => simple apply (proj1 id_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 id_gen_correct) : wf_gen_cache.
 
 Derive selectznz_gen
-       SuchThat (forall (cond : Z) (f g : list Z),
-                    Interp (t:=reify_type_of Positional.select)
-                           selectznz_gen cond f g
-                    = Positional.select cond f g)
+       SuchThat ((forall (cond : Z) (f g : list Z),
+                     Interp (t:=reify_type_of Positional.select)
+                            selectznz_gen cond f g
+                     = Positional.select cond f g)
+                 /\ Wf selectznz_gen)
        As selectznz_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = Positional.select _ _ _) => simple apply selectznz_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = Positional.select _ _ _) => simple apply (proj1 selectznz_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 selectznz_gen_correct) : wf_gen_cache.
 
 Derive to_bytes_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (bitwidth : Z)
-                        (m_enc : list Z)
-                        (f : list Z),
-                    Interp (t:=reify_type_of freeze_to_bytesmod)
-                           to_bytes_gen limbwidth_num limbwidth_den n bitwidth m_enc f
-                    = freeze_to_bytesmod limbwidth_num limbwidth_den n bitwidth m_enc f)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (bitwidth : Z)
+                         (m_enc : list Z)
+                         (f : list Z),
+                     Interp (t:=reify_type_of freeze_to_bytesmod)
+                            to_bytes_gen limbwidth_num limbwidth_den n bitwidth m_enc f
+                     = freeze_to_bytesmod limbwidth_num limbwidth_den n bitwidth m_enc f)
+                 /\ Wf to_bytes_gen)
        As to_bytes_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = freeze_to_bytesmod _ _ _ _ _ _) => simple apply to_bytes_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = freeze_to_bytesmod _ _ _ _ _ _) => simple apply (proj1 to_bytes_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 to_bytes_gen_correct) : wf_gen_cache.
 
 Derive from_bytes_gen
-       SuchThat (forall (limbwidth_num limbwidth_den : Z)
-                        (n : nat)
-                        (f : list Z),
-                    Interp (t:=reify_type_of from_bytesmod)
-                           from_bytes_gen limbwidth_num limbwidth_den n f
-                    = from_bytesmod limbwidth_num limbwidth_den n f)
+       SuchThat ((forall (limbwidth_num limbwidth_den : Z)
+                         (n : nat)
+                         (f : list Z),
+                     Interp (t:=reify_type_of from_bytesmod)
+                            from_bytes_gen limbwidth_num limbwidth_den n f
+                     = from_bytesmod limbwidth_num limbwidth_den n f)
+                 /\ Wf from_bytes_gen)
        As from_bytes_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = from_bytesmod _ _ _ _) => simple apply from_bytes_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = from_bytesmod _ _ _ _) => simple apply (proj1 from_bytes_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 from_bytes_gen_correct) : wf_gen_cache.
 
 Derive mulx_gen
-       SuchThat (forall (s x y : Z),
-                    Interp (t:=reify_type_of mulx)
-                           mulx_gen s x y
-                    = mulx s x y)
+       SuchThat ((forall (s x y : Z),
+                     Interp (t:=reify_type_of mulx)
+                            mulx_gen s x y
+                     = mulx s x y)
+                 /\ Wf mulx_gen)
        As mulx_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = mulx _ _ _) => simple apply mulx_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = mulx _ _ _) => simple apply (proj1 mulx_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 mulx_gen_correct) : wf_gen_cache.
 
 Derive addcarryx_gen
-       SuchThat (forall (s c x y : Z),
-                    Interp (t:=reify_type_of addcarryx)
-                           addcarryx_gen s c x y
-                    = addcarryx s c x y)
+       SuchThat ((forall (s c x y : Z),
+                     Interp (t:=reify_type_of addcarryx)
+                            addcarryx_gen s c x y
+                     = addcarryx s c x y)
+                 /\ Wf addcarryx_gen)
        As addcarryx_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = addcarryx _ _ _ _) => simple apply addcarryx_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = addcarryx _ _ _ _) => simple apply (proj1 addcarryx_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 addcarryx_gen_correct) : wf_gen_cache.
 
 Derive subborrowx_gen
-       SuchThat (forall (s c x y : Z),
-                    Interp (t:=reify_type_of subborrowx)
-                           subborrowx_gen s c x y
-                    = subborrowx s c x y)
+       SuchThat ((forall (s c x y : Z),
+                     Interp (t:=reify_type_of subborrowx)
+                            subborrowx_gen s c x y
+                     = subborrowx s c x y)
+                 /\ Wf subborrowx_gen)
        As subborrowx_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = subborrowx _ _ _ _) => simple apply subborrowx_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = subborrowx _ _ _ _) => simple apply (proj1 subborrowx_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 subborrowx_gen_correct) : wf_gen_cache.
 
 Derive cmovznz_gen
-       SuchThat (forall (bitwidth cond z nz : Z),
-                    Interp (t:=reify_type_of cmovznz)
-                           cmovznz_gen bitwidth cond z nz
-                    = cmovznz bitwidth cond z nz)
+       SuchThat ((forall (bitwidth cond z nz : Z),
+                     Interp (t:=reify_type_of cmovznz)
+                            cmovznz_gen bitwidth cond z nz
+                     = cmovznz bitwidth cond z nz)
+                 /\ Wf cmovznz_gen)
        As cmovznz_gen_correct.
 Proof. cache_reify (). Qed.
-Hint Extern 1 (_ = cmovznz _ _ _ _) => simple apply cmovznz_gen_correct : reify_gen_cache.
+Hint Extern 1 (_ = cmovznz _ _ _ _) => simple apply (proj1 cmovznz_gen_correct) : reify_gen_cache.
+Hint Immediate (proj2 cmovznz_gen_correct) : wf_gen_cache.
+
+
+Axiom admit_pf : False.
+Notation admit := (match admit_pf with end).
 
 
 (** XXX TODO: Translate Jade's python script *)
@@ -1190,7 +1290,7 @@ Module Import UnsaturatedSolinas.
     Notation BoundsPipeline_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               (*false*) true None
+               (*false*) true None I
                relax_zrange
                (relax_zrange_gen_good _)
                _
@@ -1212,7 +1312,7 @@ Module Import UnsaturatedSolinas.
     Notation BoundsPipeline_no_subst01_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               (*false*) false None
+               (*false*) false None I
                relax_zrange
                (relax_zrange_gen_good _)
                _
@@ -1234,7 +1334,7 @@ Module Import UnsaturatedSolinas.
     Notation BoundsPipeline_with_bytes_no_subst01_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               (*false*) false None
+               (*false*) false None I
                relax_zrange_with_bytes
                (relax_zrange_gen_good _)
                _
@@ -1660,10 +1760,10 @@ Module Import UnsaturatedSolinas.
             lazymatch goal with
             | [ H : ?P ?rop |- context[expr.Interp _ ?rop] ]
               => intros;
-                  let H1 := fresh in
-                  let H2 := fresh in
-                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | eapply H2 ] ] ];
-                    solve [ exact tt | eassumption | reflexivity ]
+                  let H1 := fresh "HH1" in
+                  let H2 := fresh "HH2" in
+                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | refine (H2 _) ] ] ];
+                    solve [ exact tt | eassumption | reflexivity | repeat split ]
             | _ => idtac
             end;
             repeat first [ assumption
@@ -1675,7 +1775,7 @@ Module Import UnsaturatedSolinas.
                          | intros; apply eval_encodemod
                          | apply conj ]. }
         { cbv zeta; intros f Hf; split.
-          { apply Hto_bytesv; assumption. }
+          { apply Hto_bytesv; solve [ assumption | repeat split ]. }
           { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
             rewrite Bool.andb_true_iff in *; split_and'.
             etransitivity; [ apply eval_freeze_to_bytesmod | f_equal; (eassumption || (symmetry; eassumption)) ];
@@ -1693,7 +1793,7 @@ Module Import UnsaturatedSolinas.
               split.
               { etransitivity; [ erewrite <- eval_zeros; [ | apply weight_0, wprops ] | apply H15 ].
                 apply Z.eq_le_incl; f_equal.
-                admit.
+                repeat match goal with H : _ |- _ => revert H end; exact admit.
                 omega. }
               { eapply Z.le_lt_trans; [ apply H15 | ].
                 assert (Hlen : length (encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1)) = n) by distr_length.
@@ -1704,11 +1804,11 @@ Module Import UnsaturatedSolinas.
                 revert ls.
                 clearbody limbwidth.
                 induction n as [|n' IHn'], ls as [|l ls]; cbn [length]; intros; try omega.
-                admit.
+                repeat match goal with H : _ |- _ => revert H end; exact admit.
                 cbn [map].
-                admit. }
-              admit. }
-      Admitted.
+                repeat match goal with H : _ |- _ => revert H end; exact admit. }
+              repeat match goal with H : _ |- _ => revert H end; exact admit. } } }
+      Qed.
     End make_ring.
 
     Section for_stringification.
@@ -1817,23 +1917,50 @@ Ltac peel_interp_app _ :=
                end ] ]
   end.
 Ltac pre_cache_reify _ :=
-  cbv [type.app_curried];
-  let arg := fresh "arg" in
-  intros arg _;
-  peel_interp_app ();
-  [ lazymatch goal with
-    | [ |- ?R (Interp ?ev) _ ]
-      => (tryif is_evar ev
-           then let ev' := fresh "ev" in set (ev' := ev)
-           else idtac)
-    end;
-    cbv [pointwise_relation]; intros; clear
-  | .. ].
+  let H' := fresh in
+  lazymatch goal with
+  | [ |- ?P /\ Wf ?e ]
+    => let P' := fresh in
+       evar (P' : Prop);
+       assert (H' : P' /\ Wf e); subst P'
+  end;
+  [
+      | split; [ destruct H' as [H' _] | destruct H' as [_ H']; exact H' ];
+        cbv [type.app_curried];
+        let arg := fresh "arg" in
+        let arg2 := fresh in
+        intros arg arg2;
+        cbn [type.and_for_each_lhs_of_arrow type.eqv];
+        let H := fresh in
+        intro H;
+        repeat match type of H with
+               | and _ _ => let H' := fresh in
+                            destruct H as [H' H];
+                            rewrite <- H'
+               end;
+        clear dependent arg2; clear H;
+        intros _;
+        peel_interp_app ();
+        [ lazymatch goal with
+          | [ |- ?R (Interp ?ev) _ ]
+            => (tryif is_evar ev
+                 then let ev' := fresh "ev" in set (ev' := ev)
+                 else idtac)
+          end;
+          cbv [pointwise_relation];
+          repeat lazymatch goal with
+                 | [ H : _ |- _ ] => first [ constr_eq H H'; fail 1
+                                           | revert H ]
+                 end;
+          eexact H'
+        | .. ] ];
+  [ intros; clear | .. ].
 Ltac do_inline_cache_reify do_if_not_cached :=
   pre_cache_reify ();
   [ try solve [
+          cbv beta zeta;
           repeat match goal with H := ?e |- _ => is_evar e; subst H end;
-          eauto with nocore reify_gen_cache;
+          try solve [ split; [ solve [ eauto with nocore reify_gen_cache ] | solve [ eauto with wf_gen_cache; prove_Wf () ] ] ];
           do_if_not_cached ()
         ];
     cache_reify ()
@@ -2067,185 +2194,217 @@ Abort.
 Module WordByWordMontgomery.
   Import Arithmetic.WordByWordMontgomery.
   Derive mul_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (m' : Z)
-                          (f g : list Z),
-                      Interp (t:=reify_type_of mulmod)
-                             mul_gen bitwidth n m m' f g
-                      = mulmod bitwidth n m m' f g)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (m' : Z)
+                           (f g : list Z),
+                       Interp (t:=reify_type_of mulmod)
+                              mul_gen bitwidth n m m' f g
+                       = mulmod bitwidth n m m' f g)
+                   /\ Wf mul_gen)
          As mul_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = mulmod _ _ _ _ _ _) => simple apply mul_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = mulmod _ _ _ _ _ _) => simple apply (proj1 mul_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 mul_gen_correct) : wf_gen_cache.
 
   Derive square_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (m' : Z)
-                          (f : list Z),
-                      Interp (t:=reify_type_of squaremod)
-                             square_gen bitwidth n m m' f
-                      = squaremod bitwidth n m m' f)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (m' : Z)
+                           (f : list Z),
+                       Interp (t:=reify_type_of squaremod)
+                              square_gen bitwidth n m m' f
+                       = squaremod bitwidth n m m' f)
+                   /\ Wf square_gen)
          As square_gen_correct.
   Proof.
     Time cache_reify ().
     (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
     (*
-    intros; etransitivity; [ | cbv [squaremod]; apply mul_gen_correct ].
-    subst square_gen.
-    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f f):list Z) in refine (r @ mul_gen)%Expr)).
-    reflexivity.
+    split.
+    { intros; etransitivity; [ | cbv [squaremod]; apply mul_gen_correct ].
+      subst square_gen.
+      instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f f):list Z) in refine (r @ mul_gen)%Expr)).
+      reflexivity. }
+    { prove_Wf (). }
      *)
   Time Qed.
-  Hint Extern 1 (_ = squaremod _ _ _ _ _) => simple apply square_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = squaremod _ _ _ _ _) => simple apply (proj1 square_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 square_gen_correct) : wf_gen_cache.
 
   Derive encode_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (m' : Z)
-                          (v : Z),
-                      Interp (t:=reify_type_of encodemod)
-                             encode_gen bitwidth n m m' v
-                      = encodemod bitwidth n m m' v)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (m' : Z)
+                           (v : Z),
+                       Interp (t:=reify_type_of encodemod)
+                              encode_gen bitwidth n m m' v
+                       = encodemod bitwidth n m m' v)
+                   /\ Wf encode_gen)
          As encode_gen_correct.
   Proof.
     Time cache_reify ().
     (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
     (*
-    intros; etransitivity; [ | cbv [encodemod]; apply mul_gen_correct ].
-    subst encode_gen; revert bitwidth n m m' v.
-    lazymatch goal with
-    | [ |- forall bw n m m' v, ?interp ?ev bw n m m' v = ?interp' mul_gen bw n m m' (@?A bw n m m' v) (@?B bw n m m' v) ]
-      => let rv := constr:(fun F bw n m m' v => (F bw n m m' (A bw n m m' v) (B bw n m m' v)):list Z) in
-         intros;
-           instantiate (1:=ltac:(let r := Reify rv in
-                                 refine (r @ mul_gen)%Expr))
-    end.
-    reflexivity.
+    split.
+    { intros; etransitivity; [ | cbv [encodemod]; apply mul_gen_correct ].
+      subst encode_gen; revert bitwidth n m m' v.
+      lazymatch goal with
+      | [ |- forall bw n m m' v, ?interp ?ev bw n m m' v = ?interp' mul_gen bw n m m' (@?A bw n m m' v) (@?B bw n m m' v) ]
+        => let rv := constr:(fun F bw n m m' v => (F bw n m m' (A bw n m m' v) (B bw n m m' v)):list Z) in
+           intros;
+             instantiate (1:=ltac:(let r := Reify rv in
+                                   refine (r @ mul_gen)%Expr))
+      end.
+      reflexivity. }
+    { prove_Wf (). }
      *)
   Time Qed.
-  Hint Extern 1 (_ = encodemod _ _ _ _ _) => simple apply encode_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = encodemod _ _ _ _ _) => simple apply (proj1 encode_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 encode_gen_correct) : wf_gen_cache.
 
   Derive add_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (f g : list Z),
-                      Interp (t:=reify_type_of addmod)
-                             add_gen bitwidth n m f g
-                      = addmod bitwidth n m f g)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (f g : list Z),
+                       Interp (t:=reify_type_of addmod)
+                              add_gen bitwidth n m f g
+                       = addmod bitwidth n m f g)
+                   /\ Wf add_gen)
          As add_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply add_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = addmod _ _ _ _ _) => simple apply (proj1 add_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 add_gen_correct) : wf_gen_cache.
 
   Derive sub_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (f g : list Z),
-                      Interp (t:=reify_type_of submod)
-                             sub_gen bitwidth n m f g
-                      = submod bitwidth n m f g)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (f g : list Z),
+                       Interp (t:=reify_type_of submod)
+                              sub_gen bitwidth n m f g
+                       = submod bitwidth n m f g)
+                   /\ Wf sub_gen)
          As sub_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = submod _ _ _ _ _) => simple apply sub_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = submod _ _ _ _ _) => simple apply (proj1 sub_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 sub_gen_correct) : wf_gen_cache.
 
   Derive opp_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (f : list Z),
-                      Interp (t:=reify_type_of oppmod)
-                             opp_gen bitwidth n m f
-                      = oppmod bitwidth n m f)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (f : list Z),
+                       Interp (t:=reify_type_of oppmod)
+                              opp_gen bitwidth n m f
+                       = oppmod bitwidth n m f)
+                   /\ Wf opp_gen)
          As opp_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = oppmod _ _ _ _) => simple apply opp_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = oppmod _ _ _ _) => simple apply (proj1 opp_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 opp_gen_correct) : wf_gen_cache.
 
   Derive from_montgomery_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (m' : Z)
-                          (f : list Z),
-                      Interp (t:=reify_type_of from_montgomery_mod)
-                             from_montgomery_gen bitwidth n m m' f
-                      = from_montgomery_mod bitwidth n m m' f)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (m' : Z)
+                           (f : list Z),
+                       Interp (t:=reify_type_of from_montgomery_mod)
+                              from_montgomery_gen bitwidth n m m' f
+                       = from_montgomery_mod bitwidth n m m' f)
+                   /\ Wf from_montgomery_gen)
          As from_montgomery_gen_correct.
   Proof.
     Time cache_reify ().
     (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
     (*
-    intros; etransitivity; [ | cbv [from_montgomery_mod]; apply mul_gen_correct ].
-    subst from_montgomery_gen.
-    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f (onemod bitwidth n)):list Z) in refine (r @ mul_gen)%Expr)).
-    reflexivity.
+    split.
+    { intros; etransitivity; [ | cbv [from_montgomery_mod]; apply mul_gen_correct ].
+      subst from_montgomery_gen.
+      instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f (onemod bitwidth n)):list Z) in refine (r @ mul_gen)%Expr)).
+      reflexivity. }
+    { prove_Wf (). }
      *)
   Qed.
-  Hint Extern 1 (_ = from_montgomery_mod _ _ _ _ _) => simple apply from_montgomery_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = from_montgomery_mod _ _ _ _ _) => simple apply (proj1 from_montgomery_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 from_montgomery_gen_correct) : wf_gen_cache.
 
   Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
   Definition onemod bitwidth n m m' := encodemod bitwidth n m m' 1.
   Derive zero_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (m' : Z),
-                      Interp (t:=reify_type_of zeromod)
-                             zero_gen bitwidth n m m'
-                      = zeromod bitwidth n m m')
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (m' : Z),
+                       Interp (t:=reify_type_of zeromod)
+                              zero_gen bitwidth n m m'
+                       = zeromod bitwidth n m m')
+                   /\ Wf zero_gen)
          As zero_gen_correct.
   Proof.
     (* Time cache_reify (). *)
     (* we do something faster *)
-    intros; etransitivity; [ | cbv [zeromod]; apply encode_gen_correct ].
-    subst zero_gen.
-    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) => (F bitwidth n m m' 0):list Z) in refine (r @ encode_gen)%Expr)).
-    reflexivity.
+    split.
+    { intros; etransitivity; [ | cbv [zeromod]; apply encode_gen_correct ].
+      subst zero_gen.
+      instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) => (F bitwidth n m m' 0):list Z) in refine (r @ encode_gen)%Expr)).
+      reflexivity. }
+    { prove_Wf (). }
   Qed.
-  Hint Extern 1 (_ = zeromod _ _ _ _) => simple apply zero_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = zeromod _ _ _ _) => simple apply (proj1 zero_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 zero_gen_correct) : wf_gen_cache.
 
   Derive one_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (m : Z)
-                          (m' : Z),
-                      Interp (t:=reify_type_of onemod)
-                             one_gen bitwidth n m m'
-                      = onemod bitwidth n m m')
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (m : Z)
+                           (m' : Z),
+                       Interp (t:=reify_type_of onemod)
+                              one_gen bitwidth n m m'
+                       = onemod bitwidth n m m')
+                   /\ Wf one_gen)
          As one_gen_correct.
   Proof.
     (* Time cache_reify (). *)
     (* we do something faster *)
-    intros; etransitivity; [ | cbv [onemod]; apply encode_gen_correct ].
-    subst one_gen.
-    instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) => (F bitwidth n m m' 1):list Z) in refine (r @ encode_gen)%Expr)).
-    reflexivity.
+    split.
+    { intros; etransitivity; [ | cbv [onemod]; apply encode_gen_correct ].
+      subst one_gen.
+      instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) => (F bitwidth n m m' 1):list Z) in refine (r @ encode_gen)%Expr)).
+      reflexivity. }
+    { prove_Wf (). }
   Qed.
-  Hint Extern 1 (_ = onemod _ _ _ _) => simple apply one_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = onemod _ _ _ _) => simple apply (proj1 one_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 one_gen_correct) : wf_gen_cache.
 
   Derive nonzero_gen
-         SuchThat (forall (f : list Z),
-                      Interp (t:=reify_type_of nonzeromod)
-                             nonzero_gen f
-                      = nonzeromod f)
+         SuchThat ((forall (f : list Z),
+                       Interp (t:=reify_type_of nonzeromod)
+                              nonzero_gen f
+                       = nonzeromod f)
+                   /\ Wf nonzero_gen)
          As nonzero_gen_correct.
   Proof. Time cache_reify (). Time Qed.
-  Hint Extern 1 (_ = nonzeromod _) => simple apply nonzero_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = nonzeromod _) => simple apply (proj1 nonzero_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 nonzero_gen_correct) : wf_gen_cache.
 
   Derive to_bytes_gen
-         SuchThat (forall (bitwidth : Z)
-                          (n : nat)
-                          (f : list Z),
-                      Interp (t:=reify_type_of to_bytesmod)
-                             to_bytes_gen bitwidth n f
-                      = to_bytesmod bitwidth n f)
+         SuchThat ((forall (bitwidth : Z)
+                           (n : nat)
+                           (f : list Z),
+                       Interp (t:=reify_type_of to_bytesmod)
+                              to_bytes_gen bitwidth n f
+                       = to_bytesmod bitwidth n f)
+                   /\ Wf to_bytes_gen)
          As to_bytes_gen_correct.
   Proof. cache_reify (). Qed.
-  Hint Extern 1 (_ = to_bytesmod _ _ _) => simple apply to_bytes_gen_correct : reify_gen_cache.
+  Hint Extern 1 (_ = to_bytesmod _ _ _) => simple apply (proj1 to_bytes_gen_correct) : reify_gen_cache.
+  Hint Immediate (proj2 to_bytes_gen_correct) : wf_gen_cache.
 
   Section rcarry_mul.
     Context (s : Z)
@@ -2323,7 +2482,7 @@ Module WordByWordMontgomery.
     Notation BoundsPipeline_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               (*false*) true None
+               (*false*) true None I
                relax_zrange
                (relax_zrange_gen_good _)
                _
@@ -2345,7 +2504,7 @@ Module WordByWordMontgomery.
     Notation BoundsPipeline_no_subst01_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               (*false*) false None
+               (*false*) false None I
                relax_zrange
                (relax_zrange_gen_good _)
                _
@@ -2367,7 +2526,7 @@ Module WordByWordMontgomery.
     Notation BoundsPipeline_with_bytes_no_subst01_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               (*false*) false None
+               (*false*) false None I
                relax_zrange_with_bytes
                (relax_zrange_gen_good _)
                _
@@ -2690,8 +2849,8 @@ Module WordByWordMontgomery.
               => intros;
                   let H1 := fresh in
                   let H2 := fresh in
-                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | eapply H2 ] ] ];
-                    solve [ exact tt | eassumption | reflexivity ]
+                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | refine (H2 _) ] ] ];
+                    solve [ exact tt | eassumption | reflexivity | repeat split ]
             | _ => idtac
             end;
             repeat first [ eassumption
@@ -2705,21 +2864,21 @@ Module WordByWordMontgomery.
                          | intros; apply conj
                          | omega ]. }
         { cbv zeta; intros f Hf; split.
-          { apply Hto_bytesv; assumption. }
+          { apply Hto_bytesv; solve [ assumption | repeat split ]. }
           { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
             rewrite Bool.andb_true_iff in *; split_and'.
             apply to_bytesmod_correct; eauto; [].
             split; cbv [small].
-            admit.
-            admit. } }
+            repeat match goal with H : _ |- _ => revert H end; exact admit.
+            repeat match goal with H : _ |- _ => revert H end; exact admit. } }
         { intros.
           split; [ intro H'; eapply nonzeromod_correct;
                    [ .. | rewrite <- H'; symmetry; eapply Hrnonzerov ]
                  | etransitivity; [ apply Hrnonzerov | eapply nonzeromod_correct; [ .. | eassumption ] ] ];
-          try eassumption.
-          admit.
-          admit. }
-      Admitted.
+          try solve [ eassumption | repeat split ].
+          repeat match goal with H : _ |- _ => revert H end; exact admit.
+          repeat match goal with H : _ |- _ => revert H end; exact admit. }
+      Qed.
     End make_ring.
 
     Section for_stringification.
@@ -2826,15 +2985,17 @@ Module SaturatedSolinas.
   End MulMod.
 
   Derive mulmod_gen
-         SuchThat (forall (log2base s : Z) (c : list (Z * Z)) (n nreductions : nat)
-                          (f g : list Z),
-                      Interp (t:=reify_type_of mulmod')
-                             mulmod_gen s c log2base n nreductions f g
-                      = mulmod' s c log2base n nreductions f g)
+         SuchThat ((forall (log2base s : Z) (c : list (Z * Z)) (n nreductions : nat)
+                           (f g : list Z),
+                       Interp (t:=reify_type_of mulmod')
+                              mulmod_gen s c log2base n nreductions f g
+                       = mulmod' s c log2base n nreductions f g)
+                   /\ Wf mulmod_gen)
          As mulmod_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Module Export ReifyHints.
-    Global Hint Extern 1 (_ = mulmod' _ _ _ _ _ _ _) => simple apply mulmod_gen_correct : reify_gen_cache.
+    Global Hint Extern 1 (_ = mulmod' _ _ _ _ _ _ _) => simple apply (proj1 mulmod_gen_correct) : reify_gen_cache.
+    Hint Immediate (proj2 mulmod_gen_correct) : wf_gen_cache.
   End ReifyHints.
 
   Section rmulmod.
@@ -2884,7 +3045,7 @@ Module SaturatedSolinas.
   Notation BoundsPipeline_correct in_bounds out_bounds op
     := (fun rv (rop : Expr (reify_type_of op)) Hrop
         => @Pipeline.BoundsPipeline_correct_trans
-             (*false*) false None
+             (*false*) false None I
              relax_zrange
              (relax_zrange_gen_good _)
              _
@@ -3513,16 +3674,18 @@ Module BarrettReduction.
   Strategy -10 [barrett_reduce reduce].
 
   Derive barrett_red_gen
-         SuchThat (forall (k M muLow : Z)
-                          (n nout: nat)
-                          (xLow xHigh : Z),
-                      Interp (t:=reify_type_of barrett_reduce)
-                             barrett_red_gen k M muLow n nout xLow xHigh
-                      = barrett_reduce k M muLow n nout xLow xHigh)
+         SuchThat ((forall (k M muLow : Z)
+                           (n nout: nat)
+                           (xLow xHigh : Z),
+                       Interp (t:=reify_type_of barrett_reduce)
+                              barrett_red_gen k M muLow n nout xLow xHigh
+                       = barrett_reduce k M muLow n nout xLow xHigh)
+                   /\ Wf barrett_red_gen)
          As barrett_red_gen_correct.
   Proof. Time cache_reify (). Time Qed. (* Now only takes ~5-10 s, because we set up [Strategy] commands correctly *)
   Module Export ReifyHints.
-    Global Hint Extern 1 (_ = barrett_reduce _ _ _ _ _ _ _) => simple apply barrett_red_gen_correct : reify_gen_cache.
+    Global Hint Extern 1 (_ = barrett_reduce _ _ _ _ _ _ _) => simple apply (proj1 barrett_red_gen_correct) : reify_gen_cache.
+    Hint Immediate (proj2 barrett_red_gen_correct) : wf_gen_cache.
   End ReifyHints.
 
   Section rbarrett_red.
@@ -3574,10 +3737,24 @@ Module BarrettReduction.
       := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
                   Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list |}).
 
+    Lemma fancy_args_good
+      : match fancy_args with
+        | Some {| Pipeline.invert_low := il ; Pipeline.invert_high := ih |}
+          => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+            /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
+        | None => True
+        end.
+    Proof.
+      cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
+        split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
+    Qed.
+
     Notation BoundsPipeline_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               false (* subst01 *) fancy_args
+               false (* subst01 *)
+               fancy_args
+               fancy_args_good
                relax_zrange
                relax_zrange_good
                _
@@ -3695,17 +3872,19 @@ Module MontgomeryReduction.
   End MontRed'.
 
   Derive montred_gen
-         SuchThat (forall (N R N' : Z)
-                          (Zlog2R : Z)
-                          (n nout: nat)
-                          (lo_hi : Z * Z),
-                      Interp (t:=reify_type_of montred')
-                             montred_gen N R N' Zlog2R n nout lo_hi
-                      = montred' N R N' Zlog2R n nout lo_hi)
+         SuchThat ((forall (N R N' : Z)
+                           (Zlog2R : Z)
+                           (n nout: nat)
+                           (lo_hi : Z * Z),
+                       Interp (t:=reify_type_of montred')
+                              montred_gen N R N' Zlog2R n nout lo_hi
+                       = montred' N R N' Zlog2R n nout lo_hi)
+                   /\ Wf montred_gen)
          As montred_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Module Export ReifyHints.
-    Global Hint Extern 1 (_ = montred' _ _ _ _ _ _ _) => simple apply montred_gen_correct : reify_gen_cache.
+    Global Hint Extern 1 (_ = montred' _ _ _ _ _ _ _) => simple apply (proj1 montred_gen_correct) : reify_gen_cache.
+    Hint Immediate (proj2 montred_gen_correct) : wf_gen_cache.
   End ReifyHints.
 
   Section rmontred.
@@ -3729,10 +3908,24 @@ Module MontgomeryReduction.
       := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
                   Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list |}).
 
+    Lemma fancy_args_good
+      : match fancy_args with
+        | Some {| Pipeline.invert_low := il ; Pipeline.invert_high := ih |}
+          => (forall s v v' : Z, il s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+            /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
+        | None => True
+        end.
+    Proof.
+      cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
+        split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
+    Qed.
+
     Notation BoundsPipeline_correct in_bounds out_bounds op
       := (fun rv (rop : Expr (reify_type_of op)) Hrop
           => @Pipeline.BoundsPipeline_correct_trans
-               false (* subst01 *) fancy_args
+               false (* subst01 *)
+               fancy_args
+               fancy_args_good
                relax_zrange
                (relax_zrange_gen_good _)
                _
