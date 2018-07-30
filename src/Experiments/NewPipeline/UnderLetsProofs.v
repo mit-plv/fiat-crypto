@@ -176,6 +176,23 @@ Module Compilers.
         Proof.
           intro Hwf; induction Hwf; cbn [to_expr]; [ assumption | constructor; auto ].
         Qed.
+
+        Lemma wf_splice {A1 B1 A2 B2}
+              {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
+              {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
+              G
+              (x1 : @UnderLets var1 A1) (x2 : @UnderLets var2 A2) (Hx : @wf _ _ P G x1 x2)
+              (e1 : A1 -> @UnderLets var1 B1) (e2 : A2 -> @UnderLets var2 B2)
+              (He : forall G' a1 a2, (exists seg, G' = seg ++ G) -> P G' a1 a2 -> @wf _ _ Q G' (e1 a1) (e2 a2))
+          : @wf _ _ Q G (splice x1 e1) (splice x2 e2).
+        Proof.
+          induction Hx; cbn [splice]; [ | constructor ];
+            eauto using (ex_intro _ nil); intros.
+          match goal with H : _ |- _ => eapply H end;
+            intros; destruct_head'_ex; subst.
+          rewrite ListUtil.app_cons_app_app in *.
+          eauto using (ex_intro _ nil).
+        Qed.
       End with_var.
     End with_ident.
 
