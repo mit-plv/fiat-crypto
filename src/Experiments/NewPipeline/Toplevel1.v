@@ -788,7 +788,7 @@ Module Pipeline.
                        | None => True
                        end)
     : forall arg1 arg2
-             (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+             (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
       ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
       /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
@@ -832,7 +832,7 @@ Module Pipeline.
              (InterpE : type.interp base.interp t)
              (rv : Expr t)
     := forall arg1 arg2
-              (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+              (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
       ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
       /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
@@ -858,7 +858,7 @@ Module Pipeline.
         (InterpE : type.interp base.interp t)
         (InterpE_correct_and_Wf
          : (forall arg1 arg2
-                   (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+                   (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
                    (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
                type.app_curried (Interp e) arg1 = type.app_curried InterpE arg2)
            /\ Wf e)

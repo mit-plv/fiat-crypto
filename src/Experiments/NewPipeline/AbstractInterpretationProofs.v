@@ -51,7 +51,7 @@ Module Compilers.
         (Hwf : Wf E)
         (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : forall arg1 arg2
-        (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+        (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
         (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg1 = true),
       type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds E b_in)) arg1 = type.app_curried (Interp E) arg2.
   Proof.
@@ -70,7 +70,7 @@ Module Compilers.
           (b_out : ZRange.type.base.option.interp (type.final_codomain t))
           rv (Hrv : CheckedPartialEvaluateWithBounds relax_zrange E b_in b_out = inl rv)
     : forall arg1 arg2
-             (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv _ _) arg1 arg2)
+             (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg1 = true),
       ZRange.type.base.option.is_bounded_by b_out (type.app_curried (Interp rv) arg1) = true
       /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1

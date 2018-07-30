@@ -104,11 +104,14 @@ Module Compilers.
          | arrow s d => @interp _ base_interp s -> @interp _ base_interp d
          end.
 
-    Fixpoint eqv {base_type} {base_interp : base_type -> Type} {t : type base_type} : relation (interp base_interp t)
+    Fixpoint related {base_type} {base_interp : base_type -> Type} (R : forall t, relation (base_interp t)) {t : type base_type}
+      : relation (interp base_interp t)
       := match t with
-         | base t => @eq (base_interp t)
-         | arrow s d => @eqv _ base_interp s ==> @eqv _ base_interp d
+         | base t => R t
+         | arrow s d => @related _ _ R s ==> @related _ _ R d
          end%signature.
+
+    Notation eqv := (@related _ _ (fun _ => eq)).
 
     Fixpoint app_curried {base_type} {f : base_type -> Type} {t : type base_type}
       : interp f t -> for_each_lhs_of_arrow (interp f) t -> f (final_codomain t)

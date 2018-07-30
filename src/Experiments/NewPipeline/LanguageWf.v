@@ -33,7 +33,7 @@ Module Compilers.
   Module type.
     Section eqv.
       Context {base_type} {interp_base_type : base_type -> Type}.
-      Local Notation eqv := (@type.eqv base_type interp_base_type).
+      Local Notation eqv := (@type.related base_type interp_base_type (fun _ => eq)).
 
       Global Instance eqv_Symmetric {t} : Symmetric (@eqv t) | 10.
       Proof. induction t; cbn [type.eqv type.interp] in *; repeat intro; eauto. Qed.
@@ -62,7 +62,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 >>
 *)
       Lemma app_curried_Proper {t}
-        : Proper (@type.eqv base_type base_interp t ==> type.and_for_each_lhs_of_arrow (@type.eqv _ _) ==> eq)
+        : Proper (@type.related base_type base_interp (fun _ => eq) t ==> type.and_for_each_lhs_of_arrow (@type.eqv) ==> eq)
                  (@type.app_curried base_type base_interp t).
       Proof.
         cbv [Proper respectful]; induction t; cbn [type.eqv type.app_curried]; cbv [Proper respectful]; [ intros; subst; reflexivity | ].
