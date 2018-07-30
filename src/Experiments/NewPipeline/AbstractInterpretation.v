@@ -695,7 +695,7 @@ Module Compilers.
            end
       with thunk_abstract_domain {t} : abstract_domain t -> lazy_abstract_domain t
            := match t with
-              | type.base t => fun st 'tt => st
+              | type.base t => fun st (_ : unit) => st
               | type.arrow s d
                 => fun f x => @thunk_abstract_domain d (f (@force_abstract_domain s x))
               end.
