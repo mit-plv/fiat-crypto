@@ -4,11 +4,13 @@ Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.LanguageInversion.
 Require Import Crypto.Experiments.NewPipeline.LanguageWf.
 Require Import Crypto.Experiments.NewPipeline.UnderLets.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Option.
 Import ListNotations. Local Open Scope list_scope.
 
 Import EqNotations.
@@ -169,6 +171,29 @@ Module Compilers.
             -> (forall v1 v2, wf (existT _ A (v1, v2) :: G) (f1 v1) (f2 v2))
             -> wf G (UnderLet x1 f1) (UnderLet x2 f2).
         Global Arguments wf {T1 T2} P _ _ _.
+
+        Lemma wf_Proper_list {T1 T2}
+              {P : list { t : type & var1 t * var2 t }%type -> T1 -> T2 -> Prop}
+              (HP : forall G1 G2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                  -> forall v1 v2, P G1 v1 v2 -> P G2 v1 v2)
+              G1 G2
+              (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+              e1 e2
+              (Hwf : @wf T1 T2 P G1 e1 e2)
+          : @wf T1 T2 P G2 e1 e2.
+        Proof.
+          revert dependent G2; induction Hwf; constructor;
+            repeat first [ progress cbn in *
+                         | progress intros
+                         | solve [ eauto ]
+                         | progress subst
+                         | progress destruct_head'_or
+                         | progress inversion_sigma
+                         | progress inversion_prod
+                         | match goal with H : _ |- _ => apply H; clear H end
+                         | wf_unsafe_t_step ].
+        Qed.
 
         Lemma wf_to_expr {t} (x : @UnderLets var1 (@expr var1 t)) (y : @UnderLets var2 (@expr var2 t))
               G
