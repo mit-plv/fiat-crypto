@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Lists.SetoidList.
 Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.LanguageInversion.
 Require Import Crypto.Experiments.NewPipeline.LanguageWf.
@@ -172,16 +173,16 @@ Module Compilers.
             -> wf G (UnderLet x1 f1) (UnderLet x2 f2).
         Global Arguments wf {T1 T2} P _ _ _.
 
-        Lemma wf_Proper_list {T1 T2}
-              {P : list { t : type & var1 t * var2 t }%type -> T1 -> T2 -> Prop}
+        Lemma wf_Proper_list_impl {T1 T2}
+              (P1 P2 : list { t : type & var1 t * var2 t }%type -> T1 -> T2 -> Prop)
               (HP : forall G1 G2,
                   (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
-                  -> forall v1 v2, P G1 v1 v2 -> P G2 v1 v2)
+                  -> forall v1 v2, P1 G1 v1 v2 -> P2 G2 v1 v2)
               G1 G2
               (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
               e1 e2
-              (Hwf : @wf T1 T2 P G1 e1 e2)
-          : @wf T1 T2 P G2 e1 e2.
+              (Hwf : @wf T1 T2 P1 G1 e1 e2)
+          : @wf T1 T2 P2 G2 e1 e2.
         Proof.
           revert dependent G2; induction Hwf; constructor;
             repeat first [ progress cbn in *
@@ -194,6 +195,18 @@ Module Compilers.
                          | match goal with H : _ |- _ => apply H; clear H end
                          | wf_unsafe_t_step ].
         Qed.
+
+        Lemma wf_Proper_list {T1 T2}
+              {P : list { t : type & var1 t * var2 t }%type -> T1 -> T2 -> Prop}
+              (HP : forall G1 G2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                  -> forall v1 v2, P G1 v1 v2 -> P G2 v1 v2)
+              G1 G2
+              (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+              e1 e2
+              (Hwf : @wf T1 T2 P G1 e1 e2)
+          : @wf T1 T2 P G2 e1 e2.
+        Proof. eapply wf_Proper_list_impl; eassumption. Qed.
 
         Lemma wf_to_expr {t} (x : @UnderLets var1 (@expr var1 t)) (y : @UnderLets var2 (@expr var2 t))
               G
@@ -210,6 +223,25 @@ Module Compilers.
               (e1 : A1 -> @UnderLets var1 B1) (e2 : A2 -> @UnderLets var2 B2)
               (He : forall G' a1 a2, (exists seg, G' = seg ++ G) -> P G' a1 a2 -> @wf _ _ Q G' (e1 a1) (e2 a2))
           : @wf _ _ Q G (splice x1 e1) (splice x2 e2).
+        Proof.
+          induction Hx; cbn [splice]; [ | constructor ];
+            eauto using (ex_intro _ nil); intros.
+          match goal with H : _ |- _ => eapply H end;
+            intros; destruct_head'_ex; subst.
+          rewrite ListUtil.app_cons_app_app in *.
+          eauto using (ex_intro _ nil).
+        Qed.
+
+        Lemma wf_splice_list {A1 B1 A2 B2}
+              {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
+              {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
+              G
+              (x1 : list (@UnderLets var1 A1)) (x2 : list (@UnderLets var2 A2))
+              (Hx_len : length x1 = length x2)
+              (Hx : forall v1 v2, List.In (v1, v2) (List.combine x1 x2) -> @wf _ _ P G v1 v2)
+              (e1 : list A1 -> @UnderLets var1 B1) (e2 : list A2 -> @UnderLets var2 B2)
+              (He : forall G' a1 a2, (exists seg, G' = seg ++ G) -> P G' a1 a2 -> @wf _ _ Q G' (e1 a1) (e2 a2))
+          : @wf _ _ Q G (splice_list x1 e1) (splice_list x2 e2).
         Proof.
           induction Hx; cbn [splice]; [ | constructor ];
             eauto using (ex_intro _ nil); intros.
