@@ -232,6 +232,7 @@ Module Compilers.
           eauto using (ex_intro _ nil).
         Qed.
 
+        (*
         Lemma wf_splice_list {A1 B1 A2 B2}
               {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
               {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
@@ -250,6 +251,7 @@ Module Compilers.
           rewrite ListUtil.app_cons_app_app in *.
           eauto using (ex_intro _ nil).
         Qed.
+         *)
       End with_var.
     End with_ident.
 
