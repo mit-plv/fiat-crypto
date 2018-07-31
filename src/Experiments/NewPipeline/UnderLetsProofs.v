@@ -175,10 +175,8 @@ Module Compilers.
 
         Lemma wf_Proper_list_impl {T1 T2}
               (P1 P2 : list { t : type & var1 t * var2 t }%type -> T1 -> T2 -> Prop)
-              (HP : forall G1 G2,
-                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
-                  -> forall v1 v2, P1 G1 v1 v2 -> P2 G2 v1 v2)
               G1 G2
+              (HP : forall seg v1 v2, P1 (seg ++ G1) v1 v2 -> P2 (seg ++ G2) v1 v2)
               (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
               e1 e2
               (Hwf : @wf T1 T2 P1 G1 e1 e2)
@@ -193,7 +191,9 @@ Module Compilers.
                          | progress inversion_sigma
                          | progress inversion_prod
                          | match goal with H : _ |- _ => apply H; clear H end
-                         | wf_unsafe_t_step ].
+                         | wf_unsafe_t_step
+                         | eapply (HP nil)
+                         | rewrite ListUtil.app_cons_app_app in * ].
         Qed.
 
         Lemma wf_Proper_list {T1 T2}
@@ -206,7 +206,11 @@ Module Compilers.
               e1 e2
               (Hwf : @wf T1 T2 P G1 e1 e2)
           : @wf T1 T2 P G2 e1 e2.
-        Proof. eapply wf_Proper_list_impl; eassumption. Qed.
+        Proof.
+          eapply wf_Proper_list_impl; [ intros | | eassumption ]; eauto.
+          eapply HP; [ | eassumption ]; intros *.
+          rewrite !in_app_iff; intuition eauto.
+        Qed.
 
         Lemma wf_to_expr {t} (x : @UnderLets var1 (@expr var1 t)) (y : @UnderLets var2 (@expr var2 t))
               G
