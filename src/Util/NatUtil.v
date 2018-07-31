@@ -1,6 +1,7 @@
 Require Coq.Logic.Eqdep_dec.
 Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.micromega.Lia.
 Import Nat.
 
@@ -68,10 +69,10 @@ Qed.
 Global Instance nat_rect_Proper_nondep {P} : Proper (Logic.eq ==> pointwise_relation _ (pointwise_relation _ Logic.eq) ==> Logic.eq ==> Logic.eq) (@nat_rect (fun _ => P)).
 Proof. repeat intro; subst; apply (@nat_rect_Proper (fun _ => P)); eauto. Qed.
 
-Global Instance nat_rect_Proper_nondep_gen {P} (R : relation P) : Proper (R ==> (eq ==> R ==> R) ==> Logic.eq ==> R) (@nat_rect (fun _ => P)) | 100.
+Global Instance nat_rect_Proper_nondep_gen {P} (R : relation P) : Proper (R ==> (Logic.eq ==> R ==> R) ==> Logic.eq ==> R) (@nat_rect (fun _ => P)) | 100.
 Proof.
   cbv [forall_relation respectful]; intros O_case O_case' HO S_case S_case' HS n n' ?; subst n'; revert O_case O_case' HO.
-  induction n as [|n IHn]; cbn [nat_rect]; intros; rewrite ?IHn, ?HS; auto.
+  induction n as [|n IHn]; cbn [nat_rect]; intros; eauto.
 Qed.
 
 Lemma nat_eq_dec_S x y
