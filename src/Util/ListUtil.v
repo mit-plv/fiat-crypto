@@ -2102,3 +2102,13 @@ Lemma fold_right_push A (x y : A) (f : A -> A -> A)
 Proof.
   rewrite <- (rev_involutive ls), !fold_left_rev_right, fold_left_push with (f:=fun x y => f y x); auto.
 Qed.
+
+Lemma nth_error_combine {A B} n (ls1 : list A) (ls2 : list B)
+  : nth_error (combine ls1 ls2) n = match nth_error ls1 n, nth_error ls2 n with
+                                    | Some v1, Some v2 => Some (v1, v2)
+                                    | _, _ => None
+                                    end.
+Proof.
+  revert ls2 n; induction ls1 as [|l1 ls1 IHls1], ls2, n; cbn [combine nth_error]; try reflexivity; auto.
+  edestruct nth_error; reflexivity.
+Qed.
