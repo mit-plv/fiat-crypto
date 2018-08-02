@@ -249,6 +249,7 @@ src/Experiments/NewPipeline/CLI.v
 src/Experiments/NewPipeline/CStringification.v
 src/Experiments/NewPipeline/CompilersTestCases.v
 src/Experiments/NewPipeline/GENERATEDIdentifiersWithoutTypes.v
+src/Experiments/NewPipeline/GENERATEDIdentifiersWithoutTypesProofs.v
 src/Experiments/NewPipeline/Language.v
 src/Experiments/NewPipeline/LanguageInversion.v
 src/Experiments/NewPipeline/LanguageWf.v
