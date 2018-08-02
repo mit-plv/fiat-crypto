@@ -502,7 +502,8 @@ Module Compilers.
         Definition rewrite_rulesT
           := (list rewrite_ruleT).
 
-        Definition ERROR_BAD_REWRITE_RULE {t} (pat : pattern) (value : expr t) : expr t. exact value. Qed.
+        Definition ERROR_BAD_REWRITE_RULE {t} (pat : pattern) (value : expr t) : expr t := value.
+        Global Opaque ERROR_BAD_REWRITE_RULE.
 
         Definition eval_rewrite_rules
                    (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
