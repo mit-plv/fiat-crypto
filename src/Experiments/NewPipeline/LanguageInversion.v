@@ -327,7 +327,7 @@ Module Compilers.
            end.
 
   Ltac rewrite_type_transport_correct :=
-    cbv [type.try_transport_cps type.try_transport base.try_transport] in *;
+    cbv [type.try_transport_cps type.try_transport base.try_transport base.try_transport_cps] in *;
     cbn [type.try_make_transport_cps] in *;
     cbv [cpscall cpsbind cps_option_bind cpsreturn id] in *;
     repeat match goal with
