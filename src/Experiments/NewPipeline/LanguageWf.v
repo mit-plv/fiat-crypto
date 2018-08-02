@@ -555,6 +555,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           | progress inversion_prod
           | progress destruct_head'_sig
           | progress destruct_head'_and
+          | progress destruct_head' False
           | progress cbn [List.In eq_rect] in *
           | match goal with
             | [ |- expr.wf _ _ _ ] => constructor
