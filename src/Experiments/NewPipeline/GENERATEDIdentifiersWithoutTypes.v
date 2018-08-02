@@ -9,6 +9,7 @@ Module Compilers.
   Module pattern.
     Module ident.
       Set Boolean Equality Schemes.
+      Set Decidable Equality Schemes.
       (*
       Set Printing Coercions.
       Redirect "/tmp/pr" Print Compilers.ident.ident.
@@ -706,6 +707,7 @@ Module Compilers.
   Module pattern.
     Module ident.
       Set Boolean Equality Schemes.
+      Set Decidable Equality Schemes.
       (""" + """*
       Set Printing Coercions.
       Redirect "/tmp/pr" Print Compilers.ident.ident.
