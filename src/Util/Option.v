@@ -34,7 +34,7 @@ End Notations.
 Local Open Scope option_scope.
 
 Section Relations.
-  Definition option_eq {A} eq (x y : option A) :=
+  Definition option_eq {A B} eq (x : option A) (y : option B) :=
     match x with
     | None    => y = None
     | Some ax => match y with
@@ -47,16 +47,26 @@ Section Relations.
     cbv; repeat (break_match || intro || intuition congruence ||
                  solve [ apply reflexivity
                        | apply symmetry; eassumption
-                       | eapply transitivity; eassumption ] ).
+                       | eapply transitivity; eassumption
+                       | eauto ] ).
 
   Global Instance Reflexive_option_eq {T} {R} {Reflexive_R:@Reflexive T R}
-    : Reflexive (option_eq R). Proof. t. Qed.
+    : Reflexive (option_eq R) | 1. Proof. t. Qed.
+
+  Lemma option_eq_sym {A B} {R1 R2 : _ -> _ -> Prop} (HR : forall v1 v2, R1 v1 v2 -> R2 v2 v1)
+    : forall v1 v2, @option_eq A B R1 v1 v2 -> option_eq R2 v2 v1.
+  Proof. t. Qed.
+
+  Lemma option_eq_trans {A B C} {R1 R2 R3 : _ -> _ -> Prop}
+        (HR : forall v1 v2 v3, R1 v1 v2 -> R2 v2 v3 -> R3 v1 v3)
+    : forall v1 v2 v3, @option_eq A B R1 v1 v2 -> @option_eq B C R2 v2 v3 -> @option_eq A C R3 v1 v3.
+  Proof. t. Qed.
 
   Global Instance Transitive_option_eq {T} {R} {Transitive_R:@Transitive T R}
-    : Transitive (option_eq R). Proof. t. Qed.
+    : Transitive (option_eq R) | 1 := option_eq_trans Transitive_R.
 
   Global Instance Symmetric_option_eq {T} {R} {Symmetric_R:@Symmetric T R}
-    : Symmetric (option_eq R). Proof. t. Qed.
+    : Symmetric (option_eq R) | 1 := option_eq_sym Symmetric_R.
 
   Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
     : Equivalence (option_eq R). Proof. split; exact _. Qed.
