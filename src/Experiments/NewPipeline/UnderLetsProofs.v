@@ -236,26 +236,81 @@ Module Compilers.
           eauto using (ex_intro _ nil).
         Qed.
 
-        (*
         Lemma wf_splice_list {A1 B1 A2 B2}
-              {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
+              {P_parts : nat -> list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
+              {P : list { t : type & var1 t * var2 t }%type -> list A1 -> list A2 -> Prop}
               {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
               G
               (x1 : list (@UnderLets var1 A1)) (x2 : list (@UnderLets var2 A2))
+              (P_parts_Proper_list : forall n G1 G2 a1 a2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                  -> P_parts n G1 a1 a2 -> P_parts n G2 a1 a2)
+              (HP : forall G' l1 l2,
+                  (exists seg, G' = seg ++ G) -> length l1 = length x1 -> length l2 = length x2
+                  -> (forall n v1 v2, nth_error l1 n = Some v1 -> nth_error l2 n = Some v2 -> P_parts n G' v1 v2)
+                  -> P G' l1 l2)
               (Hx_len : length x1 = length x2)
-              (Hx : forall v1 v2, List.In (v1, v2) (List.combine x1 x2) -> @wf _ _ P G v1 v2)
+              (Hx : forall n v1 v2, nth_error x1 n = Some v1 -> nth_error x2 n = Some v2 ->@wf _ _ (P_parts n) G v1 v2)
               (e1 : list A1 -> @UnderLets var1 B1) (e2 : list A2 -> @UnderLets var2 B2)
               (He : forall G' a1 a2, (exists seg, G' = seg ++ G) -> P G' a1 a2 -> @wf _ _ Q G' (e1 a1) (e2 a2))
           : @wf _ _ Q G (splice_list x1 e1) (splice_list x2 e2).
         Proof.
-          induction Hx; cbn [splice]; [ | constructor ];
-            eauto using (ex_intro _ nil); intros.
-          match goal with H : _ |- _ => eapply H end;
-            intros; destruct_head'_ex; subst.
-          rewrite ListUtil.app_cons_app_app in *.
-          eauto using (ex_intro _ nil).
+          revert dependent P; revert dependent P_parts; revert dependent G; revert dependent e1; revert dependent e2; revert dependent x2;
+            induction x1 as [|x1 xs1 IHx1], x2 as [|x2 xs2];
+            cbn [splice_list length nth_error]; intros; try congruence.
+          { eapply He; [ exists nil; reflexivity | eapply HP; eauto using (ex_intro _ nil) ].
+            intros []; cbn [nth_error]; intros; congruence. }
+          { inversion Hx_len; clear Hx_len.
+            pose proof (fun n => Hx (S n)) as Hxs.
+            specialize (Hx O).
+            cbn [nth_error] in *.
+            eapply wf_splice; [ eapply Hx; reflexivity | wf_safe_t ].
+            destruct_head'_ex; subst.
+            lazymatch goal with
+            | [ |- wf _ _ (splice_list _ (fun _ => ?e1 (?a1 :: _))) (splice_list _ (fun _ => ?e2 (?a2 :: _))) ]
+              => eapply IHx1 with (P_parts:=fun n => P_parts (S n)) (P:=fun G' l1 l2 => P G' (a1::l1) (a2::l2))
+            end; wf_safe_t; destruct_head'_ex; wf_safe_t.
+            { eapply wf_Proper_list; [ | | eapply Hxs ]; wf_t. }
+            { eapply HP; cbn [length]; rewrite ?app_assoc; eauto; [].
+              intros []; cbn [nth_error]; wf_safe_t; inversion_option; wf_safe_t.
+              { eapply P_parts_Proper_list; [ | eauto ]; wf_t. }
+              { eapply P_parts_Proper_list; [ | eauto ]; wf_t. } }
+            { eapply He; eauto; rewrite ?app_assoc; eauto. } }
         Qed.
-         *)
+
+        Lemma wf_splice_list_no_order {A1 B1 A2 B2}
+              {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
+              {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
+              G
+              (x1 : list (@UnderLets var1 A1)) (x2 : list (@UnderLets var2 A2))
+              (P_Proper_list : forall G1 G2 a1 a2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                  -> P G1 a1 a2 -> P G2 a1 a2)
+              (Hx_len : length x1 = length x2)
+              (Hx : forall n v1 v2, nth_error x1 n = Some v1 -> nth_error x2 n = Some v2 ->@wf _ _ P G v1 v2)
+              (e1 : list A1 -> @UnderLets var1 B1) (e2 : list A2 -> @UnderLets var2 B2)
+              (He : forall G' a1 a2, (exists seg, G' = seg ++ G)
+                                     -> length a1 = length x1
+                                     -> length a2 = length x2
+                                     -> (forall v1 v2, List.In (v1, v2) (combine a1 a2) -> P G' v1 v2)
+                                     -> @wf _ _ Q G' (e1 a1) (e2 a2))
+          : @wf _ _ Q G (splice_list x1 e1) (splice_list x2 e2).
+        Proof.
+          apply @wf_splice_list
+            with (P_parts := fun _ => P)
+                 (P:=fun G' l1 l2 => length l1 = length x1 /\ length l2 = length x2
+                                     /\ forall v1 v2, List.In (v1, v2) (combine l1 l2) -> P G' v1 v2);
+            repeat first [ progress wf_safe_t
+                         | apply conj
+                         | progress inversion_option
+                         | progress destruct_head'_ex
+                         | progress break_innermost_match_hyps
+                         | match goal with
+                           | [ H : In _ (combine _ _) |- _ ] => apply ListUtil.In_nth_error_value in H
+                           | [ H : context[nth_error (combine _ _) _] |- _ ]
+                             => rewrite ListUtil.nth_error_combine in H
+                           end ].
+        Qed.
       End with_var.
     End with_ident.
 
