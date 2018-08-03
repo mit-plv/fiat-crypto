@@ -558,6 +558,10 @@ Module Compilers.
         apply reflect_list_cps'_id_cons_body; assumption.
       Qed.
 
+      Lemma reflect_list_cps_id {t} {e : expr (base.type.list t)}
+        : forall T k, @invert_expr.reflect_list_cps _ _ e T k = k (invert_expr.reflect_list e).
+      Proof. exact (@reflect_list_cps'_id _ e). Qed.
+
       Lemma reflect_list_step {t} {e : expr (base.type.list t)}
         : invert_expr.reflect_list e
           = match invert_expr.invert_nil e, invert_expr.invert_cons e with
