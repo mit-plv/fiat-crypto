@@ -25,20 +25,20 @@ Ltac make_parameterized_sig t :=
   repeat autorewrite with pattern_runtime;
   reflexivity.
 
-Notation parameterize_sig t := ltac:(let v := t in make_parameterized_sig v) (only parsing).
+Notation parameterize_sig t := ltac:(let v := constr:(t) in make_parameterized_sig v) (only parsing).
 
 Ltac make_parameterized_from_sig t_sig :=
   let t := (eval cbv [proj1_sig t_sig] in (proj1_sig t_sig)) in
   let t := pattern_strip t in
   exact t.
 
-Notation parameterize_from_sig t := ltac:(let v := t in make_parameterized_from_sig v) (only parsing).
+Notation parameterize_from_sig t := ltac:(let v := constr:(t) in make_parameterized_from_sig v) (only parsing).
 
 Ltac make_parameterized_eq t t_sig :=
   let t := apply_patterned t in
   exact (proj2_sig t_sig : t = _).
 
-Notation parameterize_eq t t_sig := ltac:(let v := t in let v_sig := t_sig in make_parameterized_eq v v_sig) (only parsing).
+Notation parameterize_eq t t_sig := ltac:(let v := constr:(t) in let v_sig := t_sig in make_parameterized_eq v v_sig) (only parsing).
 
 Ltac basesystem_partial_evaluation_RHS_fast :=
   repeat autorewrite with pattern_runtime;
