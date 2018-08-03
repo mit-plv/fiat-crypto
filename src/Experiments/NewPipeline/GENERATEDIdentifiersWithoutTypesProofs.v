@@ -72,7 +72,7 @@ Module Compilers.
         { destruct idc1, idc2; try reflexivity; solve [ inversion pf ]. }
       Qed.
 
-      Global Instance eq_ident_Decidable : DecidableRel (@eq pattern.ident) := pattern.ident.ident_eq_dec.
+      Global Instance eq_ident_Decidable : DecidableRel (@eq pattern.ident.ident) := pattern.ident.ident_eq_dec.
     End ident.
   End pattern.
 End Compilers.
