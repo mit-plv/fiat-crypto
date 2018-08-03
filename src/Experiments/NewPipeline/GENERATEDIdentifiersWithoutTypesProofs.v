@@ -3,6 +3,7 @@ Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.GENERATEDIdentifiersWithoutTypes.
 
@@ -70,6 +71,8 @@ Module Compilers.
           destruct idc1; reflexivity. }
         { destruct idc1, idc2; try reflexivity; solve [ inversion pf ]. }
       Qed.
+
+      Global Instance eq_ident_Decidable : DecidableRel (@eq pattern.ident) := pattern.ident.ident_eq_dec.
     End ident.
   End pattern.
 End Compilers.
