@@ -608,8 +608,36 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
   Ltac interp_t := repeat interp_t_step.
 
 
-
   Import defaults.
+  Module DefaultValue.
+    Import Language.Compilers.DefaultValue.
+    Module expr.
+      Module base.
+        Section with_var2.
+          Context {var1 var2 : type -> Type}.
+
+          Lemma wf_default G {t : base.type} : expr.wf G (@expr.base.default var1 t) (@expr.base.default var2 t).
+          Proof.
+            induction t; destruct_head' base.type.base; wf_t.
+          Qed.
+        End with_var2.
+
+        Lemma Wf_Default {t : base.type} : Wf (@expr.base.Default t).
+        Proof. repeat intro; apply @wf_default. Qed.
+      End base.
+
+      Section with_var2.
+        Context {var1 var2 : type -> Type}.
+
+        Lemma wf_default G {t : type} : expr.wf G (@expr.default var1 t) (@expr.default var2 t).
+        Proof. revert G; induction t; intros; wf_t; apply base.wf_default. Qed.
+      End with_var2.
+
+      Lemma Wf_Default {t : type} : Wf (@expr.Default t).
+      Proof. repeat intro; apply @wf_default. Qed.
+    End expr.
+  End DefaultValue.
+
   Module GeneralizeVar.
     Import Language.Compilers.GeneralizeVar.
     Local Open Scope etype_scope.
