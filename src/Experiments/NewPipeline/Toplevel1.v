@@ -767,6 +767,11 @@ Module Pipeline.
                  | break_innermost_match_step
                  | solve [ auto 100 with wf ] ].
 
+  Class bounds_goodT {t} bounds
+    := bounds_good :
+         Proper (type.and_for_each_lhs_of_arrow (t:=t) (@partial.abstract_domain_R base.type ZRange.type.base.option.interp (fun _ => eq)))
+                bounds.
+
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -778,6 +783,7 @@ Module Pipeline.
              (e : Expr t)
              arg_bounds
              out_bounds
+             {arg_bounds_good : bounds_goodT arg_bounds}
              rv
              (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 translate_to_fancy relax_zrange e arg_bounds out_bounds = Success rv)
              (Hwf : Wf e)
@@ -787,14 +793,15 @@ Module Pipeline.
                            /\ (forall s v v' : Z, ih s v = Some v' -> v = Z.shiftr v' (s/2))
                        | None => True
                        end)
-    : forall arg1 arg2
-             (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
-             (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
-      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
-      /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
-                                       = type.app_curried (Interp e) arg2.
+    : (forall arg1 arg2
+              (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
+              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+          ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
+          /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
+                                           = type.app_curried (Interp e) arg2)
+      /\ Wf rv.
   Proof.
-    cbv [BoundsPipeline Let_In] in *;
+    cbv [BoundsPipeline Let_In bounds_goodT] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
                => destruct x eqn:?; cbv beta iota in H; [ | destruct_head'_prod; congruence ];
@@ -807,18 +814,19 @@ Module Pipeline.
           => let H' := fresh in
              pose proof H as H';
                eapply CheckedPartialEvaluateWithBounds_Correct in H';
-               [ destruct H' as [H0 H1] | .. ]
+               [ destruct H' as [H01 Hwf'] | .. ]
         end;
         [
         | match goal with
           | [ |- Wf _ ] => idtac
           | _ => eassumption || reflexivity
           end.. ].
-      { subst.
+      { subst; split; [ | assumption ].
+        split_and.
         split; [ solve [ eauto with nocore ] | ].
-        { intros; rewrite H1; clear H1.
+        { intros; match goal with H : _ |- _ => erewrite H; clear H end; eauto.
           transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1).
-          { apply type.app_curried_Proper; [ | symmetry; assumption ].
+          { apply type.app_curried_Proper; [ | symmetry; eassumption ].
             clear dependent arg1; clear dependent arg2; clear dependent out_bounds.
             wf_interp_t. }
           { apply Interp_PartialEvaluateWithListInfoFromBounds; auto. } } }
@@ -831,12 +839,13 @@ Module Pipeline.
              out_bounds
              (InterpE : type.interp base.interp t)
              (rv : Expr t)
-    := forall arg1 arg2
-              (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
-              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
-      ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
-      /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
-                                       = type.app_curried InterpE arg2.
+    := (forall arg1 arg2
+               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
+               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+           ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
+           /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
+                                            = type.app_curried InterpE arg2)
+       /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
         (with_dead_code_elimination : bool := true)
@@ -855,6 +864,7 @@ Module Pipeline.
         {t}
         (e : Expr t)
         arg_bounds out_bounds
+        {arg_bounds_good : bounds_goodT arg_bounds}
         (InterpE : type.interp base.interp t)
         (InterpE_correct_and_Wf
          : (forall arg1 arg2
@@ -867,14 +877,35 @@ Module Pipeline.
     : BoundsPipeline_correct_transT arg_bounds out_bounds InterpE rv.
   Proof.
     destruct InterpE_correct_and_Wf as [InterpE_correct Hwf].
-    intros arg1 arg2 Harg12 Harg1; erewrite <- InterpE_correct; [ eapply @BoundsPipeline_correct | .. ];
+    split; [ intros arg1 arg2 Harg12 Harg1; erewrite <- InterpE_correct | ]; try eapply @BoundsPipeline_correct;
       lazymatch goal with
       | [ |- type.andb_bool_for_each_lhs_of_arrow _ _ _ = true ] => eassumption
       | _ => try assumption
       end; try eassumption.
     etransitivity; try eassumption; symmetry; assumption.
   Qed.
+
+  Ltac solve_bounds_good :=
+    repeat first [ progress cbv [bounds_goodT Proper partial.abstract_domain_R type_base] in *
+                 | progress cbn [type.and_for_each_lhs_of_arrow type.for_each_lhs_of_arrow partial.abstract_domain type.interp ZRange.type.base.option.interp type.related] in *
+                 | exact I
+                 | apply conj
+                 | exact eq_refl ].
+
+  Global Instance bounds0_good {t : base.type} {bounds} : @bounds_goodT t bounds.
+  Proof. solve_bounds_good. Qed.
+
+  Global Instance bounds1_good {s d : base.type} {bounds} : @bounds_goodT (s -> d) bounds.
+  Proof. solve_bounds_good. Qed.
+
+  Global Instance bounds2_good {a b D : base.type} {bounds} : @bounds_goodT (a -> b -> D) bounds.
+  Proof. solve_bounds_good. Qed.
+
+  Global Instance bounds3_good {a b c D : base.type} {bounds} : @bounds_goodT (a -> b -> c -> D) bounds.
+  Proof. solve_bounds_good. Qed.
 End Pipeline.
+
+Hint Extern 1 (@Pipeline.bounds_goodT _ _) => solve [ Pipeline.solve_bounds_good ] : typeclass_instances.
 
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
   := List.fold_right
@@ -1297,6 +1328,7 @@ Module Import UnsaturatedSolinas.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -1319,6 +1351,7 @@ Module Import UnsaturatedSolinas.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -1341,6 +1374,7 @@ Module Import UnsaturatedSolinas.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -1762,7 +1796,7 @@ Module Import UnsaturatedSolinas.
               => intros;
                   let H1 := fresh "HH1" in
                   let H2 := fresh "HH2" in
-                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | refine (H2 _) ] ] ];
+                  unshelve edestruct H as [ [H1 H2] ? ]; [ .. | split; [ eapply H1 | refine (H2 _) ] ];
                     solve [ exact tt | eassumption | reflexivity | repeat split ]
             | _ => idtac
             end;
@@ -2489,6 +2523,7 @@ Module WordByWordMontgomery.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -2511,6 +2546,7 @@ Module WordByWordMontgomery.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -2533,6 +2569,7 @@ Module WordByWordMontgomery.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -2849,7 +2886,7 @@ Module WordByWordMontgomery.
               => intros;
                   let H1 := fresh in
                   let H2 := fresh in
-                  unshelve edestruct H as [H1 H2]; [ .. | solve [ split; [ eapply H1 | refine (H2 _) ] ] ];
+                  unshelve edestruct H as [ [H1 H2] ? ]; [ .. | split; [ eapply H1 | refine (H2 _) ] ];
                     solve [ exact tt | eassumption | reflexivity | repeat split ]
             | _ => idtac
             end;
@@ -3052,6 +3089,7 @@ Module SaturatedSolinas.
              rop
              in_bounds
              out_bounds
+             _
              op
              Hrop rv)
          (only parsing).
@@ -3761,6 +3799,7 @@ Module BarrettReduction.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).
@@ -3932,6 +3971,7 @@ Module MontgomeryReduction.
                rop
                in_bounds
                out_bounds
+               _
                op
                Hrop rv)
            (only parsing).

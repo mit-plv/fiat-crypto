@@ -2464,7 +2464,7 @@ Module Barrett256.
   Proof.
     intros.
     rewrite <-barrett_reduce_correct_specialized by assumption.
-    destruct (barrett_red256_correct (xLow, (xHigh, tt)) (xLow, (xHigh, tt))) as [H1 H2].
+    destruct (proj1 barrett_red256_correct (xLow, (xHigh, tt)) (xLow, (xHigh, tt))) as [H1 H2].
     { repeat split. }
     { cbn -[Z.pow].
       rewrite !andb_true_iff.
@@ -2931,7 +2931,7 @@ Module Montgomery256.
   Proof.
     intros.
     rewrite <-montred'_correct_specialized by assumption.
-    destruct (montred256_correct ((lo, hi), tt) ((lo, hi), tt)) as [H2 H3].
+    destruct (proj1 montred256_correct ((lo, hi), tt) ((lo, hi), tt)) as [H2 H3].
     { repeat split. }
     { cbn -[Z.pow].
       rewrite !andb_true_iff.
