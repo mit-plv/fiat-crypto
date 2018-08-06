@@ -52,6 +52,7 @@ Require Crypto.Experiments.NewPipeline.LanguageWf.
 Require Crypto.Experiments.NewPipeline.UnderLetsProofs.
 Require Crypto.Experiments.NewPipeline.MiscCompilerPassesProofs.
 Require Crypto.Experiments.NewPipeline.RewriterProofs.
+Require Crypto.Experiments.NewPipeline.AbstractInterpretationWf.
 Require Crypto.Experiments.NewPipeline.AbstractInterpretationProofs.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
@@ -499,6 +500,7 @@ Import
   Crypto.Experiments.NewPipeline.UnderLetsProofs
   Crypto.Experiments.NewPipeline.MiscCompilerPassesProofs
   Crypto.Experiments.NewPipeline.RewriterProofs
+  Crypto.Experiments.NewPipeline.AbstractInterpretationWf
   Crypto.Experiments.NewPipeline.AbstractInterpretationProofs
   Crypto.Experiments.NewPipeline.Language
   Crypto.Experiments.NewPipeline.UnderLets
@@ -512,6 +514,7 @@ Import
   UnderLetsProofs.Compilers
   MiscCompilerPassesProofs.Compilers
   RewriterProofs.Compilers
+  AbstractInterpretationWf.Compilers
   AbstractInterpretationProofs.Compilers
   Language.Compilers
   UnderLets.Compilers

@@ -244,6 +244,7 @@ src/Experiments/PartialEvaluationWithLetIn.v
 src/Experiments/SimplyTypedArithmetic.v
 src/Experiments/NewPipeline/AbstractInterpretation.v
 src/Experiments/NewPipeline/AbstractInterpretationProofs.v
+src/Experiments/NewPipeline/AbstractInterpretationWf.v
 src/Experiments/NewPipeline/Arithmetic.v
 src/Experiments/NewPipeline/CLI.v
 src/Experiments/NewPipeline/CStringification.v
