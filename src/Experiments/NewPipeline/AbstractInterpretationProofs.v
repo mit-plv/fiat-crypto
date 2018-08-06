@@ -269,38 +269,6 @@ Module Compilers.
           eapply UnderLets.wf_to_expr, wf_reify; [ eapply wf_reflect | ]; eauto; apply bottom_Proper.
         Qed.
 
-        Local Notation lazy_abstract_domain := (@lazy_abstract_domain base_type abstract_domain').
-        Local Notation force_abstract_domain := (@force_abstract_domain base_type abstract_domain').
-        Local Notation thunk_abstract_domain := (@thunk_abstract_domain base_type abstract_domain').
-
-        Definition lazy_abstract_domain'_R {t} : relation (lazy_abstract_domain (type.base t))
-          := fun v1 v2 => abstract_domain'_R t (force_abstract_domain v1) (force_abstract_domain v2).
-        Definition lazy_abstract_domain_R {t} : relation (lazy_abstract_domain t)
-          := fun v1 v2 => abstract_domain_R (force_abstract_domain v1) (force_abstract_domain v2).
-
-        Local Ltac red_thunk_force' s d :=
-          change (@force_abstract_domain (s -> d)) with (fun f x => @force_abstract_domain d (f (@thunk_abstract_domain s x))) in *;
-          change (@thunk_abstract_domain (s -> d)) with (fun f x => @thunk_abstract_domain d (f (@force_abstract_domain s x))) in *.
-        Local Ltac red_thunk_force :=
-          repeat match goal with
-                 | [ |- context[@force_abstract_domain (type.arrow ?s ?d)] ] => progress red_thunk_force' s d
-                 | [ |- context[@thunk_abstract_domain (type.arrow ?s ?d)] ] => progress red_thunk_force' s d
-                 | [ H : context[@force_abstract_domain (type.arrow ?s ?d)] |- _ ] => progress red_thunk_force' s d
-                 | [ H : context[@thunk_abstract_domain (type.arrow ?s ?d)] |- _ ] => progress red_thunk_force' s d
-                 end;
-          cbv beta in *.
-
-        Lemma force_thunk_abstract_domain {t} : (fun v => @force_abstract_domain t (thunk_abstract_domain v)) = (fun v => v).
-        Proof.
-          induction t as [t|s IHs d IHd]; [ reflexivity | ].
-          change
-            ((fun (v : abstract_domain (s -> d)) (x : abstract_domain s)
-              => id (fun v => force_abstract_domain (thunk_abstract_domain v)) (v (id (fun v => force_abstract_domain (thunk_abstract_domain v)) x)))
-             = (fun v => v)).
-          rewrite IHs, IHd; cbv [id]; reflexivity.
-        Qed.
-        Lemma force_thunk_abstract_domain_ext {t} v : @force_abstract_domain t (thunk_abstract_domain v) = v.
-        Proof. exact (f_equal (fun f => f v) force_thunk_abstract_domain). Qed.
         (*
         Lemma related_force {t} x y
           : @lazy_abstract_domain_R t x y <-> @abstract_domain_R t (force_abstract_domain x) (force_abstract_domain y).
@@ -792,26 +760,19 @@ Module Compilers.
 
           Section extract.
             Local Notation ident_extract := (@ident.ident_extract abstract_domain' bottom' abstract_interp_ident).
-            Local Notation lazy_abstract_domain_R := (@lazy_abstract_domain_R base.type abstract_domain' abstract_domain'_R).
             Global Instance ident_extract_Proper {t}
-              : Proper (eq ==> lazy_abstract_domain_R) (@ident_extract t).
+              : Proper (eq ==> abstract_domain_R) (@ident_extract t).
             Proof.
               intros idc idc' ?; subst idc'.
-              destruct idc; cbn [ident.ident_extract]; cbv [lazy_abstract_domain_R];
-                repeat first [ match goal with
-                               | [ |- context G[force_abstract_domain _ (thunk_abstract_domain _ ?x)] ]
-                                 => let G' := context G [x] in
-                                   change G'
-                               | [ |- context G[force_abstract_domain _ (fun _ 'tt => ?x)] ]
-                                 => cbv [force_abstract_domain abstract_domain_R]
-                               end
-                             | refine (abstract_interp_ident_Proper _ _ _ eq_refl)
+              destruct idc; cbn [ident.ident_extract];
+                repeat first [ refine (abstract_interp_ident_Proper _ _ _ eq_refl)
                              | eapply bottom_Proper
                              | eapply bottom'_Proper
-                             | progress cbn [type.related]
+                             | progress cbn [type.related abstract_domain'_R]
                              | progress cbv [respectful]
                              | progress intros
-                             | refine (abstract_interp_ident_Proper (type.arrow (type.base _) (type.base _)) _ _ eq_refl _ _ _) ].
+                             | refine (abstract_interp_ident_Proper (type.arrow (type.base _) (type.base _)) _ _ eq_refl _ _ _)
+                             | progress cbv [type.related abstract_domain_R] ].
             Qed.
 
           (*

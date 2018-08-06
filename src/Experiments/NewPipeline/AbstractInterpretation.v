@@ -684,22 +684,6 @@ Module Compilers.
 
       Context (interp_ident : forall t, ident t -> value_with_lets t).
 
-      Definition lazy_abstract_domain (t : type)
-        := type.interp (fun t => unit -> abstract_domain' t) t.
-
-      Fixpoint force_abstract_domain {t} : lazy_abstract_domain t -> abstract_domain t
-        := match t with
-           | type.base t => fun st => st tt
-           | type.arrow s d
-             => fun f x => @force_abstract_domain d (f (@thunk_abstract_domain s x))
-           end
-      with thunk_abstract_domain {t} : abstract_domain t -> lazy_abstract_domain t
-           := match t with
-              | type.base t => fun st (_ : unit) => st
-              | type.arrow s d
-                => fun f x => @thunk_abstract_domain d (f (@force_abstract_domain s x))
-              end.
-
       Fixpoint bottom {t} : abstract_domain t
         := match t with
            | type.base t => bottom' t
@@ -780,27 +764,14 @@ Module Compilers.
         := UnderLets.to_expr (reify false (reflect e bottom) st).
 
       Section extract.
-        Context (ident_extract : forall t, ident t -> lazy_abstract_domain t).
+        Context (ident_extract : forall t, ident t -> abstract_domain t).
 
-        Fixpoint extract' {t} (e : @expr lazy_abstract_domain t)
-          : lazy_abstract_domain t
-          := match e in expr.expr t return lazy_abstract_domain t with
-             | expr.Ident t idc => ident_extract t idc
-             | expr.Var t v => v
-             | expr.Abs s d f
-               => fun v => @extract' d (f v)
-             | expr.App s d f x
-               => let f' := @extract' _ f in
-                  let x' := @extract' _ x in
-                  f' x'
-             | expr.LetIn A B x f
-               => let x' := @extract' A x in
-                  @extract' B (f x')
-             end.
+        Definition extract' {t} (e : @expr abstract_domain t) : abstract_domain t
+          := expr.interp (@ident_extract) e.
 
-        Definition extract_gen {t} (e : @expr lazy_abstract_domain t) (bound : type.for_each_lhs_of_arrow abstract_domain t)
+        Definition extract_gen {t} (e : @expr abstract_domain t) (bound : type.for_each_lhs_of_arrow abstract_domain t)
           : abstract_domain' (type.final_codomain t)
-          := type.app_curried (extract' e) (type.map_for_each_lhs_of_arrow (@thunk_abstract_domain) bound) tt.
+          := type.app_curried (extract' e) bound.
       End extract.
     End with_var.
 
@@ -943,21 +914,19 @@ Module Compilers.
           := @eta_expand_with_bound' base.type ident var abstract_domain' annotate bottom' t e st.
 
         Section extract.
-          Local Notation lazy_abstract_domain := (@lazy_abstract_domain base.type abstract_domain').
-          Local Notation thunk_abstract_domain := (@thunk_abstract_domain base.type abstract_domain').
           Local Notation bottom := (@bottom base.type abstract_domain' bottom').
-          Definition ident_extract {t} (idc : ident t) : lazy_abstract_domain t
-            := match idc in ident.ident t return lazy_abstract_domain t with
+          Definition ident_extract {t} (idc : ident t) : abstract_domain t
+            := match idc in ident.ident t return abstract_domain t with
                | ident.Literal _ _ as idc
                | ident.nil _ as idc
                | ident.cons _ as idc
                | ident.pair _ _ as idc
-                 => thunk_abstract_domain (abstract_interp_ident _ idc)
+                 => abstract_interp_ident _ idc
                | ident.Z_cast _ as idc
                | ident.Z_cast2 _ as idc
                  => (* fast-path for cast: don't bother with the abstract state of the argument *)
-                 fun _ 'tt => abstract_interp_ident _ idc (bottom' _)
-               | _ => thunk_abstract_domain bottom
+                 fun _ => abstract_interp_ident _ idc (bottom' _)
+               | _ => bottom
                end.
 
           Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
