@@ -121,6 +121,16 @@ Module Compilers.
          | arrow s d => respectful_hetero _ _ _ _ (@related_hetero _ _ _ R s) (fun _ _ => @related_hetero _ _ _ R d)
          end%signature.
 
+    Fixpoint related_hetero3 {base_type} {base_interp1 base_interp2 base_interp3 : base_type -> Type}
+             (R : forall t, base_interp1 t -> base_interp2 t -> base_interp3 t -> Prop) {t : type base_type}
+      : interp base_interp1 t -> interp base_interp2 t -> interp base_interp3 t -> Prop
+      := match t with
+         | base t => R t
+         | arrow s d
+           => fun f g h
+              => forall x y z, @related_hetero3 _ _ _ _ R s x y z -> @related_hetero3 _ _ _ _ R d (f x) (g y) (h z)
+         end.
+
     Fixpoint app_curried {base_type} {f : base_type -> Type} {t : type base_type}
       : interp f t -> for_each_lhs_of_arrow (interp f) t -> f (final_codomain t)
       := match t with
