@@ -541,6 +541,7 @@ Module Pipeline.
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
+  | Unsupported_casts_in_input {t} (e : @Compilers.defaults.Expr t) (ls : list { t : _ & ident t })
   | Stringification_failed {t} (e : @Compilers.defaults.Expr t) (err : string)
   | Invalid_argument (msg : string).
 
@@ -647,6 +648,10 @@ Module Pipeline.
               | Values_not_provably_equalZ descr lhs rhs
               | Values_not_provably_equal_listZ descr lhs rhs
                 => ["Values not provably equal (" ++ descr ++ ") : expected " ++ show true lhs ++ " = " ++ show true rhs]
+              | Unsupported_casts_in_input t e ls
+                => ["Unsupported casts in input syntax tree:"]
+                     ++ show_lines false e
+                     ++ ["Unsupported casts: " ++ @show_list _ (fun p v => show p (projT2 v)) false ls]
               | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines false e ++ [err]
               | Invalid_argument msg
                 => ["Invalid argument:" ++ msg]%string
@@ -699,11 +704,13 @@ Module Pipeline.
                end in
       dlet_nd e := ToFlat E in
       let E := FromFlat e in
-      let E := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
-      match E with
+      let E' := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
+      match E' with
       | inl E => Success E
-      | inr (b, E)
+      | inr (inl (b, E))
         => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
+      | inr (inr unsupported_casts)
+        => Error (Unsupported_casts_in_input E unsupported_casts)
       end.
 
   Definition BoundsPipelineToStrings
@@ -807,7 +814,7 @@ Module Pipeline.
     cbv [BoundsPipeline Let_In bounds_goodT] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
-               => destruct x eqn:?; cbv beta iota in H; [ | destruct_head'_prod; congruence ];
+               => destruct x eqn:?; cbv beta iota in H; [ | break_innermost_match_hyps; congruence ];
                     let H' := fresh in
                     inversion H as [H']; clear H; rename H' into H
              end.
@@ -820,7 +827,7 @@ Module Pipeline.
                [ destruct H' as [H01 Hwf'] | .. ]
         end;
         [
-        | match goal with
+        | lazymatch goal with
           | [ |- Wf _ ] => idtac
           | _ => eassumption || reflexivity
           end.. ].

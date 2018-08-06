@@ -987,24 +987,40 @@ Module Compilers.
         := @partial.ident.extract abstract_domain' abstract_interp_ident t (e _) bound.
     End specialized.
   End partial.
-
   Import defaults.
+
+  Module Import CheckCasts.
+    Fixpoint get_casts {t} (e : expr t) : list { t : _ & ident t }
+      := match e with
+         | expr.Ident t idc => if partial.is_annotation _ idc then [existT _ t idc] else nil
+         | expr.Var t v => v
+         | expr.Abs s d f => @get_casts _ (f nil)
+         | expr.App s d f x => @get_casts _ f ++ @get_casts _ x
+         | expr.LetIn A B x f => @get_casts _ x ++ @get_casts _ (f nil)
+         end%list.
+
+    Definition GetUnsupportedCasts {t} (e : Expr t) : list { t : _ & ident t }
+      := get_casts (e _).
+  End CheckCasts.
 
   Module RelaxZRange.
     Module ident.
       Section relax.
         Context (relax_zrange : zrange -> option zrange).
 
-        Definition relax {t} (idc : ident t) : option (ident t)
-          := match idc in ident.ident t return option (ident t) with
+        Let always_relax_zrange : zrange -> zrange
+          := fun range => match relax_zrange range with
+                          | Some r => r
+                          | None => range
+                          end.
+
+        Definition relax {t} (idc : ident t) : ident t
+          := match idc in ident.ident t return ident t with
              | ident.Z_cast range
-               => (r <- relax_zrange range;
-                    Some (ident.Z_cast r))
+               => ident.Z_cast (always_relax_zrange range)
              | ident.Z_cast2 (r1, r2)
-               => (r1 <- relax_zrange r1;
-                    r2 <- relax_zrange r2;
-                    Some (ident.Z_cast2 (r1, r2)))
-             | _ => None
+               => ident.Z_cast2 (always_relax_zrange r1, always_relax_zrange r2)
+             | idc => idc
              end%option.
       End relax.
     End ident.
@@ -1018,24 +1034,12 @@ Module Compilers.
           Fixpoint relax {t} (e : @expr var t) : @expr var t
             := match e with
                | expr.Var _ _ as e
-               | expr.Ident _ _ as e
                  => e
+               | expr.Ident t idc
+                 => expr.Ident (ident.relax relax_zrange idc)
                | expr.Abs s d f => expr.Abs (fun v => @relax d (f v))
                | expr.LetIn tx tC ex eC => expr.LetIn (@relax tx ex) (fun v => @relax tC (eC v))
-               | expr.App s d f x
-                 => let f' := @relax _ f in
-                    let x' := @relax _ x in
-                    match s, d return expr (s -> d) -> expr s -> expr d with
-                    | type.base base.type.Z, type.base base.type.Z
-                    | type.base (base.type.Z * base.type.Z)%etype, type.base (base.type.Z * base.type.Z)%etype
-                      => fun f x
-                         => match option_map (ident.relax relax_zrange)
-                                             (invert_Ident f) with
-                            | Some (Some idc) => expr.App (expr.Ident idc) x
-                            | _ => expr.App f x
-                            end
-                    | _, _ => expr.App
-                    end f' x'
+               | expr.App s d f x => expr.App (@relax _ f) (@relax _ x)
                end.
         End with_var.
 
@@ -1055,24 +1059,30 @@ Module Compilers.
     := partial.EtaExpandWithListInfoFromBound (GeneralizeVar.GeneralizeVar (e _)) bound.
 
   Definition CheckPartialEvaluateWithBounds
+             {A}
              (relax_zrange : zrange -> option zrange)
              {t} (E : Expr t)
              (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
              (b_out : ZRange.type.base.option.interp (type.final_codomain t))
-    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t)
+    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + A)
     := let b_computed := partial.Extract E b_in in
        if ZRange.type.base.option.is_tighter_than b_computed b_out
        then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
-       else @inr _ (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) (b_computed, E).
+       else inr (@inl (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) _ (b_computed, E)).
 
   Definition CheckedPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
              {t} (E : Expr t)
              (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
              (b_out : ZRange.type.base.option.interp (type.final_codomain t))
-    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t)
-    := let E := PartialEvaluateWithBounds E b_in in
-       dlet_nd e := GeneralizeVar.ToFlat E in
-             let E := GeneralizeVar.FromFlat e in
-             CheckPartialEvaluateWithBounds relax_zrange E b_in b_out.
+    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + list { t : _ & ident t })
+    := dlet_nd e := GeneralizeVar.ToFlat E in
+       let E := GeneralizeVar.FromFlat e in
+       match CheckCasts.GetUnsupportedCasts E with
+       | nil => (let E := PartialEvaluateWithBounds E b_in in
+                 dlet_nd e := GeneralizeVar.ToFlat E in
+                 let E := GeneralizeVar.FromFlat e in
+                 CheckPartialEvaluateWithBounds relax_zrange E b_in b_out)
+       | unsupported_casts => inr (inr unsupported_casts)
+       end.
 End Compilers.

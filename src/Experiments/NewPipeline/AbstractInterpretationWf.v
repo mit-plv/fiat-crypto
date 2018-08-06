@@ -777,23 +777,6 @@ Module Compilers.
           Proof using Type.
             clear -Hwf.
             induction Hwf; wf_safe_t.
-            cbn [RelaxZRange.expr.relax]; cbv [option_map] in *.
-            break_innermost_match;
-              repeat first [ progress wf_safe_t
-                           | progress expr.invert_subst
-                           | progress expr.inversion_wf_constr
-                           | progress destruct_head' False
-                           | progress inversion_option
-                           | progress cbn [invert_Ident invert_Var invert_Abs invert_App invert_LetIn] in *
-                           | match goal with
-                             | [ H : context[RelaxZRange.expr.relax ?r ?x], H' : RelaxZRange.expr.relax ?r ?x = _ |- _ ]
-                               => rewrite H' in H
-                             | [ H : context[match RelaxZRange.expr.relax ?r ?x with _ => _ end] |- _ ]
-                               => remember (RelaxZRange.expr.relax r x) in *; progress expr.invert_match
-                             | [ H : ?x = Some ?a, H' : context[?x] |- _ ] => rewrite H in H'
-                             | [ H : ?x = None, H' : context[?x] |- _ ] => rewrite H in H'
-                             end
-                           | progress expr.inversion_wf_one_constr ].
           Qed.
         End with_var2.
 
