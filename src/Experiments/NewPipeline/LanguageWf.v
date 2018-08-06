@@ -16,6 +16,7 @@ Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Logic.ProdForall.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.CPSNotations.
@@ -79,6 +80,24 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         : Transitive (@type.and_for_each_lhs_of_arrow base_type f f R t).
       Proof. cbv [Transitive] in *; induction t; cbn; repeat split; intuition eauto. Qed.
     End app_curried_instances.
+
+    Lemma related_iff_app_curried {base_type base_interp R} t F G
+      : (@type.related base_type base_interp R t F G)
+        <-> (forall x y, type.and_for_each_lhs_of_arrow (@type.related base_type base_interp R) x y -> R (type.final_codomain t) (type.app_curried F x) (type.app_curried G y)).
+    Proof using Type.
+      induction t as [t|s IHs d IHd]; cbn; [ tauto | ].
+      cbv [respectful].
+      rewrite pull_prod_forall.
+      lazymatch goal with
+      | [ |- (forall x y, @?P x y) <-> (forall z w, @?Q z w) ]
+        => cut (forall x y, (P x y <-> Q x y)); [ intro H'; setoid_rewrite H'; reflexivity | intros ??; cbn [fst snd] ]
+      end.
+      lazymatch goal with
+      | [ |- (?P -> ?Q) <-> (forall z w, ?P' /\ @?R z w -> @?S z w) ]
+        => unify P P'; cut (P' -> (Q <-> (forall z w, R z w -> S z w))); [ change P with P'; solve [ intuition ] | intro; cbn [fst snd] ]
+      end.
+      eauto.
+    Qed.
   End type.
 
   Module ident.

@@ -6530,6 +6530,7 @@ src/Util/Decidable/Decidable2Bool.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/Forall.v
 src/Util/Logic/ImplAnd.v
+src/Util/Logic/ProdForall.v
 src/Util/SideConditions/AdmitPackage.v
 src/Util/SideConditions/Autosolve.v
 src/Util/SideConditions/CorePackages.v
