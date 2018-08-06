@@ -63,21 +63,25 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_l _ R); [ | | solve [
 Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [ eauto with nocore ] ] : typeclass_instances.
 >>
 *)
+      Global Instance app_curried_Proper_gen {base_type base_interp R t}
+        : Proper (@type.related base_type base_interp R t ==> type.and_for_each_lhs_of_arrow (@type.related base_type base_interp R)  ==> R (type.final_codomain t))
+                 (@type.app_curried base_type base_interp t) | 1.
+      Proof.
+        cbv [Proper respectful]; induction t; cbn [type.related type.app_curried]; cbv [Proper respectful]; [ intros; assumption | ].
+        intros f g Hfg x y [Hxy ?]; eauto.
+      Qed.
       Lemma app_curried_Proper {t}
         : Proper (@type.related base_type base_interp (fun _ => eq) t ==> type.and_for_each_lhs_of_arrow (@type.eqv) ==> eq)
                  (@type.app_curried base_type base_interp t).
-      Proof.
-        cbv [Proper respectful]; induction t; cbn [type.eqv type.app_curried]; cbv [Proper respectful]; [ intros; subst; reflexivity | ].
-        intros f g Hfg x y [Hxy ?]; eauto.
-      Qed.
+      Proof. exact _. Qed.
       Global Instance and_for_each_lhs_of_arrow_Reflexive {f} {R} {_ : forall t, Reflexive (R t)} {t}
-        : Reflexive (@type.and_for_each_lhs_of_arrow base_type f f R t).
+        : Reflexive (@type.and_for_each_lhs_of_arrow base_type f f R t) | 1.
       Proof. cbv [Reflexive] in *; induction t; cbn; repeat split; eauto. Qed.
       Global Instance and_for_each_lhs_of_arrow_Symmetric {f} {R} {_ : forall t, Symmetric (R t)} {t}
-        : Symmetric (@type.and_for_each_lhs_of_arrow base_type f f R t).
+        : Symmetric (@type.and_for_each_lhs_of_arrow base_type f f R t) | 1.
       Proof. cbv [Symmetric] in *; induction t; cbn; repeat split; intuition eauto. Qed.
       Global Instance and_for_each_lhs_of_arrow_Transitive {f} {R} {_ : forall t, Transitive (R t)} {t}
-        : Transitive (@type.and_for_each_lhs_of_arrow base_type f f R t).
+        : Transitive (@type.and_for_each_lhs_of_arrow base_type f f R t) | 1.
       Proof. cbv [Transitive] in *; induction t; cbn; repeat split; intuition eauto. Qed.
     End app_curried_instances.
 
