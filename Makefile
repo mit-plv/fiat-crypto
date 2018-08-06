@@ -87,6 +87,9 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Specific/NISTP256/AMD128/fe%.vo \
 	src/Specific/X25519/C64/ladderstep.vo \
 	src/Specific/X25519/C32/fe%.vo \
+	src/Experiments/NewPipeline/RewriterWf1.vo \
+	src/Experiments/NewPipeline/RewriterWf2.vo \
+	src/Experiments/NewPipeline/RewriterRulesGood.vo \
 	src/Experiments/NewPipeline/RewriterProofs.vo \
 	src/Experiments/NewPipeline/Toplevel2.vo \
 	src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.vo \
