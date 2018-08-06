@@ -913,25 +913,8 @@ Module Compilers.
           : @expr var t
           := @eta_expand_with_bound' base.type ident var abstract_domain' annotate bottom' t e st.
 
-        Section extract.
-          Local Notation bottom := (@bottom base.type abstract_domain' bottom').
-          Definition ident_extract {t} (idc : ident t) : abstract_domain t
-            := match idc in ident.ident t return abstract_domain t with
-               | ident.Literal _ _ as idc
-               | ident.nil _ as idc
-               | ident.cons _ as idc
-               | ident.pair _ _ as idc
-                 => abstract_interp_ident _ idc
-               | ident.Z_cast _ as idc
-               | ident.Z_cast2 _ as idc
-                 => (* fast-path for cast: don't bother with the abstract state of the argument *)
-                 fun _ => abstract_interp_ident _ idc (bottom' _)
-               | _ => bottom
-               end.
-
-          Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-            := @extract_gen base.type ident abstract_domain' (@ident_extract) t e bound.
-        End extract.
+        Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
+          := @extract_gen base.type ident abstract_domain' abstract_interp_ident t e bound.
       End with_var.
     End ident.
 
@@ -999,9 +982,9 @@ Module Compilers.
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
         := EtaExpandWithBound e (type.map_for_each_lhs_of_arrow (@ZRange.type.option.strip_ranges) bound).
       Definition extract {t} (e : expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-        := @partial.ident.extract abstract_domain' bottom' abstract_interp_ident t e bound.
+        := @partial.ident.extract abstract_domain' abstract_interp_ident t e bound.
       Definition Extract {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-        := @partial.ident.extract abstract_domain' bottom' abstract_interp_ident t (e _) bound.
+        := @partial.ident.extract abstract_domain' abstract_interp_ident t (e _) bound.
     End specialized.
   End partial.
 

@@ -759,22 +759,6 @@ Module Compilers.
           Qed.
 
           Section extract.
-            Local Notation ident_extract := (@ident.ident_extract abstract_domain' bottom' abstract_interp_ident).
-            Global Instance ident_extract_Proper {t}
-              : Proper (eq ==> abstract_domain_R) (@ident_extract t).
-            Proof.
-              intros idc idc' ?; subst idc'.
-              destruct idc; cbn [ident.ident_extract];
-                repeat first [ refine (abstract_interp_ident_Proper _ _ _ eq_refl)
-                             | eapply bottom_Proper
-                             | eapply bottom'_Proper
-                             | progress cbn [type.related abstract_domain'_R]
-                             | progress cbv [respectful]
-                             | progress intros
-                             | refine (abstract_interp_ident_Proper (type.arrow (type.base _) (type.base _)) _ _ eq_refl _ _ _)
-                             | progress cbv [type.related abstract_domain_R] ].
-            Qed.
-
           (*
             Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
               := @extract_gen base.type ident abstract_domain' (@ident_extract) t e bound.
