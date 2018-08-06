@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Relations.Relations.
 Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.LanguageInversion.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -330,6 +331,65 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Abort.
     End wf_properties.
 
+    Section interp_gen.
+      Context {base_type}
+              {ident : type base_type -> Type}
+              {base_interp : base_type -> Type}
+              {R : forall t, relation (base_interp t)}.
+      Section with_2.
+        Context {ident_interp1 ident_interp2 : forall t, ident t -> type.interp base_interp t}
+                {ident_interp_Proper : forall t, (eq ==> type.related R)%signature (ident_interp1 t) (ident_interp2 t)}.
+
+        Lemma wf_interp_Proper_gen2
+              G {t} e1 e2
+              (Hwf : @wf _ _ _ _ G t e1 e2)
+              (HG : forall t v1 v2, In (existT _ t (v1, v2)) G -> type.related R v1 v2)
+          : type.related R (expr.interp ident_interp1 e1) (expr.interp ident_interp2 e2).
+        Proof.
+          induction Hwf;
+            repeat first [ reflexivity
+                         | assumption
+                         | progress destruct_head' False
+                         | progress destruct_head'_sig
+                         | progress inversion_sigma
+                         | progress inversion_prod
+                         | progress destruct_head'_or
+                         | progress intros
+                         | progress subst
+                         | inversion_wf_step
+                         | progress expr.invert_subst
+                         | break_innermost_match_hyps_step
+                         | progress cbn [expr.interp fst snd projT1 projT2 List.In eq_rect type.eqv] in *
+                         | progress cbn [type.app_curried]
+                         | progress cbv [LetIn.Let_In respectful Proper] in *
+                         | progress destruct_head'_and
+                         | solve [ eauto with nocore ]
+                         | match goal with
+                           | [ |- type.related R (ident_interp1 _ ?x) (ident_interp2 _ ?y) ] => apply ident_interp_Proper
+                           | [ |- Proper type.eqv (ident.interp _) ] => apply ident.eqv_Reflexive_Proper
+                           | [ H : context[?R (expr.interp _ _) (expr.interp _ _)] |- ?R (expr.interp _ _) (expr.interp _ _) ] => eapply H; eauto with nocore
+                           end ].
+        Qed.
+      End with_2.
+
+      Section with_1.
+        Context {ident_interp : forall t, ident t -> type.interp base_interp t}
+                {ident_interp_Proper : forall t, Proper (eq ==> type.related R) (ident_interp t)}.
+
+        Lemma wf_interp_Proper_gen1 G {t}
+              (HG : forall t v1 v2, In (existT _ t (v1, v2)) G -> type.related R v1 v2)
+          : Proper (@wf _ _ _ _ G t ==> type.related R) (expr.interp ident_interp).
+        Proof. intros ? ? Hwf; eapply @wf_interp_Proper_gen2; eassumption. Qed.
+
+        Lemma wf_interp_Proper_gen {t}
+          : Proper (@wf _ _ _ _ nil t ==> type.related R) (expr.interp ident_interp).
+        Proof. apply wf_interp_Proper_gen1; cbn [In]; tauto. Qed.
+
+        Lemma Wf_Interp_Proper_gen {t} (e : expr.Expr t) : Wf e -> Proper (type.related R) (expr.Interp ident_interp e).
+        Proof. intro Hwf; apply wf_interp_Proper_gen, Hwf. Qed.
+      End with_1.
+    End interp_gen.
+
     Section for_interp.
       Local Open Scope etype_scope.
       Import defaults.
@@ -337,31 +397,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
             (Hwf : @wf _ _ _ _ G t e1 e2)
             (HG : forall t v1 v2, In (existT _ t (v1, v2)) G -> v1 == v2)
         : interp e1 == interp e2.
-      Proof.
-        induction Hwf;
-          repeat first [ reflexivity
-                       | assumption
-                       | progress destruct_head' False
-                       | progress destruct_head'_sig
-                       | progress inversion_sigma
-                       | progress inversion_prod
-                       | progress destruct_head'_or
-                       | progress intros
-                       | progress subst
-                       | inversion_wf_step
-                       | progress expr.invert_subst
-                       | break_innermost_match_hyps_step
-                       | progress cbn [expr.interp fst snd projT1 projT2 List.In eq_rect type.eqv] in *
-                       | progress cbn [type.app_curried]
-                       | progress cbv [LetIn.Let_In respectful Proper] in *
-                       | progress destruct_head'_and
-                       | solve [ eauto with nocore ]
-                       | match goal with
-                         | [ |- ident.interp ?x == ident.interp ?x ] => apply ident.eqv_Reflexive
-                         | [ |- Proper type.eqv (ident.interp _) ] => apply ident.eqv_Reflexive_Proper
-                         | [ H : context[interp _ == interp _] |- interp _ == interp _ ] => eapply H; eauto with nocore
-                         end ].
-      Qed.
+      Proof. apply @wf_interp_Proper_gen1 with (G:=G); eauto using ident.interp_Proper. Qed.
 
       Lemma Wf_Interp_Proper {t} (e : Expr t) : Wf e -> Proper type.eqv (Interp e).
       Proof. repeat intro; apply wf_interp_Proper with (G:=nil); cbn [List.In]; intuition eauto. Qed.
