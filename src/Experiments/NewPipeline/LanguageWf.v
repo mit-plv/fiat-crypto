@@ -875,27 +875,77 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                      | [ |- Some _ = Some _ ] => apply f_equal
                      | [ |- existT _ ?x _ = existT _ ?x _ ] => apply f_equal
                      | [ |- pair _ _ = pair _ _ ] => apply f_equal2
-                     | [ H : context[interp _ == interp _] |- interp _ == interp _ ] => eapply H; clear H; solve [ t ]
+                     | [ H : context[type.related _ (expr.interp _ _) (expr.interp _ _)] |- type.related _ (expr.interp _ _) (expr.interp _ _) ] => eapply H; clear H; solve [ t ]
                      end ].
-    Lemma interp_from_flat_to_flat' {t} (e1 : expr t) (e2 : expr t) G ctx
+    Section gen2.
+      Context {base_interp : base.type -> Type}
+              {ident_interp1 ident_interp2 : forall t, ident t -> type.interp base_interp t}
+              {R : forall t, relation (base_interp t)}
+              {ident_interp_Proper : forall t, (eq ==> type.related R)%signature (ident_interp1 t) (ident_interp2 t)}.
+
+      Lemma interp_gen2_from_flat_to_flat'
+            {t} (e1 : expr t) (e2 : expr t) G ctx
+            (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
+                                       -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ type.related R v2' v2))
+            (Hwf : expr.wf G e1 e2)
+            cur_idx
+            (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
+        : type.related R (expr.interp ident_interp1 (from_flat (to_flat' e1 cur_idx) _ ctx)) (expr.interp ident_interp2 e2).
+      Proof.
+        setoid_rewrite PositiveMap.mem_find in Hidx.
+        revert dependent cur_idx; revert dependent ctx; induction Hwf; intros;
+          t.
+      Qed.
+
+      Lemma Interp_gen2_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e)
+        : type.related R (expr.Interp ident_interp1 (FromFlat (ToFlat e))) (expr.Interp ident_interp2 e).
+      Proof.
+        cbv [Interp FromFlat ToFlat to_flat].
+        apply interp_gen2_from_flat_to_flat' with (G:=nil); eauto; intros *; cbn [List.In]; rewrite ?PositiveMap.mem_find, ?PositiveMap.gempty;
+          intuition congruence.
+      Qed.
+
+      Lemma Interp_gen2_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e)
+        : type.related R (expr.Interp ident_interp1 (GeneralizeVar (e _))) (expr.Interp ident_interp2 e).
+      Proof. apply Interp_gen2_FromFlat_ToFlat, Hwf. Qed.
+    End gen2.
+    Section gen1.
+      Context {base_interp : base.type -> Type}
+              {ident_interp : forall t, ident t -> type.interp base_interp t}
+              {R : forall t, relation (base_interp t)}
+              {ident_interp_Proper : forall t, Proper (eq ==> type.related R) (ident_interp t)}.
+
+      Lemma interp_gen1_from_flat_to_flat'
+            {t} (e1 : expr t) (e2 : expr t) G ctx
+            (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
+                                       -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ type.related R v2' v2))
+            (Hwf : expr.wf G e1 e2)
+            cur_idx
+            (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
+        : type.related R (expr.interp ident_interp (from_flat (to_flat' e1 cur_idx) _ ctx)) (expr.interp ident_interp e2).
+      Proof. apply @interp_gen2_from_flat_to_flat' with (G:=G); eassumption. Qed.
+
+      Lemma Interp_gen1_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e)
+        : type.related R (expr.Interp ident_interp (FromFlat (ToFlat e))) (expr.Interp ident_interp e).
+      Proof. apply @Interp_gen2_FromFlat_ToFlat; eassumption. Qed.
+
+      Lemma Interp_gen1_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e)
+        : type.related R (expr.Interp ident_interp (GeneralizeVar (e _))) (expr.Interp ident_interp e).
+      Proof. apply @Interp_gen2_GeneralizeVar; eassumption. Qed.
+    End gen1.
+
+    Lemma interp_from_flat_to_flat'
+          {t} (e1 : expr t) (e2 : expr t) G ctx
           (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
                                      -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ v2' == v2))
           (Hwf : expr.wf G e1 e2)
           cur_idx
           (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
       : interp (from_flat (to_flat' e1 cur_idx) _ ctx) == interp e2.
-    Proof.
-      setoid_rewrite PositiveMap.mem_find in Hidx.
-      revert dependent cur_idx; revert dependent ctx; induction Hwf; intros;
-        t.
-    Qed.
+    Proof. apply @interp_gen1_from_flat_to_flat' with (G:=G); eauto using ident.interp_Proper. Qed.
 
     Lemma Interp_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (FromFlat (ToFlat e)) == Interp e.
-    Proof.
-      cbv [Interp FromFlat ToFlat to_flat].
-      apply interp_from_flat_to_flat' with (G:=nil); eauto; intros *; cbn [List.In]; rewrite ?PositiveMap.mem_find, ?PositiveMap.gempty;
-        intuition congruence.
-    Qed.
+    Proof. apply @Interp_gen1_FromFlat_ToFlat; eauto using ident.interp_Proper. Qed.
 
     Lemma Interp_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (GeneralizeVar (e _)) == Interp e.
     Proof. apply Interp_FromFlat_ToFlat, Hwf. Qed.
