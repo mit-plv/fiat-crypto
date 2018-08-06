@@ -106,16 +106,22 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
   Module ident.
     Local Open Scope etype_scope.
-    Global Instance eqv_Reflexive_Proper {t} (idc : ident t) : Proper type.eqv (ident.interp idc) | 1.
+    Global Instance gen_eqv_Reflexive_Proper cast_outside_of_range {t} (idc : ident t) : Proper type.eqv (ident.gen_interp cast_outside_of_range idc) | 1.
     Proof.
-      destruct idc; cbv [ident.interp]; cbn [type.eqv ident.gen_interp type.interp base.interp base.base_interp];
+      destruct idc; cbn [type.eqv ident.gen_interp type.interp base.interp base.base_interp];
         try solve [ typeclasses eauto
                   | cbv [respectful]; repeat intro; subst; destruct_head_hnf bool; destruct_head_hnf prod; eauto
                   | cbv [respectful]; repeat intro; (apply nat_rect_Proper_nondep || apply list_rect_Proper || apply list_case_Proper); repeat intro; eauto ].
     Qed.
 
+    Global Instance eqv_Reflexive_Proper {t} (idc : ident t) : Proper type.eqv (ident.interp idc) | 1.
+    Proof. exact _. Qed.
+
+    Global Instance gen_interp_Proper {cast_outside_of_range} {t} : Proper (@eq (ident t) ==> type.eqv) (ident.gen_interp cast_outside_of_range) | 1.
+    Proof. intros idc idc' ?; subst idc'; apply gen_eqv_Reflexive_Proper. Qed.
+
     Global Instance interp_Proper {t} : Proper (@eq (ident t) ==> type.eqv) ident.interp | 1.
-    Proof. intros idc idc' ?; subst idc'; apply eqv_Reflexive_Proper. Qed.
+    Proof. exact _. Qed.
 
     Global Instance eqv_Reflexive {t} : Reflexive (fun idc1 idc2 : ident t => type.eqv (ident.interp idc1) (ident.interp idc2)) | 20.
     Proof. intro; apply eqv_Reflexive_Proper. Qed.
