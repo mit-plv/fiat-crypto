@@ -1828,10 +1828,9 @@ Module Import UnsaturatedSolinas.
               rewrite ?map_map in *.
               cbn [lower upper] in *.
               split.
-              { etransitivity; [ erewrite <- eval_zeros; [ | apply weight_0, wprops ] | apply H15 ].
+              { etransitivity; [ erewrite <- eval_zeros | apply H15 ].
                 apply Z.eq_le_incl; f_equal.
-                repeat match goal with H : _ |- _ => revert H end; exact admit.
-                omega. }
+                repeat match goal with H : _ |- _ => revert H end; exact admit. }
               { eapply Z.le_lt_trans; [ apply H15 | ].
                 assert (Hlen : length (encode (weight (Qnum limbwidth) (QDen limbwidth)) n s c (s - 1)) = n) by distr_length.
                 revert Hlen.
