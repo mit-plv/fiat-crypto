@@ -758,6 +758,7 @@ Module Compilers.
       Qed.
     End specialized.
   End partial.
+  Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound : wf.
   Import defaults.
 
   Module RelaxZRange.
@@ -809,7 +810,7 @@ Module Compilers.
         (Hwf : Wf E)
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
     : Wf (PartialEvaluateWithListInfoFromBounds E b_in).
-  Proof. apply Wf_EtaExpandWithListInfoFromBound; assumption. Qed.
+  Proof. cbv [PartialEvaluateWithListInfoFromBounds]; auto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf.
 
   Lemma Wf_PartialEvaluateWithBounds
@@ -818,8 +819,6 @@ Module Compilers.
         (Hwf : Wf E)
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
     : Wf (PartialEvaluateWithBounds E b_in).
-  Proof. eapply partial.Wf_EvalWithBound; assumption. Qed.
+  Proof. cbv [PartialEvaluateWithBounds]; auto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithBounds : wf.
-
-  Hint Resolve Wf_EtaExpandWithBound Wf_PartialEvaluateWithListInfoFromBounds : wf.
 End Compilers.

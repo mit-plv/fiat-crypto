@@ -312,6 +312,7 @@ Module Compilers.
         Admitted.
 
         Lemma Interp_Relax {t} (e : Expr t)
+              (Hwf : expr.Wf3 e)
               v
               (Hinterp : forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) e) v
                                                   = type.app_curried (defaults.Interp e) v)
@@ -396,7 +397,7 @@ Module Compilers.
                         | progress cbv [ident.interp]
                         | rewrite RelaxZRange.expr.Interp_Relax; eauto
                         | erewrite !Interp_PartialEvaluateWithBounds
-                        | solve [ eauto ]
+                        | solve [ eauto with wf ]
                         | progress intros ]. }
     { auto with wf. }
   Qed.
