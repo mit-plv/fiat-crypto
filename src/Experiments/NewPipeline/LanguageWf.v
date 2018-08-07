@@ -235,8 +235,41 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         End inversion.
       End with_var.
 
+      Section with_var3.
+        Context {var1 var2 var3 : type.type base_type -> Type}.
+        Local Notation wfvP := (fun t => (var1 t * var2 t * var3 t)%type).
+        Local Notation wfvT := (list (sigT wfvP)).
+        Local Notation expr := (@expr.expr base_type ident). (* But can't use this to define other notations, see COQBUG(https://github.com/coq/coq/issues/8126) *)
+        Local Notation expr1 := (@expr.expr base_type ident var1).
+        Local Notation expr2 := (@expr.expr base_type ident var2).
+        Local Notation expr3 := (@expr.expr base_type ident var3).
+        Inductive wf3 : wfvT -> forall {t}, expr1 t -> expr2 t -> expr3 t -> Prop :=
+        | Wf3Ident
+          : forall G {t} (idc : ident t), wf3 G (expr.Ident idc) (expr.Ident idc) (expr.Ident idc)
+        | Wf3Var
+          : forall G {t} (v1 : var1 t) (v2 : var2 t) (v3 : var3 t), List.In (existT _ t (v1, v2, v3)) G -> wf3 G (expr.Var v1) (expr.Var v2) (expr.Var v3)
+        | Wf3Abs
+          : forall G {s d} (f1 : var1 s -> expr1 d) (f2 : var2 s -> expr2 d) (f3 : var3 s -> expr3 d),
+            (forall (v1 : var1 s) (v2 : var2 s) (v3 : var3 s), wf3 (existT _ s (v1, v2, v3) :: G) (f1 v1) (f2 v2) (f3 v3))
+            -> wf3 G (expr.Abs f1) (expr.Abs f2) (expr.Abs f3)
+        | Wf3App
+          : forall G {s d}
+                   (f1 : expr1 (s -> d)) (f2 : expr2 (s -> d)) (f3 : expr3 (s -> d)) (wf_f : wf3 G f1 f2 f3)
+                   (x1 : expr1 s) (x2 : expr2 s) (x3 : expr3 s) (wf_x : wf3 G x1 x2 x3),
+            wf3 G (expr.App f1 x1) (expr.App f2 x2) (expr.App f3 x3)
+        | Wf3LetIn
+          : forall G {A B}
+                   (x1 : expr1 A) (x2 : expr2 A) (x3 : expr3 A) (wf_x : wf3 G x1 x2 x3)
+                   (f1 : var1 A -> expr1 B) (f2 : var2 A -> expr2 B) (f3 : var3 A -> expr3 B),
+            (forall (v1 : var1 A) (v2 : var2 A) (v3 : var3 A), wf3 (existT _ A (v1, v2, v3) :: G) (f1 v1) (f2 v2) (f3 v3))
+            -> wf3 G (expr.LetIn x1 f1) (expr.LetIn x2 f2) (expr.LetIn x3 f3).
+      End with_var3.
+
       Definition Wf {t} (e : @expr.Expr base_type ident t) : Prop
         := forall var1 var2, @wf var1 var2 nil t (e var1) (e var2).
+
+      Definition Wf3 {t} (e : @expr.Expr base_type ident t) : Prop
+        := forall var1 var2 var3, @wf3 var1 var2 var3 nil t (e var1) (e var2) (e var3).
     End with_ty.
 
     Ltac is_expr_constructor arg :=
@@ -357,6 +390,50 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                          | [ |- exists x, _ ] => refine (ex_intro _ (existT _ _ (_, _, _)) _); cbn; split; [ reflexivity | ]
                          end ].
         (* Seems false? *)
+      Abort.
+
+      Lemma wf3_of_wf {var1 var2 var3} G1 G2 G {t}
+            (HG1 : G1 = List.map (fun '(existT t (v1, v2, v3)) => existT _ t (v1, v2)) G)
+            (HG2 : G2 = List.map (fun '(existT t (v1, v2, v3)) => existT _ t (v2, v3)) G)
+            e1 e2 e3
+            (Hwf12 : @wf var1 var2 G1 t e1 e2)
+            (Hwf23 : @wf var2 var3 G2 t e2 e3)
+        : @wf3 base_type ident var1 var2 var3 G t e1 e2 e3.
+      Proof.
+        revert dependent G; revert dependent G2; revert dependent e3; induction Hwf12; intros.
+        all: try solve [ repeat first [ progress subst
+                          | progress destruct_head' False
+                          | progress destruct_head'_sig
+                          | progress destruct_head'_and
+                          | progress intros
+                          | progress expr.invert_subst
+                          | progress inversion_wf_one_constr
+                          | progress cbn [projT1 projT2 fst snd eq_rect] in *
+                          | solve [ eauto ]
+                          | break_innermost_match_hyps_step
+                          | match goal with
+                            | [ |- wf3 _ _ _ _ ] => constructor
+                            | [ H : _ |- wf3 _ _ _ _ ] => eapply H
+                            end ] ].
+        repeat first [ progress subst
+                          | progress inversion_sigma
+                          | progress inversion_prod
+                          | progress destruct_head' False
+                          | progress destruct_head'_sig
+                          | progress destruct_head'_and
+                          | progress destruct_head'_ex
+                          | progress intros
+                          | progress expr.invert_subst
+                          | progress inversion_wf_one_constr
+                          | progress cbn [projT1 projT2 fst snd eq_rect] in *
+                          | solve [ eauto ]
+                          | break_innermost_match_hyps_step
+                          | match goal with
+                            | [ |- wf3 _ _ _ _ ] => constructor
+                            | [ H : _ |- wf3 _ _ _ _ ] => eapply H
+                            end
+                          | rewrite in_map_iff in * ].
+        (* seems false? *)
       Abort.
     End wf_properties.
 
@@ -792,8 +869,75 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Qed.
     End with_var.
 
+    Section with_var3.
+      Context {var1 var2 var3 : type -> Type}.
+
+      Lemma wf3_from_flat_gen
+            {t}
+            (e : Flat.expr t)
+        : forall (G1 : PositiveMap.t type) (G2 : list { t : _ & var1 t * var2 t * var3 t }%type)
+                 (ctx1 : PositiveMap.t { t : type & var1 t })
+                 (ctx2 : PositiveMap.t { t : type & var2 t })
+                 (ctx3 : PositiveMap.t { t : type & var3 t })
+                 (H_G1_ctx1 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx1))
+                 (H_G1_ctx2 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx2))
+                 (H_G1_ctx3 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx3))
+                 (H_ctx_G2 : forall t v1 v2 v3, List.In (existT _ t (v1, v2, v3)) G2
+                                             <-> (exists p, PositiveMap.find p ctx1 = Some (existT _ t v1) /\ PositiveMap.find p ctx2 = Some (existT _ t v2) /\ PositiveMap.find p ctx3 = Some (existT _ t v3))),
+          Flat.wf G1 e = true -> expr.wf3 G2 (from_flat e var1 ctx1) (from_flat e var2 ctx2) (from_flat e var3 ctx3).
+      Proof.
+        induction e;
+          repeat first [ progress cbn [Flat.wf from_flat option_map projT1 projT2 List.In fst snd] in *
+                       | progress intros
+                       | destructure_step
+                       | progress cbv [Option.bind type.try_transport type.try_transport_cps cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
+                       | match goal with |- expr.wf3 _ _ _ _ => constructor end
+                       | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
+                       | congruence
+                       | destructure_split_step
+                       | erewrite type.try_make_transport_cps_correct
+                         by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
+                       | match goal with
+                         | [ H : context[expr.wf3 _ _ _ _] |- expr.wf3 _ _ _ _ ] => eapply H; clear H; eauto with nocore
+                         | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
+                         | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
+                         | [ H : forall t v1 v2 v3, In _ ?G2 <-> _ |- context[In _ ?G2] ] => rewrite H
+                         | [ H : In _ ?G2, H' : forall t v1 v2 v3, In _ ?G2 <-> _ |- _ ] => rewrite H' in H
+                         | [ |- exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
+                           => exists n
+                         | [ H : PositiveMap.find ?n ?ctx = ?v |- exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
+                           => exists n
+                         | [ |- _ \/ exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
+                           => right; exists n
+                         | [ H : PositiveMap.find ?n ?ctx = ?v |- _ \/ exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
+                           => right; exists n
+                         | [ H : PositiveMap.find ?n ?G = ?a, H' : PositiveMap.find ?n ?G' = ?b, H'' : forall p, PositiveMap.find p ?G = option_map _ (PositiveMap.find p ?G') |- _ ]
+                           => (tryif assert (a = option_map (@projT1 _ _) b) by (cbn [projT1 option_map]; (reflexivity || congruence))
+                                then fail
+                                else let H1 := fresh in
+                                     pose proof (H'' n) as H1;
+                                     rewrite H, H' in H1;
+                                     cbn [option_map projT1] in H1)
+                         end ].
+      Qed.
+
+      Lemma wf3_from_flat
+            {t}
+            (e : Flat.expr t)
+        : Flat.wf (PositiveMap.empty _) e = true -> expr.wf3 nil (from_flat e var1 (PositiveMap.empty _)) (from_flat e var2 (PositiveMap.empty _)) (from_flat e var3 (PositiveMap.empty _)).
+      Proof.
+        apply wf3_from_flat_gen; intros *;
+          repeat setoid_rewrite PositiveMap.gempty;
+          cbn [In option_map];
+          intuition (destruct_head'_ex; intuition (congruence || auto)).
+      Qed.
+    End with_var3.
+
     Lemma Wf_FromFlat {t} (e : Flat.expr t) : Flat.wf (PositiveMap.empty _) e = true -> expr.Wf (FromFlat e).
     Proof. intros H ??; apply wf_from_flat, H. Qed.
+
+    Lemma Wf3_FromFlat {t} (e : Flat.expr t) : Flat.wf (PositiveMap.empty _) e = true -> expr.Wf3 (FromFlat e).
+    Proof. intros H ???; apply wf3_from_flat, H. Qed.
 
     Lemma Wf_via_flat {t} (e : Expr t)
       : (e = GeneralizeVar (e _) /\ Flat.wf (PositiveMap.empty _) (to_flat (e _)) = true)
@@ -871,6 +1015,13 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
     Proof. intro H; apply Wf_FromFlat_to_flat, H. Qed.
     Lemma Wf_GeneralizeVar {t} (e : Expr t) : expr.Wf e -> expr.Wf (GeneralizeVar (e _)).
     Proof. apply Wf_FromFlat_ToFlat. Qed.
+
+    Lemma Wf3_FromFlat_to_flat {t} (e : expr t) : expr.wf nil e e -> expr.Wf3 (FromFlat (to_flat e)).
+    Proof. intro Hwf; eapply Wf3_FromFlat, wf_to_flat, Hwf. Qed.
+    Lemma Wf3_FromFlat_ToFlat {t} (e : Expr t) : expr.Wf e -> expr.Wf3 (FromFlat (ToFlat e)).
+    Proof. intro H; apply Wf3_FromFlat_to_flat, H. Qed.
+    Lemma Wf3_GeneralizeVar {t} (e : Expr t) : expr.Wf e -> expr.Wf3 (GeneralizeVar (e _)).
+    Proof. apply Wf3_FromFlat_ToFlat. Qed.
 
     Local Ltac t :=
       repeat first [ reflexivity
@@ -987,5 +1138,6 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
   Global Hint Extern 0 (?x == ?x) => apply expr.Wf_Interp_Proper : wf interp.
   Hint Resolve GeneralizeVar.Wf_FromFlat_ToFlat GeneralizeVar.Wf_GeneralizeVar : wf.
+  Hint Resolve GeneralizeVar.Wf3_FromFlat_ToFlat GeneralizeVar.Wf3_GeneralizeVar : wf.
   Hint Rewrite @GeneralizeVar.Interp_GeneralizeVar @GeneralizeVar.Interp_FromFlat_ToFlat : interp.
 End Compilers.

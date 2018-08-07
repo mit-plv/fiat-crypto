@@ -1048,11 +1048,11 @@ Module Compilers.
   Definition PartialEvaluateWithBounds {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
-    := partial.EvalWithBound e bound.
+    := partial.EvalWithBound (GeneralizeVar.GeneralizeVar (e _)) bound.
   Definition PartialEvaluateWithListInfoFromBounds {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
-    := partial.EtaExpandWithListInfoFromBound e bound.
+    := partial.EtaExpandWithListInfoFromBound (GeneralizeVar.GeneralizeVar (e _)) bound.
 
   Definition CheckPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
