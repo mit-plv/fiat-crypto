@@ -1058,18 +1058,6 @@ Module Compilers.
     : Expr t
     := partial.EtaExpandWithListInfoFromBound (GeneralizeVar.GeneralizeVar (e _)) bound.
 
-  Definition CheckPartialEvaluateWithBounds
-             {A}
-             (relax_zrange : zrange -> option zrange)
-             {t} (E : Expr t)
-             (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-             (b_out : ZRange.type.base.option.interp (type.final_codomain t))
-    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + A)
-    := let b_computed := partial.Extract E b_in in
-       if ZRange.type.base.option.is_tighter_than b_computed b_out
-       then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
-       else inr (@inl (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) _ (b_computed, E)).
-
   Definition CheckedPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
              {t} (E : Expr t)
@@ -1078,11 +1066,12 @@ Module Compilers.
     : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + list { t : _ & ident t })
     := dlet_nd e := GeneralizeVar.ToFlat E in
        let E := GeneralizeVar.FromFlat e in
+       let b_computed := partial.Extract E b_in in
        match CheckCasts.GetUnsupportedCasts E with
        | nil => (let E := PartialEvaluateWithBounds E b_in in
-                 dlet_nd e := GeneralizeVar.ToFlat E in
-                 let E := GeneralizeVar.FromFlat e in
-                 CheckPartialEvaluateWithBounds relax_zrange E b_in b_out)
+                if ZRange.type.base.option.is_tighter_than b_computed b_out
+                then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
+                else inr (@inl (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) _ (b_computed, E)))
        | unsupported_casts => inr (inr unsupported_casts)
        end.
 End Compilers.
