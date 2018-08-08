@@ -10,6 +10,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Sigma.
@@ -101,6 +102,39 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         => unify P P'; cut (P' -> (Q <-> (forall z w, R z w -> S z w))); [ change P with P'; solve [ intuition ] | intro; cbn [fst snd] ]
       end.
       eauto.
+    Qed.
+
+    Lemma andb_bool_impl_and_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
+          (R : forall t, f t -> g t -> bool)
+          (R' : forall t, f t -> g t -> Prop)
+          (HR : forall t x y, R t x y = true -> R' t x y)
+          {t} x y
+      : @type.andb_bool_for_each_lhs_of_arrow base_type f g R t x y = true
+        -> @type.and_for_each_lhs_of_arrow base_type f g R' t x y.
+    Proof.
+      induction t; cbn in *; rewrite ?Bool.andb_true_iff; destruct_head'_prod; cbn [fst snd]; intuition.
+    Qed.
+
+    Lemma and_impl_andb_bool_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
+          (R : forall t, f t -> g t -> bool)
+          (R' : forall t, f t -> g t -> Prop)
+          (HR : forall t x y, R' t x y -> R t x y = true)
+          {t} x y
+      : @type.and_for_each_lhs_of_arrow base_type f g R' t x y
+        -> @type.andb_bool_for_each_lhs_of_arrow base_type f g R t x y = true.
+    Proof.
+      induction t; cbn in *; rewrite ?Bool.andb_true_iff; destruct_head'_prod; cbn [fst snd]; intuition.
+    Qed.
+
+    Lemma andb_bool_iff_and_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
+          (R : forall t, f t -> g t -> bool)
+          (R' : forall t, f t -> g t -> Prop)
+          (HR : forall t x y, R t x y = true <-> R' t x y)
+          {t} x y
+      : @type.andb_bool_for_each_lhs_of_arrow base_type f g R t x y = true
+        <-> @type.and_for_each_lhs_of_arrow base_type f g R' t x y.
+    Proof.
+      induction t; cbn in *; rewrite ?Bool.andb_true_iff; destruct_head'_prod; cbn [fst snd]; split_iff; intuition.
     Qed.
   End type.
 
