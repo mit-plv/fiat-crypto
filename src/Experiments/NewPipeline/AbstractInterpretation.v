@@ -790,31 +790,18 @@ Module Compilers.
                 (abstract_interp_ident : forall t, ident t -> type.interp abstract_domain' t)
                 (update_literal_with_state : forall A : base.type.base, abstract_domain' A -> base.interp A -> base.interp A)
                 (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A)))
-                (is_annotation : forall t, ident t -> bool)
-        (*(do_again : forall t : base.type, @expr var t -> UnderLets (@expr var t))*).
+                (is_annotated_for : forall t t', ident t -> abstract_domain' t' -> bool).
 
         (** TODO: Is it okay to commute annotations? *)
         Definition update_annotation {t} (st : abstract_domain' t) (e : @expr var t) : @expr var t
-          := match e with
-             | (#cst' @ e')
-               => if is_annotation _ cst'
-                 then match type.try_transport base.try_make_transport_cps ident _ (t -> t) cst', type.try_transport base.try_make_transport_cps _ _ _ e' with
-                      | Some cst'', Some e''
-                        => match annotate_ident _ (abstract_interp_ident _ cst'' st) with
-                          | Some cst''' => ###cst''' @ e''
-                          | None => e
-                          end%expr
-                      | _, _ => e
-                      end
-                 else match annotate_ident _ st with
-                      | Some cst => ###cst @ e
-                      | None => e
-                      end%expr
-             | _ => match annotate_ident _ st with
-                   | Some cst => ###cst @ e
-                   | None => e
-                   end%expr
-             end%expr_pat.
+          := match e, annotate_ident _ st with
+             | (#cst' @ e'), Some cst
+               => if is_annotated_for _ _ cst' st
+                  then e
+                  else ###cst @ e
+             | _, Some cst => ###cst @ e
+             | _, None => e
+             end%expr_pat%expr.
 
         Definition annotate_with_ident (is_let_bound : bool) {t}
                    (st : abstract_domain' t) (e : @expr var t)
@@ -934,6 +921,22 @@ Module Compilers.
              => fun '(sta, stb) => sta' <- sta; stb' <- stb; Some (ident.Z_cast2 (sta', stb'))
            | _ => fun _ => None
            end%option%etype.
+      Definition is_annotated_for t t' (idc : ident t) : abstract_domain' t' -> bool
+        := match idc, t' with
+           | ident.Z_cast r, base.type.type_base base.type.Z
+             => fun r'
+                => match r' with
+                   | Some r' => zrange_beq r r'
+                   | None => false
+                   end
+           | ident.Z_cast2 (r1, r2), base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)
+             => fun '(r1', r2')
+                => match r1', r2' with
+                   | Some r1', Some r2' => zrange_beq r1 r1' && zrange_beq r2 r2'
+                   | _, _ => false
+                   end
+           | _, _ => fun _ => false
+           end.
       Definition is_annotation t (idc : ident t) : bool
         := match idc with
            | ident.Z_cast _
@@ -966,13 +969,13 @@ Module Compilers.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
         := (@partial.ident.eval)
-             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotation t e.
+             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e.
       Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
         := (@partial.ident.eval_with_bound)
-             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotation t e bound.
+             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e bound.
       Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
         := (@partial.ident.eta_expand_with_bound)
-             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotation t e bound.
+             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e bound.
       Definition Eval {t} (e : Expr t) : Expr t
         := fun var => eval (e _).
       Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
