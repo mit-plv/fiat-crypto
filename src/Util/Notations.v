@@ -31,6 +31,7 @@ Reserved Infix "=ᶻ?" (at level 70, no associativity).
 Reserved Infix "=ⁿ?" (at level 70, no associativity).
 Reserved Infix ".+" (at level 50).
 Reserved Infix ".*" (at level 50).
+Reserved Notation "' x" (at level 20, no associativity, format "' x").
 Reserved Notation "x ^ 2" (at level 30, format "x ^ 2").
 Reserved Notation "x ^ 3" (at level 30, format "x ^ 3").
 Reserved Notation "2 ^ e" (at level 30, format "2 ^ e", only printing).
