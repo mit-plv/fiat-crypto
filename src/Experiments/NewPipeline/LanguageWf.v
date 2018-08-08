@@ -436,40 +436,59 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Proof.
         revert dependent G; revert dependent G2; revert dependent e3; induction Hwf12; intros.
         all: try solve [ repeat first [ progress subst
-                          | progress destruct_head' False
-                          | progress destruct_head'_sig
-                          | progress destruct_head'_and
-                          | progress intros
-                          | progress expr.invert_subst
-                          | progress inversion_wf_one_constr
-                          | progress cbn [projT1 projT2 fst snd eq_rect] in *
-                          | solve [ eauto ]
-                          | break_innermost_match_hyps_step
-                          | match goal with
-                            | [ |- wf3 _ _ _ _ ] => constructor
-                            | [ H : _ |- wf3 _ _ _ _ ] => eapply H
-                            end ] ].
+                                      | progress destruct_head' False
+                                      | progress destruct_head'_sig
+                                      | progress destruct_head'_and
+                                      | progress intros
+                                      | progress expr.invert_subst
+                                      | progress inversion_wf_one_constr
+                                      | progress cbn [projT1 projT2 fst snd eq_rect] in *
+                                      | solve [ eauto ]
+                                      | break_innermost_match_hyps_step
+                                      | match goal with
+                                        | [ |- wf3 _ _ _ _ ] => constructor
+                                        | [ H : _ |- wf3 _ _ _ _ ] => eapply H
+                                        end ] ].
         repeat first [ progress subst
-                          | progress inversion_sigma
-                          | progress inversion_prod
-                          | progress destruct_head' False
-                          | progress destruct_head'_sig
-                          | progress destruct_head'_and
-                          | progress destruct_head'_ex
-                          | progress intros
-                          | progress expr.invert_subst
-                          | progress inversion_wf_one_constr
-                          | progress cbn [projT1 projT2 fst snd eq_rect] in *
-                          | solve [ eauto ]
-                          | break_innermost_match_hyps_step
-                          | match goal with
-                            | [ |- wf3 _ _ _ _ ] => constructor
-                            | [ H : _ |- wf3 _ _ _ _ ] => eapply H
-                            end
-                          | rewrite in_map_iff in * ].
+                     | progress inversion_sigma
+                     | progress inversion_prod
+                     | progress destruct_head' False
+                     | progress destruct_head'_sig
+                     | progress destruct_head'_and
+                     | progress destruct_head'_ex
+                     | progress intros
+                     | progress expr.invert_subst
+                     | progress inversion_wf_one_constr
+                     | progress cbn [projT1 projT2 fst snd eq_rect] in *
+                     | solve [ eauto ]
+                     | break_innermost_match_hyps_step
+                     | match goal with
+                       | [ |- wf3 _ _ _ _ ] => constructor
+                       | [ H : _ |- wf3 _ _ _ _ ] => eapply H
+                       end
+                     | rewrite in_map_iff in * ].
         (* seems false? *)
       Abort.
+
+      Lemma wf_of_wf3 {var1 var2} G {t}
+            (G1 := List.map (fun '(existT t (v1, v2, v3)) => existT _ t (v1, v2)) G)
+            (G2 := List.map (fun '(existT t (v1, v2, v3)) => existT _ t (v2, v3)) G)
+            e1 e2 e3
+            (Hwf : @wf3 base_type ident var1 var2 var2 G t e1 e2 e3)
+        : @wf _ _ G1 t e1 e2.
+      Proof.
+        subst G1 G2.
+        induction Hwf; cbn [map] in *; constructor; rewrite ?in_map_iff; intros;
+          try eexists (existT (fun t => _ * _ * _)%type _ (_, _, _));
+          split_and;
+          repeat apply conj; try reflexivity; try eassumption;
+            eauto.
+      Qed.
+
+      Lemma Wf_of_Wf3 {t} (e : expr.Expr t) : @Wf3 base_type ident t e -> @Wf base_type ident t e.
+      Proof. intros Hwf var1 var2; eapply wf_of_wf3 with (G:=nil), Hwf. Qed.
     End wf_properties.
+    Global Hint Resolve Wf_of_Wf3 : wf.
 
     Section interp_gen.
       Context {base_type}
