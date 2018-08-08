@@ -312,6 +312,40 @@ Module Compilers.
                            end ].
         Qed.
       End with_var.
+
+      Section for_interp.
+        Context {base_interp : base_type -> Type}
+                (ident_interp : forall t, ident t -> type.interp base_interp t).
+
+        Local Notation UnderLets := (@UnderLets (type.interp base_interp)).
+
+        Fixpoint interp {T} (v : UnderLets T) : T
+          := match v with
+             | Base v => v
+             | UnderLet A x f => let xv := expr.interp ident_interp x in
+                                 @interp _ (f xv)
+             end.
+
+        Lemma interp_splice {A B} (x : UnderLets A) (e : A -> UnderLets B)
+          : interp (splice x e) = interp (e (interp x)).
+        Proof. induction x; cbn [splice interp]; eauto. Qed.
+
+        Lemma interp_splice_list {A B} (x : list (UnderLets A)) (e : list A -> UnderLets B)
+          : interp (splice_list x e)
+            = interp (e (map interp x)).
+        Proof.
+          revert e; induction x as [|x xs IHx]; intros; cbn [splice_list interp map]; [ reflexivity | ].
+          rewrite interp_splice, IHx; reflexivity.
+        Qed.
+
+        Lemma interp_to_expr {t} (x : UnderLets (expr t))
+          : expr.interp ident_interp (to_expr x) = expr.interp ident_interp (interp x).
+        Proof. induction x; cbn [expr.interp interp to_expr]; cbv [LetIn.Let_In]; eauto. Qed.
+
+        Lemma interp_of_expr {t} (x : expr t)
+          : expr.interp ident_interp (interp (of_expr x)) = expr.interp ident_interp x.
+        Proof. induction x; cbn [expr.interp interp of_expr]; cbv [LetIn.Let_In]; eauto. Qed.
+      End for_interp.
     End with_ident.
 
     Section reify.

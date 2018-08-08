@@ -650,6 +650,8 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
       Section interp.
         Import defaults.
+        Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
+        Local Notation interp := (expr.interp (@ident.gen_interp cast_outside_of_range)).
         Lemma interp_reify_list {t} ls : interp (reify_list (t:=t) ls) = List.map interp ls.
         Proof.
           cbv [reify_list]; induction ls as [|l ls IHls]; [ reflexivity | ];
@@ -664,7 +666,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           { etransitivity; [ | apply map_id ]; apply map_ext; auto. }
         Qed.
 
-        Lemma Interp_Reify_as {t} v : Interp (GallinaReify.base.Reify_as t v) = v.
+        Lemma Interp_Reify_as {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (GallinaReify.base.Reify_as t v) = v.
         Proof. apply interp_reify. Qed.
       End interp.
     End invert.
