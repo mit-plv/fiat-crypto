@@ -66,8 +66,7 @@ Module Compilers.
       pattern.ident.internal_ident_dec_bl,
       pattern.ident.try_make_transport_ident_cps_correct,
       pattern.ident.eta_ident_cps_correct
-        with nocore;
-      [ .. | intros; eapply UnderLets.wf_Proper_list; [ | | eapply wf_do_again; assumption ]; solve [ wf_t ] ].
+        with nocore.
     Local Ltac start_Interp_proof rewrite_head_eq all_rewrite_rules_eq rewrite_head0 :=
       start_Wf_or_interp_proof rewrite_head_eq all_rewrite_rules_eq rewrite_head0.
 

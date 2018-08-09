@@ -623,12 +623,11 @@ Module Compilers.
                                           | true, true
                                             => UnderLets.wf
                                                  (fun G' v1 v2
-                                                  => exists (pf1 : anyexpr_ty v1 = t) (pf2 : anyexpr_ty v2 = t),
-                                                      forall G'',
-                                                        (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> wf_value G' v1' v2')
-                                                        -> expr.wf G''
-                                                                   (rew [fun t : base.type => expr t] pf1 in unwrap v1)
-                                                                   (rew [fun t : base.type => expr t] pf2 in unwrap v2))
+                                                  => exists (pf1 : anyexpr_ty v1 = t) (pf2 : anyexpr_ty v2 = t) G'',
+                                                      (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> wf_value G' v1' v2')
+                                                      /\ expr.wf G''
+                                                                (rew [fun t : base.type => expr t] pf1 in unwrap v1)
+                                                                (rew [fun t : base.type => expr t] pf2 in unwrap v2))
                                                  G
                                           | false, false
                                             => UnderLets.wf (fun G' => wf_anyexpr G' t) G
