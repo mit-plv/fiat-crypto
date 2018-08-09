@@ -2112,3 +2112,13 @@ Proof.
   revert ls2 n; induction ls1 as [|l1 ls1 IHls1], ls2, n; cbn [combine nth_error]; try reflexivity; auto.
   edestruct nth_error; reflexivity.
 Qed.
+
+Lemma combine_repeat {A B} (a : A) (b : B) n : combine (repeat a n) (repeat b n) = repeat (a, b) n.
+Proof. induction n; cbn; congruence. Qed.
+
+Lemma combine_rev_rev_samelength {A B} ls1 ls2 : length ls1 = length ls2 -> @combine A B (rev ls1) (rev ls2) = rev (combine ls1 ls2).
+Proof.
+  revert ls2; induction ls1 as [|? ? IHls1], ls2; cbn in *; try congruence; intros.
+  rewrite combine_app_samelength, IHls1 by (rewrite ?rev_length; congruence); cbn [combine].
+  reflexivity.
+Qed.
