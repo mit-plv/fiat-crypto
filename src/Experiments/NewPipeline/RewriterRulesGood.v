@@ -554,20 +554,16 @@ Module Compilers.
       Lemma nbe_rewrite_rules_good
         : rewrite_rules_goodT nbe_rewrite_rules nbe_rewrite_rules.
       Proof.
-        (*
         Time start_good (@nbe_cps_id) (@nbe_rewrite_rules).
         Time all: repeat repeat good_t_step.
-         *)
-      Admitted.
+      Qed.
 
       Lemma arith_rewrite_rules_good max_const
         : rewrite_rules_goodT (arith_rewrite_rules max_const) (arith_rewrite_rules max_const).
       Proof.
-        (*
         Time start_good (@arith_cps_id) (@arith_rewrite_rules).
         Time all: repeat good_t_step.
-         *)
-      Admitted.
+      Qed.
 
       Lemma fancy_rewrite_rules_good
             (invert_low invert_high : Z -> Z -> option Z)
