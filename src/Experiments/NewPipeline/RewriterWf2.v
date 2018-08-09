@@ -484,7 +484,7 @@ Module Compilers.
                 (do_again1 : forall t : base.type, @expr.expr base.type ident (@value var1) t -> @UnderLets var1 (@expr var1 t))
                 (do_again2 : forall t : base.type, @expr.expr base.type ident (@value var2) t -> @UnderLets var2 (@expr var2 t))
                 (wf_do_again : forall G (t : base.type) e1 e2,
-                    expr.wf nil e1 e2
+                    (exists G', (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2) /\ expr.wf G' e1 e2)
                     -> UnderLets.wf (fun G' => expr.wf G') G (@do_again1 t e1) (@do_again2 t e2))
                 (d : @decision_tree pident)
                 (rew1 : rewrite_rulesT1) (rew2 : rewrite_rulesT2)
@@ -757,8 +757,9 @@ Module Compilers.
                     (Hrew : rewrite_rules_goodT rew1 rew2)
                     (do_again1 : forall t : base.type, @expr.expr base.type ident (@value var1) t -> @UnderLets var1 (@expr var1 t))
                     (do_again2 : forall t : base.type, @expr.expr base.type ident (@value var2) t -> @UnderLets var2 (@expr var2 t))
-                    (wf_do_again : forall G (t : base.type) e1 e2,
-                        expr.wf nil e1 e2
+                    (wf_do_again : forall G G' (t : base.type) e1 e2,
+                        (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2)
+                        -> expr.wf G' e1 e2
                         -> UnderLets.wf (fun G' => expr.wf G') G (@do_again1 t e1) (@do_again2 t e2)).
 
             Local Notation assemble_identifier_rewriters' var := (@assemble_identifier_rewriters' ident var pident full_types invert_bind_args type_of_pident pident_to_typed of_typed_ident arg_types bind_args try_make_transport_ident_cps dtree).
@@ -776,7 +777,8 @@ Module Compilers.
             Proof.
               revert dependent G; revert dependent re1; revert dependent re2; induction t as [t|s IHs d IHd];
                 intros; cbn [assemble_identifier_rewriters'].
-              { rewrite HK1, HK2; apply wf_eval_rewrite_rules; assumption. }
+              { rewrite HK1, HK2; apply wf_eval_rewrite_rules; try assumption.
+                intros; destruct_head'_ex; destruct_head'_and; eauto. }
               { hnf; intros; subst.
                 unshelve eapply IHd; cbn [type_of_rawexpr]; [ shelve | shelve | constructor | cbn; reflexivity | cbn; reflexivity ].
                 all: rewrite ?HK1, ?HK2.
@@ -903,9 +905,10 @@ Module Compilers.
                   do_again1
                   do_again2
                   (wf_do_again
-                   : forall (t : base.type) e1 e2,
-                      expr.wf nil e1 e2
-                      -> UnderLets.wf (fun G' => expr.wf G') nil (do_again1 t e1) (do_again2 t e2))
+                   : forall G G' (t : base.type) e1 e2,
+                      (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2)
+                      -> expr.wf G' e1 e2
+                      -> UnderLets.wf (fun G' => expr.wf G') G (do_again1 t e1) (do_again2 t e2))
                   t (idc : ident t),
                   wf_value_with_lets nil (rewrite_head var1 do_again1 t idc) (rewrite_head var2 do_again2 t idc))
               fuel {t} (e : Expr t) (Hwf : Wf e)
@@ -913,7 +916,6 @@ Module Compilers.
       Proof.
         intros var1 var2; cbv [Rewrite]; eapply wf_rewrite with (G:=nil); [ | apply Hwf | wf_t ].
         intros; subst; eapply wf_value'_Proper_list; [ | eapply wf_rewrite_head ]; wf_t.
-        eapply wf_do_again; [ | eassumption ]; wf_t.
       Qed.
     End Compile.
   End RewriteRules.

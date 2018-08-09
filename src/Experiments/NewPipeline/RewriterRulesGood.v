@@ -166,28 +166,27 @@ Module Compilers.
             N1 N2 C1 C2 ls1 ls2 G
             (Hwf : expr.wf G ls1 ls2)
             (HN : UnderLets.wf (fun G' v1 v2
-                                => forall G'',
+                                => exists G'',
                                     (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                                    -> expr.wf G'' v1 v2) G N1 N2)
+                                    /\ expr.wf G'' v1 v2) G N1 N2)
             (HC : forall G' x xs y ys rec1 rec2,
                 (exists seg, G' = (seg ++ G)%list)
                 -> expr.wf G x y
                 -> expr.wf G (reify_list xs) (reify_list ys)
-                -> (forall G'', (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                          -> expr.wf G'' rec1 rec2)
+                -> (exists G'', (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
+                                /\ expr.wf G'' rec1 rec2)
                 -> UnderLets.wf (fun G' v1 v2
-                                => forall G'',
-                                    (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                                    -> expr.wf G'' v1 v2)
-                               G' (C1 x xs rec1) (C2 y ys rec2))
+                                 => exists G'',
+                                     (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
+                                     /\ expr.wf G'' v1 v2)
+                                G' (C1 x xs rec1) (C2 y ys rec2))
         : option_eq (UnderLets.wf
                        (fun G' v1 v2
-                        => exists (pf1 : AnyExpr.anyexpr_ty v1 = P) (pf2 : AnyExpr.anyexpr_ty v2 = P),
-                            forall G'',
-                              (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                              -> expr.wf G''
-                                        (rew [fun t : base.type => expr t] pf1 in AnyExpr.unwrap v1)
-                                        (rew [fun t : base.type => expr t] pf2 in AnyExpr.unwrap v2))
+                        => exists (pf1 : AnyExpr.anyexpr_ty v1 = P) (pf2 : AnyExpr.anyexpr_ty v2 = P) G'',
+                            (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
+                            /\ expr.wf G''
+                                       (rew [fun t : base.type => expr t] pf1 in AnyExpr.unwrap v1)
+                                       (rew [fun t : base.type => expr t] pf2 in AnyExpr.unwrap v2))
                        G)
                     (@rlist_rect var1 A P (@Compile.value _ ident var1) N1 C1 ls1 _ id)
                     (@rlist_rect var2 A P (@Compile.value _ ident var2) N2 C2 ls2 _ id).
@@ -199,8 +198,8 @@ Module Compilers.
         all: repeat first [ match goal with
                             | [ H : invert_expr.reflect_list ?v = Some _, H' : invert_expr.reflect_list ?v' = None |- _ ]
                               => first [ erewrite <- expr.wf_reflect_list in H' by eassumption
-                                      | erewrite -> expr.wf_reflect_list in H' by eassumption ];
-                                exfalso; clear -H H'; congruence
+                                       | erewrite -> expr.wf_reflect_list in H' by eassumption ];
+                                 exfalso; clear -H H'; congruence
                             | [ |- UnderLets.wf _ _ _ _ ] => constructor
                             | [ |- Compile.wf_anyexpr _ _ _ _ ] => constructor
                             end
@@ -208,10 +207,11 @@ Module Compilers.
                           | progress cbn [sequence_return option_eq]
                           | assumption
                           | reflexivity
+                          | (exists eq_refl)
                           | apply @UnderLets.wf_splice with (P:=fun G' v1 v2
-                                                                => forall G'',
+                                                                => exists G'',
                                                                     (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                                                                    -> expr.wf G'' v1 v2)
+                                                                    /\ expr.wf G'' v1 v2)
                           | progress intros ].
         lazymatch goal with
         | [ H : expr.wf _ (reify_list ?l) (reify_list ?l') |- _ ]
@@ -223,8 +223,8 @@ Module Compilers.
         all: repeat first [ match goal with
                             | [ H : invert_expr.reflect_list ?v = Some _, H' : invert_expr.reflect_list ?v' = None |- _ ]
                               => first [ erewrite <- expr.wf_reflect_list in H' by eassumption
-                                      | erewrite -> expr.wf_reflect_list in H' by eassumption ];
-                                exfalso; clear -H H'; congruence
+                                       | erewrite -> expr.wf_reflect_list in H' by eassumption ];
+                                 exfalso; clear -H H'; congruence
                             | [ |- UnderLets.wf _ _ _ _ ] => constructor
                             end
                           | progress expr.invert_subst
@@ -235,9 +235,9 @@ Module Compilers.
                           | solve [ auto ]
                           | progress subst
                           | apply @UnderLets.wf_splice with (P:=fun G' v1 v2
-                                                                => forall G'',
+                                                                => exists G'',
                                                                     (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                                                                    -> expr.wf G'' v1 v2)
+                                                                    /\ expr.wf G'' v1 v2)
                           | progress intros
                           | wf_safe_t_step
                           | progress type.inversion_type
@@ -248,28 +248,27 @@ Module Compilers.
             N1 N2 C1 C2 ls1 ls2 G
             (Hwf : expr.wf G ls1 ls2)
             (HN : UnderLets.wf (fun G' x1 x2
-                                => forall G'',
+                                => exists G'',
                                     (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                                    -> Compile.wf_anyexpr G'' (type.base P) (AnyExpr.wrap x1) (AnyExpr.wrap x2)) G N1 N2)
+                                    /\ Compile.wf_anyexpr G'' (type.base P) (AnyExpr.wrap x1) (AnyExpr.wrap x2)) G N1 N2)
             (HC : forall G' x xs y ys rec1 rec2,
                 (exists seg, G' = (seg ++ G)%list)
                 -> expr.wf G x y
                 -> expr.wf G (reify_list xs) (reify_list ys)
-                -> (forall G'', (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                          -> expr.wf G'' rec1 rec2)
+                -> (exists G'', (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
+                                /\ expr.wf G'' rec1 rec2)
                 -> UnderLets.wf (fun G' v1 v2
-                                => forall G'',
+                                => exists G'',
                                     (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                                    -> expr.wf G'' v1 v2)
+                                    /\ expr.wf G'' v1 v2)
                                G' (C1 x xs rec1) (C2 y ys rec2))
         : option_eq (UnderLets.wf
                        (fun G' v1 v2
-                        => exists (pf1 : AnyExpr.anyexpr_ty v1 = P) (pf2 : AnyExpr.anyexpr_ty v2 = P),
-                            forall G'',
-                              (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
-                              -> expr.wf G''
-                                        (rew [fun t : base.type => expr t] pf1 in AnyExpr.unwrap v1)
-                                        (rew [fun t : base.type => expr t] pf2 in AnyExpr.unwrap v2))
+                        => exists (pf1 : AnyExpr.anyexpr_ty v1 = P) (pf2 : AnyExpr.anyexpr_ty v2 = P) G'',
+                            (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> Compile.wf_value G' v1' v2')
+                            /\ expr.wf G''
+                                       (rew [fun t : base.type => expr t] pf1 in AnyExpr.unwrap v1)
+                                       (rew [fun t : base.type => expr t] pf2 in AnyExpr.unwrap v2))
                        G)
                     (@rlist_rect_cast var1 A A' P (@Compile.value _ ident var1) N1 C1 ls1 _ id)
                     (@rlist_rect_cast var2 A A' P (@Compile.value _ ident var2) N2 C2 ls2 _ id).
@@ -280,7 +279,8 @@ Module Compilers.
         apply wf_rlist_rectv; auto.
         eapply UnderLets.wf_Proper_list_impl; [ | | eassumption ]; trivial; cbn; intros ? ? ? H.
         repeat let x := fresh in intro x; specialize (H x).
-        inversion H; inversion_sigma; type.inversion_type; subst; assumption.
+        destruct H as [? [H0 H1] ].
+        inversion H1; inversion_sigma; type.inversion_type; subst; eauto.
       Qed.
 
 
@@ -392,16 +392,6 @@ Module Compilers.
         induction ls as [|x xs IHxs]; cbn [fold_right In]; intros;
           destruct_head' False; destruct_head'_prod; destruct_head'_or; intros.
         eapply fold_right_impl_Proper; [ | | refine IHxs ]; intuition (inversion_prod; subst; eauto).
-      Qed.
-
-      (** TODO: MOVE ME *)
-      Lemma combine_repeat {A B} (a : A) (b : B) n : combine (repeat a n) (repeat b n) = repeat (a, b) n.
-      Proof. induction n; cbn; congruence. Qed.
-      Lemma combine_rev_rev_samelength {A B} ls1 ls2 : length ls1 = length ls2 -> @combine A B (rev ls1) (rev ls2) = rev (combine ls1 ls2).
-      Proof.
-        revert ls2; induction ls1 as [|? ? IHls1], ls2; cbn in *; try congruence; intros.
-        rewrite combine_app_samelength, IHls1 by (rewrite ?rev_length; congruence); cbn [combine].
-        reflexivity.
       Qed.
 
       Local Ltac start_good cps_id rewrite_rules :=
@@ -547,6 +537,13 @@ Module Compilers.
                   => is_evar R; revert H; instantiate (1:=fun G' => expr.wf G'); solve [ auto ]
                 | [ H : expr.wf ?G ?a ?b |- ?R ?G ?a ?b ]
                   => is_evar R; instantiate (1:=fun G' => expr.wf G'); solve [ auto ]
+                | [ |- (forall t v1 v2, In _ _ -> _) /\ expr.wf _ _ _ ] => apply conj; revgoals
+                | [ |- (forall t v1 v2, In _ _ -> _) /\ Compile.wf_anyexpr _ _ _ _ ] => apply conj; revgoals
+                | [ H : expr.wf _ ?x ?y |- Compile.wf_value _ ?x ?y ] => hnf
+                | [ |- Compile.wf_value _ ?x ?y ] => eapply Compile.wf_value'_Proper_list; [ | solve [ cbv [Compile.wf_value] in *; eauto ] ]; solve [ wf_t ]
+                | [ |- In ?x ?ls ] => is_evar ls; refine (or_introl eq_refl : In x (x :: _)); shelve
+                | [ |- or (_ = _) ?G ] => first [ left; reflexivity | has_evar G; right ]
+                | [ H : @In ?A _ ?ls |- _ ] => is_evar ls; unify ls (@nil A); cbn [In] in H
                 end
               | progress expr.invert_subst
               | solve [ wf_t ]
@@ -557,12 +554,9 @@ Module Compilers.
       Lemma nbe_rewrite_rules_good
         : rewrite_rules_goodT nbe_rewrite_rules nbe_rewrite_rules.
       Proof.
-        (*Time start_good (@nbe_cps_id) (@nbe_rewrite_rules).
-        Set Ltac Profiling.
-        Time all: try solve [ repeat repeat good_t_step ].
-        Show Ltac Profile.
-        (*start_good (@nbe_cps_id) (@nbe_rewrite_rules).
-        all: repeat good_t_step.*)
+        (*
+        Time start_good (@nbe_cps_id) (@nbe_rewrite_rules).
+        Time all: repeat repeat good_t_step.
          *)
       Admitted.
 
