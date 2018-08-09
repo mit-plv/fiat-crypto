@@ -90,8 +90,7 @@ Module Compilers.
 
     Local Ltac t_red :=
       repeat first [ progress intros
-                   | progress cbn [type.type_beq base.type.type_beq base.type.base_beq base.try_make_transport_cps base.try_make_base_transport_cps eq_rect andb] in *
-                   | progress cbv [cpsreturn cpsbind cps_option_bind Option.bind cpscall] in * ].
+                   | progress cbn [type.type_beq base.type.type_beq base.type.base_beq base.try_make_transport_cps base.try_make_base_transport_cps eq_rect andb] in * ].
     Local Ltac t :=
       repeat first [ progress t_red
                    | reflexivity
@@ -110,30 +109,33 @@ Module Compilers.
                      | [ H : _ |- _ ] => rewrite H
                      end ].
 
-    Lemma try_make_base_transport_cps_correct P t1 t2 T k
-      : base.try_make_base_transport_cps P t1 t2 T k
-        = k match Sumbool.sumbool_of_bool (base.type.base_beq t1 t2) with
-            | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_base_dec_bl _ _ pf) in id)
-            | right _ => None
-            end.
-    Proof. revert P t2 T k; induction t1, t2; t. Qed.
+    Lemma try_make_base_transport_cps_correct P t1 t2
+      : base.try_make_base_transport_cps P t1 t2
+        = fun T k
+          => k match Sumbool.sumbool_of_bool (base.type.base_beq t1 t2) with
+              | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_base_dec_bl _ _ pf) in id)
+              | right _ => None
+              end.
+    Proof. revert P t2; induction t1, t2; t. Qed.
 
-    Lemma try_make_transport_cps_correct P t1 t2 T k
-      : base.try_make_transport_cps P t1 t2 T k
-        = k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-            | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_type_dec_bl _ _ pf) in id)
-            | right _ => None
-            end.
-    Proof. revert P t2 T k; induction t1, t2; t_red; rewrite ?try_make_base_transport_cps_correct; t. Qed.
+    Lemma try_make_transport_cps_correct P t1 t2
+      : base.try_make_transport_cps P t1 t2
+        = fun T k
+          => k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
+              | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_type_dec_bl _ _ pf) in id)
+              | right _ => None
+              end.
+    Proof. revert P t2; induction t1, t2; t_red; rewrite ?try_make_base_transport_cps_correct; t. Qed.
 
-    Lemma try_transport_cps_correct P t1 t2 v T k
-      : base.try_transport_cps P t1 t2 v T k
-        = k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-            | left pf => Some (rew [P] (base.type.internal_type_dec_bl _ _ pf) in v)
-            | right _ => None
-            end.
+    Lemma try_transport_cps_correct P t1 t2 v
+      : base.try_transport_cps P t1 t2 v
+        = fun T k
+          => k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
+              | left pf => Some (rew [P] (base.type.internal_type_dec_bl _ _ pf) in v)
+              | right _ => None
+              end.
     Proof.
-      cbv [base.try_transport_cps cpscall cps_option_bind cpsreturn cpsbind Option.bind]; rewrite try_make_transport_cps_correct;
+      cbv [base.try_transport_cps]; rewrite try_make_transport_cps_correct;
         t.
     Qed.
 
@@ -189,7 +191,8 @@ Module Compilers.
           end.
     Ltac inversion_type_step :=
       cbv [defaults.type_base] in *;
-      first [ lazymatch goal with
+      first [ base.type.inversion_type_step
+            | lazymatch goal with
               | [ H : ?x = ?x :> type.type _ |- _ ] => clear H
               | [ H : ?x = ?y :> type.type _ |- _ ] => subst x || subst y
               end
@@ -233,12 +236,13 @@ Module Compilers.
               (base_type_lb : forall t1 t2, t1 = t2 -> base_type_beq t1 t2 = true)
               (try_make_transport_base_type_cps : forall (P : base_type -> Type) t1 t2, ~> option (P t1 -> P t2))
               (try_make_transport_base_type_cps_correct
-               : forall P t1 t2 T k,
-                  try_make_transport_base_type_cps P t1 t2 T k
-                  = k match Sumbool.sumbool_of_bool (base_type_beq t1 t2) with
-                      | left pf => Some (rew [fun t => P t1 -> P t] (base_type_bl _ _ pf) in id)
-                      | right _ => None
-                      end).
+               : forall P t1 t2,
+                  try_make_transport_base_type_cps P t1 t2
+                  = fun T k
+                    => k match Sumbool.sumbool_of_bool (base_type_beq t1 t2) with
+                        | left pf => Some (rew [fun t => P t1 -> P t] (base_type_bl _ _ pf) in id)
+                        | right _ => None
+                        end).
 
       Let base_type_eq_dec : DecidableRel (@eq base_type)
         := dec_rel_of_bool_dec_rel base_type_beq base_type_bl base_type_lb.
@@ -266,31 +270,34 @@ Module Compilers.
                        | [ H : _ |- _ ] => rewrite H
                        end ].
 
-      Lemma try_make_transport_cps_correct P t1 t2 T k
-        : type.try_make_transport_cps try_make_transport_base_type_cps P t1 t2 T k
-          = k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-              | left pf => Some (rew [fun t => P t1 -> P t] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in id)
-              | right _ => None
-              end.
-      Proof. revert P t2 T k; induction t1, t2; t. Qed.
+      Lemma try_make_transport_cps_correct P t1 t2
+        : type.try_make_transport_cps try_make_transport_base_type_cps P t1 t2
+          = fun T k
+            => k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
+                | left pf => Some (rew [fun t => P t1 -> P t] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in id)
+                | right _ => None
+                end.
+      Proof. revert P t2; induction t1, t2; t. Qed.
 
-      Lemma try_transport_cps_correct P t1 t2 v T k
-        : type.try_transport_cps try_make_transport_base_type_cps P t1 t2 v T k
-          = k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-              | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
-              | right _ => None
-              end.
+      Lemma try_transport_cps_correct P t1 t2
+        : type.try_transport_cps try_make_transport_base_type_cps P t1 t2
+          = fun v T k
+            => k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
+                | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
+                | right _ => None
+                end.
       Proof.
-        cbv [type.try_transport_cps cpscall cps_option_bind cpsreturn cpsbind Option.bind]; rewrite try_make_transport_cps_correct;
+        cbv [type.try_transport_cps]; rewrite try_make_transport_cps_correct;
           t.
       Qed.
 
-      Lemma try_transport_correct P t1 t2 v
-        : type.try_transport try_make_transport_base_type_cps P t1 t2 v
-          = match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-            | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
-            | right _ => None
-            end.
+      Lemma try_transport_correct P t1 t2
+        : type.try_transport try_make_transport_base_type_cps P t1 t2
+          = fun v
+            => match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
+              | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
+              | right _ => None
+              end.
       Proof. cbv [type.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
     End transport_cps.
   End type.
@@ -328,8 +335,7 @@ Module Compilers.
 
   Ltac rewrite_type_transport_correct :=
     cbv [type.try_transport_cps type.try_transport base.try_transport base.try_transport_cps] in *;
-    cbn [type.try_make_transport_cps] in *;
-    cbv [cpscall cpsbind cps_option_bind cpsreturn id] in *;
+    cbv [cpsbind cpscall cpsreturn id cps_option_bind] in *;
     repeat match goal with
            | [ |- context[type.try_make_transport_cps ?bmt ?P ?t1 ?t2] ]
              => erewrite type.try_make_transport_cps_correct
@@ -341,6 +347,10 @@ Module Compilers.
              => rewrite base.try_make_transport_cps_correct
            | [ H : context[base.try_make_transport_cps ?P ?t1 ?t2] |- _ ]
              => rewrite base.try_make_transport_cps_correct in H
+           | [ |- context[base.try_make_base_transport_cps ?P ?t1 ?t2] ]
+             => rewrite base.try_make_base_transport_cps_correct
+           | [ H : context[base.try_make_base_transport_cps ?P ?t1 ?t2] |- _ ]
+             => rewrite base.try_make_base_transport_cps_correct in H
            end.
 
   Module ident.
@@ -485,13 +495,11 @@ Module Compilers.
                      | discriminate
                      | reflexivity
                      | progress type.inversion_type
-                     | progress base.type.inversion_type
                      | progress invert_match
                      | progress ident.invert_match
                      | progress break_innermost_match_hyps
                      | exists eq_refl; cbn
-                     | progress cbv [type.try_transport type.try_transport_cps type.try_make_transport_cps cpsbind cpscall cps_option_bind cpsreturn id] in *
-                     | rewrite base.try_make_transport_cps_correct in *
+                     | progress rewrite_type_transport_correct
                      | progress type_beq_to_eq
                      | congruence ].
 
@@ -539,8 +547,7 @@ Module Compilers.
       Proof.
         intros T k; subst e; cbn [invert_expr.reflect_list_cps']; cbv [id type_base] in *.
         rewrite_type_transport_correct; break_innermost_match; type_beq_to_eq; subst; cbn [eq_rect]; try reflexivity.
-        etransitivity; rewrite rec; clear rec; [ | reflexivity ]; cbv [id]; break_innermost_match; try reflexivity.
-        all: do 2 (rewrite_type_transport_correct; break_innermost_match; type_beq_to_eq; subst; cbn [eq_rect]; try reflexivity).
+        all: etransitivity; rewrite rec; clear rec; [ | reflexivity ]; cbv [id]; break_innermost_match; try reflexivity.
       Qed.
 
 
@@ -571,7 +578,7 @@ Module Compilers.
             end.
       Proof.
         type.invert_one e; cbv [invert_expr.invert_nil invert_expr.invert_Ident type_base]; try reflexivity;
-          [ ident.invert_match; cbv [type_base] in *; base.type.inversion_type; reflexivity | ].
+          [ ident.invert_match; cbv [type_base] in *; type.inversion_type; reflexivity | ].
         do 2 (let f := match goal with f : expr (_ -> _) |- _ => f end in
               type.invert_one f; try reflexivity; []).
         cbv [type_base] in *; ident.invert; break_innermost_match_hyps; subst; destruct_head' False; try reflexivity; [].
@@ -579,9 +586,13 @@ Module Compilers.
         cbv [invert_expr.reflect_list invert_expr.invert_cons invert_expr.invert_AppIdent2 invert_expr.invert_App2 invert_expr.invert_App Option.bind invert_expr.invert_Ident].
         cbv [invert_expr.reflect_list_cps].
         cbn [invert_expr.reflect_list_cps'].
-        rewrite_type_transport_correct; break_innermost_match_step; type_beq_to_eq; try discriminate; base.type.inversion_type; [].
-        rewrite reflect_list_cps'_id; cbv [id]; break_innermost_match; try reflexivity; [].
-        rewrite_type_transport_correct; break_innermost_match_step; type_beq_to_eq; base.type.inversion_type; try discriminate; reflexivity.
+        repeat first [ reflexivity
+                     | discriminate
+                     | progress rewrite_type_transport_correct
+                     | progress type_beq_to_eq
+                     | progress break_innermost_match
+                     | progress type.inversion_type
+                     | rewrite reflect_list_cps'_id; reflexivity ].
       Qed.
 
       Lemma reify_list_nil {t} : reify_list nil = ([])%expr :> expr (base.type.list t).
