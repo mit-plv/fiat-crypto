@@ -526,6 +526,7 @@ Module Compilers.
                               | progress cbv [rewrite_ruleT id] in *
                               | progress destruct_head'_sigT
                               | rewrite Equality.transport_const
+                              | progress cbv [type.try_transport_cps type.try_make_transport_cps]
                               | progress rewrite_type_transport_correct
                               | progress type_beq_to_eq
                               | congruence
