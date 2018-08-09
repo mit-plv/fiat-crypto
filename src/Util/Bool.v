@@ -61,13 +61,32 @@ Qed.
 Definition andb_prop : forall a b : bool, a && b = true -> a = true /\ b = true. (* transparent version *)
 Proof. destruct a, b; simpl; split; try reflexivity; assumption. Defined.
 
+Definition andb_true_intro : forall a b : bool, a = true /\ b = true -> a && b = true. (* transparent version *)
+Proof. destruct a, b; simpl; try reflexivity; intros [? ?]; assumption. Defined.
+
+Definition andb_true_rect {a b : bool} (P : a && b = true -> Type) (f : forall p q, P (andb_true_intro a b (conj p q)))
+  : forall p, P p.
+Proof.
+  destruct a, b; try specialize (f eq_refl eq_refl); cbn in *; intro p;
+    first [ refine match p with eq_refl => f end
+          | refine match p with eq_refl => I end ].
+Defined.
+Definition andb_true_rec {a b : bool} (P : a && b = true -> Set) := @andb_true_rect a b P.
+Definition andb_true_ind {a b : bool} (P : a && b = true -> Prop) := @andb_true_rec a b P.
+
+Definition andb_is_true_intro : forall a b : bool, is_true a /\ is_true b -> is_true (a && b)
+  := andb_true_intro.
+
+Definition andb_is_true_rect {a b : bool} (P : is_true (a && b) -> Type) (f : forall p q, P (andb_is_true_intro a b (conj p q)))
+  : forall p, P p
+  := @andb_true_rect a b P f.
+Definition andb_is_true_rec {a b : bool} (P : is_true (a && b) -> Set) := @andb_is_true_rect a b P.
+Definition andb_is_true_ind {a b : bool} (P : is_true (a && b) -> Prop) := @andb_is_true_rec a b P.
+
 Ltac split_andb_step :=
   match goal with
-  | [ H : andb _ _ = true |- _ ] => apply andb_prop in H; destruct H
-  | [ H : is_true (andb ?x ?y) |- _ ]
-    => apply andb_prop in H;
-       change (is_true x /\ is_true y) in H;
-       destruct H
+  | [ H : andb _ _ = true |- _ ] => induction H using (@andb_true_rect _ _)
+  | [ H : is_true (andb _ _) |- _ ] => induction H using (@andb_is_true_rect _ _)
   end.
 Ltac split_andb := repeat split_andb_step.
 Ltac split_andb_in_context_step :=
