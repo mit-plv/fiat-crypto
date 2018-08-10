@@ -126,19 +126,20 @@ Ltac inversion_prod := repeat inversion_prod_step.
 (** This turns a goal like [x = let v := p in let '(x, y) := f v in x
     + y)] into a goal like [x = fst (f p) + snd (f p)].  Note that it
     inlines [let ... in ...] as well as destructuring lets. *)
-Ltac only_eta_expand_and_contract :=
-  repeat match goal with
-         | [ |- context[let '(x, y) := ?e in _] ]
-           => rewrite (surjective_pairing e)
-         | _ => rewrite <- !surjective_pairing
-         end.
+Ltac only_eta_expand_and_contract_step :=
+  match goal with
+  | [ |- context[let '(x, y) := ?e in _] ]
+    => rewrite (surjective_pairing e)
+  | [ H : context[let '(x, y) := ?e in _] |- _ ]
+    => rewrite (surjective_pairing e) in H
+  | _ => rewrite <- !surjective_pairing
+  | [ H : context[(fst ?e, snd ?e)] |- _ ]
+    => rewrite <- !surjective_pairing in H
+  end.
+Ltac only_eta_expand_and_contract := repeat only_eta_expand_and_contract_step.
 Ltac eta_expand :=
-  repeat match goal with
-         | _ => progress cbv beta iota zeta
-         | [ |- context[let '(x, y) := ?e in _] ]
-           => rewrite (surjective_pairing e)
-         | _ => rewrite <- !surjective_pairing
-         end.
+  repeat first [ progress cbv beta iota zeta
+               | only_eta_expand_and_contract_step ].
 
 (** *** [subst_prod] *)
 (** The tactic [subst_prod] is like [subst], but it works on equations
