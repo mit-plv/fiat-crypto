@@ -86,12 +86,12 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Proof. cbv [Transitive] in *; induction t; cbn; repeat split; intuition eauto. Qed.
     End app_curried_instances.
 
-    Lemma related_iff_app_curried {base_type base_interp R} t F G
-      : (@type.related base_type base_interp R t F G)
-        <-> (forall x y, type.and_for_each_lhs_of_arrow (@type.related base_type base_interp R) x y -> R (type.final_codomain t) (type.app_curried F x) (type.app_curried G y)).
+    Lemma related_hetero_iff_app_curried {base_type base_interp1 base_interp2 R} t F G
+      : (@type.related_hetero base_type base_interp1 base_interp2 R t F G)
+        <-> (forall x y, type.and_for_each_lhs_of_arrow (@type.related_hetero base_type base_interp1 base_interp2 R) x y -> R (type.final_codomain t) (type.app_curried F x) (type.app_curried G y)).
     Proof using Type.
       induction t as [t|s IHs d IHd]; cbn; [ tauto | ].
-      cbv [respectful].
+      cbv [respectful_hetero].
       rewrite pull_prod_forall.
       lazymatch goal with
       | [ |- (forall x y, @?P x y) <-> (forall z w, @?Q z w) ]
@@ -102,6 +102,32 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         => unify P P'; cut (P' -> (Q <-> (forall z w, R z w -> S z w))); [ change P with P'; solve [ intuition ] | intro; cbn [fst snd] ]
       end.
       eauto.
+    Qed.
+
+    Lemma related_hetero_iff_related {base_type base_interp R} t F G
+      : (@type.related_hetero base_type base_interp base_interp R t F G)
+        <-> (@type.related base_type base_interp R t F G).
+    Proof.
+      induction t as [t|s IHs d IHd]; cbn; [ tauto | ].
+      cbv [respectful respectful_hetero]; split_iff; intuition eauto.
+    Qed.
+
+    Global Instance and_for_each_lhs_of_arrow_Proper_iff {base_type f g}
+      : Proper (forall_relation (fun t => pointwise_relation _ (pointwise_relation _ iff)) ==> forall_relation (fun t => eq ==> eq ==> iff))
+               (@type.and_for_each_lhs_of_arrow base_type f g) | 10.
+    Proof.
+      cbv [forall_relation pointwise_relation respectful]; intros ? ? H t ? ? ? ? ? ?; subst.
+      induction t; cbn [type.and_for_each_lhs_of_arrow]; split_iff; intuition eauto.
+    Qed.
+
+    Lemma related_iff_app_curried {base_type base_interp R} t F G
+      : (@type.related base_type base_interp R t F G)
+        <-> (forall x y, type.and_for_each_lhs_of_arrow (@type.related base_type base_interp R) x y -> R (type.final_codomain t) (type.app_curried F x) (type.app_curried G y)).
+    Proof using Type.
+      rewrite <- related_hetero_iff_related.
+      change (@type.related base_type base_interp R) with (fun t x y => @type.related base_type base_interp R t x y).
+      setoid_rewrite <- related_hetero_iff_related.
+      apply related_hetero_iff_app_curried.
     Qed.
 
     Lemma andb_bool_impl_and_for_each_lhs_of_arrow {base_type} {f g : type base_type -> Type}
