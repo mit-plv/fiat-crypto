@@ -2122,3 +2122,19 @@ Proof.
   rewrite combine_app_samelength, IHls1 by (rewrite ?rev_length; congruence); cbn [combine].
   reflexivity.
 Qed.
+
+Lemma map_nth_default_seq {A} (d:A) n ls
+  : length ls = n -> List.map (List.nth_default d ls) (List.seq 0 n) = ls.
+Proof.
+  intro; subst.
+  rewrite <- (List.rev_involutive ls); generalize (List.rev ls); clear ls; intro ls.
+  rewrite List.rev_length.
+  induction ls; cbn [length List.rev]; [ reflexivity | ].
+  rewrite seq_snoc, List.map_app.
+  apply f_equal2; [ | cbn; rewrite nth_default_app, List.rev_length, Nat.sub_diag ];
+    [ etransitivity; [ | eassumption ]; apply List.map_ext_in; intro; rewrite Lists.List.in_seq;
+      rewrite nth_default_app, List.rev_length; intros
+    | ].
+  all: edestruct lt_dec; try (exfalso; lia).
+  all: reflexivity.
+Qed.
