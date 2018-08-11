@@ -353,6 +353,14 @@ Module Compilers.
                (only parsing).
         (** do bounds analysis on identifiers; take in optional bounds
             on arguments, return optional bounds on outputs. *)
+        (** Casts are like assertions; we only guarantee anything when they're true *)
+        Definition interp_Z_cast (r : zrange) (v : option zrange) : option zrange
+          := match v with
+             | Some v => if is_tighter_than_bool v r (* the value is definitely inside the range *)
+                         then Some v
+                         else None
+             | None => None
+             end.
         Definition interp {t} (idc : ident t) : type.option.interp t
           := match idc in ident.ident t return type.option.interp t with
              | ident.Literal _ v => of_literal v
@@ -589,20 +597,10 @@ Module Compilers.
                                                     x y m)))
              | ident.Z_cast range
                => fun r : option zrange
-                 => Some match r with
-                        | Some r => ZRange.intersection r range
-                        | None => range
-                        end
+                  => interp_Z_cast range r
              | ident.Z_cast2 (r1, r2)
                => fun '((r1', r2') : option zrange * option zrange)
-                 => (Some match r1' with
-                         | Some r => ZRange.intersection r r1
-                         | None => r1
-                         end,
-                    Some match r2' with
-                         | Some r => ZRange.intersection r r2
-                         | None => r2
-                         end)
+                  => (interp_Z_cast r1 r1', interp_Z_cast r2 r2')
              (** TODO(jadep): fill in fancy bounds analysis rules *)
              | ident.fancy_add log2wordmax _
              | ident.fancy_sub log2wordmax _
