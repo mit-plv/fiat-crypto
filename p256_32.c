@@ -78,7 +78,7 @@ static void fiat_p256_mulx_u32(uint32_t* out1, uint32_t* out2, uint32_t arg1, ui
 static void fiat_p256_cmovznz_u32(uint32_t* out1, fiat_p256_uint1 arg1, uint32_t arg2, uint32_t arg3) {
   fiat_p256_uint1 x1 = (!(!arg1));
   uint32_t x2 = ((fiat_p256_int1)(0x0 - x1) & UINT32_C(0xffffffff));
-  uint32_t x3 = ((x2 & arg3) | (uint32_t)((uint64_t)(~x2) & arg2));
+  uint32_t x3 = ((x2 & arg3) | ((~x2) & arg2));
   *out1 = x3;
 }
 

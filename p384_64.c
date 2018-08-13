@@ -80,7 +80,7 @@ static void fiat_p384_mulx_u64(uint64_t* out1, uint64_t* out2, uint64_t arg1, ui
 static void fiat_p384_cmovznz_u64(uint64_t* out1, fiat_p384_uint1 arg1, uint64_t arg2, uint64_t arg3) {
   fiat_p384_uint1 x1 = (!(!arg1));
   uint64_t x2 = ((fiat_p384_int1)(0x0 - x1) & UINT64_C(0xffffffffffffffff));
-  uint64_t x3 = ((x2 & arg3) | (uint64_t)((fiat_p384_uint128)(~x2) & arg2));
+  uint64_t x3 = ((x2 & arg3) | ((~x2) & arg2));
   *out1 = x3;
 }
 

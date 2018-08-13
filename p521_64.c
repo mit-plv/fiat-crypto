@@ -92,7 +92,7 @@ static void fiat_p521_subborrowx_u57(uint64_t* out1, fiat_p521_uint1* out2, fiat
 static void fiat_p521_cmovznz_u64(uint64_t* out1, fiat_p521_uint1 arg1, uint64_t arg2, uint64_t arg3) {
   fiat_p521_uint1 x1 = (!(!arg1));
   uint64_t x2 = ((fiat_p521_int1)(0x0 - x1) & UINT64_C(0xffffffffffffffff));
-  uint64_t x3 = ((x2 & arg3) | (uint64_t)((fiat_p521_uint128)(~x2) & arg2));
+  uint64_t x3 = ((x2 & arg3) | ((~x2) & arg2));
   *out1 = x3;
 }
 
