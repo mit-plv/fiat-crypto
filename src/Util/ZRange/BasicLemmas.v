@@ -8,6 +8,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.DestructHead.
 
@@ -96,5 +97,13 @@ Module ZRange.
     destruct b; cbv [Operations.ZRange.union is_bounded_by_bool];
       intros; Bool.split_andb; rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; cbn [lower upper] in *; split_min_max.
     all: lia.
+  Qed.
+
+  Lemma is_bounded_by_bool_opp x r : is_bounded_by_bool (Z.opp x) (ZRange.opp r) = is_bounded_by_bool x r.
+  Proof.
+    cbv [is_bounded_by_bool andb opp]; cbn [lower upper]; break_match; Z.ltb_to_lt; break_match; Z.ltb_to_lt;
+      try (symmetry; progress Z.ltb_to_lt);
+      try reflexivity;
+      try lia.
   Qed.
 End ZRange.

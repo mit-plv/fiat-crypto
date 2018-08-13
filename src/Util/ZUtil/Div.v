@@ -258,4 +258,8 @@ Module Z.
     intros; subst; auto with zarith.
   Qed.
   Hint Resolve div_same' : zarith.
+
+  Lemma div_opp_r a b : a / (-b) = ((-a) / b).
+  Proof. Z.div_mod_to_quot_rem; nia. Qed.
+  Hint Resolve div_opp_r : zarith.
 End Z.

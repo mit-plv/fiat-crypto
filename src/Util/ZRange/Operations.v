@@ -102,7 +102,7 @@ Module ZRange.
   Definition land_bounds : zrange -> zrange -> zrange := land_lor_bounds Z.land.
   Definition lor_bounds : zrange -> zrange -> zrange := land_lor_bounds Z.lor.
 
-  Definition split_bounds (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
+  Definition split_bounds_pos (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
     if upper r <? split_at
     then if (0 <=? lower r)%Z
          then (r, {| lower := 0; upper := 0 |})
@@ -110,6 +110,13 @@ Module ZRange.
                 {| lower := lower r / split_at; upper := (upper r / split_at) |} )
     else ( {| lower := 0; upper := split_at - 1 |},
            {| lower := lower r / split_at; upper := (upper r / split_at) |} ).
+  Definition split_bounds (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
+    if (0 <? split_at)%Z
+    then split_bounds_pos r split_at
+    else if (split_at =? 0)%Z
+         then ({| lower := 0; upper := 0 |}, {| lower := 0 ; upper := 0 |})
+         else let '(q, r) := split_bounds_pos (opp r) (-split_at) in
+              (opp q, r).
 
   Definition good (r : zrange) : Prop
     := lower r <= upper r.

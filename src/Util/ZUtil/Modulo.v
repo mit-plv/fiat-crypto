@@ -4,6 +4,7 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
@@ -282,4 +283,8 @@ Module Z.
     autorewrite with zsimplify_const.
     reflexivity.
   Qed.
+
+  Lemma mod_opp_r a b : a mod (-b) = -((-a) mod b).
+  Proof. pose proof (Z.div_opp_r a b); Z.div_mod_to_quot_rem; nia. Qed.
+  Hint Resolve mod_opp_r : zarith.
 End Z.
