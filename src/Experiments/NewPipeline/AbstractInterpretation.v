@@ -52,7 +52,7 @@ Module Compilers.
              end%bool.
         Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
           := match t with
-             | base.type.Z => fun r z => (lower r <=? z) && (z <=? upper r)
+             | base.type.Z => fun r z => ZRange.is_bounded_by_bool z r
              | base.type.nat => Nat.eqb
              | base.type.unit => fun _ _ => true
              | base.type.bool => bool_eq
@@ -208,7 +208,7 @@ Module Compilers.
                            | progress cbn in *
                            | progress destruct_head' option
                            | solve [ eauto with nocore ]
-                           | progress cbv [is_tighter_than_bool] in *
+                           | progress cbv [ZRange.is_bounded_by_bool is_tighter_than_bool] in *
                            | progress rewrite ?Bool.andb_true_iff in *
                            | discriminate
                            | apply conj

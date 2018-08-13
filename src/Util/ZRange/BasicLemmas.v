@@ -87,4 +87,14 @@ Module ZRange.
     cbv [is_tighter_than_bool is_true]; cbn [lower upper]; repeat intro.
     rewrite ?Bool.andb_true_iff, ?Z.leb_le_iff in *; repeat apply conj; etransitivity; destruct_head'_and; eassumption.
   Qed.
+
+  Lemma is_bounded_by_bool_Proper_if_sumbool_union {A B} (b : sumbool A B) x y rx ry
+    : is_bounded_by_bool x rx = true
+      -> is_bounded_by_bool y ry = true
+      -> is_bounded_by_bool (if b then x else y) (Operations.ZRange.union rx ry) = true.
+  Proof.
+    destruct b; cbv [Operations.ZRange.union is_bounded_by_bool];
+      intros; Bool.split_andb; rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; cbn [lower upper] in *; split_min_max.
+    all: lia.
+  Qed.
 End ZRange.

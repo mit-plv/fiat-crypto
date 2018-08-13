@@ -485,7 +485,7 @@ Module Compilers.
                      ident.gen_interp cast_outside_of_range idc v = v).
       Proof.
         cbv [annotate_ident Option.bind] in Hst; break_innermost_match_hyps; inversion_option; subst;
-          cbv [ident.gen_interp ident.cast abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by];
+          cbv [ident.gen_interp ident.cast abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by is_bounded_by_bool];
           intros; destruct_head'_prod; cbn [fst snd] in *;
             break_innermost_match; Bool.split_andb; try congruence; reflexivity.
       Qed.
