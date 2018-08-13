@@ -2138,3 +2138,30 @@ Proof.
   all: edestruct lt_dec; try (exfalso; lia).
   all: reflexivity.
 Qed.
+
+Lemma nth_error_firstn A ls n i
+  : List.nth_error (@List.firstn A n ls) i = if lt_dec i n then List.nth_error ls i else None.
+Proof.
+  revert ls i; induction n, ls, i; cbn; try reflexivity; destruct lt_dec; try reflexivity; rewrite IHn.
+  all: destruct lt_dec; try reflexivity; omega.
+Qed.
+
+Lemma nth_error_rev A n ls : List.nth_error (@List.rev A ls) n = if lt_dec n (length ls) then List.nth_error ls (length ls - S n) else None.
+Proof.
+  destruct lt_dec; [ | rewrite nth_error_length_error; rewrite ?List.rev_length; try reflexivity; omega ].
+  revert dependent n; induction ls as [|x xs IHxs]; cbn [length List.rev]; try omega; try reflexivity; intros.
+  { destruct n; reflexivity. }
+  { rewrite nth_error_app, List.rev_length, Nat.sub_succ.
+    destruct lt_dec.
+    { rewrite IHxs by omega.
+      rewrite <- (Nat.succ_pred_pos (length xs - n)) by omega.
+      cbn [List.nth_error].
+      f_equal; omega. }
+    { assert (n = length xs) by omega; subst.
+      rewrite Nat.sub_diag.
+      reflexivity. } }
+Qed.
+
+Lemma concat_fold_right_app A ls
+  : @List.concat A ls = List.fold_right (@List.app A) nil ls.
+Proof. induction ls; cbn; eauto. Qed.

@@ -43,3 +43,15 @@ Proof.
   revert ls2; induction ls1, ls2; cbn; try reflexivity.
   apply f_equal2; eauto.
 Qed.
+
+Lemma fold_andb_map_iff A B R ls1 ls2
+  : (@fold_andb_map A B R ls1 ls2 = true)
+    <-> (length ls1 = length ls2
+         /\ (forall v, List.In v (List.combine ls1 ls2) -> R (fst v) (snd v) = true)).
+Proof.
+  revert ls2; induction ls1 as [|x xs IHxs], ls2 as [|y ys]; cbn; try solve [ intuition (congruence || auto) ]; [].
+  rewrite Bool.andb_true_iff, IHxs.
+  split; intros [H0 H1]; split; auto;
+    intuition (congruence || (subst; auto)).
+  apply (H1 (_, _)); auto.
+Qed.
