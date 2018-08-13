@@ -1750,18 +1750,7 @@ Module Import UnsaturatedSolinas.
                                                = type.app_curried (t:=to_bytesT) (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f))
                   /\ (Positional.eval (weight 8 1) n_bytes (type.app_curried (t:=to_bytesT) (freeze_to_bytesmod (Qnum limbwidth) (Z.pos (Qden limbwidth)) n machine_wordsize m_enc) f)) = (Positional.eval (weight (Qnum limbwidth) (Z.pos (Qden limbwidth))) n (fst f) mod m))).
 
-      (** XXX TODO MOVE ME *)
-      Lemma fold_andb_map_snoc A B f x xs y ys
-        : @fold_andb_map A B f (xs ++ [x]) (ys ++ [y]) = @fold_andb_map A B f xs ys && f x y.
-      Proof.
-        clear.
-        revert ys; induction xs as [|x' xs'], ys as [|y' ys']; cbn;
-          rewrite ?Bool.andb_true_r, ?Bool.andb_false_r;
-          try (destruct ys'; cbn; rewrite Bool.andb_false_r);
-          try (destruct xs'; cbn; rewrite Bool.andb_false_r);
-          try reflexivity.
-        rewrite IHxs', Bool.andb_assoc; reflexivity.
-      Qed.
+      (** XXX TODO MOVE ME? *)
       Lemma eval_is_bounded_by wt n' bounds bounds' f
             (H : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) bounds f = true)
             (Hb : bounds = Some (List.map (@Some _) bounds'))

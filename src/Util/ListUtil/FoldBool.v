@@ -55,3 +55,15 @@ Proof.
     intuition (congruence || (subst; auto)).
   apply (H1 (_, _)); auto.
 Qed.
+
+Lemma fold_andb_map_snoc A B f x xs y ys
+  : @fold_andb_map A B f (xs ++ [x]) (ys ++ [y]) = @fold_andb_map A B f xs ys && f x y.
+Proof.
+  clear.
+  revert ys; induction xs as [|x' xs'], ys as [|y' ys']; cbn;
+    rewrite ?Bool.andb_true_r, ?Bool.andb_false_r;
+    try (destruct ys'; cbn; rewrite Bool.andb_false_r);
+    try (destruct xs'; cbn; rewrite Bool.andb_false_r);
+    try reflexivity.
+  rewrite IHxs', Bool.andb_assoc; reflexivity.
+Qed.
