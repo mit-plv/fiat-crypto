@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Lists.List.
+Import ListNotations. Open Scope bool_scope.
 
 Lemma fold_left_orb_true ls
   : List.fold_left orb ls true = true.
