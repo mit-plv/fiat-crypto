@@ -1782,6 +1782,7 @@ Module Import UnsaturatedSolinas.
         { rewrite !map_app in *; cbn [map] in *.
           erewrite !eval_snoc by (distr_length; eauto).
           cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *.
+          cbv [is_bounded_by_bool] in *.
           specialize_by (intros; auto with omega).
           specialize (Hwt n); specialize_by omega.
           repeat first [ progress Bool.split_andb

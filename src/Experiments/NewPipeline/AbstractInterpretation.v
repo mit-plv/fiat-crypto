@@ -429,7 +429,11 @@ Module Compilers.
                => fun v m
                  => match to_literal m, to_literal v with
                    | Some m, Some v => of_literal (ident.interp idc v m)
-                   | Some m, None => Some r[0 ~> m]
+                   | Some m, None => Some (if (0 <? m)%Z
+                                           then r[0 ~> m-1]
+                                           else if (m =? 0)%Z
+                                                then r[0 ~> 0]
+                                                else r[m+1 ~> 0])
                    | _, _ => None
                    end
              | ident.bool_rect _
