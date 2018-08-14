@@ -2456,6 +2456,7 @@ Module Barrett256.
   Proof. intros; rewrite barrett_red256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
    *)
   Strategy -100 [type.app_curried].
+  Local Arguments is_bounded_by_bool / .
   Lemma barrett_red256_correct_full  :
     forall (xLow xHigh : Z),
       0 <= xLow < 2 ^ machine_wordsize ->
