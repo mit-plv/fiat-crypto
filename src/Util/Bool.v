@@ -103,3 +103,8 @@ Ltac split_andb_in_context := repeat split_andb_in_context_step.
 
 Lemma if_const A (b : bool) (x : A) : (if b then x else x) = x.
 Proof. case b; reflexivity. Qed.
+
+Lemma ex_bool_iff_or P : @ex bool P <-> (or (P true) (P false)).
+Proof.
+  split; [ intros [ [] ? ] | intros [?|?]; eexists ]; eauto.
+Qed.

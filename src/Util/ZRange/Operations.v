@@ -72,6 +72,55 @@ Module ZRange.
 
   Definition constant (v : Z) : zrange := r[v ~> v].
 
+  Fixpoint nary_T (A B : Type) (n : nat) :=
+    match n with
+    | O => B
+    | S n => A -> nary_T A B n
+    end.
+
+  Fixpoint under_args {A B B'} (F : B -> B') {n : nat} : nary_T A B n -> nary_T A B' n
+    := match n with
+       | O => F
+       | S n => fun f x => @under_args A B B' F n (f x)
+       end.
+
+  Fixpoint under_args2 {A B B' B''} (F : B -> B' -> B'') {n : nat} : nary_T A B n -> nary_T A B' n -> nary_T A B'' n
+    := match n with
+       | O => F
+       | S n => fun f g x => @under_args2 A B B' B'' F n (f x) (g x)
+       end.
+
+  Definition apply_to_range_under_args {A} {n} (f : Z -> nary_T A zrange n) (v : zrange) : nary_T A zrange n
+    := let (l, u) := eta v in
+       under_args2 union (f l) (f u).
+
+  Definition apply_to_split_range_under_args {A} {n} (f : zrange -> nary_T A zrange n) (v : zrange) : nary_T A zrange n
+    := match split_range_at_0 v with
+       | (Some n, Some z, Some p) => under_args2 union (under_args2 union (f n) (f p)) (f z)
+       | (Some v1, Some v2, None) | (Some v1, None, Some v2) | (None, Some v1, Some v2) => under_args2 union (f v1) (f v2)
+       | (Some v, None, None) | (None, Some v, None) | (None, None, Some v) => f v
+       | (None, None, None) => f v
+       end.
+
+  Definition apply_to_each_split_range_under_args {A} {n} (f : BinInt.Z -> nary_T A zrange n) (v : zrange) : nary_T A zrange n
+    := apply_to_split_range_under_args (apply_to_range_under_args f) v.
+
+  Fixpoint n_corners {n : nat} : nary_T Z Z n -> nary_T zrange zrange n
+    := match n with
+       | O => constant
+       | S n
+         => fun (f : Z -> nary_T Z Z n) (v : zrange)
+            => apply_to_range_under_args (fun x => n_corners (f x)) v
+       end.
+
+  Fixpoint n_corners_and_zero {n : nat} : nary_T Z Z n -> nary_T zrange zrange n
+    := match n with
+       | O => constant
+       | S n
+         => fun (f : Z -> nary_T Z Z n) (v : zrange)
+            => apply_to_each_split_range_under_args (fun x => n_corners_and_zero (f x)) v
+       end.
+
   Definition two_corners (f : Z -> Z) (v : zrange) : zrange
     := apply_to_range (fun x => constant (f x)) v.
   Definition four_corners (f : Z -> Z -> Z) (x y : zrange) : zrange
