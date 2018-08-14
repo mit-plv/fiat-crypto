@@ -43,20 +43,24 @@ Module ZRange.
     := let (l, u) := eta v in
        r[ f l ~> f u ].
 
-  Definition split_range_at_0 (x : zrange) : option zrange (* < 0 *) * option zrange (* >= 0 *)
+  Definition split_range_at_0 (x : zrange) : option zrange (* < 0 *) * option zrange (* = 0 *) * option zrange (* >= 0 *)
     := let (l, u) := eta x in
        (if (0 <=? l)%Z
         then None
         else Some r[l ~> Z.min u (-1)],
+        if ((0 <? l)%Z || (u <? 0)%Z)%bool
+        then None
+        else Some r[0 ~> 0],
         if (0 <=? u)%Z
-        then Some r[Z.max 0 l ~> u]
+        then Some r[Z.max 1 l ~> u]
         else None).
 
   Definition apply_to_split_range (f : zrange -> zrange) (v : zrange) : zrange
     := match split_range_at_0 v with
-       | (Some n, Some p) => union (f n) (f p)
-       | (Some v, None) | (None, Some v) => f v
-       | (None, None) => f v
+       | (Some n, Some z, Some p) => union (union (f n) (f p)) (f z)
+       | (Some v1, Some v2, None) | (Some v1, None, Some v2) | (None, Some v1, Some v2) => union (f v1) (f v2)
+       | (Some v, None, None) | (None, Some v, None) | (None, None, Some v) => f v
+       | (None, None, None) => f v
        end.
 
   Definition apply_to_range (f : BinInt.Z -> zrange) (v : zrange) : zrange

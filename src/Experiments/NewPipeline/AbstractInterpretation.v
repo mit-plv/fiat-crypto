@@ -521,10 +521,11 @@ Module Compilers.
              | ident.Z_add as idc
              | ident.Z_mul as idc
              | ident.Z_sub as idc
+               => fun x y => x <- x; y <- y; Some (ZRange.four_corners (ident.interp idc) x y)
              | ident.Z_div as idc
              | ident.Z_shiftr as idc
              | ident.Z_shiftl as idc
-               => fun x y => x <- x; y <- y; Some (ZRange.four_corners (ident.interp idc) x y)
+               => fun x y => x <- x; y <- y; Some (ZRange.four_corners_and_zero (ident.interp idc) x y)
              | ident.Z_add_with_carry as idc
                => fun x y z => x <- x; y <- y; z <- z; Some (ZRange.eight_corners (ident.interp idc) x y z)
              | ident.Z_cc_m as idc
