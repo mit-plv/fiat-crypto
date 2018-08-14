@@ -2924,7 +2924,8 @@ Module Montgomery256.
         xy = true ->
        expr.Interp (@ident.interp) montred256 xy = MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2 xy.
   Proof. intros; rewrite montred256_correct_proj2 by assumption; unfold app_curried; exact eq_refl. Qed.
-*)
+   *)
+  Local Arguments is_bounded_by_bool / .
   Lemma montred256_correct_full  R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
