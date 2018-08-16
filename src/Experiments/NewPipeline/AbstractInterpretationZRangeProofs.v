@@ -6,6 +6,8 @@ Require Import Coq.Relations.Relations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.SplitBounds.
+Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZRange.CornersMonotoneBounds.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.
@@ -13,6 +15,7 @@ Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.CC.
@@ -401,7 +404,33 @@ Module Compilers.
                                 | [ |- is_bounded_by_bool (_ mod _) r[_ ~> _] = true ] => cbv [is_bounded_by_bool]; rewrite Bool.andb_true_iff
                                 end
                               | progress Z.ltb_to_lt
-                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct ].
+                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct
+                              | rewrite Bool.andb_true_iff
+                              | match goal with
+                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true
+                                    |- is_bounded_by_bool _ (ZRange.two_corners ?f ?x_bs) = true ]
+                                  => unshelve eapply (@ZRange.monotoneb_two_corners_gen f _ _ _ Hx)
+                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true, Hy : is_bounded_by_bool ?y ?y_bs = true
+                                    |- is_bounded_by_bool _ (ZRange.four_corners ?f ?x_bs ?y_bs) = true ]
+                                  => unshelve eapply (@ZRange.monotoneb_four_corners_gen f _ _ _ _ _ _ Hx Hy)
+                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true, Hy : is_bounded_by_bool ?y ?y_bs = true
+                                    |- is_bounded_by_bool _ (ZRange.four_corners_and_zero ?f ?x_bs ?y_bs) = true ]
+                                  => unshelve eapply (@ZRange.monotoneb_four_corners_and_zero_gen f _ _ _ _ _ _ _ _ Hx Hy)
+                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true, Hy : is_bounded_by_bool ?y ?y_bs = true, Hz : is_bounded_by_bool ?z ?z_bs = true
+                                    |- is_bounded_by_bool _ (ZRange.eight_corners ?f ?x_bs ?y_bs ?z_bs) = true ]
+                                  => unshelve eapply (@ZRange.monotoneb_eight_corners_gen f _ _ _ _ _ _ _ _ _ Hx Hy Hz)
+                                | [ |- is_bounded_by_bool _ _ = true /\ is_bounded_by_bool _ _ = true ] => split
+                                end ].
+            all: try solve [
+                       repeat
+                         first [ solve [ auto using ZRange.is_bounded_by_bool_Proper_if_sumbool_union, Z.mod_pos_bound, Z.mod_neg_bound with zarith ]
+                               | match goal with
+                                 | [ |- forall x : Z, Proper _ _ \/ Proper _ _ ] => intros [|?|?]
+                                 | [ |- forall x y : Z, Proper _ _ \/ Proper _ _ ] => do 2 intros [|?|?]
+                                 | [ |- Proper _ _ \/ Proper _ _ ]
+                                   => cbv [Proper respectful Basics.flip];
+                                      solve [ constructor; intros; autorewrite with Zshift_to_pow zsimplify_const; lia ]
+                                 end ] ].
             all: clear cast_outside_of_range.
             all: repeat match goal with
                         | [ H : ?T |- _ ]
