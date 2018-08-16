@@ -97,6 +97,12 @@ Module Compilers.
          | arrow s d => f s * @for_each_lhs_of_arrow _ f d
          end.
 
+    Fixpoint andb_each_lhs_of_arrow {base_type} (f : type base_type -> bool) (t : type base_type) : bool
+      := match t with
+         | base t => true
+         | arrow s d => andb (f s) (@andb_each_lhs_of_arrow _ f d)
+         end.
+
     (** Denote [type]s into their interpretation in [Type]/[Set] *)
     Fixpoint interp {base_type} (base_interp : base_type -> Type) (t : type base_type) : Type
       := match t with
@@ -172,6 +178,15 @@ Module Compilers.
          | base t => fun _ _ => True
          | arrow s d => fun x_xs y_ys => R s (fst x_xs) (fst y_ys) /\ @and_for_each_lhs_of_arrow _ f g R d (snd x_xs) (snd y_ys)
          end.
+
+    Definition is_base {base_type} (t : type base_type) : bool
+      := match t with
+         | type.base _ => true
+         | type.arrow _ _ => false
+         end.
+
+    Definition is_not_higher_order {base_type} : type base_type -> bool
+      := andb_each_lhs_of_arrow is_base.
 
     Section interpM.
       Context {base_type} (M : Type -> Type) (base_interp : base_type -> Type).
