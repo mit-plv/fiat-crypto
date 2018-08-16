@@ -97,6 +97,17 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Proof. cbv [Transitive] in *; induction t; cbn; repeat split; intuition eauto. Qed.
     End app_curried_instances.
 
+    Global Instance and_eqv_for_each_lhs_of_arrow_not_higher_order {base_type base_interp t}
+           (Ht : type.is_not_higher_order t = true)
+           (v : @type.for_each_lhs_of_arrow base_type (type.interp base_interp) t)
+      : Proper (type.and_for_each_lhs_of_arrow (@type.eqv) (t:=t)) v.
+    Proof using Type.
+      cbv [Proper]; induction t as [t|s IHs d IHd]; cbn in *; [ tauto | ].
+      rewrite Bool.andb_true_iff in Ht; destruct Ht.
+      destruct s; cbn in *; try discriminate.
+      eauto.
+    Qed.
+
     Lemma related_hetero_iff_app_curried {base_type base_interp1 base_interp2 R} t F G
       : (@type.related_hetero base_type base_interp1 base_interp2 R t F G)
         <-> (forall x y, type.and_for_each_lhs_of_arrow (@type.related_hetero base_type base_interp1 base_interp2 R) x y -> R (type.final_codomain t) (type.app_curried F x) (type.app_curried G y)).
