@@ -43,7 +43,7 @@ Module ZRange.
     := let (l, u) := eta v in
        r[ f l ~> f u ].
 
-  Definition split_range_at_0 (x : zrange) : option zrange (* < 0 *) * option zrange (* = 0 *) * option zrange (* >= 0 *)
+  Definition split_range_at_0 (x : zrange) : option zrange (* < 0 *) * option zrange (* = 0 *) * option zrange (* > 0 *)
     := let (l, u) := eta x in
        (if (0 <=? l)%Z
         then None
@@ -51,9 +51,9 @@ Module ZRange.
         if ((0 <? l)%Z || (u <? 0)%Z)%bool
         then None
         else Some r[0 ~> 0],
-        if (0 <=? u)%Z
-        then Some r[Z.max 1 l ~> u]
-        else None).
+        if (u <=? 0)%Z
+        then None
+        else Some r[Z.max 1 l ~> u]).
 
   Definition apply_to_split_range (f : zrange -> zrange) (v : zrange) : zrange
     := match split_range_at_0 v with
