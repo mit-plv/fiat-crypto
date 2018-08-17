@@ -38,18 +38,33 @@ Module Compilers.
       Context {base_type} {interp_base_type : base_type -> Type}.
       Local Notation eqv := (@type.related base_type interp_base_type (fun _ => eq)).
 
-      Global Instance eqv_Symmetric {t} : Symmetric (@eqv t) | 10.
-      Proof. induction t; cbn [type.eqv type.interp] in *; repeat intro; eauto. Qed.
-
-      Global Instance eqv_Transitive {t} : Transitive (@eqv t) | 10.
+      Local Instance related_Symmetric {t} {R : forall t, relation (interp_base_type t)}
+             {R_sym : forall t, Symmetric (R t)}
+        : Symmetric (@type.related base_type interp_base_type R t) | 100.
       Proof.
-        induction t; cbn [eqv]; [ exact _ | ].
+        cbv [Symmetric] in *;
+          induction t; cbn [type.related type.interp] in *; repeat intro; eauto.
+      Qed.
+
+      Local Instance related_Transitive {t} {R : forall t, relation (interp_base_type t)}
+             {R_sym : forall t, Symmetric (R t)}
+             {R_trans : forall t, Transitive (R t)}
+        : Transitive (@type.related base_type interp_base_type R t) | 100.
+      Proof.
+        induction t; cbn [type.related]; [ exact _ | ].
         cbv [respectful]; cbn [type.interp].
         intros f g h Hfg Hgh x y Hxy.
         etransitivity; [ eapply Hfg; eassumption | eapply Hgh ].
         etransitivity; first [ eassumption | symmetry; eassumption ].
       Qed.
+
+      Global Instance eqv_Transitive {t} : Transitive (@eqv t) | 10 := _.
+      Global Instance eqv_Symmetric {t} : Symmetric (@eqv t) | 10 := _.
     End eqv.
+    Hint Extern 100 (Symmetric (@type.related ?base_type ?interp_base_type ?R ?t))
+    => (tryif has_evar R then fail else simple apply (@related_Symmetric base_type interp_base_type t R)) : typeclass_instances.
+    Hint Extern 100 (Transitive (@type.related ?base_type ?interp_base_type ?R ?t))
+    => (tryif has_evar R then fail else simple apply (@related_Transitive base_type interp_base_type t R)) : typeclass_instances.
 
     Section app_curried_instances.
       Context {base_type} {base_interp : base_type -> Type}.
