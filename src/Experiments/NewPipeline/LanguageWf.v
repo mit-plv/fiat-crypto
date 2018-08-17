@@ -97,7 +97,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Proof. cbv [Transitive] in *; induction t; cbn; repeat split; intuition eauto. Qed.
     End app_curried_instances.
 
-    Global Instance and_eqv_for_each_lhs_of_arrow_not_higher_order {base_type base_interp t}
+    Lemma and_eqv_for_each_lhs_of_arrow_not_higher_order {base_type base_interp t}
            (Ht : type.is_not_higher_order t = true)
            (v : @type.for_each_lhs_of_arrow base_type (type.interp base_interp) t)
       : Proper (type.and_for_each_lhs_of_arrow (@type.eqv) (t:=t)) v.
@@ -107,6 +107,8 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       destruct s; cbn in *; try discriminate.
       eauto.
     Qed.
+
+    Global Hint Immediate and_eqv_for_each_lhs_of_arrow_not_higher_order : typeclass_instances.
 
     Lemma related_hetero_iff_app_curried {base_type base_interp1 base_interp2 R} t F G
       : (@type.related_hetero base_type base_interp1 base_interp2 R t F G)
