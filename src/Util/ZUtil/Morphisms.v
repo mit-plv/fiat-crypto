@@ -6,6 +6,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationPairs.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.LandLorBounds.
 Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -279,4 +280,13 @@ Module Z.
   Lemma shiftl_Zneg_Zneg_le_Proper_r x : Proper (Basics.flip Pos.le ==> Z.le) (fun p => Z.shiftl (Zneg p) (Zneg x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftl_Zneg_Zneg_le_Proper_r : zarith.
+
+  Hint Resolve Z.land_round_Proper_pos_r : zarith.
+  Hint Resolve Z.land_round_Proper_pos_l : zarith.
+  Hint Resolve Z.lor_round_Proper_pos_r : zarith.
+  Hint Resolve Z.lor_round_Proper_pos_l : zarith.
+  Hint Resolve Z.land_round_Proper_neg_r : zarith.
+  Hint Resolve Z.land_round_Proper_neg_l : zarith.
+  Hint Resolve Z.lor_round_Proper_neg_r : zarith.
+  Hint Resolve Z.lor_round_Proper_neg_l : zarith.
 End Z.

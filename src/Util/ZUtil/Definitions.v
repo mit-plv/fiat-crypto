@@ -84,4 +84,9 @@ Module Z.
     := if s =? 2^Z.log2 s
        then mul_split_at_bitwidth (Z.log2 s) x y
        else ((x * y) mod s, (x * y) / s).
+
+  Definition round_lor_land_bound (x : Z) : Z
+    := if (0 <=? x)%Z
+       then 2^(Z.log2_up (x+1))-1
+       else -2^(Z.log2_up (-x)).
 End Z.
