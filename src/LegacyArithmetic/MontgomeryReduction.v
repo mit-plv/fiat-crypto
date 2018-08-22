@@ -5,7 +5,7 @@ Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.microm
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.LegacyArithmetic.ZBounded.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.Tactics.Test.
 Require Import Crypto.Util.Tactics.Not.
 Require Import Crypto.Util.LetIn.

@@ -8,7 +8,8 @@ Require Import Crypto.LegacyArithmetic.Double.Proofs.Multiply.
 Require Import Crypto.LegacyArithmetic.ArchitectureToZLike.
 Require Import Crypto.LegacyArithmetic.ZBounded.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.LetIn.
 

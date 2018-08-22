@@ -1,7 +1,13 @@
 (** * Alternate forms for Interface for bounded arithmetic *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Crypto.LegacyArithmetic.Interface.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Hints.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.AutoRewrite.
 Require Import Crypto.Util.Notations.

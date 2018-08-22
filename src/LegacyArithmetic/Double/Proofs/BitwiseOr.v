@@ -2,7 +2,8 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.

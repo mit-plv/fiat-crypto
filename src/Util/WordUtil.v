@@ -9,11 +9,14 @@ Require Import Coq.Bool.Bool.
 
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.NatUtil.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Sigma.
+
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.N2Z.
+Require Import Crypto.Util.ZUtil.Definitions.
 
 Require Import bbv.WordScope.
 Require Import bbv.Nomega.

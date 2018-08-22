@@ -9,7 +9,12 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Util.Tuple Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
+Require Import Crypto.Util.ZUtil.Le.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
@@ -273,7 +278,7 @@ Module Columns.
         rewrite <-Z.mul_mod_distr_l with (c:=a) by omega.
         rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by omega.
         f_equal; ring. }
-      { split; [zero_bounds|].
+      { split; [Z.zero_bounds|].
         apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; omega].
         apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
     Qed.

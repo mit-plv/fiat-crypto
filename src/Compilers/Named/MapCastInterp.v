@@ -11,7 +11,6 @@ Require Import Crypto.Compilers.Named.ContextProperties.SmartMap.
 Require Import Crypto.Compilers.Named.InterpSideConditions.
 Require Import Crypto.Compilers.Named.InterpSideConditionsInterp.
 Require Import Crypto.Compilers.Named.MapCast.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sigma.

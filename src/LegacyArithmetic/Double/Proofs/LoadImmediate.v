@@ -3,7 +3,7 @@ Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Local Open Scope Z_scope.
 Local Opaque tuple_decoder.

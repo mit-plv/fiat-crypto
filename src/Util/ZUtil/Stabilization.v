@@ -1,7 +1,10 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Classes.Morphisms.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 

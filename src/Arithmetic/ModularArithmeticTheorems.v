@@ -8,7 +8,9 @@ Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Ring_tac.
 
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.ScalarMult.
 Require Crypto.Algebra.Ring Crypto.Algebra.Field.
-Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Export Crypto.Util.FixCoqMistakes.
 
 Module F.

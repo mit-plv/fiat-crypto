@@ -1,6 +1,8 @@
 Require Import Coq.ZArith.ZArith Coq.QArith.QArith QArith.Qround.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Decidable.
-Require Import ZUtil Lia.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Morphisms.
 
 Local Open Scope Z_scope.
 

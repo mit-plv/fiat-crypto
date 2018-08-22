@@ -4,7 +4,6 @@
 Require Import Coq.ZArith.ZArith Coq.Lists.List Coq.Classes.Morphisms Coq.micromega.Psatz.
 Require Import Crypto.Arithmetic.BarrettReduction.HAC.
 Require Import Crypto.LegacyArithmetic.ZBounded.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope small_zlike_scope.

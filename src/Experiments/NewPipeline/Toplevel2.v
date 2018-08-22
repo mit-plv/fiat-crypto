@@ -16,6 +16,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -29,10 +30,14 @@ Require Import Crypto.Util.ZUtil.Rshi.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.CC.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ErrorT.
@@ -2087,24 +2092,13 @@ Module ProdEquiv.
       let new_ctx := fun n => if reg_eqb n rd then result mod wordmax else ctx n in interp256 cont new_cc new_ctx.
   Proof. reflexivity. Qed.
 
-  (* TODO : move *)
-  Lemma tuple_map_ext {A B} (f g : A -> B) n (t : tuple A n) :
-    (forall x : A, f x = g x) ->
-    Tuple.map f t = Tuple.map g t.
-  Proof.
-    destruct n; [reflexivity|]; cbn in *.
-    induction n; cbn in *; intro H; auto; [ ].
-    rewrite IHn by assumption.
-    rewrite H; reflexivity.
-  Qed.
-
   Lemma interp_state_equiv e :
     forall cc ctx cc' ctx',
     cc = cc' -> (forall r, ctx r = ctx' r) ->
     interp256 e cc ctx = interp256 e cc' ctx'.
   Proof.
     induction e; intros; subst; cbn; [solve[auto]|].
-    apply IHe; rewrite tuple_map_ext with (g:=ctx') by auto;
+    apply IHe; rewrite Tuple.map_ext with (g:=ctx') by auto;
       [reflexivity|].
     intros; break_match; auto.
   Qed.
@@ -2114,17 +2108,6 @@ Module ProdEquiv.
     cbv [CC.update]. cbn [CC.cc_c CC.cc_m CC.cc_l CC.cc_z].
     break_match; try match goal with H : ~ In _ _ |- _ => cbv [In] in H; tauto end.
     reflexivity.
-  Qed.
-
-  Lemma tuple_map_ext_In {A B} (f g : A -> B) n (t : tuple A n) :
-    (forall x, In x (to_list n t) -> f x = g x) ->
-    Tuple.map f t = Tuple.map g t.
-  Proof.
-    destruct n; [reflexivity|]; cbn in *.
-    induction n; cbn in *; intro H; auto; [ ].
-    destruct t.
-    rewrite IHn by auto using in_cons.
-    rewrite H; auto using in_eq.
   Qed.
 
   Definition value_unused r e : Prop :=
@@ -2141,7 +2124,7 @@ Module ProdEquiv.
     match goal with |- ?lhs = ?rhs =>
                     match lhs with context [Tuple.map ?f ?t] =>
                                    match rhs with context [Tuple.map ?g ?t] =>
-                                                  rewrite (tuple_map_ext_In f g) by (intros; cbv [reg_eqb]; break_match; congruence)
+                                                  rewrite (Tuple.map_ext_In f g) by (intros; cbv [reg_eqb]; break_match; congruence)
                                    end end end.
     apply interp_state_equiv; [ congruence | ].
     { intros; cbv [reg_eqb] in *; break_match; congruence. }
@@ -2155,7 +2138,7 @@ Module ProdEquiv.
     match goal with |- ?lhs = ?rhs =>
                     match lhs with context [Tuple.map ?f ?t] =>
                                    match rhs with context [Tuple.map ?g ?t] =>
-                                                  rewrite (tuple_map_ext_In f g) by (intros; cbv [reg_eqb]; break_match; congruence)
+                                                  rewrite (Tuple.map_ext_In f g) by (intros; cbv [reg_eqb]; break_match; congruence)
                                    end end end.
     apply interp_state_equiv; [ congruence | ].
     { intros; cbv [reg_eqb] in *; break_match; congruence. }
@@ -2649,19 +2632,6 @@ Module Barrett256.
       => apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result]
     end.
 
-  (* TODO: move this lemma to ZUtil *)
-  Lemma testbit_neg_eq_if x n :
-    0 <= n ->
-    - (2 ^ n) <= x  < 2 ^ n ->
-    Z.b2z (if x <? 0 then true else Z.testbit x n) = - (x / 2 ^ n) mod 2.
-  Proof.
-    intros. break_match; Z.ltb_to_lt.
-    { autorewrite with zsimplify. reflexivity. }
-    { autorewrite with zsimplify.
-      rewrite Z.bits_above_pow2 by omega.
-      reflexivity. }
-  Qed.
-
   Lemma prod_barrett_red256_correct :
     forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
            (start_context : register -> Z)   (* starting register values *)
@@ -2755,7 +2725,7 @@ Module Barrett256.
     { reflexivity. }
     { autorewrite with zsimplify_fast.
       match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-      rewrite <-testbit_neg_eq_if with (n:=256) by (cbn; omega).
+      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (cbn; omega).
       reflexivity. }
     step start_context.
     { reflexivity. }
@@ -2763,7 +2733,7 @@ Module Barrett256.
       rewrite Z.mod_small with (a:=(if (if _ <? 0 then true else _) then _ else _)) (b:=2) by (break_innermost_match; omega).
       match goal with |- context [?a - ?b - ?c] => replace (a - b - c) with (a - (b + c)) by ring end.
       match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-      rewrite <-testbit_neg_eq_if with (n:=256) by (break_innermost_match; cbn; omega).
+      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (break_innermost_match; cbn; omega).
       reflexivity. }
     step start_context.
     { rewrite Z.bit0_eqb.
@@ -2782,7 +2752,7 @@ Module Barrett256.
     { reflexivity. }
     { autorewrite with zsimplify_fast.
       repeat match goal with |- context [?x mod ?m] => unique pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-      rewrite <-testbit_neg_eq_if with (n:=256) by (cbn; omega).
+      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (cbn; omega).
       reflexivity. }
     step start_context; [ break_innermost_match; Z.ltb_to_lt; omega | ].
     reflexivity.
@@ -3169,19 +3139,6 @@ Module Montgomery256.
       => apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result]
     end.
 
-  (* TODO: move this lemma to ZUtil *)
-  Lemma testbit_neg_eq_if x y n :
-    0 <= n ->
-    0 <= x < 2 ^ n ->
-    0 <= y < 2 ^ n ->
-    Z.b2z (if (x - y) <? 0 then true else Z.testbit (x - y) n) = - ((x - y) / 2 ^ n) mod 2.
-  Proof.
-    intros. rewrite Z.sub_pos_bound_div_eq by omega.
-    break_innermost_match; Z.ltb_to_lt; try lia; try reflexivity; [ ].
-    rewrite Z.testbit_eqb, Z.div_between_0_if by omega.
-    break_innermost_match; Z.ltb_to_lt; try lia; reflexivity.
-  Qed.
-
   Local Ltac break_ifs :=
     repeat (break_innermost_match_step; Z.ltb_to_lt; try (exfalso; omega); []).
 
@@ -3228,7 +3185,7 @@ Module Montgomery256.
     {
       let r := eval cbv in (2^256) in replace (2^256) with r by reflexivity.
       rewrite !Z.shiftl_0_r, !Z.mod_mod by omega.
-      apply testbit_neg_eq_if;
+      apply Z.testbit_neg_eq_if;
         let r := eval cbv in (2^256) in replace (2^256) with r by reflexivity;
         auto using Z.mod_pos_bound with omega. }
     step start_context; [ break_innermost_match; Z.ltb_to_lt; omega | ].

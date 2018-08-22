@@ -2,11 +2,14 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.ZArith.Znumtheory.
 Require Import Crypto.Util.ZUtil.Tactics.CompareToSgn.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
+Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -262,4 +265,165 @@ Module Z.
   Lemma div_opp_r a b : a / (-b) = ((-a) / b).
   Proof. Z.div_mod_to_quot_rem; nia. Qed.
   Hint Resolve div_opp_r : zarith.
+
+  Lemma div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
+  Proof.
+    intros.
+    apply Z.lt_succ_r.
+    apply Z.div_lt_upper_bound; try omega.
+  Qed.
+
+  Lemma mul_div_le x y z
+        (Hx : 0 <= x) (Hy : 0 <= y) (Hz : 0 < z)
+        (Hyz : y <= z)
+    : x * y / z <= x.
+  Proof.
+    transitivity (x * z / z); [ | rewrite Z.div_mul by lia; lia ].
+    apply Z_div_le; nia.
+  Qed.
+  Hint Resolve mul_div_le : zarith.
+
+  Lemma div_mul_diff_exact a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * a / b = c * (a / b) + (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z_div_mod_eq a b) at 1 by lia.
+    rewrite Z.mul_add_distr_l.
+    replace (c * (b * (a / b))) with ((c * (a / b)) * b) by lia.
+    rewrite Z.div_add_l by lia.
+    lia.
+  Qed.
+
+  Lemma div_mul_diff_exact' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * (a / b) = c * a / b - (c * (a mod b)) / b.
+  Proof.
+    rewrite div_mul_diff_exact by assumption; lia.
+  Qed.
+
+  Lemma div_mul_diff_exact'' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : a * c / b = (a / b) * c + (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z.mul_comm a c), div_mul_diff_exact by lia; lia.
+  Qed.
+
+  Lemma div_mul_diff_exact''' a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : (a / b) * c = a * c / b - (c * (a mod b)) / b.
+  Proof.
+    rewrite (Z.mul_comm a c), div_mul_diff_exact by lia; lia.
+  Qed.
+
+  Lemma div_mul_diff a b c
+        (Ha : 0 <= a) (Hb : 0 < b) (Hc : 0 <= c)
+    : c * a / b - c * (a / b) <= c.
+  Proof.
+    rewrite div_mul_diff_exact by assumption.
+    ring_simplify; auto with zarith.
+  Qed.
+
+  Lemma div_mul_le_le a b c
+    :  0 <= a -> 0 < b -> 0 <= c -> c * (a / b) <= c * a / b <= c * (a / b) + c.
+  Proof.
+    pose proof (Z.div_mul_diff a b c); split; try apply Z.div_mul_le; lia.
+  Qed.
+
+  Lemma div_mul_le_le_offset a b c
+    : 0 <= a -> 0 < b -> 0 <= c -> c * a / b - c <= c * (a / b).
+  Proof.
+    pose proof (Z.div_mul_le_le a b c); lia.
+  Qed.
+  Hint Resolve div_mul_le_le_offset : zarith.
+
+  Lemma div_x_y_x x y : 0 < x -> 0 < y -> x / y / x = 1 / y.
+  Proof.
+    intros; rewrite Z.div_div, (Z.mul_comm y x), <- Z.div_div, Z.div_same by lia.
+    reflexivity.
+  Qed.
+  Hint Rewrite div_x_y_x using zutil_arith : zsimplify.
+
+  Lemma sub_pos_bound_div a b X : 0 <= a < X -> 0 <= b < X -> -1 <= (a - b) / X <= 0.
+  Proof.
+    intros H0 H1; pose proof (Z.sub_pos_bound a b X H0 H1).
+    assert (Hn : -X <= a - b) by lia.
+    assert (Hp : a - b <= X - 1) by lia.
+    split; etransitivity; [ | apply Z_div_le, Hn; lia | apply Z_div_le, Hp; lia | ];
+      instantiate; autorewrite with zsimplify; try reflexivity.
+  Qed.
+
+  Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
+       (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+
+  Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
+  Proof.
+    intros H0 H1; pose proof (Z.sub_pos_bound_div a b X H0 H1).
+    destruct (a <? b) eqn:?; Z.ltb_to_lt.
+    { cut ((a - b) / X <> 0); [ lia | ].
+      autorewrite with zstrip_div; auto with zarith lia. }
+    { autorewrite with zstrip_div; auto with zarith lia. }
+  Qed.
+
+  Lemma add_opp_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (-b + a) / X = if a <? b then -1 else 0.
+  Proof.
+    rewrite !(Z.add_comm (-_)), !Z.add_opp_r.
+    apply Z.sub_pos_bound_div_eq.
+  Qed.
+
+  Hint Rewrite Z.sub_pos_bound_div_eq Z.add_opp_pos_bound_div_eq using zutil_arith : zstrip_div.
+
+  Lemma div_small_sym a b : 0 <= a < b -> 0 = a / b.
+  Proof. intros; symmetry; apply Z.div_small; assumption. Qed.
+  Hint Resolve div_small_sym : zarith.
+
+  Lemma mod_eq_le_div_1 a b : 0 < a <= b -> a mod b = 0 -> a / b = 1.
+  Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
+  Hint Resolve mod_eq_le_div_1 : zarith.
+  Hint Rewrite mod_eq_le_div_1 using zutil_arith : zsimplify.
+
+  Lemma div_small_neg x y : 0 < -x <= y -> x / y = -1.
+  Proof. intros; Z.div_mod_to_quot_rem; nia. Qed.
+  Hint Rewrite div_small_neg using zutil_arith : zsimplify.
+
+  Lemma div_sub_small x y z : 0 <= x < z -> 0 <= y <= z -> (x - y) / z = if x <? y then -1 else 0.
+  Proof.
+    pose proof (Zlt_cases x y).
+    (destruct (x <? y) eqn:?);
+      intros; autorewrite with zsimplify; try lia.
+  Qed.
+  Hint Rewrite div_sub_small using zutil_arith : zsimplify.
+
+  Lemma mul_div_lt_by_le x y z b : 0 <= y < z -> 0 <= x < b -> x * y / z < b.
+  Proof.
+    intros [? ?] [? ?]; eapply Z.le_lt_trans; [ | eassumption ].
+    auto with zarith.
+  Qed.
+  Hint Resolve mul_div_lt_by_le : zarith.
+
+  Definition mul_div_le'
+    := fun x y z w p H0 H1 H2 H3 => @Z.le_trans _ _ w (@Z.mul_div_le x y z H0 H1 H2 H3) p.
+  Hint Resolve mul_div_le' : zarith.
+  Lemma mul_div_le'' x y z w : y <= w -> 0 <= x -> 0 <= y -> 0 < z -> x <= z -> x * y / z <= w.
+  Proof.
+    rewrite (Z.mul_comm x y); intros; apply mul_div_le'; assumption.
+  Qed.
+  Hint Resolve mul_div_le'' : zarith.
+
+  Lemma div_between n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a / b = n.
+  Proof. intros; Z.div_mod_to_quot_rem_in_goal; nia. Qed.
+  Hint Rewrite div_between using zutil_arith : zsimplify.
+
+  Lemma div_between_1 a b : b <> 0 -> b <= a < 2 * b -> a / b = 1.
+  Proof. intros; rewrite (div_between 1) by lia; reflexivity. Qed.
+  Hint Rewrite div_between_1 using zutil_arith : zsimplify.
+
+  Lemma div_between_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> (a / b = if (1 + n) * b <=? a then 1 + n else n)%Z.
+  Proof.
+    intros.
+    break_match; Z.ltb_to_lt;
+      apply div_between; lia.
+  Qed.
+
+  Lemma div_between_0_if a b : b <> 0 -> 0 <= a < 2 * b -> a / b = if b <=? a then 1 else 0.
+  Proof. intros; rewrite (div_between_if 0) by lia; autorewrite with zsimplify_const; reflexivity. Qed.
 End Z.

@@ -1,42 +1,14 @@
 Require Import Coq.NArith.NArith.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil Crypto.Util.Decidable.
+Require Export Crypto.Util.NUtil.WithoutReferenceToZ.
 Require bbv.WordScope.
 Require Import bbv.NatLib.
 Require Crypto.Util.WordUtil.
+Require Import Crypto.Util.ZUtil.Z2Nat.
+Require Import Crypto.Util.ZUtil.Shift.
 
 Module N.
-  Lemma size_le a b : (a <= b -> N.size a <= N.size b)%N.
-  Proof.
-    destruct (dec (a=0)%N), (dec (b=0)%N); subst; auto using N.le_0_l.
-    { destruct a; auto. }
-    { rewrite !N.size_log2 by assumption.
-      rewrite <-N.succ_le_mono.
-      apply N.log2_le_mono. }
-  Qed.
-
-  Lemma le_to_nat a b : (a <= b)%N <-> (N.to_nat a <= N.to_nat b)%nat.
-  Proof.
-    rewrite <-N.lt_succ_r.
-    rewrite <-Nat.lt_succ_r.
-    rewrite <-Nnat.N2Nat.inj_succ.
-    rewrite <-NatUtil.Nat2N_inj_lt.
-    rewrite !Nnat.N2Nat.id.
-    reflexivity.
-  Qed.
-
-  Lemma size_nat_equiv : forall n, N.size_nat n = N.to_nat (N.size n).
-  Proof.
-    destruct n as [|p]; auto; simpl; induction p as [p IHp|p IHp|]; simpl; auto; rewrite IHp, Pnat.Pos2Nat.inj_succ; reflexivity.
-  Qed.
-
-  Lemma size_nat_le a b : (a <= b)%N -> (N.size_nat a <= N.size_nat b)%nat.
-  Proof.
-    rewrite !size_nat_equiv.
-    rewrite <-le_to_nat.
-    apply size_le.
-  Qed.
-
   Lemma shiftr_size : forall n bound, N.size_nat n <= bound ->
     N.shiftr_nat n bound = 0%N.
   Proof.
@@ -45,7 +17,7 @@ Module N.
     rewrite Nshiftr_nat_equiv.
     destruct (N.eq_dec n 0); subst; [apply N.shiftr_0_l|].
     apply N.shiftr_eq_0.
-    rewrite size_nat_equiv in *.
+    rewrite N.size_nat_equiv in *.
     rewrite N.size_log2 in * by auto.
     apply N.le_succ_l.
     rewrite <- N.compare_le_iff.
@@ -114,7 +86,7 @@ Module N.
       apply WordUtil.bound_check_nat_N.
       apply Znat.Nat2Z.inj_lt.
       rewrite Znat.Z2Nat.id by omega.
-      rewrite ZUtil.Z.pow_Zpow.
+      rewrite Z.pow_Zpow.
       replace (Z.of_nat 2) with 2%Z by reflexivity.
       omega.
     Qed.
@@ -134,13 +106,13 @@ Module N.
       rewrite WordUtil.wordToNat_combine.
       rewrite !Word.wordToNat_natToWord_idempotent by (rewrite Nnat.N2Nat.id; auto using ZToN_NPow2_lt).
       f_equal.
-      rewrite ZUtil.Z.lor_shiftl by auto.
+      rewrite Z.lor_shiftl by auto.
       rewrite !Z_N_nat.
       rewrite Znat.Z2Nat.inj_add by (try apply Z.shiftl_nonneg; omega).
       f_equal.
       rewrite Z.shiftl_mul_pow2 by auto.
       rewrite Znat.Z2Nat.inj_mul by omega.
-      rewrite <-ZUtil.Z.pow_Z2N_Zpow by omega.
+      rewrite <-Z.pow_Z2N_Zpow by omega.
       rewrite Nat.mul_comm.
       f_equal.
     Qed.

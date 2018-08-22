@@ -1,6 +1,7 @@
 (*** Interface for bounded arithmetic *)
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Notations.
+
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.AutoRewrite.
 Require Import Crypto.Util.Notations.

@@ -1,10 +1,11 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Algebra.Nsatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.LetIn Crypto.Util.CPSUtil.
+Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Arithmetic.Core. Import B. Import Positional.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.IdfunWithAlt.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 Local Open Scope Z_scope.
 
 Section Karatsuba.

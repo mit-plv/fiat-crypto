@@ -5,7 +5,10 @@ Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.SpreadLeftImmediate.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.RippleCarryAddSub.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.Tactics.SimplifyProjections.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.LetIn.

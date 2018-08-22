@@ -2,7 +2,7 @@
 (** This file implements Montgomery Form, Montgomery Reduction, and
     Montgomery Multiplication on [Z].  We follow Wikipedia. *)
 Require Import Coq.ZArith.ZArith.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.Notations.
 
 Local Open Scope Z_scope.

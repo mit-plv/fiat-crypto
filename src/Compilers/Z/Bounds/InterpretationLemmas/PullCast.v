@@ -7,7 +7,12 @@ Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.Tactics.
 Require Import Crypto.Compilers.SmartMap.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Morphisms.
+Require Import Crypto.Util.ZUtil.Log2.
+Require Import Crypto.Util.ZUtil.Pow2.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
 Require Import Crypto.Util.Option.

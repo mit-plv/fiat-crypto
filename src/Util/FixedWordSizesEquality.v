@@ -4,7 +4,8 @@ Require Import Coq.Arith.Arith.
 Require Import bbv.WordScope.
 Require Import Crypto.Util.FixedWordSizes.
 Require Import Crypto.Util.WordUtil.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Log2.
+Require Import Crypto.Util.ZUtil.Z2Nat.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Definition wordT_beq_hetero {logsz1 logsz2} : wordT logsz1 -> wordT logsz2 -> bool

@@ -1,6 +1,10 @@
 Require Import Coq.ZArith.Zpower Coq.ZArith.Znumtheory Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
-Require Import Crypto.Util.NatUtil Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Divide.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Odd.
+Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZUtil.Tactics.PrimeBound.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z.
@@ -48,9 +52,9 @@ Hypothesis prime_p : prime p.
 Hypothesis neq_p_2 : p <> 2. (* Euler's Criterion is also provable with p = 2, but we do not need it and are lazy.*)
 Hypothesis x_id : x * 2 + 1 = p.
 
-Lemma lt_1_p : 1 < p. Proof using prime_p. prime_bound. Qed.
-Lemma x_pos: 0 < x. Proof using prime_p x_id. prime_bound. Qed.
-Lemma x_nonneg: 0 <= x. Proof using prime_p x_id. prime_bound. Qed.
+Lemma lt_1_p : 1 < p. Proof using prime_p. Z.prime_bound. Qed.
+Lemma x_pos: 0 < x. Proof using prime_p x_id. Z.prime_bound. Qed.
+Lemma x_nonneg: 0 <= x. Proof using prime_p x_id. Z.prime_bound. Qed.
 
 Lemma x_id_inv : x = (p - 1) / 2.
 Proof using x_id.
@@ -85,12 +89,12 @@ Lemma fermat_little: forall a (a_nonzero : a mod p <> 0),
 Proof using prime_p.
   intros a a_nonzero.
   assert (rel_prime a p). {
-    apply rel_prime_mod_rev; try prime_bound.
-    assert (0 < p) as p_pos by prime_bound.
+    apply rel_prime_mod_rev; try Z.prime_bound.
+    assert (0 < p) as p_pos by Z.prime_bound.
     apply rel_prime_le_prime; auto; pose proof (Z.mod_pos_bound a p p_pos).
     omega.
   }
-  rewrite (Coqprime.PrimalityTest.Zp.Zpower_mod_is_gpow _ _ _ lt_1_p) by (auto || prime_bound).
+  rewrite (Coqprime.PrimalityTest.Zp.Zpower_mod_is_gpow _ _ _ lt_1_p) by (auto || Z.prime_bound).
   rewrite <- mod_p_order.
   apply Coqprime.PrimalityTest.EGroup.fermat_gen; try apply Z.eq_dec.
   apply Coqprime.PrimalityTest.Zp.in_mod_ZPGroup; auto.
@@ -126,14 +130,14 @@ Proof using Type*.
   assert (b mod p <> 0) as b_nonzero. {
     intuition.
     rewrite <- Z.pow_2_r in a_square.
-    rewrite Z.mod_exp_0 in a_square by prime_bound.
+    rewrite Z.mod_exp_0 in a_square by Z.prime_bound.
     rewrite <- a_square in a_nonzero.
     auto.
   }
   pose proof (squared_fermat_little b b_nonzero).
-  rewrite Z.mod_pow in * by prime_bound.
+  rewrite Z.mod_pow in * by Z.prime_bound.
   rewrite <- a_square.
-  rewrite Z.mod_mod; prime_bound.
+  rewrite Z.mod_mod; Z.prime_bound.
 Qed.
 
 Lemma exists_primitive_root_power :
@@ -174,10 +178,10 @@ Proof using Type*.
   intros a a_range pow_a_x.
   destruct (exists_primitive_root_power) as [y [in_ZPGroup_y [y_order gpow_y]]]; auto.
   destruct (gpow_y a a_range) as [j [j_range pow_y_j]]; clear gpow_y.
-  rewrite Z.mod_pow in pow_a_x by prime_bound.
+  rewrite Z.mod_pow in pow_a_x by Z.prime_bound.
   replace a with (a mod p) in pow_y_j by (apply Z.mod_small; omega).
   rewrite <- pow_y_j in pow_a_x.
-  rewrite <- Z.mod_pow in pow_a_x by prime_bound.
+  rewrite <- Z.mod_pow in pow_a_x by Z.prime_bound.
   rewrite <- Z.pow_mul_r in pow_a_x by omega.
   assert (p - 1 | j * x) as divide_mul_j_x. {
     rewrite <- Coqprime.PrimalityTest.Zp.phi_is_order in y_order.
@@ -196,7 +200,7 @@ Proof using Type*.
   rewrite Z.mul_comm.
   rewrite x_id_inv in divide_mul_j_x; auto.
   apply (Z.divide_mul_div _ j 2) in divide_mul_j_x;
-    try (apply prime_pred_divide2 || prime_bound); auto.
+    try (apply prime_pred_divide2 || Z.prime_bound); auto.
   rewrite <- Zdivide_Zdiv_eq by (auto || omega).
   rewrite Zplus_diag_eq_mult_2.
   replace (a mod p) with a in pow_y_j by (symmetry; apply Z.mod_small; omega).
@@ -296,8 +300,8 @@ Proof.
   apply (euler_criterion (p / 2) p prime_p).
   + auto.
   + apply div2_p_1mod4; auto.
-  + prime_bound.
-  + apply minus1_even_pow; [apply divide2_1mod4 | | apply Z_div_pos]; prime_bound.
+  + Z.prime_bound.
+  + apply minus1_even_pow; [apply divide2_1mod4 | | apply Z_div_pos]; Z.prime_bound.
 Qed.
 
 

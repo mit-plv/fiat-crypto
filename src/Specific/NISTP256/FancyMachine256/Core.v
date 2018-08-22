@@ -20,7 +20,6 @@ Require Import Crypto.Compilers.Linearize.
 Require Import Crypto.Compilers.Inline.
 Require Import Crypto.Compilers.CommonSubexpressionElimination.
 Require Export Crypto.Compilers.Reify.
-Require Export Crypto.Util.ZUtil.
 Require Export Crypto.Util.Option.
 Require Export Crypto.Util.Notations.
 Require Import Crypto.Util.ListUtil.

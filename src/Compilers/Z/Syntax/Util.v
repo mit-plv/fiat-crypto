@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Compilers.Wf.
@@ -6,9 +7,7 @@ Require Import Crypto.Compilers.TypeUtil.
 Require Import Crypto.Compilers.TypeInversion.
 Require Import Crypto.Compilers.Z.Syntax.
 Require Import Crypto.Util.FixedWordSizesEquality.
-Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.HProp.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
@@ -113,8 +112,8 @@ Proof.
                  | [ H : ?leb _ _ = false |- _ ] => apply Compare_dec.leb_iff_conv in H
                  | [ H : TWord _ = TWord _ |- _ ] => inversion H; clear H
                  end
-               | rewrite ZToWord_wordToZ_ZToWord by omega *
-               | rewrite wordToZ_ZToWord_wordToZ by omega *
+               | rewrite ZToWord_wordToZ_ZToWord by lia
+               | rewrite wordToZ_ZToWord_wordToZ by lia
                | rewrite wordToZ_ZToWord by assumption
                | rewrite ZToWord_wordToZ_ZToWord_small by omega ].
 Qed.
@@ -182,8 +181,8 @@ Proof.
                  | [ H : ?leb _ _ = false |- _ ] => apply Compare_dec.leb_iff_conv in H
                  | [ H : TWord _ = TWord _ |- _ ] => inversion H; clear H
                  end
-               | rewrite ZToWord_wordToZ_ZToWord by omega *
-               | rewrite wordToZ_ZToWord_wordToZ by omega * ].
+               | rewrite ZToWord_wordToZ_ZToWord by lia
+               | rewrite wordToZ_ZToWord_wordToZ by lia ].
 Qed.
 
 Lemma ZToInterp_eq_inj {a} x y

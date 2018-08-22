@@ -4,6 +4,7 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -287,4 +288,85 @@ Module Z.
   Lemma mod_opp_r a b : a mod (-b) = -((-a) mod b).
   Proof. pose proof (Z.div_opp_r a b); Z.div_mod_to_quot_rem; nia. Qed.
   Hint Resolve mod_opp_r : zarith.
+
+  Lemma mod_same_pow : forall a b c, 0 <= c <= b -> a ^ b mod a ^ c = 0.
+  Proof.
+    intros a b c H.
+    replace b with (b - c + c) by ring.
+    rewrite Z.pow_add_r by omega.
+    apply Z_mod_mult.
+  Qed.
+  Hint Rewrite mod_same_pow using zutil_arith : zsimplify.
+
+  Lemma mod_opp_l_z_iff a b (H : b <> 0) : a mod b = 0 <-> (-a) mod b = 0.
+  Proof.
+    split; intro H'; apply Z.mod_opp_l_z in H'; rewrite ?Z.opp_involutive in H'; assumption.
+  Qed.
+  Hint Rewrite <- mod_opp_l_z_iff using zutil_arith : zsimplify.
+
+  Lemma mod_small_sym a b : 0 <= a < b -> a = a mod b.
+  Proof. intros; symmetry; apply Z.mod_small; assumption. Qed.
+  Hint Resolve mod_small_sym : zarith.
+
+  Lemma mod_eq_le_to_eq a b : 0 < a <= b -> a mod b = 0 -> a = b.
+  Proof. pose proof (Z.mod_eq_le_div_1 a b); intros; Z.div_mod_to_quot_rem; nia. Qed.
+  Hint Resolve mod_eq_le_to_eq : zarith.
+
+  Lemma mod_neq_0_le_to_neq a b : a mod b <> 0 -> a <> b.
+  Proof. repeat intro; subst; autorewrite with zsimplify in *; lia. Qed.
+  Hint Resolve mod_neq_0_le_to_neq : zarith.
+
+  Lemma div_mod' a b : b <> 0 -> a = (a / b) * b + a mod b.
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod' using zutil_arith : zsimplify.
+
+  Lemma div_mod'' a b : b <> 0 -> a = a mod b + b * (a / b).
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod'' using zutil_arith : zsimplify.
+
+  Lemma div_mod''' a b : b <> 0 -> a = a mod b + (a / b) * b.
+  Proof. intro; etransitivity; [ apply (Z.div_mod a b); assumption | lia ]. Qed.
+  Hint Rewrite <- div_mod''' using zutil_arith : zsimplify.
+
+  Lemma sub_mod_mod_0 x d : (x - x mod d) mod d = 0.
+  Proof.
+    destruct (Z_zerop d); subst; push_Zmod; autorewrite with zsimplify; reflexivity.
+  Qed.
+  Hint Resolve sub_mod_mod_0 : zarith.
+  Hint Rewrite sub_mod_mod_0 : zsimplify.
+
+  Lemma mod_small_n n a b : 0 <= n -> b <> 0 -> n * b <= a < (1 + n) * b -> a mod b = a - n * b.
+  Proof. intros; erewrite Zmod_eq_full, Z.div_between by eassumption. reflexivity. Qed.
+  Hint Rewrite mod_small_n using zutil_arith : zsimplify.
+
+  Lemma mod_small_1 a b : b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
+  Proof. intros; rewrite (mod_small_n 1) by lia; lia. Qed.
+  Hint Rewrite mod_small_1 using zutil_arith : zsimplify.
+
+  Lemma mod_small_n_if n a b : 0 <= n -> b <> 0 -> n * b <= a < (2 + n) * b -> a mod b = a - (if (1 + n) * b <=? a then (1 + n) else n) * b.
+  Proof. intros; erewrite Zmod_eq_full, Z.div_between_if by eassumption; autorewrite with zsimplify_const. reflexivity. Qed.
+
+  Lemma mod_small_0_if a b : b <> 0 -> 0 <= a < 2 * b -> a mod b = a - if b <=? a then b else 0.
+  Proof. intros; rewrite (mod_small_n_if 0) by lia; autorewrite with zsimplify_const. break_match; lia. Qed.
+
+  Lemma mul_mod_distr_r_full a b c : (a * c) mod (b * c) = (a mod b * c).
+  Proof.
+    destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
+      autorewrite with zsimplify; auto using Z.mul_mod_distr_r.
+  Qed.
+
+  Lemma mul_mod_distr_l_full a b c : (c * a) mod (c * b) = c * (a mod b).
+  Proof.
+    destruct (Z_zerop b); [ | destruct (Z_zerop c) ]; subst;
+      autorewrite with zsimplify; auto using Z.mul_mod_distr_l.
+  Qed.
+
+  Lemma lt_mul_2_mod_sub : forall a b, b <> 0 -> b <= a < 2 * b -> a mod b = a - b.
+  Proof.
+    intros a b H H0.
+    replace (a mod b) with ((1 * b + (a - b)) mod b) by (f_equal; ring).
+    rewrite Z.mod_add_l by auto.
+    apply Z.mod_small.
+    omega.
+  Qed.
 End Z.

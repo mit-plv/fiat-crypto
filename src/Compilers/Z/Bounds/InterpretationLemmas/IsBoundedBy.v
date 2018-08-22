@@ -8,9 +8,13 @@ Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Compilers.Z.Bounds.InterpretationLemmas.Tactics.
 Require Import Crypto.Compilers.SmartMap.
 Require Import Crypto.Util.ZRange.CornersMonotoneBounds.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.Morphisms.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.PointedProp.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.
