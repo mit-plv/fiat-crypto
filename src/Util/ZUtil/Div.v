@@ -262,4 +262,11 @@ Module Z.
   Lemma div_opp_r a b : a / (-b) = ((-a) / b).
   Proof. Z.div_mod_to_quot_rem; nia. Qed.
   Hint Resolve div_opp_r : zarith.
+
+  Lemma div_floor : forall a b c, 0 < b -> a < b * (Z.succ c) -> a / b <= c.
+  Proof.
+    intros.
+    apply Z.lt_succ_r.
+    apply Z.div_lt_upper_bound; try omega.
+  Qed.
 End Z.

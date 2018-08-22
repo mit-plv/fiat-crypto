@@ -287,4 +287,13 @@ Module Z.
   Lemma mod_opp_r a b : a mod (-b) = -((-a) mod b).
   Proof. pose proof (Z.div_opp_r a b); Z.div_mod_to_quot_rem; nia. Qed.
   Hint Resolve mod_opp_r : zarith.
+
+  Lemma mod_same_pow : forall a b c, 0 <= c <= b -> a ^ b mod a ^ c = 0.
+  Proof.
+    intros a b c H.
+    replace b with (b - c + c) by ring.
+    rewrite Z.pow_add_r by omega.
+    apply Z_mod_mult.
+  Qed.
+  Hint Rewrite mod_same_pow using zutil_arith : zsimplify.
 End Z.
