@@ -1,7 +1,12 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Lnot.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z_scope.
 
@@ -87,4 +92,39 @@ Module Z.
     auto using Z.mod_pow2_bits_low.
   Qed.
   Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
+
+  Lemma testbit_sub_pow2 n i x (i_range:0 <= i < n) (x_range:0 < x < 2 ^ n) :
+    Z.testbit (2 ^ n - x) i = negb (Z.testbit (x - 1)  i).
+  Proof.
+    rewrite <-Z.lnot_spec, Z.lnot_sub1 by omega.
+    rewrite <-(Z.mod_pow2_bits_low (-x) _ _ (proj2 i_range)).
+    f_equal.
+    rewrite Z.mod_opp_l_nz; autorewrite with zsimplify; omega.
+  Qed.
+
+  Lemma testbit_false_bound : forall a x, 0 <= x ->
+    (forall n, ~ (n < x) -> Z.testbit a n = false) ->
+    a < 2 ^ x.
+  Proof.
+    intros a x H H0.
+    assert (H1 : a = Z.pow2_mod a x). {
+     apply Z.bits_inj'; intros.
+     rewrite Z.testbit_pow2_mod by omega; break_match; auto.
+    }
+    rewrite H1.
+    cbv [Z.pow2_mod]; rewrite Z.land_ones by auto.
+    try apply Z.mod_pos_bound; Z.zero_bounds.
+  Qed.
+
+  Lemma testbit_neg_eq_if x n :
+    0 <= n ->
+    - (2 ^ n) <= x  < 2 ^ n ->
+    Z.b2z (if x <? 0 then true else Z.testbit x n) = - (x / 2 ^ n) mod 2.
+  Proof.
+    intros. break_match; Z.ltb_to_lt.
+    { autorewrite with zsimplify. reflexivity. }
+    { autorewrite with zsimplify.
+      rewrite Z.bits_above_pow2 by omega.
+      reflexivity. }
+  Qed.
 End Z.

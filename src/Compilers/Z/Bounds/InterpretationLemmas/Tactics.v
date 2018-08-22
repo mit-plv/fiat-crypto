@@ -1,7 +1,14 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Psatz.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Hints.
+Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.ZSimplify.Core.
+Require Import Crypto.Util.ZUtil.Log2.
+Require Import Crypto.Util.ZUtil.Shift.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.FixedWordSizesEquality.

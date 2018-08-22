@@ -11,12 +11,18 @@ Require Import Crypto.Arithmetic.Saturated.AddSub.
 Require Import Crypto.Util.LetIn Crypto.Util.CPSUtil.
 Require Import Crypto.Util.Tuple Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Opp.
 Require Import Crypto.Util.Tactics.UniquePose.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 

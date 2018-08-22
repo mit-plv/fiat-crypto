@@ -4,7 +4,9 @@ Local Open Scope Z_scope.
 
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Saturated.Core.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Le.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.LetIn Crypto.Util.Tuple.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 

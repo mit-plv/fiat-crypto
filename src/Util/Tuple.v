@@ -618,6 +618,27 @@ Proof.
   auto using fieldwiseb'_fieldwise'.
 Qed.
 
+Lemma map_ext {A B} (f g : A -> B) n (t : tuple A n) :
+  (forall x : A, f x = g x) ->
+  map f t = map g t.
+Proof.
+  destruct n; [reflexivity|]; cbn in *.
+  induction n; cbn in *; intro H; auto; [ ].
+  rewrite IHn by assumption.
+  rewrite H; reflexivity.
+Qed.
+
+Lemma map_ext_In {A B} (f g : A -> B) n (t : tuple A n) :
+  (forall x, In x (to_list n t) -> f x = g x) ->
+  map f t = map g t.
+Proof.
+  destruct n; [reflexivity|]; cbn in *.
+  induction n; cbn in *; intro H; auto; [ ].
+  destruct t.
+  rewrite IHn by auto using in_cons.
+  rewrite H; auto using in_eq.
+Qed.
+
 
 Fixpoint from_list_default' {T} (d y:T) (n:nat) (xs:list T) : tuple' T n :=
   match n return tuple' T n with

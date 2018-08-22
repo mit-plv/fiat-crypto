@@ -10,7 +10,6 @@ Require Import Crypto.Compilers.Z.OpInversion.
 Require Import Crypto.Compilers.Z.ArithmeticSimplifier.
 Require Import Crypto.Compilers.Z.Syntax.Equality.
 Require Import Crypto.Compilers.Z.Syntax.Util.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Prod.

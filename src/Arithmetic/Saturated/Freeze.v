@@ -7,9 +7,11 @@ Require Import Crypto.Arithmetic.Saturated.Core.
 Require Import Crypto.Arithmetic.Saturated.Wrappers.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
+Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.CPS.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Decidable Crypto.Util.ZUtil.
+Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple Crypto.Util.LetIn.
 Local Notation "A ^ n" := (tuple A n) : type_scope.
 

@@ -3,8 +3,6 @@ Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.ShiftLeftRightTactic.
-Require Import Crypto.Util.ZUtil.
-(*Require Import Crypto.Util.Tactics.*)
 
 Local Open Scope Z_scope.
 

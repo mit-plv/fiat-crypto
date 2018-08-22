@@ -1,6 +1,7 @@
 Require Import Crypto.Specific.NISTP256.FancyMachine256.Core.
 Require Import Crypto.LegacyArithmetic.MontgomeryReduction.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
+Require Import Crypto.Util.ZUtil.EquivModulo.
 
 Section expression.
   Context (ops : fancy_machine.instructions (2 * 128)) (props : fancy_machine.arithmetic ops) (modulus : Z) (m' : Z) (Hm : modulus <> 0) (H : 0 <= modulus < 2^256) (Hm' : 0 <= m' < 2^256).

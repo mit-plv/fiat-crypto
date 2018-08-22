@@ -246,8 +246,9 @@ Local Open Scope Z_scope.
 
 Require Import Crypto.Algebra.Nsatz.
 Require Import Crypto.Util.Decidable Crypto.Util.LetIn.
-Require Import Crypto.Util.ZUtil Crypto.Util.ListUtil Crypto.Util.Sigma.
+Require Import Crypto.Util.ListUtil Crypto.Util.Sigma.
 Require Import Crypto.Util.CPSUtil Crypto.Util.Prod.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -257,6 +258,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.VM.
 Require Import Crypto.Util.IdfunWithAlt.
+Require Import Crypto.Util.Notations.
 
 Require Import Coq.Lists.List. Import ListNotations.
 Require Crypto.Util.Tuple. Local Notation tuple := Tuple.tuple.

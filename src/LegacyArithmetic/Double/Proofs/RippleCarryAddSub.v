@@ -4,7 +4,10 @@ Require Import Crypto.LegacyArithmetic.InterfaceProofs.
 Require Import Crypto.LegacyArithmetic.Double.Core.
 Require Import Crypto.LegacyArithmetic.Double.Proofs.Decode.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SimplifyProjections.
 Require Import Crypto.Util.Notations.

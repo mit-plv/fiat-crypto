@@ -1,5 +1,5 @@
 Require Import Coq.Lists.List Coq.micromega.Psatz.
-Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil.
+Require Import Crypto.Util.ListUtil.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
 Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.LegacyArithmetic.BaseSystem.

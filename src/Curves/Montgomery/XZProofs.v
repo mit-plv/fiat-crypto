@@ -3,7 +3,9 @@ Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Shift.
 Require Import Crypto.Util.ZUtil.Peano.
 Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -248,7 +250,7 @@ Module M.
     Proof. t. Qed.
     Lemma transitive_eq {p} q {r} : projective q -> eq p q -> eq q r -> eq p r.
     Proof. t. Qed.
-    
+
     Lemma projective_to_xz Q : projective (to_xz Q).
     Proof. t. Qed.
 

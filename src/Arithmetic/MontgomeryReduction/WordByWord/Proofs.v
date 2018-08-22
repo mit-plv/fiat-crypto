@@ -6,7 +6,6 @@ Require Import Crypto.Arithmetic.Saturated.MontgomeryAPI.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Abstract.Dependent.Proofs.
 Require Import Crypto.Arithmetic.MontgomeryReduction.WordByWord.Definition.
-Require Import Crypto.Util.ZUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.

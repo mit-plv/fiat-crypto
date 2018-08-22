@@ -9,7 +9,13 @@
     have to carry around extra precision), but requires more stringint
     conditions on the base ([b]), exponent ([k]), and the [offset]. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Hints.
+Require Import Crypto.Util.ZUtil.ZSimplify.
 
 Local Open Scope Z_scope.
 
@@ -72,8 +78,8 @@ Section barrett.
     Let R := x mod m.
     Lemma q3_nice : { b : bool * bool | q3 = Q + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
     Proof using base_pos k_big_enough m_large m_pos m_small offset_nonneg x_nonneg x_small μ_good.
-      assert (0 < b^(k+offset)) by zero_bounds.
-      assert (0 < b^(k-offset)) by zero_bounds.
+      assert (0 < b^(k+offset)) by Z.zero_bounds.
+      assert (0 < b^(k-offset)) by Z.zero_bounds.
       assert (x / b^(k-offset) <= b^(2*k) / b^(k-offset)) by auto with zarith lia.
       assert (x / b^(k-offset) <= b^(k+offset)) by (autorewrite with pull_Zpow zsimplify in *; assumption).
       subst q1 q2 q3 Q r_mod_3m r_mod_3m_orig r1 r2 R μ.

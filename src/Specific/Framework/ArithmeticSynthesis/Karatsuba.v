@@ -6,7 +6,7 @@ Require Import Crypto.Arithmetic.Core. Import B.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Crypto.Specific.Framework.CurveParameters.
 Require Import Crypto.Util.Decidable.
-Require Import Crypto.Util.LetIn Crypto.Util.ZUtil.
+Require Import Crypto.Util.LetIn.
 Require Import Crypto.Arithmetic.Karatsuba.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Util.Tuple.

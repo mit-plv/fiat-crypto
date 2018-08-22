@@ -3,6 +3,7 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.Ztestbit.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Local Open Scope Z_scope.
@@ -51,4 +52,14 @@ Module Z.
     auto with zarith.
   Qed.
   Hint Resolve pow2_mod_pos_bound : zarith.
+
+  Lemma pow2_mod_id_iff : forall a n, 0 <= n ->
+                                      (Z.pow2_mod a n = a <-> 0 <= a < 2 ^ n).
+  Proof.
+    intros a n H.
+    rewrite Z.pow2_mod_spec by assumption.
+    assert (0 < 2 ^ n) by Z.zero_bounds.
+    rewrite Z.mod_small_iff by omega.
+    split; intros; intuition omega.
+  Qed.
 End Z.

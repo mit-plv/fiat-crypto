@@ -9,7 +9,15 @@
     base ([b]), exponent ([k]), and the [offset] than those given in
     the HAC. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Pow.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.ZSimplify.
+Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
 
@@ -94,17 +102,17 @@ Section barrett.
       : q * n <= a.
     Proof using a_nonneg a_small base_good k_big_enough m_good n_pos n_reasonable offset_nonneg.
       subst q r m.
-      assert (0 < b^(k-offset)). zero_bounds.
-      assert (0 < b^(k+offset)) by zero_bounds.
-      assert (0 < b^(2 * k)) by zero_bounds.
+      assert (0 < b^(k-offset)). Z.zero_bounds.
+      assert (0 < b^(k+offset)) by Z.zero_bounds.
+      assert (0 < b^(2 * k)) by Z.zero_bounds.
       Z.simplify_fractions_le.
       autorewrite with pull_Zpow pull_Zdiv zsimplify; reflexivity.
     Qed.
 
     Lemma q_nice : { b : bool * bool | q = a / n + (if fst b then -1 else 0) + (if snd b then -1 else 0) }.
     Proof using a_nonneg a_small base_good k_big_enough m_good n_large n_pos n_reasonable offset_nonneg.
-      assert (0 < b^(k+offset)) by zero_bounds.
-      assert (0 < b^(k-offset)) by zero_bounds.
+      assert (0 < b^(k+offset)) by Z.zero_bounds.
+      assert (0 < b^(k-offset)) by Z.zero_bounds.
       assert (a / b^(k-offset) <= b^(2*k) / b^(k-offset)) by auto with zarith lia.
       assert (a / b^(k-offset) <= b^(k+offset)) by (autorewrite with pull_Zpow zsimplify in *; assumption).
       subst q r m.

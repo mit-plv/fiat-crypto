@@ -1,7 +1,11 @@
 (*** Barrett Reduction *)
 (** This file implements Barrett Reduction on [Z].  We follow Wikipedia. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Psatz.
-Require Import Crypto.Util.ZUtil.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.SimplifyFractionsLe.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Local Open Scope Z_scope.
@@ -80,7 +84,7 @@ Section barrett.
       : q * n <= a.
     Proof using a_nonneg k_good m_good n_pos n_reasonable.
       pose proof k_nonnegative; subst q r m.
-      assert (0 <= 2^(k-1)) by zero_bounds.
+      assert (0 <= 2^(k-1)) by Z.zero_bounds.
       Z.simplify_fractions_le.
     Qed.
 

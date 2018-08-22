@@ -2,7 +2,13 @@ Require Import Coq.ZArith.Zpower Coq.ZArith.ZArith Coq.micromega.Psatz.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Coq.Lists.List.
 Require Import Coq.funind.Recdef.
-Require Import Crypto.Util.ListUtil Crypto.Util.ZUtil Crypto.Util.NatUtil.
+Require Import Crypto.Util.ListUtil Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Testbit.
+Require Import Crypto.Util.ZUtil.Pow2Mod.
+Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Shift.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.LegacyArithmetic.VerdiTactics.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -282,7 +288,7 @@ Section Pow2BaseProofs.
            | |- _ => rewrite BaseSystemProofs.set_higher
            | |- _ => rewrite nth_default_base
            | |- _ => rewrite IHi
-           | |- _ => rewrite <-Z.lor_shiftl by (rewrite ?Z.pow2_mod_spec; try apply Z.mod_pos_bound; zero_bounds)
+           | |- _ => rewrite <-Z.lor_shiftl by (rewrite ?Z.pow2_mod_spec; try apply Z.mod_pos_bound; Z.zero_bounds)
            | |- context[min ?x ?y] => (rewrite Nat.min_l by omega || rewrite Nat.min_r by omega)
            | |- context[2 ^ ?a * _] => rewrite (Z.mul_comm (2 ^ a)); rewrite <-Z.shiftl_mul_pow2
            | |- _ => solve [auto]
@@ -452,7 +458,7 @@ Section UniformBase.
        intros; apply Z.eq_le_incl.
        f_equal; auto.
      + apply nth_default_preserves_properties_length_dep;
-         try solve [apply nth_default_preserves_properties; split; zero_bounds; rewrite limb_widths_uniform; auto || omega].
+         try solve [apply nth_default_preserves_properties; split; Z.zero_bounds; rewrite limb_widths_uniform; auto || omega].
       intros; apply nth_default_preserves_properties_length_dep; try solve [intros; omega].
        let x := fresh "x" in intro x; intros;
          replace x with width; try symmetry; auto.
