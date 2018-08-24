@@ -21,6 +21,8 @@ INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime coqprime-all \
+	old-pipeline-nobigmem print-old-pipeline-nobigmem \
+	old-pipeline-lite print-old-pipeline-lite \
 	nobigmem print-nobigmem \
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite lite-display print-lite-display \
@@ -52,7 +54,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite print-lite-display lite-display nobigmem print-nobigmem new-pipeline pre-standalone,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite print-lite-display lite-display nobigmem print-nobigmem new-pipeline pre-standalone old-pipeline-nobigmem print-old-pipeline-nobigmem old-pipeline-lite print-old-pipeline-lite,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -79,6 +81,7 @@ SPECIAL_VOFILES := \
 SPECIFIC_GENERATED_VOFILES := src/Specific/solinas%.vo src/Specific/montgomery%.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
+NEW_PIPELINE_FILTER := src/Experiments/NewPipeline/%
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
@@ -100,13 +103,15 @@ NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
+OLD_PIPELINE_LITE_UNMADE_VOFILES := $(LITE_UNMADE_VOFILES) $(NEW_PIPELINE_FILTER)
+OLD_PIPELINE_NOBIGMEM_UNMADE_VOFILES := $(NOBIGMEM_UNMADE_VOFILES) $(NEW_PIPELINE_FILTER)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/Weierstrass/Jacobian.vo src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := $(filter $(NO_CURVES_PROOFS_UNMADE_VOFILES) src/Specific/%.vo,$(VOFILES))
 REAL_SPECIFIC_GENERATED_VOFILES := $(filter $(SPECIFIC_GENERATED_VOFILES),$(VOFILES))
-NEW_PIPELINE_PRE_VOFILES := $(filter src/Experiments/NewPipeline/%,$(REGULAR_VOFILES))
+NEW_PIPELINE_PRE_VOFILES := $(filter $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Experiments/NewPipeline/Standalone%.vo,$(REGULAR_VOFILES))
 
 SELECTED_PATTERN := \
@@ -136,9 +141,17 @@ LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(LITE_UNMADE_VOFILES),$(call vo_reverse
 LITE_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 LITE_DISPLAY_VOFILES := $(filter-out $(LITE_ALL_UNMADE_VOFILES),$(DISPLAY_VO))
 endif
+ifneq ($(filter print-old-pipeline-lite old-pipeline-lite,$(MAKECMDGOALS)),)
+OLD_PIPELINE_LITE_ALL_UNMADE_VOFILES := $(foreach vo,$(OLD_PIPELINE_LITE_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+OLD_PIPELINE_LITE_VOFILES := $(filter-out $(OLD_PIPELINE_LITE_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
 ifneq ($(filter nobigmem print-nobigmem,$(MAKECMDGOALS)),)
 NOBIGMEM_ALL_UNMADE_VOFILES := $(foreach vo,$(NOBIGMEM_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 NOBIGMEM_VOFILES := $(filter-out $(NOBIGMEM_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
+endif
+ifneq ($(filter old-pipeline-nobigmem print-old-pipeline-nobigmem,$(MAKECMDGOALS)),)
+OLD_PIPELINE_NOBIGMEM_ALL_UNMADE_VOFILES := $(foreach vo,$(OLD_PIPELINE_NOBIGMEM_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
+OLD_PIPELINE_NOBIGMEM_VOFILES := $(filter-out $(OLD_PIPELINE_NOBIGMEM_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
 endif
 ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
 HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
@@ -169,8 +182,10 @@ specific: $(SPECIFIC_VO)
 non-specific: $(NON_SPECIFIC_VO)
 coq: $(COQ_VOFILES)
 lite: $(LITE_VOFILES)
+old-pipeline-lite: $(OLD_PIPELINE_LITE_VOFILES)
 lite-display: $(LITE_DISPLAY_VOFILES:.vo=.log)
 nobigmem: $(NOBIGMEM_VOFILES)
+old-pipeline-nobigmem: $(OLD_PIPELINE_NOBIGMEM_VOFILES)
 only-heavy: $(HEAVY_VOFILES)
 curves-proofs: $(CURVES_PROOFS_VOFILES)
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES)
@@ -225,6 +240,14 @@ printlite::
 	@echo 'Files Not Made:'
 	@for i in $(sort $(LITE_ALL_UNMADE_VOFILES)); do echo $$i; done
 
+print-old-pipeline-lite::
+	@echo 'Files Made:'
+	@for i in $(sort $(OLD_PIPELINE_LITE_VOFILES)); do echo $$i; done
+	@echo
+	@echo
+	@echo 'Files Not Made:'
+	@for i in $(sort $(OLD_PIPELINE_LITE_ALL_UNMADE_VOFILES)); do echo $$i; done
+
 print-lite-display::
 	@echo 'Files Made:'
 	@for i in $(sort $(LITE_DISPLAY_VOFILES)); do echo $$i; done
@@ -240,6 +263,14 @@ print-nobigmem::
 	@echo
 	@echo 'Files Not Made:'
 	@for i in $(sort $(NOBIGMEM_ALL_UNMADE_VOFILES)); do echo $$i; done
+
+print-old-pipeline-nobigmem::
+	@echo 'Files Made:'
+	@for i in $(sort $(OLD_PIPELINE_NOBIGMEM_VOFILES)); do echo $$i; done
+	@echo
+	@echo
+	@echo 'Files Not Made:'
+	@for i in $(sort $(OLD_PIPELINE_NOBIGMEM_ALL_UNMADE_VOFILES)); do echo $$i; done
 
 ifneq ($(filter 8.5%,$(COQ_VERSION)),) # 8.5
 else
