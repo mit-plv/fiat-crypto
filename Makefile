@@ -114,7 +114,7 @@ NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := $(filter $(NO_CURVES_PROOFS_UNMA
 REAL_SPECIFIC_GENERATED_VOFILES := $(filter $(SPECIFIC_GENERATED_VOFILES),$(VOFILES))
 NEW_PIPELINE_PRE_VOFILES := $(filter $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Experiments/NewPipeline/Standalone%.vo,$(REGULAR_VOFILES))
-UTIL_PRE_VO_FILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
+UTIL_PRE_VOFILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 
 SELECTED_PATTERN := \
 	src/Specific/X25519/C64/% \
