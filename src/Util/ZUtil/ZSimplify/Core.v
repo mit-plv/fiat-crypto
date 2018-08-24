@@ -8,7 +8,7 @@ Hint Rewrite Z.div_mul Z.div_1_l Z.div_same Z.mod_same Z.div_small Z.mod_small Z
 Hint Rewrite <- Z.opp_eq_mul_m1 Z.one_succ Z.two_succ : zsimplify.
 Hint Rewrite <- Z.div_mod using zutil_arith : zsimplify.
 Hint Rewrite (fun x y => proj2 (Z.eqb_neq x y)) using assumption : zsimplify.
-Hint Rewrite Z.mul_0_l Z.mul_0_r Z.mul_1_l Z.mul_1_r Z.add_0_l Z.add_0_r Z.sub_0_l Z.sub_0_r Zdiv_0_l Zdiv_0_r Zdiv_1_r Zmod_0_l Zmod_0_r Zmod_1_r Z.opp_0 Z.abs_0 Z.sgn_0 Nat2Z.inj_0 Z2Nat.inj_0 Z.land_0_l Z.land_0_r Z.lor_0_l Z.lor_0_r Z.lnot_0 Z.land_lnot_diag Z.lnot_involutive Z.lxor_lnot_lnot Z.lnot_m1 Z.lxor_m1_l Z.lxor_m1_r Z.add_lnot_diag Z.lor_lnot_diag Z.pow_0_r Z.pow_0_l Z.pow_1_r : zsimplify_const.
+Hint Rewrite Z.mul_0_l Z.mul_0_r Z.mul_1_l Z.mul_1_r Z.add_0_l Z.add_0_r Z.sub_0_l Z.sub_0_r Zdiv_0_l Zdiv_0_r Zdiv_1_r Zmod_0_l Zmod_0_r Zmod_1_r Z.opp_0 Z.abs_0 Z.sgn_0 Nat2Z.inj_0 Z2Nat.inj_0 Z.land_0_l Z.land_0_r Z.lor_0_l Z.lor_0_r Z.lnot_0 Z.land_lnot_diag Z.lnot_involutive Z.lxor_lnot_lnot Z.lnot_m1 Z.lxor_m1_l Z.lxor_m1_r Z.add_lnot_diag Z.lor_lnot_diag Z.pow_0_r Z.pow_0_l Z.pow_1_r Z.shiftr_0_r Z.shiftr_0_l Z.shiftl_0_r Z.shiftl_0_l : zsimplify_const.
 
 Hint Rewrite <- Z.one_succ Z.two_succ : zsimplify_const.
 
