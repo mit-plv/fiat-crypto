@@ -1,4 +1,6 @@
 Require Import Crypto.Spec.ModularArithmetic.
+Require Import Coq.PArith.BinPosDef.
+Require Import Coq.ZArith.BinIntDef.
 Require Import Crypto.Spec.CompleteEdwardsCurve.
 Require Import Crypto.Spec.EdDSA.
 

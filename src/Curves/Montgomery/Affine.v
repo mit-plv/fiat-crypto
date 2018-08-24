@@ -1,3 +1,4 @@
+Require Import Coq.PArith.BinPosDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings.
 Require Import Crypto.Util.Sum Crypto.Util.Prod.

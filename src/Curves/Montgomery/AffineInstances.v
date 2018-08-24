@@ -1,3 +1,4 @@
+Require Import Coq.PArith.BinPosDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Spec.WeierstrassCurve Crypto.Curves.Weierstrass.Affine.

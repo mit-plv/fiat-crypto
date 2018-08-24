@@ -1,3 +1,5 @@
+Require Import Coq.PArith.BinPosDef.
+Require Import Coq.ZArith.BinIntDef.
 Require Import Crypto.Algebra.Field.
 Require Import Crypto.Util.GlobalSettings Crypto.Util.Notations.
 Require Import Crypto.Util.Sum Crypto.Util.Prod Crypto.Util.LetIn.
@@ -109,7 +111,7 @@ Module M.
         dlet z2 := tmp1l * tmp0l in
         ((x2, z2), (x3, z3))%core
       end.
- 
+
     Context {cswap:bool->F->F->F*F}.
     Local Notation xor := Coq.Init.Datatypes.xorb.
     Local Open Scope core_scope.

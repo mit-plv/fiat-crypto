@@ -1,3 +1,7 @@
+Require Import Coq.ZArith.BinIntDef.
+Require Import Coq.NArith.BinNatDef.
+Require Import Coq.PArith.BinPosDef.
+
 Require Coq.ZArith.Znumtheory Coq.Numbers.BinNums.
 
 Require Crypto.Arithmetic.ModularArithmeticPre.
