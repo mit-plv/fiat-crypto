@@ -24,6 +24,7 @@ INSTALLDEFAULTROOT := Crypto
 	old-pipeline-nobigmem print-old-pipeline-nobigmem \
 	old-pipeline-lite print-old-pipeline-lite \
 	nobigmem print-nobigmem \
+	util \
 	specific-c specific-display display \
 	specific non-specific lite only-heavy printlite lite-display print-lite-display \
 	new-pipeline pre-standalone \
@@ -54,7 +55,7 @@ COQ_VERSION := $(firstword $(subst $(COQ_VERSION_PREFIX),,$(shell "$(COQBIN)coqc
 -include Makefile.coq
 endif
 
-ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite print-lite-display lite-display nobigmem print-nobigmem new-pipeline pre-standalone old-pipeline-nobigmem print-old-pipeline-nobigmem old-pipeline-lite print-old-pipeline-lite,$(MAKECMDGOALS)),)
+ifeq ($(filter curves-proofs no-curves-proofs no-curves-proofs-non-specific selected-specific selected-specific-display lite only-heavy printdeps printreversedeps printlite print-lite-display lite-display nobigmem print-nobigmem new-pipeline pre-standalone old-pipeline-nobigmem print-old-pipeline-nobigmem old-pipeline-lite print-old-pipeline-lite util,$(MAKECMDGOALS)),)
 -include etc/coq-scripts/Makefile.vo_closure
 else
 include etc/coq-scripts/Makefile.vo_closure
@@ -113,6 +114,7 @@ NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := $(filter $(NO_CURVES_PROOFS_UNMA
 REAL_SPECIFIC_GENERATED_VOFILES := $(filter $(SPECIFIC_GENERATED_VOFILES),$(VOFILES))
 NEW_PIPELINE_PRE_VOFILES := $(filter $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Experiments/NewPipeline/Standalone%.vo,$(REGULAR_VOFILES))
+UTIL_PRE_VO_FILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 
 SELECTED_PATTERN := \
 	src/Specific/X25519/C64/% \
@@ -156,6 +158,9 @@ endif
 ifneq ($(filter only-heavy,$(MAKECMDGOALS)),)
 HEAVY_VOFILES := $(call vo_closure,$(LITE_UNMADE_VOFILES))
 endif
+ifneq ($(filter util,$(MAKECMDGOALS)),)
+UTIL_VOFILES := $(call vo_closure,$(UTIL_PRE_VOFILES))
+endif
 ifneq ($(filter no-curves-proofs,$(MAKECMDGOALS)),)
 NO_CURVES_PROOFS_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
 NO_CURVES_PROOFS_VOFILES := $(filter-out $(NO_CURVES_PROOFS_ALL_UNMADE_VOFILES),$(COQ_VOFILES))
@@ -187,6 +192,7 @@ lite-display: $(LITE_DISPLAY_VOFILES:.vo=.log)
 nobigmem: $(NOBIGMEM_VOFILES)
 old-pipeline-nobigmem: $(OLD_PIPELINE_NOBIGMEM_VOFILES)
 only-heavy: $(HEAVY_VOFILES)
+util: $(UTIL_VOFILES)
 curves-proofs: $(CURVES_PROOFS_VOFILES)
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES)
 no-curves-proofs-non-specific: $(NO_CURVES_PROOFS_NON_SPECIFIC_VOFILES)
