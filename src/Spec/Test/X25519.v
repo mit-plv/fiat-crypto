@@ -1,6 +1,9 @@
 (* Test vectors from <https://tools.ietf.org/html/rfc7748#section-5.2>,
    with hex values converted to decimal using python like this:
    > int.from_bytes(binascii.unhexlify('deadbeef'), 'little') *)
+Require Import Coq.NArith.BinNatDef.
+Require Import Coq.ZArith.BinIntDef.
+Require Import Coq.PArith.BinPosDef.
 Require Import Spec.ModularArithmetic Spec.MxDH Crypto.Util.Decidable.
 Definition F := F (2^255 - 19).
 Definition a : F := F.of_Z _ 486662.

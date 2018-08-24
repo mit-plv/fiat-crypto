@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Experiments.NewPipeline.Arithmetic.

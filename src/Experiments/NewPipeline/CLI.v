@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Strings.Ascii.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Crypto.Util.Strings.String.
