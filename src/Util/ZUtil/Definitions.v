@@ -85,6 +85,7 @@ Module Z.
        then mul_split_at_bitwidth (Z.log2 s) x y
        else ((x * y) mod s, (x * y) / s).
 
+  (** if positive, round up to 2^k-1 (0b11111....); if negative, round down to -2^k (0b...111000000...) *)
   Definition round_lor_land_bound (x : Z) : Z
     := if (0 <=? x)%Z
        then 2^(Z.log2_up (x+1))-1

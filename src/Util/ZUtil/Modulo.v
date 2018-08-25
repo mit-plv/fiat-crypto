@@ -297,6 +297,7 @@ Module Z.
     apply Z_mod_mult.
   Qed.
   Hint Rewrite mod_same_pow using zutil_arith : zsimplify.
+  Hint Resolve mod_same_pow : zarith.
 
   Lemma mod_opp_l_z_iff a b (H : b <> 0) : a mod b = 0 <-> (-a) mod b = 0.
   Proof.
@@ -368,5 +369,15 @@ Module Z.
     rewrite Z.mod_add_l by auto.
     apply Z.mod_small.
     omega.
+  Qed.
+
+  Lemma mod_pow_r_split x b e1 e2 : 0 <= b -> 0 <= e1 <= e2 -> x mod b^e2 = (x mod b^e1) + (b^e1) * ((x / b^e1) mod b^(e2-e1)).
+  Proof.
+    destruct (Z_zerop b).
+    { destruct (Z_zerop e1), (Z_zerop e2), (Z.eq_dec e1 e2); subst; intros; cbn; autorewrite with zsimplify_fast; lia. }
+    intros.
+    replace (b^e2) with (b^e1 * b^(e2 - e1)) by (autorewrite with pull_Zpow; f_equal; lia).
+    rewrite Z.rem_mul_r by auto with zarith.
+    reflexivity.
   Qed.
 End Z.

@@ -12,6 +12,8 @@ Module Z.
   Proof. omega. Qed.
   Lemma move_R_Xm x y z : y - x = z -> x = y - z.
   Proof. omega. Qed.
+  Lemma move_R_nX x y : -x = y -> x = -y.
+  Proof. omega. Qed.
   Lemma move_L_pX x y z : z = x + y -> z - y = x.
   Proof. omega. Qed.
   Lemma move_L_mX x y z : z = x - y -> z + y = x.
@@ -19,6 +21,8 @@ Module Z.
   Lemma move_L_Xp x y z : z = y + x -> z - y = x.
   Proof. omega. Qed.
   Lemma move_L_Xm x y z : z = y - x -> y - z = x.
+  Proof. omega. Qed.
+  Lemma move_L_nX x y : y = -x -> -y = x.
   Proof. omega. Qed.
 
   (** [linear_substitute x] attempts to maipulate equations using only
@@ -36,6 +40,8 @@ Module Z.
             | ?a - ?b
               => first [ contains for_var b; apply move_L_mX in H
                        | contains for_var a; apply move_L_Xm in H ]
+            | -?a
+              => contains for_var a; apply move_L_nX in H
             | for_var
               => progress symmetry in H
             end
@@ -46,6 +52,8 @@ Module Z.
             | ?a - ?b
               => first [ not contains for_var b; apply move_R_mX in H
                        | not contains for_var a; apply move_R_Xm in H ]
+            | -?a
+              => contains for_var a; apply move_R_nX in H
             end ].
   Ltac linear_solve_for_in for_var H := repeat linear_solve_for_in_step for_var H.
   Ltac linear_solve_for for_var :=
