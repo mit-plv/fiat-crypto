@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -44,4 +45,36 @@ Module Z.
            end.
     Z.div_mod_to_quot_rem_in_goal; lia.
   Qed.
+
+  Lemma cc_m_Proper_le_r_gen s
+    : (0 <= s /\ Proper (Z.le ==> Z.le) (Definitions.Z.cc_m s))
+      \/ (s < 0 /\ Proper (Basics.flip Z.le ==> Z.le) (Definitions.Z.cc_m s)).
+  Proof.
+    cbv [Basics.flip].
+    destruct (Z_lt_le_dec s 0); [ right | left ]; (split; [ assumption | ]).
+    all: intros x0 x1 H; rewrite !cc_m_eq_full; break_innermost_match; Z.ltb_to_lt; [ nia | ].
+    all: Z.div_mod_to_quot_rem; nia.
+  Qed.
+  Hint Resolve cc_m_Proper_le_r_gen : zarith.
+
+  Lemma cc_m_Proper_le_r s
+    : Proper (Z.le ==> Z.le) (Definitions.Z.cc_m s)
+      \/ Proper (Basics.flip Z.le ==> Z.le) (Definitions.Z.cc_m s).
+  Proof. pose proof (cc_m_Proper_le_r_gen s); tauto. Qed.
+  Hint Resolve cc_m_Proper_le_r : zarith.
+
+  Lemma cc_m_Proper_le_r_pos s
+    : Proper (Z.le ==> Z.le) (Definitions.Z.cc_m (Z.pos s)).
+  Proof. pose proof (cc_m_Proper_le_r_gen (Z.pos s)); intuition lia. Qed.
+  Hint Resolve cc_m_Proper_le_r_pos : zarith.
+
+  Lemma cc_m_Proper_le_r_neg s
+    : Proper (Basics.flip Z.le ==> Z.le) (Definitions.Z.cc_m (Z.neg s)).
+  Proof. pose proof (cc_m_Proper_le_r_gen (Z.neg s)); intuition lia. Qed.
+  Hint Resolve cc_m_Proper_le_r_neg : zarith.
+
+  Lemma cc_m_Proper_le_r_0
+    : Proper (Z.le ==> Z.le) (Definitions.Z.cc_m 0).
+  Proof. pose proof (cc_m_Proper_le_r_gen 0); intuition lia. Qed.
+  Hint Resolve cc_m_Proper_le_r_0 : zarith.
 End Z.
