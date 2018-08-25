@@ -71,6 +71,9 @@ Module ZRange.
           | progress specialize_by omega
           | progress destruct_head'_or ].
 
+  Lemma is_tighter_than_bool_extend_land_lor_bounds r : is_tighter_than_bool r (extend_land_lor_bounds r) = true.
+  Proof. repeat t2_step. Qed.
+
   Lemma is_bounded_by_iff_is_tighter_than r1 r2
     : (forall v, is_bounded_by_bool v r1 = true -> is_bounded_by_bool v r2 = true)
       <-> (is_tighter_than_bool r1 r2 = true \/ goodb r1 = false).
@@ -91,6 +94,10 @@ Module ZRange.
     cbv [is_tighter_than_bool is_true]; cbn [lower upper]; repeat intro.
     rewrite ?Bool.andb_true_iff, ?Z.leb_le_iff in *; repeat apply conj; etransitivity; destruct_head'_and; eassumption.
   Qed.
+
+  Lemma is_bounded_by_of_is_tighter_than r1 r2 (H : is_tighter_than_bool r1 r2 = true)
+    : (forall v, is_bounded_by_bool v r1 = true -> is_bounded_by_bool v r2 = true).
+  Proof. apply is_bounded_by_iff_is_tighter_than; auto. Qed.
 
   Lemma is_bounded_by_bool_Proper_if_sumbool_union_dep {A B} (b : sumbool A B) x y rx ry
     : (A -> is_bounded_by_bool x rx = true)

@@ -13,6 +13,9 @@ Module Z.
   Lemma pow_1_l_Zof_nat a : 1^Z.of_nat a = 1.
   Proof. apply Z.pow_1_l; lia. Qed.
   Hint Rewrite pow_1_l_Zof_nat : zsimplify_fast zsimplify_const zsimplify.
+  Lemma pow_0_l_Zpos a : 0^Zpos a = 0.
+  Proof. apply Z.pow_0_l; lia. Qed.
+  Hint Rewrite pow_0_l_Zpos : zsimplify_fast zsimplify_const zsimplify.
 
   Lemma sub_same_minus (x y : Z) : x - (x - y) = y.
   Proof. lia. Qed.

@@ -145,13 +145,13 @@ Module ZRange.
     rewrite Z.max_comm; reflexivity.
   Qed.
 
-  (** if positive, round up to 2^k-1 (0b11111....); if negative, round down to -2^k (0b...111000000...) *)
-  Definition round_lor_land_bound (x : BinInt.Z) : BinInt.Z
-    := if (0 <=? x)%Z
-       then 2^(Z.log2_up (x+1))-1
-       else -2^(Z.log2_up (-x)).
+  Definition extend_land_lor_bounds (v : zrange) : zrange
+    := let (l, u) := eta v in
+       r[ Z.min 0 l ~> Z.max (-1) u ].
+
   Definition land_lor_bounds (f : BinInt.Z -> BinInt.Z -> BinInt.Z) (x y : zrange) : zrange
-    := four_corners_and_zero (fun x y => f (round_lor_land_bound x) (round_lor_land_bound y)) x y.
+    := four_corners_and_zero (fun x y => f (Z.round_lor_land_bound x) (Z.round_lor_land_bound y))
+                             (extend_land_lor_bounds x) (extend_land_lor_bounds y).
   Definition land_bounds : zrange -> zrange -> zrange := land_lor_bounds Z.land.
   Definition lor_bounds : zrange -> zrange -> zrange := land_lor_bounds Z.lor.
 

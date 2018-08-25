@@ -174,4 +174,42 @@ Module Z.
                      end ].
   Qed.
   Hint Rewrite lor_ones_ones : zsimplify.
+
+  Lemma lor_pow2_mod_pow2_r x e (He : 0 <= e) : Z.lor x (2^e-1) mod (2^e) = 2^e-1.
+  Proof.
+    destruct (Z_zerop e).
+    { subst; autorewrite with zsimplify_const; reflexivity. }
+    assert (0 <= x mod 2^e < 2^e) by auto with zarith.
+    assert (0 <= x mod 2^e <= 2^e-1) by lia.
+    assert (Z.log2 (x mod 2^e) <= Z.log2 (2^e-1)) by (apply Z.log2_le_mono; lia).
+    assert (Z.log2 (x mod 2^e) < e) by (rewrite Z.sub_1_r, Z.log2_pred_pow2 in * by lia; lia).
+    rewrite <- Z.land_ones, Z.land_lor_distr_l by assumption.
+    rewrite !Z.sub_1_r, <- !Z.ones_equiv, !Z.land_ones_ones, Z.min_id, Z.max_id, Bool.if_const.
+    rewrite Z.land_ones by assumption.
+    rewrite Z.lor_ones_low; auto with zarith.
+  Qed.
+  Hint Rewrite lor_pow2_mod_pow2_r using zutil_arith : zsimplify.
+  Hint Rewrite lor_pow2_mod_pow2_r using assumption : zsimplify_fast.
+
+  Lemma lor_pow2_mod_pow2_l x e (He : 0 <= e) : Z.lor (2^e-1) x mod (2^e) = 2^e-1.
+  Proof. rewrite Z.lor_comm; apply lor_pow2_mod_pow2_r; assumption. Qed.
+  Hint Rewrite lor_pow2_mod_pow2_l using zutil_arith : zsimplify.
+  Hint Rewrite lor_pow2_mod_pow2_l using assumption : zsimplify_fast.
+  
+  Lemma lor_pow2_div_pow2_r x e (He : 0 <= e) : (Z.lor x (2^e-1)) / (2^e) = x / 2^e.
+  Proof.
+    destruct (Z_zerop e).
+    { subst; autorewrite with zsimplify_const; reflexivity. }
+    assert (0 < 2^e) by auto with zarith.
+    rewrite <- Z.shiftr_div_pow2, Z.shiftr_lor, !Z.shiftr_div_pow2 by lia.
+    rewrite (Z.div_small (_-1) _), Z.lor_0_r by lia.
+    reflexivity.
+  Qed.
+  Hint Rewrite lor_pow2_div_pow2_r using zutil_arith : zsimplify.
+  Hint Rewrite lor_pow2_div_pow2_r using assumption : zsimplify_fast.
+
+  Lemma lor_pow2_div_pow2_l x e (He : 0 <= e) : (Z.lor (2^e-1) x) / (2^e) = x / 2^e.
+  Proof. rewrite Z.lor_comm; apply lor_pow2_div_pow2_r; assumption. Qed.
+  Hint Rewrite lor_pow2_div_pow2_l using zutil_arith : zsimplify.
+  Hint Rewrite lor_pow2_div_pow2_l using assumption : zsimplify_fast.
 End Z.

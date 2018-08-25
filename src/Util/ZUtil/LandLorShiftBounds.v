@@ -11,6 +11,7 @@ Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
 Require Import Crypto.Util.NUtil.WithoutReferenceToZ.
 Local Open Scope Z_scope.
 
@@ -70,7 +71,7 @@ Module Z.
   Qed.
 
   Section ZInequalities.
-    Lemma land_le : forall x y, (0 <= x)%Z -> (Z.land x y <= x)%Z.
+    Lemma land_le' : forall x y, (0 <= x)%Z -> (Z.land x y <= x)%Z.
     Proof.
       intros x y H; apply Z.ldiff_le; [assumption|].
       rewrite Z.ldiff_land, Z.land_comm, Z.land_assoc.
@@ -79,14 +80,38 @@ Module Z.
       reflexivity.
     Qed.
 
-    Lemma lor_lower : forall x y, (0 <= x)%Z -> (0 <= y)%Z -> (x <= Z.lor x y)%Z.
+    Lemma lor_lower : forall x y, (0 <= x -> 0 <= y)%Z -> (x <= Z.lor x y)%Z.
     Proof.
-      intros x y H H0; apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
-      rewrite Z.ldiff_land.
-      apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
-      rewrite Z.testbit_0_l, Z.land_spec, Z.lnot_spec, Z.lor_spec;
-        [|apply Z.ge_le; assumption].
-      induction (Z.testbit x k), (Z.testbit y k); cbv; reflexivity.
+      intros x y H.
+      destruct (Z_lt_le_dec x 0).
+      { Z.replace_all_neg_with_pos.
+        replace (-x) with (Z.lnot (x - 1)) by (cbv [Z.pred Z.lnot]; lia).
+        rewrite <- (Z.lnot_involutive y).
+        rewrite <- Z.lnot_land.
+        cbv [Z.lnot].
+        rewrite <- !Z.sub_1_r.
+        Z.peel_le.
+        apply land_le'; lia. }
+      { apply Z.ldiff_le; [apply Z.lor_nonneg; auto|].
+        rewrite Z.ldiff_land.
+        apply Z.bits_inj_iff'; intros k Hpos; apply Z.le_ge in Hpos.
+        rewrite Z.testbit_0_l, Z.land_spec, Z.lnot_spec, Z.lor_spec;
+          [|apply Z.ge_le; assumption].
+        induction (Z.testbit x k), (Z.testbit y k); cbv; reflexivity. }
+    Qed.
+
+    Lemma land_le : forall x y, (0 <= y -> 0 <= x)%Z -> (Z.land x y <= x)%Z.
+    Proof.
+      intros x y H.
+      destruct (Z_lt_le_dec y 0), (Z_lt_le_dec x 0); auto using land_le' with lia.
+      Z.replace_all_neg_with_pos.
+      replace (-x) with (Z.lnot (x - 1)) by (cbv [Z.pred Z.lnot]; lia).
+      replace (-y) with (Z.lnot (y - 1)) by (cbv [Z.pred Z.lnot]; lia).
+      rewrite <- Z.lnot_lor.
+      cbv [Z.lnot].
+      rewrite <- !Z.sub_1_r.
+      Z.peel_le.
+      apply lor_lower; lia.
     Qed.
 
     Lemma lor_le : forall x y z,
