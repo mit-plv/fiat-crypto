@@ -43,6 +43,9 @@ Module ZRange.
   Definition normalize_or v : normalize v = v \/ normalize v = flip v.
   Proof. t. Qed.
 
+  Lemma union_comm r1 r2 : union r1 r2 = union r2 r1.
+  Proof. t. Qed.
+
   Local Ltac t2_step :=
     first [ t_step
           | rewrite !Bool.andb_true_iff
