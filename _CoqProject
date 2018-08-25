@@ -6604,6 +6604,7 @@ src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
 src/Util/ZRange/BasicLemmas.v
 src/Util/ZRange/CornersMonotoneBounds.v
+src/Util/ZRange/LandLorBounds.v
 src/Util/ZRange/Operations.v
 src/Util/ZRange/Show.v
 src/Util/ZRange/SplitBounds.v
