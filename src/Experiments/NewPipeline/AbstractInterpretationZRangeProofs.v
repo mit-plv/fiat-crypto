@@ -4,10 +4,11 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationPairs.
 Require Import Coq.Relations.Relations.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.SplitBounds.
-Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.CornersMonotoneBounds.
+Require Import Crypto.Util.ZRange.LandLorBounds.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Prod.
@@ -15,7 +16,6 @@ Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.NatUtil.
-Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.CC.
@@ -25,6 +25,7 @@ Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -404,33 +405,7 @@ Module Compilers.
                                 | [ |- is_bounded_by_bool (_ mod _) r[_ ~> _] = true ] => cbv [is_bounded_by_bool]; rewrite Bool.andb_true_iff
                                 end
                               | progress Z.ltb_to_lt
-                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct
-                              | rewrite Bool.andb_true_iff
-                              | match goal with
-                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true
-                                    |- is_bounded_by_bool _ (ZRange.two_corners ?f ?x_bs) = true ]
-                                  => unshelve eapply (@ZRange.monotoneb_two_corners_gen f _ _ _ Hx)
-                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true, Hy : is_bounded_by_bool ?y ?y_bs = true
-                                    |- is_bounded_by_bool _ (ZRange.four_corners ?f ?x_bs ?y_bs) = true ]
-                                  => unshelve eapply (@ZRange.monotoneb_four_corners_gen f _ _ _ _ _ _ Hx Hy)
-                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true, Hy : is_bounded_by_bool ?y ?y_bs = true
-                                    |- is_bounded_by_bool _ (ZRange.four_corners_and_zero ?f ?x_bs ?y_bs) = true ]
-                                  => unshelve eapply (@ZRange.monotoneb_four_corners_and_zero_gen f _ _ _ _ _ _ _ _ Hx Hy)
-                                | [ Hx : is_bounded_by_bool ?x ?x_bs = true, Hy : is_bounded_by_bool ?y ?y_bs = true, Hz : is_bounded_by_bool ?z ?z_bs = true
-                                    |- is_bounded_by_bool _ (ZRange.eight_corners ?f ?x_bs ?y_bs ?z_bs) = true ]
-                                  => unshelve eapply (@ZRange.monotoneb_eight_corners_gen f _ _ _ _ _ _ _ _ _ Hx Hy Hz)
-                                | [ |- is_bounded_by_bool _ _ = true /\ is_bounded_by_bool _ _ = true ] => split
-                                end ].
-            all: try solve [
-                       repeat
-                         first [ solve [ auto using ZRange.is_bounded_by_bool_Proper_if_sumbool_union, Z.mod_pos_bound, Z.mod_neg_bound with zarith ]
-                               | match goal with
-                                 | [ |- forall x : Z, Proper _ _ \/ Proper _ _ ] => intros [|?|?]
-                                 | [ |- forall x y : Z, Proper _ _ \/ Proper _ _ ] => do 2 intros [|?|?]
-                                 | [ |- Proper _ _ \/ Proper _ _ ]
-                                   => cbv [Proper respectful Basics.flip];
-                                      solve [ constructor; intros; autorewrite with Zshift_to_pow zsimplify_const; lia ]
-                                 end ] ].
+                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct ].
             all: clear cast_outside_of_range.
             all: repeat match goal with
                         | [ H : ?T |- _ ]
@@ -442,7 +417,54 @@ Module Compilers.
                             | _ => fail 10 T
                             end
                         end.
-            all: exact admit.
+            all: intros.
+            all: repeat lazymatch goal with
+                        | [ |- is_bounded_by_bool (Z.land _ _) (ZRange.land_bounds _ _) = true ]
+                          => apply ZRange.is_bounded_by_bool_land_bounds; auto
+                        | [ |- is_bounded_by_bool (Z.lor _ _) (ZRange.lor_bounds _ _) = true ]
+                          => apply ZRange.is_bounded_by_bool_lor_bounds; auto
+                        | [ |- is_bounded_by_bool (if _ then (_ + _ - _)%Z else (_ + _)%Z) (ZRange.union (ZRange.four_corners Z.add _ _) (ZRange.eight_corners _ _ _ _)) = true ]
+                          => rewrite ZRange.union_comm; apply ZRange.is_bounded_by_bool_Proper_if_bool_union_dep; intros; Z.ltb_to_lt
+                        | [ |- is_bounded_by_bool (?a + ?b - ?c) (ZRange.eight_corners (fun x y z => Z.max 0 (x + y - z)) _ _ _) = true ]
+                          => replace (a + b - c)%Z with (Z.max 0 (a + b - c)) by lia
+                        | [ Hx : is_bounded_by_bool _ ?x = true, Hy : is_bounded_by_bool _ ?y = true, Hz : is_bounded_by_bool _ ?z = true
+                            |- is_bounded_by_bool _ (ZRange.eight_corners ?f ?x ?y ?z) = true ]
+                          => apply (fun pf1 pf2 pf3 => @ZRange.monotoneb_eight_corners_gen f pf1 pf2 pf3 _ _ _ _ _ _ Hx Hy Hz); intros; auto with zarith
+                        | [ Hx : is_bounded_by_bool _ ?x = true, Hy : is_bounded_by_bool _ ?y = true
+                            |- is_bounded_by_bool _ (ZRange.four_corners_and_zero ?f ?x ?y) = true ]
+                          => apply (fun pf1 pf2 pf3 pf4 => @ZRange.monotoneb_four_corners_and_zero_gen f pf1 pf2 pf3 pf4 _ _ _ _ Hx Hy); intros; auto with zarith
+                        | [ Hx : is_bounded_by_bool _ ?x = true, Hy : is_bounded_by_bool _ ?y = true
+                            |- is_bounded_by_bool _ (ZRange.four_corners ?f ?x ?y) = true ]
+                          => apply (fun pf1 pf2 => @ZRange.monotoneb_four_corners_gen f pf1 pf2 _ _ _ _ Hx Hy); intros; auto with zarith
+                        | [ Hx : is_bounded_by_bool _ ?x = true
+                            |- is_bounded_by_bool _ (ZRange.two_corners ?f ?x) = true ]
+                          => apply (fun pf => @ZRange.monotoneb_two_corners_gen f pf x _ Hx); intros; auto with zarith
+                        | [ H : ?x <> ?x |- _ ] => destruct (H eq_refl)
+                        | [ |- context[Proper _ (Z.mul ?v)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (Z.div ?v)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.mul _ ?v)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.mul ?v _)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.div _ ?v)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.div ?v _)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.shiftr _ ?v)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.shiftr ?v _)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.shiftl _ ?v)] ] => is_var v; destruct v; auto with zarith
+                        | [ |- context[Proper _ (fun y => Z.shiftl ?v _)] ] => is_var v; destruct v; auto with zarith
+                        | _ => idtac
+                        end.
+            all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; lia ].
+            all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; autorewrite with zsimplify_const; lia ].
+            all: repeat match goal with
+                        | [ H : ?T |- _ ]
+                          => lazymatch T with
+                            | Z => clear H
+                            | zrange => clear H
+                            | _ = true => revert H
+                            | _ = false => revert H
+                            | _ => fail 10 T
+                            end
+                        end.
+            1-12: exact admit.
           Qed.
         End interp_related.
       End option.
