@@ -5,6 +5,7 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Simple.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Local Open Scope Z_scope.
 
@@ -26,6 +27,13 @@ Module Z.
              | _ => omega
              end.
   Qed.
+
+  Lemma rshi_correct_full_alt : forall s a b n,
+    Z.rshi s a b n = if (0 <=? n)
+                     then ((b + a * s) / 2 ^ n) mod s
+                     else (b * 2 ^ (-n)) mod s.
+  Proof. intros; rewrite rshi_correct_full; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; reflexivity. Qed.
+
   Lemma rshi_correct : forall s a b n, 0 <= n -> s <> 0 ->
                                   Z.rshi s a b n = ((b + a * s) / 2 ^ n) mod s.
   Proof. intros; rewrite rshi_correct_full; break_match; Z.ltb_to_lt; omega. Qed.
