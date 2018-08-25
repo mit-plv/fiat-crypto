@@ -11536,7 +11536,7 @@ Module Barrett256.
     {
       match goal with H : Fancy.CC.cc_m _ = _ |- _ => rewrite H end.
       match goal with |- context [Z.cc_m ?s ?x] =>
-                      pose proof (Z.cc_m_small s x ltac:(reflexivity) ltac:(reflexivity) ltac:(omega));
+                      pose proof (Z.cc_m_small s x ltac:(reflexivity) ltac:(omega));
                         let H := fresh in
                         assert (Z.cc_m s x = 1 \/ Z.cc_m s x = 0) as H by omega;
                           destruct H as [H | H]; rewrite H in *
