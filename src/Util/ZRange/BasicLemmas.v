@@ -108,6 +108,18 @@ Module ZRange.
       -> is_bounded_by_bool (if b then x else y) (Operations.ZRange.union rx ry) = true.
   Proof. intros; apply is_bounded_by_bool_Proper_if_sumbool_union_dep; auto. Qed.
 
+  Lemma is_bounded_by_bool_Proper_if_bool_union_dep (b : bool) x y rx ry
+    : (b = true -> is_bounded_by_bool x rx = true)
+      -> (b = false -> is_bounded_by_bool y ry = true)
+      -> is_bounded_by_bool (if b then x else y) (Operations.ZRange.union rx ry) = true.
+  Proof. pose proof (is_bounded_by_bool_Proper_if_sumbool_union_dep (Sumbool.sumbool_of_bool b) x y rx ry); destruct b; assumption. Qed.
+
+  Lemma is_bounded_by_bool_Proper_if_bool_union (b : bool) x y rx ry
+    : is_bounded_by_bool x rx = true
+      -> is_bounded_by_bool y ry = true
+      -> is_bounded_by_bool (if b then x else y) (Operations.ZRange.union rx ry) = true.
+  Proof. intros; apply is_bounded_by_bool_Proper_if_bool_union_dep; auto. Qed.
+
   Lemma is_bounded_by_bool_opp x r : is_bounded_by_bool (Z.opp x) (ZRange.opp r) = is_bounded_by_bool x r.
   Proof.
     cbv [is_bounded_by_bool andb opp]; cbn [lower upper]; break_match; Z.ltb_to_lt; break_match; Z.ltb_to_lt;
