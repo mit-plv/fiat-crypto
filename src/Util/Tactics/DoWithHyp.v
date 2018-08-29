@@ -1,3 +1,4 @@
+Require Import Crypto.Util.Tactics.Test.
 Require Import Crypto.Util.Tactics.Not.
 Require Export Crypto.Util.FixCoqMistakes.
 
@@ -11,7 +12,8 @@ Ltac do_with_hyp' tac :=
 Ltac do_with_exactly_one_hyp tac :=
   match goal with
   | [ H : _ |- _ ]
-    => not (idtac; match goal with
+    => test (tac H);
+      not (idtac; match goal with
                   | [ H' : _ |- _ ] => tryif constr_eq H H' then fail else tac H'
                   end);
       tac H
