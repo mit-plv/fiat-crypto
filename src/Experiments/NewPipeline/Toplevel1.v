@@ -232,7 +232,7 @@ Module Ring.
 
     Lemma Good : GoodT.
     Proof.
-      split_and.
+      split_and; simpl in *.
       repeat match goal with
              | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
              end.
@@ -441,7 +441,7 @@ Module MontgomeryStyleRing.
     Qed.
     Lemma Good : GoodT.
     Proof.
-      split_and.
+      split_and; simpl in *.
       repeat match goal with
              | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
              end.
@@ -839,7 +839,7 @@ Module Pipeline.
           | _ => eassumption || reflexivity
           end.. ].
       { subst; split; [ | assumption ].
-        split_and.
+        split_and; simpl in *.
         split; [ solve [ eauto with nocore ] | ].
         { intros; match goal with H : _ |- _ => erewrite H; clear H end; eauto.
           transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1).

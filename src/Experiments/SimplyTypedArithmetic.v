@@ -2173,7 +2173,7 @@ Module Ring.
 
     Lemma Good : GoodT.
     Proof.
-      split_and.
+      split_and; simpl in *.
       eapply subsetoid_ring_by_ring_isomorphism;
         cbv [ring_opp ring_add ring_sub ring_mul ring_encode F.sub] in *;
         repeat match goal with

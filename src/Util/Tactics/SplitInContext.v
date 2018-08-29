@@ -5,9 +5,13 @@ Require Export Crypto.Util.FixCoqMistakes.
 Ltac split_in_context_by ident funl funr tac :=
   repeat match goal with
          | [ H : context p [ident] |- _ ] =>
-           let H0 := context p[funl] in let H0' := eval simpl in H0 in assert H0' by (tac H);
-                                          let H1 := context p[funr] in let H1' := eval simpl in H1 in assert H1' by (tac H);
-                                                                         clear H
+           let H0 := context p[funl] in
+           let H1 := context p[funr] in
+           let H0' := (eval cbv beta in H0) in
+           let H1' := (eval cbv beta in H1) in
+           assert H0' by (tac H);
+           assert H1' by (tac H);
+           clear H
          end.
 Ltac split_in_context ident funl funr :=
   split_in_context_by ident funl funr ltac:(fun H => apply H).
