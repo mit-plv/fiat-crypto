@@ -6510,6 +6510,7 @@ src/Util/Notations.v
 src/Util/NumTheoryUtil.v
 src/Util/Option.v
 src/Util/OptionList.v
+src/Util/PER.v
 src/Util/ParseTaps.v
 src/Util/PartiallyReifiedProp.v
 src/Util/Pointed.v
