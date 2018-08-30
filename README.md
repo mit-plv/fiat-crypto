@@ -6,7 +6,7 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primiti
 Build Requirements
 -----
 This repository requires:
-- To build the proofs and almost-C-like outputs: [Coq 8.7](https://github.com/coq/coq/releases/tag/V8.7.0) (tested with 8.7.0)
+- To build the proofs and almost-C-like outputs: [Coq 8.7](https://github.com/coq/coq/releases/tag/V8.7.2) or [Coq 8.8](https://github.com/coq/coq/releases/tag/V8.8.0) (tested with 8.7.2, 8.8.0)
 
 To build (if your COQPATH variable is empty):
 
@@ -16,6 +16,40 @@ To build:
 
 	export COQPATH="$(pwd)/coqprime${COQPATH:+:}$COQPATH"
 	make
+
+New Pipeline
+-----
+The new pipeline (nearly finished) generates binaries that take in arguments on the command line and print out C code on stdout.
+
+A collection of C files can be made with
+
+    make c-files
+
+The C files will appear in the top-level directory.
+
+The binaries generating these C files can be made with
+
+    make standalone
+
+The binaries are located in
+
+    src/Experiments/NewPipeline/ExtractionOCaml/
+
+or
+
+    src/Experiments/NewPipeline/ExtractionOCaml/
+
+The binaries are:
+
+ - `saturated_solinas`
+ - `unsaturated_solinas`
+ - `word_by_word_montgomery`
+
+See the Makefile for examples of how to invoke these binaries.
+
+
+Old Pipeline
+----
 
 To build a representative subset, instead of `make`, run
 
@@ -32,7 +66,7 @@ To build:
 or, for a representative subset,
 
         make selected-c
-	
+
 - To build and run the binaries, gcc (7.1.2; or 7.1.1 with `-fno-peephole2`) or clang of a new enough version to support the appropriate compiler intrinsics.
 
 To build and run:
@@ -42,7 +76,7 @@ To build and run:
 or, for a representative subset,
 
         make selected-test selected-bench
-	
+
 Exploring the code
 -----
 
@@ -51,7 +85,7 @@ Exploring the code
 To add a new prime, add a new line to [`primes.txt`](https://github.com/mit-plv/fiat-crypto/blob/master/primes.txt) with your prime.  Then run
 
         ./generate_parameters.py; ./src/Specific/CurveParameters/remake_curves.sh
-	
+
 You will see a bunch of lines starting with `git add`; any `.v` files that show up in these lines must be added to `_CoqProject`.  (If you are working in the git repository, you may simply run the `git add` lines, and then run `make update-_CoqProject`.)  Note that the directory structure involves a textual representation of your prime, call it `${REPRESENTATION_OF_YOUR_PRIME}`.  To build, you can run
 
         make src/Specific/{montgomery,solinas}{32,64}_${REPRESENTATION_OF_YOUR_PRIME}/fibe
@@ -97,7 +131,7 @@ The curve-specific synthesis framework lives in [`src/Specific/Framework`](./src
 - The record of curve specific parameters is defined in [`src/Specific/Framework/RawCurveParameters.v`](./src/Specific/Framework/RawCurveParameters.v), and defaults are filled in [`src/Specific/Framework/CurveParameters.v`](src/Specific/Framework/CurveParameters.v).
 - The tactics that specialize the various arithmetic optimizations to specific curves live in [`src/Specific/Framework/ArithmeticSynthesis`](./src/Specific/Framework/ArithmeticSynthesis), e.g., [`src/Specific/Framework/ArithmeticSynthesis/Montgomery.v`](./src/Specific/Framework/ArithmeticSynthesis/Montgomery.v).
 - The script at [`src/Specific/Framework/ArithmeticSynthesis/remake_packages.py`](./src/Specific/Framework/ArithmeticSynthesis/remake_packages.py) processes these files to add relevant boilerplate, and gets run after significantly changing an optimization, or after adding a new optimization.
-- The synthesis tactics are assembled in [`src/Specific/Framework/SynthesisFramework.v`](./src/Specific/Framework/SynthesisFramework.v).  
+- The synthesis tactics are assembled in [`src/Specific/Framework/SynthesisFramework.v`](./src/Specific/Framework/SynthesisFramework.v).
 Note that magic<a name="magic-ref">[¹](#magic)</a> is used to create identifiers refering to the curve-specific parameters, from tactics, so that they can be used in other curve-specific files.
 
 ### Example Output
