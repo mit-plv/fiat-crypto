@@ -105,6 +105,21 @@ Module ForExtraction.
          => inr [res]
        end.
 
+  Definition curve_description_help
+    := "  curve_description       A string which will be prefixed to every function name generated".
+  Definition n_help
+    := "  n                       The number of limbs".
+  Definition s_help
+    := "  s                       The largest component of the prime (e.g., '2^255' in '2^255-19')".
+  Definition c_help
+    := "  c                       The semi-colon separated list of taps, each of which is specified as weight,value (no parentheses) (e.g., '2^96,1;1,-1' in '2^224 - 2^96 + 1')".
+  Definition machine_wordsize_help
+    := "  machine_wordsize        The machine bitwidth (e.g., 32 or 64)".
+  Definition function_to_synthesize_help (valid_names : string)
+    := "  function_to_synthesize  A list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
+         ++ String.NewLine ++
+       "                            Valid options are " ++ valid_names.
+
   Module UnsaturatedSolinas.
     Definition PipelineLines
                (curve_description : string)
@@ -201,8 +216,18 @@ Module ForExtraction.
                error
          | nil => error ["empty argv"]
          | prog::args
-           => error ["Expected arguments curve_description, n, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog]
+           => error ["Expected arguments curve_description, n, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog;
+                       "";
+                       curve_description_help;
+                       n_help;
+                       s_help;
+                       c_help;
+                       machine_wordsize_help;
+                       function_to_synthesize_help UnsaturatedSolinas.valid_names;
+                       ""]
          end.
+
+
   End UnsaturatedSolinas.
 
   Module WordByWordMontgomery.
@@ -302,7 +327,14 @@ Module ForExtraction.
                error
          | nil => error ["empty argv"]
          | prog::args
-           => error ["Expected arguments curve_description, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog]
+           => error ["Expected arguments curve_description, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog;
+                       "";
+                       curve_description_help;
+                       s_help;
+                       c_help;
+                       machine_wordsize_help;
+                       function_to_synthesize_help WordByWordMontgomery.valid_names;
+                       ""]
          end.
   End WordByWordMontgomery.
 
@@ -396,7 +428,14 @@ Module ForExtraction.
                error
          | nil => error ["empty argv"]
          | prog::args
-           => error ["Expected arguments curve_description, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog]
+           => error ["Expected arguments curve_description, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog;
+                       "";
+                       curve_description_help;
+                       s_help;
+                       c_help;
+                       machine_wordsize_help;
+                       function_to_synthesize_help SaturatedSolinas.valid_names;
+                       ""]
          end.
   End SaturatedSolinas.
 End ForExtraction.
