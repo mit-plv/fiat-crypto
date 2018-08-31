@@ -8,6 +8,10 @@ Build Requirements
 This repository requires:
 - To build the proofs and almost-C-like outputs: [Coq 8.7](https://github.com/coq/coq/releases/tag/V8.7.2) or [Coq 8.8](https://github.com/coq/coq/releases/tag/V8.8.0) (tested with 8.7.2, 8.8.0)
 
+If you checked out this repository via `git`, you should run
+
+    git submodule update --init --recursive
+
 To build (if your COQPATH variable is empty):
 
 	make
@@ -16,6 +20,8 @@ To build:
 
 	export COQPATH="$(pwd)/coqprime${COQPATH:+:}$COQPATH"
 	make
+
+You may get non-fatal errors such as `make: execvp: /bin/sh: Argument list too long`; this is an artifact of the [old pipeline](#old-pipeline) and is a [bug in Coq](https://github.com/coq/coq/issues/7584) that will prevent `make install` from succeeding, but will not impact the build itself.
 
 New Pipeline
 -----
