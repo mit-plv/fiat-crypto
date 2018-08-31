@@ -1893,6 +1893,9 @@ Module Import UnsaturatedSolinas.
               ("to_bytes", srto_bytes);
               ("from_bytes", srfrom_bytes)].
 
+      Definition valid_names : string
+        := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal".
+
       Definition synthesize_of_name (function_name_prefix : string) (name : string)
         : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
         := fold_right
@@ -1904,7 +1907,7 @@ Module Import UnsaturatedSolinas.
              ((name,
                Error
                  (Pipeline.Invalid_argument
-                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal."))))
+                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ "."))))
              ((map
                  (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
                  known_functions)
@@ -2967,6 +2970,8 @@ Module WordByWordMontgomery.
               ("to_bytes", srto_bytes);
               ("from_bytes", srfrom_bytes)].
 
+      Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
+
       Definition synthesize_of_name (function_name_prefix : string) (name : string)
         : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
         := fold_right
@@ -2978,7 +2983,7 @@ Module WordByWordMontgomery.
              ((name,
                Error
                  (Pipeline.Invalid_argument
-                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ String.concat ", " (List.map (@fst _ _) known_functions)))))
+                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ "."))))
              (map
                 (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
                 known_functions).
@@ -3151,6 +3156,8 @@ Module SaturatedSolinas.
       Definition known_functions
         := [("mulmod", srmulmod)].
 
+      Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
+
       Definition synthesize_of_name (function_name_prefix : string) (name : string)
         : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
         := fold_right
@@ -3162,7 +3169,7 @@ Module SaturatedSolinas.
              ((name,
                Error
                  (Pipeline.Invalid_argument
-                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ String.concat ", " (List.map (@fst _ _) known_functions) ++ "."))))
+                    ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ "."))))
              (map
                 (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
                 known_functions).

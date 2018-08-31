@@ -545,8 +545,9 @@ $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%.hs) : %.hs : %.v 
 	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp | sed -f src/Experiments/NewPipeline/haskell.sed > $@ && rm -f $@.tmp
 
+# pass -w -20 to disable the unused argument warning
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%) : % : %.ml
-	$(TIMER_FULL) ocamlopt -o $@ $<
+	$(TIMER_FULL) ocamlopt -w -20 -o $@ $<
 
 $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%) : % : %.hs
 	$(TIMER_FULL) $(GHC) $(GHCFLAGS) -o $@ $<
