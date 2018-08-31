@@ -6477,6 +6477,7 @@ src/Specific/solinas64_2e521m1_9limbs/fesubDisplay.v
 src/Specific/solinas64_2e521m1_9limbs/freeze.v
 src/Specific/solinas64_2e521m1_9limbs/freezeDisplay.v
 src/Util/AdditionChainExponentiation.v
+src/Util/Arg.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
 src/Util/BoundedWord.v
