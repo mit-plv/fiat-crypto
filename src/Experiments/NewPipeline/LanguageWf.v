@@ -11,6 +11,7 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Sigma.
@@ -748,6 +749,11 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           | progress eliminate_hprop_eq
           | match goal with
             | [ H : ?x = ?x -> _ |- _ ] => specialize (H eq_refl)
+            | [ H : ?x = Some _, H' : ?x = Some _ |- _ ]
+              => lazymatch x with
+                 | Some _ => fail
+                 | _ => rewrite H in H'
+                 end
             end ].
 
   Local Ltac destructure_destruct_step :=
@@ -756,6 +762,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           | break_innermost_match_step
           | match goal with
             | [ H : None = option_map _ _ |- _ ] => cbv [option_map] in H
+            | [ H : Some _ = option_map _ _ |- _ ] => cbv [option_map] in H
             | [ |- context[andb _ _ = true] ] => rewrite Bool.andb_true_iff
             end ].
   Local Ltac destructure_split_step :=
@@ -917,6 +924,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
     End Flat.
 
     Section with_var.
+      Import BinPos.
       Context {var1 var2 : type -> Type}.
 
       Lemma wf_from_flat_gen
@@ -975,6 +983,54 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           repeat setoid_rewrite PositiveMap.gempty;
           cbn [In option_map];
           intuition (destruct_head'_ex; intuition (congruence || auto)).
+      Qed.
+
+      Lemma wf_from_flat_to_flat_gen
+            offset G1 G2 ctx
+            {t} (e1 e2 : expr t)
+            (Hwf : expr.wf G1 e1 e2)
+            (HG1G2 : forall t v1 v2,
+                List.In (existT _ t (v1, v2)) G1
+                -> exists v1', PositiveMap.find v1 ctx = Some (existT _ t v1')
+                               /\ List.In (existT _ t (v1', v2)) G2)
+            (Hoffset : forall p, PositiveMap.find p ctx <> None -> (p < offset)%positive)
+        : expr.wf G2 (var2:=var2) (from_flat (@to_flat' t e1 offset) var1 ctx) e2.
+      Proof.
+        revert dependent offset; revert dependent G2; revert dependent ctx; induction Hwf; intros.
+        all: repeat first [ progress cbn [from_flat to_flat' List.In projT1 projT2 fst snd] in *
+                          | progress intros
+                          | destructure_step
+                          | progress cbv [Option.bind type.try_transport type.try_transport_cps cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
+                          | match goal with |- expr.wf _ _ _ => constructor end
+                          | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
+                          | congruence
+                          | destructure_split_step
+                          | erewrite type.try_make_transport_cps_correct
+                            by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
+                          | match goal with
+                            | [ H : List.In (existT _ ?t (?v1, ?v2)) ?G, H' : forall t' v1' v2', List.In _ ?G -> _ |- _ ]
+                              => specialize (H' _ _ _ H)
+                            | [ H : _ |- expr.wf _ _ _ ] => apply H; clear H
+                            | [ v' : var1 ?t |- exists v : var1 ?t, _ ] => exists v'
+                            | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
+                            | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
+                            | [ H : forall p, _ <> None -> (_ < _)%positive, H' : _ <> None |- _ ]
+                              => unique pose proof (H _ H')
+                            | [ H : forall p, PositiveMap.find p ?ctx <> None -> (p < ?offset)%positive,
+                                  H' : PositiveMap.find ?p' ?ctx = Some _ |- _]
+                              => unique assert ((p' < offset)%positive) by (apply H; rewrite H'; congruence)
+                            | [ H : (?x < ?x)%positive |- _ ] => exfalso; clear -H; lia
+                            | [ |- (_ < _)%positive ] => lia
+                            end ].
+      Qed.
+
+      Lemma wf_from_flat_to_flat
+            {t} (e1 e2 : expr t)
+            (Hwf : expr.wf nil e1 e2)
+        : expr.wf nil (var2:=var2) (from_flat (@to_flat t e1) var1 (PositiveMap.empty _)) e2.
+      Proof.
+        eapply wf_from_flat_to_flat_gen; eauto; cbn [List.In]; try tauto; intros *;
+          rewrite PositiveMap.gempty; congruence.
       Qed.
     End with_var.
 
