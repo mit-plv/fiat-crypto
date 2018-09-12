@@ -65,8 +65,8 @@ Module Compilers.
         Local Notation value2 := (@value base_type ident var2 abstract_domain').
         Local Notation value_with_lets1 := (@value_with_lets base_type ident var1 abstract_domain').
         Local Notation value_with_lets2 := (@value_with_lets base_type ident var2 abstract_domain').
-        Local Notation state_of_value1 := (@state_of_value base_type ident var1 abstract_domain').
-        Local Notation state_of_value2 := (@state_of_value base_type ident var2 abstract_domain').
+        Local Notation state_of_value1 := (@state_of_value base_type ident var1 abstract_domain' bottom').
+        Local Notation state_of_value2 := (@state_of_value base_type ident var2 abstract_domain' bottom').
         Context (annotate1 : forall (is_let_bound : bool) t, abstract_domain' t -> @expr1 t -> UnderLets1 (@expr1 t))
                 (annotate2 : forall (is_let_bound : bool) t, abstract_domain' t -> @expr2 t -> UnderLets2 (@expr2 t))
                 (annotate_Proper
@@ -80,6 +80,8 @@ Module Compilers.
         Local Notation reify2 := (@reify base_type ident var2 abstract_domain' annotate2 bottom').
         Local Notation reflect1 := (@reflect base_type ident var1 abstract_domain' annotate1 bottom').
         Local Notation reflect2 := (@reflect base_type ident var2 abstract_domain' annotate2 bottom').
+        Local Notation bottomify1 := (@bottomify base_type ident var1 abstract_domain' bottom').
+        Local Notation bottomify2 := (@bottomify base_type ident var2 abstract_domain' bottom').
         Local Notation interp1 := (@interp base_type ident var1 abstract_domain' annotate1 bottom' interp_ident1).
         Local Notation interp2 := (@interp base_type ident var2 abstract_domain' annotate2 bottom' interp_ident2).
         Local Notation eval_with_bound'1 := (@eval_with_bound' base_type ident var1 abstract_domain' annotate1 bottom' interp_ident1).
@@ -108,13 +110,12 @@ Module Compilers.
                    /\ expr.wf G (snd v1) (snd v2)
              | type.arrow s d
                => fun v1 v2
-                 => abstract_domain_R (fst v1) (fst v2)
-                   /\ (forall seg G' sv1 sv2,
-                         G' = (seg ++ G)%list
-                         -> @wf_value seg s sv1 sv2
-                         -> UnderLets.wf
-                             (fun G' => @wf_value G' d) G'
-                             (snd v1 sv1) (snd v2 sv2))
+                 => forall seg G' sv1 sv2,
+                     G' = (seg ++ G)%list
+                     -> @wf_value seg s sv1 sv2
+                     -> UnderLets.wf
+                         (fun G' => @wf_value G' d) G'
+                         (v1 sv1) (v2 sv2)
              end.
 
         Definition wf_value_with_lets G {t} : value_with_lets1 t -> value_with_lets2 t -> Prop
@@ -140,9 +141,9 @@ Module Compilers.
 
         Lemma state_of_value_Proper G {t} v1 v2 (Hv : @wf_value G t v1 v2)
           : abstract_domain_R (state_of_value1 v1) (state_of_value2 v2).
-        Proof using Type.
-          clear -Hv type_base.
-          destruct t, v1, v2, Hv; cbn in *; cbv [respectful]; eauto.
+        Proof using bottom'_Proper.
+          clear -Hv type_base bottom'_Proper.
+          destruct t; [ destruct v1, v2, Hv | ]; cbn in *; cbv [respectful]; eauto; intros; apply bottom_Proper.
         Qed.
 
         Local Hint Resolve (ex_intro _ nil) (ex_intro _ (cons _ nil)).
@@ -180,39 +181,60 @@ Module Compilers.
             @wf_value G t (@reflect1 t e1 s1) (@reflect2 t e2 s2).
         Proof using annotate_Proper bottom'_Proper.
           all: clear -wf_reflect wf_reify annotate_Proper type_base bottom'_Proper.
-          all: pose proof (@bottom_for_each_lhs_of_arrow_Proper); cbv [Proper] in *.
-          { destruct t as [t|s d];
-              [ clear wf_reify wf_reflect
-              | specialize (fun G => wf_reflect G s);
-                specialize (fun G => wf_reify false G d) ].
-            { cbn; intros [? ?] [? ?] [Hv0 Hv1] [] [] [];
-                cbn [fst snd] in *.
-              apply annotate_Proper; assumption. }
-            { cbn; cbv [respectful]; intros [? ?] [? ?] [He0 He1] [? ?] [? ?] [Hs0 Hs1];
-                cbn [fst snd] in *.
-              do 2 constructor; intros v1 v2.
-              eapply UnderLets.wf_to_expr, UnderLets.wf_splice.
-              { eapply He1 with (seg:=cons _ nil); eauto using eq_refl. }
-              { intros; apply wf_reify; destruct_head'_ex; subst; auto. } } }
-          { destruct t as [t|s d];
-              [ clear wf_reify wf_reflect
-              | specialize (fun G => wf_reflect G d);
-                specialize (fun G => wf_reify false G s) ].
-            { cbn; auto. }
-            { cbn; cbv [respectful]; intros e1 e2 He s1 s2 Hs;
-                split; [ solve [ auto ] | ];
-                  intros G' seg sv1 sv2 HG1G2 Hsv; subst.
-              eapply UnderLets.wf_splice.
-              { apply wf_reify; auto; eapply wf_value_Proper_list; [ .. | solve [ eauto ] ];
-                  wf_safe_t. }
-              { intros G'' a1 a2 [seg' ?] Ha; subst G''.
-                constructor.
-                apply wf_reflect.
-                { constructor; auto; wf_unsafe_t_step; [].
-                  destruct_head'_ex; subst.
-                  intros *.
-                  rewrite !List.in_app_iff; auto. }
-                { eapply Hs, state_of_value_Proper; eassumption. } } } }
+          all: pose proof (@bottom_for_each_lhs_of_arrow_Proper); cbv [Proper abstract_domain_R] in *.
+          all: destruct t as [t|s d];
+            [ clear wf_reify wf_reflect
+            | pose proof (fun G => wf_reflect G s) as wf_reflect_s;
+              pose proof (fun G => wf_reflect G d) as wf_reflect_d;
+              pose proof (fun G => wf_reify false G s) as wf_reify_s;
+              pose proof (fun G => wf_reify false G d) as wf_reify_d;
+              pose proof (@bottom_Proper s);
+              clear wf_reify wf_reflect ].
+          all: cbn [reify reflect] in *.
+          all: fold (@reify2) (@reflect2) (@reify1) (@reflect1).
+          all: cbn in *.
+          all: repeat first [ progress cbn [fst snd] in *
+                            | progress cbv [respectful] in *
+                            | progress intros
+                            | progress subst
+                            | progress destruct_head'_and
+                            | progress destruct_head'_ex
+                            | solve [ eauto | wf_t ]
+                            | apply annotate_Proper
+                            | apply UnderLets.wf_to_expr
+                            | break_innermost_match_step
+                            | match goal with
+                              | [ |- UnderLets.wf _ _ _ _ ] => constructor
+                              | [ |- expr.wf _ _ _ ] => constructor
+                              | [ He : forall seg G' sv1 sv2, G' = (seg ++ ?G)%list -> _ |- UnderLets.wf _ (?v :: ?G) (UnderLets.splice _ _) (UnderLets.splice _ _) ]
+                                => eapply UnderLets.wf_splice; [ apply (He (cons v nil)) | ]
+                              | [ |- UnderLets.wf _ _ (UnderLets.splice (reify1 _ _ _) _) (UnderLets.splice (reify2 _ _ _) _) ]
+                                => eapply UnderLets.wf_splice; [ apply wf_reify_s || apply wf_reify_d | ]
+                              | [ |- wf_value _ (reflect1 _ _) (reflect2 _ _) ] => apply wf_reflect_s || apply wf_reflect_d
+                              | [ H : wf_value _ ?x ?y |- wf_value _ ?x ?y ]
+                                => eapply wf_value_Proper_list; [ | eassumption ]
+                              | [ H : forall x y, ?R x y -> ?R' (?f x) (?g y) |- ?R' (?f _) (?g _) ]
+                                => apply H
+                              | [ |- ?R (state_of_value1 _) (state_of_value2 _) ] => eapply state_of_value_Proper
+                              end ].
+        Qed.
+
+        Lemma wf_bottomify {t} G v1 v2
+              (Hwf : @wf_value G t v1 v2)
+          : wf_value_with_lets G (bottomify1 v1) (bottomify2 v2).
+        Proof using bottom'_Proper.
+          cbv [wf_value_with_lets] in *.
+          revert dependent G; induction t as [|s IHs d IHd]; intros;
+            cbn [bottomify wf_value]; fold (@value1) (@value2) in *; break_innermost_match;
+              constructor.
+          all: repeat first [ progress cbn [fst snd wf_value] in *
+                            | progress destruct_head'_and
+                            | assumption
+                            | apply bottom'_Proper
+                            | apply conj
+                            | progress intros
+                            | progress subst
+                            | solve [ eapply UnderLets.wf_splice; eauto ] ].
         Qed.
 
         Local Ltac wf_interp_t :=
@@ -226,6 +248,7 @@ Module Compilers.
                        | progress destruct_head'_or
                        | eapply UnderLets.wf_splice
                        | match goal with
+                         | [ |- UnderLets.wf _ _ (bottomify1 _) (bottomify2 _) ] => apply wf_bottomify
                          | [ |- UnderLets.wf _ _ _ _ ] => constructor
                          | [ |- and _ _ ] => apply conj
                          end
@@ -460,12 +483,18 @@ Module Compilers.
           Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident abstract_domain' abstract_domain'_R var1 var2).
           Local Notation wf_value := (@wf_value base.type ident abstract_domain' abstract_domain'_R var1 var2).
 
+          Local Ltac type_of_value v :=
+            lazymatch v with
+            | (abstract_domain ?t * _)%type => t
+            | (?a -> UnderLets _ ?b)
+              => let a' := type_of_value a in
+                let b' := type_of_value b in
+                constr:(type.arrow a' b')
+            end.
           Lemma wf_interp_ident_nth_default G T
             : wf_value_with_lets G (@interp_ident1 _ (@ident.List_nth_default T)) (@interp_ident2 _ (@ident.List_nth_default T)).
           Proof using abstract_interp_ident_Proper annotate_ident_Proper extract_list_state_length extract_list_state_rel update_literal_with_state_Proper is_annotated_for_Proper.
             cbv [wf_value_with_lets wf_value ident.interp_ident]; constructor; cbn -[abstract_domain_R abstract_domain].
-            split.
-            { exact (abstract_interp_ident_Proper _ (@ident.List_nth_default T) _ eq_refl). }
             { intros; subst.
               destruct_head'_prod; destruct_head'_and; cbn [fst snd] in *.
               repeat first [ progress subst
@@ -495,15 +524,16 @@ Module Compilers.
                            | match goal with
                              | [ |- UnderLets.wf ?Q ?G (UnderLets.splice ?x1 ?e1) (UnderLets.splice ?x2 ?e2) ]
                                => simple refine (@UnderLets.wf_splice _ _ _ _ _ _ _ _ _ Q G x1 x2 _ e1 e2 _);
-                                  [ let G := fresh "G" in
-                                    intro G;
-                                    lazymatch goal with
-                                    | [ |- (abstract_domain ?t * _) -> _ -> _ ]
-                                      => refine (@wf_value G t)
-                                    | [ |- expr _ -> _ -> _ ]
-                                      => refine (expr.wf G)
-                                    end
-                                  | | ]
+                                 [ let G := fresh "G" in
+                                   intro G;
+                                   lazymatch goal with
+                                   | [ |- expr _ -> _ -> _ ]
+                                     => refine (expr.wf G)
+                                   | [ |- ?T -> _ -> _ ]
+                                     => let t := type_of_value T in
+                                       refine (@wf_value G t)
+                                   end
+                                 | | ]
                              | [ |- UnderLets.wf ?Q ?G (UnderLets.Base _) (UnderLets.Base _) ]
                                => constructor
                              | [ H : _ = _ :> ident _ |- _ ] => inversion H; clear H
@@ -563,7 +593,10 @@ Module Compilers.
                            | rewrite NPeano.Nat.min_r in * by lia
                            | rewrite NPeano.Nat.min_l in * by lia
                            | progress expr.inversion_wf_one_constr
-                           | progress expr.invert_match ]. }
+                           | progress expr.invert_match
+                           | match goal with
+                             | [ |- wf_value _ _ _ ] => progress hnf
+                             end ]. }
           Qed.
 
           Lemma wf_interp_ident_not_nth_default G {t} (idc : ident t)

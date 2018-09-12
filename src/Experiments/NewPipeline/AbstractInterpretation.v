@@ -674,13 +674,12 @@ Module Compilers.
         := type.interp abstract_domain' t.
 
       Fixpoint value (t : type)
-        := (abstract_domain t
-            * match t return Type (* COQBUG(https://github.com/coq/coq/issues/7727) *) with
-              | type.base t
-                => @expr var t
-              | type.arrow s d
-                => value s -> UnderLets (value d)
-              end)%type.
+        := match t return Type (* COQBUG(https://github.com/coq/coq/issues/7727) *) with
+           | type.base t
+             => abstract_domain t * @expr var t
+           | type.arrow s d
+             => value s -> UnderLets (value d)
+           end%type.
 
       Definition value_with_lets (t : type)
         := UnderLets (value t).
@@ -702,20 +701,35 @@ Module Compilers.
       Definition state_of_value {t} : value t -> abstract_domain t
         := match t return value t -> abstract_domain t with
            | type.base t => fun '(st, v) => st
-           | type.arrow s d => fun '(st, v) => st
+           | type.arrow s d => fun _ => bottom
            end.
 
+      (** We need to make sure that we ignore the state of
+         higher-order arrows *everywhere*, or else the proofs don't go
+         through.  So we sometimes need to replace the state of
+         arrow-typed values with [⊥]. *)
+      Fixpoint bottomify {t} : value t -> value_with_lets t
+        := match t return value t -> value_with_lets t with
+           | type.base t => fun '(st, v) => Base (bottom' t, v)
+           | type.arrow s d => fun f => Base (fun x => fx <-- f x; @bottomify d fx)
+           end%under_lets.
+
+      (** We drop the state of higher-order arrows *)
       Fixpoint reify (is_let_bound : bool) {t} : value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t)
         := match t return value t -> type.for_each_lhs_of_arrow abstract_domain t -> UnderLets (@expr var t) with
            | type.base t
              => fun '(st, v) 'tt
                 => annotate is_let_bound t st v
            | type.arrow s d
-             => fun '(f_st, f_e) '(sv, dv)
-                => Base
-                     (λ x , (UnderLets.to_expr
-                               (fx <-- f_e (@reflect _ (expr.Var x) sv);
-                                  @reify false _ fx dv)))
+             => fun f_e '(sv, dv)
+               => let sv := match s with
+                           | type.base _ => sv
+                           | type.arrow _ _ => bottom
+                           end in
+                 Base
+                   (λ x , (UnderLets.to_expr
+                             (fx <-- f_e (@reflect _ (expr.Var x) sv);
+                                @reify false _ fx dv)))
            end%core%expr
       with reflect {t} : @expr var t -> abstract_domain t -> value t
            := match t return @expr var t -> abstract_domain t -> value t with
@@ -723,27 +737,26 @@ Module Compilers.
                 => fun e st => (st, e)
               | type.arrow s d
                 => fun e absf
-                   => (absf,
-                       (fun v
-                        => let stv := state_of_value v in
-                           (rv <-- (@reify false s v bottom_for_each_lhs_of_arrow);
-                              Base (@reflect d (e @ rv) (absf stv))%expr)))
+                   => (fun v
+                       => let stv := state_of_value v in
+                          (rv <-- (@reify false s v bottom_for_each_lhs_of_arrow);
+                             Base (@reflect d (e @ rv) (absf stv))%expr))
               end%under_lets.
 
-      (* N.B. Because the [App] case only looks at the second argument
-              of arrow-values, we are free to set the state of [Abs]
-              nodes to [bottom], because for any [Abs] nodes which are
-              actually applied (here and in places where we don't
-              rewrite), we just drop it. *)
       Fixpoint interp {t} (e : @expr value_with_lets t) : value_with_lets t
         := match e in expr.expr t return value_with_lets t with
            | expr.Ident t idc => interp_ident _ idc (* Base (reflect (###idc) (abstract_interp_ident _ idc))*)
            | expr.Var t v => v
-           | expr.Abs s d f => Base (bottom, fun x => @interp d (f (Base x)))
-           | expr.App s d f x
-             => (x' <-- @interp s x;
-                   f' <-- @interp (s -> d)%etype f;
-                   snd f' x')
+           | expr.Abs s d f => Base (fun x => @interp d (f (Base x)))
+           | expr.App (type.base s) d f x
+             => (x' <-- @interp _ x;
+                   f' <-- @interp (_ -> d)%etype f;
+                   f' x')
+           | expr.App (type.arrow s' d') d f x
+             => (x' <-- @interp (s' -> d')%etype x;
+                   x'' <-- bottomify x';
+                   f' <-- @interp (_ -> d)%etype f;
+                   f' x'')
            | expr.LetIn (type.arrow _ _) B x f
              => (x' <-- @interp _ x;
                    @interp _ (f (Base x')))
@@ -769,8 +782,19 @@ Module Compilers.
       Section extract.
         Context (ident_extract : forall t, ident t -> abstract_domain t).
 
-        Definition extract' {t} (e : @expr abstract_domain t) : abstract_domain t
-          := expr.interp (@ident_extract) e.
+        (** like [expr.interp (@ident_extract) e], except we replace
+            all higher-order state with bottom *)
+        Fixpoint extract' {t} (e : @expr abstract_domain t) : abstract_domain t
+          := match e in expr.expr t return abstract_domain t with
+             | expr.Ident t idc => ident_extract t idc
+             | expr.Var t v => v
+             | expr.Abs s d f => fun v : abstract_domain s => @extract' _ (f v)
+             | expr.App (type.base s) d f x
+               => @extract' _ f (@extract' _ x)
+             | expr.App (type.arrow s' d') d f x
+               => @extract' _ f (@bottom (type.arrow s' d'))
+             | expr.LetIn A B x f => dlet y := @extract' _ x in @extract' _ (f y)
+             end.
 
         Definition extract_gen {t} (e : @expr abstract_domain t) (bound : type.for_each_lhs_of_arrow abstract_domain t)
           : abstract_domain' (type.final_codomain t)
@@ -868,25 +892,22 @@ Module Compilers.
              | ident.List_nth_default T as idc
                => let default := reflect (###idc) (abstract_interp_ident _ idc) in
                   Base
-                    (fst default,
-                     (fun default_arg
-                      => default <-- snd default default_arg;
-                           Base
-                             (fst default,
-                              (fun ls_arg
-                               => default <-- snd default ls_arg;
-                                    Base
-                                      (fst default,
-                                       (fun n_arg
-                                        => default <-- snd default n_arg;
-                                            ls' <-- @reify false (base.type.list T) ls_arg tt;
-                                             Base
-                                               (fst default,
-                                                match reflect_list ls', invert_Literal (snd n_arg) with
-                                                | Some ls, Some n
-                                                  => nth_default (snd default_arg) ls n
-                                                | _, _ => snd default
-                                                end)))))))
+                    (fun default_arg
+                     => default <-- default default_arg;
+                          Base
+                            (fun ls_arg
+                             => default <-- default ls_arg;
+                                  Base
+                                    (fun n_arg
+                                     => default <-- default n_arg;
+                                          ls' <-- @reify false (base.type.list T) ls_arg tt;
+                                          Base
+                                            (fst default,
+                                             match reflect_list ls', invert_Literal (snd n_arg) with
+                                             | Some ls, Some n
+                                               => nth_default (snd default_arg) ls n
+                                             | _, _ => snd default
+                                             end))))
              | idc => Base (reflect (###idc) (abstract_interp_ident _ idc))
              end%core%under_lets%expr.
 
@@ -904,7 +925,7 @@ Module Compilers.
           := @eta_expand_with_bound' base.type ident var abstract_domain' annotate bottom' t e st.
 
         Definition extract {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-          := @extract_gen base.type ident abstract_domain' abstract_interp_ident t e bound.
+          := @extract_gen base.type ident abstract_domain' bottom' abstract_interp_ident t e bound.
       End with_var.
     End ident.
 
@@ -988,9 +1009,9 @@ Module Compilers.
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
         := EtaExpandWithBound e (type.map_for_each_lhs_of_arrow (@ZRange.type.option.strip_ranges) bound).
       Definition extract {t} (e : expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-        := @partial.ident.extract abstract_domain' abstract_interp_ident t e bound.
+        := @partial.ident.extract abstract_domain' bottom' abstract_interp_ident t e bound.
       Definition Extract {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
-        := @partial.ident.extract abstract_domain' abstract_interp_ident t (e _) bound.
+        := @partial.ident.extract abstract_domain' bottom' abstract_interp_ident t (e _) bound.
     End specialized.
   End partial.
   Import defaults.
