@@ -25,6 +25,7 @@ Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -446,11 +447,13 @@ Module Compilers.
                         end.
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; lia ].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; autorewrite with zsimplify_const; lia ].
+            all: cbv [is_bounded_by_bool upper lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
+            all: try solve [ match goal with
+                             | [ |- ((0 <= _ mod _ <= _) /\ (0 <= _ <= _))%Z ]
+                               => Z.div_mod_to_quot_rem; nia
+                             end ].
             all: repeat match goal with
                         | [ H : Z.le ?x ?y, H' : Z.le ?y ?z |- _ ] => pose proof (conj H H'); clear H H'
-                        end.
-            all: cbv [is_bounded_by_bool upper lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
-            all: repeat match goal with
                         | [ H : ?T |- _ ]
                           => lazymatch T with
                             | Z => clear H
@@ -462,9 +465,8 @@ Module Compilers.
                             | _ => fail 10 T
                             end
                         end.
-            Local Open Scope Z_scope.
             (*
-12 subgoals (ID 201734)
+10 subgoals (ID 203126)
 
   y : Z
   z1 : zrange
@@ -477,62 +479,54 @@ Module Compilers.
   Proper (Z.le ==> Z.le) (fun y3 : Z => Definitions.Z.rshi y x y3 y2) \/
   Proper (Z.le --> Z.le) (fun y3 : Z => Definitions.Z.rshi y x y3 y2)
 
-subgoal 2 (ID 201738) is:
+subgoal 2 (ID 203130) is:
  is_bounded_by_bool y0 z1 = true ->
  is_bounded_by_bool y1 z0 = true ->
  Proper (Z.le ==> Z.le) (fun x : Z => Definitions.Z.rshi y x y3 y2) \/
  Proper (Z.le --> Z.le) (fun x : Z => Definitions.Z.rshi y x y3 y2)
-subgoal 3 (ID 201742) is:
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= (z + Z.shiftl z0 imm mod 2 ^ log2wordmax) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1 /\
- 0 <= (z + Z.shiftl z0 imm mod 2 ^ log2wordmax) / 2 ^ log2wordmax <= 1
-subgoal 4 (ID 201748) is:
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= z1 <= 2 ^ log2wordmax - 1 ->
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= (z0 + z1 + Z.shiftl z imm mod 2 ^ log2wordmax) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1 /\
- 0 <= (z0 + z1 + Z.shiftl z imm mod 2 ^ log2wordmax) / 2 ^ log2wordmax <= 1
-subgoal 5 (ID 201752) is:
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= (z - Z.shiftl z0 imm mod 2 ^ log2wordmax) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1 /\
- 0 <= - ((z - Z.shiftl z0 imm mod 2 ^ log2wordmax) / 2 ^ log2wordmax) <= 1
-subgoal 6 (ID 201758) is:
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= z1 <= 2 ^ log2wordmax - 1 ->
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= (z1 - Z.shiftl z imm mod 2 ^ log2wordmax - z0) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1 /\
- 0 <= - ((z1 - Z.shiftl z imm mod 2 ^ log2wordmax - z0) / 2 ^ log2wordmax) <= 1
-subgoal 7 (ID 201762) is:
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= Z.land z (2 ^ (log2wordmax / 2) - 1) * Z.land z0 (2 ^ (log2wordmax / 2) - 1) <=
- 2 ^ log2wordmax - 1
-subgoal 8 (ID 201766) is:
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= Z.land z (2 ^ (log2wordmax / 2) - 1) * Z.shiftr z0 (log2wordmax / 2) <= 2 ^ log2wordmax - 1
-subgoal 9 (ID 201770) is:
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= Z.shiftr z (log2wordmax / 2) * Z.land z0 (2 ^ (log2wordmax / 2) - 1) <= 2 ^ log2wordmax - 1
-subgoal 10 (ID 201774) is:
- 0 <= z <= 2 ^ log2wordmax - 1 ->
- 0 <= z0 <= 2 ^ log2wordmax - 1 ->
- 0 <= Z.shiftr z (log2wordmax / 2) * Z.shiftr z0 (log2wordmax / 2) <= 2 ^ log2wordmax - 1
-subgoal 11 (ID 201778) is:
+subgoal 3 (ID 203151) is:
+ (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z1 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= (z0 + z1 + Z.shiftl z imm mod 2 ^ log2wordmax) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1)%Z /\
+ (0 <= (z0 + z1 + Z.shiftl z imm mod 2 ^ log2wordmax) / 2 ^ log2wordmax <= 1)%Z
+subgoal 4 (ID 203172) is:
+ (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z1 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= (z1 - Z.shiftl z imm mod 2 ^ log2wordmax - z0) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1)%Z /\
+ (0 <= - ((z1 - Z.shiftl z imm mod 2 ^ log2wordmax - z0) / 2 ^ log2wordmax) <= 1)%Z
+subgoal 5 (ID 203186) is:
+ (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= Z.land z (2 ^ (log2wordmax / 2) - 1) * Z.land z0 (2 ^ (log2wordmax / 2) - 1) <=
+  2 ^ log2wordmax - 1)%Z
+subgoal 6 (ID 203200) is:
+ (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= Z.land z (2 ^ (log2wordmax / 2) - 1) * Z.shiftr z0 (log2wordmax / 2) <=
+  2 ^ log2wordmax - 1)%Z
+subgoal 7 (ID 203214) is:
+ (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= Z.shiftr z (log2wordmax / 2) * Z.land z0 (2 ^ (log2wordmax / 2) - 1) <=
+  2 ^ log2wordmax - 1)%Z
+subgoal 8 (ID 203228) is:
+ (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
+ (0 <= Z.shiftr z (log2wordmax / 2) * Z.shiftr z0 (log2wordmax / 2) <= 2 ^ log2wordmax - 1)%Z
+subgoal 9 (ID 203232) is:
  is_bounded_by_bool z0 z3 = true ->
  is_bounded_by_bool z1 z2 = true ->
  Proper (Z.le ==> Z.le) (fun y : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z) \/
  Proper (Z.le --> Z.le) (fun y : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z)
-subgoal 12 (ID 201782) is:
+subgoal 10 (ID 203236) is:
  is_bounded_by_bool z0 z3 = true ->
  is_bounded_by_bool z1 z2 = true ->
  Proper (Z.le ==> Z.le) (fun x : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z) \/
  Proper (Z.le --> Z.le) (fun x : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z)
 *)
-            1-12: exact admit.
+            1-10: exact admit.
           Qed.
         End interp_related.
       End option.
