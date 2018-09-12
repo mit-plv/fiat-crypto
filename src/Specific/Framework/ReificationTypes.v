@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.romega.ROmega.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Local Open Scope Z_scope.
