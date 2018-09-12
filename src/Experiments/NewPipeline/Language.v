@@ -442,7 +442,8 @@ Module Compilers.
       := match e in expr t return type.interp _ t with
          | Ident t idc => interp_ident _ idc
          | Var t v => v
-         | Abs s d f => fun x => @interp _ _ _ interp_ident _ (f x)
+         | Abs s d f => fun x : type.interp interp_base_type s
+                        => @interp _ _ _ interp_ident _ (f x)
          | App s d f x => (@interp _ _ _ interp_ident _ f)
                             (@interp _ _ _ interp_ident _ x)
          | LetIn A B x f
