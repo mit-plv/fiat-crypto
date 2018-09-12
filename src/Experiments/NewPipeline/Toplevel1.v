@@ -789,6 +789,11 @@ Module Pipeline.
          Proper (type.and_for_each_lhs_of_arrow (t:=t) (@partial.abstract_domain_R base.type ZRange.type.base.option.interp (fun _ => eq)))
                 bounds.
 
+  Class type_goodT (t : type.type base.type)
+    := type_good : type.andb_each_lhs_of_arrow type.is_base t = true.
+
+  Hint Extern 1 (type_goodT _) => vm_compute; reflexivity : typeclass_instances.
+
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -800,7 +805,7 @@ Module Pipeline.
              (e : Expr t)
              arg_bounds
              out_bounds
-             {arg_bounds_good : bounds_goodT arg_bounds}
+             {type_good : type_goodT t}
              rv
              (Hrv : BoundsPipeline (*with_dead_code_elimination*) with_subst01 translate_to_fancy relax_zrange e arg_bounds out_bounds = Success rv)
              (Hwf : Wf e)
@@ -818,6 +823,7 @@ Module Pipeline.
                                            = type.app_curried (Interp e) arg2)
       /\ Wf rv.
   Proof.
+    assert (Hbounds_Proper : bounds_goodT arg_bounds) by (apply type.and_eqv_for_each_lhs_of_arrow_not_higher_order, type_good).
     cbv [BoundsPipeline Let_In bounds_goodT] in *;
       repeat match goal with
              | [ H : match ?x with _ => _ end = Success _ |- _ ]
@@ -841,7 +847,7 @@ Module Pipeline.
       { subst; split; [ | assumption ].
         split_and; simpl in *.
         split; [ solve [ eauto with nocore ] | ].
-        { intros; match goal with H : _ |- _ => erewrite H; clear H end; eauto.
+        { intros; match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; eauto.
           transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1).
           { apply type.app_curried_Proper; [ | symmetry; eassumption ].
             clear dependent arg1; clear dependent arg2; clear dependent out_bounds.
@@ -881,7 +887,7 @@ Module Pipeline.
         {t}
         (e : Expr t)
         arg_bounds out_bounds
-        {arg_bounds_good : bounds_goodT arg_bounds}
+        {type_good : type_goodT t}
         (InterpE : type.interp base.interp t)
         (InterpE_correct_and_Wf
          : (forall arg1 arg2
