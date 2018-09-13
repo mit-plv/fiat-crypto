@@ -5,6 +5,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
 
 Scheme Equality for option.
+Arguments option_beq {_} _ _ _.
 
 Definition bind {A B} (v : option A) (f : A -> option B) : option B
   := match v with
