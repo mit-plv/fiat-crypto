@@ -2595,14 +2595,14 @@ Module BaseConversion.
                       transitivity (from_associational_inlined sw dw idxs n (rev p));
                         [ | transitivity (from_associational sw dw idxs n p); [ | reflexivity ] ](* reverse to make addc chains line up *)
       end.
-      Focus 2. {
+      2: {
         rewrite from_associational_inlined_correct by (subst nout; auto).
         cbv [from_associational].
         rewrite !Rows.flatten_partitions' by eauto using Rows.length_from_associational.
         rewrite !Rows.eval_from_associational by (subst nout; auto).
         f_equal.
         rewrite !eval_carries, !Associational.bind_snd_correct, !Associational.eval_rev by auto.
-        reflexivity. } Unfocus.
+        reflexivity. }
       subst widemul_inlined_reverse; reflexivity.
     Qed.
   End widemul.
