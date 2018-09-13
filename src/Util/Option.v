@@ -4,6 +4,8 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
 
+Scheme Equality for option.
+
 Definition bind {A B} (v : option A) (f : A -> option B) : option B
   := match v with
      | Some v => f v
