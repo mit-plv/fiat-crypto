@@ -1426,6 +1426,36 @@ Module Partition.
         rewrite <-!Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto).
         rewrite Hxy, Hxyn; reflexivity. }
     Qed.
+
+    Fixpoint recursive_partition n i x :=
+      match n with
+      | O => []
+      | S n' => x mod (weight (S i) / weight i) :: recursive_partition n' (S i) (x / (weight (S i) / weight i))
+      end.
+
+    Lemma recursive_partition_equiv' n : forall x j,
+        map (fun i => x mod weight (S i) / weight i) (seq j n) = recursive_partition n j (x / weight j).
+    Proof.
+      induction n; [reflexivity|].
+      intros; cbn. rewrite IHn.
+      pose proof (@weight_positive _ wprops j).
+      pose proof (@weight_divides _ wprops j).
+      f_equal;
+        repeat match goal with
+               | _ => rewrite Z.mod_pull_div by auto using Z.lt_le_incl
+               | _ => rewrite weight_multiples by auto
+               | _ => progress autorewrite with zsimplify_fast zdiv_to_mod pull_Zdiv
+               | _ => reflexivity
+               end.
+    Qed.
+
+    Lemma recursive_partition_equiv n x :
+      partition n x = recursive_partition n 0%nat x.
+    Proof.
+      cbv [partition]. rewrite recursive_partition_equiv'.
+      rewrite weight_0 by auto; autorewrite with zsimplify_fast.
+      reflexivity.
+    Qed.
   End Partition.
 End Partition.
 
