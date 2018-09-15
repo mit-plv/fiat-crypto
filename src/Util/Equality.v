@@ -8,6 +8,13 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Isomorphism.
 Require Import Crypto.Util.HProp.
 
+Import EqNotations.
+
+Definition f_equal_dep {A B} (f : forall a : A, B a) (x y : A) (H : x = y) : rew [B] H in f x = f y
+  := match H with
+     | eq_refl => eq_refl
+     end.
+
 (** Most of the structure of proofs of equalities fits into what
     mathematicians call a weak ∞-groupoid.  (In fact, one way of
     *defining* a weak ∞-groupoid is via what's called the J-rule,

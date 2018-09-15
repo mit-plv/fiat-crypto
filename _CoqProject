@@ -6519,6 +6519,7 @@ src/Util/PointedProp.v
 src/Util/Pos.v
 src/Util/PrimitiveHList.v
 src/Util/PrimitiveProd.v
+src/Util/PrimitiveSigma.v
 src/Util/Prod.v
 src/Util/QUtil.v
 src/Util/Relations.v
