@@ -3486,7 +3486,7 @@ Module BarrettReduction.
 
     Lemma partition_represents x :
       0 <= x < 2^k*2^k ->
-      represents (Rows.partition w 2 x) x.
+      represents (Partition.partition w 2 x) x.
     Proof.
       intros; cbn. change_weight.
       Z.rewrite_mod_small.
@@ -3891,7 +3891,7 @@ Module MontgomeryReduction.
       autorewrite with widemul.
       rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; omega).
       rewrite R_two_pow.
-      cbv [Rows.partition seq]. rewrite !eval2.
+      cbv [Partition.partition seq]. rewrite !eval2.
       autorewrite with push_nth_default push_map.
       autorewrite with to_div_mod. rewrite ?Z.zselect_correct, ?Z.add_modulo_correct.
       change_weight.
