@@ -2013,7 +2013,7 @@ Module Rows.
                  | H : length _ = _ |- _ => rewrite H
                  | H: 0%nat = _ |- _ => rewrite <-H
                  | [p := _ |- _] => subst p
-                 | _ => progress autorewrite with cancel_pair natsimplify push_sum_rows list push_nth_default
+                 | _ => progress autorewrite with cancel_pair natsimplify push_sum_rows list
                  | _ => progress autorewrite with cancel_pair in *
                  | _ => progress distr_length
                  | _ => progress break_match
@@ -2131,7 +2131,7 @@ Module Rows.
           cbv [sum_rows]; intros. rewrite <-(Nat.add_0_r n).
           rewrite <-(app_nil_l row1), <-(app_nil_l row2).
           apply sum_rows'_partitions; intros;
-            autorewrite with cancel_pair push_eval zsimplify_fast push_nth_default; distr_length; reflexivity.
+            autorewrite with cancel_pair push_eval zsimplify_fast; distr_length; reflexivity.
         Qed.
 
         Lemma length_sum_rows row1 row2 n:
