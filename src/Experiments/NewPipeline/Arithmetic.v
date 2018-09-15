@@ -3229,6 +3229,14 @@ Module WordByWordMontgomery.
         all: nia. }
     Qed.
 
+    (* TODO : relocate? *)
+    Lemma weight_1 : weight 1 = r.
+    Proof.
+      clear - lgr_big. subst r.
+      rewrite UniformWeight.uweight_eq_alt by omega.
+      cbn; ring.
+    Qed.
+
     Local Ltac push_step :=
       first [ progress eta_expand
             | rewrite Rows.mul_partitions
@@ -3240,7 +3248,9 @@ Module WordByWordMontgomery.
               | [ H : ?v = _ |- context[length ?v] ] => erewrite length_small by eassumption
               | [ H : small ?v |- context[length ?v] ] => erewrite length_small by eassumption
               end
-            | rewrite Positional.eval_cons
+            | rewrite Positional.eval_cons by distr_length
+            | progress rewrite ?weight_0, ?weight_1 by auto;
+              autorewrite with zsimplify_fast
             | rewrite (weight_0 wprops)
             | rewrite <- Z.div_mod'' by auto with omega
             | solve [ trivial ] ].
@@ -3265,31 +3275,28 @@ Module WordByWordMontgomery.
     Qed.
     Local Hint Immediate small_zero.
 
-    (* TODO : relocate? *)
-    Lemma weight_1 : weight 1 = r.
-    Proof.
-      clear - lgr_big. subst r.
-      rewrite UniformWeight.uweight_eq_alt by omega.
-      cbn; ring.
-    Qed.
+    Ltac push_recursive_partition :=
+      repeat match goal with
+             | _ => progress cbn [recursive_partition]
+             | H : small _ |- _ => rewrite H; clear H
+             | _ => rewrite recursive_partition_equiv by auto using UniformWeight.uwprops
+             | _ => rewrite UniformWeight.uweight_eval_shift by distr_length
+             | _ => progress push
+             end.
 
     Lemma eval_div : forall n v, small v -> eval (fst (@divmod n v)) = eval v / r.
     Proof.
       pose proof r_big as r_big.
-      clear - r_big lgr_big; autounfold with loc; intros.
-      repeat match goal with
-             | _ => progress cbn [Rows.divmod fst recursive_partition tl]
-             | H : _ = partition _ _ _ |- _ => rewrite H; clear H
-             | _ => rewrite recursive_partition_equiv by auto using UniformWeight.uwprops
-             | _ => progress rewrite weight_0, weight_1 by auto;
-                      autorewrite with zsimplify_fast
-             | _ => rewrite Positional.eval_cons by distr_length
-             | _ => rewrite UniformWeight.uweight_eval_shift by distr_length
-             end.
-      autorewrite with zsimplify.
-      reflexivity.
+      clear - r_big lgr_big; intros; autounfold with loc.
+      push_recursive_partition; cbn [Rows.divmod fst tl].
+      autorewrite with zsimplify; reflexivity.
     Qed.
-    Local Axiom eval_mod : forall n v, small v -> snd (@divmod n v) = eval v mod r.
+    Lemma eval_mod : forall n v, small v -> snd (@divmod n v) = eval v mod r.
+    Proof.
+      clear - lgr_big; intros; autounfold with loc.
+      push_recursive_partition; cbn [Rows.divmod snd hd].
+      autorewrite with zsimplify; reflexivity.
+    Qed.
     Local Axiom small_div : forall n v, small v -> small (fst (@divmod n v)).
     Local Lemma eval_scmul: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> eval (@scmul n a v) = a * eval v.
     Proof using lgr_big.
