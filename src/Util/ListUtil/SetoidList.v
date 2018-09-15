@@ -15,3 +15,11 @@ Proof.
   intros i; specialize (H (S i)).
   assumption.
 Qed.
+
+Lemma nth_error_Proper_eqlistA {T R}
+  : Proper (eqlistA R ==> eq ==> option_eq R) (@nth_error T).
+Proof.
+  intros ls1 ls2 Hls n n' ?; subst n'.
+  revert ls1 ls2 Hls.
+  induction n; intros ls1 ls2 Hls; destruct Hls; cbn; auto.
+Qed.
