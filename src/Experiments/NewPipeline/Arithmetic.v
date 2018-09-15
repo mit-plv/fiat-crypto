@@ -2432,43 +2432,6 @@ Module Rows.
       (* returns all-but-lowest-limb and lowest limb *)
       Definition divmod (p : list Z) : list Z * Z
         := (tl p, hd 0 p).
-      (*
-      Lemma eval_divmod n (p : list Z) :
-        length p = S n ->
-        (forall i, weight i = weight 1 ^ Z.of_nat i) ->
-        (forall i, (i <= n)%nat ->
-                   nth_default 0 p i = (Positional.eval weight (S n) p mod weight (S i)) / (weight i)) ->
-        let pv := Positional.eval weight (S n) p in
-        Positional.eval (fun i => weight (S i) / weight 1) n (fst (divmod p)) = pv / weight 1
-        /\ snd (divmod p) = pv mod weight 1.
-      Proof using Type.
-        cbv [is_div_mod divmod]; destruct p; cbn [fst snd hd tl length]; [ omega | ].
-        intros Hlen Hsmall.
-        split.
-        { rewrite Positional.eval_cons, weight_0 by (assumption || omega).
-          autorewrite with zsimplify_const.
-          symmetry; erewrite Positional.eval_weight_mul.
-          Print Positional.
-        2: {
-             (etransitivity; [ exact (Hsmall 0%nat ltac:(omega)) | ]).
-             rewrite weight_0 by assumption; autorewrite with zsimplify_const; reflexivity.
-             }
-
-
-        revert H0.
-        push_Zmod.
-hd 0 p).
-      Lemma eval_divmod n (p : list Z) :
-        length p = S n -> p = partition (S n) (Positional.eval weight (S n) p) ->
-        is_div_mod (Positional.eval (fun i => weight (S i) / weight 1) n)
-                   (divmod p)
-                   (Positional.eval weight (S n) p)
-                   (weight 1).
-      Proof using Type.
-        cbv [is_div_mod divmod]; destruct p; cbn [fst snd hd tl length]; [ omega | ].
-        intros.
-        rewrite eval_
-       *)
     End Ops.
   End Rows.
   Hint Rewrite length_from_columns using eassumption : distr_length.
