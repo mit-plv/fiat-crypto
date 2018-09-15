@@ -25,7 +25,6 @@ Module Import Primitive.
   Module Import Notations.
     Notation "{ x  &  P }" := (sigT (fun x => P)) : type_scope.
     Notation "{ x : A  & P }" := (sigT (A:=A) (fun x => P)) : type_scope.
-    Notation "{ ' pat : A  & P }" := (sigT (A:=A) (fun pat => P)) : type_scope.
     Add Printing Let sigT.
   End Notations.
 
@@ -91,7 +90,6 @@ Module Import Primitive.
 End Primitive.
 Notation "{ x  &  P }" := (sigT (fun x => P%primproj_type)) : primproj_type_scope.
 Notation "{ x : A  & P }" := (sigT (A:=A%primproj_type) (fun x => P%primproj_type)) : primproj_type_scope.
-Notation "{ ' pat : A  & P }" := (sigT (A:=A%primproj_type) (fun pat => P%primproj_type)) : primproj_type_scope.
 Add Printing Let sigT.
 
 Import Primitive.Notations.
