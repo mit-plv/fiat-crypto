@@ -1427,6 +1427,13 @@ Module Partition.
         rewrite Hxy, Hxyn; reflexivity. }
     Qed.
 
+    (* This is basically a shortcut for:
+       apply partition_Proper; [ | cbv [Z.equiv_modulo] *)
+    Lemma partition_eq_mod x y n :
+      x mod weight n = y mod weight n ->
+      partition n x = partition n y.
+    Proof. apply partition_Proper. Qed.
+
     Fixpoint recursive_partition n i x :=
       match n with
       | O => []
@@ -1622,14 +1629,13 @@ Module Columns.
                | |- pair _ _ = pair _ _ => f_equal
                | |- _ ++ _ = _ ++ _ => f_equal
                | |- _ :: _ = _ :: _ => f_equal
-               | _ => apply partition_Proper;
-                        [ assumption | cbv [Z.equiv_modulo ] ]
+               | _ => apply (@partition_eq_mod _ wprops)
                | _ => rewrite length_partition
                | _ => rewrite weight_mod_pull_div by assumption
                | _ => rewrite weight_div_pull_div by assumption
                | _ => f_equal; ring
                | _ => progress autorewrite with zsimplify
-        end.
+               end.
       Qed.
 
       Lemma flatten_div_mod n inp :
@@ -2056,6 +2062,10 @@ Module Rows.
           eapply is_div_mod_step with (x := x1 + x2); try eassumption; push.
         Qed.
 
+        (* TODO : examine is_div_mod to see if it can be improved,
+        especially since partition gives the "mod" part for
+        free. Maybe put the remainder on the end, prove that this is a
+        partition, and then split them? *)
         Lemma sum_rows_div_mod n row1 row2 :
           length row1 = n -> length row2 = n ->
           let eval := Positional.eval weight in
@@ -2088,40 +2098,40 @@ Module Rows.
             nm = (n + m)%nat ->
             let eval := Positional.eval weight in
             snd (fst start_state) = (eval m row1' + eval m row2') / weight m ->
-            (forall j, (j < m)%nat ->
-                       nth_default 0 (fst (fst start_state)) j = ((eval m row1' + eval m row2') mod (weight (S j))) / (weight j)) ->
-            forall i, (i < nm)%nat ->
-                      nth_default 0 (fst (fst (sum_rows' start_state row1 row2))) i
-                      = ((eval nm (row1' ++ row1) + eval nm (row2' ++ row2)) mod (weight (S i))) / (weight i).
+            (fst (fst start_state) = partition weight m (eval m row1' + eval m row2')) ->
+            fst (fst (sum_rows' start_state row1 row2))
+            = partition weight nm (eval nm (row1' ++ row1) + eval nm (row2' ++ row2)).
         Proof using wprops.
           induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push; [].
-
           rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
-          apply IHrow1; clear IHrow1; push;
+          apply IHrow1; clear IHrow1;
             repeat match goal with
                    | H : ?LHS = _ |- _ =>
                      match LHS with context [start_state] => rewrite H end
-                   | H : context [nth_default 0 (fst (fst start_state))] |- _ => rewrite H by omega
                    | _ => rewrite <-(Z.add_assoc _ x1 x2)
+                   | _ => rewrite div_step by auto using Z.gt_lt
+                   | _ => rewrite Z.mul_div_eq_full by auto
+                   | _ => rewrite weight_multiples by auto
+                   | _ => rewrite partition_step by auto
+                   | _ => rewrite add_mod_div_multiple by auto using Z.lt_le_incl
+                   | _ => rewrite weight_mod_pull_div by auto
+                   | _ => progress push
                    end.
-          { rewrite div_step by auto using Z.gt_lt.
-            rewrite Z.mul_div_eq_full by auto; rewrite weight_multiples by auto. push. }
-          { rewrite weight_div_mod with (j:=snd start_state) (i:=S j) by (auto; omega).
-            push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
-          { push. replace (snd start_state) with j in * by omega.
-            push. rewrite add_mod_div_multiple by auto using Z.lt_le_incl.
-            push. }
+            f_equal; push; [ ].
+            apply (@partition_eq_mod _ wprops).
+            push_Zmod.
+            autorewrite with zsimplify_fast; reflexivity.
         Qed.
 
-        Lemma sum_rows_partitions row1: forall row2 n i,
-            length row1 = n -> length row2 = n -> (i < n)%nat ->
-            nth_default 0 (fst (sum_rows row1 row2)) i
-            = ((Positional.eval weight n row1 + Positional.eval weight n row2) mod weight (S i)) / (weight i).
+        Lemma sum_rows_partitions row1: forall row2 n,
+            length row1 = n -> length row2 = n ->
+            fst (sum_rows row1 row2)
+            = partition weight n (Positional.eval weight n row1 + Positional.eval weight n row2).
         Proof using wprops.
           cbv [sum_rows]; intros. rewrite <-(Nat.add_0_r n).
           rewrite <-(app_nil_l row1), <-(app_nil_l row2).
           apply sum_rows'_partitions; intros;
-            autorewrite with cancel_pair push_eval zsimplify_fast push_nth_default; distr_length.
+            autorewrite with cancel_pair push_eval zsimplify_fast push_nth_default; distr_length; reflexivity.
         Qed.
 
         Lemma length_sum_rows row1 row2 n:
@@ -2234,37 +2244,29 @@ Module Rows.
         inp <> nil ->
         length (fst start_state) = n ->
         (forall row, In row inp -> length row = n) ->
-        forall i, (i < n)%nat ->
-                  nth_default 0 (fst (flatten' start_state inp)) i
-                  = ((Positional.eval weight n (fst start_state) + eval n inp) mod weight (S i)) / (weight i).
+        fst (flatten' start_state inp)
+        = partition weight n (Positional.eval weight n (fst start_state) + eval n inp).
       Proof using wprops.
         induction inp using rev_ind; push.
         destruct (dec (inp = nil)).
-        { subst inp; push. rewrite sum_rows_partitions with (n:=n) by eauto. push. }
+        { subst inp; push. rewrite sum_rows_partitions with (n:=n) by eauto. f_equal; ring. }
         { erewrite IHinp; push.
-          rewrite add_mod_l_multiple by auto using weight_divides_full, weight_multiples_full.
-          push. }
-      Qed.
-
-      Lemma flatten_partitions inp n :
-        (forall row, In row inp -> length row = n) ->
-        forall i, (i < n)%nat ->
-                  nth_default 0 (fst (flatten n inp)) i = (eval n inp mod weight (S i)) / (weight i).
-      Proof using wprops.
-        intros; cbv [flatten].
-        intros; destruct inp as [| ? [| ? ?] ]; try congruence; cbn [hd tl] in *;  try solve [push].
-        { cbn. autorewrite with push_nth_default.
-          rewrite sum_rows_partitions with (n:=n) by distr_length.
-          autorewrite with push_eval zsimplify_fast.
-          auto with zarith. }
-        { push. rewrite sum_rows_partitions with (n:=n) by distr_length; push. }
-        { rewrite flatten'_partitions with (n:=n); push. }
+          apply (@partition_eq_mod _ wprops).
+          pull_Zmod. f_equal; ring. }
       Qed.
 
       Lemma flatten_partitions' inp n :
         (forall row, In row inp -> length row = n) ->
         fst (flatten n inp) = partition weight n (eval n inp).
-      Proof using wprops. auto using nth_default_partitions, flatten_partitions, length_flatten. Qed.
+      Proof using wprops.
+        intros; cbv [flatten].
+        intros; destruct inp as [| ? [| ? ?] ]; cbn [hd tl] in *;
+          repeat match goal with
+                 | _ => erewrite flatten'_partitions by push
+                 | _ => erewrite sum_rows_partitions by (distr_length; reflexivity)
+                 | _ => progress push
+                 end.
+      Qed.
     End Flatten.
     Hint Rewrite length_partition : distr_length.
 
@@ -2522,16 +2524,6 @@ Module BaseConversion.
     Hint Rewrite eval_from_associational using solve [push_eval; distr_length] : push_eval.
 
     Lemma from_associational_partitions n idxs p  (_:n<>0%nat):
-      forall i, (i < n)%nat ->
-                nth_default 0 (from_associational idxs n p) i = (Associational.eval p) mod (sw (S i)) / sw i.
-    Proof using dwprops swprops.
-      intros; cbv [from_associational].
-      rewrite Rows.flatten_partitions with (n:=n) by (eauto using Rows.length_from_associational; omega).
-      rewrite Associational.bind_snd_correct.
-      push_eval.
-    Qed.
-
-    Lemma from_associational_eq n idxs p  (_:n<>0%nat):
       from_associational idxs n p = partition sw n (Associational.eval p).
     Proof using dwprops swprops.
       intros. cbv [from_associational].
@@ -2599,7 +2591,7 @@ Module BaseConversion.
         mul_converted n1 n2 m1 m2 n3 idxs p1 p2 = partition sw n3 (Positional.eval sw n1 p1 * Positional.eval sw n2 p2).
       Proof using dwprops swprops.
         intros; cbv [mul_converted].
-        rewrite from_associational_eq by auto. push_eval.
+        rewrite from_associational_partitions by auto. push_eval.
       Qed.
     End mul_converted.
   End BaseConversion.
@@ -3353,7 +3345,7 @@ Module WordByWordMontgomery.
         rewrite UniformWeight.uweight_eq_alt by omega.
         reflexivity. }
     Qed.
-    Local Lemma small_drop_high_addT' : forall n a b, small a -> small b -> small (@drop_high_addT' n a b).
+    Lemma small_drop_high_addT' : forall n a b, small a -> small b -> small (@drop_high_addT' n a b).
     Proof using lgr_big.
       intros n a b Ha Hb; generalize (length_small Ha); generalize (length_small Hb); generalize (@eval_drop_high_addT' n a b Ha).
       clear -lgr_big Ha Hb.
