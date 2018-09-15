@@ -6541,6 +6541,7 @@ src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/Forall.v
+src/Util/ListUtil/SetoidList.v
 src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
 src/Util/NUtil/WithoutReferenceToZ.v
