@@ -2474,7 +2474,7 @@ hd 0 p).
   Hint Rewrite length_from_columns using eassumption : distr_length.
   Hint Rewrite length_sum_rows using solve [ reflexivity | eassumption | distr_length; eauto ] : distr_length.
   Hint Rewrite length_fst_extract_row length_snd_extract_row length_flatten length_flatten' length_partition length_fst_from_columns' length_snd_from_columns' : distr_length.
-  Hint Rewrite @eval_partition : push_eval.
+  Hint Rewrite @eval_partition using auto : push_eval.
 End Rows.
 
 Module BaseConversion.
@@ -3064,6 +3064,30 @@ Module UniformWeight.
     rewrite !Z.pow_succ_r by auto using Nat2Z.is_nonneg.
     ring.
   Qed.
+
+  (* Because the weight is uniform, we can start partitioning from
+  any index and end up with the same result. *)
+  Lemma uweight_recursive_partition_change_start lgr (Hr : 0 <= lgr) n :
+    forall i j x,
+      Partition.recursive_partition (uweight lgr) n i x
+      = Partition.recursive_partition (uweight lgr) n j x.
+  Proof.
+    induction n; intros; [reflexivity | ].
+    cbn [Partition.recursive_partition].
+    rewrite !uweight_eq_alt by omega.
+    autorewrite with push_Zof_nat push_Zpow.
+    rewrite <-!Z.pow_sub_r by auto using Z.pow_nonzero with omega.
+    rewrite !Z.sub_succ_l.
+    autorewrite with zsimplify_fast.
+    erewrite IHn. reflexivity.
+  Qed.
+  Lemma uweight_recursive_partition_equiv lgr (Hr : 0 < lgr) n i x:
+    Partition.partition (uweight lgr) n x =
+    Partition.recursive_partition (uweight lgr) n i x.
+  Proof.
+    rewrite Partition.recursive_partition_equiv by auto using uwprops.
+    auto using uweight_recursive_partition_change_start with omega.
+ Qed.
 End UniformWeight.
 
 Module WordByWordMontgomery.
@@ -3279,7 +3303,7 @@ Module WordByWordMontgomery.
       repeat match goal with
              | _ => progress cbn [recursive_partition]
              | H : small _ |- _ => rewrite H; clear H
-             | _ => rewrite recursive_partition_equiv by auto using UniformWeight.uwprops
+             | _ => rewrite recursive_partition_equiv by auto using wprops
              | _ => rewrite UniformWeight.uweight_eval_shift by distr_length
              | _ => progress push
              end.
@@ -3297,7 +3321,18 @@ Module WordByWordMontgomery.
       push_recursive_partition; cbn [Rows.divmod snd hd].
       autorewrite with zsimplify; reflexivity.
     Qed.
-    Local Axiom small_div : forall n v, small v -> small (fst (@divmod n v)).
+    Lemma small_div : forall n v, small v -> small (fst (@divmod n v)).
+    Proof.
+      pose proof r_big as r_big.
+      clear - r_big lgr_big. intros; autounfold with loc.
+      push_recursive_partition. cbn [Rows.divmod fst tl].
+      rewrite <-recursive_partition_equiv by auto.
+      rewrite <-UniformWeight.uweight_recursive_partition_equiv with (i:=1%nat) by omega.
+      push.
+      apply Partition.partition_Proper; [ solve [auto] | ].
+      cbv [Z.equiv_modulo]. autorewrite with zsimplify.
+      reflexivity.
+    Qed.
     Local Lemma eval_scmul: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> eval (@scmul n a v) = a * eval v.
     Proof using lgr_big.
       generalize (@length_small); clear -lgr_big; intro.
@@ -3475,7 +3510,7 @@ Module WordByWordMontgomery.
 
       Lemma small_A'
         : small A'.
-      Proof using small_A. repeat autounfold with word_by_word_montgomery; t_small. Qed.
+      Proof using small_A lgr_big. repeat autounfold with word_by_word_montgomery; t_small. Qed.
 
       Lemma small_S3
         : small S3.
@@ -3589,7 +3624,7 @@ Module WordByWordMontgomery.
                 (S_bound : 0 <= eval S < eval N + eval B).
 
         Lemma small_fst_redc_body : small (fst (redc_body A_S)).
-        Proof using S_bound small_A small_S. destruct A_S; apply small_A'; assumption. Qed.
+        Proof using S_bound small_A small_S lgr_big. destruct A_S; apply small_A'; assumption. Qed.
         Lemma small_snd_redc_body : small (snd (redc_body A_S)).
         Proof using small_S small_N small_B small_A lgr_big S_bound B_bounds N_nz N_lt_R.
           destruct A_S; unfold redc_body; apply small_S3; assumption.
