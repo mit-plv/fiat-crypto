@@ -9,6 +9,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.IffT.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.GlobalSettings.
+Require Import Crypto.Util.Notations.
 
 Local Set Primitive Projections.
 

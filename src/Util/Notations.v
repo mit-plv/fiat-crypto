@@ -145,6 +145,8 @@ Reserved Notation "A ~> R" (at level 99).
 Reserved Notation "A --->" (left associativity, at level 65).
 Reserved Notation "'return' x" (at level 70, format "'return'  x").
 Reserved Notation "f x" (only printing, at level 10, left associativity).
+(* TODO: Remove this next one if and when we drop support for Coq 8.7; it's present in the stdlib in 8.8 *)
+Reserved Notation "{ x  &  P }" (at level 0, x at level 99).
 (* TODO: Uncomment this block when https://github.com/mit-plv/bbv/pull/13 is merged
 Reserved Notation "$ x" (at level 9, x at level 9, format "$ x").
 Reserved Notation "# x" (at level 55, x at level 9, format "# x"). (* 55, so we don't clash with [_ # _] *)
