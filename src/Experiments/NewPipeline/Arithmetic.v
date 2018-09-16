@@ -510,7 +510,7 @@ Module Positional. Section Positional.
 
   Lemma eval_snoc_S n x y : n = length x -> eval (S n) (x ++ [y]) = eval n x + weight n * y.
   Proof using Type. intros; erewrite eval_snoc; eauto. Qed.
-  Hint Rewrite eval_snoc_S : push_eval.
+  Hint Rewrite eval_snoc_S using (solve [distr_length]) : push_eval.
 
   (* SKIP over this: zeros, add_to_nth *)
   Local Ltac push := autorewrite with push_eval push_map distr_length
@@ -918,7 +918,7 @@ Module Positional. Section Positional.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
 Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
-Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length (*@eval_drop_high_to_length*) : push_eval.
+Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length (*@eval_drop_high_to_length*) using (solve [auto; distr_length]): push_eval.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
 
@@ -1380,7 +1380,7 @@ Module Partition.
     Hint Rewrite length_recursive_partition : distr_length.
   End Partition.
   Hint Rewrite length_partition length_recursive_partition : distr_length.
-  Hint Rewrite eval_partition using auto : push_eval.
+  Hint Rewrite eval_partition using (solve [auto; distr_length]) : push_eval.
 End Partition.
 
 Module Columns.
@@ -1588,7 +1588,7 @@ Module Columns.
       Lemma length_from_associational n p : length (from_associational n p) = n.
       Proof using Type. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
       Hint Rewrite length_from_associational: distr_length.
-      Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil):
+      Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil) :
         eval n (from_associational n p) = Associational.eval p.
       Proof using wprops.
         erewrite <-Positional.eval_from_associational by eauto.
@@ -2138,26 +2138,26 @@ Module Rows.
         try reflexivity.
 
       Lemma add_partitions n p q :
-        n <> 0%nat -> length p = n -> length q = n ->
+        length p = n -> length q = n ->
         fst (add n p q) = partition weight n (Positional.eval weight n p + Positional.eval weight n q).
       Proof using wprops. solver. Qed.
 
       Lemma add_div n p q :
-        n <> 0%nat -> length p = n -> length q = n ->
+        length p = n -> length q = n ->
         snd (add n p q) = (Positional.eval weight n p + Positional.eval weight n q) / weight n.
       Proof using wprops. solver. Qed.
 
       Lemma conditional_add_partitions n mask cond p q :
-        n <> 0%nat -> length p = n -> length q = n -> map (Z.land mask) q = q ->
+        length p = n -> length q = n -> map (Z.land mask) q = q ->
         fst (conditional_add n mask cond p q)
         = partition weight n (Positional.eval weight n p + if dec (cond = 0) then 0 else Positional.eval weight n q).
       Proof using wprops.
         cbv [conditional_add]; intros; rewrite add_partitions by (distr_length; auto).
-        autorewrite with push_eval; auto.
+        autorewrite with push_eval; reflexivity.
       Qed.
 
       Lemma conditional_add_div n mask cond p q :
-        n <> 0%nat -> length p = n -> length q = n -> map (Z.land mask) q = q ->
+        length p = n -> length q = n -> map (Z.land mask) q = q ->
         snd (conditional_add n mask cond p q) = (Positional.eval weight n p + if dec (cond = 0) then 0 else Positional.eval weight n q) / weight n.
       Proof using wprops.
         cbv [conditional_add]; intros; rewrite add_div by (distr_length; auto).
@@ -2178,22 +2178,22 @@ Module Rows.
       Qed. Hint Rewrite eval_map_opp using solve [auto]: push_eval.
 
       Lemma sub_partitions n p q :
-        n <> 0%nat -> length p = n -> length q = n ->
+        length p = n -> length q = n ->
         fst (sub n p q) = partition weight n (Positional.eval weight n p - Positional.eval weight n q).
       Proof using wprops. solver. Qed.
 
       Lemma sub_div n p q :
-        n <> 0%nat -> length p = n -> length q = n ->
+        length p = n -> length q = n ->
         snd (sub n p q) = (Positional.eval weight n p - Positional.eval weight n q) / weight n.
       Proof using wprops. solver. Qed.
 
       Lemma mul_partitions base n m p q :
-        base <> 0 -> n <> 0%nat -> m <> 0%nat -> length p = n -> length q = n ->
+        base <> 0 -> m <> 0%nat -> length p = n -> length q = n ->
         fst (mul base n m p q) = partition weight m (Positional.eval weight n p * Positional.eval weight n q).
       Proof using wprops. solver. Qed.
 
       Lemma mul_div base n m p q :
-        base <> 0 -> n <> 0%nat -> m <> 0%nat -> length p = n -> length q = n ->
+        base <> 0 -> m <> 0%nat -> length p = n -> length q = n ->
         snd (mul base n m p q) = (Positional.eval weight n p * Positional.eval weight n q) / weight m.
       Proof using wprops. solver. Qed.
 
@@ -3129,7 +3129,26 @@ Module WordByWordMontgomery.
       { destruct a, b; cbn; try omega. }
       { eta_expand; intros; repeat t_step. }
     Qed.
-    Local Axiom small_addT : forall n a b, small a -> small b -> small (@addT n a b).
+    Local Lemma small_addT : forall n a b, small a -> small b -> small (@addT n a b).
+    Proof.
+      pose proof r_big as r_big.
+      clear - r_big lgr_big; autounfold with loc; intros.
+      repeat match goal with H : ?x = partition _ _ _ |- _ =>
+                   rewrite H; clear H end.
+      rewrite (surjective_pairing (Rows.add _ _ _ _)).
+      rewrite Rows.add_partitions, Rows.add_div by (auto; distr_length).
+      autorewrite with push_eval.
+      rewrite <-Z.div_mod'', partition_step by auto.
+      rewrite Z.mod_small with (b:=weight (S n)); [ reflexivity | ].
+      split; auto with zarith; [ ].
+      apply Z.lt_le_trans with (m:=2 * weight n).
+      { rewrite <-Z.add_diag.
+        auto using Z.add_lt_mono with zarith. }
+      { rewrite !UniformWeight.uweight_eq_alt by omega.
+        autorewrite with push_Zof_nat push_Zpow.
+        rewrite Z.pow_succ_r by auto.
+        auto with zarith. }
+    Qed.
     Local Lemma eval_drop_high_addT' : forall n a b, small a -> small b -> eval (@drop_high_addT' n a b) = (eval a + eval b) mod (r^Z.of_nat (S n)).
     Proof using lgr_big.
       intros n a b Ha Hb; generalize (length_small Ha); generalize (length_small Hb).
