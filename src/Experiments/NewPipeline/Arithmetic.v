@@ -1296,33 +1296,6 @@ Module Partition.
     Definition partition n x :=
       map (fun i => (x mod weight (S i)) / weight i) (seq 0 n).
 
-    (* TODO : move to ListUtil *)
-    Lemma nth_default_map_seq_equiv {A} l f d n
-          (Hlength : length l = n)
-          (Hnth_default : forall i, (i < n)%nat -> @nth_default A d l i = f i) :
-      l = map f (seq 0 n).
-    Proof using Type.
-      apply list_elementwise_eq. subst n.
-      intro i; destruct (lt_dec i (length l)).
-      { rewrite !nth_error_Some_nth_default with (x:=d) by distr_length.
-        autorewrite with push_nth_default.
-        rewrite map_nth_default with (x:=0%nat) by distr_length.
-        rewrite Hnth_default by distr_length.
-        rewrite nth_default_seq_inbounds by distr_length.
-        f_equal. }
-      { rewrite !nth_error_length_error by distr_length.
-        reflexivity. }
-    Qed.
-
-    Lemma nth_default_partitions x : forall p n,
-        (forall i, (i < n)%nat -> nth_default 0 p i = (x mod weight (S i)) / weight i) ->
-        length p = n ->
-        p = partition n x.
-    Proof using Type.
-      cbv [partition]; intros.
-      eauto using nth_default_map_seq_equiv.
-    Qed.
-
     Lemma partition_step n x :
       partition (S n) x = partition n x ++ [(x mod weight (S n)) / weight n].
     Proof using Type.
@@ -1405,29 +1378,6 @@ Module Partition.
       intros; distr_length; auto.
     Qed.
     Hint Rewrite length_recursive_partition : distr_length.
-
-    (* TODO : move *)
-    Hint Rewrite Nat.sub_0_l : natsimplify.
-
-    (* TODO : remove if this ends up being unused *)
-    Lemma recursive_partition_skipn : forall m n i j x,
-        (m < n)%nat ->
-        (j = i + m)%nat ->
-        skipn m (recursive_partition n i (x / weight i)) = recursive_partition (n-m) j (x / weight j).
-    Proof.
-      induction m; destruct n; intros; subst;
-        repeat match goal with
-               | _ => progress cbn [recursive_partition]
-               | _ => rewrite weight_0 by assumption
-               | _ => rewrite weight_multiples by assumption
-               | _ => rewrite Z.div_div by auto
-               | _ => rewrite Z.mul_div_eq by auto
-               | _ => progress autorewrite with zsimplify_fast natsimplify push_skipn
-               | _ => reflexivity
-               end.
-      erewrite IHm by (auto; omega).
-      repeat (f_equal; try omega).
-    Qed.
   End Partition.
   Hint Rewrite length_partition length_recursive_partition : distr_length.
   Hint Rewrite eval_partition using auto : push_eval.
