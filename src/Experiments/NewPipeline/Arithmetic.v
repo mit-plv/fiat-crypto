@@ -3135,7 +3135,7 @@ Module WordByWordMontgomery.
       clear - r_big lgr_big; autounfold with loc; intros.
       repeat match goal with H : ?x = partition _ _ _ |- _ =>
                    rewrite H; clear H end.
-      rewrite (surjective_pairing (Rows.add _ _ _ _)).
+      rewrite (surjective_pairing (Rows.add _ _ _ _)). cbn [fst snd].
       rewrite Rows.add_partitions, Rows.add_div by (auto; distr_length).
       autorewrite with push_eval.
       rewrite <-Z.div_mod'', partition_step by auto.
@@ -3171,16 +3171,15 @@ Module WordByWordMontgomery.
     Qed.
     Lemma small_drop_high_addT' : forall n a b, small a -> small b -> small (@drop_high_addT' n a b).
     Proof using lgr_big.
-      intros n a b Ha Hb; generalize (length_small Ha); generalize (length_small Hb); generalize (@eval_drop_high_addT' n a b Ha).
-      clear -lgr_big Ha Hb.
-      cbv [small].
-      intro Heq; rewrite Heq; autounfold with loc in *.
-      rewrite Ha, Hb.
-      repeat t_step.
-      rewrite !UniformWeight.uweight_eq_alt by omega.
-      autorewrite with push_Zof_nat zsimplify_fast.
-      rewrite Z.pow_succ_r by omega.
-    Admitted.
+      pose proof r_big as r_big.
+      clear - r_big lgr_big; autounfold with loc; intros.
+      repeat match goal with H : ?x = partition _ _ _ |- _ =>
+                   rewrite H; clear H end.
+      rewrite (surjective_pairing (Rows.add _ _ _ _)). cbn [fst snd].
+      rewrite Rows.add_partitions by (distr_length; auto using length_partition).
+      autorewrite with push_eval.
+      auto using partition_eq_mod with zarith.
+    Qed.
     Local Axiom eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v N) = eval v + if eval N <=? eval v then -eval N else 0.
     Local Axiom small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
     Local Axiom eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
