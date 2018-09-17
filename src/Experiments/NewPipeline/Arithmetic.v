@@ -480,7 +480,76 @@ Module Associational.
   End Carries.
 End Associational.
 
-Module Positional. Section Positional.
+Module Weight.
+  Section Weight.
+    Context weight
+            (weight_0 : weight 0%nat = 1)
+            (weight_positive : forall i, 0 < weight i)
+            (weight_multiples : forall i, weight (S i) mod weight i = 0)
+                                                                              (weight_divides : forall i : nat, 0 < weight (S i) / weight i).
+
+    Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
+
+    Lemma weight_multiples_full' j : forall i, weight (i+j) mod weight i = 0.
+    Proof using weight_positive weight_multiples.
+      induction j; intros;
+        repeat match goal with
+               | _ => rewrite Nat.add_succ_r
+               | _ => rewrite IHj
+               | |- context [weight (S ?x) mod weight _] =>
+                 rewrite (Z.div_mod (weight (S x)) (weight x)), weight_multiples by auto
+               | _ => progress autorewrite with push_Zmod natsimplify zsimplify_fast
+               | _ => reflexivity
+               end.
+    Qed.
+
+    Lemma weight_multiples_full j i : (i <= j)%nat -> weight j mod weight i = 0.
+    Proof using weight_positive weight_multiples.
+      intros; replace j with (i + (j - i))%nat by omega.
+      apply weight_multiples_full'.
+    Qed.
+
+    Lemma weight_divides_full j i : (i <= j)%nat -> 0 < weight j / weight i.
+    Proof using weight_positive weight_multiples. auto using Z.gt_lt, Z.div_positive_gt_0, weight_multiples_full. Qed.
+
+    Lemma weight_div_mod j i : (i <= j)%nat -> weight j = weight i * (weight j / weight i).
+    Proof using weight_positive weight_multiples. intros. apply Z.div_exact; auto using weight_multiples_full. Qed.
+
+    Lemma weight_mod_pull_div n x :
+      x mod weight (S n) / weight n =
+      (x / weight n) mod (weight (S n) / weight n).
+    Proof using weight_positive weight_multiples weight_divides.
+      replace (weight (S n)) with (weight n * (weight (S n) / weight n));
+      repeat match goal with
+             | _ => progress autorewrite with zsimplify_fast
+             | _ => rewrite Z.mul_div_eq_full by auto
+             | _ => rewrite Z.mul_div_eq' by auto
+             | _ => rewrite Z.mod_pull_div
+             | _ => rewrite weight_multiples by auto
+             | _ => solve [auto using Z.lt_le_incl]
+             end.
+    Qed.
+
+    Lemma weight_div_pull_div n x :
+      x / weight (S n) =
+      (x / weight n) / (weight (S n) / weight n).
+    Proof using weight_positive weight_multiples weight_divides.
+      replace (weight (S n)) with (weight n * (weight (S n) / weight n));
+      repeat match goal with
+             | _ => progress autorewrite with zdiv_to_mod zsimplify_fast
+             | _ => rewrite Z.mul_div_eq_full by auto
+             | _ => rewrite Z.mul_div_eq' by auto
+             | _ => rewrite Z.div_div by auto
+             | _ => rewrite weight_multiples by assumption
+             | _ => solve [auto using Z.lt_le_incl]
+             end.
+    Qed.
+  End Weight.
+End Weight.
+
+Module Positional.
+  Import Weight.
+  Section Positional.
   Context (weight : nat -> Z)
           (weight_0 : weight 0%nat = 1)
           (weight_nz : forall i, weight i <> 0).
@@ -1160,66 +1229,6 @@ Section mod_ops.
 End mod_ops.
 
 Module Saturated.
-  Hint Resolve weight_positive weight_0 weight_multiples weight_divides.
-  Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
-
-  Section Weight.
-    Context weight {wprops : @weight_properties weight}.
-
-    Lemma weight_multiples_full' j : forall i, weight (i+j) mod weight i = 0.
-    Proof using wprops.
-      induction j; intros;
-        repeat match goal with
-               | _ => rewrite Nat.add_succ_r
-               | _ => rewrite IHj
-               | |- context [weight (S ?x) mod weight _] =>
-                 rewrite (Z.div_mod (weight (S x)) (weight x)), weight_multiples by auto
-               | _ => progress autorewrite with push_Zmod natsimplify zsimplify_fast
-               | _ => reflexivity
-               end.
-    Qed.
-
-    Lemma weight_multiples_full j i : (i <= j)%nat -> weight j mod weight i = 0.
-    Proof using wprops.
-      intros; replace j with (i + (j - i))%nat by omega.
-      apply weight_multiples_full'.
-    Qed.
-
-    Lemma weight_divides_full j i : (i <= j)%nat -> 0 < weight j / weight i.
-    Proof using wprops. auto using Z.gt_lt, Z.div_positive_gt_0, weight_multiples_full. Qed.
-
-    Lemma weight_div_mod j i : (i <= j)%nat -> weight j = weight i * (weight j / weight i).
-    Proof using wprops. intros. apply Z.div_exact; auto using weight_multiples_full. Qed.
-
-    Lemma weight_mod_pull_div n x :
-      x mod weight (S n) / weight n =
-      (x / weight n) mod (weight (S n) / weight n).
-    Proof using wprops.
-      pose proof (@weight_positive _ wprops n).
-      replace (weight (S n)) with (weight n * (weight (S n) / weight n));
-      repeat match goal with
-             | _ => progress autorewrite with zdiv_to_mod zsimplify_fast
-             | _ => rewrite Z.mod_pull_div
-             | _ => rewrite weight_multiples by assumption
-             | _ => solve [auto using Z.lt_le_incl]
-             end.
-    Qed.
-
-    Lemma weight_div_pull_div n x :
-      x / weight (S n) =
-      (x / weight n) / (weight (S n) / weight n).
-    Proof using wprops.
-      pose proof (@weight_positive _ wprops n).
-      replace (weight (S n)) with (weight n * (weight (S n) / weight n));
-      repeat match goal with
-             | _ => progress autorewrite with zdiv_to_mod zsimplify_fast
-             | _ => rewrite Z.div_div by auto
-             | _ => rewrite weight_multiples by assumption
-             | _ => solve [auto using Z.lt_le_incl]
-             end.
-    Qed.
-  End Weight.
-
   Module Associational.
     Section Associational.
 
@@ -1303,8 +1312,12 @@ Module Saturated.
 End Saturated.
 
 Module Partition.
+  Import Weight.
   Section Partition.
     Context weight {wprops : @weight_properties weight}.
+
+    Hint Resolve Z.positive_is_nonzero Z.lt_gt.
+
     Definition partition n x :=
       map (fun i => (x mod weight (S i)) / weight i) (seq 0 n).
 
@@ -1396,9 +1409,10 @@ Module Partition.
 End Partition.
 
 Module Columns.
-  Import Saturated. Import Partition.
+  Import Saturated. Import Partition. Import Weight.
   Section Columns.
     Context weight {wprops : @weight_properties weight}.
+    Hint Resolve Z.positive_is_nonzero Z.lt_gt.
 
     Definition eval n (x : list (list Z)) : Z := Positional.eval weight n (map sum x).
 
@@ -1528,8 +1542,8 @@ Module Columns.
                | |- _ :: _ = _ :: _ => f_equal
                | _ => apply (@partition_eq_mod _ wprops)
                | _ => rewrite length_partition
-               | _ => rewrite weight_mod_pull_div by assumption
-               | _ => rewrite weight_div_pull_div by assumption
+               | _ => rewrite weight_mod_pull_div by auto
+               | _ => rewrite weight_div_pull_div by auto
                | _ => f_equal; ring
                | _ => progress autorewrite with zsimplify
                end.
@@ -1630,10 +1644,10 @@ Module Columns.
 End Columns.
 
 Module Rows.
-  Import Saturated. Import Partition.
+  Import Saturated. Import Partition. Import Weight.
   Section Rows.
     Context weight {wprops : @weight_properties weight}.
-
+    Hint Resolve Z.positive_is_nonzero Z.lt_gt.
     Local Notation rows := (list (list Z)) (only parsing).
     Local Notation cols := (list (list Z)) (only parsing).
 
@@ -2294,7 +2308,7 @@ End Rows.
 Module BaseConversion.
   Import Positional. Import Partition.
   Section BaseConversion.
-    Hint Resolve Z.gt_lt.
+    Hint Resolve Z.positive_is_nonzero Z.lt_gt Z.gt_lt.
     Context (sw dw : nat -> Z) (* source/destination weight functions *)
             {swprops : @weight_properties sw}
             {dwprops : @weight_properties dw}.
@@ -2308,7 +2322,7 @@ Module BaseConversion.
       eval dw dn (convert_bases sn dn p) = eval sw sn p.
     Proof using dwprops.
       cbv [convert_bases]; intros.
-      rewrite eval_chained_carries_no_reduce; auto using Z.positive_is_nonzero.
+      rewrite eval_chained_carries_no_reduce by auto.
       rewrite eval_from_associational; auto.
     Qed.
 
@@ -2932,6 +2946,7 @@ End UniformWeight.
 
 Module WordByWordMontgomery.
   Import Partition.
+  Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
   Section with_args.
     Context (lgr : Z)
             (m : Z).
