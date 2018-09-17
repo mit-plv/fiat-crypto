@@ -3220,7 +3220,12 @@ Module WordByWordMontgomery.
       { rewrite !UniformWeight.uweight_eq_alt by omega.
         autorewrite with push_Zof_nat push_Zpow.
         rewrite Z.pow_succ_r by auto.
-        auto with zarith. }
+        (* In versions newer than 8.7, auto with zarith is sufficient
+        to solve this from here. *)
+        apply Z.mul_le_mono_nonneg_r.
+        { auto with zarith. }
+        { transitivity (2 ^ 1); [ reflexivity | ].
+          apply Z.pow_le_mono_r; omega. } }
     Qed.
     Local Lemma eval_drop_high_addT' : forall n a b, small a -> small b -> eval (@drop_high_addT' n a b) = (eval a + eval b) mod (r^Z.of_nat (S n)).
     Proof using lgr_big.
