@@ -505,44 +505,50 @@ Module Compilers.
         Definition ERROR_BAD_REWRITE_RULE {t} (pat : pattern) (value : expr t) : expr t := value.
         Global Opaque ERROR_BAD_REWRITE_RULE.
 
-        Definition eval_rewrite_rules
-                   (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
-                   (maybe_do_again
-                    := fun (should_do_again : bool) (t : base.type)
-                       => if should_do_again return ((@expr.expr base.type ident (if should_do_again then value else var) t) -> UnderLets (expr t))
-                         then do_again t
-                         else UnderLets.Base)
-                   (d : decision_tree)
-                   (rew : rewrite_rulesT)
-                   (e : rawexpr)
-          : UnderLets (expr (type_of_rawexpr e))
-          := let defaulte := expr_of_rawexpr e in
-             (eval_decision_tree
-                (e::nil) d
-                (fun k ctx
-                 => match ctx return option (UnderLets (expr (type_of_rawexpr e))) with
-                   | e'::nil
-                     => (pf <- nth_error rew k;
-                          let 'existT p f := pf in
-                          bind_data_cps
-                            e' p _
-                            (fun v
-                             => v <- v;
-                                 f v _
-                                   (fun fv
-                                    => fv <- fv;
-                                        let 'existT should_do_again fv := fv in
-                                        Some
-                                          (fv <-- fv;
-                                             fv <-- maybe_do_again should_do_again _ fv;
-                                             type.try_transport_cps
-                                               base.try_make_transport_cps _ _ _ fv _
-                                               (fun fv'
-                                                => UnderLets.Base
-                                                     (fv' ;;; (ERROR_BAD_REWRITE_RULE p defaulte))))%under_lets)))%option
-                   | _ => None
-                   end);;;
-                (UnderLets.Base defaulte))%option.
+        Section eval_rewrite_rules.
+          Context (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t)).
+
+          Let maybe_do_again
+            := fun (should_do_again : bool) (t : base.type)
+               => if should_do_again return ((@expr.expr base.type ident (if should_do_again then value else var) t) -> UnderLets (expr t))
+                  then do_again t
+                  else UnderLets.Base.
+
+          Definition rewrite_with_rule {t} (defaulte : expr t) e' (pf : rewrite_ruleT)
+            := let 'existT p f := pf in
+               bind_data_cps
+                 e' p _
+                 (fun v
+                  => v <- v;
+                       f v _
+                         (fun fv
+                          => fv <- fv;
+                               let 'existT should_do_again fv := fv in
+                               Some
+                                 (fv <-- fv;
+                                    fv <-- maybe_do_again should_do_again _ fv;
+                                    type.try_transport_cps
+                                      base.try_make_transport_cps _ _ _ fv _
+                                      (fun fv'
+                                       => UnderLets.Base
+                                            (fv' ;;; (ERROR_BAD_REWRITE_RULE p defaulte))))%under_lets))%option.
+
+          Definition eval_rewrite_rules
+                     (d : decision_tree)
+                     (rew : rewrite_rulesT)
+                     (e : rawexpr)
+            : UnderLets (expr (type_of_rawexpr e))
+            := let defaulte := expr_of_rawexpr e in
+               (eval_decision_tree
+                  (e::nil) d
+                  (fun k ctx
+                   => match ctx return option (UnderLets (expr (type_of_rawexpr e))) with
+                      | e'::nil
+                        => (pf <- nth_error rew k; rewrite_with_rule defaulte e' pf)%option
+                      | _ => None
+                      end);;;
+                  (UnderLets.Base defaulte))%option.
+        End eval_rewrite_rules.
 
         Local Notation enumerate ls
           := (List.combine (List.seq 0 (List.length ls)) ls).
