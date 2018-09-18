@@ -21,7 +21,7 @@ Module Import Primitive.
   Global Arguments fst {_ _}.
   Global Arguments snd {_ _}.
 
-  Module Import Notations.
+  Module Export Notations.
     Notation "x * y" := (@prod x y) : type_scope.
     Notation "( x , y , .. , z )" := (pair .. (pair x y) .. z) : core_scope.
   End Notations.
@@ -69,7 +69,6 @@ Module Import Primitive.
 End Primitive.
 Notation "x * y" := (@prod x%primproj_type y%primproj_type) : primproj_type_scope.
 Notation "( x , y , .. , z )" := (pair .. (pair x%primproj y%primproj) .. z%primproj) : primproj_scope.
-Import Primitive.Notations.
 
 Local Arguments f_equal {_ _} _ {_ _} _.
 

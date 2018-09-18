@@ -23,7 +23,7 @@ Module Import Primitive.
   Global Arguments projT1 {_ _} _.
   Global Arguments projT2 {_ _} _.
 
-  Module Import Notations.
+  Module Export Notations.
     Notation "{ x  &  P }" := (sigT (fun x => P)) : type_scope.
     Notation "{ x : A  & P }" := (sigT (A:=A) (fun x => P)) : type_scope.
     Add Printing Let sigT.
@@ -92,8 +92,6 @@ End Primitive.
 Notation "{ x  &  P }" := (sigT (fun x => P%primproj_type)) : primproj_type_scope.
 Notation "{ x : A  & P }" := (sigT (A:=A%primproj_type) (fun x => P%primproj_type)) : primproj_type_scope.
 Add Printing Let sigT.
-
-Import Primitive.Notations.
 
 Local Arguments f_equal {_ _} _ {_ _} _.
 
