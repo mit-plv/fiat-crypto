@@ -1297,6 +1297,7 @@ Proof.
   revert k a; induction b as [|? IHb], k; simpl; try reflexivity.
   intros; rewrite IHb; reflexivity.
 Qed.
+Hint Rewrite @firstn_seq : push_firstn.
 
 Lemma skipn_seq k a b
   : skipn k (seq a b) = seq (k + a) (b - k).
