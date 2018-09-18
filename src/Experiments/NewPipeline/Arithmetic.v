@@ -3113,6 +3113,17 @@ Module WordByWordMontgomery.
     Lemma length_small {n v} : @small n v -> length v = n.
     Proof using Type. clear; cbv [small]; intro H; rewrite H; autorewrite with distr_length; reflexivity. Qed.
 
+    Lemma R_plusR_le : R + R <= weight (S R_numlimbs).
+    Proof.
+      clear - lgr_big.
+      rewrite UniformWeight.uweight_S, UniformWeight.uweight_eq_alt by omega.
+      rewrite Z.add_diag.
+      apply Z.mul_le_mono_nonneg_r.
+      { auto with zarith. }
+      { transitivity (2 ^ 1); [ reflexivity | ].
+        apply Z.pow_le_mono_r; omega. }
+    Qed.
+
     Let partition_Proper := (@partition_Proper _ wprops).
     Local Existing Instance partition_Proper.
     Lemma eval_nonzero n A : @small n A -> nonzero A = 0 <-> @eval n A = 0.
@@ -3333,19 +3344,25 @@ Module WordByWordMontgomery.
       assert (eval N < weight R_numlimbs) by
           (subst r R; rewrite UniformWeight.uweight_eq_alt; omega).
       assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst R; reflexivity).
-      assert (eval v < weight (S R_numlimbs)).
-      { apply Z.lt_le_trans with (m:=2 * R); [ lia | ].
-        subst r R; rewrite UniformWeight.uweight_S, UniformWeight.uweight_eq_alt by omega.
-        apply Z.mul_le_mono_nonneg_r; [auto with zarith | ].
-        transitivity (2 ^ 1); [ reflexivity | ];
-          apply Z.pow_le_mono_r; omega. }
+      assert (eval v < weight (S R_numlimbs)) by (pose proof R_plusR_le; lia).
       Z.rewrite_mod_small.
       break_match; autorewrite with zsimplify_fast; Z.ltb_to_lt.
       { rewrite Z.add_opp_r. fold (eval N).
         auto using Z.mod_small with lia. }
       { auto using Z.mod_small with lia. }
     Qed.
-    Local Axiom small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
+    Local Lemma small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
+    Proof using small_N lgr_big N_nz N_lt_R.
+      pose proof (length_small small_N) as length_N.
+      clear - lgr_big N_lt_R N_nz length_N.
+      pose proof R_plusR_le.
+      cbv [conditional_sub]; autounfold with loc; intros.
+      rewrite Rows.conditional_sub_partitions by
+          (auto; autorewrite with push_eval distr_length; fold (eval N); lia).
+      rewrite drop_high_to_length_partition by omega.
+      autorewrite with push_eval.
+      apply partition_eq_mod; auto with zarith.
+    Qed.
     Local Axiom eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
     Local Axiom small_sub_then_maybe_add : forall a b, small (sub_then_maybe_add a b).
 
