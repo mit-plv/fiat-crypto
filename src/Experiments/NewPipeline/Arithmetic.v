@@ -3412,7 +3412,18 @@ Module WordByWordMontgomery.
       apply Z.mod_small.
       break_match; Z.ltb_to_lt; lia.
     Qed.
-    Local Axiom small_sub_then_maybe_add : forall a b, small (sub_then_maybe_add a b).
+    Local Lemma small_sub_then_maybe_add : forall a b, small a -> small b -> small (sub_then_maybe_add a b).
+    Proof using small_N lgr_big R_numlimbs_nz.
+      pose proof mask_r_sub1 as mask_r_sub1.
+      clear - small_N lgr_big R_numlimbs_nz mask_r_sub1.
+      intros; autounfold with loc; cbv [sub_then_maybe_add].
+      repeat match goal with H : small _ |- _ =>
+                             rewrite H; clear H end.
+      rewrite Rows.sub_then_maybe_add_partitions by (distr_length; autorewrite with push_eval; auto with zarith).
+      autorewrite with push_eval.
+      apply partition_eq_mod; auto; [ ].
+      auto with zarith.
+    Qed.
 
     Local Opaque T addT drop_high_addT' divmod zero scmul conditional_sub sub_then_maybe_add.
     Create HintDb push_mont_eval discriminated.
