@@ -689,42 +689,6 @@ Module Positional.
 
   Definition drop_high_to_length (n : nat) (p:list Z) : list Z :=
     firstn n p.
-
-  (* Helper for eval_drop_high_to_length *)
-  Lemma eval_drop_high_to_length' q
-        (weight_multiples: forall i, weight (S i) mod weight i = 0)
-        (weight_positive: forall i, 0 < weight i) :
-    forall n p m,
-    length p = n -> length q = m ->
-    eval (n+m) (p ++ q) mod weight n
-    = eval n p mod weight n.
-  Proof using Type.
-    induction q using rev_ind; intros; distr_length.
-    { subst m; rewrite app_nil_r.
-      autorewrite with natsimplify; reflexivity. }
-    { rewrite app_assoc.
-      rewrite eval_snoc with (n:=(n+pred m)%nat) by distr_length.
-      rewrite weight_div_mod with (j:=(n+pred m)%nat) (i:=n) by auto with omega.
-      push_Zmod. rewrite IHq by lia.
-      autorewrite with zsimplify_fast.
-      reflexivity. }
-  Qed.
-  Lemma eval_drop_high_to_length n m p
-        (weight_multiples: forall i, weight (S i) mod weight i = 0)
-        (weight_positive: forall i, 0 < weight i) :
-    length p = m -> (n <= m)%nat ->
-    eval n (drop_high_to_length n p) mod weight n
-    = eval m p mod weight n.
-  Proof using Type.
-    cbv [drop_high_to_length]; intros.
-    rewrite <-(firstn_skipn n p).
-    rewrite firstn_app_inleft by (distr_length; lia).
-    rewrite firstn_firstn. autorewrite with natsimplify.
-    replace m with (n + (m-n))%nat by omega.
-    rewrite eval_drop_high_to_length' by (auto; distr_length; lia).
-    reflexivity.
-  Qed.
-  Hint Rewrite eval_drop_high_to_length : push_eval.
   Lemma length_drop_high_to_length n p :
     length (drop_high_to_length n p) = Nat.min n (length p).
   Proof using Type. clear; cbv [drop_high_to_length]; intros; distr_length.        Qed.
@@ -1011,7 +975,7 @@ Module Positional.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
 Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_chained_carries @length_encode @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
-Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length @eval_drop_high_to_length using (solve [auto; distr_length]): push_eval.
+Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
 
@@ -2810,7 +2774,7 @@ Section freeze_mod_ops.
     generalize wprops wprops_bytes; clear -Hn_nz limbwidth_good.
     intros.
     cbv [to_bytes].
-    rewrite Rows.flatten_mod by eauto using Rows.length_from_associational.
+    rewrite Rows.flatten_mod by (assumption || apply Rows.length_from_associational).
     rewrite Rows.eval_from_associational by eauto using bytes_nz with omega.
     rewrite eval_to_associational.
     cbv [to_bytes'].
@@ -2837,7 +2801,7 @@ Section freeze_mod_ops.
   Proof using Hn_nz limbwidth_good.
     clear -Hn_nz limbwidth_good.
     intros; cbv [to_bytes].
-    rewrite Rows.flatten_correct by eauto using wprops, Rows.length_from_associational.
+    rewrite Rows.flatten_correct by (apply wprops_bytes || apply Rows.length_from_associational).
     rewrite Rows.eval_from_associational by eauto using bytes_nz with omega.
     rewrite eval_to_associational.
     cbv [to_bytes'].
@@ -3355,7 +3319,6 @@ Module WordByWordMontgomery.
       assert (eval N mod weight R_numlimbs < weight (S R_numlimbs)) by (pose proof (Z.mod_pos_bound (eval N) (weight R_numlimbs) ltac:(auto)); omega).
       rewrite Rows.conditional_sub_partitions by (repeat (autorewrite with distr_length push_eval; auto using partition_eq_mod with zarith)).
       rewrite drop_high_to_length_partition by omega.
-      (* TODO : do we need eval_drop_high_to_length? *)
       autorewrite with push_eval.
       assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst R; reflexivity).
       Z.rewrite_mod_small.
