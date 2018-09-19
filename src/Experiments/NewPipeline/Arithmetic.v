@@ -3935,9 +3935,11 @@ Module WordByWordMontgomery.
         unfold add; t_small.
       Qed.
       Lemma small_sub : small (sub Av Bv).
-      Proof using Type. unfold sub; t_small. Qed.
+      Proof using small_N small_Bv small_Av partition_Proper lgr_big
+R_numlimbs_nz. unfold sub; t_small. Qed.
       Lemma small_opp : small (opp Av).
-      Proof using Type. unfold opp, sub; t_small. Qed.
+      Proof using small_N small_Bv small_Av partition_Proper lgr_big
+R_numlimbs_nz. unfold opp, sub; t_small. Qed.
 
       Lemma eval_add : eval (add Av Bv) = eval Av + eval Bv + if (eval N <=? eval Av + eval Bv) then -eval N else 0.
       Proof using small_Bv small_Av lgr_big N_lt_R Bv_bound Av_bound small_N ri k R_numlimbs_nz N_nz B_bounds B.
@@ -3945,10 +3947,10 @@ Module WordByWordMontgomery.
         unfold add; autorewrite with push_mont_eval; reflexivity.
       Qed.
       Lemma eval_sub : eval (sub Av Bv) = eval Av - eval Bv + if (eval Av - eval Bv <? 0) then eval N else 0.
-      Proof using small_Bv small_Av Bv_bound Av_bound. unfold sub; autorewrite with push_mont_eval; reflexivity. Qed.
+      Proof using small_Bv small_Av Bv_bound Av_bound small_N partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R. unfold sub; autorewrite with push_mont_eval; reflexivity. Qed.
       Lemma eval_opp : eval (opp Av) = (if (eval Av =? 0) then 0 else eval N) - eval Av.
-      Proof using Av_bound N_nz small_Av.
-        clear -Av_bound N_nz small_Av partition_Proper r_big'.
+      Proof using small_Av Av_bound small_N partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R.
+        clear -Av_bound N_nz small_Av partition_Proper r_big' small_N lgr_big R_numlimbs_nz N_nz N_lt_R.
         unfold opp, sub; autorewrite with push_mont_eval.
         break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
@@ -3966,21 +3968,21 @@ Module WordByWordMontgomery.
         generalize eval_add; clear. t_mod_N.
       Qed.
       Lemma eval_sub_mod_N : eval (sub Av Bv) mod eval N = (eval Av - eval Bv) mod eval N.
-      Proof using small_Bv small_Av Bv_bound Av_bound. generalize eval_sub; clear. t_mod_N. Qed.
+      Proof using small_Bv small_Av Bv_bound Av_bound small_N r_big' partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R. generalize eval_sub; clear. t_mod_N. Qed.
       Lemma eval_opp_mod_N : eval (opp Av) mod eval N = (-eval Av) mod eval N.
-      Proof using small_Av N_nz Av_bound. generalize eval_opp; clear; t_mod_N. Qed.
+      Proof using small_Av Av_bound small_N r_big' partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R. generalize eval_opp; clear. t_mod_N. Qed.
 
       Lemma add_bound : 0 <= eval (add Av Bv) < eval N.
       Proof using small_Bv small_Av lgr_big R_numlimbs_nz N_lt_R Bv_bound Av_bound small_N ri k N_nz B_bounds B.
         generalize eval_add; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
       Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.
-      Proof using small_Bv small_Av R_numlimbs_nz Bv_bound Av_bound.
+      Proof using small_Bv small_Av R_numlimbs_nz Bv_bound Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
         generalize eval_sub; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
       Lemma opp_bound : 0 <= eval (opp Av) < eval N.
-      Proof using small_Av R_numlimbs_nz N_nz Av_bound.
-        clear Bv_bound.
+      Proof using small_Av R_numlimbs_nz Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
+        clear Bv small_Bv Bv_bound.
         generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
     End add_sub.
@@ -4195,8 +4197,10 @@ Module WordByWordMontgomery.
         push_Zmod; rewrite ?eval_from_montgomery_mod; pull_Zmod; repeat apply conj;
           cbv [valid submod] in *; destruct_head'_and; auto;
             try rewrite m_enc_correct_montgomery;
-            try (eapply small_sub || eapply sub_bound); rewrite <- ?m_enc_correct_montgomery; eauto with omega; [].
-      push_Zmod; erewrite eval_sub by (rewrite <- ?m_enc_correct_montgomery; eauto with omega); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
+            try (eapply small_sub || eapply sub_bound);
+            cbv [small]; rewrite <- ?m_enc_correct_montgomery;
+              eauto with omega; [ ].
+      push_Zmod; erewrite eval_sub by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with omega); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
       break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
     Qed.
 
@@ -4209,8 +4213,10 @@ Module WordByWordMontgomery.
         push_Zmod; rewrite ?eval_from_montgomery_mod; pull_Zmod; repeat apply conj;
           cbv [valid oppmod] in *; destruct_head'_and; auto;
             try rewrite m_enc_correct_montgomery;
-            try (eapply small_opp || eapply opp_bound); rewrite <- ?m_enc_correct_montgomery; eauto with omega; [].
-      push_Zmod; erewrite eval_opp by (rewrite <- ?m_enc_correct_montgomery; eauto with omega); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
+            try (eapply small_opp || eapply opp_bound);
+            cbv [small]; rewrite <- ?m_enc_correct_montgomery;
+              eauto with omega; [ ].
+      push_Zmod; erewrite eval_opp by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with omega); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
       break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
     Qed.
 
