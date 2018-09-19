@@ -2273,6 +2273,29 @@ Module Rows.
             break_match; congruence.
       Qed.
 
+      Let sub_then_maybe_add_Z a b c :=
+        a - b + (if (a - b <? 0) then c else 0).
+
+      Lemma sub_then_maybe_add_partitions n mask p q r :
+        length p = n -> length q = n -> length r = n ->
+        map (Z.land mask) r = r ->
+        0 <= Positional.eval weight n p < weight n ->
+        0 <= Positional.eval weight n q < weight n ->
+        fst (sub_then_maybe_add n mask p q r) = partition weight n (sub_then_maybe_add_Z (Positional.eval weight n p) (Positional.eval weight n q) (Positional.eval weight n r)).
+      Proof using wprops.
+        cbv [sub_then_maybe_add]. subst sub_then_maybe_add_Z.
+        intros.
+        rewrite (surjective_pairing (sub _ _ _)).
+        rewrite (surjective_pairing (add _ _ _)).
+        cbn [fst snd].
+        rewrite sub_partitions, add_partitions, sub_div by distr_length.
+        autorewrite with push_eval.
+        Z.rewrite_mod_small.
+        rewrite Z.div_sub_small by omega.
+        break_innermost_match; Z.ltb_to_lt; try omega;
+          auto using partition_eq_mod with zarith.
+      Qed.
+
       Lemma mul_partitions base n m p q :
         base <> 0 -> m <> 0%nat -> length p = n -> length q = n ->
         fst (mul base n m p q) = partition weight m (Positional.eval weight n p * Positional.eval weight n q).
@@ -3114,7 +3137,7 @@ Module WordByWordMontgomery.
     Proof using Type. clear; cbv [small]; intro H; rewrite H; autorewrite with distr_length; reflexivity. Qed.
 
     Lemma R_plusR_le : R + R <= weight (S R_numlimbs).
-    Proof.
+    Proof using lgr_big.
       clear - lgr_big.
       rewrite UniformWeight.uweight_S, UniformWeight.uweight_eq_alt by omega.
       rewrite Z.add_diag.
@@ -3122,6 +3145,18 @@ Module WordByWordMontgomery.
       { auto with zarith. }
       { transitivity (2 ^ 1); [ reflexivity | ].
         apply Z.pow_le_mono_r; omega. }
+    Qed.
+
+    Lemma mask_r_sub1 n x :
+      map (Z.land (r - 1)) (partition weight n x) = partition weight n x.
+    Proof using lgr_big.
+      clear - lgr_big. cbv [partition].
+      rewrite map_map. apply map_ext; intros.
+      rewrite UniformWeight.uweight_S by omega.
+      rewrite <-Z.mod_pull_div by auto with zarith.
+      replace (r - 1) with (Z.ones lgr) by (rewrite Z.ones_equiv; subst r; reflexivity).
+      rewrite <-Z.land_comm, Z.land_ones by omega.
+      auto with zarith.
     Qed.
 
     Let partition_Proper := (@partition_Proper _ wprops).
@@ -3329,7 +3364,8 @@ Module WordByWordMontgomery.
     Qed.
     Local Lemma eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v N) = eval v + if eval N <=? eval v then -eval N else 0.
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R.
-      clear - small_N ri lgr_big R_numlimbs_nz N_nz N_lt_R.
+      pose proof R_plusR_le as R_plusR_le.
+      clear - small_N ri lgr_big R_numlimbs_nz N_nz N_lt_R R_plusR_le.
       intros; autounfold with loc; cbv [conditional_sub].
       repeat match goal with H : small _ |- _ =>
                              rewrite H; clear H end.
@@ -3344,7 +3380,6 @@ Module WordByWordMontgomery.
       assert (eval N < weight R_numlimbs) by
           (subst r R; rewrite UniformWeight.uweight_eq_alt; omega).
       assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst R; reflexivity).
-      assert (eval v < weight (S R_numlimbs)) by (pose proof R_plusR_le; lia).
       Z.rewrite_mod_small.
       break_match; autorewrite with zsimplify_fast; Z.ltb_to_lt.
       { rewrite Z.add_opp_r. fold (eval N).
@@ -3354,8 +3389,8 @@ Module WordByWordMontgomery.
     Local Lemma small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
     Proof using small_N lgr_big N_nz N_lt_R.
       pose proof (length_small small_N) as length_N.
-      clear - lgr_big N_lt_R N_nz length_N.
-      pose proof R_plusR_le.
+      pose proof R_plusR_le as R_plusR_le.
+      clear - lgr_big N_lt_R N_nz length_N R_plusR_le.
       cbv [conditional_sub]; autounfold with loc; intros.
       rewrite Rows.conditional_sub_partitions by
           (auto; autorewrite with push_eval distr_length; fold (eval N); lia).
@@ -3363,7 +3398,20 @@ Module WordByWordMontgomery.
       autorewrite with push_eval.
       apply partition_eq_mod; auto with zarith.
     Qed.
-    Local Axiom eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
+    Local Lemma eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
+    Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R.
+      pose proof mask_r_sub1 as mask_r_sub1.
+      clear - small_N lgr_big R_numlimbs_nz N_nz N_lt_R mask_r_sub1.
+      intros; autounfold with loc; cbv [sub_then_maybe_add].
+      repeat match goal with H : small _ |- _ =>
+                             rewrite H; clear H end.
+      rewrite Rows.sub_then_maybe_add_partitions by (distr_length; autorewrite with push_eval; auto with zarith).
+      autorewrite with push_eval.
+      replace (weight R_numlimbs) with R by (rewrite UniformWeight.uweight_eq_alt by omega; subst r R; reflexivity).
+      Z.rewrite_mod_small.
+      apply Z.mod_small.
+      break_match; Z.ltb_to_lt; lia.
+    Qed.
     Local Axiom small_sub_then_maybe_add : forall a b, small (sub_then_maybe_add a b).
 
     Local Opaque T addT drop_high_addT' divmod zero scmul conditional_sub sub_then_maybe_add.
