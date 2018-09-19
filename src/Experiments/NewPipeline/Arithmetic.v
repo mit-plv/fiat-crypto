@@ -2951,6 +2951,15 @@ Module UniformWeight.
     rewrite Z.pow_succ_r by auto using Nat2Z.is_nonneg.
     reflexivity.
   Qed.
+  Lemma uweight_double_le lgr (Hr : 0 < lgr) n : uweight lgr n + uweight lgr n <= uweight lgr (S n).
+  Proof.
+    rewrite uweight_S, uweight_eq_alt by omega.
+    rewrite Z.add_diag.
+    apply Z.mul_le_mono_nonneg_r.
+    { auto with zarith. }
+    { transitivity (2 ^ 1); [ reflexivity | ].
+      apply Z.pow_le_mono_r; omega. }
+  Qed.
 
   Lemma uweight_1 lgr : uweight lgr 1 = 2^lgr.
   Proof using Type.
@@ -3135,16 +3144,15 @@ Module WordByWordMontgomery.
 
     Lemma length_small {n v} : @small n v -> length v = n.
     Proof using Type. clear; cbv [small]; intro H; rewrite H; autorewrite with distr_length; reflexivity. Qed.
+    Lemma small_bound {n v} : @small n v -> 0 <= eval v < weight n.
+    Proof using lgr_big. clear - lgr_big; cbv [small eval]; intro H; rewrite H; autorewrite with push_eval; auto with zarith. Qed.
 
     Lemma R_plusR_le : R + R <= weight (S R_numlimbs).
     Proof using lgr_big.
       clear - lgr_big.
-      rewrite UniformWeight.uweight_S, UniformWeight.uweight_eq_alt by omega.
-      rewrite Z.add_diag.
-      apply Z.mul_le_mono_nonneg_r.
-      { auto with zarith. }
-      { transitivity (2 ^ 1); [ reflexivity | ].
-        apply Z.pow_le_mono_r; omega. }
+      etransitivity; [ | apply UniformWeight.uweight_double_le; omega ].
+      rewrite UniformWeight.uweight_eq_alt by omega.
+      subst r R; omega.
     Qed.
 
     Lemma mask_r_sub1 n x :
@@ -3273,157 +3281,126 @@ Module WordByWordMontgomery.
       cbv [Z.equiv_modulo]. autorewrite with zsimplify.
       reflexivity.
     Qed.
-    Local Lemma eval_scmul: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> eval (@scmul n a v) = a * eval v.
+
+    Definition canon_rep {n} x (v : T n) : Prop :=
+      (v = partition weight n x) /\ (0 <= x < weight n).
+    Lemma eval_canon_rep n x v : @canon_rep n x v -> eval v = x.
     Proof using lgr_big.
-      generalize (@length_small); clear -lgr_big; intro.
-      autounfold with loc; intro n; destruct (zerop n).
-      { cbn; intros; subst; cbn; rewrite Z.add_with_get_carry_full_mod; cbn; omega. }
-      intros; repeat t_step.
-      rewrite UniformWeight.uweight_S by omega.
-      rewrite UniformWeight.uweight_eq_alt by omega.
+      clear - lgr_big.
+      cbv [canon_rep eval]; intros [Hv Hx].
+      rewrite Hv. autorewrite with push_eval.
+      auto using Z.mod_small.
+    Qed.
+    Lemma small_canon_rep n x v : @canon_rep n x v -> small v.
+    Proof using lgr_big.
+      clear - lgr_big.
+      cbv [canon_rep eval small]; intros [Hv Hx].
+      rewrite Hv. autorewrite with push_eval.
+      apply partition_eq_mod; auto; [ ].
       Z.rewrite_mod_small; reflexivity.
     Qed.
-    Local Lemma small_scmul : forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> small (@scmul n a v).
+
+    Local Lemma scmul_correct: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> canon_rep (a * eval v) (@scmul n a v).
     Proof using lgr_big.
-      intros n a v Hpart.
-      generalize (length_small Hpart).
-      generalize eval_scmul.
-      clear -Hpart lgr_big.
-      destruct (zerop n).
-      { destruct v; subst; cbn; try congruence; cbv [small]; cbn.
-        rewrite Z.add_with_get_carry_full_mod; cbn; autorewrite with zsimplify_const; reflexivity. }
-      { cbv [small]; intros eval_scmul; intros.
-        rewrite eval_scmul by auto.
-        cbv [scmul]; eta_expand.
-        rewrite Rows.mul_partitions by (auto with omega; autorewrite with distr_length; auto with omega).
-        autorewrite with push_eval; auto with omega.
-        rewrite Positional.eval_cons, Positional.eval_nil by reflexivity.
-        rewrite weight_0 by auto; autorewrite with zsimplify_const; reflexivity. }
+      pose proof r_big as r_big.
+      clear - lgr_big r_big.
+      autounfold with loc; intro n; destruct (zerop n); intros until 0; intro Hsmall; intros.
+      { intros; subst; cbn; rewrite Z.add_with_get_carry_full_mod.
+        split; cbn; autorewrite with zsimplify_fast; auto with zarith. }
+      { rewrite (surjective_pairing (Rows.mul _ _ _ _ _ _)).
+        rewrite Rows.mul_partitions by (try rewrite Hsmall; auto using length_partition, Positional.length_extend_to_length with omega).
+        autorewrite with push_eval.
+        rewrite Positional.eval_cons by reflexivity.
+        rewrite weight_0 by auto.
+        autorewrite with push_eval zsimplify_fast.
+        split; [reflexivity | ].
+        rewrite UniformWeight.uweight_S, UniformWeight.uweight_eq_alt by omega.
+        subst r; nia. }
     Qed.
-    Local Lemma eval_addT : forall n a b, small a -> small b -> eval (@addT n a b) = eval a + eval b.
+
+    Local Lemma addT_correct : forall n a b, small a -> small b -> canon_rep (eval a + eval b) (@addT n a b).
     Proof using lgr_big.
-      intros n a b Ha Hb; generalize (length_small Ha); generalize (length_small Hb).
+      intros n a b Ha Hb.
+      generalize (length_small Ha); generalize (length_small Hb).
+      generalize (small_bound Ha); generalize (small_bound Hb).
       clear -lgr_big Ha Hb.
       autounfold with loc; destruct (zerop n); subst.
-      { destruct a, b; cbn; try omega. }
-      { eta_expand; intros; repeat t_step. }
+      { destruct a, b; cbn; try omega; split; auto with zarith. }
+      { pose proof (UniformWeight.uweight_double_le lgr ltac:(omega) n).
+        eta_expand; split; [ | lia ].
+        rewrite Rows.add_partitions, Rows.add_div by auto.
+        rewrite partition_step.
+        Z.rewrite_mod_small; reflexivity. }
     Qed.
-    Local Lemma small_addT : forall n a b, small a -> small b -> small (@addT n a b).
-    Proof.
-      pose proof r_big as r_big.
-      clear - r_big lgr_big; autounfold with loc; intros.
-      repeat match goal with H : ?x = partition _ _ _ |- _ =>
-                   rewrite H; clear H end.
-      rewrite (surjective_pairing (Rows.add _ _ _ _)). cbn [fst snd].
-      rewrite Rows.add_partitions, Rows.add_div by (auto; distr_length).
-      autorewrite with push_eval.
-      rewrite <-Z.div_mod'', partition_step by auto.
-      rewrite Z.mod_small with (b:=weight (S n)); [ reflexivity | ].
-      split; auto with zarith; [ ].
-      apply Z.lt_le_trans with (m:=2 * weight n).
-      { rewrite <-Z.add_diag.
-        auto using Z.add_lt_mono with zarith. }
-      { rewrite UniformWeight.uweight_S by omega.
-        (* In versions newer than 8.7, auto with zarith is sufficient
-        to solve this from here. *)
-        apply Z.mul_le_mono_nonneg_r.
-        { auto with zarith. }
-        { transitivity (2 ^ 1); [ reflexivity | ].
-          apply Z.pow_le_mono_r; omega. } }
-    Qed.
-    Local Lemma eval_drop_high_addT' : forall n a b, small a -> small b -> eval (@drop_high_addT' n a b) = (eval a + eval b) mod (r^Z.of_nat (S n)).
+
+    Local Lemma drop_high_addT'_correct : forall n a b, small a -> small b -> canon_rep ((eval a + eval b) mod (r^Z.of_nat (S n))) (@drop_high_addT' n a b).
     Proof using lgr_big.
       intros n a b Ha Hb; generalize (length_small Ha); generalize (length_small Hb).
       clear -lgr_big Ha Hb.
-      autounfold with loc in *; destruct (zerop n); subst.
-      { destruct a as [| ? [|] ], b; cbn; try omega.
-        cbv [partition seq eval map] in Ha.
-        cbn in Ha.
-        rewrite (weight_0 wprops) in *.
-        rewrite Z.add_with_get_carry_full_mod.
-        subst r.
-        rewrite UniformWeight.uweight_eq_alt in * by omega.
-        autorewrite with zsimplify_const in *.
-        inversion Ha as [Ha']; clear Ha.
-        rewrite <- !Ha'.
-        reflexivity. }
-      { eta_expand; intros; repeat t_step.
-        rewrite UniformWeight.uweight_eq_alt by omega.
-        reflexivity. }
-    Qed.
-    Lemma small_drop_high_addT' : forall n a b, small a -> small b -> small (@drop_high_addT' n a b).
-    Proof using lgr_big.
-      pose proof r_big as r_big.
-      clear - r_big lgr_big; autounfold with loc; intros.
-      repeat match goal with H : ?x = partition _ _ _ |- _ =>
-                   rewrite H; clear H end.
-      rewrite (surjective_pairing (Rows.add _ _ _ _)). cbn [fst snd].
-      rewrite Rows.add_partitions by (distr_length; auto using length_partition).
+      autounfold with loc in *; subst; intros.
+      rewrite Rows.add_partitions by auto using Positional.length_extend_to_length.
       autorewrite with push_eval.
-      auto using partition_eq_mod with zarith.
+      split; try apply partition_eq_mod; auto; rewrite UniformWeight.uweight_eq_alt by omega; subst r; Z.rewrite_mod_small; auto with zarith.
     Qed.
-    Local Lemma eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v N) = eval v + if eval N <=? eval v then -eval N else 0.
-    Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R.
+
+    Local Lemma conditional_sub_correct : forall v, small v -> 0 <= eval v < eval N + R -> canon_rep (eval v + if eval N <=? eval v then -eval N else 0) (conditional_sub v N).
+    Proof using small_N lgr_big N_nz N_lt_R.
       pose proof R_plusR_le as R_plusR_le.
-      clear - small_N ri lgr_big R_numlimbs_nz N_nz N_lt_R R_plusR_le.
+      clear - small_N lgr_big N_nz N_lt_R R_plusR_le.
       intros; autounfold with loc; cbv [conditional_sub].
       repeat match goal with H : small _ |- _ =>
                              rewrite H; clear H end.
       autorewrite with push_eval.
-      assert (eval N mod weight R_numlimbs < weight (S R_numlimbs))
-             by (rewrite UniformWeight.uweight_S, !UniformWeight.uweight_eq_alt by omega; subst r R; rewrite Z.mod_small by omega; assert (0 < 2 ^ lgr) by auto with zarith; nia).
-      rewrite Rows.conditional_sub_partitions
-              by (repeat (autorewrite with distr_length push_eval; auto using partition_eq_mod with zarith)).
+      assert (weight R_numlimbs < weight (S R_numlimbs)) by (rewrite !UniformWeight.uweight_eq_alt by omega; autorewrite with push_Zof_nat; auto with zarith).
+      assert (eval N mod weight R_numlimbs < weight (S R_numlimbs)) by (pose proof (Z.mod_pos_bound (eval N) (weight R_numlimbs) ltac:(auto)); omega).
+      rewrite Rows.conditional_sub_partitions by (repeat (autorewrite with distr_length push_eval; auto using partition_eq_mod with zarith)).
       rewrite drop_high_to_length_partition by omega.
       (* TODO : do we need eval_drop_high_to_length? *)
       autorewrite with push_eval.
-      assert (eval N < weight R_numlimbs) by
-          (subst r R; rewrite UniformWeight.uweight_eq_alt; omega).
       assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst R; reflexivity).
       Z.rewrite_mod_small.
       break_match; autorewrite with zsimplify_fast; Z.ltb_to_lt.
-      { rewrite Z.add_opp_r. fold (eval N).
+      { split; [ reflexivity | ].
+        rewrite Z.add_opp_r. fold (eval N).
         auto using Z.mod_small with lia. }
-      { auto using Z.mod_small with lia. }
+      { split; auto using Z.mod_small with lia. }
     Qed.
-    Local Lemma small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
-    Proof using small_N lgr_big N_nz N_lt_R.
-      pose proof (length_small small_N) as length_N.
-      pose proof R_plusR_le as R_plusR_le.
-      clear - lgr_big N_lt_R N_nz length_N R_plusR_le.
-      cbv [conditional_sub]; autounfold with loc; intros.
-      rewrite Rows.conditional_sub_partitions by
-          (auto; autorewrite with push_eval distr_length; fold (eval N); lia).
-      rewrite drop_high_to_length_partition by omega.
-      autorewrite with push_eval.
-      apply partition_eq_mod; auto with zarith.
-    Qed.
-    Local Lemma eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
+
+    Local Lemma sub_then_maybe_add_correct : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> canon_rep (eval a - eval b + if eval a - eval b <? 0 then eval N else 0) (sub_then_maybe_add a b).
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R.
       pose proof mask_r_sub1 as mask_r_sub1.
       clear - small_N lgr_big R_numlimbs_nz N_nz N_lt_R mask_r_sub1.
       intros; autounfold with loc; cbv [sub_then_maybe_add].
       repeat match goal with H : small _ |- _ =>
                              rewrite H; clear H end.
-      rewrite Rows.sub_then_maybe_add_partitions by (distr_length; autorewrite with push_eval; auto with zarith).
+      rewrite Rows.sub_then_maybe_add_partitions by (autorewrite with push_eval distr_length; auto with zarith).
       autorewrite with push_eval.
-      replace (weight R_numlimbs) with R by (rewrite UniformWeight.uweight_eq_alt by omega; subst r R; reflexivity).
+      assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst r R; reflexivity).
       Z.rewrite_mod_small.
-      apply Z.mod_small.
+      split; [ reflexivity | ].
       break_match; Z.ltb_to_lt; lia.
     Qed.
-    Local Lemma small_sub_then_maybe_add : forall a b, small a -> small b -> small (sub_then_maybe_add a b).
-    Proof using small_N lgr_big R_numlimbs_nz.
-      pose proof mask_r_sub1 as mask_r_sub1.
-      clear - small_N lgr_big R_numlimbs_nz mask_r_sub1.
-      intros; autounfold with loc; cbv [sub_then_maybe_add].
-      repeat match goal with H : small _ |- _ =>
-                             rewrite H; clear H end.
-      rewrite Rows.sub_then_maybe_add_partitions by (distr_length; autorewrite with push_eval; auto with zarith).
-      autorewrite with push_eval.
-      apply partition_eq_mod; auto; [ ].
-      auto with zarith.
-    Qed.
+
+    Local Lemma eval_scmul: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> eval (@scmul n a v) = a * eval v.
+    Proof using lgr_big. eauto using scmul_correct, eval_canon_rep. Qed.
+    Local Lemma small_scmul : forall n a v, small v -> 0 <= a < r -> 0 <= eval v < r^Z.of_nat n -> small (@scmul n a v).
+    Proof using lgr_big. eauto using scmul_correct, small_canon_rep. Qed.
+    Local Lemma eval_addT : forall n a b, small a -> small b -> eval (@addT n a b) = eval a + eval b.
+    Proof using lgr_big. eauto using addT_correct, eval_canon_rep. Qed.
+    Local Lemma small_addT : forall n a b, small a -> small b -> small (@addT n a b).
+    Proof using lgr_big. eauto using addT_correct, small_canon_rep. Qed.
+    Local Lemma eval_drop_high_addT' : forall n a b, small a -> small b -> eval (@drop_high_addT' n a b) = (eval a + eval b) mod (r^Z.of_nat (S n)).
+    Proof using lgr_big. eauto using drop_high_addT'_correct, eval_canon_rep. Qed.
+    Local Lemma small_drop_high_addT' : forall n a b, small a -> small b -> small (@drop_high_addT' n a b).
+    Proof using lgr_big. eauto using drop_high_addT'_correct, small_canon_rep. Qed.
+    Local Lemma eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v N) = eval v + if eval N <=? eval v then -eval N else 0.
+    Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using conditional_sub_correct, eval_canon_rep. Qed.
+    Local Lemma small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
+    Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using conditional_sub_correct, small_canon_rep. Qed.
+    Local Lemma eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
+    Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using sub_then_maybe_add_correct, eval_canon_rep. Qed.
+    Local Lemma small_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> small (sub_then_maybe_add a b).
+    Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using sub_then_maybe_add_correct, small_canon_rep. Qed.
 
     Local Opaque T addT drop_high_addT' divmod zero scmul conditional_sub sub_then_maybe_add.
     Create HintDb push_mont_eval discriminated.
@@ -3935,11 +3912,9 @@ Module WordByWordMontgomery.
         unfold add; t_small.
       Qed.
       Lemma small_sub : small (sub Av Bv).
-      Proof using small_N small_Bv small_Av partition_Proper lgr_big
-R_numlimbs_nz. unfold sub; t_small. Qed.
+      Proof using small_N small_Bv small_Av partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R Bv_bound Av_bound. unfold sub; t_small. Qed.
       Lemma small_opp : small (opp Av).
-      Proof using small_N small_Bv small_Av partition_Proper lgr_big
-R_numlimbs_nz. unfold opp, sub; t_small. Qed.
+      Proof using small_N small_Bv small_Av partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R Av_bound. unfold opp, sub; t_small. Qed.
 
       Lemma eval_add : eval (add Av Bv) = eval Av + eval Bv + if (eval N <=? eval Av + eval Bv) then -eval N else 0.
       Proof using small_Bv small_Av lgr_big N_lt_R Bv_bound Av_bound small_N ri k R_numlimbs_nz N_nz B_bounds B.
