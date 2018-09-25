@@ -3722,6 +3722,7 @@ Module WordByWordMontgomery.
       Qed.
       Lemma opp_bound : 0 <= eval (opp Av) < eval N.
       Proof using small_Av R_numlimbs_nz N_nz Av_bound.
+        clear Bv_bound.
         generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
     End add_sub.
