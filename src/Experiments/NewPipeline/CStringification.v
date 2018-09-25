@@ -1239,7 +1239,7 @@ Module Compilers.
                | type.arrow (type.base s) d
                  => fun f
                      (x : (int.option.interp s -> ErrT (arith_expr_for_base s)))
-                   => match x int.option.None with
+                   => match x int.option.None return _ with
                      | inl x'
                        => @collect_args_and_apply_unknown_casts
                            d
