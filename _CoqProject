@@ -6537,6 +6537,7 @@ src/Util/ZRange.v
 src/Util/ZUtil.v
 src/Util/Bool/Equality.v
 src/Util/Bool/IsTrue.v
+src/Util/Bool/Reflect.v
 src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
 src/Util/ListUtil/FoldBool.v
