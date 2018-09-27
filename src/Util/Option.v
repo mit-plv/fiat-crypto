@@ -75,6 +75,33 @@ Section Relations.
     : Equivalence (option_eq R). Proof. split; exact _. Qed.
 End Relations.
 
+Global Instance bind_Proper {A B}
+  : Proper (eq ==> (pointwise_relation _ eq) ==> eq) (@bind A B).
+Proof.
+  cbv [respectful bind pointwise_relation Proper]; intros; subst; break_innermost_match; auto.
+Qed.
+
+Global Instance bind_Proper_pointwise_option_eq {A B RB}
+  : Proper (eq ==> (pointwise_relation _ (option_eq RB)) ==> option_eq RB) (@bind A B) | 90.
+Proof.
+  cbv [respectful bind pointwise_relation Proper]; intros; subst; break_innermost_match; cbn [option_eq]; auto.
+Qed.
+
+Lemma bind_Proper_option_eq_hetero {A A' B B'} {RA RB : _ -> _ -> Prop}
+      a a' (HA : option_eq RA a a') b b' (HB : forall a a', RA a a' -> option_eq RB (b a) (b' a'))
+  : option_eq RB (@bind A B a b) (@bind A' B' a' b').
+Proof.
+  cbv [bind].
+  destruct a as [a|], a' as [a'|]; try (reflexivity || congruence || exfalso; assumption).
+  cbn [option_eq] in *; auto.
+Qed.
+
+Global Instance bind_Proper_option_eq {A B RA RB}
+  : Proper (option_eq RA ==> (RA ==> option_eq RB) ==> option_eq RB) (@bind A B) | 100.
+Proof.
+  cbv [Proper respectful]; eapply bind_Proper_option_eq_hetero.
+Qed.
+
 Global Instance Proper_option_rect_nd_changebody
       {A B:Type} {RB:relation B} {a:option A}
   : Proper (pointwise_relation _ RB ==> RB ==> RB) (fun S N => option_rect (fun _ => B) S N a).
