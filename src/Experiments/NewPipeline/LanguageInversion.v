@@ -8,6 +8,7 @@ Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.FixCoqMistakes.
@@ -99,13 +100,9 @@ Module Compilers.
                    | progress break_innermost_match
                    | progress eliminate_hprop_eq
                    | congruence
+                   | progress Reflect.beq_to_eq base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb
+                   | progress Reflect.beq_to_eq base.type.base_beq base.type.internal_base_dec_bl base.type.internal_base_dec_lb
                    | match goal with
-                     | [ H : base.type.type_beq _ _ = true |- _ ] => apply base.type.internal_type_dec_bl in H; auto
-                     | [ H : context[base.type.type_beq ?x ?x] |- _ ] => rewrite base.type.internal_type_dec_lb in H by auto
-                     | [ |- context[base.type.internal_type_dec_bl ?x ?y ?pf] ] => generalize (base.type.internal_type_dec_bl x y pf); intro
-                     | [ H : base.type.base_beq _ _ = true |- _ ] => apply base.type.internal_base_dec_bl in H; auto
-                     | [ H : context[base.type.base_beq ?x ?x] |- _ ] => rewrite base.type.internal_base_dec_lb in H by auto
-                     | [ |- context[base.type.internal_base_dec_bl ?x ?y ?pf] ] => generalize (base.type.internal_base_dec_bl x y pf); intro
                      | [ H : _ |- _ ] => rewrite H
                      end ].
 
@@ -146,6 +143,7 @@ Module Compilers.
           | right _ => None
           end.
     Proof. cbv [base.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
+
   End base.
 
   Module type.
@@ -306,32 +304,15 @@ Module Compilers.
     := type.type_eq_dec _ base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb.
 
   Ltac type_beq_to_eq :=
-    repeat match goal with
-           | [ H : type.type_beq _ _ _ _ = true |- _ ]
-             => apply type.internal_type_dec_bl in H; [ | apply base.type.internal_type_dec_bl ]
-           | [ H : context[type.type_beq _ _ ?x ?x] |- _ ]
-             => rewrite type.internal_type_dec_lb in H by (reflexivity || exact base.type.internal_type_dec_lb)
-           | [ H : type.type_beq _ _ ?x ?y = true |- _ ]
-             => generalize dependent (type.internal_type_dec_bl _ _ base.type.internal_type_dec_bl _ _ H); clear H; intros
-           | [ |- type.type_beq _ _ _ _ = true ]
-             => apply type.internal_type_dec_lb; [ apply base.type.internal_type_dec_lb | ]
-           | [ H : base.type.type_beq _ _ = true |- _ ]
-             => apply base.type.internal_type_dec_bl in H
-           | [ H : context[base.type.type_beq ?x ?x] |- _ ]
-             => rewrite base.type.internal_type_dec_lb in H by reflexivity
-           | [ H : base.type.type_beq ?x ?y = true |- _ ]
-             => generalize dependent (base.type.internal_type_dec_bl _ _ H); clear H; intros
-           | [ |- base.type.type_beq _ _ = true ]
-             => apply base.type.internal_type_dec_lb
-           | [ H : base.type.type_beq _ _ = true |- _ ]
-             => apply base.type.internal_base_dec_bl in H
-           | [ H : context[base.type.base_beq ?x ?x] |- _ ]
-             => rewrite base.type.internal_base_dec_lb in H by reflexivity
-           | [ H : base.type.base_beq ?x ?y = true |- _ ]
-             => generalize dependent (base.type.internal_base_dec_bl _ _ H); clear H; intros
-           | [ |- base.type.base_beq _ _ = true ]
-             => apply base.type.internal_base_dec_lb
-           end.
+    repeat first [ progress Reflect.beq_to_eq base.type.base_beq base.type.internal_base_dec_bl base.type.internal_base_dec_lb
+                 | progress Reflect.beq_to_eq base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb
+                 | progress Reflect.beq_to_eq
+                            (@type.type_beq base.type base.type.type_beq)
+                            (@type.internal_type_dec_bl base.type base.type.type_beq base.type.internal_type_dec_bl)
+                            (@type.internal_type_dec_lb base.type base.type.type_beq base.type.internal_type_dec_lb)
+                 | match goal with
+                   | [ H : ?x <> ?x |- _ ] => exfalso; exact (H eq_refl)
+                   end ].
 
   Ltac rewrite_type_transport_correct :=
     cbv [type.try_transport_cps type.try_transport base.try_transport base.try_transport_cps] in *;
