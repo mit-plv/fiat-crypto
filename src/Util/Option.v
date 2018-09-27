@@ -116,6 +116,13 @@ Global Instance Proper_option_rect_nd_changevalue
   : Proper (RB ==> option_eq RA ==> RB) (@option_rect A (fun _ => B) some).
 Proof. cbv; repeat (intro || break_match || f_equiv || intuition congruence). Qed.
 
+Lemma bind_zero_l {A B} f : @bind A B None f = None.
+Proof. reflexivity. Qed.
+Lemma bind_zero_r {A B} v : @bind A B v (fun _ => None) = None.
+Proof. destruct v; reflexivity. Qed.
+Lemma bind_zero_r_ext {A B} v f : (forall v, f v = None) -> @bind A B v f = None.
+Proof. destruct v; cbn; auto. Qed.
+
 Lemma option_rect_false_returns_true_iff
       {T} {R} {reflexiveR:Reflexive R}
       (f:T->bool) {Proper_f:Proper(R==>eq)f} (o:option T) :
