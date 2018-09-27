@@ -78,3 +78,13 @@ Ltac destruct_one_head'_bool := match goal with H : bool |- _ => clear H || dest
 Ltac destruct_one_head_bool := destruct_one_head'_bool; simpl in *.
 Ltac destruct_head'_bool := repeat destruct_one_head'_bool.
 Ltac destruct_head_bool := repeat destruct_one_head_bool.
+
+Ltac destruct_one_head'_False := match goal with H : False |- _ => destruct H end.
+Ltac destruct_one_head_False := destruct_one_head'_False; simpl in *.
+Ltac destruct_head'_False := repeat destruct_one_head'_False.
+Ltac destruct_head_False := repeat destruct_one_head_False.
+
+Ltac destruct_one_head'_Empty_set := match goal with H : Empty_set |- _ => destruct H end.
+Ltac destruct_one_head_Empty_set := destruct_one_head'_Empty_set; simpl in *.
+Ltac destruct_head'_Empty_set := repeat destruct_one_head'_Empty_set.
+Ltac destruct_head_Empty_set := repeat destruct_one_head_Empty_set.
