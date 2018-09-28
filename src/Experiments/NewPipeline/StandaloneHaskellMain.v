@@ -34,8 +34,6 @@ Extract Inlined Constant _IO_bind => "(Prelude.>>=)".
 Extract Inlined Constant _IO_return => "return".
 Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
 Extract Inlined Constant cast_io => "".
-(** Error messages from deeply nested axioms *)
-Extract Constant Rewriter.Compilers.RewriteRules.Compile.ERROR_BAD_REWRITE_RULE => "\pat e -> Prelude.error ""ERROR BAD REWRITE RULE""".
 
 Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
 

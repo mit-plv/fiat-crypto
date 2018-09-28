@@ -61,12 +61,9 @@ Module Compilers.
       (intros ? ? ? ? wf_do_again ? ?);
       eapply @Compile.wf_assemble_identifier_rewriters;
       eauto using
-            pattern.ident.to_typed_invert_bind_args,
-      pattern.ident.ident_beq,
-      pattern.ident.internal_ident_dec_bl,
-      pattern.ident.try_make_transport_ident_cps_correct,
-      pattern.ident.eta_ident_cps_correct
-        with nocore.
+            pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct
+        with nocore;
+      try reflexivity.
     Local Ltac start_Interp_proof rewrite_head_eq all_rewrite_rules_eq rewrite_head0 :=
       start_Wf_or_interp_proof rewrite_head_eq all_rewrite_rules_eq rewrite_head0.
 
