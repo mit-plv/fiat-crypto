@@ -1955,7 +1955,7 @@ Module Fancy.
     Definition of_prefancy_step
                (of_prefancy : forall (next_name : name) {t} (e : @cexpr var t), @expr name)
                (next_name : name) {t} (e : @cexpr var t) : @expr name
-      := let default _ := (e' <- type.try_transport base.try_make_transport_cps (@cexpr var) t tZ e;
+      := let default _ := (e' <- type.try_transport (@base.try_make_transport_cps) (@cexpr var) t tZ e;
                              Ret (of_prefancy_scalar e')) in
          match e with
          | PreFancy.LetInAppIdentZ s d r eidc x f

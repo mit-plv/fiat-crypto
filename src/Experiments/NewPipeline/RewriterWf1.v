@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
+Require Import Coq.Lists.SetoidList.
 Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.MSets.MSetPositive.
@@ -15,11 +16,15 @@ Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
+Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 Import ListNotations. Local Open Scope list_scope.
@@ -38,6 +43,47 @@ Module Compilers.
 
   Module Import RewriteRules.
     Import Rewriter.Compilers.RewriteRules.
+
+    Module pattern.
+      Module base.
+        Lemma add_var_types_cps_id {t v evm T k}
+        : @pattern.base.add_var_types_cps t v evm T k = k (@pattern.base.add_var_types_cps t v evm _ id).
+        Proof using Type.
+          revert v evm T k.
+          induction t; cbn in *; intros; break_innermost_match; try reflexivity;
+            auto.
+          repeat match goal with H : _ |- _ => etransitivity; rewrite H; clear H; [ | reflexivity ] end.
+          reflexivity.
+        Qed.
+      End base.
+
+      Module type.
+        Lemma add_var_types_cps_id {t v evm T k}
+        : @pattern.type.add_var_types_cps t v evm T k = k (@pattern.type.add_var_types_cps t v evm _ id).
+        Proof using Type.
+          revert v evm T k.
+          induction t; cbn in *; intros; break_innermost_match; try reflexivity;
+            auto using base.add_var_types_cps_id.
+          repeat match goal with H : _ |- _ => etransitivity; rewrite H; clear H; [ | reflexivity ] end.
+          reflexivity.
+        Qed.
+
+        Lemma app_forall_vars_under_forall_vars_relation
+              {p k1 k2 F v1 v2 evm}
+          : @pattern.type.under_forall_vars_relation p k1 k2 F v1 v2
+            -> option_eq
+                 (F _)
+                 (@pattern.type.app_forall_vars p k1 v1 evm)
+                 (@pattern.type.app_forall_vars p k2 v2 evm).
+        Proof using Type.
+          revert k1 k2 F v1 v2 evm.
+          cbv [pattern.type.under_forall_vars_relation pattern.type.app_forall_vars pattern.type.forall_vars].
+          generalize (PositiveMap.empty base.type).
+          induction (List.rev (PositiveSet.elements p)) as [|x xs IHxs]; cbn; eauto.
+          intros; break_innermost_match; cbn in *; eauto.
+        Qed.
+      End type.
+    End pattern.
 
     Module Compile.
       Import Rewriter.Compilers.RewriteRules.Compile.
@@ -136,49 +182,49 @@ Module Compilers.
               { reflexivity. }
               { intros; subst; eapply wf_value'_Proper_list; [ | solve [ eauto ] ]; wf_t. } }
           Qed.
-
-          Section wf.
-            Context (G : list { t : _ & var1 t * var2 t }%type).
-            Inductive wf_anyexpr : forall t, @AnyExpr.anyexpr base_type ident var1 -> @AnyExpr.anyexpr base_type ident var2 -> Prop :=
-            | Wf_wrap {t : base_type} {e1 e2} : expr.wf (t:=t) G e1 e2 -> @wf_anyexpr (type.base t) (AnyExpr.wrap e1) (AnyExpr.wrap e2).
-          End wf.
         End with_var2.
       End with_type0.
-      Import AnyExpr.
-      Section with_type.
+      Local Notation EvarMap := pattern.EvarMap.
+      Section with_var.
+        Local Notation type_of_list
+          := (fold_right (fun a b => prod a b) unit).
+        Local Notation type_of_list_cps
+          := (fold_right (fun a K => a -> K)).
         Context {ident : type.type base.type -> Type}
-                {pident : Type}
-                (full_types : pident -> Type)
-                (invert_bind_args : forall t (idc : ident t) (pidc : pident), option (full_types pidc))
-                (type_of_pident : forall (pidc : pident), full_types pidc -> type.type base.type)
-                (pident_to_typed : forall (pidc : pident) (args : full_types pidc), ident (type_of_pident pidc args))
                 (eta_ident_cps : forall {T : type.type base.type -> Type} {t} (idc : ident t)
                                         (f : forall t', ident t' -> T t'),
                     T t)
+                {pident : type.type pattern.base.type -> Type}
+                (pident_arg_types : forall t, pident t -> list Type)
+                (pident_unify pident_unify_unknown : forall t t' (idc : pident t) (idc' : ident t'), option (type_of_list (pident_arg_types t idc)))
+                {raw_pident : Type}
+                (strip_types : forall t, pident t -> raw_pident)
+                (raw_pident_beq : raw_pident -> raw_pident -> bool)
+                (type_vars_of_pident : forall t, pident t -> list (type.type pattern.base.type))
+
+                (full_types : raw_pident -> Type)
+                (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
+                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base.type)
+                (raw_pident_to_typed : forall (pidc : raw_pident) (args : full_types pidc), ident (type_of_raw_pident pidc args))
+                (raw_pident_is_simple : raw_pident -> bool)
+                (pident_unify_unknown_correct
+                 : forall t t' idc idc', pident_unify_unknown t t' idc idc' = pident_unify t t' idc idc')
+                (invert_bind_args_unknown_correct
+                 : forall t idc pidc, invert_bind_args_unknown t idc pidc = invert_bind_args t idc pidc)
                 (eta_ident_cps_correct : forall T t idc f, @eta_ident_cps T t idc f = f _ idc)
-                (of_typed_ident : forall {t}, ident t -> pident)
-                (arg_types : pident -> option Type)
-                (bind_args : forall {t} (idc : ident t), match arg_types (of_typed_ident idc) return Type with Some t => t | None => unit end)
-                (pident_beq : pident -> pident -> bool)
-                (try_make_transport_ident_cps : forall (P : pident -> Type) (idc1 idc2 : pident), ~> option (P idc1 -> P idc2))
-                (pident_to_typed_invert_bind_args_type
-                 : forall t idc p f, invert_bind_args t idc p = Some f -> t = type_of_pident p f)
-                (pident_to_typed_invert_bind_args
+                (raw_pident_to_typed_invert_bind_args_type
+                 : forall t idc p f, invert_bind_args t idc p = Some f -> t = type_of_raw_pident p f)
+                (raw_pident_to_typed_invert_bind_args
                  : forall t idc p f (pf : invert_bind_args t idc p = Some f),
-                    pident_to_typed p f = rew [ident] pident_to_typed_invert_bind_args_type t idc p f pf in idc)
-                (pident_bl : forall p q, pident_beq p q = true -> p = q)
-                (pident_lb : forall p q, p = q -> pident_beq p q = true)
-                (try_make_transport_ident_cps_correct
-                 : forall P idc1 idc2 T k,
-                    try_make_transport_ident_cps P idc1 idc2 T k
-                    = k (match Sumbool.sumbool_of_bool (pident_beq idc1 idc2) with
-                         | left pf => Some (fun v => rew [P] pident_bl _ _ pf in v)
-                         | right _ => None
-                         end)).
+                    raw_pident_to_typed p f = rew [ident] raw_pident_to_typed_invert_bind_args_type t idc p f pf in idc)
+                (*(raw_pident_bl : forall p q, raw_pident_beq p q = true -> p = q)
+                (raw_pident_lb : forall p q, p = q -> raw_pident_beq p q = true)*).
+
         Local Notation type := (type.type base.type).
-        Local Notation pattern := (@pattern.pattern pident).
         Local Notation expr := (@expr.expr base.type ident).
-        Local Notation anyexpr := (@anyexpr base.type ident).
+        Local Notation pattern := (@pattern.pattern pident).
+        Local Notation rawpattern := (@pattern.Raw.pattern raw_pident).
+        Local Notation anypattern := (@pattern.anypattern pident).
         Local Notation UnderLets := (@UnderLets.UnderLets base.type ident).
         Local Notation ptype := (type.type pattern.base.type).
         Local Notation value' := (@value' base.type ident).
@@ -187,15 +233,367 @@ Module Compilers.
         Local Notation Base_value := (@Base_value base.type ident).
         Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base.type ident).
         Local Notation splice_value_with_lets := (@splice_value_with_lets base.type ident).
+        Local Notation to_raw_pattern := (@pattern.to_raw pident raw_pident (@strip_types)).
         Local Notation reify := (@reify ident).
         Local Notation reflect := (@reflect ident).
         Local Notation rawexpr := (@rawexpr ident).
-        Local Notation eval_decision_tree var := (@eval_decision_tree ident var pident full_types invert_bind_args type_of_pident pident_to_typed).
+        Local Notation eval_decision_tree var := (@eval_decision_tree ident var pident full_types invert_bind_args type_of_raw_pident raw_pident_to_typed).
         Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps ident _ e _ id).
-        Local Notation bind_data_cps var := (@bind_data_cps ident var pident of_typed_ident arg_types bind_args try_make_transport_ident_cps).
-        Local Notation bind_data e p := (@bind_data_cps _ e p _ id).
-        Local Notation ptype_interp := (@ptype_interp ident).
-        Local Notation binding_dataT var := (@binding_dataT ident var pident arg_types).
+        Local Notation unify_pattern' var := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
+        Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
+
+        Section with_var1.
+          Context {var : type -> Type}.
+          Local Notation expr := (@expr.expr base.type ident var).
+
+          Local Notation "e1 === e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
+
+          Fixpoint rawexpr_equiv_expr {t0} (e1 : expr t0) (r2 : rawexpr) {struct r2} : Prop
+            := match r2 with
+               | rIdent _ t idc t' alt
+                 => alt === e1 /\ expr.Ident idc === e1
+               | rApp f x t alt
+                 => alt === e1
+                    /\ match e1 with
+                       | expr.App _ _ f' x'
+                         => rawexpr_equiv_expr f' f /\ rawexpr_equiv_expr x' x
+                       | _ => False
+                       end
+               | rExpr t e => e === e1
+               | rValue t e => reify e === e1
+               end.
+
+          Definition rawexpr_ok (r : rawexpr) := rawexpr_equiv_expr (expr_of_rawexpr r) r.
+
+          Fixpoint rawexpr_equiv (r1 r2 : rawexpr) : Prop
+            := match r1, r2 with
+               | rExpr t e, r
+               | r, rExpr t e
+                 => rawexpr_equiv_expr e r
+                                       (*
+               | rValue t1 e1, rValue t2 e2
+                 => existT _ t1 e1 = existT _ t2 e2
+                                        *)
+               | rValue t e, r
+               | r, rValue t e
+                 => rawexpr_equiv_expr (reify e) r
+               | rIdent _ t1 idc1 t'1 alt1, rIdent _ t2 idc2 t'2 alt2
+                 => alt1 === alt2
+                    /\ (existT ident _ idc1 = existT ident _ idc2)
+               | rApp f1 x1 t1 alt1, rApp f2 x2 t2 alt2
+                 => alt1 === alt2
+                    /\ rawexpr_equiv f1 f2
+                    /\ rawexpr_equiv x1 x2
+               | rIdent _ _ _ _ _, _
+               | rApp _ _ _ _, _
+                 => False
+               end.
+
+          Global Instance rawexpr_equiv_Reflexive : Reflexive rawexpr_equiv.
+          Proof using Type.
+            intro x; induction x; cbn; repeat apply conj; break_innermost_match; try reflexivity; auto.
+          Qed.
+
+          Global Instance rawexpr_equiv_Symmetric : Symmetric rawexpr_equiv.
+          Proof using Type.
+            intro x; induction x; intro y; destruct y; intros;
+              repeat first [ progress destruct_head'_and
+                           | progress subst
+                           | progress cbn in *
+                           | progress inversion_sigma
+                           | break_innermost_match_step
+                           | break_innermost_match_hyps_step
+                           | type.inversion_type_step
+                           | solve [ auto ]
+                           | apply conj
+                           | (exists eq_refl)
+                           | apply path_sigT_uncurried ].
+          Qed.
+
+          Lemma rawexpr_equiv_expr_to_rawexpr_equiv {t} e r
+            : @rawexpr_equiv_expr t e r <-> rawexpr_equiv (rExpr e) r /\ rawexpr_equiv r (rExpr e).
+          Proof using Type.
+            split; [ intro H | intros [H0 H1] ]; cbn; try apply conj; (idtac + symmetry); assumption.
+          Qed.
+
+          Local Ltac invert_t_step :=
+            first [ progress cbn -[rawexpr_equiv] in *
+                  | exfalso; assumption
+                  | progress intros
+                  | progress destruct_head'_and
+                  | progress subst
+                  | match goal with
+                    | [ H : (existT ?P ?t (reify ?e)) = _ |- _ ] => generalize dependent (existT P t (reify e)); clear e t
+                    | [ H : _ = (existT ?P ?t (reify ?e)) |- _ ] => generalize dependent (existT P t (reify e)); clear e t
+                    | [ H : existT value ?t1 ?e1 = existT value ?t2 ?e2 |- _ ]
+                      => first [ is_var t1; is_var e1 | is_var t2; is_var e2 ];
+                         induction_sigma_in_using H (@path_sigT_rect)
+                    | [ H : match reify ?e with _ => _ end |- _ ] => generalize dependent (reify e); clear e
+                    end
+                  | progress inversion_sigma
+                  | progress inversion_option
+                  | reflexivity
+                  | (exists eq_refl)
+                  | match goal with
+                    | [ |- ?x = ?x /\ _ ] => apply conj
+                    | [ |- ?x = ?y :> sigT _ ] => apply path_sigT_uncurried
+                    end
+                  | (idtac + symmetry); assumption ].
+          Local Ltac equiv_t_step :=
+            first [ invert_t_step
+                  | apply conj
+                  | solve [ eauto ]
+                  | break_innermost_match_step
+                  | expr.inversion_expr_step
+                  | type.inversion_type_step
+                  | break_innermost_match_hyps_step
+                  | match goal with
+                    | [ H : forall y z : rawexpr, rawexpr_equiv ?x _ -> _ -> _, H' : rawexpr_equiv ?x _ |- _ ]
+                      => unique pose proof (fun z => H _ z H')
+                    | [ H : forall z : rawexpr, rawexpr_equiv ?x _ -> _, H' : rawexpr_equiv ?x _ |- _ ]
+                      => unique pose proof (H _ H')
+                    | [ H : rawexpr_equiv_expr _ _ |- _ ] => rewrite rawexpr_equiv_expr_to_rawexpr_equiv in H
+                    | [ |- rawexpr_equiv_expr ?e ?r ] => change (rawexpr_equiv (rExpr e) r)
+                    end
+                  | expr.invert_match_step ].
+
+          Local Instance rawexpr_equiv_expr_Proper {t}
+            : Proper (eq ==> rawexpr_equiv ==> Basics.impl) (@rawexpr_equiv_expr t).
+          Proof using Type.
+            cbv [Proper respectful Basics.impl]; intros e e' ? r1 r2 H0 H1; subst e'.
+            revert r2 t e H1 H0.
+            induction r1, r2; cbn in *; repeat equiv_t_step.
+          Qed.
+
+          Local Instance rawexpr_equiv_expr_Proper' {t}
+            : Proper (eq ==> rawexpr_equiv ==> Basics.flip Basics.impl) (@rawexpr_equiv_expr t).
+          Proof using Type.
+            intros e e' ? r1 r2 H0 H1; subst e'.
+            rewrite H0; assumption.
+          Qed.
+
+          Local Instance rawexpr_equiv_expr_Proper'' {t}
+            : Proper (eq ==> rawexpr_equiv ==> iff) (@rawexpr_equiv_expr t).
+          Proof using Type.
+            intros e e' ? r1 r2 H; subst e'.
+            split; intro; (rewrite H + rewrite <- H); assumption.
+          Qed.
+
+          Global Instance rawexpr_equiv_Transitive : Transitive rawexpr_equiv.
+          Proof using Type.
+            intro x; induction x; intros y z; destruct y, z.
+            all: intros; cbn in *; repeat invert_t_step.
+            all: cbn in *; expr.invert_match; break_innermost_match.
+            all: try solve [ intros; destruct_head'_and; inversion_sigma; subst; cbn [eq_rect] in *; subst; repeat apply conj; eauto;
+                             match goal with
+                             | [ H : rawexpr_equiv ?a ?b, H' : rawexpr_equiv_expr ?e ?a |- rawexpr_equiv_expr ?e ?b ]
+                               => rewrite <- H; assumption
+                             | [ H : rawexpr_equiv ?a ?b, H' : rawexpr_equiv_expr ?e ?b |- rawexpr_equiv_expr ?e ?a ]
+                               => rewrite H; assumption
+                             end
+                           | exfalso; assumption
+                           | repeat equiv_t_step ].
+          Qed.
+
+          Global Instance rawexpr_equiv_Equivalence : Equivalence rawexpr_equiv.
+          Proof using Type. split; exact _. Qed.
+
+          Lemma swap_swap_list {A n m ls ls'}
+            : @swap_list A n m ls = Some ls' -> @swap_list A n m ls' = Some ls.
+          Proof using Type.
+            cbv [swap_list].
+            break_innermost_match; intros; inversion_option; subst;
+              f_equal; try apply list_elementwise_eq; intros;
+                repeat first [ progress subst
+                             | progress inversion_option
+                             | rewrite !nth_set_nth
+                             | rewrite !length_set_nth
+                             | congruence
+                             | match goal with
+                               | [ H : context[nth_error (set_nth _ _ _) _] |- _ ] => rewrite !nth_set_nth in H
+                               | [ H : context[List.length (set_nth _ _ _)] |- _ ] => rewrite !length_set_nth in H
+                               | [ H : nth_error ?ls ?n = Some ?x |- _ ] => unique pose proof (@nth_error_value_length _ _ _ _ H)
+                               | [ H : context[Nat.eq_dec ?x ?y] |- _ ] => destruct (Nat.eq_dec x y)
+                               | [ |- context[Nat.eq_dec ?x ?y] ] => destruct (Nat.eq_dec x y)
+                               | [ H : context[lt_dec ?x ?y] |- _ ] => destruct (lt_dec x y)
+                               end ].
+          Qed.
+          Lemma swap_swap_list_iff {A n m ls ls'}
+            : @swap_list A n m ls = Some ls' <-> @swap_list A n m ls' = Some ls.
+          Proof using Type. split; apply swap_swap_list. Qed.
+
+          Lemma swap_list_eqlistA {A R}
+            : Proper (eq ==> eq ==> SetoidList.eqlistA R ==> option_eq (SetoidList.eqlistA R))
+                     (@swap_list A).
+          Proof using Type.
+            intros n n' ? m m' ? ls1 ls2 Hls; subst m' n'.
+            cbv [swap_list].
+            break_innermost_match; intros; inversion_option; subst; cbn [option_eq];
+              try apply list_elementwise_eqlistA; intros;
+                repeat first [ progress subst
+                             | progress inversion_option
+                             | rewrite !nth_set_nth
+                             | rewrite !length_set_nth
+                             | progress cbv [option_eq] in *
+                             | congruence
+                             | break_innermost_match_step
+                             | match goal with
+                               | [ H : eqlistA _ _ _ |- _ ] => unique pose proof (@eqlistA_length _ _ _ _ H)
+                               | [ H : context[nth_error (set_nth _ _ _) _] |- _ ] => rewrite !nth_set_nth in H
+                               | [ H : context[List.length (set_nth _ _ _)] |- _ ] => rewrite !length_set_nth in H
+                               | [ H : nth_error ?ls ?n = Some ?x |- _ ] => unique pose proof (@nth_error_value_length _ _ _ _ H)
+                               | [ H : context[Nat.eq_dec ?x ?y] |- _ ] => destruct (Nat.eq_dec x y)
+                               | [ |- context[Nat.eq_dec ?x ?y] ] => destruct (Nat.eq_dec x y)
+                               | [ H : context[lt_dec ?x ?y] |- _ ] => destruct (lt_dec x y)
+                               | [ |- context[lt_dec ?x ?y] ] => destruct (lt_dec x y)
+                               | [ H : eqlistA ?R ?ls1 ?ls2, H1 : nth_error ?ls1 ?n = Some ?v1, H2 : nth_error ?ls2 ?n = Some ?v2 |- _ ]
+                                 => unique assert (R v1 v2)
+                                   by (generalize (nth_error_Proper_eqlistA ls1 ls2 H n n eq_refl); rewrite H1, H2; cbn; congruence)
+                               | [ H : eqlistA ?R ?ls1 ?ls2, H1 : nth_error ?ls1 ?n = _, H2 : nth_error ?ls2 ?n = _ |- _ ]
+                                 => exfalso; generalize (nth_error_Proper_eqlistA ls1 ls2 H n n eq_refl); rewrite H1, H2; cbn; congruence
+                               | [ |- nth_error ?a ?b = _ ] => destruct (nth_error a b) eqn:?
+                               end ].
+          Qed.
+
+          Local Ltac rew_swap_list_step0 :=
+            match goal with
+            | [ H : swap_list ?a ?b ?ls1 = Some ?ls2, H' : context[swap_list ?a ?b ?ls2] |- _ ]
+              => rewrite (swap_swap_list H) in H'
+            | [ H : swap_list ?a ?b ?ls1 = Some ?ls2 |- context[swap_list ?a ?b ?ls2] ]
+              => rewrite (swap_swap_list H)
+            | [ H : swap_list ?a ?b ?ls1 = Some ?ls2 |- context[swap_list ?a ?b ?ls1] ]
+              => rewrite H
+            end.
+
+          Lemma swap_swap_list_eqlistA {A R a b ls1 ls2 ls3 ls4}
+                (H : swap_list a b ls1 = Some ls2)
+                (H' : swap_list a b ls3 = Some ls4)
+                (Hl : eqlistA R ls2 ls3)
+            : @eqlistA A R ls1 ls4.
+          Proof using Type.
+            generalize (swap_list_eqlistA a a eq_refl b b eq_refl _ _ Hl).
+            clear Hl.
+            (destruct (swap_list a b ls2) eqn:?, (swap_list a b ls4) eqn:?).
+            all: repeat (rew_swap_list_step0 || inversion_option || subst); cbn [option_eq]; tauto.
+          Qed.
+
+          Lemma swap_list_None_iff {A} (i j : nat) (ls : list A)
+            : swap_list i j ls = None <-> (length ls <= i \/ length ls <= j)%nat.
+          Proof using Type.
+            rewrite <- !nth_error_None.
+            cbv [swap_list]; break_innermost_match; intuition congruence.
+          Qed.
+
+          Lemma swap_list_Some_length {A} (i j : nat) (ls ls' : list A)
+            : swap_list i j ls = Some ls'
+              -> (i < length ls /\ j < length ls /\ length ls' = length ls)%nat.
+          Proof using Type.
+            cbv [swap_list]; break_innermost_match; intros; inversion_option; subst.
+            repeat match goal with H : _ |- _ => apply nth_error_value_length in H end.
+            autorewrite with distr_length; tauto.
+          Qed.
+
+          Local Ltac fin_handle_list :=
+            destruct_head' iff;
+            destruct_head'_and;
+            cbn [length] in *;
+            try solve [ destruct_head'_or;
+                        exfalso;
+                        repeat match goal with
+                               | [ H : ?T, H' : ?T |- _ ] => clear H'
+                               | [ H : ?T |- _ ]
+                                 => lazymatch type of H with
+                                    | _ = _ :> nat => fail
+                                    | (_ <= _)%nat => fail
+                                    | (_ < _)%nat => fail
+                                    | ~_ = _ :> nat => fail
+                                    | ~(_ <= _)%nat => fail
+                                    | ~(_ < _)%nat => fail
+                                    | _ => clear H
+                                    end
+                               | [ H : context[length ?ls] |- _ ]
+                                 => generalize dependent (length ls); intros
+                               | _ => progress subst
+                               | _ => lia
+                               end ].
+
+          Local Ltac handle_nth_error :=
+            repeat match goal with
+                   | [ H : nth_error _ _ = None |- _ ] => rewrite nth_error_None in H
+                   | [ H : nth_error _ _ = Some _ |- _ ] => unique pose proof (@nth_error_value_length _ _ _ _ H)
+                   end;
+            fin_handle_list.
+
+          Lemma nth_error_swap_list {A} {i j : nat} {ls ls' : list A}
+            : swap_list i j ls = Some ls'
+              -> forall k,
+                nth_error ls' k = if Nat.eq_dec k i then nth_error ls j else if Nat.eq_dec k j then nth_error ls i else nth_error ls k.
+          Proof.
+            cbv [swap_list]; break_innermost_match; intros; inversion_option; subst;
+              rewrite ?nth_set_nth; distr_length; break_innermost_match; try congruence; try lia;
+                handle_nth_error.
+          Qed.
+
+          Lemma unify_types_cps_id {t e p T k}
+            : @unify_types ident var pident t e p T k = k (@unify_types ident var pident t e p _ id).
+          Proof using Type.
+            cbv [unify_types]; break_innermost_match; try reflexivity.
+            etransitivity; rewrite pattern.type.add_var_types_cps_id; reflexivity.
+          Qed.
+
+          Lemma unify_pattern'_cps_id {t e p evm K v T cont}
+            : @unify_pattern' var t e p evm K v T cont
+              = (v' <- @unify_pattern' var t e p evm K v _ (@Some _); cont v')%option.
+          Proof using Type.
+            clear.
+            revert e evm K v T cont; induction p; intros; cbn in *;
+              repeat first [ progress rewrite_type_transport_correct
+                           | reflexivity
+                           | progress cbv [Option.bind cpscall option_bind'] in *
+                           | match goal with H : _ |- _ => etransitivity; rewrite H; clear H; [ | reflexivity ] end
+                           | break_innermost_match_step ].
+          Qed.
+
+          Lemma unify_pattern_cps_id {t e p K v T cont}
+            : @unify_pattern var t e p K v T cont
+              = (v' <- @unify_pattern var t e p K v _ (@Some _); cont v')%option.
+          Proof using Type.
+            clear.
+            cbv [unify_pattern].
+            etransitivity; rewrite unify_types_cps_id; [ | reflexivity ].
+            repeat first [ reflexivity
+                         | progress rewrite_type_transport_correct
+                         | progress cbv [Option.bind cpscall option_bind'] in *
+                         | match goal with
+                           | [ |- @unify_pattern' _ _ _ _ _ _ _ _ _ = _ ]
+                             => etransitivity; rewrite unify_pattern'_cps_id; [ | reflexivity ]
+                           end
+                         | break_innermost_match_step
+                         | break_match_step ltac:(fun _ => idtac) ].
+          Qed.
+
+          Lemma normalize_deep_rewrite_rule_cps_id
+                {should_do_again with_opt under_lets is_cps t v T k}
+                (Hk : k None = None)
+                (Hv : (match is_cps, with_opt return @deep_rewrite_ruleTP_gen ident var should_do_again with_opt under_lets is_cps t -> Prop
+                       with
+                       | true, true => fun v => forall T k, v T k = k (v _ id)
+                       | true, false => fun v => forall T k, v T k = (v' <- v _ (@Some _); k v')%option
+                       | false, _ => fun _ => True
+                       end)
+                        v)
+            : @normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v T k = k (@normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v _ id).
+          Proof using Type.
+            clear -Hv Hk; cbn in *.
+            repeat first [ progress cbn in *
+                         | progress destruct_head'_bool
+                         | reflexivity
+                         | progress cbv [id Option.bind] in *
+                         | solve [ auto ]
+                         | break_innermost_match_step
+                         | rewrite Hv; (solve [ auto ] + break_innermost_match_step) ].
+          Qed.
+        End with_var1.
 
         Section with_var2.
           Context {var1 var2 : type -> Type}.
@@ -214,10 +612,24 @@ Module Compilers.
           Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident var1 var2).
           Local Notation reify_and_let_binds_cps1 := (@reify_and_let_binds_cps ident var1 reify_and_let_binds_base_cps1).
           Local Notation reify_and_let_binds_cps2 := (@reify_and_let_binds_cps ident var2 reify_and_let_binds_base_cps2).
-          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident arg_types).
-          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident arg_types).
-          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident full_types invert_bind_args type_of_pident pident_to_typed of_typed_ident arg_types bind_args try_make_transport_ident_cps).
-          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident full_types invert_bind_args type_of_pident pident_to_typed of_typed_ident arg_types bind_args try_make_transport_ident_cps).
+          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident pident_arg_types type_vars_of_pident).
+          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation with_unification_resultT'1 := (@with_unification_resultT' ident var1 pident pident_arg_types).
+          Local Notation with_unification_resultT'2 := (@with_unification_resultT' ident var2 pident pident_arg_types).
+          Local Notation with_unification_resultT1 := (@with_unification_resultT ident var1 pident pident_arg_types type_vars_of_pident).
+          Local Notation with_unification_resultT2 := (@with_unification_resultT ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types type_vars_of_pident).
+          Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types type_vars_of_pident).
+          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation deep_rewrite_ruleTP_gen1 := (@deep_rewrite_ruleTP_gen ident var1).
+          Local Notation deep_rewrite_ruleTP_gen2 := (@deep_rewrite_ruleTP_gen ident var2).
+          Local Notation preunify_types1 := (@preunify_types ident var1 pident).
+          Local Notation preunify_types2 := (@preunify_types ident var2 pident).
+          Local Notation unify_types1 := (@unify_types ident var1 pident).
+          Local Notation unify_types2 := (@unify_types ident var2 pident).
 
           Fixpoint wf_reify {with_lets} G {t}
             : forall e1 e2, @wf_value' with_lets G t e1 e2 -> expr.wf G (@reify _ with_lets t e1) (@reify _ with_lets t e2)
@@ -260,7 +672,7 @@ Module Compilers.
           Qed.
 
           Inductive wf_rawexpr : list { t : type & var1 t * var2 t }%type -> forall {t}, @rawexpr var1 -> @expr var1 t -> @rawexpr var2 -> @expr var2 t -> Prop :=
-          | Wf_rIdent {t} G (idc : ident t) : wf_rawexpr G (rIdent idc (expr.Ident idc)) (expr.Ident idc) (rIdent idc (expr.Ident idc)) (expr.Ident idc)
+          | Wf_rIdent {t} G known (idc : ident t) : wf_rawexpr G (rIdent known idc (expr.Ident idc)) (expr.Ident idc) (rIdent known idc (expr.Ident idc)) (expr.Ident idc)
           | Wf_rApp {s d} G
                     f1 (f1e : @expr var1 (s -> d)) x1 (x1e : @expr var1 s)
                     f2 (f2e : @expr var2 (s -> d)) x2 (x2e : @expr var2 s)
@@ -328,6 +740,22 @@ Module Compilers.
             destruct Hwf; cbn; try eapply wf_reflect; try assumption.
           Qed.
 
+          Lemma wf_value_of_wf_rawexpr_gen {t t' G re1 e1 re2 e2}
+                {pf1 pf2 : _ = t'}
+                (Hwf : @wf_rawexpr G t re1 e1 re2 e2)
+            : wf_value G
+                       (rew [value] pf1 in value_of_rawexpr re1)
+                       (rew [value] pf2 in value_of_rawexpr re2).
+          Proof using Type.
+            assert (H : t = t');
+              [
+              | destruct H;
+                replace pf1 with (proj1 (eq_type_of_rawexpr_of_wf Hwf));
+                [ replace pf2 with (proj2 (eq_type_of_rawexpr_of_wf Hwf)) | ] ];
+              [ | apply wf_value_of_wf_rawexpr | | ];
+              destruct (eq_type_of_rawexpr_of_wf Hwf); generalize dependent (type_of_rawexpr re1); generalize dependent (type_of_rawexpr re2); intros; subst; clear; eliminate_hprop_eq; reflexivity.
+          Qed.
+
           Lemma reveal_rawexpr_cps_id {var} e T k
             : @reveal_rawexpr_cps ident var e T k = k (reveal_rawexpr e).
           Proof.
@@ -349,460 +777,224 @@ Module Compilers.
                            | break_innermost_match_step
                            | progress expr.invert_match
                            | progress expr.inversion_wf_constr ].
-
           Qed.
 
-          Fixpoint wf_pbase_type_interp_cps (quant : quant_type) (t1 t2 : pattern.base.type) (K1 K2 : base.type -> Type)
-                   (P : forall t, K1 t -> K2 t -> Prop) {struct t1}
-            : pbase_type_interp_cps quant t1 K1 -> pbase_type_interp_cps quant t2 K2 -> Prop
-            := match t1, t2, quant with
-               | pattern.base.type.any, pattern.base.type.any, qforall
-                 => fun v1 v2
-                    => forall t : base.type, P _ (v1 t) (v2 t)
-               | pattern.base.type.any, pattern.base.type.any, qexists
-                 => fun v1 v2
-                    => { pf : projT1 v1 = projT1 v2 | P _ (rew pf in projT2 v1) (projT2 v2) }
-               | pattern.base.type.type_base t1, pattern.base.type.type_base t2, _
-                 => fun v1 v2
-                    => { pf : t1 = t2 | P _ (rew [fun t : base.type.base => K1 t] pf in v1) v2 }
-               | pattern.base.type.prod A1 B1, pattern.base.type.prod A2 B2, _
-                 => @wf_pbase_type_interp_cps
-                      quant A1 A2 _ _
-                      (fun A' => @wf_pbase_type_interp_cps
-                                   quant B1 B2 _ _
-                                   (fun B' => P (A' * B')%etype))
-               | pattern.base.type.list A1, pattern.base.type.list A2, _
-                 => @wf_pbase_type_interp_cps
-                      quant A1 A2 _ _
-                      (fun A' => P (base.type.list A'))
-               | pattern.base.type.any, _, _
-               | pattern.base.type.type_base _, _, _
-               | pattern.base.type.prod _ _, _, _
-               | pattern.base.type.list _, _, _
-                 => fun _ _ => False
-               end.
+          Definition forall2_type_of_list_cps {ls K1 K2} (P : K1 -> K2 -> Prop)
+            : type_of_list_cps K1 ls -> type_of_list_cps K2 ls -> Prop
+            := list_rect
+                 (fun ls => type_of_list_cps K1 ls -> type_of_list_cps K2 ls -> Prop)
+                 P
+                 (fun T Ts rec f1 f2 => forall x : T, rec (f1 x) (f2 x))
+                 ls.
 
-          Fixpoint wf_ptype_interp_cps (quant : quant_type) (t1 t2 : pattern.type) (K1 K2 : type -> Type)
-                   (P : forall t, K1 t -> K2 t -> Prop) {struct t1}
-            : ptype_interp_cps quant t1 K1 -> ptype_interp_cps quant t2 K2 -> Prop
-            := match t1, t2 with
-               | type.base t1, type.base t2 => wf_pbase_type_interp_cps quant t1 t2 _ _ (fun t => P (type.base t))
-               | type.arrow s1 d1, type.arrow s2 d2
-                 => wf_ptype_interp_cps
-                      quant s1 s2 _ _
-                      (fun s => wf_ptype_interp_cps
-                                  quant d1 d2 _ _
-                                  (fun d => P (type.arrow s d)))
-               | type.base _, _
-               | type.arrow _ _, _
-                 => fun _ _ => False
-               end.
+          Lemma related_app_type_of_list_of_forall2_type_of_list_cps {K1 K2 ls args}
+                {v1 v2}
+                (P : _ -> _ -> Prop)
+            : @forall2_type_of_list_cps ls K1 K2 P v1 v2
+              -> P (app_type_of_list v1 args) (app_type_of_list v2 args).
+          Proof using Type.
+            induction ls as [|x ls IHls]; [ now (cbn; eauto) | ].
+            (* N.B. [simpl] does more refolding than [cbn], and it's important that we use [simpl] and not [cbn] here *)
+            intro H; cbn in args, v1, v2; simpl in *; eauto.
+          Qed.
 
-          Definition wf_ptype_interp_id G {quant t1 t2} : @ptype_interp var1 quant t1 id -> @ptype_interp var2 quant t2 id -> Prop
-            := @wf_ptype_interp_cps quant t1 t2 _ _ (@wf_value G).
+          Lemma wf_preunify_types {G t t' re1 e1 re2 e2 p}
+                (H : @wf_rawexpr G t' re1 e1 re2 e2)
+            : @preunify_types1 t re1 p = @preunify_types2 t re2 p.
+          Proof using Type.
+            revert G t' re1 e1 re2 e2 H.
+            induction p; cbn; intros; destruct H; cbn in *; try reflexivity.
+            repeat match goal with H : _ |- _ => erewrite H by eassumption; clear H end;
+              reflexivity.
+          Qed.
 
-          Fixpoint wf_binding_dataT G (p1 p2 : pattern) : @binding_dataT var1 p1 -> @binding_dataT var2 p2 -> Prop
-            := match p1, p2 with
+          Lemma wf_unify_types {G t t' re1 e1 re2 e2 p}
+                (H : @wf_rawexpr G t' re1 e1 re2 e2)
+            : @unify_types1 t re1 p _ id = @unify_types2 t re2 p _ id.
+          Proof using Type.
+            cbv [unify_types]; erewrite wf_preunify_types by eassumption.
+            reflexivity.
+          Qed.
+
+          Lemma wf_unify_types_cps {G t t' re1 e1 re2 e2 p T K}
+                (H : @wf_rawexpr G t' re1 e1 re2 e2)
+            : @unify_types1 t re1 p T K = @unify_types2 t re2 p T K.
+          Proof using Type.
+            etransitivity; rewrite unify_types_cps_id; [ | reflexivity ].
+            erewrite wf_unify_types by eassumption; reflexivity.
+          Qed.
+
+          Fixpoint wf_with_unification_resultT'
+                   (G : list {t : _ & (var1 t * var2 t)%type})
+                   {t1 t2} {p1 : pattern t1} {p2 : pattern t2} {evm1 evm2 : EvarMap} {K1 K2}
+                   (P : K1 -> K2 -> Prop)
+                   {struct p1}
+            : @with_unification_resultT'1 t1 p1 evm1 K1
+              -> @with_unification_resultT'2 t2 p2 evm2 K2
+              -> Prop
+            := match p1 in pattern.pattern t1, p2 in pattern.pattern t2
+                     return @with_unification_resultT'1 t1 p1 evm1 K1
+                            -> @with_unification_resultT'2 t2 p2 evm2 K2
+                            -> Prop
+               with
                | pattern.Wildcard t1, pattern.Wildcard t2
-                 => wf_ptype_interp_id G
-               | pattern.Ident idc1, pattern.Ident idc2
+                 => fun f1 f2
+                    => { pf : pattern.type.subst_default t1 evm1 = pattern.type.subst_default t2 evm2
+                       | forall v1 v2,
+                           wf_value G (rew [value] pf in v1) v2
+                           -> P (f1 v1) (f2 v2) }
+               | pattern.Ident t1 idc1, pattern.Ident t2 idc2
                  => fun v1 v2
-                    => { pf : idc1 = idc2 | (rew [fun idc => @binding_dataT _ (pattern.Ident idc)] pf in v1) = v2 }
-               | pattern.App f1 x1, pattern.App f2 x2
-                 => fun v1 v2
-                    => @wf_binding_dataT G _ _ (fst v1) (fst v2) /\ @wf_binding_dataT G _ _ (snd v1) (snd v2)
+                    => { pf : existT pident t1 idc1 = existT pident t2 idc2
+                       | forall2_type_of_list_cps
+                           P
+                           (rew [fun tidc => type_of_list_cps K1 (pident_arg_types (projT1 tidc) (projT2 tidc))] pf in (v1 : type_of_list_cps _ (pident_arg_types _ (projT2 (existT pident _ _)))))
+                           v2 }
+               | pattern.App s1 d1 f1 x1, pattern.App s2 d2 f2 x2
+                 => fun (v1 : with_unification_resultT'1 f1 evm1 (with_unification_resultT'1 x1 evm1 K1))
+                        (v2 : with_unification_resultT'2 f2 evm2 (with_unification_resultT'2 x2 evm2 K2))
+                    => @wf_with_unification_resultT'
+                         G _ _ f1 f2 evm1 evm2 _ _
+                         (@wf_with_unification_resultT' G _ _ x1 x2 evm1 evm2 _ _ P)
+                         v1 v2
                | pattern.Wildcard _, _
-               | pattern.Ident _, _
-               | pattern.App _ _, _
+               | pattern.Ident _ _, _
+               | pattern.App _ _ _ _, _
                  => fun _ _ => False
                end.
 
-          Lemma bind_base_cps_id t1 t2 K v T k
-            : @bind_base_cps t1 t2 K v T k = k (@bind_base_cps t1 t2 K v _ id).
-          Proof using Type.
-            revert t2 K v T k; induction t1, t2; intros; cbn [bind_base_cps]; try reflexivity;
-              rewrite_type_transport_correct; break_innermost_match; try reflexivity;
-                repeat first [ progress subst
-                             | progress inversion_option
-                             | reflexivity
-                             | match goal with
-                               | [ H : _ |- _ ] => rewrite H; (reflexivity || break_innermost_match_step)
-                               end ].
-          Qed.
+          Definition wf_with_unification_resultT
+                     G {t} {p : pattern t} {K1 K2 : type -> Type}
+                     (P : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
+            : @with_unification_resultT1 t p K1 -> @with_unification_resultT2 t p K2 -> Prop
+            := pattern.type.under_forall_vars_relation
+                 (fun evm v1 v2
+                  => wf_with_unification_resultT' G (P _) v1 v2).
 
-          Lemma wf_bind_base t1 t1' t2 t2' K1 K2 v1 v2 (Ht1 : t1 = t2) (Ht2 : t1' = t2') (P : forall t, K1 t -> K2 t -> Prop)
-                (Pv : P _ (rew Ht2 in v1) v2)
-            : option_eq (@wf_pbase_type_interp_cps _ _ _ _ _ P) (@bind_base_cps t1 t1' K1 v1 _ id) (@bind_base_cps t2 t2' K2 v2 _ id).
-          Proof.
-            subst t2' t2; revert t1' K1 v1 K2 v2 P Pv.
-            induction t1, t1'; cbn [wf_pbase_type_interp_cps bind_base_cps]; intros; cbv [cpsreturn id cpsbind cpscall cps_option_bind];
-              cbn [option_eq projT1 projT2];
-              repeat first [ (exists eq_refl)
-                           | reflexivity
-                           | progress subst
-                           | progress base.type.inversion_type
-                           | progress destruct_head' False
-                           | congruence
-                           | progress cbn [eq_rect option_eq] in *
-                           | progress cbv [id] in *
-                           | solve [ eauto ]
-                           | progress rewrite_type_transport_correct
-                           | progress type_beq_to_eq
-                           | progress break_match_step ltac:(fun v => let h := head v in constr_eq h (@Sumbool.sumbool_of_bool))
-                           | rewrite bind_base_cps_id; set (@bind_base_cps _ _ _ _ _ id) at 1
-                           | match goal with
-                             | [ H : forall P : (forall x, _ -> _ -> Prop), P _ _ _ -> False |- _ ]
-                               => specialize (H (fun _ _ _ => True) I)
-                             | [ H : forall P : (forall x, _ -> _ -> Prop), P _ _ _ -> Some _ = None |- _ ]
-                               => specialize (H (fun _ _ _ => True) I)
-                             | [ X := Some _ |- _ ] => subst X
-                             | [ X := None |- _ ] => subst X
-                             | [ HP : context[?P _ ?v1 ?v2], H' : _, X := @bind_base_cps ?t1 ?t2 ?K1 ?v1 _ (fun x => x), Y := @bind_base_cps ?t1' ?t2 ?K2 ?v2 _ (fun y => y) |- _ ]
-                               => specialize (H' t2 K1 v1 K2 v2);
-                                  destruct (@bind_base_cps t1 t2 K1 v1 _ (fun x => x)) eqn:?,
-                                           (@bind_base_cps t1' t2 K2 v2 _ (fun x => x)) eqn:?
-                             end ].
-          Qed.
+          Definition wf_maybe_do_again_expr
+                     {t}
+                     {rew_should_do_again1 rew_should_do_again2 : bool}
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+            : expr (var:=if rew_should_do_again1 then @value var1 else var1) t
+              -> expr (var:=if rew_should_do_again2 then @value var2 else var2) t
+              -> Prop
+            := match rew_should_do_again1, rew_should_do_again2
+                     return expr (var:=if rew_should_do_again1 then @value var1 else var1) t
+                            -> expr (var:=if rew_should_do_again2 then @value var2 else var2) t
+                            -> Prop
+               with
+               | true, true
+                 => fun e1 e2
+                    => exists G',
+                        (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G' -> wf_value G v1' v2')
+                        /\ expr.wf G' e1 e2
+               | false, false => expr.wf G
+               | _, _ => fun _ _ => False
+               end.
 
-          Lemma bind_value_cps_id t1 t2 K v T k
-            : @bind_value_cps t1 t2 K v T k = k (@bind_value_cps t1 t2 K v _ id).
-          Proof using Type.
-            revert t2 K v T k; induction t1, t2; intros; cbn [bind_value_cps]; try reflexivity; [ apply bind_base_cps_id | ].
-            cbv [cps_option_bind cpscall cpsreturn cpsbind].
-            repeat first [ progress subst
-                         | progress inversion_option
-                         | reflexivity
-                         | match goal with
-                           | [ H : _ |- _ ] => rewrite H; (reflexivity || break_innermost_match_step)
-                           end ].
-          Qed.
+          Definition wf_maybe_under_lets_expr
+                     {T1 T2}
+                     (P : list {t : _ & (var1 t * var2 t)%type} -> T1 -> T2 -> Prop)
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {rew_under_lets1 rew_under_lets2 : bool}
+            : (if rew_under_lets1 then UnderLets var1 T1 else T1)
+              -> (if rew_under_lets2 then UnderLets var2 T2 else T2)
+              -> Prop
+            := match rew_under_lets1, rew_under_lets2
+                     return (if rew_under_lets1 then UnderLets var1 T1 else T1)
+                            -> (if rew_under_lets2 then UnderLets var2 T2 else T2)
+                            -> Prop
+               with
+               | true, true
+                 => UnderLets.wf P G
+               | false, false
+                 => P G
+               | _, _ => fun _ _ => False
+               end.
 
-          Lemma wf_bind_value t1 t1' t2 t2' K1 K2 v1 v2 (Ht1 : t1 = t2) (Ht2 : t1' = t2') (P : forall t, K1 t -> K2 t -> Prop)
-                (Hv : P _ (rew Ht2 in v1) v2)
-            : option_eq (@wf_ptype_interp_cps _ _ _ _ _ P) (@bind_value_cps t1 t1' K1 v1 _ id) (@bind_value_cps t2 t2' K2 v2 _ id).
-          Proof.
-            subst t2' t2; revert t1' K1 v1 K2 v2 P Hv.
-            induction t1, t1'; cbn [wf_ptype_interp_cps bind_value_cps]; cbv [id cpsbind cpscall cpsreturn cps_option_bind];
-              cbn [option_eq]; intros; try reflexivity.
-            { unshelve eapply wf_bind_base; eauto. }
-            { repeat first [ progress destruct_head' False
-                           | congruence
-                           | progress cbn [eq_rect option_eq] in *
-                           | progress cbv [id] in *
-                           | solve [ eauto ]
-                           | rewrite bind_value_cps_id; set (@bind_value_cps _ _ _ _ _ id) at 1
-                           | match goal with
-                             | [ H : forall P : (forall x, _ -> _ -> Prop), P _ _ _ -> False |- _ ]
-                               => specialize (H (fun _ _ _ => True) I)
-                             | [ H : forall P : (forall x, _ -> _ -> Prop), P _ _ _ -> Some _ = None |- _ ]
-                               => specialize (H (fun _ _ _ => True) I)
-                             | [ X := Some _ |- _ ] => subst X
-                             | [ X := None |- _ ] => subst X
-                             | [ HP : context[?P _ ?v1 ?v2], H' : _, X := @bind_value_cps ?t1 ?t2 ?K1 ?v1 _ (fun x => x), Y := @bind_value_cps ?t1' ?t2 ?K2 ?v2 _ (fun y => y) |- _ ]
-                               => specialize (H' t2 K1 v1 K2 v2);
-                                  destruct (@bind_value_cps t1 t2 K1 v1 _ (fun x => x)) eqn:?,
-                                           (@bind_value_cps t1' t2 K2 v2 _ (fun x => x)) eqn:?
-                             end ]. }
-          Qed.
+          Definition wf_deep_rewrite_ruleTP_gen
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {t}
+                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1 : bool}
+                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2 : bool}
+            : deep_rewrite_ruleTP_gen1 rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1 t
+              -> deep_rewrite_ruleTP_gen2 rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2 t
+              -> Prop
+            := match rew_is_cps1, rew_is_cps2, rew_with_opt1, rew_with_opt2
+                     return (if rew_is_cps1
+                             then fun T => forall T', (T -> option T') -> option T'
+                             else fun T => T)
+                              (if rew_with_opt1 then option _ else _)
+                            -> (if rew_is_cps2
+                                then fun T => forall T', (T -> option T') -> option T'
+                                else fun T => T)
+                                 (if rew_with_opt2 then option _ else _)
+                            -> Prop
+               with
+               | true, true, true, true
+                 => fun f1 f2
+                    => (forall T K, f1 T K = K (f1 _ id))
+                       /\ (forall T K, f2 T K = K (f2 _ id))
+                       /\ option_eq
+                            (wf_maybe_under_lets_expr
+                               wf_maybe_do_again_expr
+                               G)
+                            (f1 _ id) (f2 _ id)
+               | true, true, false, false
+                 => fun (f1 f2 : forall T, _ -> option T)
+                    => (forall T K, f1 T K = (fv <- f1 _ (@Some _); K fv)%option)
+                       /\ (forall T K, f2 T K = (fv <- f2 _ (@Some _); K fv)%option)
+                       /\ option_eq
+                            (wf_maybe_under_lets_expr
+                               wf_maybe_do_again_expr
+                               G)
+                            (f1 _ (@Some _)) (f2 _ (@Some _))
+               | false, false, true, true
+                 => option_eq
+                      (wf_maybe_under_lets_expr
+                         wf_maybe_do_again_expr
+                         G)
+               | false, false, false, false
+                 => wf_maybe_under_lets_expr
+                      wf_maybe_do_again_expr
+                      G
+               | _, _, _, _ => fun _ _ => False
+               end.
 
-          Lemma bind_data_cps_id {var} e p T k
-            : @bind_data_cps var e p T k = k (bind_data e p).
-          Proof using try_make_transport_ident_cps_correct.
-            revert p T k; induction e, p; intros; cbn [bind_data_cps]; try (reflexivity || apply bind_value_cps_id);
-              cbv [cps_option_bind cpscall cpsreturn cpsbind];
-              repeat first [ progress subst
-                           | progress inversion_option
-                           | reflexivity
-                           | rewrite try_make_transport_ident_cps_correct
-                           | match goal with
-                             | [ H : _ |- _ ] => rewrite H; (reflexivity || break_innermost_match_step)
-                             end
-                           | break_innermost_match_step ].
-          Qed.
+          Definition wf_with_unif_rewrite_ruleTP_gen
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {t} {p : pattern t}
+                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1}
+                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2}
+            : with_unif_rewrite_ruleTP_gen1 p rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1
+              -> with_unif_rewrite_ruleTP_gen2 p rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2
+              -> Prop
+            := wf_with_unification_resultT
+                 G
+                 (fun evm => wf_deep_rewrite_ruleTP_gen G).
 
-          Lemma wf_bind_data t G re1 e1 re2 e2 p1 p2 (Hwf : @wf_rawexpr G t re1 e1 re2 e2) (Hp : p1 = p2)
-            : option_eq (@wf_binding_dataT G p1 p2) (bind_data re1 p1) (bind_data re2 p2).
-          Proof.
-            subst p2; revert p1; induction Hwf, p1; cbn [bind_data_cps value_of_rawexpr];
-              rewrite_type_transport_correct;
-              rewrite ?try_make_transport_ident_cps_correct.
-            all: repeat first [ (exists eq_refl)
-                              | exact I
-                              | reflexivity
-                              | unshelve eapply wf_bind_value
-                              | progress break_match_step ltac:(fun v => let h := head v in constr_eq h (@Sumbool.sumbool_of_bool))
-                              | progress cbn [eq_rect wf_binding_dataT fst snd option_eq] in *
-                              | progress cbv [id] in *
-                              | progress subst
-                              | progress inversion_option
-                              | apply wf_reflect
-                              | match goal with
-                                | [ |- context[pident_bl ?a ?b ?pf] ] => generalize (pident_bl a b pf); intros
-                                | [ X := Some _ |- _ ] => subst X
-                                | [ X := None |- _ ] => subst X
-                                | [ X := @bind_data_cps _ ?e ?p _ (fun y => y), H : context[@bind_data_cps _ ?e _ _ (fun x => x)] |- _ ]
-                                  => pose proof (H p); destruct (@bind_data_cps _ e p _ (fun y => y)) eqn:?
-                                end
-                              | rewrite bind_data_cps_id; set (@bind_data _ _) at 1
-                              | solve [ auto ]
-                              | eapply wf_expr_of_wf_rawexpr; eassumption
-                              | wf_safe_t_step ].
-          Qed.
-
-          (*
-        Local Notation opt_anyexprP ivar
-          := (fun should_do_again : bool => UnderLets (@AnyExpr.anyexpr base.type ident (if should_do_again then ivar else var)))
-               (only parsing).
-        Local Notation opt_anyexpr ivar
-          := (option (sigT (opt_anyexprP ivar))) (only parsing).
-
-        Definition rewrite_ruleTP
-          := (fun p : pattern => binding_dataT p -> forall T, (opt_anyexpr value -> T) -> T).
-        Definition rewrite_ruleT := sigT rewrite_ruleTP.
-        Definition rewrite_rulesT
-          := (list rewrite_ruleT).
-
-        Definition ERROR_BAD_REWRITE_RULE {t} (pat : pattern) (value : expr t) : expr t. exact value. Qed.
-           *)
-
-          (*
-          Fixpoint natural_type_of_pattern_binding_data {var} (p : pattern) : @binding_dataT var p -> option { t : type & @expr var t }.
-          Proof.
-            refine match p with
-                   | pattern.Wildcard t => _
-                   | pattern.Ident idc => _
-                   | pattern.App f x => _
-                   end.
-            all: cbn.
-            Focus 2.
-            Fixpoint natural_of_ptype_interp {var} (t : ptype) k (K : forall t, k t -> option { t : type & @expr var t }) {struct t}
-              : @ptype_interp var qexists t k -> option { t : type & @expr var t }.
-              refine match t with
-                     | type.base t => _
-                     | type.arrow s d => _
-                     end.
-              all: cbn.
-              Focus 2.
-              Fixpoint natural_of_pbase_type_interp {var} (t : ptype) k (K : forall t, k t -> option { t : type & @expr var t }) {struct t}
-              : @ptype_interp var qexists t k -> option { t : type & @expr var t }.
-              refine match t with
-                     | type.base t => _
-                     | type.arrow s d => _
-                     end.
-              all: cbn.
-              refine
-          Proof.
-            refine match p with
-                   | pattern.Wildcard t => _
-                   | pattern.Ident idc => _
-                   | pattern.App f x => _
-                   end.
-            cbn.
-
-           *)
+          Definition wf_rewrite_rule_data
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {t} {p : pattern t}
+                     (r1 : @rewrite_rule_data1 t p)
+                     (r2 : @rewrite_rule_data2 t p)
+            : Prop
+            := wf_with_unif_rewrite_ruleTP_gen G (rew_replacement _ _ r1) (rew_replacement _ _ r2).
 
           Definition rewrite_rules_goodT
                      (rew1 : rewrite_rulesT1) (rew2 : rewrite_rulesT2)
             : Prop
             := length rew1 = length rew2
-               /\ (forall p r, List.In (existT _ p r) rew1 -> forall v T k, r v T k = k (r v _ id))
-               /\ (forall p r, List.In (existT _ p r) rew2 -> forall v T k, r v T k = k (r v _ id))
                /\ (forall p1 r1 p2 r2,
                       List.In (existT _ p1 r1, existT _ p2 r2) (combine rew1 rew2)
-                      -> p1 = p2
-                         /\ (forall G v1 v2,
-                                wf_binding_dataT G p1 p2 v1 v2
-                                -> option_eq
-                                     (fun rv1 rv2
-                                      => exists t : base.type, (* TODO: FIXME: This should be the natural type of the rewrite rule, probably *)
-                                          match projT1 rv1 as sda1, projT1 rv2 as sda2
-                                                return UnderLets _ (@AnyExpr.anyexpr base.type ident (if sda1 then _ else _))
-                                                       -> UnderLets _ (@AnyExpr.anyexpr base.type ident (if sda2 then _ else _))
-                                                       -> Prop
-                                          with
-                                          | true, true
-                                            => UnderLets.wf
-                                                 (fun G' v1 v2
-                                                  => exists (pf1 : anyexpr_ty v1 = t) (pf2 : anyexpr_ty v2 = t) G'',
-                                                      (forall t' v1' v2', List.In (existT _ t' (v1', v2')) G'' -> wf_value G' v1' v2')
-                                                      /\ expr.wf G''
-                                                                (rew [fun t : base.type => expr t] pf1 in unwrap v1)
-                                                                (rew [fun t : base.type => expr t] pf2 in unwrap v2))
-                                                 G
-                                          | false, false
-                                            => UnderLets.wf (fun G' => wf_anyexpr G' t) G
-                                          | true, false | false, true => fun _ _ => False
-                                          end (projT2 rv1) (projT2 rv2))
-                                     (r1 v1 _ id)
-                                     (r2 v2 _ id))).
-
-          (*
-        Fixpoint with_bindingsT (p : pattern) (T : Type)
-          := match p return Type with
-             | pattern.Wildcard t => ptype_interp qforall t (fun eT => eT -> T)
-             | pattern.Ident idc
-               => match arg_types idc with
-                 | Some t => t -> T
-                 | None => T
-                 end
-             | pattern.App f x => with_bindingsT f (with_bindingsT x T)
-             end.
-
-        Fixpoint lift_pbase_type_interp_cps {K1 K2} {quant} (F : forall t : base.type, K1 t -> K2 t) {t}
-          : pbase_type_interp_cps quant t K1
-            -> pbase_type_interp_cps quant t K2
-          := match t, quant return pbase_type_interp_cps quant t K1
-                                   -> pbase_type_interp_cps quant t K2 with
-             | pattern.base.type.any, qforall
-               => fun f t => F t (f t)
-             | pattern.base.type.any, qexists
-               => fun tf => existT _ _ (F _ (projT2 tf))
-             | pattern.base.type.type_base t, _
-               => F _
-             | pattern.base.type.prod A B, _
-               => @lift_pbase_type_interp_cps
-                   _ _ quant
-                   (fun A'
-                    => @lift_pbase_type_interp_cps
-                        _ _ quant (fun _ => F _) B)
-                   A
-             | pattern.base.type.list A, _
-               => @lift_pbase_type_interp_cps
-                   _ _ quant (fun _ => F _) A
-             end.
-
-        Fixpoint lift_ptype_interp_cps {K1 K2} {quant} (F : forall t : type.type base.type, K1 t -> K2 t) {t}
-          : ptype_interp_cps quant t K1
-            -> ptype_interp_cps quant t K2
-          := match t return ptype_interp_cps quant t K1
-                                   -> ptype_interp_cps quant t K2 with
-             | type.base t
-               => lift_pbase_type_interp_cps F
-             | type.arrow A B
-               => @lift_ptype_interp_cps
-                   _ _ quant
-                   (fun A'
-                    => @lift_ptype_interp_cps
-                        _ _ quant (fun _ => F _) B)
-                   A
-             end.
-
-        Fixpoint lift_with_bindings {p} {A B : Type} (F : A -> B) {struct p} : with_bindingsT p A -> with_bindingsT p B
-          := match p return with_bindingsT p A -> with_bindingsT p B with
-             | pattern.Wildcard t
-               => lift_ptype_interp_cps
-                   (K1:=fun t => value t -> A)
-                   (K2:=fun t => value t -> B)
-                   (fun _ f v => F (f v))
-             | pattern.Ident idc
-               => match arg_types idc as ty
-                       return match ty with
-                              | Some t => t -> A
-                              | None => A
-                              end -> match ty with
-                                    | Some t => t -> B
-                                    | None => B
-                                    end
-                 with
-                 | Some _ => fun f v => F (f v)
-                 | None => F
-                 end
-             | pattern.App f x
-               => @lift_with_bindings
-                   f _ _
-                   (@lift_with_bindings x _ _ F)
-             end.
-
-        Fixpoint app_pbase_type_interp_cps {T : Type} {K1 K2 : base.type -> Type}
-                 (F : forall t, K1 t -> K2 t -> T)
-                 {t}
-          : pbase_type_interp_cps qforall t K1
-            -> pbase_type_interp_cps qexists t K2 -> T
-          := match t return pbase_type_interp_cps qforall t K1
-                            -> pbase_type_interp_cps qexists t K2 -> T with
-             | pattern.base.type.any
-               => fun f tv => F _ (f _) (projT2 tv)
-             | pattern.base.type.type_base t
-               => fun f v => F _ f v
-             | pattern.base.type.prod A B
-               => @app_pbase_type_interp_cps
-                   _
-                   (fun A' => pbase_type_interp_cps qforall B (fun B' => K1 (A' * B')%etype))
-                   (fun A' => pbase_type_interp_cps qexists B (fun B' => K2 (A' * B')%etype))
-                   (fun A'
-                    => @app_pbase_type_interp_cps
-                        _
-                        (fun B' => K1 (A' * B')%etype)
-                        (fun B' => K2 (A' * B')%etype)
-                        (fun _ => F _)
-                        B)
-                   A
-             | pattern.base.type.list A
-               => @app_pbase_type_interp_cps T (fun A' => K1 (base.type.list A')) (fun A' => K2 (base.type.list A')) (fun _ => F _) A
-             end.
-
-        Fixpoint app_ptype_interp_cps {T : Type} {K1 K2 : type -> Type}
-                 (F : forall t, K1 t -> K2 t -> T)
-                 {t}
-          : ptype_interp_cps qforall t K1
-            -> ptype_interp_cps qexists t K2 -> T
-          := match t return ptype_interp_cps qforall t K1
-                            -> ptype_interp_cps qexists t K2 -> T with
-             | type.base t => app_pbase_type_interp_cps F
-             | type.arrow A B
-               => @app_ptype_interp_cps
-                   _
-                   (fun A' => ptype_interp_cps qforall B (fun B' => K1 (A' -> B')%etype))
-                   (fun A' => ptype_interp_cps qexists B (fun B' => K2 (A' -> B')%etype))
-                   (fun A'
-                    => @app_ptype_interp_cps
-                        _
-                        (fun B' => K1 (A' -> B')%etype)
-                        (fun B' => K2 (A' -> B')%etype)
-                        (fun _ => F _)
-                        B)
-                   A
-             end.
-
-        Fixpoint app_binding_data {T p} : forall (f : with_bindingsT p T) (v : binding_dataT p), T
-          := match p return forall (f : with_bindingsT p T) (v : binding_dataT p), T with
-             | pattern.Wildcard t
-               => app_ptype_interp_cps
-                   (K1:=fun t => value t -> T)
-                   (K2:=fun t => value t)
-                   (fun _ f v => f v)
-             | pattern.Ident idc
-               => match arg_types idc as ty
-                       return match ty with
-                              | Some t => t -> T
-                              | None => T
-                              end -> match ty return Type with
-                                    | Some t => t
-                                    | None => unit
-                                    end -> T
-                 with
-                 | Some t => fun f x => f x
-                 | None => fun v 'tt => v
-                 end
-             | pattern.App f x
-               => fun F '(vf, vx)
-                 => @app_binding_data _ x (@app_binding_data _ f F vf) vx
-             end.
-
-        (** XXX MOVEME? *)
-        Definition mkcast {P : type -> Type} {t1 t2 : type} : ~> (option (P t1 -> P t2))
-          := fun T k => type.try_make_transport_cps base.try_make_transport_cps P t1 t2 _ k.
-        Definition cast {P : type -> Type} {t1 t2 : type} (v : P t1) : ~> (option (P t2))
-          := fun T k => type.try_transport_cps base.try_make_transport_cps P t1 t2 v _ k.
-        Definition castb {P : base.type -> Type} {t1 t2 : base.type} (v : P t1) : ~> (option (P t2))
-          := fun T k => base.try_transport_cps P t1 t2 v _ k.
-        Definition castbe {t1 t2 : base.type} (v : expr t1) : ~> (option (expr t2))
-          := @castb expr t1 t2 v.
-        Definition castv {t1 t2} (v : value t1) : ~> (option (value t2))
-          := fun T k => type.try_transport_cps base.try_make_transport_cps value t1 t2 v _ k.
-           *)
+                      -> { pf : p1 = p2
+                         | forall G,
+                             wf_rewrite_rule_data
+                               G
+                               (rew [fun tp => @rewrite_rule_data1 _ (pattern.pattern_of_anypattern tp)] pf in r1)
+                               r2 }).
         End with_var2.
-      End with_type.
+      End with_var.
     End Compile.
   End RewriteRules.
 End Compilers.
