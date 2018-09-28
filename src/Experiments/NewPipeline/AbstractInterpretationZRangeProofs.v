@@ -362,8 +362,55 @@ Module Compilers.
           Local Lemma le_add_1_eq x y : ((x + 1 <= y) <-> (x < y))%Z.
           Proof. lia. Qed.
 
-          Axiom proof_admitted : False.
-          Notation admit := (match proof_admitted with end).
+          Local Lemma mul_by_halves_bounds x y n :
+            (0 <= x < 2^ (n / 2))%Z ->
+            (0 <= y < 2^ (n / 2))%Z ->
+            (0 <= x * y <= 2 ^ n - 1)%Z.
+          Proof.
+            intros. rewrite le_sub_1_eq.
+            assert (2 ^ (n / 2) * 2 ^ (n / 2) <= 2 ^ n)%Z.
+            { rewrite <-Z.pow_twice_r.
+              apply Z.pow_le_mono_r; auto with zarith; [ ].
+              Z.div_mod_to_quot_rem. nia. }
+            Z.div_mod_to_quot_rem; nia.
+          Qed.
+
+          Local Ltac mul_by_halves_t :=
+            apply mul_by_halves_bounds;
+            match goal with
+            | |- context [Z.land _ (2 ^ ?n - 1)%Z] =>
+              rewrite (Z.sub_1_r (2 ^ n)), <-Z.ones_equiv, !Z.land_ones by auto with zarith
+            | |- context [Z.shiftr ?a ?n] =>
+            apply LandLorShiftBounds.Z.shiftr_range; auto with zarith; rewrite Z.add_diag, <-Z_div_exact_full_2 by auto with zarith
+            end; auto using Z.mod_pos_bound with zarith.
+
+          Local Lemma interp_related_fancy_rshi k n :
+            interp_is_related (ident.fancy_rshi k n).
+          Proof.
+            cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
+            cbv [respectful_hetero option_map list_case].
+            clear cast_outside_of_range.
+            intros.
+            destruct_head_hnf' prod.
+            break_innermost_match;
+              auto using type.base.option.is_bounded_by_None;
+              cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal ident.fancy.interp invert_Some ident.to_fancy ident.fancy.interp_with_wordmax] in *;
+              repeat match goal with
+                     | H : _ |- _ =>
+                     rewrite Bool.andb_true_iff in H;
+                       destruct H
+                     | _ => progress destruct_head_hnf' option; try congruence; [ ]
+                     | _ => progress cbv [is_bounded_by_bool is_tighter_than_bool] in *; cbn in *
+                     | _ => progress cbn in *
+                     end.
+
+             { Z.ltb_to_lt. rewrite !Z.rshi_small by omega.
+               apply Bool.andb_true_iff; split; apply Z.leb_le;
+                 Z.div_mod_to_quot_rem; nia. }
+             { Z.ltb_to_lt.
+               rewrite Z.rshi_correct_full by omega.
+               break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply le_sub_1_eq; auto with zarith. }
+          Qed.
 
           Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
           Proof.
@@ -373,6 +420,7 @@ Module Compilers.
                  | [ |- context[ident.Z_cast2] ] => apply interp_related_Z_cast2
                  | [ |- context[ident.List_flat_map] ] => apply interp_related_List_flat_map
                  | [ |- context[ident.List_partition] ] => apply interp_related_List_partition
+                 | [ |- context[ident.fancy_rshi] ] => apply interp_related_fancy_rshi
                  | _ => idtac
                  end.
             all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
@@ -407,9 +455,11 @@ Module Compilers.
                                 | [ H : is_bounded_by_bool ?v ?r1 = true, H' : is_tighter_than_bool ?r1 ?r2 = true |- _ ]
                                   => pose proof (@ZRange.is_bounded_by_of_is_tighter_than r1 r2 H' v H);
                                      clear H H' r1
+                                | [ |- context [match (if _ then _ else _) with _ => _ end ] ]
+                                => break_innermost_match
                                 end
                               | progress Z.ltb_to_lt
-                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct ].
+                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct, ?Z.rshi_correct_full ].
             all: clear cast_outside_of_range.
             all: repeat lazymatch goal with
                         | [ |- is_bounded_by_bool (Z.land _ _) (ZRange.land_bounds _ _) = true ]
@@ -432,6 +482,8 @@ Module Compilers.
                         | [ Hx : is_bounded_by_bool _ ?x = true
                             |- is_bounded_by_bool _ (ZRange.two_corners ?f ?x) = true ]
                           => apply (fun pf => @ZRange.monotoneb_two_corners_gen f pf x _ Hx); intros; auto with zarith
+                        | [ |- is_bounded_by_bool (if _ then _ else _) (ZRange.four_corners _ _ _) = true ]
+                          => apply ZRange.is_bounded_by_bool_Proper_if_bool_union_dep; intros; Z.ltb_to_lt
                         | [ H : ?x <> ?x |- _ ] => destruct (H eq_refl)
                         | [ |- context[Proper _ (Z.mul ?v)] ] => is_var v; destruct v; auto with zarith
                         | [ |- context[Proper _ (Z.div ?v)] ] => is_var v; destruct v; auto with zarith
@@ -451,82 +503,12 @@ Module Compilers.
             all: try solve [ match goal with
                              | [ |- ((0 <= _ mod _ <= _) /\ (0 <= _ <= _))%Z ]
                                => Z.div_mod_to_quot_rem; nia
-                             end ].
-            all: repeat match goal with
-                        | [ H : Z.le ?x ?y, H' : Z.le ?y ?z |- _ ] => pose proof (conj H H'); clear H H'
-                        | [ H : ?T |- _ ]
-                          => lazymatch T with
-                            | Z => clear H
-                            | zrange => clear H
-                            | _ = true => revert H
-                            | _ = false => revert H
-                            | Z.le _ _ => revert H
-                            | and (Z.le _ _) (Z.le _ _) => revert H
-                            | _ => fail 10 T
-                            end
-                        end.
-            (*
-10 subgoals (ID 203126)
-
-  y : Z
-  z1 : zrange
-  y0 : Z
-  z0 : zrange
-  y1, y2, x : Z
-  ============================
-  is_bounded_by_bool y0 z1 = true ->
-  is_bounded_by_bool y1 z0 = true ->
-  Proper (Z.le ==> Z.le) (fun y3 : Z => Definitions.Z.rshi y x y3 y2) \/
-  Proper (Z.le --> Z.le) (fun y3 : Z => Definitions.Z.rshi y x y3 y2)
-
-subgoal 2 (ID 203130) is:
- is_bounded_by_bool y0 z1 = true ->
- is_bounded_by_bool y1 z0 = true ->
- Proper (Z.le ==> Z.le) (fun x : Z => Definitions.Z.rshi y x y3 y2) \/
- Proper (Z.le --> Z.le) (fun x : Z => Definitions.Z.rshi y x y3 y2)
-subgoal 3 (ID 203151) is:
- (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z1 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= (z0 + z1 + Z.shiftl z imm mod 2 ^ log2wordmax) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1)%Z /\
- (0 <= (z0 + z1 + Z.shiftl z imm mod 2 ^ log2wordmax) / 2 ^ log2wordmax <= 1)%Z
-subgoal 4 (ID 203172) is:
- (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z1 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= (z1 - Z.shiftl z imm mod 2 ^ log2wordmax - z0) mod 2 ^ log2wordmax <= 2 ^ log2wordmax - 1)%Z /\
- (0 <= - ((z1 - Z.shiftl z imm mod 2 ^ log2wordmax - z0) / 2 ^ log2wordmax) <= 1)%Z
-subgoal 5 (ID 203186) is:
- (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= Z.land z (2 ^ (log2wordmax / 2) - 1) * Z.land z0 (2 ^ (log2wordmax / 2) - 1) <=
-  2 ^ log2wordmax - 1)%Z
-subgoal 6 (ID 203200) is:
- (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= Z.land z (2 ^ (log2wordmax / 2) - 1) * Z.shiftr z0 (log2wordmax / 2) <=
-  2 ^ log2wordmax - 1)%Z
-subgoal 7 (ID 203214) is:
- (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= Z.shiftr z (log2wordmax / 2) * Z.land z0 (2 ^ (log2wordmax / 2) - 1) <=
-  2 ^ log2wordmax - 1)%Z
-subgoal 8 (ID 203228) is:
- (0 <= z <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= z0 <= 2 ^ log2wordmax - 1)%Z ->
- (0 <= Z.shiftr z (log2wordmax / 2) * Z.shiftr z0 (log2wordmax / 2) <= 2 ^ log2wordmax - 1)%Z
-subgoal 9 (ID 203232) is:
- is_bounded_by_bool z0 z3 = true ->
- is_bounded_by_bool z1 z2 = true ->
- Proper (Z.le ==> Z.le) (fun y : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z) \/
- Proper (Z.le --> Z.le) (fun y : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z)
-subgoal 10 (ID 203236) is:
- is_bounded_by_bool z0 z3 = true ->
- is_bounded_by_bool z1 z2 = true ->
- Proper (Z.le ==> Z.le) (fun x : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z) \/
- Proper (Z.le --> Z.le) (fun x : Z => Definitions.Z.rshi (2 ^ log2wordmax) x y z)
-*)
-            1-10: exact admit.
+                             end
+                           | intros; mul_by_halves_t ].
+            { intros.
+              rewrite le_sub_1_eq.
+              break_innermost_match; Z.ltb_to_lt;
+                auto with zarith. }
           Qed.
         End interp_related.
       End option.

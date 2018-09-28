@@ -533,7 +533,7 @@ Module Compilers.
              | ident.Z_rshi as idc
                => fun s x y offset
                  => s <- to_literal s; x <- x; y <- y; offset <- to_literal offset;
-                     Some (ZRange.four_corners (fun x' y' => ident.interp idc s x' y' offset) x y)
+                     if (0 <? s) then Some r[0~>s-1] else None
              | ident.Z_land
                => fun x y => x <- x; y <- y; Some (ZRange.land_bounds x y)
              | ident.Z_lor
@@ -620,7 +620,7 @@ Module Compilers.
                => let wordmax := 2^log2wordmax in
                   let r := r[0~>wordmax-1] in
                   fun args
-                  => if ZRange.type.base.option.is_tighter_than args (Some r, Some r, Some r)
+                  => if ZRange.type.base.option.is_tighter_than args (Some r[0~>1], Some r, Some r)
                      then (Some r, Some r[0~>1])
                      else ZRange.type.base.option.None
              | ident.fancy_mulll log2wordmax
@@ -631,10 +631,26 @@ Module Compilers.
                   let r := r[0~>wordmax-1] in
                   fun args
                   => if ZRange.type.base.option.is_tighter_than args (Some r, Some r)
-                     then Some r
+                     then if (Z.eqb (log2wordmax mod 2) 0)
+                          then Some r
+                          else ZRange.type.base.option.None
                      else ZRange.type.base.option.None
-             | ident.fancy_rshi _ _ as idc
-               => fun '(x, y) => x <- x; y <- y; Some (ZRange.four_corners (fun x y => ident.interp idc (x, y)) x y)
+             | ident.fancy_rshi log2wordmax n as idc
+               => let wordmax := 2^log2wordmax in
+                  let r := r[0~>wordmax-1] in
+                  let r_nbits := r[0~>2^n-1] in
+                  fun args
+                  =>
+                    if (0 <=? log2wordmax)%Z
+                    then if (ZRange.type.base.option.is_tighter_than args (Some r_nbits, Some r) && (0 <=? n)%Z)
+                         then
+                           hi_range <- fst args;
+                             lo_range <- snd args;
+                             Some (ZRange.four_corners (fun x y => ident.interp idc (x, y)) hi_range lo_range)
+                         else if ZRange.type.base.option.is_tighter_than args (Some r, Some r)
+                              then Some r
+                              else ZRange.type.base.option.None
+                    else ZRange.type.base.option.None
              | ident.fancy_selm _
              | ident.fancy_selc
              | ident.fancy_sell

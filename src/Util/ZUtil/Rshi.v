@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.ZSimplify.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
@@ -6,6 +7,7 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Simple.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Local Open Scope Z_scope.
 
@@ -37,4 +39,17 @@ Module Z.
   Lemma rshi_correct : forall s a b n, 0 <= n -> s <> 0 ->
                                   Z.rshi s a b n = ((b + a * s) / 2 ^ n) mod s.
   Proof. intros; rewrite rshi_correct_full; break_match; Z.ltb_to_lt; omega. Qed.
+
+  Lemma rshi_small s a b n :
+    (0 <= b < s) ->
+    (0 <= a < 2^ n) ->
+    (0 <= n) ->
+    Z.rshi s a b n = ((b + a * s) / 2 ^ n).
+  Proof.
+    intros.
+    rewrite Z.rshi_correct by auto with zarith.
+    apply Z.mod_small.
+    Z.div_mod_to_quot_rem; nia.
+  Qed.
+
 End Z.
