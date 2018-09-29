@@ -126,6 +126,7 @@ Section with_args.
   Proof.
     exists (fun A B => add (r:=r)(R_numlimbs:=sz) m_enc A B).
     abstract (
+        (let H := fresh in let G := fresh in destruct (conj m_big m_big) as [H G]; clear H G); (* COQBUG(https://github.com/coq/coq/pull/8457) *)
         split; intros;
         unfold montgomery_to_F_gen; rewrite <- ?ModularArithmeticTheorems.F.of_Z_mul, <- ?ModularArithmeticTheorems.F.of_Z_add;
         rewrite <- ?Z.mul_add_distr_r;
