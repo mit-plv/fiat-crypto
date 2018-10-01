@@ -499,6 +499,16 @@ Module Compilers.
                (fun T Ts rec f x => rec (f x))
                ls.
 
+        Definition under_type_of_list_relation_cps {A1 A2 ls}
+                   (F : A1 -> A2 -> Prop)
+          : type_of_list_cps A1 ls -> type_of_list_cps A2 ls -> Prop
+          := list_rect
+               (fun ls
+                => type_of_list_cps A1 ls -> type_of_list_cps A2 ls -> Prop)
+               F
+               (fun T Ts rec f1 f2 => forall x, rec (f1 x) (f2 x))
+               ls.
+
         Definition app_type_of_list {K} {ls : list Type} (f : type_of_list_cps K ls) (args : type_of_list ls) : K
           := list_rect
                (fun ls
@@ -613,6 +623,19 @@ Module Compilers.
                     (@under_with_unification_resultT' _ x evm _ _ F)
              end.
 
+        Fixpoint under_with_unification_resultT'_relation {t p evm K1 K2}
+                 (F : K1 -> K2 -> Prop)
+                 {struct p}
+          : @with_unification_resultT' t p evm K1 -> @with_unification_resultT' t p evm K2 -> Prop
+          := match p return with_unification_resultT' p evm K1 -> with_unification_resultT' p evm K2 -> Prop with
+             | pattern.Wildcard t => fun f1 f2 => forall v, F (f1 v) (f2 v)
+             | pattern.Ident t idc => under_type_of_list_relation_cps F
+             | pattern.App s d f x
+               => @under_with_unification_resultT'_relation
+                    _ f evm _ _
+                    (@under_with_unification_resultT'_relation _ x evm _ _ F)
+             end.
+
         Definition ident_collect_vars := (fun t idc => fold_right PositiveSet.union PositiveSet.empty (List.map pattern.type.collect_vars (type_vars_of_pident t idc))).
 
         Definition with_unification_resultT {t} (p : pattern t) (K : type -> Type) : Type
@@ -627,6 +650,12 @@ Module Compilers.
           : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2
           := pattern.type.under_forall_vars
                (fun evm => under_with_unification_resultT' (F evm)).
+
+        Definition under_with_unification_resultT_relation {t p K1 K2}
+                 (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
+          : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2 -> Prop
+          := pattern.type.under_forall_vars_relation
+               (fun evm => under_with_unification_resultT'_relation (F evm)).
 
         Fixpoint preunify_types {t} (e : rawexpr) (p : pattern t) {struct p}
           : option (option (ptype * type))
