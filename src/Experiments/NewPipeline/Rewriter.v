@@ -51,18 +51,6 @@ Module Compilers.
            | type.list A => option_map Compilers.base.type.list (subst A evar_map)
            end%option.
 
-      Fixpoint subst_default (ptype : type) (evar_map : EvarMap) : Compilers.base.type
-        := match ptype with
-           | type.var p => match PositiveMap.find p evar_map with
-                           | Some t => t
-                           | None => Compilers.base.type.type_base base.type.unit
-                           end
-           | type.type_base t => Compilers.base.type.type_base t
-           | type.prod A B
-             => Compilers.base.type.prod (subst_default A evar_map) (subst_default B evar_map)
-           | type.list A => Compilers.base.type.list (subst_default A evar_map)
-           end.
-
       Fixpoint subst_default_relax P {t evm} : P t -> P (subst_default (relax t) evm)
         := match t return P t -> P (subst_default (relax t) evm) with
            | Compilers.base.type.type_base t => fun x => x
@@ -163,14 +151,8 @@ Module Compilers.
                    Some (type.arrow s' d'))
            end%option.
 
-      Fixpoint subst_default (ptype : type) (evar_map : EvarMap) : type.type Compilers.base.type
-        := match ptype with
-           | type.base t => type.base (base.subst_default t evar_map)
-           | type.arrow A B => type.arrow (subst_default A evar_map) (subst_default B evar_map)
-           end.
-
-      Fixpoint subst_default_relax P {t evm} : P t -> P (subst_default (type.relax t) evm)
-        := match t return P t -> P (subst_default (type.relax t) evm) with
+      Fixpoint subst_default_relax P {t evm} : P t -> P (type.subst_default (type.relax t) evm)
+        := match t return P t -> P (type.subst_default (type.relax t) evm) with
            | type.base t => base.subst_default_relax (fun t => P (type.base t))
            | type.arrow A B
              => fun v
