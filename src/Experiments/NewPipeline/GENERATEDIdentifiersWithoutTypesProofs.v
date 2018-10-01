@@ -5,6 +5,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Experiments.NewPipeline.Language.
+Require Import Crypto.Experiments.NewPipeline.LanguageInversion.
 Require Import Crypto.Experiments.NewPipeline.GENERATEDIdentifiersWithoutTypes.
 
 Import EqNotations.
@@ -109,6 +110,31 @@ Module Compilers.
         : Raw.ident.is_simple (@strip_types t idc) = true
           <-> type_vars idc = List.nil.
       Proof. destruct idc; cbn; intuition congruence. Qed.
+
+      Local Lemma None_neq_Some_fast {T} {P : T -> Prop} {v} : @None T = Some v -> P v.
+      Proof. congruence. Qed.
+
+      Local Lemma Some_eq_Some_subst_fast {T v1} {P : T -> Prop}
+        : P v1 -> forall v2, Some v1 = Some v2 -> P v2.
+      Proof. congruence. Qed.
+
+      Lemma unify_to_typed {t t' pidc idc}
+        : forall v,
+          @unify t t' pidc idc = Some v
+          -> forall evm pf,
+            rew [Compilers.ident] pf in @to_typed t pidc evm v = idc.
+      Proof.
+        cbv [unify to_typed].
+        repeat first [ match goal with
+                       | [ |- forall v, None = Some v -> _ ] => refine (@None_neq_Some_fast _ _)
+                       | [ |- forall v, Some _ = Some v -> _ ] => refine (@Some_eq_Some_subst_fast _ _ _ _)
+                       end
+                     | break_innermost_match_step
+                     | reflexivity
+                     | progress intros
+                     | progress cbv [type.subst_default base.subst_default] in *
+                     | progress Compilers.type.inversion_type ].
+      Qed.
     End ident.
   End pattern.
 End Compilers.
