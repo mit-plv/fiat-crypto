@@ -23,6 +23,7 @@ INSTALLDEFAULTROOT := Crypto
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	old-pipeline-nobigmem print-old-pipeline-nobigmem \
 	old-pipeline-lite print-old-pipeline-lite \
+	coq-without-new-pipeline \
 	nobigmem print-nobigmem \
 	util \
 	specific-c specific-display display \
@@ -115,6 +116,7 @@ REAL_SPECIFIC_GENERATED_VOFILES := $(filter $(SPECIFIC_GENERATED_VOFILES),$(VOFI
 NEW_PIPELINE_PRE_VOFILES := $(filter $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Experiments/NewPipeline/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
+COQ_WITHOUT_NEW_PIPELINE_VOFILES := $(filter-out $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
 
 SELECTED_PATTERN := \
 	src/Specific/X25519/C64/% \
@@ -189,6 +191,7 @@ coq: $(COQ_VOFILES)
 lite: $(LITE_VOFILES)
 old-pipeline-lite: $(OLD_PIPELINE_LITE_VOFILES)
 lite-display: $(LITE_DISPLAY_VOFILES:.vo=.log)
+coq-without-new-pipeline: $(COQ_WITHOUT_NEW_PIPELINE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
 old-pipeline-nobigmem: $(OLD_PIPELINE_NOBIGMEM_VOFILES)
 only-heavy: $(HEAVY_VOFILES)
