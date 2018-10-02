@@ -156,7 +156,7 @@ Module E.
           destruct (parity r), p; cbv [negb] in *; congruence. }
       Qed.
 
-      Local Ltac t_step :=
+      Local Ltac t'_step :=
         match goal with
         | _ => progress subst
         | _ => progress destruct_head' @E.point
@@ -173,7 +173,7 @@ Module E.
         | H:_ |- _ => unique pose proof (exist_option_None _ _ _ H); clear H
         | _ => solve [trivial | eapply solve_correct; fsatz]
         end.
-      Local Ltac t := repeat t_step.
+      Local Ltac t' := repeat t'_step.
 
       Program Definition decompress (b:bool*F) : option point :=
         exist_option _
@@ -188,21 +188,21 @@ Module E.
                 end
               end
             end _.
-      Next Obligation. t. Qed.
+      Next Obligation. t'. Qed.
 
       Lemma decompress_Some b P (H:Logic.eq (decompress b) (Some P))
         : Logic.eq (compress P) b.
-      Proof using Type. cbv [compress decompress] in *; t. Qed.
+      Proof using Type. cbv [compress decompress] in *; t'. Qed.
 
       Lemma decompress_None b (H:Logic.eq (decompress b) None)
         : forall P, not (Logic.eq (compress P) b).
       Proof.
         cbv [compress decompress exist_option coordinates] in *; intros.
-        t.
+        t'.
         { intro.
           match goal with
           | [ H0 : _ |- False ]
-            => apply (H0 f); [t|congruence]; clear H0
+            => apply (H0 f); [t'|congruence]; clear H0
           end.
           rewrite solve_correct in y; Nsatz.nsatz_power 2%nat. }
         { intro. Prod.inversion_prod; subst.
