@@ -4,9 +4,11 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.HProp.
 Require Import Crypto.Experiments.NewPipeline.Language.
 Require Import Crypto.Experiments.NewPipeline.LanguageInversion.
 Require Import Crypto.Experiments.NewPipeline.GENERATEDIdentifiersWithoutTypes.
+Require Import Crypto.Util.FixCoqMistakes.
 
 Import EqNotations.
 Module Compilers.
@@ -34,6 +36,43 @@ Module Compilers.
     Proof. destruct x, y; try congruence; trivial. Qed.
 
     Local Lemma Some_neq_None {A x} : @Some A x <> None. Proof. congruence. Qed.
+
+    Local Lemma None_neq_Some_fast {T} {P : T -> Prop} {v} : @None T = Some v -> P v.
+    Proof. congruence. Qed.
+
+    Local Lemma Some_eq_Some_subst_fast {T v1} {P : T -> Prop}
+      : P v1 -> forall v2, Some v1 = Some v2 -> P v2.
+    Proof. congruence. Qed.
+
+    Local Lemma option_case_fast {T} {P : T -> Prop} {v'}
+      : match v' with
+        | Some v' => P v'
+        | None => True
+        end
+        -> forall v,
+          v' = Some v
+          -> P v.
+    Proof. destruct v'; congruence. Qed.
+
+    Module base.
+      Definition eq_subst_default_relax {t evm} : base.subst_default (base.relax t) evm = t.
+      Proof.
+        induction t; cbn;
+          first [ reflexivity
+                | apply f_equal
+                | apply f_equal2 ];
+          assumption.
+      Defined.
+    End base.
+
+    Module type.
+      Definition eq_subst_default_relax {t evm} : type.subst_default (type.relax t) evm = t.
+      Proof.
+        induction t; cbn;
+          first [ apply f_equal, base.eq_subst_default_relax
+                | apply f_equal2; assumption ].
+      Defined.
+    End type.
 
     Module Raw.
       Module ident.
@@ -111,29 +150,50 @@ Module Compilers.
           <-> type_vars idc = List.nil.
       Proof. destruct idc; cbn; intuition congruence. Qed.
 
-      Local Lemma None_neq_Some_fast {T} {P : T -> Prop} {v} : @None T = Some v -> P v.
-      Proof. congruence. Qed.
-
-      Local Lemma Some_eq_Some_subst_fast {T v1} {P : T -> Prop}
-        : P v1 -> forall v2, Some v1 = Some v2 -> P v2.
-      Proof. congruence. Qed.
-
       Lemma unify_to_typed {t t' pidc idc}
         : forall v,
           @unify t t' pidc idc = Some v
           -> forall evm pf,
             rew [Compilers.ident] pf in @to_typed t pidc evm v = idc.
       Proof.
-        cbv [unify to_typed].
-        repeat first [ match goal with
-                       | [ |- forall v, None = Some v -> _ ] => refine (@None_neq_Some_fast _ _)
-                       | [ |- forall v, Some _ = Some v -> _ ] => refine (@Some_eq_Some_subst_fast _ _ _ _)
-                       end
-                     | break_innermost_match_step
-                     | reflexivity
-                     | progress intros
-                     | progress cbv [type.subst_default base.subst_default] in *
-                     | progress Compilers.type.inversion_type ].
+        refine (@option_case_fast _ _ _ _).
+        Time destruct pidc, idc; cbv [unify to_typed]; try exact I.
+        Time all: break_innermost_match; try exact I.
+        Time all: repeat first [ reflexivity
+                               | progress intros
+                               | progress eliminate_hprop_eq
+                               | progress cbn [type.subst_default base.subst_default] in *
+                               | progress Compilers.type.inversion_type ].
+      Qed.
+
+      Lemma unify_of_typed_ident {t idc}
+        : unify (@of_typed_ident t idc) idc <> None.
+      Proof.
+        destruct idc; cbn; break_innermost_match; exact Some_neq_None.
+      Qed.
+
+      Lemma to_typed_of_typed_ident {t idc}
+        : forall v,
+          unify (@of_typed_ident t idc) idc = Some v
+          -> forall evm pf,
+            (rew [Compilers.ident] pf in to_typed (@of_typed_ident t idc) evm v)
+            = idc.
+      Proof.
+        destruct idc.
+        all: repeat first [ break_innermost_match_step
+                          | break_innermost_match_hyps_step
+                          | progress intros
+                          | reflexivity
+                          | progress subst
+                          | progress inversion_option
+                          | progress eliminate_hprop_eq
+                          | progress fold (@base.subst_default)
+                          | progress cbn in *
+                          | lazymatch goal with
+                            | [ H : context[base.subst_default (base.relax ?t) ?evm] |- _ ]
+                              => generalize dependent (base.subst_default (base.relax t) evm)
+                            end
+                          | progress Compilers.type.inversion_type ].
       Qed.
     End ident.
   End pattern.
