@@ -124,6 +124,7 @@ Section with_args.
                  -> eval B < eval m_enc
                  -> 0 <= eval (f A B) < eval m_enc)))%Z }.
   Proof.
+    generalize m_big.
     exists (fun A B => add (r:=r)(R_numlimbs:=sz) m_enc A B).
     abstract (
         split; intros;
@@ -209,6 +210,7 @@ Section with_args.
           (eval A < eval m_enc
            -> f A = 0 <-> (montgomery_to_F_gen (eval A) = F.of_Z m 0))%Z }.
   Proof.
+    generalize m_big;
     exists (fun A => nonzero (R_numlimbs:=sz) A).
     abstract (
         intros eval A H **; rewrite (@eval_nonzero r) by (eassumption || reflexivity);
