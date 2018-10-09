@@ -1244,6 +1244,13 @@ Module Compilers.
         end
       end.
 
+    Definition reify_list {var} {t} (ls : list (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.list t))
+      := Datatypes.list_rect
+           (fun _ => _)
+           (expr.Ident ident.nil)
+           (fun x _ xs => expr.Ident ident.cons @ x @ xs)%expr
+           ls.
+
     Fixpoint smart_Literal {var} {t:base.type} : base.interp t -> @expr.expr base.type ident var (type.base t)
       := match t with
          | base.type.type_base t => fun v => expr.Ident (ident.Literal v)
@@ -1252,10 +1259,7 @@ Module Compilers.
               => expr.Ident ident.pair @ (@smart_Literal var A a) @ (@smart_Literal var B b)
          | base.type.list A
            => fun v : list (base.interp A)
-              => fold_right
-                   (fun x xs => expr.Ident ident.cons @ x @ xs)
-                   (expr.Ident ident.nil)
-                   (List.map (@smart_Literal var A) v)
+              => reify_list (List.map (@smart_Literal var A) v)
          end%expr.
 
     Module Export Notations.
@@ -1585,15 +1589,7 @@ Module Compilers.
     Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
   End defaults.
 
-  Section gallina_reify.
-    Context {var : type -> Type}.
-    Definition reify_list {t} (ls : list (@expr var (type.base t))) : @expr var (base.type.list t)
-      := (list_rect
-            (fun _ => _)
-            (#ident.nil)
-            (fun x _ xs => x :: xs)
-            ls)%expr.
-  End gallina_reify.
+  Notation reify_list := ident.reify_list.
 
   Lemma interp_reify_list {t} ls
     : interp (@reify_list _ t ls) = List.map interp ls.
@@ -1601,6 +1597,16 @@ Module Compilers.
     unfold reify_list.
     induction ls as [|x xs IHxs]; cbn in *; [ reflexivity | ].
     rewrite IHxs; reflexivity.
+  Qed.
+
+  Lemma interp_smart_Literal {t} v : expr.interp (@ident.interp) (@ident.smart_Literal _ t v) = v.
+  Proof.
+    cbv [ident.interp]; induction t; cbn [ident.smart_Literal expr.interp ident.gen_interp];
+      break_innermost_match; cbn [expr.interp ident.gen_interp].
+    { reflexivity. }
+    { apply f_equal2; auto. }
+    { etransitivity; [ rewrite interp_reify_list, map_map | apply map_id ].
+      apply map_ext; auto. }
   Qed.
 
   Module GallinaReify.
