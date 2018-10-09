@@ -2190,7 +2190,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      Redirect "/tmp/fancy_rewrite_head" Print fancy_rewrite_head.
+      (* Redirect "/tmp/fancy_rewrite_head" Print fancy_rewrite_head. *)
     End red_fancy.
 
     Section red_nbe.
@@ -2286,7 +2286,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      Redirect "/tmp/nbe_rewrite_head" Print nbe_rewrite_head.
+      (* Redirect "/tmp/nbe_rewrite_head" Print nbe_rewrite_head. *)
     End red_nbe.
 
     Section red_arith.
@@ -2383,7 +2383,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      Redirect "/tmp/arith_rewrite_head" Print arith_rewrite_head.
+      (* Redirect "/tmp/arith_rewrite_head" Print arith_rewrite_head. *)
     End red_arith.
 
     Definition RewriteNBE {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t

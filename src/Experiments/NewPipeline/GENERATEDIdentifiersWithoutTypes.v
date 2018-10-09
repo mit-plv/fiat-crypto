@@ -89,8 +89,8 @@ Module Compilers.
 
     (*
     Set Printing Coercions.
-    Redirect "/tmp/pr" Print Compilers.ident.ident.
-    Redirect "/tmp/sm" Show Match Compilers.ident.ident.
+    (* Redirect "/tmp/pr" Print Compilers.ident.ident. *)
+    (* Redirect "/tmp/sm" Show Match Compilers.ident.ident. *)
     *)
     (*
 <<<
@@ -905,8 +905,8 @@ Module Compilers.
 
     (""" + """*
     Set Printing Coercions.
-    Redirect "/tmp/pr" Print Compilers.ident.ident.
-    Redirect "/tmp/sm" Show Match Compilers.ident.ident.
+    (* Redirect "/tmp/pr" Print Compilers.ident.ident. *)
+    (* Redirect "/tmp/sm" Show Match Compilers.ident.ident. *)
     *""" + """)
 """
 
