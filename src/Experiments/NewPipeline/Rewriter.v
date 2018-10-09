@@ -520,6 +520,16 @@ Module Compilers.
                   => fun f (x : value' _ _) => @reflect _ d (f @ (@reify _ s x))
                 end%expr%under_lets.
 
+        Fixpoint reify_expr {t} (e : @expr.expr base.type ident value t)
+          : @expr.expr base.type ident var t
+          := match e in expr.expr t return expr.expr t with
+             | expr.Ident t idc => expr.Ident idc
+             | expr.Var t v => reify v
+             | expr.Abs s d f => expr.Abs (fun x => @reify_expr _ (f (reflect (expr.Var x))))
+             | expr.App s d f x => expr.App (@reify_expr _ f) (@reify_expr _ x)
+             | expr.LetIn A B x f => expr.LetIn (@reify_expr _ x) (fun xv => @reify_expr _ (f (reflect (expr.Var xv))))
+             end.
+
         Definition reify_and_let_binds_cps {with_lets} {t} : value' with_lets t -> forall T, (expr t -> UnderLets T) -> UnderLets T
           := match t, with_lets return value' with_lets t -> forall T, (expr t -> UnderLets T) -> UnderLets T with
              | type.base _, false => reify_and_let_binds_base_cps _
@@ -605,18 +615,25 @@ Module Compilers.
                     (@under_with_unification_resultT' _ x evm _ _ F)
              end.
 
-        Fixpoint under_with_unification_resultT'_relation {t p evm K1 K2}
+        Fixpoint under_with_unification_resultT'_relation_hetero {t p evm K1 K2}
+                 (FH : forall t, value t -> value t -> Prop)
                  (F : K1 -> K2 -> Prop)
                  {struct p}
           : @with_unification_resultT' t p evm K1 -> @with_unification_resultT' t p evm K2 -> Prop
           := match p return with_unification_resultT' p evm K1 -> with_unification_resultT' p evm K2 -> Prop with
-             | pattern.Wildcard t => fun f1 f2 => forall v, F (f1 v) (f2 v)
+             | pattern.Wildcard t => fun f1 f2 => forall v1 v2, FH _ v1 v2 -> F (f1 v1) (f2 v2)
              | pattern.Ident t idc => under_type_of_list_relation_cps F
              | pattern.App s d f x
-               => @under_with_unification_resultT'_relation
+               => @under_with_unification_resultT'_relation_hetero
                     _ f evm _ _
-                    (@under_with_unification_resultT'_relation _ x evm _ _ F)
+                    FH
+                    (@under_with_unification_resultT'_relation_hetero _ x evm _ _ FH F)
              end.
+
+        Definition under_with_unification_resultT'_relation {t p evm K1 K2}
+                 (F : K1 -> K2 -> Prop)
+          : @with_unification_resultT' t p evm K1 -> @with_unification_resultT' t p evm K2 -> Prop
+          := @under_with_unification_resultT'_relation_hetero t p evm K1 K2 (fun _ => eq) F.
 
         Definition ident_collect_vars := (fun t idc => fold_right PositiveSet.union PositiveSet.empty (List.map pattern.type.collect_vars (type_vars_of_pident t idc))).
 
@@ -633,8 +650,15 @@ Module Compilers.
           := pattern.type.under_forall_vars
                (fun evm => under_with_unification_resultT' (F evm)).
 
+        Definition under_with_unification_resultT_relation_hetero {t p K1 K2}
+                   (FH : forall t, value t -> value t -> Prop)
+                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
+          : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2 -> Prop
+          := pattern.type.under_forall_vars_relation
+               (fun evm => under_with_unification_resultT'_relation_hetero FH (F evm)).
+
         Definition under_with_unification_resultT_relation {t p K1 K2}
-                 (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
+                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
           : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2 -> Prop
           := pattern.type.under_forall_vars_relation
                (fun evm => under_with_unification_resultT'_relation (F evm)).
