@@ -264,6 +264,7 @@ src/Experiments/NewPipeline/MiscCompilerPassesProofs.v
 src/Experiments/NewPipeline/Rewriter.v
 src/Experiments/NewPipeline/RewriterProofs.v
 src/Experiments/NewPipeline/RewriterRulesGood.v
+src/Experiments/NewPipeline/RewriterRulesInterpGood.v
 src/Experiments/NewPipeline/RewriterWf1.v
 src/Experiments/NewPipeline/RewriterWf2.v
 src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.v

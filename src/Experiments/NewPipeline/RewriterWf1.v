@@ -204,6 +204,9 @@ Module Compilers.
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
+                (pident_to_typed
+                 : forall t (idc : pident t) (evm : EvarMap),
+                    type_of_list (pident_arg_types t idc) -> ident (pattern.type.subst_default t evm))
                 (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base.type)
                 (raw_pident_to_typed : forall (pidc : raw_pident) (args : full_types pidc), ident (type_of_raw_pident pidc args))
                 (raw_pident_is_simple : raw_pident -> bool)
@@ -236,15 +239,24 @@ Module Compilers.
         Local Notation to_raw_pattern := (@pattern.to_raw pident raw_pident (@strip_types)).
         Local Notation reify := (@reify ident).
         Local Notation reflect := (@reflect ident).
+        Local Notation reify_expr := (@reify_expr ident).
         Local Notation rawexpr := (@rawexpr ident).
         Local Notation eval_decision_tree var := (@eval_decision_tree ident var pident full_types invert_bind_args type_of_raw_pident raw_pident_to_typed).
         Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps ident _ e _ id).
         Local Notation unify_pattern' var := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
 
+        Definition lam_type_of_list {ls K} : (type_of_list ls -> K) -> type_of_list_cps K ls
+          := list_rect
+               (fun ls => (type_of_list ls -> K) -> type_of_list_cps K ls)
+               (fun f => f tt)
+               (fun T Ts rec k t => rec (fun ts => k (t, ts)))
+               ls.
+
         Section with_var1.
           Context {var : type -> Type}.
           Local Notation expr := (@expr.expr base.type ident var).
+          Local Notation deep_rewrite_ruleTP_gen := (@deep_rewrite_ruleTP_gen ident var).
 
           Local Notation "e1 === e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
 
@@ -572,27 +584,37 @@ Module Compilers.
                          | break_match_step ltac:(fun _ => idtac) ].
           Qed.
 
-          Lemma normalize_deep_rewrite_rule_cps_id
-                {should_do_again with_opt under_lets is_cps t v T k}
-                (Hk : k None = None)
-                (Hv : (match is_cps, with_opt return @deep_rewrite_ruleTP_gen ident var should_do_again with_opt under_lets is_cps t -> Prop
-                       with
-                       | true, true => fun v => forall T k, v T k = k (v _ id)
-                       | true, false => fun v => forall T k, v T k = (v' <- v _ (@Some _); k v')%option
-                       | false, _ => fun _ => True
-                       end)
-                        v)
-            : @normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v T k = k (@normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v _ id).
-          Proof using Type.
-            clear -Hv Hk; cbn in *.
-            repeat first [ progress cbn in *
-                         | progress destruct_head'_bool
-                         | reflexivity
-                         | progress cbv [id Option.bind] in *
-                         | solve [ auto ]
-                         | break_innermost_match_step
-                         | rewrite Hv; (solve [ auto ] + break_innermost_match_step) ].
-          Qed.
+          Section normalize_deep_rewrite_rule_cps_id.
+            Context {should_do_again with_opt under_lets is_cps : bool}
+                    {t}
+                    {v : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t}
+                    {T}
+                    {k : option (UnderLets var (@expr.expr base.type ident (if should_do_again then @value var else var) t)) -> option T}.
+
+            Definition normalize_deep_rewrite_rule_cps_id_hypsT
+              := ((match is_cps, with_opt return @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t -> Prop
+                   with
+                   | true, true => fun v => forall T k, v T k = k (v _ id)
+                   | true, false => fun v => forall T k, v T k = (v' <- v _ (@Some _); k v')%option
+                   | false, _ => fun _ => True
+                   end)
+                    v).
+
+            Lemma normalize_deep_rewrite_rule_cps_id
+                  (Hk : k None = None)
+                  (Hv : normalize_deep_rewrite_rule_cps_id_hypsT)
+              : @normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v T k = k (@normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v _ id).
+            Proof using Type.
+              clear -Hk Hv; cbv [normalize_deep_rewrite_rule_cps_id_hypsT] in *; cbn in *.
+              repeat first [ progress cbn in *
+                           | progress destruct_head'_bool
+                           | reflexivity
+                           | progress cbv [id Option.bind] in *
+                           | solve [ auto ]
+                           | break_innermost_match_step
+                           | rewrite Hv; (solve [ auto ] + break_innermost_match_step) ].
+            Qed.
+          End normalize_deep_rewrite_rule_cps_id.
         End with_var1.
 
         Section with_var2.
@@ -669,6 +691,26 @@ Module Compilers.
               eapply He; rewrite app_assoc; wf_t. }
             { eapply He with (seg:=nil); [ reflexivity | ].
               eapply wf_reify; auto. }
+          Qed.
+
+          Lemma wf_reify_expr G G' {t}
+                (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> @wf_value G' t v1 v2)
+                e1 e2
+                (Hwf : expr.wf G e1 e2)
+            : expr.wf G' (@reify_expr var1 t e1) (@reify_expr var2 t e2).
+          Proof using Type.
+            cbv [wf_value] in *; revert dependent G'; induction Hwf; intros; cbn [reify_expr];
+              first [ constructor | apply wf_reify ]; eauto; intros.
+            all: match goal with H : _ |- _ => apply H end.
+            all: repeat first [ progress cbn [In eq_rect] in *
+                              | progress intros
+                              | progress destruct_head'_or
+                              | progress subst
+                              | progress inversion_sigma
+                              | progress inversion_prod
+                              | apply wf_reflect
+                              | solve [ eapply wf_value'_Proper_list; [ | solve [ eauto ] ]; wf_safe_t ]
+                              | constructor ].
           Qed.
 
           Inductive wf_rawexpr : list { t : type & var1 t * var2 t }%type -> forall {t}, @rawexpr var1 -> @expr var1 t -> @rawexpr var2 -> @expr var2 t -> Prop :=
@@ -994,6 +1036,137 @@ Module Compilers.
                                (rew [fun tp => @rewrite_rule_data1 _ (pattern.pattern_of_anypattern tp)] pf in r1)
                                r2 }).
         End with_var2.
+
+        Section with_interp.
+          Context (ident_interp : forall t, ident t -> type.interp base.interp t)
+                  {ident_interp_Proper : forall t, Proper (eq ==> type.eqv) (ident_interp t)}.
+          Local Notation var := (type.interp base.interp) (only parsing).
+          Local Notation expr := (@expr.expr base.type ident var).
+          Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation with_unif_rewrite_ruleTP_gen := (@with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
+          Local Notation normalize_deep_rewrite_rule := (@normalize_deep_rewrite_rule ident var).
+          Local Notation under_with_unification_resultT_relation := (@under_with_unification_resultT_relation ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation under_with_unification_resultT_relation_hetero := (@under_with_unification_resultT_relation_hetero ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation deep_rewrite_ruleTP_gen := (@deep_rewrite_ruleTP_gen ident var).
+
+          Local Notation UnderLets_maybe_interp with_lets
+            := (if with_lets as with_lets' return (if with_lets' then UnderLets var _ else _) -> _
+                then UnderLets.interp ident_interp
+                else (fun x => x)).
+
+          Fixpoint value'_interp_related
+                   {with_lets1 with_lets2 t}
+            : @value' var with_lets1 t
+              -> @value' var with_lets2 t
+              -> Prop
+            := match t return value' _ t -> value' _ t -> Prop with
+               | type.base t
+                 => fun v1 v2
+                    => expr.interp ident_interp (UnderLets_maybe_interp with_lets1 v1)
+                       == expr.interp ident_interp (UnderLets_maybe_interp with_lets2 v2)
+               | type.arrow s d
+                 => fun (f1 f2 : value' _ s -> value' _ d)
+                    => forall x1 x2,
+                        @value'_interp_related _ _ s x1 x2
+                        -> @value'_interp_related _ _ d (f1 x1) (f2 x2)
+               end.
+
+          Definition value_interp_related {t} : relation (@value var t)
+            := value'_interp_related.
+
+          Lemma interp_reify_reflect {with_lets t} e v
+            : expr.interp ident_interp e == v -> expr.interp ident_interp (@reify _ with_lets t (reflect e)) == v.
+          Proof using Type.
+            revert with_lets; induction t as [|s IHs d IHd]; intro;
+              cbn [type.related reflect reify];
+              fold (@reify var) (@reflect var); cbv [respectful]; break_innermost_match;
+                cbn [expr.interp UnderLets.to_expr]; auto; [].
+            intros Hf ? ? Hx.
+            apply IHd; cbn [expr.interp]; auto.
+          Qed.
+
+          Lemma interp_of_wf_reify_expr G {t}
+                (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> expr.interp ident_interp (reify v1) == v2)
+                e1 e2
+                (Hwf : expr.wf G e1 e2)
+            : expr.interp ident_interp (@reify_expr _ t e1) == expr.interp ident_interp e2.
+          Proof using ident_interp_Proper.
+            induction Hwf; cbn [expr.interp reify_expr]; cbv [LetIn.Let_In];
+              try solve [ auto
+                        | apply ident_interp_Proper; reflexivity ].
+            all: cbn [type.related] in *; cbv [respectful]; intros.
+            all: match goal with H : _ |- _ => apply H; clear H end.
+            all: repeat first [ progress cbn [In eq_rect fst snd] in *
+                              | progress intros
+                              | progress destruct_head'_or
+                              | progress subst
+                              | progress inversion_sigma
+                              | progress inversion_prod
+                              | apply interp_reify_reflect
+                              | solve [ auto ] ].
+          Qed.
+
+          Fixpoint pattern_default_interp' {K t} (p : pattern t) evm {struct p} : (expr (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' t p evm K
+            := match p in pattern.pattern t return (expr (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' t p evm K with
+               | pattern.Wildcard t => fun k v => k (reify v)
+               | pattern.Ident t idc
+                 => fun k
+                    => lam_type_of_list (fun args => k (expr.Ident (pident_to_typed _ idc _ args)))
+               | pattern.App s d f x
+                 => fun k
+                    => @pattern_default_interp'
+                         _ _ f evm
+                         (fun ef
+                          => @pattern_default_interp'
+                               _ _ x evm
+                               (fun ex
+                                => k (expr.App ef ex)))
+               end.
+
+          Definition pattern_default_interp {t} (p : pattern t) : @with_unif_rewrite_ruleTP_gen t p false false false false
+            := pattern.type.lam_forall_vars
+                 (fun evm
+                  => pattern_default_interp' p evm id).
+
+          Definition deep_rewrite_ruleTP_gen_good_relation
+                     {should_do_again with_opt under_lets is_cps : bool} {t}
+                     (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t)
+                     (v2 : expr t)
+            : Prop
+            := @normalize_deep_rewrite_rule_cps_id_hypsT var _ _ _ _ _ v1
+               /\ (let v1 := normalize_deep_rewrite_rule v1 _ id in
+                   match v1 with
+                   | None => True
+                   | Some v1 => let v1 := UnderLets.interp ident_interp v1 in
+                                (if should_do_again
+                                    return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> Prop
+                                 then
+                                   (fun v1
+                                    => expr.interp ident_interp (reify_expr v1) == expr.interp ident_interp v2)
+                                 else
+                                   (fun v1 => expr.interp ident_interp v1 == expr.interp ident_interp v2))
+                                  v1
+                   end).
+
+          Definition rewrite_rule_data_interp_goodT
+                     {t} {p : pattern t} (r : @rewrite_rule_data t p)
+            : Prop
+            := @under_with_unification_resultT_relation_hetero
+                 _ _ _ _
+                 (fun _ => value_interp_related)
+                 (fun evm => deep_rewrite_ruleTP_gen_good_relation)
+                 (rew_replacement _ _ r)
+                 (pattern_default_interp p).
+
+          Definition rewrite_rules_interp_goodT
+                     (rews : rewrite_rulesT)
+            : Prop
+            := forall p r,
+              List.In (existT _ p r) rews
+              -> rewrite_rule_data_interp_goodT r.
+        End with_interp.
       End with_var.
     End Compile.
   End RewriteRules.
