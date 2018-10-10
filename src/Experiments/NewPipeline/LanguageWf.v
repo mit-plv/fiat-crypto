@@ -714,6 +714,16 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
               reflexivity.
         Qed.
 
+        Lemma interp_smart_Literal {t} v : interp (@ident.smart_Literal _ t v) = v.
+        Proof.
+          cbv [ident.interp]; induction t; cbn [ident.smart_Literal expr.interp ident.gen_interp];
+            break_innermost_match; cbn [expr.interp ident.gen_interp].
+          { reflexivity. }
+          { apply f_equal2; auto. }
+          { etransitivity; [ rewrite interp_reify_list, map_map | apply map_id ].
+            apply map_ext; auto. }
+        Qed.
+
         Lemma interp_reify {t} v : interp (GallinaReify.base.reify (t:=t) v) = v.
         Proof.
           induction t; cbn [GallinaReify.base.reify]; break_innermost_match; cbn; f_equal;

@@ -1591,24 +1591,6 @@ Module Compilers.
 
   Notation reify_list := ident.reify_list.
 
-  Lemma interp_reify_list {t} ls
-    : interp (@reify_list _ t ls) = List.map interp ls.
-  Proof.
-    unfold reify_list.
-    induction ls as [|x xs IHxs]; cbn in *; [ reflexivity | ].
-    rewrite IHxs; reflexivity.
-  Qed.
-
-  Lemma interp_smart_Literal {t} v : expr.interp (@ident.interp) (@ident.smart_Literal _ t v) = v.
-  Proof.
-    cbv [ident.interp]; induction t; cbn [ident.smart_Literal expr.interp ident.gen_interp];
-      break_innermost_match; cbn [expr.interp ident.gen_interp].
-    { reflexivity. }
-    { apply f_equal2; auto. }
-    { etransitivity; [ rewrite interp_reify_list, map_map | apply map_id ].
-      apply map_ext; auto. }
-  Qed.
-
   Module GallinaReify.
     Module base.
       Section reify.

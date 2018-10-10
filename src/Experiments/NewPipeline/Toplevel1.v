@@ -1679,7 +1679,7 @@ Module Import UnsaturatedSolinas.
                      | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
                      | reflexivity
                      | lia
-                     | rewrite interp_reify_list, ?map_map
+                     | rewrite expr.interp_reify_list, ?map_map
                      | rewrite map_ext with (g:=id), map_id
                      | progress distr_length
                      | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
@@ -2803,7 +2803,7 @@ Module WordByWordMontgomery.
                      | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
                      | reflexivity
                      | lia
-                     | rewrite interp_reify_list, ?map_map
+                     | rewrite expr.interp_reify_list, ?map_map
                      | rewrite map_ext with (g:=id), map_id
                      | progress distr_length
                      | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *

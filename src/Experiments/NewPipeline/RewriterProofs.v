@@ -51,7 +51,7 @@ Module Compilers.
     Local Ltac start_Wf_or_interp_proof rewrite_head_eq all_rewrite_rules_eq rewrite_head0 :=
       let Rewrite := lazymatch goal with
                      | [ |- Wf ?e ] => head e
-                     | [ |- Interp ?e == _ ] => head e
+                     | [ |- expr.Interp _ ?e == _ ] => head e
                      end in
       cbv [Rewrite]; rewrite rewrite_head_eq; cbv [rewrite_head0]; rewrite all_rewrite_rules_eq.
     Local Ltac start_Wf_proof rewrite_head_eq all_rewrite_rules_eq rewrite_head0 :=
@@ -86,32 +86,53 @@ Module Compilers.
       apply fancy_rewrite_rules_good; assumption.
     Qed.
 
-    Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : Interp (@RewriteNBE t e) == Interp e.
+    Lemma Interp_gen_RewriteNBE {cast_outside_of_range t} e (Hwf : Wf e)
+      : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteNBE t e)
+        == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
     Proof.
       start_Interp_proof nbe_rewrite_head_eq nbe_all_rewrite_rules_eq (@nbe_rewrite_head0).
     Admitted.
-    Lemma Interp_RewriteArith (max_const_val : Z) {t} e (Hwf : Wf e) : Interp (@RewriteArith max_const_val t e) == Interp e.
+    Lemma Interp_gen_RewriteArith {cast_outside_of_range} (max_const_val : Z) {t} e (Hwf : Wf e)
+      : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteArith max_const_val t e)
+        == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
     Proof.
       start_Interp_proof arith_rewrite_head_eq arith_all_rewrite_rules_eq (@arith_rewrite_head0).
     Admitted.
 
+    Lemma Interp_gen_RewriteToFancy {cast_outside_of_range} (invert_low invert_high : Z -> Z -> option Z)
+          (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+          (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+          {t} e (Hwf : Wf e)
+      : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancy invert_low invert_high t e)
+        == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+    Proof.
+      start_Interp_proof fancy_rewrite_head_eq fancy_all_rewrite_rules_eq (@fancy_rewrite_head0).
+    Admitted.
+
+    Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : Interp (@RewriteNBE t e) == Interp e.
+    Proof. apply Interp_gen_RewriteNBE; assumption. Qed.
+    Lemma Interp_RewriteArith (max_const_val : Z) {t} e (Hwf : Wf e)
+      : Interp (@RewriteArith max_const_val t e) == Interp e.
+    Proof. apply Interp_gen_RewriteArith; assumption. Qed.
     Lemma Interp_RewriteToFancy (invert_low invert_high : Z -> Z -> option Z)
           (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
           (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
           {t} e (Hwf : Wf e)
       : Interp (@RewriteToFancy invert_low invert_high t e) == Interp e.
-    Proof.
-      start_Interp_proof fancy_rewrite_head_eq fancy_all_rewrite_rules_eq (@fancy_rewrite_head0).
-    Admitted.
+    Proof. apply Interp_gen_RewriteToFancy; assumption. Qed.
   End RewriteRules.
 
   Lemma Wf_PartialEvaluate {t} e (Hwf : Wf e) : Wf (@PartialEvaluate t e).
   Proof. apply Wf_RewriteNBE, Hwf. Qed.
 
-  Lemma Interp_PartialEvaluate {t} e (Hwf : Wf e) : Interp (@PartialEvaluate t e) == Interp e.
-  Proof. apply Interp_RewriteNBE, Hwf. Qed.
+  Lemma Interp_gen_PartialEvaluate {cast_outside_of_range} {t} e (Hwf : Wf e)
+    : expr.Interp (@ident.gen_interp cast_outside_of_range) (@PartialEvaluate t e) == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+  Proof. apply Interp_gen_RewriteNBE, Hwf. Qed.
 
+  Lemma Interp_PartialEvaluate {t} e (Hwf : Wf e)
+    : Interp (@PartialEvaluate t e) == Interp e.
+  Proof. apply Interp_gen_PartialEvaluate; assumption. Qed.
 
   Hint Resolve Wf_PartialEvaluate Wf_RewriteArith Wf_RewriteNBE Wf_RewriteToFancy : wf.
-  Hint Rewrite @Interp_PartialEvaluate @Interp_RewriteArith @Interp_RewriteNBE @Interp_RewriteToFancy : interp.
+  Hint Rewrite @Interp_gen_PartialEvaluate @Interp_gen_RewriteArith @Interp_gen_RewriteNBE @Interp_gen_RewriteToFancy @Interp_PartialEvaluate @Interp_RewriteArith @Interp_RewriteNBE @Interp_RewriteToFancy : interp.
 End Compilers.
