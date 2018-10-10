@@ -2165,3 +2165,13 @@ Qed.
 Lemma concat_fold_right_app A ls
   : @List.concat A ls = List.fold_right (@List.app A) nil ls.
 Proof. induction ls; cbn; eauto. Qed.
+
+Lemma map_update_nth_ext {A B n} f1 f2 f3 ls1 ls2
+  : map f3 ls1 = ls2
+    -> (forall x, List.In x ls1 -> f3 (f2 x) = f1 (f3 x))
+    -> map f3 (@update_nth A n f2 ls1) = @update_nth B n f1 ls2.
+Proof.
+  revert ls1 ls2; induction n as [|n IHn], ls1 as [|x1 xs1], ls2 as [|x2 xs2]; cbn; intros H0 H1; try discriminate; try reflexivity.
+  all: inversion H0; clear H0; subst.
+  all: f_equal; eauto using or_introl.
+Qed.
