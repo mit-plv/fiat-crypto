@@ -1864,11 +1864,11 @@ Module Compilers.
 (Z.add_get_carry_concrete 2^256) @@ (?x, ?y)        --> (add 0) @@ (y, x)
 *)
               make_rewriteo
-                (#pattern.ident.Z_add_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                (fun s x y offset => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                (#pattern.ident.Z_add_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ #?ℤ))
+                (fun s x y mask offset => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  (s =? 2^Z.log2 s) && (mask =? Z.ones (Z.log2 s - offset)))
               ; make_rewriteo
-                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ) @ ??)
-                  (fun s y offset x => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ (#pattern.ident.Z_shiftl @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ #?ℤ) @ ??)
+                  (fun s y mask offset x => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  (s =? 2^Z.log2 s) && (mask =? Z.ones (Z.log2 s - offset)))
               ; make_rewriteo
                   (#pattern.ident.Z_add_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
                   (fun s x y offset => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
@@ -1886,11 +1886,11 @@ Module Compilers.
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y)        --> (addc 0) @@ (c, y, x)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                  (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftl @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ #?ℤ))
+                  (fun s c x y mask offset => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  (s =? 2^Z.log2 s) && (mask =? Z.ones (Z.log2 s - offset)))
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ) @ ??)
-                  (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ #?ℤ) @ ??)
+                  (fun s c y mask offset x => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  (s =? 2^Z.log2 s) && (mask =? Z.ones (Z.log2 s - offset)))
               ; make_rewriteo
                   (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
                   (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
@@ -1906,8 +1906,8 @@ Module Compilers.
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y)        --> (sub 0) @@ (y, x)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                  (fun s x y offset => #(ident.fancy_sub (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ #?ℤ))
+                  (fun s x y mask offset => #(ident.fancy_sub (Z.log2 s) offset) @ (x, y)  when  (s =? 2^Z.log2 s) && (mask =? Z.ones (Z.log2 s - offset)))
               ; make_rewriteo
                   (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
                   (fun s x y offset => #(ident.fancy_sub (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
@@ -1920,8 +1920,8 @@ Module Compilers.
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y)        --> (subb 0) @@ (c, y, x)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                  (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) offset) @ (b, x, y)  when  s =? 2^Z.log2 s)
+                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftl @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ #?ℤ))
+                  (fun s b x y mask offset => #(ident.fancy_subb (Z.log2 s) offset) @ (b, x, y)  when  (s =? 2^Z.log2 s) && (mask =? Z.ones (Z.log2 s - offset)))
               ; make_rewriteo
                   (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
                   (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) (-offset)) @ (b, x, y)  when  s =? 2^Z.log2 s)
