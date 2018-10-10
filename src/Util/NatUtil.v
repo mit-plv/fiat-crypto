@@ -411,3 +411,33 @@ Qed.
 
 Lemma max_0_iff a b : Nat.max a b = 0%nat <-> (a = 0%nat /\ b = 0%nat).
 Proof. omega **. Qed.
+
+Lemma push_f_nat_rect {P P'} (f : P -> P') PO PS PS' n
+      (HS : forall x rec, f (PS x rec)
+                          = PS' x (f rec))
+  : f (nat_rect (fun _ => P) PO PS n)
+    = nat_rect
+        (fun _ => _)
+        (f PO)
+        PS'
+        n.
+Proof.
+  induction n as [|n IHn]; cbn [nat_rect]; [ reflexivity | ].
+  rewrite HS, IHn; reflexivity.
+Qed.
+
+Lemma push_f_nat_rect_arrow {P P'} (f : P -> P') {A} PO PS PS' n v
+      (HS : forall x rec v, f (PS x rec v)
+                            = PS' x (fun v => f (rec v)) v)
+      (PS'_Proper : Proper (Logic.eq ==> pointwise_relation _ Logic.eq ==> Logic.eq ==> Logic.eq) PS')
+  : f (nat_rect (fun _ => A -> P) PO PS n v)
+    = nat_rect
+        (fun _ => _)
+        (fun v => f (PO v))
+        PS'
+        n
+        v.
+Proof.
+  revert v; induction n as [|n IHn]; cbn [nat_rect]; [ reflexivity | ]; intro.
+  rewrite HS; apply PS'_Proper; eauto.
+Qed.

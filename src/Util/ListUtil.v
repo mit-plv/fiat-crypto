@@ -2175,3 +2175,33 @@ Proof.
   all: inversion H0; clear H0; subst.
   all: f_equal; eauto using or_introl.
 Qed.
+
+Lemma push_f_list_rect {P P'} (f : P -> P') {A} Pnil Pcons Pcons' ls
+      (Hcons : forall x xs rec, f (Pcons x xs rec)
+                                = Pcons' x xs (f rec))
+  : f (list_rect (fun _ : list A => P) Pnil Pcons ls)
+    = list_rect
+        (fun _ => _)
+        (f Pnil)
+        Pcons'
+        ls.
+Proof.
+  induction ls as [|x xs IHxs]; cbn [list_rect]; [ reflexivity | ].
+  rewrite Hcons, IHxs; reflexivity.
+Qed.
+
+Lemma eq_app_list_rect {A} (ls1 ls2 : list A)
+  : List.app ls1 ls2 = list_rect _ ls2 (fun x _ rec => x :: rec) ls1.
+Proof. revert ls2; induction ls1, ls2; cbn; f_equal; eauto. Qed.
+Lemma eq_flat_map_list_rect {A B} f (ls : list A)
+  : @flat_map A B f ls = list_rect _ nil (fun x _ rec => f x ++ rec) ls.
+Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_partition_list_rect {A} f (ls : list A)
+  : @partition A f ls = list_rect _ (nil, nil) (fun x _ '(a, b) => bool_rect (fun _ => _) (x :: a, b) (a, x :: b) (f x)) ls.
+Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_fold_right_list_rect {A B} f v (ls : list _)
+  : @fold_right A B f v ls = list_rect _ v (fun x _ rec => f x rec) ls.
+Proof. induction ls; cbn; eauto. Qed.
+Lemma eq_map_list_rect {A B} f (ls : list _)
+  : @List.map A B f ls = list_rect _ nil (fun x _ rec => f x :: rec) ls.
+Proof. induction ls; cbn; eauto. Qed.
