@@ -1675,7 +1675,7 @@ Module Compilers.
             ; make_rewriteo (#?ℤ   - (-??)) (fun z v => ##z + v  when  z >? 0)
             ; make_rewriteo (#?ℤ   - (-??)) (fun z v => v - ##((-z)%Z)     when  z <? 0)
             ; make_rewriteo (#?ℤ   -   ?? ) (fun z v => -(##((-z)%Z) + v)  when  z <? 0)
-            ; make_rewriteo ((-??) - #?ℤ  ) (fun v z => -(v + ##((-z)%Z))  when  z >? 0)
+            ; make_rewriteo ((-??) - #?ℤ  ) (fun v z => -(v + ##(z))       when  z >? 0)
             ; make_rewriteo ((-??) - #?ℤ  ) (fun v z => ##((-z)%Z) - v     when  z <? 0)
             ; make_rewriteo (  ??  - #?ℤ  ) (fun v z => v + ##((-z)%Z)     when  z <? 0)
             ; make_rewrite ((-??) - (-??)) (fun x y => y - x)

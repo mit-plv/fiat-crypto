@@ -491,7 +491,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                              (fun _ : nat =>
                                               UnderLets
                                                 (expr
-                                                   (pattern.base.subst_default
+                                                   (base.subst_default 
                                                       '1
                                                       (PositiveMap.add
                                                          (PositiveSet.rev
@@ -502,7 +502,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                              (fun (n' : nat)
                                                 (rec : UnderLets
                                                          (expr
-                                                            (pattern.base.subst_default
+                                                            (base.subst_default
                                                                '1
                                                                (PositiveMap.add
                                                                   (PositiveSet.rev
@@ -688,8 +688,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                          (Datatypes.nat_rect
                                             (fun _ : nat =>
                                              expr
-                                               (pattern.base.subst_default 
-                                                  '1
+                                               (base.subst_default '1
                                                   (PositiveMap.add
                                                      (PositiveSet.rev
                                                         2%positive) b16
@@ -700,7 +699,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                            base.type)))) ->
                                              UnderLets
                                                (expr
-                                                  (pattern.base.subst_default
+                                                  (base.subst_default 
                                                      '2
                                                      (PositiveMap.add
                                                         (PositiveSet.rev
@@ -713,7 +712,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                             (v x)
                                             (fun (n' : nat)
                                                (rec : expr
-                                                        (pattern.base.subst_default
+                                                        (base.subst_default
                                                            '1
                                                            (PositiveMap.add
                                                               (PositiveSet.rev
@@ -727,7 +726,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                     base.type)))) ->
                                                       UnderLets
                                                         (expr
-                                                           (pattern.base.subst_default
+                                                           (base.subst_default
                                                               '2
                                                               (PositiveMap.add
                                                                  (PositiveSet.rev
@@ -740,7 +739,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                     (PositiveMap.empty
                                                                     base.type))))))
                                                (v5 : expr
-                                                       (pattern.base.subst_default
+                                                       (base.subst_default 
                                                           '1
                                                           (PositiveMap.add
                                                              (PositiveSet.rev
@@ -912,7 +911,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         (fun
                                            _ : Datatypes.list
                                                  (expr
-                                                    (pattern.base.subst_default
+                                                    (base.subst_default 
                                                        '1
                                                        (PositiveMap.add
                                                           (PositiveSet.rev
@@ -925,8 +924,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                          =>
                                          UnderLets
                                            (expr
-                                              (pattern.base.subst_default 
-                                                 '2
+                                              (base.subst_default '2
                                                  (PositiveMap.add
                                                     (PositiveSet.rev
                                                        2%positive) b12
@@ -938,7 +936,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         (v x (##tt)%expr)
                                         (fun
                                            (x2 : expr
-                                                   (pattern.base.subst_default
+                                                   (base.subst_default 
                                                       '1
                                                       (PositiveMap.add
                                                          (PositiveSet.rev
@@ -950,7 +948,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                base.type)))))
                                            (xs : Datatypes.list
                                                    (expr
-                                                      (pattern.base.subst_default
+                                                      (base.subst_default 
                                                          '1
                                                          (PositiveMap.add
                                                             (PositiveSet.rev
@@ -964,7 +962,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                   base.type))))))
                                            (rec : UnderLets
                                                     (expr
-                                                       (pattern.base.subst_default
+                                                       (base.subst_default 
                                                           '2
                                                           (PositiveMap.add
                                                              (PositiveSet.rev
@@ -978,8 +976,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                    base.type))))))
                                          =>
                                          (rec' <-- rec;
-                                          v0 x0 x2 (reify_list xs) rec')%under_lets)
-                                        ls));
+                                          v0 x0 x2 (Compilers.reify_list xs)
+                                            rec')%under_lets) ls));
                           v3 <- base.try_make_transport_cps P P;
                           v4 <- base.try_make_transport_cps P P;
                           Some (fv0 <-- fv;
@@ -1269,9 +1267,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  ##(projT2 args);
                   Some
                     (Base
-                       (fold_right
-                          (fun (x1 : expr ℕ) (xs : expr (list ℕ)) =>
-                           (x1 :: xs)%expr_pat) []%expr_pat
+                       (Compilers.reify_list
                           (map (fun v : nat => (##v)%expr)
                              (seq (let (x1, _) := idc_args in x1)
                                 (let (x1, _) := idc_args0 in x1)))))
@@ -1305,7 +1301,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (xs <- reflect_list (v x0);
                        Some
                          (Base
-                            (reify_list
+                            (Compilers.reify_list
                                (firstn (let (x1, _) := idc_args0 in x1) xs))));
               v1 <- base.try_make_transport_cps A A;
               v2 <- base.try_make_transport_cps A A;
@@ -1339,7 +1335,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (xs <- reflect_list (v x0);
                        Some
                          (Base
-                            (reify_list
+                            (Compilers.reify_list
                                (skipn (let (x1, _) := idc_args0 in x1) xs))));
               v1 <- base.try_make_transport_cps A A;
               v2 <- base.try_make_transport_cps A A;
@@ -1374,7 +1370,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (v2
                       (v1
                          (v0
-                            (reify_list
+                            (Compilers.reify_list
                                (repeat (v x) (let (x1, _) := idc_args0 in x1)))))))
           | None => None
           end
@@ -1408,7 +1404,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (xs <- reflect_list (v x);
                          ys <- reflect_list (v0 x0);
                          Some
-                           (reify_list
+                           (Compilers.reify_list
                               (map (fun '(x1, y) => (x1, y)%expr_pat)
                                  (combine xs ys))));
                 (trA <-- @base.try_make_transport_cps
@@ -1484,8 +1480,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  (fun
                                     _ : Datatypes.list
                                           (expr
-                                             (pattern.base.subst_default 
-                                                '1
+                                             (base.subst_default '1
                                                 (PositiveMap.add
                                                    (PositiveSet.rev
                                                       2%positive) b4
@@ -1497,8 +1492,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   UnderLets
                                     (expr
                                        (list
-                                          (pattern.base.subst_default 
-                                             '2
+                                          (base.subst_default '2
                                              (PositiveMap.add
                                                 (PositiveSet.rev 2%positive)
                                                 b4
@@ -1510,8 +1504,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  (Base []%expr_pat)
                                  (fun
                                     (x1 : expr
-                                            (pattern.base.subst_default 
-                                               '1
+                                            (base.subst_default '1
                                                (PositiveMap.add
                                                   (PositiveSet.rev 2%positive)
                                                   b4
@@ -1522,8 +1515,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                         base.type)))))
                                     (_ : Datatypes.list
                                            (expr
-                                              (pattern.base.subst_default 
-                                                 '1
+                                              (base.subst_default '1
                                                  (PositiveMap.add
                                                     (PositiveSet.rev
                                                        2%positive) b4
@@ -1535,7 +1527,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     (rec : UnderLets
                                              (expr
                                                 (list
-                                                   (pattern.base.subst_default
+                                                   (base.subst_default 
                                                       '2
                                                       (PositiveMap.add
                                                          (PositiveSet.rev
@@ -1583,8 +1575,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (fun _ : Datatypes.list (expr b) =>
                          UnderLets
                            (expr
-                              (pattern.base.subst_default
-                                 (pattern.base.type.list '1)
+                              (base.subst_default (pattern.base.type.list '1)
                                  (PositiveMap.add
                                     (PositiveSet.rev 1%positive) b
                                     (PositiveMap.empty base.type)))))
@@ -1592,7 +1583,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (fun (x1 : expr b) (_ : Datatypes.list (expr b))
                            (rec : UnderLets
                                     (expr
-                                       (pattern.base.subst_default
+                                       (base.subst_default
                                           (pattern.base.type.list '1)
                                           (PositiveMap.add
                                              (PositiveSet.rev 1%positive) b
@@ -1623,7 +1614,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           v0 <- base.try_make_transport_cps b A;
           fv <- v0
                   (xs <- reflect_list (v x);
-                   Some (Base (reify_list (rev xs))));
+                   Some (Base (Compilers.reify_list (rev xs))));
           v1 <- base.try_make_transport_cps A A;
           v2 <- base.try_make_transport_cps A A;
           Some (fv0 <-- fv;
@@ -1677,8 +1668,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  (fun
                                     _ : Datatypes.list
                                           (expr
-                                             (pattern.base.subst_default 
-                                                '1
+                                             (base.subst_default '1
                                                 (PositiveMap.add
                                                    (PositiveSet.rev
                                                       2%positive) b4
@@ -1691,8 +1681,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  (Base []%expr_pat)
                                  (fun
                                     (x1 : expr
-                                            (pattern.base.subst_default 
-                                               '1
+                                            (base.subst_default '1
                                                (PositiveMap.add
                                                   (PositiveSet.rev 2%positive)
                                                   b4
@@ -1703,8 +1692,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                         base.type)))))
                                     (_ : Datatypes.list
                                            (expr
-                                              (pattern.base.subst_default 
-                                                 '1
+                                              (base.subst_default '1
                                                  (PositiveMap.add
                                                     (PositiveSet.rev
                                                        2%positive) b4
@@ -1786,7 +1774,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         (fun
                                            _ : Datatypes.list
                                                  (expr
-                                                    (pattern.base.subst_default
+                                                    (base.subst_default 
                                                        '1
                                                        (PositiveMap.add
                                                           (PositiveSet.rev
@@ -1796,7 +1784,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                          UnderLets
                                            (expr
                                               (list
-                                                 (pattern.base.subst_default
+                                                 (base.subst_default 
                                                     '1
                                                     (PositiveMap.add
                                                        (PositiveSet.rev
@@ -1804,7 +1792,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                        (PositiveMap.empty
                                                           base.type))) *
                                                list
-                                                 (pattern.base.subst_default
+                                                 (base.subst_default 
                                                     '1
                                                     (PositiveMap.add
                                                        (PositiveSet.rev
@@ -1814,7 +1802,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         (Base ([], [])%expr_pat)
                                         (fun
                                            (x1 : expr
-                                                   (pattern.base.subst_default
+                                                   (base.subst_default 
                                                       '1
                                                       (PositiveMap.add
                                                          (PositiveSet.rev
@@ -1823,7 +1811,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                             base.type))))
                                            (_ : Datatypes.list
                                                   (expr
-                                                     (pattern.base.subst_default
+                                                     (base.subst_default 
                                                         '1
                                                         (PositiveMap.add
                                                            (PositiveSet.rev
@@ -1833,7 +1821,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            (rec : UnderLets
                                                     (expr
                                                        (list
-                                                          (pattern.base.subst_default
+                                                          (base.subst_default
                                                              '1
                                                              (PositiveMap.add
                                                                 (PositiveSet.rev
@@ -1842,7 +1830,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                 (PositiveMap.empty
                                                                    base.type))) *
                                                         list
-                                                          (pattern.base.subst_default
+                                                          (base.subst_default
                                                              '1
                                                              (PositiveMap.add
                                                                 (PositiveSet.rev
@@ -1858,7 +1846,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                              (λ g
                                                  d : expr
                                                        (list
-                                                          (pattern.base.subst_default
+                                                          (base.subst_default
                                                              '1
                                                              (PositiveMap.add
                                                                 (PositiveSet.rev
@@ -2024,8 +2012,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  (fun
                                     _ : Datatypes.list
                                           (expr
-                                             (pattern.base.subst_default 
-                                                '2
+                                             (base.subst_default '2
                                                 (PositiveMap.add
                                                    (PositiveSet.rev
                                                       2%positive) b
@@ -2036,7 +2023,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                          base.type))))) =>
                                   UnderLets
                                     (expr
-                                       (pattern.base.subst_default '1
+                                       (base.subst_default '1
                                           (PositiveMap.add
                                              (PositiveSet.rev 2%positive) b
                                              (PositiveMap.add
@@ -2046,8 +2033,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  (Base (v0 x0))
                                  (fun
                                     (x2 : expr
-                                            (pattern.base.subst_default 
-                                               '2
+                                            (base.subst_default '2
                                                (PositiveMap.add
                                                   (PositiveSet.rev 2%positive)
                                                   b
@@ -2058,8 +2044,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                         base.type)))))
                                     (_ : Datatypes.list
                                            (expr
-                                              (pattern.base.subst_default 
-                                                 '2
+                                              (base.subst_default '2
                                                  (PositiveMap.add
                                                     (PositiveSet.rev
                                                        2%positive) b
@@ -2070,8 +2055,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                           base.type))))))
                                     (rec : UnderLets
                                              (expr
-                                                (pattern.base.subst_default
-                                                   '1
+                                                (base.subst_default '1
                                                    (PositiveMap.add
                                                       (PositiveSet.rev
                                                          2%positive) b
@@ -2146,7 +2130,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                (fun
                                                   x2 : UnderLets
                                                          (expr
-                                                            (pattern.base.subst_default
+                                                            (base.subst_default
                                                                '1
                                                                (PositiveMap.add
                                                                   (PositiveSet.rev
@@ -2156,7 +2140,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                     base.type))))
                                                 => x3 <-- x2;
                                                    v x0 x3) (map Base ls);
-                                  Base (reify_list retv))%under_lets);
+                                  Base (Compilers.reify_list retv))%under_lets);
                       v2 <- base.try_make_transport_cps T T;
                       v3 <- base.try_make_transport_cps T T;
                       Some (fv0 <-- fv;

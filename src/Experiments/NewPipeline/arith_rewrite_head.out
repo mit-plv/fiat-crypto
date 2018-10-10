@@ -988,7 +988,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             Some
                               (-
                                (v (Compile.reflect x1) +
-                                ##(- (let (x2, _) := idc_args in x2))%Z))%expr
+                                ##(let (x2, _) := idc_args in x2)))%expr
                            else None);
                     Some (Base x2)
                 | None => None
@@ -1129,7 +1129,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      (UnderLet x
                         (fun
                            v : var
-                                 (pattern.base.subst_default ℤ
+                                 (base.subst_default ℤ
                                     (PositiveMap.empty base.type)) =>
                          Base (- $v)%expr))
                   else None);
