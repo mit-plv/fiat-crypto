@@ -6585,13 +6585,13 @@ src/Util/Tactics/GetGoal.v
 src/Util/Tactics/Head.v
 src/Util/Tactics/HeadUnderBinders.v
 src/Util/Tactics/MoveLetIn.v
+src/Util/Tactics/NormalizeCommutativeIdentifier.v
 src/Util/Tactics/Not.v
 src/Util/Tactics/OnSubterms.v
 src/Util/Tactics/PoseTermWithName.v
 src/Util/Tactics/PrintContext.v
 src/Util/Tactics/Revert.v
 src/Util/Tactics/RewriteHyp.v
-src/Util/Tactics/RewriteWithCommutativity.v
 src/Util/Tactics/RunTacticAsConstr.v
 src/Util/Tactics/SetEvars.v
 src/Util/Tactics/SetoidSubst.v
