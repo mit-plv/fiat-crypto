@@ -799,7 +799,7 @@ Module Compilers.
                                        => rewrite ap_transport_Base
                                      | [ |- True ] => exact I
                                      end
-                                   | progress cbv [wf_rewrite_rule_data wf_with_unif_rewrite_ruleTP_gen option_bind'] in *
+                                   | progress cbv [wf_rewrite_rule_data wf_with_unif_rewrite_ruleTP_gen option_bind' normalize_deep_rewrite_rule_cps_id_hypsT] in *
                                    | lazymatch goal with
                                      | [ |- (@unify_pattern1 ?t ?re1 ?p ?K1 ?v1 ?T1 ?cont1 = None
                                              <-> @unify_pattern2 ?t ?re2 ?p ?K2 ?v2 ?T2 ?cont2 = None)
