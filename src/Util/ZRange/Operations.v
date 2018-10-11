@@ -31,6 +31,8 @@ Module ZRange.
 
   Lemma normalize'_eq : normalize = normalize'. Proof. reflexivity. Defined.
 
+  Definition size (v : zrange) : Z := upper (normalize v) - lower (normalize v).
+
   Definition abs (v : zrange) : zrange
     := let (l, u) := eta v in
        r[ 0 ~> Z.max (Z.abs l) (Z.abs u) ].

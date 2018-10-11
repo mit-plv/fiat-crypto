@@ -67,9 +67,16 @@ Module ZRange.
             | [ |- or _ (false = true) ] => left
             | [ |- or _ (?x = ?x) ] => right
             | [ H : true = false |- _ ] => exfalso; clear -H; discriminate
+            | [ H : Build_zrange _ _ = Build_zrange _ _ |- _ ] => inversion H; clear H
             end
           | progress specialize_by omega
           | progress destruct_head'_or ].
+
+  Lemma goodb_normalize r : goodb (normalize r) = true.
+  Proof. repeat t2_step. Qed.
+
+  Lemma normalize_id_iff_goodb {r} : goodb r = true <-> normalize r = r.
+  Proof. repeat t2_step. Qed.
 
   Lemma is_tighter_than_bool_extend_land_lor_bounds r : is_tighter_than_bool r (extend_land_lor_bounds r) = true.
   Proof. repeat t2_step. Qed.
@@ -94,6 +101,22 @@ Module ZRange.
     cbv [is_tighter_than_bool is_true]; cbn [lower upper]; repeat intro.
     rewrite ?Bool.andb_true_iff, ?Z.leb_le_iff in *; repeat apply conj; etransitivity; destruct_head'_and; eassumption.
   Qed.
+
+  Lemma is_bounded_by_normalize r
+    : forall v, is_bounded_by_bool v r = true -> is_bounded_by_bool v (normalize r) = true.
+  Proof.
+    apply <- is_bounded_by_iff_is_tighter_than; destruct (goodb r) eqn:?; [ left | right; reflexivity ].
+    rewrite (proj1 normalize_id_iff_goodb) by assumption; change (is_true (is_tighter_than_bool r r)); reflexivity.
+  Qed.
+
+  Lemma goodb_of_is_bounded_by_bool v r : is_bounded_by_bool v r = true -> goodb r = true.
+  Proof. repeat t2_step. Qed.
+
+  Lemma is_tighter_than_bool_normalize_of_goodb r : goodb r = true -> is_tighter_than_bool r (normalize r) = true.
+  Proof. repeat t2_step. Qed.
+
+  Lemma normalize_is_tighter_than_bool_of_goodb r : goodb r = true -> is_tighter_than_bool (normalize r) r = true.
+  Proof. repeat t2_step. Qed.
 
   Lemma is_bounded_by_of_is_tighter_than r1 r2 (H : is_tighter_than_bool r1 r2 = true)
     : (forall v, is_bounded_by_bool v r1 = true -> is_bounded_by_bool v r2 = true).
