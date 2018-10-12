@@ -8,6 +8,7 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.CPSNotations.
@@ -912,9 +913,10 @@ Module Compilers.
         Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
 
         Definition cast (r : zrange) (x : BinInt.Z)
-          := if (lower r <=? x) && (x <=? upper r)
+          := let r := ZRange.normalize r in
+             if (lower r <=? x) && (x <=? upper r)
              then x
-             else cast_outside_of_range r x.
+             else ((cast_outside_of_range r x - lower r) mod (upper r - lower r + 1)) + lower r.
 
         Local Notation wordmax log2wordmax := (2 ^ log2wordmax).
         Local Notation half_bits log2wordmax := (log2wordmax / 2).
@@ -1737,3 +1739,4 @@ Module Compilers.
       := FromFlat (to_flat e).
   End GeneralizeVar.
 End Compilers.
+Global Opaque Compilers.ident.cast. (* This should never be unfolded except in [LanguageWf] *)

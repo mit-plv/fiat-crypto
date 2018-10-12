@@ -35,9 +35,11 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Experiments.NewPipeline.LanguageWf.
 Require Import Crypto.Experiments.NewPipeline.AbstractInterpretation.
 
 Module Compilers.
+  Import LanguageWf.Compilers.
   Import AbstractInterpretation.Compilers.
 
   Module ZRange.
@@ -72,10 +74,11 @@ Module Compilers.
 
           Local Ltac z_cast_t :=
             cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some];
-            cbv [ZRange.ident.option.interp_Z_cast ident.cast ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by is_tighter_than_bool respectful_hetero is_bounded_by_bool];
+            cbv [ZRange.ident.option.interp_Z_cast ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by respectful_hetero];
             intros; break_innermost_match; trivial;
             rewrite ?Bool.andb_true_iff, ?Bool.andb_false_iff in *; destruct_head'_and; destruct_head'_or; repeat apply conj; Z.ltb_to_lt;
-            try reflexivity; try lia.
+            rewrite ?ident.cast_in_bounds by (eapply ZRange.is_bounded_by_iff_is_tighter_than; eauto);
+            try reflexivity; try lia; try assumption.
 
           Lemma interp_related_Z_cast r : interp_is_related (@ident.Z_cast r).
           Proof. z_cast_t. Qed.

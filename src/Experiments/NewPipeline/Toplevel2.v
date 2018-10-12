@@ -16,6 +16,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SubstEvars.
@@ -38,10 +39,13 @@ Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.EquivModulo.
+Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
 Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Experiments.NewPipeline.Arithmetic.
 Require Crypto.Experiments.NewPipeline.Language.
@@ -2319,22 +2323,28 @@ same meaning -- should be replaced eventually with a proof of fancy
 passes in general. *)
 
 Module Fancy_PreFancy_Equiv.
+  Import LanguageWf.Compilers.
+  Import ZRange.Operations.
   Import Fancy.Registers.
 
-  Lemma interp_cast_mod_eq w u x: u = 2^w - 1 -> ident.cast (PreFancy.interp_cast_mod w) r[0 ~> u] x = x mod 2^w.
+  Lemma interp_cast_mod_eq w u x: 1 <= 2^w -> u = 2^w - 1 -> ident.cast (PreFancy.interp_cast_mod w) r[0 ~> u] x = x mod 2^w.
   Proof.
-    cbv [ident.cast PreFancy.interp_cast_mod upper lower]; intros; subst.
-    rewrite !Z.eqb_refl.
-    break_innermost_match; Bool.split_andb; Z.ltb_to_lt; Z.rewrite_mod_small; reflexivity.
+    cbv [PreFancy.interp_cast_mod]; intros.
+    rewrite ident.cast_out_of_bounds_simple_0; cbn [lower upper]; subst;
+      rewrite ?Z.eqb_refl; intros.
+    all: Z.rewrite_mod_small; Z.div_mod_to_quot_rem; auto with zarith.
   Qed.
   Lemma interp_cast_mod_flag w x: ident.cast (PreFancy.interp_cast_mod w) r[0 ~> 1] x = x mod 2.
   Proof.
-    cbv [ident.cast PreFancy.interp_cast_mod upper lower].
-    break_match; Bool.split_andb; Z.ltb_to_lt; Z.rewrite_mod_small; subst; try omega.
-    f_equal; omega.
+    cbv [PreFancy.interp_cast_mod].
+    rewrite ident.cast_out_of_bounds_simple_0_mod; cbn [lower upper]; subst;
+      rewrite ?Z.eqb_refl; intros.
+    all: break_match; Bool.split_andb; Z.ltb_to_lt; Z.rewrite_mod_small; subst; try omega.
+    replace (2^w) with 2 by omega.
+    Z.rewrite_mod_small; reflexivity.
   Qed.
 
-  Lemma interp_equivZ {s} w u (Hu : u = 2^w-1) i rd regs e cc ctx idc args f :
+  Lemma interp_equivZ {s} w u (Hw : 1 <= 2^w) (Hu : u = 2^w-1) i rd regs e cc ctx idc args f :
     (Fancy.spec i (Tuple.map ctx regs) cc
      = ident.gen_interp (PreFancy.interp_cast_mod w) (t:=type.arrow _ base.type.Z) idc (PreFancy.interp w args)) ->
     ( let r := Fancy.spec i (Tuple.map ctx regs) cc in
@@ -2386,6 +2396,7 @@ Module Fancy_PreFancy_Equiv.
 End Fancy_PreFancy_Equiv.
 
 Module Barrett256.
+  Import LanguageWf.Compilers.
 
   Definition M := Eval lazy in (2^256-2^224+2^192+2^96-1).
   Definition machine_wordsize := 256.
@@ -2579,7 +2590,7 @@ Module Barrett256.
   Definition interp_equivZZ_256 {s} :=
     @interp_equivZZ s 256 ltac:(cbv; congruence) 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
   Definition interp_equivZ_256 {s} :=
-    @interp_equivZ s 256 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
+    @interp_equivZ s 256 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(lia) ltac:(reflexivity).
 
   Local Ltac simplify_op_equiv start_ctx :=
     cbn - [Fancy.spec (*PreFancy.interp_ident*) ident.gen_interp Fancy.cc_spec Z.shiftl];
@@ -2632,6 +2643,7 @@ Module Barrett256.
       => apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result]
     end.
 
+  Local Opaque PreFancy.interp_cast_mod.
   Lemma prod_barrett_red256_correct :
     forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
            (start_context : register -> Z)   (* starting register values *)
@@ -2668,8 +2680,16 @@ Module Barrett256.
                         assert (Z.cc_m s x = 1 \/ Z.cc_m s x = 0) as H by omega;
                           destruct H as [H | H]; rewrite H in *
       end; repeat (change (0 =? 1) with false || change (?x =? ?x) with true || cbv beta iota);
-        break_innermost_match; Z.ltb_to_lt; try congruence. }
+        break_innermost_match; Z.ltb_to_lt; try congruence.
+      all: repeat match goal with
+                  | [ H : context[ident.cast] |- _ ]
+                    => rewrite ident.cast_in_bounds in H
+                      by (cbv [is_bounded_by_bool]; rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; cbn [upper lower]; lia)
+                  end.
+      all: congruence. }
     apply interp_equivZ_256; [ simplify_op_equiv start_context | ]. (* apply manually instead of using [step] to allow a custom bounds proof *)
+    all: rewrite ?ident.cast_in_bounds
+      by (cbv [is_bounded_by_bool]; rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; cbn [upper lower]; lia).
     { rewrite Z.rshi_correct by omega.
       autorewrite with zsimplify_fast.
       rewrite Z.shiftr_div_pow2 by omega.
@@ -3089,7 +3109,7 @@ Module Montgomery256.
   Definition interp_equivZZ_256 {s} :=
     @interp_equivZZ s 256 ltac:(cbv; congruence) 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
   Definition interp_equivZ_256 {s} :=
-    @interp_equivZ s 256 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
+    @interp_equivZ s 256 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(lia) ltac:(reflexivity).
 
   Local Ltac simplify_op_equiv start_ctx :=
     cbn - [Fancy.spec ident.gen_interp Fancy.cc_spec];
@@ -3142,6 +3162,8 @@ Module Montgomery256.
   Local Ltac break_ifs :=
     repeat (break_innermost_match_step; Z.ltb_to_lt; try (exfalso; omega); []).
 
+  Local Opaque PreFancy.interp_cast_mod.
+
   Lemma prod_montred256_correct :
     forall (cc_start_state : Fancy.CC.state) (* starting carry flags can be anything *)
            (start_context : register -> Z)   (* starting register values *)
@@ -3163,9 +3185,9 @@ Module Montgomery256.
     cbv [ProdEquiv.interp256].
     cbv [montred256_alloc montred256 expr.Interp].
 
+    (*step start_context; [ break_ifs; reflexivity | ].
     step start_context; [ break_ifs; reflexivity | ].
-    step start_context; [ break_ifs; reflexivity | ].
-    step start_context; [ break_ifs; reflexivity | ].
+    step start_context; [ break_ifs; reflexivity | ].*)
     (*step start_context; [ break_ifs; reflexivity | ].
     step start_context; [ break_ifs; reflexivity | break_ifs; reflexivity | ].
     step start_context; [ break_ifs; reflexivity | break_ifs; reflexivity | ].

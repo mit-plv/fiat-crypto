@@ -662,7 +662,7 @@ Module Compilers.
       Local Notation abstract_domain'_R t := (@eq (abstract_domain' t)) (only parsing).
       Local Notation abstract_domain_R := (@abstract_domain_R base.type abstract_domain' (fun t => abstract_domain'_R t)).
 
-      Global Instance annotate_ident_Proper {t} : Proper (abstract_domain'_R t ==> eq) (annotate_ident t).
+      Global Instance annotate_ident_Proper {relax_zrange} {t} : Proper (abstract_domain'_R t ==> eq) (annotate_ident relax_zrange t).
       Proof.
         intros st st' ?; subst st'.
         cbv [annotate_ident]; break_innermost_match; reflexivity.
@@ -708,7 +708,7 @@ Module Compilers.
         intros st st' ?; subst st'; cbv [option_eq extract_list_state]; break_innermost_match; reflexivity.
       Qed.
 
-      Global Instance is_annotated_for_Proper {t t'} : Proper (eq ==> abstract_domain'_R _ ==> eq) (@is_annotated_for t t') | 10.
+      Global Instance is_annotated_for_Proper {relax_zrange t t'} : Proper (eq ==> abstract_domain'_R _ ==> eq) (@is_annotated_for relax_zrange t t') | 10.
       Proof. repeat intro; subst; reflexivity. Qed.
 
       Lemma extract_list_state_length
@@ -739,9 +739,9 @@ Module Compilers.
                   | apply extract_list_state_rel ].
         Qed.
 
-        Lemma wf_eval_with_bound {t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
+        Lemma wf_eval_with_bound {relax_zrange t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
               (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
-          : expr.wf G' (@eval_with_bound var1 t e1 st1) (@eval_with_bound var2 t e2 st2).
+          : expr.wf G' (@eval_with_bound relax_zrange var1 t e1 st1) (@eval_with_bound relax_zrange var2 t e2 st2).
         Proof.
           eapply ident.wf_eval_with_bound;
             solve [ eassumption
@@ -751,8 +751,8 @@ Module Compilers.
         Qed.
 
 
-        Lemma wf_eta_expand_with_bound {t} G e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
-          : expr.wf G (@eta_expand_with_bound var1 t e1 st1) (@eta_expand_with_bound var2 t e2 st2).
+        Lemma wf_eta_expand_with_bound {relax_zrange t} G e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
+          : expr.wf G (@eta_expand_with_bound relax_zrange var1 t e1 st1) (@eta_expand_with_bound relax_zrange var2 t e2 st2).
         Proof.
           eapply ident.wf_eta_expand_with_bound;
             solve [ eassumption
@@ -767,14 +767,14 @@ Module Compilers.
         intros ??; eapply wf_eval with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
 
-      Lemma Wf_EvalWithBound {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
-        : Wf (EvalWithBound e bound).
+      Lemma Wf_EvalWithBound {relax_zrange t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
+        : Wf (EvalWithBound relax_zrange e bound).
       Proof.
         intros ??; eapply wf_eval_with_bound with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
 
-      Lemma Wf_EtaExpandWithBound {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
-        : Wf (EtaExpandWithBound e bound).
+      Lemma Wf_EtaExpandWithBound {relax_zrange t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
+        : Wf (EtaExpandWithBound relax_zrange e bound).
       Proof.
         intros ??; eapply wf_eta_expand_with_bound with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
@@ -800,32 +800,6 @@ Module Compilers.
   Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound : wf.
   Import defaults.
 
-  Module RelaxZRange.
-    Module expr.
-      Section relax.
-        Context (relax_zrange : zrange -> option zrange)
-                (Hrelax : forall r r' z, is_tighter_than_bool z r = true
-                                         -> relax_zrange r = Some r'
-                                         -> is_tighter_than_bool z r' = true).
-        Section with_var2.
-          Context {var1 var2 : type -> Type}.
-
-          Lemma wf_relax G {t} (e1 : @expr var1 t) (e2 : @expr var2 t)
-                (Hwf : expr.wf G e1 e2)
-            : expr.wf G (@RelaxZRange.expr.relax relax_zrange var1 t e1) (@RelaxZRange.expr.relax relax_zrange var2 t e2).
-          Proof using Type.
-            clear -Hwf.
-            induction Hwf; wf_safe_t.
-          Qed.
-        End with_var2.
-
-        Lemma Wf_Relax {t} (e : Expr t) (Hwf : Wf e) : Wf (@RelaxZRange.expr.Relax relax_zrange t e).
-        Proof. intros ??; eapply wf_relax, Hwf. Qed.
-      End relax.
-    End expr.
-  End RelaxZRange.
-  Hint Resolve RelaxZRange.expr.Wf_Relax : wf.
-
   Lemma Wf_PartialEvaluateWithListInfoFromBounds
         {t} (E : Expr t)
         (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
@@ -836,11 +810,11 @@ Module Compilers.
   Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf.
 
   Lemma Wf_PartialEvaluateWithBounds
-        {t} (E : Expr t)
+        {relax_zrange} {t} (E : Expr t)
         (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
         (Hwf : Wf E)
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
-    : Wf (PartialEvaluateWithBounds E b_in).
+    : Wf (PartialEvaluateWithBounds relax_zrange E b_in).
   Proof. cbv [PartialEvaluateWithBounds]; auto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithBounds : wf.
 End Compilers.
