@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.FSets.FMapPositive.
@@ -12,8 +13,15 @@ Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
+Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Bool.
@@ -220,6 +228,117 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
     Global Instance eqv_Symmetric {t} : Symmetric (fun idc1 idc2 : ident t => type.eqv (ident.interp idc1) (ident.interp idc2)) | 20.
     Proof. repeat intro; symmetry; eassumption. Qed.
+
+    Local Transparent ident.cast.
+    Section with_cast.
+      Context {cast_outside_of_range : zrange -> Z -> Z}.
+
+      Local Notation cast := (@ident.cast cast_outside_of_range).
+
+      Lemma cast_in_normalized_bounds r v : is_bounded_by_bool v (ZRange.normalize r) = true -> cast r v = v.
+      Proof. cbv [cast is_bounded_by_bool]; break_innermost_match; congruence. Qed.
+
+      Lemma cast_in_bounds r v : is_bounded_by_bool v r = true -> cast r v = v.
+      Proof.
+        intro; apply cast_in_normalized_bounds, ZRange.is_bounded_by_normalize; assumption.
+      Qed.
+
+      Lemma cast_always_bounded r v : is_bounded_by_bool (cast r v) (ZRange.normalize r) = true.
+      Proof.
+        cbv [is_bounded_by_bool ZRange.normalize lower upper cast]; break_innermost_match; intros;
+          rewrite ?Bool.andb_true_iff, ?Bool.andb_false_iff in *;
+          destruct_head'_and; destruct_head'_or; repeat apply conj; Z.ltb_to_lt.
+        all: split_min_max.
+        all: Z.div_mod_to_quot_rem; nia.
+      Qed.
+
+      Lemma cast_bounded r v : (lower r <= upper r)%Z -> is_bounded_by_bool (cast r v) r = true.
+      Proof.
+        intro H; replace r with (ZRange.normalize r) at 2; [ apply cast_always_bounded | ].
+        cbv [ZRange.normalize lower upper] in *; destruct r; split_min_max; reflexivity.
+      Qed.
+
+      Lemma cast_cases r v
+        : is_bounded_by_bool (cast r v) (ZRange.normalize r) = true
+          /\ ((is_bounded_by_bool v (ZRange.normalize r) = true /\ cast r v = v)
+              \/ is_bounded_by_bool v (ZRange.normalize r) = false).
+      Proof.
+        split; [ apply cast_always_bounded | ].
+        pose proof (cast_in_normalized_bounds r v).
+        edestruct is_bounded_by_bool; tauto.
+      Qed.
+
+      Lemma cast_out_of_bounds_in_range r v
+        : is_bounded_by_bool v (ZRange.normalize r) = false
+          -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true
+          -> cast r v = cast_outside_of_range (ZRange.normalize r) v.
+      Proof.
+        cbv [cast is_bounded_by_bool]; break_innermost_match; try congruence; intros.
+        pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
+        split_andb; Z.ltb_to_lt.
+        match goal with
+        | [ |- context[(?a mod ?b)%Z] ]
+          => cut ((a / b) = 0)%Z
+        end.
+        all: Z.div_mod_to_quot_rem; nia.
+      Qed.
+
+      Lemma cast_out_of_bounds_simple r v
+        : (is_bounded_by_bool v (ZRange.normalize r) = true -> cast_outside_of_range (ZRange.normalize r) v = v)
+          -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true
+          -> cast r v = cast_outside_of_range (ZRange.normalize r) v.
+      Proof.
+        destruct (is_bounded_by_bool v (ZRange.normalize r)) eqn:?.
+        { rewrite cast_in_normalized_bounds by assumption; intros; symmetry; auto. }
+        { auto using cast_out_of_bounds_in_range. }
+      Qed.
+
+      Lemma cast_out_of_bounds_simple_0 u v
+        : (0 <= u)%Z
+          -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
+          -> (0 <= cast_outside_of_range r[0~>u] v <= u)%Z
+          -> cast r[0~>u] v = cast_outside_of_range r[0~>u] v.
+      Proof.
+        pose proof (cast_out_of_bounds_simple r[0~>u] v) as H.
+        intro.
+        rewrite (proj1 ZRange.normalize_id_iff_goodb) in H
+          by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
+        cbv [is_bounded_by_bool] in *; rewrite ?Bool.andb_true_iff in *.
+        intros; apply H; intros; destruct_head'_and; repeat apply conj; Z.ltb_to_lt; auto.
+      Qed.
+
+      Lemma cast_out_of_bounds_simple_0_mod u v
+        : (0 <= u)%Z
+          -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
+          -> (cast r[0~>u] v = (cast_outside_of_range r[0~>u] v) mod (u + 1))%Z.
+      Proof.
+        cbv [cast]; intro.
+        rewrite (proj1 ZRange.normalize_id_iff_goodb)
+          by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
+        cbn [lower upper].
+        rewrite !Z.sub_0_r, !Z.add_0_r.
+        break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
+          rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
+      Qed.
+    End with_cast.
+
+    Lemma cast_idempotent_gen {cast_outside_of_range1 cast_outside_of_range2}
+          r1 r2 v
+      : is_tighter_than_bool (ZRange.normalize r1) (ZRange.normalize r2) = true
+        -> ident.cast cast_outside_of_range2 r2 (ident.cast cast_outside_of_range1 r1 v)
+           = ident.cast cast_outside_of_range1 r1 v.
+    Proof.
+      intro H; apply (@cast_in_normalized_bounds _ r2).
+      eapply ZRange.is_bounded_by_of_is_tighter_than, cast_always_bounded; assumption.
+    Qed.
+
+    Lemma cast_idempotent {cast_outside_of_range1 cast_outside_of_range2}
+          r v
+      : ident.cast cast_outside_of_range2 r (ident.cast cast_outside_of_range1 r v)
+        = ident.cast cast_outside_of_range1 r v.
+    Proof.
+      apply cast_idempotent_gen; change (is_true (is_tighter_than_bool (ZRange.normalize r) (ZRange.normalize r))); reflexivity.
+    Qed.
   End ident.
 
   Module expr.

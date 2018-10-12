@@ -945,6 +945,8 @@ Module Compilers.
       End with_var.
     End ident.
 
+    Definition default_relax_zrange (v : zrange) : option zrange := Some v.
+
     Section specialized.
       Local Notation abstract_domain' := ZRange.type.base.option.interp.
       Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
@@ -953,77 +955,89 @@ Module Compilers.
       Local Notation type := (type base.type).
       Let type_base (x : base.type) : type := type.base x.
       Local Coercion type_base : base.type >-> type.
-      Definition annotate_ident t : abstract_domain' t -> option (ident (t -> t))
-        := match t return abstract_domain' t -> option (ident (t -> t)) with
-           | base.type.Z
-             => fun st => st' <- st; Some (ident.Z_cast st')
-           | base.type.Z * base.type.Z
-             => fun '(sta, stb) => sta' <- sta; stb' <- stb; Some (ident.Z_cast2 (sta', stb'))
-           | _ => fun _ => None
-           end%option%etype.
-      Definition is_annotated_for t t' (idc : ident t) : abstract_domain' t' -> bool
-        := match idc, t' with
-           | ident.Z_cast r, base.type.type_base base.type.Z
-             => fun r'
-                => match r' with
-                   | Some r' => zrange_beq r r'
-                   | None => false
-                   end
-           | ident.Z_cast2 (r1, r2), base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)
-             => fun '(r1', r2')
-                => match r1', r2' with
-                   | Some r1', Some r2' => zrange_beq r1 r1' && zrange_beq r2 r2'
-                   | _, _ => false
-                   end
-           | _, _ => fun _ => false
-           end.
-      Definition is_annotation t (idc : ident t) : bool
-        := match idc with
-           | ident.Z_cast _
-           | ident.Z_cast2 _
-             => true
-           | _ => false
-           end.
-      Definition bottom' T : abstract_domain' T
-        := ZRange.type.base.option.None.
-      Definition abstract_interp_ident t (idc : ident t) : type.interp abstract_domain' t
-        := ZRange.ident.option.interp idc.
-      Definition update_Z_literal_with_state : abstract_domain' base.type.Z -> Z -> Z
-        := fun r n
-           => match r with
-             | Some r => if ZRange.type.base.is_bounded_by (t:=base.type.Z) r n
-                        then n
-                        else ident.cast_outside_of_range r n
-             | None => n
+
+      Section with_relax.
+        Context (relax_zrange : zrange -> option zrange).
+
+        Let always_relax_zrange : zrange -> zrange
+          := fun range => match relax_zrange (ZRange.normalize range) with
+                          | Some r => r
+                          | None => range
+                          end.
+
+        Definition annotation_of_state (st : abstract_domain' base.type.Z) : option zrange
+          := option_map always_relax_zrange st.
+
+        Definition annotate_ident t : abstract_domain' t -> option (ident (t -> t))
+          := match t return abstract_domain' t -> option (ident (t -> t)) with
+             | base.type.Z
+               => fun st => st' <- annotation_of_state st; Some (ident.Z_cast st')
+             | base.type.Z * base.type.Z
+               => fun '(sta, stb) => sta' <- annotation_of_state sta; stb' <- annotation_of_state stb; Some (ident.Z_cast2 (sta', stb'))
+             | _ => fun _ => None
+             end%option%etype.
+        Definition is_annotated_for t t' (idc : ident t) : abstract_domain' t' -> bool
+          := match idc, t' with
+             | ident.Z_cast r, base.type.type_base base.type.Z
+               => fun r'
+                  => option_beq zrange_beq (Some r) (annotation_of_state r')
+             | ident.Z_cast2 (r1, r2), base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)
+               => fun '(r1', r2')
+                  => (option_beq zrange_beq (Some r1) (annotation_of_state r1'))
+                       && (option_beq zrange_beq (Some r2) (annotation_of_state r2'))
+             | _, _ => fun _ => false
              end.
-      Definition update_literal_with_state (t : base.type.base) : abstract_domain' t -> base.interp t -> base.interp t
-        := match t with
-           | base.type.Z => update_Z_literal_with_state
-           | base.type.unit
-           | base.type.bool
-           | base.type.nat
-             => fun _ => id
-           end.
-      Definition extract_list_state A (st : abstract_domain' (base.type.list A)) : option (list (abstract_domain' A))
-        := st.
+        Definition is_annotation t (idc : ident t) : bool
+          := match idc with
+             | ident.Z_cast _
+             | ident.Z_cast2 _
+               => true
+             | _ => false
+             end.
+        Definition bottom' T : abstract_domain' T
+          := ZRange.type.base.option.None.
+        Definition abstract_interp_ident t (idc : ident t) : type.interp abstract_domain' t
+          := ZRange.ident.option.interp idc.
+        Definition update_Z_literal_with_state : abstract_domain' base.type.Z -> Z -> Z
+          := fun r n
+             => match r with
+                | Some r => if ZRange.type.base.is_bounded_by (t:=base.type.Z) r n
+                            then n
+                            else ident.cast_outside_of_range r n
+                | None => n
+                end.
+        Definition update_literal_with_state (t : base.type.base) : abstract_domain' t -> base.interp t -> base.interp t
+          := match t with
+             | base.type.Z => update_Z_literal_with_state
+             | base.type.unit
+             | base.type.bool
+             | base.type.nat
+               => fun _ => id
+             end.
+        Definition extract_list_state A (st : abstract_domain' (base.type.list A)) : option (list (abstract_domain' A))
+          := st.
+
+        Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
+          := (@partial.ident.eval_with_bound)
+               var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e bound.
+
+        Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
+          := (@partial.ident.eta_expand_with_bound)
+               var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e bound.
+
+        Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+          := fun var => eval_with_bound (e _) bound.
+        Definition EtaExpandWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+          := fun var => eta_expand_with_bound (e _) bound.
+      End with_relax.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
         := (@partial.ident.eval)
-             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e.
-      Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
-        := (@partial.ident.eval_with_bound)
-             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e bound.
-      Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
-        := (@partial.ident.eta_expand_with_bound)
-             var abstract_domain' annotate_ident bottom' abstract_interp_ident update_literal_with_state extract_list_state is_annotated_for t e bound.
+             var abstract_domain' (annotate_ident default_relax_zrange) bottom' abstract_interp_ident update_literal_with_state extract_list_state (is_annotated_for default_relax_zrange) t e.
       Definition Eval {t} (e : Expr t) : Expr t
         := fun var => eval (e _).
-      Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-        := fun var => eval_with_bound (e _) bound.
-      Definition EtaExpandWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-        := fun var => eta_expand_with_bound (e _) bound.
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-        := EtaExpandWithBound e (type.map_for_each_lhs_of_arrow (@ZRange.type.option.strip_ranges) bound).
+        := EtaExpandWithBound default_relax_zrange e (type.map_for_each_lhs_of_arrow (@ZRange.type.option.strip_ranges) bound).
       Definition extract {t} (e : expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
         := @partial.ident.extract abstract_domain' bottom' abstract_interp_ident t e bound.
       Definition Extract {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : abstract_domain' (type.final_codomain t)
@@ -1046,56 +1060,11 @@ Module Compilers.
       := get_casts (e _).
   End CheckCasts.
 
-  Module RelaxZRange.
-    Module ident.
-      Section relax.
-        Context (relax_zrange : zrange -> option zrange).
-
-        Let always_relax_zrange : zrange -> zrange
-          := fun range => match relax_zrange range with
-                          | Some r => r
-                          | None => range
-                          end.
-
-        Definition relax {t} (idc : ident t) : ident t
-          := match idc in ident.ident t return ident t with
-             | ident.Z_cast range
-               => ident.Z_cast (always_relax_zrange range)
-             | ident.Z_cast2 (r1, r2)
-               => ident.Z_cast2 (always_relax_zrange r1, always_relax_zrange r2)
-             | idc => idc
-             end%option.
-      End relax.
-    End ident.
-
-    Module expr.
-      Section relax.
-        Context (relax_zrange : zrange -> option zrange).
-        Section with_var.
-          Context {var : type -> Type}.
-
-          Fixpoint relax {t} (e : @expr var t) : @expr var t
-            := match e with
-               | expr.Var _ _ as e
-                 => e
-               | expr.Ident t idc
-                 => expr.Ident (ident.relax relax_zrange idc)
-               | expr.Abs s d f => expr.Abs (fun v => @relax d (f v))
-               | expr.LetIn tx tC ex eC => expr.LetIn (@relax tx ex) (fun v => @relax tC (eC v))
-               | expr.App s d f x => expr.App (@relax _ f) (@relax _ x)
-               end.
-        End with_var.
-
-        Definition Relax {t} (e : Expr t) : Expr t
-          := fun var => relax (e _).
-      End relax.
-    End expr.
-  End RelaxZRange.
-
-  Definition PartialEvaluateWithBounds {t} (e : Expr t)
+  Definition PartialEvaluateWithBounds
+             (relax_zrange : zrange -> option zrange) {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
-    := partial.EvalWithBound (GeneralizeVar.GeneralizeVar (e _)) bound.
+    := partial.EvalWithBound relax_zrange (GeneralizeVar.GeneralizeVar (e _)) bound.
   Definition PartialEvaluateWithListInfoFromBounds {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
@@ -1111,9 +1080,9 @@ Module Compilers.
        let E := GeneralizeVar.FromFlat e in
        let b_computed := partial.Extract E b_in in
        match CheckCasts.GetUnsupportedCasts E with
-       | nil => (let E := PartialEvaluateWithBounds E b_in in
+       | nil => (let E := PartialEvaluateWithBounds relax_zrange E b_in in
                 if ZRange.type.base.option.is_tighter_than b_computed b_out
-                then @inl (Expr t) _ (RelaxZRange.expr.Relax relax_zrange E)
+                then @inl (Expr t) _ E
                 else inr (@inl (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) _ (b_computed, E)))
        | unsupported_casts => inr (inr unsupported_casts)
        end.
