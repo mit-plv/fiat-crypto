@@ -24,6 +24,8 @@ Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.Tactics.NormalizeCommutativeIdentifier.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -128,6 +130,7 @@ Module Compilers.
               | match goal with
                 | [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
                 | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand
+                | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
                 end
               | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr] in *
               | progress cbv [Compile.option_bind' respectful] in *
@@ -160,10 +163,19 @@ Module Compilers.
                   => rewrite (@eq_map_list_rect A B f ls)
                 | [ |- _ = @fold_right ?A ?B ?f ?v ?ls ]
                   =>  rewrite (@eq_fold_right_list_rect A B f v ls)
+                | [ H : context[ZRange.normalize (ZRange.normalize _)] |- _ ]
+                  => rewrite ZRange.normalize_idempotent in H
+                | [ |- context[ZRange.normalize (ZRange.normalize _)] ]
+                  => rewrite ZRange.normalize_idempotent
+                | [ |- context[ident.cast (ZRange.normalize ?r)] ]
+                  => rewrite ident.cast_normalize
+                | [ H : context[ident.cast (ZRange.normalize ?r)] |- _ ]
+                  => rewrite ident.cast_normalize in H
                 end
               | progress intros
               | progress subst
               | progress inversion_option
+              | progress destruct_head'_and
               | progress Z.ltb_to_lt
               | progress split_andb
               | match goal with
@@ -279,6 +291,19 @@ Module Compilers.
                 end
               | break_innermost_match_step
               | break_innermost_match_hyps_step
+              | progress destruct_head'_or
+              | match goal with
+                | [ |- context[ident.cast ?coor ?r ?v] ]
+                  => is_var v;
+                     pose proof (@ident.cast_always_bounded coor r v);
+                     generalize dependent (ident.cast coor r v); clear v; intro v; intros
+                | [ |- context[ident.cast ?coor ?r ?v] ]
+                  => is_var v; is_var coor;
+                     pose proof (@ident.cast_cases coor r v);
+                     generalize dependent (ident.cast coor r v); intros
+                | [ H : is_bounded_by_bool ?v ?r = true, H' : is_tighter_than_bool ?r ?r' = true |- _ ]
+                  => unique assert (is_bounded_by_bool v r' = true) by (eauto 2 using ZRange.is_bounded_by_of_is_tighter_than)
+                end
               | match goal with
                 | [ H : context[expr.interp _ (UnderLets.interp _ (?f _ _ _))]
                     |- expr.interp _ (UnderLets.interp _ (?f _ _ _)) = _ ]
@@ -433,6 +458,13 @@ subgoal 9 (ID 33473) is:
         1-9: exact admit.
       Qed.
 
+      Lemma arith_with_casts_rewrite_rules_interp_good
+        : rewrite_rules_interp_goodT arith_with_casts_rewrite_rules.
+      Proof using Type.
+        Time start_interp_good.
+        Time all: try solve [ repeat interp_good_t_step; (lia + nia) ].
+      Qed.
+
       Local Ltac fancy_local_t :=
         repeat first [ match goal with
                        | [ H : forall s v v', ?invert_low s v = Some v' -> v = _,
@@ -523,6 +555,16 @@ subgoal 16 (ID 105431) is:
  forall x v1 v0 v4 : Z, x = 2 ^ Z.log2 x -> (v0 - v4 mod x - v1) / x = (v0 - v4 - v1) / x
          *)
         1-16: exact admit.
+      Qed.
+
+      Lemma fancy_with_casts_rewrite_rules_interp_good
+            (invert_low invert_high : Z -> Z -> option Z)
+            (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+            (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+        : rewrite_rules_interp_goodT (fancy_with_casts_rewrite_rules (*invert_low invert_high*)).
+      Proof using Type.
+        Time start_interp_good.
+        Time all: repeat interp_good_t_step.
       Qed.
     End with_cast.
   End RewriteRules.

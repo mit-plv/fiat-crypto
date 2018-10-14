@@ -77,6 +77,11 @@ Module Compilers.
       start_Wf_proof arith_rewrite_head_eq arith_all_rewrite_rules_eq (@arith_rewrite_head0).
       apply arith_rewrite_rules_good.
     Qed.
+    Lemma Wf_RewriteArithWithCasts {t} e (Hwf : Wf e) : Wf (@RewriteArithWithCasts t e).
+    Proof.
+      start_Wf_proof arith_with_casts_rewrite_head_eq arith_with_casts_all_rewrite_rules_eq (@arith_with_casts_rewrite_head0).
+      apply arith_with_casts_rewrite_rules_good.
+    Qed.
     Lemma Wf_RewriteToFancy (invert_low invert_high : Z -> Z -> option Z)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
@@ -84,6 +89,15 @@ Module Compilers.
     Proof.
       start_Wf_proof fancy_rewrite_head_eq fancy_all_rewrite_rules_eq (@fancy_rewrite_head0).
       apply fancy_rewrite_rules_good; assumption.
+    Qed.
+
+    Lemma Wf_RewriteToFancyWithCasts (invert_low invert_high : Z -> Z -> option Z)
+            (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+            (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+            {t} e (Hwf : Wf e) : Wf (@RewriteToFancyWithCasts invert_low invert_high t e).
+    Proof.
+      start_Wf_proof fancy_with_casts_rewrite_head_eq fancy_with_casts_all_rewrite_rules_eq (@fancy_with_casts_rewrite_head0).
+      eapply fancy_with_casts_rewrite_rules_good; eassumption.
     Qed.
 
     Lemma Interp_gen_RewriteNBE {cast_outside_of_range t} e (Hwf : Wf e)
@@ -99,6 +113,13 @@ Module Compilers.
       start_Interp_proof arith_rewrite_head_eq arith_all_rewrite_rules_eq (@arith_rewrite_head0).
     Admitted.
 
+    Lemma Interp_gen_RewriteArithWithCasts {cast_outside_of_range} {t} e (Hwf : Wf e)
+      : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteArithWithCasts t e)
+        == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+    Proof.
+      start_Interp_proof arith_with_casts_rewrite_head_eq arith_with_casts_all_rewrite_rules_eq (@arith_with_casts_rewrite_head0).
+    Admitted.
+
     Lemma Interp_gen_RewriteToFancy {cast_outside_of_range} (invert_low invert_high : Z -> Z -> option Z)
           (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
           (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
@@ -109,17 +130,36 @@ Module Compilers.
       start_Interp_proof fancy_rewrite_head_eq fancy_all_rewrite_rules_eq (@fancy_rewrite_head0).
     Admitted.
 
+    Lemma Interp_gen_RewriteToFancyWithCasts {cast_outside_of_range} (invert_low invert_high : Z -> Z -> option Z)
+          (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+          (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+          {t} e (Hwf : Wf e)
+      : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancyWithCasts invert_low invert_high t e)
+        == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+    Proof.
+      start_Interp_proof fancy_with_casts_rewrite_head_eq fancy_with_casts_all_rewrite_rules_eq (@fancy_with_casts_rewrite_head0).
+    Admitted.
+
     Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : Interp (@RewriteNBE t e) == Interp e.
     Proof. apply Interp_gen_RewriteNBE; assumption. Qed.
     Lemma Interp_RewriteArith (max_const_val : Z) {t} e (Hwf : Wf e)
       : Interp (@RewriteArith max_const_val t e) == Interp e.
     Proof. apply Interp_gen_RewriteArith; assumption. Qed.
+    Lemma Interp_RewriteArithWithCasts {t} e (Hwf : Wf e)
+      : Interp (@RewriteArithWithCasts t e) == Interp e.
+    Proof. apply Interp_gen_RewriteArithWithCasts; assumption. Qed.
     Lemma Interp_RewriteToFancy (invert_low invert_high : Z -> Z -> option Z)
           (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
           (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
           {t} e (Hwf : Wf e)
       : Interp (@RewriteToFancy invert_low invert_high t e) == Interp e.
     Proof. apply Interp_gen_RewriteToFancy; assumption. Qed.
+    Lemma Interp_RewriteToFancyWithCasts (invert_low invert_high : Z -> Z -> option Z)
+          (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+          (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+          {t} e (Hwf : Wf e)
+      : Interp (@RewriteToFancyWithCasts invert_low invert_high t e) == Interp e.
+    Proof. apply Interp_gen_RewriteToFancyWithCasts; assumption. Qed.
   End RewriteRules.
 
   Lemma Wf_PartialEvaluate {t} e (Hwf : Wf e) : Wf (@PartialEvaluate t e).
@@ -133,6 +173,6 @@ Module Compilers.
     : Interp (@PartialEvaluate t e) == Interp e.
   Proof. apply Interp_gen_PartialEvaluate; assumption. Qed.
 
-  Hint Resolve Wf_PartialEvaluate Wf_RewriteArith Wf_RewriteNBE Wf_RewriteToFancy : wf.
-  Hint Rewrite @Interp_gen_PartialEvaluate @Interp_gen_RewriteArith @Interp_gen_RewriteNBE @Interp_gen_RewriteToFancy @Interp_PartialEvaluate @Interp_RewriteArith @Interp_RewriteNBE @Interp_RewriteToFancy : interp.
+  Hint Resolve Wf_PartialEvaluate Wf_RewriteArith Wf_RewriteNBE Wf_RewriteToFancy Wf_RewriteArithWithCasts Wf_RewriteToFancyWithCasts : wf.
+  Hint Rewrite @Interp_gen_PartialEvaluate @Interp_gen_RewriteArith @Interp_gen_RewriteNBE @Interp_gen_RewriteToFancy @Interp_gen_RewriteArithWithCasts @Interp_gen_RewriteToFancyWithCasts @Interp_PartialEvaluate @Interp_RewriteArith @Interp_RewriteNBE @Interp_RewriteToFancy @Interp_RewriteArithWithCasts @Interp_RewriteToFancyWithCasts : interp.
 End Compilers.

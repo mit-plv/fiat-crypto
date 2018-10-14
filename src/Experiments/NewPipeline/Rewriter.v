@@ -5,6 +5,8 @@ Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.CPSNotations.
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.Operations.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Experiments.NewPipeline.Language.
@@ -1854,17 +1856,29 @@ Module Compilers.
             ; make_rewriteol (-??) (fun e => (llet v := e in -$v)  when  negb (SubstVarLike.is_var_fst_snd_pair_opp e)) (* inline negation when the rewriter wouldn't already inline it *)
            ].
 
+      Definition arith_with_casts_rewrite_rules : rewrite_rulesT
+        := [make_rewrite (#(@pattern.ident.fst '1 '2) @ (??, ??)) (fun _ _ x y => x)
+            ; make_rewrite (#(@pattern.ident.snd '1 '2) @ (??, ??)) (fun _ x _ y => y)
+            ; make_rewriteo
+                (#pattern.ident.Z_cast @ (#pattern.ident.Z_cast @ ??))
+                (fun r1 r2 x => #(ident.Z_cast r2) @ x  when  ZRange.is_tighter_than_bool (ZRange.normalize r2) (ZRange.normalize r1))].
+
       Definition nbe_dtree'
         := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 nbe_rewrite_rules.
       Definition arith_dtree'
         := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 (arith_rewrite_rules 0%Z (* dummy val *)).
+      Definition arith_with_casts_dtree'
+        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 arith_with_casts_rewrite_rules.
       Definition nbe_dtree : decision_tree
         := Eval compute in invert_Some nbe_dtree'.
       Definition arith_dtree : decision_tree
         := Eval compute in invert_Some arith_dtree'.
+      Definition arith_with_casts_dtree : decision_tree
+        := Eval compute in invert_Some arith_with_casts_dtree'.
 
       Definition nbe_default_fuel := Eval compute in List.length nbe_rewrite_rules.
       Definition arith_default_fuel := Eval compute in List.length (arith_rewrite_rules 0%Z (* dummy val *)).
+      Definition arith_with_casts_default_fuel := Eval compute in List.length arith_with_casts_rewrite_rules.
 
       Import PrimitiveHList.
       (* N.B. The [combine_hlist] call MUST eta-expand
@@ -1888,10 +1902,16 @@ Module Compilers.
       Definition arith_pr1_rewrite_rules max_const_val := Eval hnf in projT1 (arith_split_rewrite_rules max_const_val).
       Definition arith_pr2_rewrite_rules max_const_val := Eval hnf in projT2 (arith_split_rewrite_rules max_const_val).
       Definition arith_all_rewrite_rules max_const_val := combine_hlist (P:=rewrite_ruleTP) (arith_pr1_rewrite_rules max_const_val) (arith_pr2_rewrite_rules max_const_val).
+      Definition arith_with_casts_split_rewrite_rules := Eval cbv [split_list projT1 projT2 arith_with_casts_rewrite_rules] in split_list arith_with_casts_rewrite_rules.
+      Definition arith_with_casts_pr1_rewrite_rules := Eval hnf in projT1 arith_with_casts_split_rewrite_rules.
+      Definition arith_with_casts_pr2_rewrite_rules := Eval hnf in projT2 arith_with_casts_split_rewrite_rules.
+      Definition arith_with_casts_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) (arith_with_casts_pr1_rewrite_rules) arith_with_casts_pr2_rewrite_rules.
       Definition nbe_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
         := @assemble_identifier_rewriters nbe_dtree nbe_all_rewrite_rules do_again t idc.
       Definition arith_rewrite_head0 max_const_val do_again {t} (idc : ident t) : value_with_lets t
         := @assemble_identifier_rewriters arith_dtree (arith_all_rewrite_rules max_const_val) do_again t idc.
+      Definition arith_with_casts_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
+        := @assemble_identifier_rewriters arith_with_casts_dtree arith_with_casts_all_rewrite_rules do_again t idc.
 
       Section fancy.
         Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z).
@@ -2067,18 +2087,32 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                   ((#pattern.ident.Z_shiftr @ ?? @ #?ℤ) * (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
                   (fun x offset1 y offset2 => let s := (2*offset1)%Z in #(ident.fancy_mulhh s) @ (x, y)  when  offset1 =? offset2)
             ].
+        Definition fancy_with_casts_rewrite_rules : rewrite_rulesT
+          := [].
+
         Definition fancy_dtree'
           := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 fancy_rewrite_rules.
         Definition fancy_dtree : decision_tree
           := Eval compute in invert_Some fancy_dtree'.
+        Definition fancy_with_casts_dtree'
+          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 fancy_with_casts_rewrite_rules.
+        Definition fancy_with_casts_dtree : decision_tree
+          := Eval compute in invert_Some fancy_with_casts_dtree'.
         Definition fancy_default_fuel := Eval compute in List.length fancy_rewrite_rules.
+        Definition fancy_with_casts_default_fuel := Eval compute in List.length fancy_with_casts_rewrite_rules.
         Import PrimitiveHList.
         Definition fancy_split_rewrite_rules := Eval cbv [split_list projT1 projT2 fancy_rewrite_rules] in split_list fancy_rewrite_rules.
         Definition fancy_pr1_rewrite_rules := Eval hnf in projT1 fancy_split_rewrite_rules.
         Definition fancy_pr2_rewrite_rules := Eval hnf in projT2 fancy_split_rewrite_rules.
         Definition fancy_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) fancy_pr1_rewrite_rules fancy_pr2_rewrite_rules.
+        Definition fancy_with_casts_split_rewrite_rules := Eval cbv [split_list projT1 projT2 fancy_with_casts_rewrite_rules] in split_list fancy_with_casts_rewrite_rules.
+        Definition fancy_with_casts_pr1_rewrite_rules := Eval hnf in projT1 fancy_with_casts_split_rewrite_rules.
+        Definition fancy_with_casts_pr2_rewrite_rules := Eval hnf in projT2 fancy_with_casts_split_rewrite_rules.
+        Definition fancy_with_casts_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) fancy_with_casts_pr1_rewrite_rules fancy_with_casts_pr2_rewrite_rules.
         Definition fancy_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
           := @assemble_identifier_rewriters fancy_dtree fancy_all_rewrite_rules do_again t idc.
+        Definition fancy_with_casts_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
+          := @assemble_identifier_rewriters fancy_with_casts_dtree fancy_with_casts_all_rewrite_rules do_again t idc.
       End fancy.
     End with_var.
     Module RewriterPrintingNotations.
@@ -2103,193 +2137,150 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Notation "x <- 'type.try_make_transport_cps' t1 t2 ; f" := (type.try_make_transport_cps t1 t2 (fun y => match y with Some x => f | None => None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'type.try_make_transport_cps'  t1  t2 ; '/' f ']'").
       Notation "x <- 'base.try_make_transport_cps' t1 t2 ; f" := (base.try_make_transport_cps t1 t2 (fun y => match y with Some x => f | None => None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'base.try_make_transport_cps'  t1  t2 ; '/' f ']'").
     End RewriterPrintingNotations.
+
+    Ltac make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
+      (eval cbv -[pr2_rewrite_rules
+                    base.interp base.try_make_transport_cps
+                    type.try_make_transport_cps type.try_transport_cps
+                    pattern.type.unify_extracted_cps
+                    Let_In Option.sequence Option.sequence_return
+                    UnderLets.splice UnderLets.to_expr
+                    Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
+                    Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
+                    Compile.value'
+                    SubstVarLike.is_var_fst_snd_pair_opp
+                 ] in rewrite_head0).
+    Ltac timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
+      constr:(ltac:(time (idtac; let v := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in exact v))).
+    Ltac make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
+      (eval cbv [id
+                   pr2_rewrite_rules
+                   projT1 projT2
+                   cpsbind cpscall cps_option_bind cpsreturn
+                   PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
+                   pattern.ident.arg_types
+                   Compile.eval_decision_tree
+                   Compile.eval_rewrite_rules
+                   Compile.expr_of_rawexpr
+                   Compile.normalize_deep_rewrite_rule
+                   Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
+                   (*Compile.reflect*)
+                   (*Compile.reify*)
+                   Compile.reveal_rawexpr_cps
+                   Compile.reveal_rawexpr_cps_gen
+                   Compile.rew_should_do_again
+                   Compile.rew_with_opt
+                   Compile.rew_under_lets
+                   Compile.rew_replacement
+                   Compile.rew_is_cps
+                   Compile.rValueOrExpr
+                   Compile.swap_list
+                   Compile.type_of_rawexpr
+                   Compile.value
+                   (*Compile.value'*)
+                   Compile.value_of_rawexpr
+                   Compile.value_with_lets
+                   ident.smart_Literal
+                   type.try_transport_cps
+                   rlist_rect rwhen rwhenl
+                ] in rewrite_head1).
+    Ltac timed_make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
+      constr:(ltac:(time (idtac; let v := make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in exact v))).
+    Ltac make_rewrite_head3 rewrite_head2 :=
+      (eval cbn [id
+                   cpsbind cpscall cps_option_bind cpsreturn
+                   Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
+                   Option.sequence Option.sequence_return Option.bind
+                   UnderLets.reify_and_let_binds_base_cps
+                   UnderLets.splice UnderLets.splice_list UnderLets.to_expr
+                   base.interp base.base_interp
+                   base.type.base_beq
+                   type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
+                   Datatypes.fst Datatypes.snd
+                ] in rewrite_head2).
+    Ltac timed_make_rewrite_head3 rewrite_head2 :=
+      constr:(ltac:(time (idtac; let v := make_rewrite_head3 rewrite_head2 in exact v))).
+    Ltac make_rewrite_head rewrite_head0 pr2_rewrite_rules :=
+      let rewrite_head1 := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in
+      let rewrite_head2 := make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in
+      let rewrite_head3 := make_rewrite_head3 rewrite_head2 in
+      rewrite_head3.
+    Ltac timed_make_rewrite_head rewrite_head0 pr2_rewrite_rules :=
+      let rewrite_head1 := timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in
+      let rewrite_head2 := timed_make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in
+      let rewrite_head3 := timed_make_rewrite_head3 rewrite_head2 in
+      rewrite_head3.
+    Notation make_rewrite_head rewrite_head0 pr2_rewrite_rules
+      := (ltac:(let v := timed_make_rewrite_head rewrite_head0 pr2_rewrite_rules in
+                exact v)) (only parsing).
+
+    (* For reduction *)
+    Local Arguments base.try_make_base_transport_cps _ !_ !_.
+    Local Arguments base.try_make_transport_cps _ !_ !_.
+    Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
+    Local Arguments Option.sequence {A} !v1 v2.
+    Local Arguments Option.sequence_return {A} !v1 v2.
+    Local Arguments Option.bind {A B} !_ _.
+    Local Arguments pattern.Raw.ident.invert_bind_args {t} !_ !_.
+    Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
+    Local Arguments type.try_make_transport_cps {base_type _ P} t1 t2 {_} _.
+    Local Arguments base.type.base_beq !_ !_.
+    Local Arguments id / .
+    (* For printing *)
+    Local Arguments option {_}.
+    Local Arguments UnderLets.UnderLets {_ _ _}.
+    Local Arguments expr.expr {_ _ _}.
+    Local Notation ℤ := base.type.Z.
+    Local Notation ℕ := base.type.nat.
+    Local Notation bool := base.type.bool.
+    Local Notation unit := base.type.unit.
+    Local Notation list := base.type.list.
+    Local Notation "x" := (type.base x) (only printing, at level 9).
+
     Section red_fancy.
-      Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
+      Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
               {var : type.type base.type -> Type}
               (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
+                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
               {t} (idc : ident t).
-      Time Let rewrite_head1
-        := Eval cbv -[fancy_pr2_rewrite_rules
-                        base.interp base.try_make_transport_cps
-                        type.try_make_transport_cps type.try_transport_cps
-                        pattern.type.unify_extracted_cps
-                        Let_In Option.sequence Option.sequence_return
-                        UnderLets.splice UnderLets.to_expr
-                        Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                        Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
-                        Compile.value'
-                        SubstVarLike.is_var_fst_snd_pair_opp
-                     ] in @fancy_rewrite_head0 var invert_low invert_high do_again t idc.
-      (* Finished transaction in 3.395 secs (3.395u,0.s) (successful) *)
-
-      Time Local Definition fancy_rewrite_head2
-        := Eval cbv [id
-                       rewrite_head1 fancy_pr2_rewrite_rules
-                       projT1 projT2
-                       cpsbind cpscall cps_option_bind cpsreturn
-                       PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
-                       pattern.ident.arg_types
-                       Compile.eval_decision_tree
-                       Compile.eval_rewrite_rules
-                       Compile.expr_of_rawexpr
-                       Compile.normalize_deep_rewrite_rule
-                       Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                       (*Compile.reflect*)
-                       (*Compile.reify*)
-                       Compile.reveal_rawexpr_cps
-                       Compile.reveal_rawexpr_cps_gen
-                       Compile.rew_should_do_again
-                       Compile.rew_with_opt
-                       Compile.rew_under_lets
-                       Compile.rew_replacement
-                       Compile.rew_is_cps
-                       Compile.rValueOrExpr
-                       Compile.swap_list
-                       Compile.type_of_rawexpr
-                       Compile.value
-                       (*Compile.value'*)
-                       Compile.value_of_rawexpr
-                       Compile.value_with_lets
-                       ident.smart_Literal
-                       type.try_transport_cps
-                       rlist_rect rwhen rwhenl
-                    ] in rewrite_head1.
-      (* Finished transaction in 10.793 secs (10.796u,0.s) (successful) *)
-
-      Local Arguments base.try_make_base_transport_cps _ !_ !_.
-      Local Arguments base.try_make_transport_cps _ !_ !_.
-      Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
-      Local Arguments Option.sequence {A} !v1 v2.
-      Local Arguments Option.sequence_return {A} !v1 v2.
-      Local Arguments Option.bind {A B} !_ _.
-      Local Arguments pattern.Raw.ident.invert_bind_args {t} !_ !_.
-      Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
-      Local Arguments type.try_make_transport_cps {base_type _ P} t1 t2 {_} _.
-      Local Arguments base.type.base_beq !_ !_.
-      Local Arguments option {_}.
-      Local Arguments id / .
-      Local Arguments fancy_rewrite_head2 / .
-      Local Arguments UnderLets.UnderLets {_ _ _}.
-      Local Arguments expr.expr {_ _ _}.
-      Local Notation ℤ := base.type.Z.
-      Local Notation ℕ := base.type.nat.
-      Local Notation bool := base.type.bool.
-      Local Notation unit := base.type.unit.
-      Local Notation list := base.type.list.
-      Local Notation "x" := (type.base x) (only printing, at level 9).
 
       Time Definition fancy_rewrite_head
-        := Eval cbn [id
-                       fancy_rewrite_head2
-                       cpsbind cpscall cps_option_bind cpsreturn
-                       Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
-                       Option.sequence Option.sequence_return Option.bind
-                       UnderLets.reify_and_let_binds_base_cps
-                       UnderLets.splice UnderLets.splice_list UnderLets.to_expr
-                       base.interp base.base_interp
-                       base.type.base_beq
-                       type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
-                       Datatypes.fst Datatypes.snd
-                    ] in fancy_rewrite_head2.
-      (* Finished transaction in 1.892 secs (1.891u,0.s) (successful) *)
+        := make_rewrite_head (@fancy_rewrite_head0 var invert_low invert_high do_again t idc) (@fancy_pr2_rewrite_rules).
+      (* Tactic call ran for 0.19 secs (0.187u,0.s) (success)
+         Tactic call ran for 10.297 secs (10.3u,0.s) (success)
+         Tactic call ran for 1.746 secs (1.747u,0.s) (success)
+         Finished transaction in 12.402 secs (12.4u,0.s) (successful) *)
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
       (* Redirect "/tmp/fancy_rewrite_head" Print fancy_rewrite_head. *)
     End red_fancy.
+    Section red_fancy_with_casts.
+      Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
+              {var : type.type base.type -> Type}
+              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
+                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
+              {t} (idc : ident t).
+      Time Definition fancy_with_casts_rewrite_head
+        := make_rewrite_head (@fancy_with_casts_rewrite_head0 var (*invert_low invert_high*) do_again t idc) (@fancy_with_casts_pr2_rewrite_rules).
 
+      Local Set Printing Depth 1000000.
+      Local Set Printing Width 200.
+      Import RewriterPrintingNotations.
+      (* Redirect "/tmp/fancy_with_casts_rewrite_head" Print fancy_with_casts_rewrite_head. *)
+    End red_fancy_with_casts.
     Section red_nbe.
       Context {var : type.type base.type -> Type}
               (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
+                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
               {t} (idc : ident t).
-
-      Time Let rewrite_head1
-        := Eval cbv -[nbe_pr2_rewrite_rules
-                        base.interp base.try_make_transport_cps
-                        type.try_make_transport_cps type.try_transport_cps
-                        pattern.type.unify_extracted_cps
-                        Let_In Option.sequence Option.sequence_return
-                        UnderLets.splice UnderLets.to_expr
-                        Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                        Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
-                        Compile.value'
-                        SubstVarLike.is_var_fst_snd_pair_opp
-                     ] in @nbe_rewrite_head0 var do_again t idc.
-      (* Finished transaction in 7.035 secs (7.036u,0.s) (successful) *)
-
-      Time Local Definition nbe_rewrite_head2
-        := Eval cbv [id
-                       rewrite_head1 nbe_pr2_rewrite_rules
-                       projT1 projT2
-                       cpsbind cpscall cps_option_bind cpsreturn
-                       PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
-                       pattern.ident.arg_types
-                       Compile.eval_decision_tree
-                       Compile.eval_rewrite_rules
-                       Compile.expr_of_rawexpr
-                       Compile.normalize_deep_rewrite_rule
-                       Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                       (*Compile.reflect*)
-                       (*Compile.reify*)
-                       Compile.reveal_rawexpr_cps
-                       Compile.reveal_rawexpr_cps_gen
-                       Compile.rew_should_do_again
-                       Compile.rew_with_opt
-                       Compile.rew_under_lets
-                       Compile.rew_replacement
-                       Compile.rew_is_cps
-                       Compile.rValueOrExpr
-                       Compile.swap_list
-                       Compile.type_of_rawexpr
-                       Compile.value
-                       (*Compile.value'*)
-                       Compile.value_of_rawexpr
-                       Compile.value_with_lets
-                       ident.smart_Literal
-                       type.try_transport_cps
-                       rlist_rect rwhen rwhenl
-                    ] in rewrite_head1.
-      (* Finished transaction in 29.297 secs (29.284u,0.016s) (successful) *)
-
-      Local Arguments base.try_make_base_transport_cps _ !_ !_.
-      Local Arguments base.try_make_transport_cps _ !_ !_.
-      Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
-      Local Arguments Option.sequence {A} !v1 v2.
-      Local Arguments Option.sequence_return {A} !v1 v2.
-      Local Arguments Option.bind {A B} !_ _.
-      Local Arguments pattern.Raw.ident.invert_bind_args {t} !_ !_.
-      Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
-      Local Arguments type.try_make_transport_cps {base_type _ P} t1 t2 {_} _.
-      Local Arguments base.type.base_beq !_ !_.
-      Local Arguments option {_}.
-      Local Arguments id / .
-      Local Arguments nbe_rewrite_head2 / .
-      Local Arguments UnderLets.UnderLets {_ _ _}.
-      Local Arguments expr.expr {_ _ _}.
-      Local Notation ℤ := base.type.Z.
-      Local Notation ℕ := base.type.nat.
-      Local Notation bool := base.type.bool.
-      Local Notation unit := base.type.unit.
-      Local Notation list := base.type.list.
-      Local Notation "x" := (type.base x) (only printing, at level 9).
-
       Time Definition nbe_rewrite_head
-        := Eval cbn [id
-                       nbe_rewrite_head2
-                       cpsbind cpscall cps_option_bind cpsreturn
-                       Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
-                       Option.sequence Option.sequence_return Option.bind
-                       UnderLets.reify_and_let_binds_base_cps
-                       UnderLets.splice UnderLets.splice_list UnderLets.to_expr
-                       base.interp base.base_interp
-                       base.type.base_beq
-                       type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
-                       PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd Datatypes.fst Datatypes.snd
-                    ] in nbe_rewrite_head2.
-      (* Finished transaction in 1.998 secs (2.u,0.s) (successful) *)
+        := make_rewrite_head (@nbe_rewrite_head0 var do_again t idc) (@nbe_pr2_rewrite_rules).
+      (* Tactic call ran for 0.232 secs (0.235u,0.s) (success)
+         Tactic call ran for 29.061 secs (29.04u,0.004s) (success)
+         Tactic call ran for 1.605 secs (1.604u,0.s) (success)
+         Finished transaction in 31.203 secs (31.183u,0.004s) (successful) *)
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2301,93 +2292,15 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Context (max_const_val : Z)
               {var : type.type base.type -> Type}
               (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
+                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
               {t} (idc : ident t).
 
-      Time Let rewrite_head1
-        := Eval cbv -[arith_pr2_rewrite_rules
-                        base.interp base.try_make_transport_cps
-                        type.try_make_transport_cps type.try_transport_cps
-                        pattern.type.unify_extracted_cps
-                        Let_In Option.sequence Option.sequence_return
-                        UnderLets.splice UnderLets.to_expr
-                        Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                        Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
-                        Compile.value'
-                        SubstVarLike.is_var_fst_snd_pair_opp
-                     ] in @arith_rewrite_head0 var max_const_val do_again t idc.
-      (* Finished transaction in 15.381 secs (15.379u,0.s) (successful) *)
-
-      Time Local Definition arith_rewrite_head2
-        := Eval cbv [id
-                       rewrite_head1 arith_pr2_rewrite_rules
-                       projT1 projT2
-                       cpsbind cpscall cps_option_bind cpsreturn
-                       PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
-                       pattern.ident.arg_types
-                       Compile.eval_decision_tree
-                       Compile.eval_rewrite_rules
-                       Compile.expr_of_rawexpr
-                       Compile.normalize_deep_rewrite_rule
-                       Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                       (*Compile.reflect*)
-                       (*Compile.reify*)
-                       Compile.reveal_rawexpr_cps
-                       Compile.reveal_rawexpr_cps_gen
-                       Compile.rew_should_do_again
-                       Compile.rew_with_opt
-                       Compile.rew_under_lets
-                       Compile.rew_replacement
-                       Compile.rew_is_cps
-                       Compile.rValueOrExpr
-                       Compile.swap_list
-                       Compile.type_of_rawexpr
-                       Compile.value
-                       (*Compile.value'*)
-                       Compile.value_of_rawexpr
-                       Compile.value_with_lets
-                       ident.smart_Literal
-                       type.try_transport_cps
-                       rlist_rect rwhen rwhenl
-                    ] in rewrite_head1.
-      (* Finished transaction in 83.667 secs (83.564u,0.115s) (successful) *)
-
-      Local Arguments base.try_make_base_transport_cps _ !_ !_.
-      Local Arguments base.try_make_transport_cps _ !_ !_.
-      Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
-      Local Arguments Option.sequence {A} !v1 v2.
-      Local Arguments Option.sequence_return {A} !v1 v2.
-      Local Arguments Option.bind {A B} !_ _.
-      Local Arguments pattern.Raw.ident.invert_bind_args {t} !_ !_.
-      Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
-      Local Arguments type.try_make_transport_cps {base_type _ P} t1 t2 {_} _.
-      Local Arguments base.type.base_beq !_ !_.
-      Local Arguments option {_}.
-      Local Arguments id / .
-      Local Arguments arith_rewrite_head2 / .
-      Local Arguments UnderLets.UnderLets {_ _ _}.
-      Local Arguments expr.expr {_ _ _}.
-      Local Notation ℤ := base.type.Z.
-      Local Notation ℕ := base.type.nat.
-      Local Notation bool := base.type.bool.
-      Local Notation unit := base.type.unit.
-      Local Notation list := base.type.list.
-      Local Notation "x" := (type.base x) (only printing, at level 9).
-
       Time Definition arith_rewrite_head
-        := Eval cbn [id
-                       arith_rewrite_head2
-                       cpsbind cpscall cps_option_bind cpsreturn
-                       Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
-                       Option.sequence Option.sequence_return Option.bind
-                       UnderLets.reify_and_let_binds_base_cps
-                       UnderLets.splice UnderLets.splice_list UnderLets.to_expr
-                       base.interp base.base_interp
-                       base.type.base_beq
-                       type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
-                       PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd Datatypes.fst Datatypes.snd
-                    ] in arith_rewrite_head2.
-      (* Finished transaction in 3.967 secs (3.968u,0.s) (successful) *)
+        := make_rewrite_head (@arith_rewrite_head0 var max_const_val do_again t idc) (@arith_pr2_rewrite_rules).
+      (* Tactic call ran for 0.283 secs (0.284u,0.s) (success)
+         Tactic call ran for 79.61 secs (79.612u,0.008s) (success)
+         Tactic call ran for 3.574 secs (3.576u,0.s) (success)
+         Finished transaction in 83.677 secs (83.68u,0.008s) (successful) *)
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2395,14 +2308,35 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       (* Redirect "/tmp/arith_rewrite_head" Print arith_rewrite_head. *)
     End red_arith.
 
+    Section red_arith_with_casts.
+      Context {var : type.type base.type -> Type}
+              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
+                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
+              {t} (idc : ident t).
+
+      Time Definition arith_with_casts_rewrite_head
+        := make_rewrite_head (@arith_with_casts_rewrite_head0 var do_again t idc) (@arith_with_casts_pr2_rewrite_rules).
+
+      Local Set Printing Depth 1000000.
+      Local Set Printing Width 200.
+      Import RewriterPrintingNotations.
+      (* Redirect "/tmp/arith_with_casts_rewrite_head" Print arith_with_casts_rewrite_head. *)
+    End red_arith_with_casts.
+
     Definition RewriteNBE {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (@nbe_rewrite_head) nbe_default_fuel t e.
     Definition RewriteArith (max_const_val : Z) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (@arith_rewrite_head max_const_val) arith_default_fuel t e.
+    Definition RewriteArithWithCasts {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
+      := @Compile.Rewrite (fun var do_again => @arith_with_casts_rewrite_head var) arith_with_casts_default_fuel t e.
     Definition RewriteToFancy
-               (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
+               (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (fun var _ => @fancy_rewrite_head invert_low invert_high var) fancy_default_fuel t e.
+    Definition RewriteToFancyWithCasts
+               (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
+               {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
+      := @Compile.Rewrite (fun var _ => @fancy_with_casts_rewrite_head (*invert_low invert_high*) var) fancy_with_casts_default_fuel t e.
   End RewriteRules.
 
   Import defaults.

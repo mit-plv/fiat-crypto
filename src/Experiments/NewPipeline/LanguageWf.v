@@ -320,6 +320,11 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
           rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
       Qed.
+
+      Lemma cast_normalize r v : cast (ZRange.normalize r) v = cast r v.
+      Proof.
+        cbv [cast]; rewrite ZRange.normalize_idempotent; reflexivity.
+      Qed.
     End with_cast.
 
     Lemma cast_idempotent_gen {cast_outside_of_range1 cast_outside_of_range2}

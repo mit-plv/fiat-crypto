@@ -713,7 +713,13 @@ Module Pipeline.
       let E := FromFlat e in
       let E' := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
       match E' with
-      | inl E => Success E
+      | inl E
+        => let E := RewriteRules.RewriteArithWithCasts E in
+           let E := match translate_to_fancy with
+                    | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancyWithCasts invert_low invert_high E
+                    | None => E
+                    end in
+           Success E
       | inr (inl (b, E))
         => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
       | inr (inr unsupported_casts)
@@ -844,15 +850,16 @@ Module Pipeline.
           | [ |- Wf _ ] => idtac
           | _ => eassumption || reflexivity
           end.. ].
-      { subst; split; [ | assumption ].
+      { subst; split; [ | solve [ wf_interp_t ] ].
         split_and; simpl in *.
-        split; [ solve [ eauto with nocore ] | ].
-        { intros; match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; eauto.
-          transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1).
-          { apply type.app_curried_Proper; [ | symmetry; eassumption ].
-            clear dependent arg1; clear dependent arg2; clear dependent out_bounds.
-            wf_interp_t. }
-          { apply Interp_PartialEvaluateWithListInfoFromBounds; auto. } } }
+        split; [ solve [ wf_interp_t; eauto with nocore ] | ].
+        intros; break_innermost_match; autorewrite with interp; try solve [ wf_interp_t ]; [ | ].
+        all: match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; eauto.
+        all: transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1);
+          [ | apply Interp_PartialEvaluateWithListInfoFromBounds; auto ].
+        all: apply type.app_curried_Proper; [ | symmetry; eassumption ].
+        all: clear dependent arg1; clear dependent arg2; clear dependent out_bounds.
+        all: wf_interp_t. }
       { wf_interp_t. } }
   Qed.
 

@@ -54,6 +54,14 @@ Module Compilers.
     Lemma arith_rewrite_head_eq max_const_val : @arith_rewrite_head max_const_val = (fun var => @arith_rewrite_head0 var max_const_val).
     Proof. reflexivity. Qed.
 
+    Lemma fancy_with_casts_rewrite_head_eq (*invert_low invert_high*)
+      : (fun var do_again => @fancy_with_casts_rewrite_head (*invert_low invert_high*) var)
+        = (fun var => @fancy_with_casts_rewrite_head0 var (*invert_low invert_high*)).
+    Proof. reflexivity. Qed.
+
+    Lemma arith_with_casts_rewrite_head_eq : (fun var _ => @arith_with_casts_rewrite_head var) = @arith_with_casts_rewrite_head0.
+    Proof. reflexivity. Qed.
+
     Lemma nbe_all_rewrite_rules_eq : @nbe_all_rewrite_rules = @nbe_rewrite_rules.
     Proof. reflexivity. Qed.
 
@@ -61,6 +69,12 @@ Module Compilers.
     Proof. reflexivity. Qed.
 
     Lemma arith_all_rewrite_rules_eq : @arith_all_rewrite_rules = @arith_rewrite_rules.
+    Proof. reflexivity. Qed.
+
+    Lemma fancy_with_casts_all_rewrite_rules_eq : @fancy_with_casts_all_rewrite_rules = @fancy_with_casts_rewrite_rules.
+    Proof. reflexivity. Qed.
+
+    Lemma arith_with_casts_all_rewrite_rules_eq : @arith_with_casts_all_rewrite_rules = @arith_with_casts_rewrite_rules.
     Proof. reflexivity. Qed.
 
     Section good.
@@ -336,11 +350,30 @@ Module Compilers.
         Time all: repeat good_t_step.
       Qed.
 
+      Lemma arith_with_casts_rewrite_rules_good
+        : rewrite_rules_goodT arith_with_casts_rewrite_rules arith_with_casts_rewrite_rules.
+      Proof using Type.
+        Time start_good.
+        Time all: repeat good_t_step.
+      Qed.
+
       Lemma fancy_rewrite_rules_good
             (invert_low invert_high : Z -> Z -> option Z)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
         : rewrite_rules_goodT (fancy_rewrite_rules invert_low invert_high) (fancy_rewrite_rules invert_low invert_high).
+      Proof using Type.
+        Time start_good.
+        Time all: repeat good_t_step.
+        all: cbv [Option.bind].
+        Time all: repeat good_t_step.
+      Qed.
+
+      Lemma fancy_with_casts_rewrite_rules_good
+            (invert_low invert_high : Z -> Z -> option Z)
+            (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+            (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+        : rewrite_rules_goodT (fancy_with_casts_rewrite_rules (*invert_low invert_high*)) (fancy_with_casts_rewrite_rules (*invert_low invert_high*)).
       Proof using Type.
         Time start_good.
         Time all: repeat good_t_step.
