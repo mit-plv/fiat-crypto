@@ -104,43 +104,47 @@ Module KyberSpec.
       forall k,
         tuple Rq k -> tuple Rq k -> tuple Rq k.
 
-    Definition compress {k q} d
+    Section helpers.
+      Definition split_stream n (x : stream) : list stream :=
+        List.map (fun i => splice_stream x (i*n)%nat n) (seq 0 (size x / n)).
+      Definition F_to_stream {m} (x : F m) := Z_to_stream (F.to_Z x).
+      Definition F_of_stream m (x : stream) := F.of_Z m (stream_to_Z x).
+    End helpers.
+
+    Section compression.
+      Definition compress {k q} d
       : tuple (F q) k -> tuple (F d) k :=
-      map (f_compress q d).
-    Definition decompress {k} q {d}
-      : tuple (F d) k -> tuple (F q) k :=
-      map (f_decompress q d).
+        map (f_compress q d).
+      Definition decompress {k} q {d}
+        : tuple (F d) k -> tuple (F q) k :=
+        map (f_decompress q d).
 
-    Definition polyvec_compress {n m q} d
-      : matrix (F q) n m -> matrix (F d) n m :=
-      map (compress d).
-    Definition polyvec_decompress {n m} q {d}
-      : matrix (F d) n m -> matrix (F q) n m :=
-      map (decompress q).
+      Definition polyvec_compress {n m q} d
+        : matrix (F q) n m -> matrix (F d) n m :=
+        map (compress d).
+      Definition polyvec_decompress {n m} q {d}
+        : matrix (F d) n m -> matrix (F q) n m :=
+        map (decompress q).
+    End compression.
 
+    Section encoding.
+      Definition encode' {T k} (t2s : T -> stream) : tuple T k -> stream :=
+        fun t => List.fold_right (fun x acc => concat_stream acc (t2s x)) nil_stream (to_list k t).
+      Definition decode' {T k} nbits (* nbits = number of bits per element *)
+                 (s2t : stream -> T) : stream -> tuple T k :=
+        fun b => map s2t (from_list_default nil_stream k (split_stream nbits b)).
+      Definition encode {l k} : tuple (F l) k -> stream :=
+        encode' F_to_stream.
+      Definition decode l k : stream -> tuple (F l) k :=
+        decode' (Pos.to_nat l) (F_of_stream l).
+      Definition polyvec_encode {n m l}
+        : matrix (F l) n m -> stream :=
+        encode' encode.
+      Definition polyvec_decode m l
+        : stream -> matrix (F l) m n :=
+        decode' (n*Pos.to_nat l) (decode l n).
+    End encoding.
 
-    Definition split_stream n (x : stream) : list stream :=
-      List.map (fun i => splice_stream x (i*n)%nat n) (seq 0 (size x / n)).
-    Definition encode' {T k} (t2s : T -> stream) : tuple T k -> stream :=
-      fun t => List.fold_right (fun x acc => concat_stream acc (t2s x)) nil_stream (to_list k t).
-    Definition decode' {T k} nbits (* nbits = number of bits per element *)
-               (s2t : stream -> T) : stream -> tuple T k :=
-      fun b => map s2t (from_list_default nil_stream k (split_stream nbits b)).
-    Let F_to_stream {m} (x : F m) := Z_to_stream (F.to_Z x).
-    Let F_of_stream m (x : stream) := F.of_Z m (stream_to_Z x).
-    Definition encode {l k} : tuple (F l) k -> stream :=
-      encode' F_to_stream.
-    Definition decode l k : stream -> tuple (F l) k :=
-      decode' (Pos.to_nat l) (F_of_stream l).
-    Definition polyvec_encode {n m l}
-      : matrix (F l) n m -> stream :=
-      encode' encode.
-    Definition polyvec_decode m l
-      : stream -> matrix (F l) m n :=
-      decode' (n*Pos.to_nat l) (decode l n).
-
-    (* Algorithm 3 *)
-    (* d should be 32 (KYBER_SYMBYTES) bytes chosen uniformly at random *)
     Definition gen_matrix (seed : stream) (transposed : bool)
       : matrix Rq_NTT k k
       := map (fun i => map (fun j =>
@@ -154,6 +158,9 @@ Module KyberSpec.
     Definition gen_at := fun seed => gen_matrix seed true.
     Definition getnoise (seed : stream) (nonce : nat) : Rq :=
       CBD_sample n q eta (PRF (seed, nat_to_stream nonce)).
+
+    (* Algorithm 3 *)
+    (* d should be 32 (KYBER_SYMBYTES) bytes chosen uniformly at random *)
     Definition KeyGen (d : stream) : stream * stream :=
       let '(rho, sigma) := G d in (* rho = public seed, sigma = noise seed *)
       let A := gen_a rho in
