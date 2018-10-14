@@ -581,18 +581,24 @@ Module Compilers.
              | type.arrow _ _ => fun _ => k None
              end.
 
-        Definition reveal_rawexpr_cps (e : rawexpr) : ~> rawexpr
+        (* Allows assuming that we know the ident that we're revealing; mainly used in proofs *)
+        Definition reveal_rawexpr_cps_gen (assume_known : option bool)
+                   (e : rawexpr) : ~> rawexpr
           := fun T k
-             => match e with
-                | rExpr _ e as r
-                | rValue (type.base _) e as r
+             => match e, assume_known with
+                | rExpr _ e as r, _
+                | rValue (type.base _) e as r, _
                   => match e with
-                     | expr.Ident t idc => k (rIdent false idc e)
+                     | expr.Ident t idc => k (rIdent (match assume_known with Some known => known | _ => false end) idc e)
                      | expr.App s d f x => k (rApp (rExpr f) (rExpr x) e)
                      | _ => k r
                      end
-                | e' => k e'
+                | rIdent _ t idc t' alt, Some known => k (rIdent known idc alt)
+                | e', _ => k e'
                 end.
+
+        Definition reveal_rawexpr_cps (e : rawexpr) : ~> rawexpr
+          := reveal_rawexpr_cps_gen None e.
 
         Fixpoint with_unification_resultT' {t} (p : pattern t) (evm : EvarMap) (K : Type) : Type
           := match p return Type with
@@ -2132,6 +2138,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                        (*Compile.reflect*)
                        (*Compile.reify*)
                        Compile.reveal_rawexpr_cps
+                       Compile.reveal_rawexpr_cps_gen
                        Compile.rew_should_do_again
                        Compile.rew_with_opt
                        Compile.rew_under_lets
@@ -2228,6 +2235,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                        (*Compile.reflect*)
                        (*Compile.reify*)
                        Compile.reveal_rawexpr_cps
+                       Compile.reveal_rawexpr_cps_gen
                        Compile.rew_should_do_again
                        Compile.rew_with_opt
                        Compile.rew_under_lets
@@ -2325,6 +2333,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                        (*Compile.reflect*)
                        (*Compile.reify*)
                        Compile.reveal_rawexpr_cps
+                       Compile.reveal_rawexpr_cps_gen
                        Compile.rew_should_do_again
                        Compile.rew_with_opt
                        Compile.rew_under_lets

@@ -241,7 +241,8 @@ Module Compilers.
         Local Notation reflect := (@reflect ident).
         Local Notation reify_expr := (@reify_expr ident).
         Local Notation rawexpr := (@rawexpr ident).
-        Local Notation eval_decision_tree var := (@eval_decision_tree ident var pident full_types invert_bind_args type_of_raw_pident raw_pident_to_typed).
+        Local Notation eval_decision_tree var := (@eval_decision_tree ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation reveal_rawexpr_gen assume_known e := (@reveal_rawexpr_cps_gen ident _ assume_known e _ id).
         Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps ident _ e _ id).
         Local Notation unify_pattern' var := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
@@ -615,6 +616,91 @@ Module Compilers.
                            | rewrite Hv; (solve [ auto ] + break_innermost_match_step) ].
             Qed.
           End normalize_deep_rewrite_rule_cps_id.
+
+          Lemma reveal_rawexpr_cps_gen_id assume_known e T k
+            : @reveal_rawexpr_cps_gen ident var assume_known e T k = k (reveal_rawexpr_gen assume_known e).
+          Proof.
+            cbv [reveal_rawexpr_cps_gen]; break_innermost_match; try reflexivity.
+            all: cbv [value value'] in *; expr.invert_match; try reflexivity.
+          Qed.
+
+          Lemma reveal_rawexpr_cps_id e T k
+            : @reveal_rawexpr_cps ident var e T k = k (reveal_rawexpr e).
+          Proof. apply reveal_rawexpr_cps_gen_id. Qed.
+
+          Fixpoint eval_decision_tree_cont_None_ext
+                   {T ctx d cont}
+                   (Hcont : forall x y, cont x y = None)
+                   {struct d}
+            : @eval_decision_tree var T ctx d cont = None.
+          Proof using Type.
+            clear -Hcont eval_decision_tree_cont_None_ext.
+            specialize (fun d ctx => @eval_decision_tree_cont_None_ext T ctx d).
+            destruct d; cbn [eval_decision_tree]; intros; try (clear eval_decision_tree_cont_None_ext; tauto).
+            { let d := match goal with d : decision_tree |- _ => d end in
+              specialize (eval_decision_tree_cont_None_ext d).
+              rewrite !Hcont, !eval_decision_tree_cont_None_ext by assumption.
+              break_innermost_match; reflexivity. }
+            { let d := match goal with d : decision_tree |- _ => d end in
+              pose proof (eval_decision_tree_cont_None_ext d) as IHd.
+              let d := match goal with d : option decision_tree |- _ => d end in
+              pose proof (match d as d' return match d' with Some _ => _ | None => True end with
+                          | Some d => eval_decision_tree_cont_None_ext d
+                          | None => I
+                          end) as IHapp_case.
+              all: destruct ctx; try (clear eval_decision_tree_cont_None_ext; (tauto || congruence)); [].
+              all: lazymatch goal with
+                   | [ |- match ?d with
+                          | TryLeaf _ _ => (?res ;; ?ev)%option
+                          | _ => _
+                          end = None ]
+                     => cut (res = None /\ ev = None);
+                          [ clear eval_decision_tree_cont_None_ext;
+                            let H1 := fresh in
+                            let H2 := fresh in
+                            intros [H1 H2]; rewrite H1, H2; destruct d; reflexivity
+                          | ]
+                   end.
+              all: split; [ | clear eval_decision_tree_cont_None_ext; eapply IHd; eassumption ].
+              (** We use the trick that [induction] inside [Fixpoint]
+                  gives us nested [fix]es that pass the guarded
+                  checker, as long as we're careful about how we do
+                  things *)
+              let icases := match goal with d : list (_ * decision_tree) |- _ => d end in
+              induction icases as [|icase icases IHicases];
+                [ | pose proof (eval_decision_tree_cont_None_ext (snd icase)) as IHicase ];
+                clear eval_decision_tree_cont_None_ext.
+              (** now we can stop being super-careful about [destruct]
+                  ordering because, if we're [Guarded] here (which we
+                  are), then we cannot break guardedness from this
+                  point on, because we've cleared the bare fixpoint
+                  after specializing it to valid arguments *)
+              2: revert IHicases.
+              rewrite reveal_rawexpr_cps_id.
+              all: repeat (rewrite reveal_rawexpr_cps_id; set (reveal_rawexpr_cps _ _ id)).
+              all: repeat match goal with H := reveal_rawexpr _ |- _ => subst H end.
+              all: repeat first [ progress cbn [fold_right Option.sequence Option.sequence_return fst snd] in *
+                                | progress subst
+                                | reflexivity
+                                | rewrite IHd
+                                | rewrite IHapp_case
+                                | rewrite IHicase
+                                | break_innermost_match_step
+                                | progress intros
+                                | solve [ auto ]
+                                | progress break_match
+                                | progress cbv [Option.bind option_bind'] in * ]. }
+            { let d := match goal with d : decision_tree |- _ => d end in
+              specialize (eval_decision_tree_cont_None_ext d); rename eval_decision_tree_cont_None_ext into IHd.
+              repeat first [ break_innermost_match_step
+                           | rewrite IHd
+                           | solve [ auto ]
+                           | progress intros ]. }
+          Qed.
+
+          Lemma eval_decision_tree_cont_None {T ctx d}
+            : @eval_decision_tree var T ctx d (fun _ _ => None) = None.
+          Proof using Type. apply eval_decision_tree_cont_None_ext; reflexivity. Qed.
         End with_var1.
 
         Section with_var2.
@@ -798,18 +884,11 @@ Module Compilers.
               destruct (eq_type_of_rawexpr_of_wf Hwf); generalize dependent (type_of_rawexpr re1); generalize dependent (type_of_rawexpr re2); intros; subst; clear; eliminate_hprop_eq; reflexivity.
           Qed.
 
-          Lemma reveal_rawexpr_cps_id {var} e T k
-            : @reveal_rawexpr_cps ident var e T k = k (reveal_rawexpr e).
-          Proof.
-            cbv [reveal_rawexpr_cps]; break_innermost_match; try reflexivity.
-            cbv [value value'] in *; expr.invert_match; try reflexivity.
-          Qed.
-
           Lemma wf_reveal_rawexpr t G re1 e1 re2 e2 (Hwf : @wf_rawexpr G t re1 e1 re2 e2)
             : @wf_rawexpr G t (reveal_rawexpr re1) e1 (reveal_rawexpr re2) e2.
           Proof.
             pose proof (wf_expr_of_wf_rawexpr Hwf).
-            destruct Hwf; cbv [reveal_rawexpr_cps id];
+            destruct Hwf; cbv [reveal_rawexpr_cps reveal_rawexpr_cps_gen id];
               repeat first [ assumption
                            | constructor
                            | progress subst
