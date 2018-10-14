@@ -30,18 +30,19 @@ Module PolynomialRing.
 
     Section with_bytestream.
       Context (stream : Type)
-              (testbit : stream -> nat -> bool)
+              (get_byte : stream -> nat -> Z)
               (splice_stream :
                  stream -> forall (start len : nat), stream).
       Context (splice_stream_correct :
                  forall s start len i,
                    (i < len)%nat ->
-                   testbit (splice_stream s start len) i = testbit s (i+start)).
+                   get_byte (splice_stream s start len) i
+                   = get_byte s (i+start)).
 
     (* Equivalent to \sum_{j=0}^{len-1} in_bits_{j} *)
-      Definition count_ones_in_stream len (in_bits : stream) :=
+      Definition sum_bytes len (in_bits : stream) :=
         fold_right
-          (fun j => Z.add (Z.b2z (testbit in_bits j)))
+          (fun j => Z.add (get_byte in_bits j))
           0 (seq 0 len).
 
       (* Algorithm 2 *)
@@ -51,8 +52,8 @@ Module PolynomialRing.
         map (fun i =>
                let in1 := splice_stream in_bits (2*i*eta) eta in
                let in2 := splice_stream in_bits (2*i*eta+eta) eta in
-               let a := count_ones_in_stream eta in1 in
-               let b := count_ones_in_stream eta in2 in
+               let a := sum_bytes eta in1 in
+               let b := sum_bytes eta in2 in
                F.of_Z q (a - b))
             (tuple_seq 0 n).
     End with_bytestream.
@@ -69,7 +70,7 @@ Module KyberSpec.
     Context (NTT : Rq -> Rq_NTT) (NTT_inv : Rq_NTT -> Rq) (NTT_toZ : Rq_NTT -> Z).
     Context (freeze : Z -> Z). (* modular reduction *)
     Context (stream : Type)
-            (testbit : stream -> nat -> bool)
+            (get_byte : stream -> nat -> Z)
             (lor : stream -> stream -> stream)
             (splice_stream :
                stream -> forall (start len : nat), stream).
@@ -86,7 +87,7 @@ Module KyberSpec.
             (nil_stream : stream).
 
     Let nat_to_stream x := Z_to_stream (Z.of_nat x).
-    Let CBD_sample n q := CBD_sample n q stream testbit splice_stream.
+    Let CBD_sample n q := CBD_sample n q stream get_byte splice_stream.
     Let matrix T n m := tuple (tuple T m) n. (* n x m matrix: m columns, n rows *)
 
     (* TODO *)
