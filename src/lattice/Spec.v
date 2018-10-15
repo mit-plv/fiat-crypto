@@ -117,6 +117,7 @@ End PolynomialRing.
 
 Module KyberSpec.
   Import PolynomialRing.
+  Import Tuple.
   Section KyberSpec.
     (* Parameters about polynomial rings *)
     Context (n : nat) (q log2q : positive).
@@ -152,7 +153,6 @@ Module KyberSpec.
             (H : stream -> byte_array 32)
             (G : stream -> byte_array 32 * byte_array 32). (* hash function *)
 
-
     (* TODO *)
     Axiom matrix_mul :
       forall n m p,
@@ -168,24 +168,34 @@ Module KyberSpec.
       forall k,
         tuple Rq k -> tuple Rq k -> tuple Rq k.
 
+    Local Notation pksize := (n / 8 * Pos.to_nat dt * k + 32)%nat (only parsing).
+    Local Notation sksize := (n / 8 * Pos.to_nat log2q * k)%nat (only parsing).
+    Local Notation ciphertextsize := (n / 8 * Pos.to_nat du * k + n / 8 * Pos.to_nat dv * 1)%nat (only parsing).
+    Local Infix "||" := concat.
+
+    Local Arguments polyvec_add {_} _ _.
+    Local Infix "+" := polyvec_add : polyvec_scope.
+    Local Infix "+" := polyvec_add : polyvec_scope.
+    Delimit Scope polyvec_scope with poly.
+
+
     Section helpers.
       Definition split_array {T} n m {nm} (* nm = n * m *)
                  (d : T) (A : tuple T nm) : tuple (tuple T n) m :=
         map (fun i => map (fun j => nth_default d (i*m+j) A)
-                          (Tuple.seq 0 n))
-            (Tuple.seq 0 m).
+                          (seq 0 n))
+            (seq 0 m).
       Definition bits_to_Z {n} (B : bit_array n) :=
         List.fold_right
           (fun i acc => acc + Z.shiftl (Z.b2z (nth_bit B i)) (Z.of_nat i))
-          0 (seq 0 n).
+          0 (List.seq 0 n).
       Definition bits_to_F m {n} (B : bit_array n) :=
         F.of_Z m (bits_to_Z B).
       Definition Z_to_bits (x : Z) n : bit_array n :=
-        map (fun i => Z.testbit x (Z.of_nat i)) (Tuple.seq 0 n).
+        map (fun i => Z.testbit x (Z.of_nat i)) (seq 0 n).
       Definition F_to_bits {m} (x : F m) n : bit_array n :=
         Z_to_bits (F.to_Z x) n.
     End helpers.
-    Local Infix "||" := Tuple.concat.
 
     Section compression.
       Definition compress {k q} d
@@ -214,7 +224,7 @@ Module KyberSpec.
       Definition encode {l} (t : tuple (F (2^l)) n)
         : byte_array ((n/8) * Pos.to_nat l) :=
         bits_to_bytes _
-          (Tuple.flat_map (fun x => F_to_bits x (Pos.to_nat l)) t).
+          (flat_map (fun x => F_to_bits x (Pos.to_nat l)) t).
 
       Definition polyvec_decode {k l}
                  (B : byte_array ((n/8)*Pos.to_nat l*k))
@@ -242,9 +252,6 @@ Module KyberSpec.
     Definition gen_at := fun seed => gen_matrix seed true.
     Definition getnoise (seed : byte_array 32) (nonce : nat) : Rq :=
       CBD_sample n q eta (stream_to_bytes _ (PRF (seed, nat_to_byte nonce))).
-    Local Notation pksize := (n / 8 * Pos.to_nat dt * k + 32)%nat (only parsing).
-    Local Notation sksize := (n / 8 * Pos.to_nat log2q * k)%nat (only parsing).
-    Local Notation ciphertextsize := (n / 8 * Pos.to_nat du * k + n / 8 * Pos.to_nat dv * 1)%nat (only parsing).
 
     (* Algorithm 3 *)
     (* d should be chosen uniformly at random *)
@@ -252,11 +259,11 @@ Module KyberSpec.
       : byte_array pksize * byte_array sksize :=
       let '(rho, sigma) := G (bytes_to_stream _ d) in (* rho = public seed, sigma = noise seed *)
       let A := gen_a rho in
-      let s := map (fun i => getnoise sigma i) (Tuple.seq 0 k) in
-      let e := map (fun i => getnoise sigma i) (Tuple.seq k k) in
+      let s := map (getnoise sigma) (Tuple.seq 0 k) in
+      let e := map (getnoise sigma) (Tuple.seq k k) in
       let s' := map NTT s in
-      let t := polyvec_add k (map NTT_inv (matrix_mul k k 1 A s')) e in
-      let pk := Tuple.concat (polyvec_encode (polyvec_compress dt t)) rho in
+      let t := (map NTT_inv (matrix_mul k k 1 A s') + e)%poly in
+      let pk := polyvec_encode (polyvec_compress dt t) || rho in
       let sk := polyvec_encode (map (map freeze) s') in
       (pk, sk).
 
@@ -266,19 +273,14 @@ Module KyberSpec.
       let t := polyvec_decompress q (polyvec_decode (Tuple.firstn _ pk)) in
       let rho := Tuple.skipn (n / 8 * Pos.to_nat dt * k) pk in
       let At := gen_at rho in
-      let r := map (fun i => getnoise coins i) (Tuple.seq 0 k) in
-      let e1 := map (fun i => getnoise coins i) (Tuple.seq k k) in
-      let e2 := getnoise coins (2*k)%nat in
+      let r := map (getnoise coins) (Tuple.seq 0 k) in
+      let e1 := map (getnoise coins) (Tuple.seq k k) in
+      let e2 : tuple Rq 1 := getnoise coins (2*k)%nat in
       let r' := map NTT r in
-      let u := polyvec_add k (map NTT_inv (matrix_mul k k 1 At r')) e1 in
+      let u := (map NTT_inv (matrix_mul k k 1 At r') + e1)%poly in
       let t' := map NTT t in
-      let v :=
-          polyvec_add 1
-          (polyvec_add 1
-            (NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k t') r'))
-            e2)
-          (decompress q (decode msg))
-      in
+      let tTr : tuple Rq 1 := NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k t') r') in
+      let v := (tTr + e2 + (decompress q (decode msg)))%poly in
       let c1 := polyvec_encode (polyvec_compress du u) in
       let c2 := polyvec_encode (polyvec_compress dv v) in
       c1 || c2.
