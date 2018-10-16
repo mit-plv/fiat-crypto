@@ -124,8 +124,7 @@ Module KyberSpec.
     Context (Zq_NTT : Type).
     Let Rq := Rq n q.
     Let Rq_NTT := tuple (Zq_NTT) n.
-    Context (NTT : Rq -> Rq_NTT) (NTT_inv : Rq_NTT -> Rq).
-    Context (freeze : Zq_NTT -> F (2^log2q)). (* modular reduction *)
+    Context (NTT : Rq -> Rq_NTT) (NTT_inv : Rq_NTT -> Rq) (NTT_mod : Zq_NTT -> F q) (NTT_of_F : F (2^log2q) -> Zq_NTT).
 
     (* Parameters about bytestreams *)
     Context (stream byte : Type)
@@ -164,20 +163,12 @@ Module KyberSpec.
         tuple (tuple T n) m -> tuple (tuple T m) n.
     Axiom f_compress : forall q d, (F q) -> (F (2^d)).
     Axiom f_decompress : forall q d, (F (2^d)) -> (F q).
-    Axiom polyvec_add :
-      forall k,
-        tuple Rq k -> tuple Rq k -> tuple Rq k.
 
     Local Notation pksize := (n / 8 * Pos.to_nat dt * k + 32)%nat (only parsing).
     Local Notation sksize := (n / 8 * Pos.to_nat log2q * k)%nat (only parsing).
     Local Notation ciphertextsize := (n / 8 * Pos.to_nat du * k + n / 8 * Pos.to_nat dv * 1)%nat (only parsing).
+    Local Notation msgsize := (n / 8 * Pos.to_nat 1)%nat (only parsing).
     Local Infix "||" := concat.
-
-    Local Arguments polyvec_add {_} _ _.
-    Local Infix "+" := polyvec_add : polyvec_scope.
-    Local Infix "+" := polyvec_add : polyvec_scope.
-    Delimit Scope polyvec_scope with poly.
-
 
     Section helpers.
       Definition split_array {T} n m {nm} (* nm = n * m *)
@@ -195,7 +186,12 @@ Module KyberSpec.
         map (fun i => Z.testbit x (Z.of_nat i)) (seq 0 n).
       Definition F_to_bits {m} (x : F m) n : bit_array n :=
         Z_to_bits (F.to_Z x) n.
+      Definition polyvec_add {k} : tuple Rq k -> tuple Rq k -> tuple Rq k :=
+        map2 (PolynomialRing.add _ _).
     End helpers.
+    Local Arguments polyvec_add {_} _ _.
+    Local Infix "+" := polyvec_add : polyvec_scope.
+    Delimit Scope polyvec_scope with poly.
 
     Section compression.
       Definition compress {k q} d
@@ -253,6 +249,9 @@ Module KyberSpec.
     Definition getnoise (seed : byte_array 32) (nonce : nat) : Rq :=
       CBD_sample n q eta (stream_to_bytes _ (PRF (seed, nat_to_byte nonce))).
 
+    Definition NTT_reduce (x : Zq_NTT) :=
+      F.of_Z (2^log2q) (F.to_Z (NTT_mod x)).
+
     (* Algorithm 3 *)
     (* d should be chosen uniformly at random *)
     Definition KeyGen (d : byte_array 32)
@@ -264,11 +263,11 @@ Module KyberSpec.
       let s' := map NTT s in
       let t := (map NTT_inv (matrix_mul k k 1 A s') + e)%poly in
       let pk := polyvec_encode (polyvec_compress dt t) || rho in
-      let sk := polyvec_encode (map (map freeze) s') in
+      let sk := polyvec_encode (map (map NTT_reduce) s') in
       (pk, sk).
 
     Definition Enc (pk : byte_array pksize)
-               (coins : byte_array 32) (msg : byte_array (n / 8 * Pos.to_nat 1))
+               (coins : byte_array 32) (msg : byte_array msgsize)
       : byte_array ciphertextsize :=
       let t := polyvec_decompress q (polyvec_decode (Tuple.firstn _ pk)) in
       let rho := Tuple.skipn (n / 8 * Pos.to_nat dt * k) pk in
@@ -284,6 +283,17 @@ Module KyberSpec.
       let c1 := polyvec_encode (polyvec_compress du u) in
       let c2 := polyvec_encode (polyvec_compress dv v) in
       c1 || c2.
+ 
+    Definition Dec (sk : byte_array sksize)
+               (c : byte_array ciphertextsize)
+      : byte_array msgsize :=
+      let u := polyvec_decompress q (polyvec_decode (firstn _ c)) in
+      let v := polyvec_decompress q (polyvec_decode (skipn _ c)) in
+      let s' := map (map NTT_of_F) (polyvec_decode sk) in
+      let u' := map NTT u in
+      let sTu := NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k s') u') in
+      let m := encode (compress 1 (sub _ _ v sTu)) in
+      m.
 
   End KyberSpec.
 End KyberSpec.
