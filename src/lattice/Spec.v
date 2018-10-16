@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.Lists.List.
 Require Import Coq.micromega.Lia.
+Require Import Coq.derive.Derive.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Util.Tuple.
@@ -25,7 +26,6 @@ Qed.
 (* TODO: make an actual tuple-land definition *)
 Module Tuple.
   Definition seq start len := from_list_default 0%nat len (seq start len).
-  Check on_tuple.
   Program Definition flat_map {A B n m} (f : A -> tuple B m) (t : tuple A n)
     : tuple B (m * n) :=
     on_tuple (List.flat_map (fun a => to_list m (f a))) _ t.
@@ -46,6 +46,17 @@ Module Tuple.
   Program Definition coerce {T n} m (t : tuple T n) (H : n = m)
     : tuple T m := from_list m (to_list n t) _.
   Next Obligation. apply length_to_list. Defined.
+
+  Definition on_tuple_default {A B} (f : list A -> list B) {n m} (d : B) (xs : tuple A n) :=
+    from_list_default d m (f (to_list n xs)).
+
+  Lemma on_tuple_default_eq A B f n m d H xs :
+    @on_tuple_default A B f n m d xs = on_tuple f H xs.
+  Proof.
+    cbv [on_tuple on_tuple_default].
+    erewrite <-from_list_default_eq.
+    reflexivity.
+  Qed.
 End Tuple.
 
 Module PolynomialRing.
@@ -70,16 +81,8 @@ Module PolynomialRing.
     Section with_bytestream.
       Context (stream byte : Type)
               (byte0 : byte)
-              (get_byte : stream -> nat -> byte)
               (make_byte : tuple bool 8 -> byte)
-              (get_bit : byte -> nat -> bool)
-              (splice_stream :
-                 stream -> forall (start len : nat), stream).
-      Context (splice_stream_correct :
-                 forall s start len i,
-                   (i < len)%nat ->
-                   get_byte (splice_stream s start len) i
-                   = get_byte s (i+start)).
+              (get_bit : byte -> nat -> bool).
       Let byte_array := tuple byte.
       Let bit_array := tuple bool.
       Let nth_byte {l} (B : byte_array l) i := nth_default byte0 i B.
@@ -104,7 +107,7 @@ Module PolynomialRing.
       (* Algorithm 2 *)
       (* NOTE : The output is not meant to represent the input, just
     preserve the input's randomness. *)
-      Definition CBD_sample (eta : nat) (B : byte_array (64*eta)) :=
+      Definition CBD_sample (eta : nat) (B : byte_array (64*eta)) : Rq :=
         let B' := bytes_to_bits B in
         map (fun i =>
                let a := sum_bits (2*i*eta) eta B' in
@@ -119,12 +122,12 @@ Module KyberSpec.
   Import PolynomialRing.
   Import Tuple.
   Section KyberSpec.
-    (* Parameters about polynomial rings *)
-    Context (n : nat) (q log2q : positive).
-    Context (Zq_NTT : Type).
-    Let Rq := Rq n q.
-    Let Rq_NTT := tuple (Zq_NTT) n.
-    Context (NTT : Rq -> Rq_NTT) (NTT_inv : Rq_NTT -> Rq) (NTT_mod : Zq_NTT -> F q) (NTT_of_F : F (2^log2q) -> Zq_NTT).
+    Context (Rq Rq_NTT : Type).
+    Context {Rqeq Rqzero Rqone Rqopp Rqadd Rqsub Rqmul}
+            (Rqring : @ring Rq Rqeq Rqzero Rqone Rqopp Rqadd Rqsub Rqmul).
+    Context {Rq_NTTeq Rq_NTTzero Rq_NTTone Rq_NTTopp Rq_NTTadd Rq_NTTsub Rq_NTTmul}
+            (Rq_NTTring : @ring Rq_NTT Rq_NTTeq Rq_NTTzero Rq_NTTone Rq_NTTopp Rq_NTTadd Rq_NTTsub Rq_NTTmul).
+    Context (NTT : Rq -> Rq_NTT) (NTT_inv : Rq_NTT -> Rq).
 
     (* Parameters about bytestreams *)
     Context (stream byte : Type)
@@ -133,41 +136,51 @@ Module KyberSpec.
             (make_byte : tuple bool 8 -> byte)
             (bytes_to_stream : forall n, tuple byte n -> stream)
             (stream_to_bytes : forall n, stream -> tuple byte n)
-            (get_bit : byte -> nat -> bool)
-            (splice_stream :
-               stream -> forall (start len : nat), stream).
+            (get_bit : byte -> nat -> bool).
     Context (nat_to_byte : nat -> byte).
     Let byte_array := tuple byte.
     Let bit_array := tuple bool.
     Let nth_bit {l} (B : bit_array l) i := nth_default false i B.
-    Let CBD_sample n q := CBD_sample n q byte get_bit.
-    Let matrix T n m := tuple (tuple T m) n. (* n x m matrix: m columns, n rows *)
 
     (* Kyber parameters *)
     Context (parse : stream -> Rq_NTT). (* Algorithm 1 *) (* TODO *)
-    Context (k eta : nat)
+    Context (k eta n : nat) (q log2q : positive)
             (dt du dv : positive) (* fields into which elements are compressed *)
             (XOF : stream -> stream) (* "extendable output function" *)
             (PRF : byte_array 32 * byte -> stream) (* pseudorandom function *)
             (H : stream -> byte_array 32)
             (G : stream -> byte_array 32 * byte_array 32). (* hash function *)
 
-    (* TODO *)
-    Axiom matrix_mul :
-      forall n m p,
-        matrix Rq_NTT n m ->
-        matrix Rq_NTT m p ->
-        matrix Rq_NTT n p.
-    Axiom matrix_transpose :
-      forall {T} n m,
-        tuple (tuple T n) m -> tuple (tuple T m) n.
-    Axiom f_compress : forall q d, (F q) -> (F (2^d)).
-    Axiom f_decompress : forall q d, (F (2^d)) -> (F q).
+    Context (CBD_sample : byte_array (64*eta) -> Rq).
+    Context (NTT_of_F :tuple (F (2^log2q)) n -> Rq_NTT) (NTT_to_F : Rq_NTT -> tuple (F (2^log2q)) n).
+    Context (compress : forall d, Rq -> tuple (F (2^d)) n) (decompress : forall {d}, tuple (F (2^d)) n -> Rq).
+    Arguments decompress {_}.
 
-    Local Notation pksize := (n / 8 * Pos.to_nat dt * k + 32)%nat (only parsing).
-    Local Notation sksize := (n / 8 * Pos.to_nat log2q * k)%nat (only parsing).
-    Local Notation ciphertextsize := (n / 8 * Pos.to_nat du * k + n / 8 * Pos.to_nat dv * 1)%nat (only parsing).
-    Local Notation msgsize := (n / 8 * Pos.to_nat 1)%nat (only parsing).
+    (* TODO : relocate? *)
+    Let matrix T n m := tuple (tuple T m) n. (* n x m matrix: m columns, n rows *)
+    Definition matrix_get {T n m} (d : T) (A : matrix T n m) (i j : nat) : T :=
+      nth_default d j (nth_default (repeat d m) i A).
+    Definition matrix_mul n m p
+               (A : matrix Rq_NTT n m)
+               (B : matrix Rq_NTT m p) : matrix Rq_NTT n p :=
+      map (fun j =>
+             map (fun i =>
+                    fold_right
+                      (fun k acc => Rq_NTTadd acc
+                                              (Rq_NTTmul (matrix_get Rq_NTTzero A i k)
+                                                         (matrix_get Rq_NTTzero B k j)))
+                      Rq_NTTzero
+                      (List.seq 0 m))
+                 (seq 0 p))
+          (seq 0 n).
+    Definition matrix_transpose n m (A : matrix Rq_NTT n m) : matrix Rq_NTT m n :=
+      map (fun j => map (fun i => matrix_get Rq_NTTzero A j i) (seq 0 n)) (seq 0 m).
+
+    Definition pksize := (n / 8 * Pos.to_nat dt * k + 32)%nat.
+    Definition sksize := (n / 8 * Pos.to_nat log2q * k)%nat.
+    Definition ciphertextsize := (n / 8 * Pos.to_nat du * k + n / 8 * Pos.to_nat dv * 1)%nat.
+    Definition msgsize := (n / 8 * Pos.to_nat 1)%nat.
+    Local Hint Transparent pksize sksize ciphertextsize msgsize.
     Local Infix "||" := concat.
 
     Section helpers.
@@ -187,25 +200,19 @@ Module KyberSpec.
       Definition F_to_bits {m} (x : F m) n : bit_array n :=
         Z_to_bits (F.to_Z x) n.
       Definition polyvec_add {k} : tuple Rq k -> tuple Rq k -> tuple Rq k :=
-        map2 (PolynomialRing.add _ _).
+        map2 Rqadd.
     End helpers.
     Local Arguments polyvec_add {_} _ _.
     Local Infix "+" := polyvec_add : polyvec_scope.
     Delimit Scope polyvec_scope with poly.
 
     Section compression.
-      Definition compress {k q} d
-      : tuple (F q) k -> tuple (F (2^d)) k :=
-        map (f_compress q d).
-      Definition decompress {k} q {d}
-        : tuple (F (2^d)) k -> tuple (F q) k :=
-        map (f_decompress q d).
-      Definition polyvec_compress {n m q} d
-        : matrix (F q) n m -> matrix (F (2^d)) n m :=
+      Definition polyvec_compress {m} d
+        : tuple Rq m -> matrix (F (2^d)) m n :=
         map (compress d).
-      Definition polyvec_decompress {n m} q {d}
-        : matrix (F (2^d)) n m -> matrix (F q) n m :=
-        map (decompress q).
+      Definition polyvec_decompress {m d}
+        : matrix (F (2^d)) m n -> tuple Rq m :=
+        map (decompress).
     End compression.
 
     Section encoding.
@@ -247,10 +254,7 @@ Module KyberSpec.
     Definition gen_a := fun seed => gen_matrix seed false.
     Definition gen_at := fun seed => gen_matrix seed true.
     Definition getnoise (seed : byte_array 32) (nonce : nat) : Rq :=
-      CBD_sample n q eta (stream_to_bytes _ (PRF (seed, nat_to_byte nonce))).
-
-    Definition NTT_reduce (x : Zq_NTT) :=
-      F.of_Z (2^log2q) (F.to_Z (NTT_mod x)).
+      CBD_sample (stream_to_bytes _ (PRF (seed, nat_to_byte nonce))).
 
     (* Algorithm 3 *)
     (* d should be chosen uniformly at random *)
@@ -263,13 +267,13 @@ Module KyberSpec.
       let s' := map NTT s in
       let t := (map NTT_inv (matrix_mul k k 1 A s') + e)%poly in
       let pk := polyvec_encode (polyvec_compress dt t) || rho in
-      let sk := polyvec_encode (map (map NTT_reduce) s') in
+      let sk := polyvec_encode (map NTT_to_F s') in
       (pk, sk).
 
     Definition Enc (pk : byte_array pksize)
                (coins : byte_array 32) (msg : byte_array msgsize)
       : byte_array ciphertextsize :=
-      let t := polyvec_decompress q (polyvec_decode (Tuple.firstn _ pk)) in
+      let t := polyvec_decompress (polyvec_decode (Tuple.firstn _ pk)) in
       let rho := Tuple.skipn (n / 8 * Pos.to_nat dt * k) pk in
       let At := gen_at rho in
       let r := map (getnoise coins) (Tuple.seq 0 k) in
@@ -279,21 +283,131 @@ Module KyberSpec.
       let u := (map NTT_inv (matrix_mul k k 1 At r') + e1)%poly in
       let t' := map NTT t in
       let tTr : tuple Rq 1 := NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k t') r') in
-      let v := (tTr + e2 + (decompress q (decode msg)))%poly in
+      let v := (tTr + e2 + (decompress (decode msg)))%poly in
       let c1 := polyvec_encode (polyvec_compress du u) in
       let c2 := polyvec_encode (polyvec_compress dv v) in
       c1 || c2.
- 
+
     Definition Dec (sk : byte_array sksize)
                (c : byte_array ciphertextsize)
       : byte_array msgsize :=
-      let u := polyvec_decompress q (polyvec_decode (firstn _ c)) in
-      let v := polyvec_decompress q (polyvec_decode (skipn _ c)) in
-      let s' := map (map NTT_of_F) (polyvec_decode sk) in
+      let u := polyvec_decompress (polyvec_decode (firstn _ c)) in
+      let v := polyvec_decompress (polyvec_decode (skipn _ c)) in
+      let s' := map NTT_of_F (polyvec_decode sk) in
       let u' := map NTT u in
       let sTu := NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k s') u') in
-      let m := encode (compress 1 (sub _ _ v sTu)) in
+      let m := encode (compress 1 (Rqsub v sTu)) in
       m.
 
   End KyberSpec.
 End KyberSpec.
+
+Module Bytes.
+  Definition byte := tuple bool 8.
+  Definition byte0 : byte := repeat false 8.
+  Definition byte_array := tuple byte.
+  Definition stream : Type := {n & byte_array n}.
+  Definition get_bit (b : byte) (n : nat) := nth_default false n b.
+  Definition get_byte (s : stream) (n : nat) := nth_default byte0 n (projT2 s).
+  Definition stream_to_bytes n (s : stream) : byte_array n := map (get_byte s) (Tuple.seq 0 n).
+  Definition bytes_to_stream n (b : byte_array n) : stream := existT _ n b.
+  Definition nat_to_byte (n : nat) : byte := map (Nat.testbit n) (Tuple.seq 0 8).
+End Bytes.
+
+Module Kyber512.
+  Import Bytes.
+  Definition n := 512%nat.
+  Definition k := 2%nat.
+  Definition q := 7681%positive.
+  Definition log2q := Eval compute in (Pos.size q).
+  Definition eta := 5%nat.
+  Definition du := 11%positive.
+  Definition dv := 3%positive.
+  Definition dt := 11%positive.
+
+  Definition pksize := Eval compute in (KyberSpec.pksize k n dt).
+  Definition sksize := Eval compute in (KyberSpec.sksize k n log2q).
+  Definition ciphertextsize := Eval compute in (KyberSpec.ciphertextsize k n du dv).
+  Definition msgsize := Eval compute in (KyberSpec.msgsize n).
+
+  Axiom Rq_NTT : Type.
+  Axiom Rq_NTTadd : Rq_NTT -> Rq_NTT -> Rq_NTT.
+  Axiom Rq_NTTmul : Rq_NTT -> Rq_NTT -> Rq_NTT.
+  Axiom Rq_NTTzero : Rq_NTT.
+  Axiom NTT : PolynomialRing.Rq n q -> Rq_NTT.
+  Axiom NTT_inv : Rq_NTT -> PolynomialRing.Rq n q.
+  Axiom NTT_to_F : Rq_NTT -> tuple (F (2^log2q)) n.
+  Axiom NTT_of_F : tuple (F (2^log2q)) n -> Rq_NTT.
+  Axiom parse : stream -> Rq_NTT.
+  Axiom XOF : stream -> stream.
+  Axiom PRF : byte_array 32%nat * byte -> stream.
+  Axiom G : stream -> byte_array 32%nat * byte_array 32%nat.
+  Axiom compress : forall d : positive, PolynomialRing.Rq n q -> tuple (F (2 ^ d)) n.
+  Axiom decompress : forall d : positive, tuple (F (2 ^ d)) n -> PolynomialRing.Rq n q.
+
+  Definition KeyGen (d : byte_array 32) : byte_array pksize * byte_array sksize
+    := @KyberSpec.KeyGen (PolynomialRing.Rq n q)
+                         Rq_NTT
+                         (PolynomialRing.add n q)
+                         Rq_NTTzero
+                         Rq_NTTadd
+                         Rq_NTTmul
+                         NTT
+                         NTT_inv
+                         stream
+                         byte
+                         id
+                         bytes_to_stream
+                         stream_to_bytes
+                         nat_to_byte
+                         parse
+                         k eta n log2q dt XOF PRF G
+                         (PolynomialRing.CBD_sample n q byte get_bit eta)
+                         NTT_to_F
+                         compress
+                         d.
+
+  Definition Enc (pk : byte_array pksize) (coins : byte_array 32) (msg : byte_array msgsize)
+    : byte_array ciphertextsize
+    := @KyberSpec.Enc (PolynomialRing.Rq n q)
+                      Rq_NTT
+                      (PolynomialRing.add n q)
+                      Rq_NTTzero
+                      Rq_NTTadd
+                      Rq_NTTmul
+                      NTT
+                      NTT_inv
+                      stream
+                      byte
+                      byte0
+                      id
+                      bytes_to_stream
+                      stream_to_bytes
+                      get_bit
+                      nat_to_byte
+                      parse
+                      k eta n dt du dv XOF PRF
+                      (PolynomialRing.CBD_sample n q byte get_bit eta)
+                      compress
+                      decompress
+                      pk coins msg.
+
+  Definition Dec (sk : byte_array sksize) (c : byte_array ciphertextsize) : byte_array msgsize
+    := @KyberSpec.Dec (PolynomialRing.Rq n q)
+                      Rq_NTT
+                      (PolynomialRing.add n q)
+                      Rq_NTTzero
+                      Rq_NTTadd
+                      Rq_NTTmul
+                      NTT
+                      NTT_inv
+                      byte
+                      byte0
+                      id
+                      get_bit
+                      k n log2q du dv
+                      NTT_of_F
+                      compress
+                      decompress
+                      sk c.
+End Kyber512.
