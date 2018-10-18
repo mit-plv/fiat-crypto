@@ -2,7 +2,7 @@ Require Import Coq.ZArith.ZArith Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Algebra.Hierarchy.
-Require Import Crypto.Spec.ModularArithmetic.
+Require Import Crypto.Spec.ModularArithmetic Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Util.Tuple.
 Local Open Scope Z_scope.
 
@@ -73,6 +73,7 @@ Module PolynomialRing.
     Definition sub : Rq -> Rq -> Rq := fun p q => add p (opp q).
     Definition scmul : F q -> Rq -> Rq := fun x => map (F.mul x).
     (* TODO : define tuple fold_right *)
+    (* TODO : this definition is wrong *)
     Definition mul : Rq -> Rq -> Rq :=
       fun p q => List.fold_right scmul q (to_list n p).
     Lemma Rq_ring : @ring Rq eq zero one opp add sub mul.
@@ -97,6 +98,11 @@ Module PolynomialRing.
                         (map (fun j => nth_bit B (i*8+j))
                              (Tuple.seq 0 8)))
                         (Tuple.seq 0 l).
+
+      Definition compress (d : positive) : Rq -> tuple (F (2 ^ d)) n :=
+        map (fun x : F q => F.of_Z _ ((Z.shiftl (F.to_Z x) d + (q / 2)) / q)).
+      Definition decompress {d : positive} : tuple (F (2 ^ d)) n -> Rq :=
+        map (fun x : F (2 ^ d) => F.of_Z _ (Z.shiftr (F.to_Z x * q + 2^(d-1)) d)).
 
     (* Equivalent to \sum_{j=0}^{len-1} in_bits_{j} *)
       Definition sum_bits {n} start len (B : bit_array n) :=
@@ -342,8 +348,6 @@ Module Kyber512.
   Axiom XOF : stream -> stream.
   Axiom PRF : byte_array 32%nat * byte -> stream.
   Axiom G : stream -> byte_array 32%nat * byte_array 32%nat.
-  Axiom compress : forall d : positive, PolynomialRing.Rq n q -> tuple (F (2 ^ d)) n.
-  Axiom decompress : forall d : positive, tuple (F (2 ^ d)) n -> PolynomialRing.Rq n q.
 
   Definition KeyGen (d : byte_array 32) : byte_array pksize * byte_array sksize
     := @KyberSpec.KeyGen (PolynomialRing.Rq n q)
@@ -364,7 +368,7 @@ Module Kyber512.
                          k eta n log2q dt XOF PRF G
                          (PolynomialRing.CBD_sample n q byte get_bit eta)
                          NTT_to_F
-                         compress
+                         (PolynomialRing.compress n q)
                          d.
 
   Definition Enc (pk : byte_array pksize) (coins : byte_array 32) (msg : byte_array msgsize)
@@ -388,8 +392,8 @@ Module Kyber512.
                       parse
                       k eta n dt du dv XOF PRF
                       (PolynomialRing.CBD_sample n q byte get_bit eta)
-                      compress
-                      decompress
+                      (PolynomialRing.compress n q)
+                      (@PolynomialRing.decompress n q)
                       pk coins msg.
 
   Definition Dec (sk : byte_array sksize) (c : byte_array ciphertextsize) : byte_array msgsize
@@ -407,7 +411,250 @@ Module Kyber512.
                       get_bit
                       k n log2q du dv
                       NTT_of_F
-                      compress
-                      decompress
+                      (PolynomialRing.compress n q)
+                      (@PolynomialRing.decompress n q)
                       sk c.
 End Kyber512.
+
+Module Kyber32.
+  Import Bytes.
+  Definition n := 32%nat.
+  Definition k := 1%nat.
+  Definition q := 5%positive.
+  Definition log2q := Eval compute in (Pos.size q).
+  Definition eta := 3%nat.
+  Definition du := 5%positive.
+  Definition dv := 1%positive.
+  Definition dt := 5%positive.
+
+  Definition pksize := Eval compute in (KyberSpec.pksize k n dt).
+  Definition sksize := Eval compute in (KyberSpec.sksize k n log2q).
+  Definition ciphertextsize := Eval compute in (KyberSpec.ciphertextsize k n du dv).
+  Definition msgsize := Eval compute in (KyberSpec.msgsize n).
+
+  Definition Rq_NTT := PolynomialRing.Rq n q.
+  Definition NTT (x : PolynomialRing.Rq n q) : Rq_NTT := x.
+  Definition NTT_inv (x : Rq_NTT) : PolynomialRing.Rq n q := x.
+  Definition NTT_to_F (x : Rq_NTT) : tuple (F (2^log2q)) n := map (fun y => F.of_Z _ (F.to_Z y)) x.
+  Definition NTT_of_F (x : tuple (F (2^log2q)) n) : Rq_NTT := map (fun y => F.of_Z _ (F.to_Z y)) x.
+  (*
+  Axiom Rq_NTT : Type.
+  Axiom Rq_NTTadd : Rq_NTT -> Rq_NTT -> Rq_NTT.
+  Axiom Rq_NTTmul : Rq_NTT -> Rq_NTT -> Rq_NTT.
+  Axiom Rq_NTTzero : Rq_NTT.
+  Axiom NTT : PolynomialRing.Rq n q -> Rq_NTT.
+  Axiom NTT_inv : Rq_NTT -> PolynomialRing.Rq n q.
+  Axiom NTT_to_F : Rq_NTT -> tuple (F (2^log2q)) n.
+  Axiom NTT_of_F : tuple (F (2^log2q)) n -> Rq_NTT.
+   *)
+  Axiom parse : stream -> Rq_NTT.
+  Axiom XOF : stream -> stream.
+  Axiom PRF : byte_array 32%nat * byte -> stream.
+  Axiom G : stream -> byte_array 32%nat * byte_array 32%nat.
+ 
+  Definition KeyGen (d : byte_array 32) : byte_array pksize * byte_array sksize
+    := @KyberSpec.KeyGen (PolynomialRing.Rq n q)
+                         Rq_NTT
+                         (PolynomialRing.add n q)
+                         (PolynomialRing.zero n q)
+                         (PolynomialRing.add n q)
+                         (PolynomialRing.mul n q)
+                         NTT
+                         NTT_inv
+                         stream
+                         byte
+                         id
+                         bytes_to_stream
+                         stream_to_bytes
+                         nat_to_byte
+                         parse
+                         k eta n log2q dt XOF PRF G
+                         (PolynomialRing.CBD_sample n q byte get_bit eta)
+                         NTT_to_F
+                         (PolynomialRing.compress n q)
+                         d.
+
+  Definition Enc (pk : byte_array pksize) (coins : byte_array 32) (msg : byte_array msgsize)
+    : byte_array ciphertextsize
+    := @KyberSpec.Enc (PolynomialRing.Rq n q)
+                      Rq_NTT
+                      (PolynomialRing.add n q)
+                      (PolynomialRing.zero n q)
+                      (PolynomialRing.add n q)
+                      (PolynomialRing.mul n q)
+                      NTT
+                      NTT_inv
+                      stream
+                      byte
+                      byte0
+                      id
+                      bytes_to_stream
+                      stream_to_bytes
+                      get_bit
+                      nat_to_byte
+                      parse
+                      k eta n dt du dv XOF PRF
+                      (PolynomialRing.CBD_sample n q byte get_bit eta)
+                      (PolynomialRing.compress n q)
+                      (@PolynomialRing.decompress n q)
+                      pk coins msg.
+
+  Definition Dec (sk : byte_array sksize) (c : byte_array ciphertextsize) : byte_array msgsize
+    := @KyberSpec.Dec (PolynomialRing.Rq n q)
+                      Rq_NTT
+                      (PolynomialRing.add n q)
+                      (PolynomialRing.zero n q)
+                      (PolynomialRing.add n q)
+                      (PolynomialRing.mul n q)
+                      NTT
+                      NTT_inv
+                      byte
+                      byte0
+                      id
+                      get_bit
+                      k n log2q du dv
+                      NTT_of_F
+                      (PolynomialRing.compress n q)
+                      (@PolynomialRing.decompress n q)
+                      sk c.
+
+  Local Notation "subst! v 'for' x 'in' e" := (match v with x => e end) (at level 200).
+  Derive encode SuchThat
+         (forall x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+           x10 x11 x12 x13 x14 x15 x16 x17 x18 x19
+           x20 x21 x22 x23 x24 x25 x26 x27 x28 x29
+           x30 x31 x,
+             (*
+             subst! (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9
+          , x10, x11, x12, x13, x14, x15, x16, x17, x18, x19
+          , x20, x21, x22, x23, x24, x25, x26, x27, x28, x29
+          , x30, x31) for x in *)
+             (x0, x1, x2, x3, x4, x5, x6, x7, x8, x9
+          , x10, x11, x12, x13, x14, x15, x16, x17, x18, x19
+          , x20, x21, x22, x23, x24, x25, x26, x27, x28, x29
+          , x30, x31) = x -> 
+               encode x0 x1 x2 x3 x4 x5 x6 x7 x8 x9
+           x10 x11 x12 x13 x14 x15 x16 x17 x18 x19
+           x20 x21 x22 x23 x24 x25 x26 x27 x28 x29
+           x30 x31 = @KyberSpec.encode byte id n 1 x) As encode_eq.
+  Proof.
+    intros. subst x.
+    cbv - [PolynomialRing.bits_to_bytes byte Tuple.flat_map KyberSpec.F_to_bits Tuple.flat_map F id].
+    cbv [Tuple.flat_map].
+    rewrite <-Tuple.on_tuple_default_eq with (d:=false).
+    cbn - [Z.testbit].
+    cbv - [F byte] in encode.
+    exact eq_refl.
+  Qed.
+
+  Local Ltac decode_simpl :=
+    cbv - [map F KyberSpec.split_array PolynomialRing.bytes_to_bits get_bit KyberSpec.bits_to_F];
+    cbv [PolynomialRing.bytes_to_bits Tuple.flat_map];
+    rewrite <-Tuple.on_tuple_default_eq with (d:= false);
+    cbv [map map' Tuple.seq seq from_list_default from_list_default'];
+    cbn [fst snd];
+    cbv [KyberSpec.split_array KyberSpec.bits_to_F];
+    cbn - [F F.of_Z Z.shiftl Z.add get_bit].
+
+  Derive decode1 SuchThat
+         (forall c0 c1 c2 c3 c,
+             (c0, c1, c2, c3) = c ->
+             decode1 c0 c1 c2 c3 = @KyberSpec.decode byte get_bit n 1 c) As decode1_eq.
+  Proof.
+    intros. subst c.
+    decode_simpl.
+    autorewrite with zsimplify_fast.
+    exact eq_refl.
+  Qed.
+
+  Derive decode3 SuchThat
+         (forall c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c,
+             (c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11) = c ->
+             decode3 c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11
+             = @KyberSpec.decode byte get_bit n 3 c) As decode3_eq.
+  Proof.
+    intros. subst c.
+    decode_simpl.
+    autorewrite with zsimplify_fast.
+    exact eq_refl.
+  Qed.
+
+  Derive decode5 SuchThat
+         (forall c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19 c,
+             (c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19) = c ->
+             decode5 c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11 c12 c13 c14 c15 c16 c17 c18 c19
+             = @KyberSpec.decode byte get_bit n 5 c) As decode5_eq.
+  Proof.
+    intros. subst c.
+    decode_simpl.
+    autorewrite with zsimplify_fast.
+    exact eq_refl.
+  Qed.
+
+  Derive Dec' SuchThat
+         (forall sk0 sk1 sk2 sk3 sk4 sk5 sk6 sk7 sk8 sk9 sk10 sk11
+                 c0 c1 c2 c3 c4 c5 c6 c7 c8 c9 c10 c11
+                 c12 c13 c14 c15 c16 c17 c18 c19 c20 c21 c22 c23 : byte,
+             subst! (sk0, sk1, sk2, sk3, sk4, sk5, sk6, sk7, sk8, sk9, sk10, sk11) for sk in
+             subst! (c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23) for c in
+               Dec' (sk0, sk1, sk2, sk3, sk4, sk5, sk6, sk7, sk8, sk9, sk10, sk11) (c0, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23)
+               = Dec sk c) As Dec'_correct.
+  Proof.
+    intros.
+    cbv [Dec KyberSpec.Dec].
+    cbv - [byte] in Dec'.
+    cbv [KyberSpec.polyvec_encode].
+    erewrite <-encode_eq.
+    2 : {
+    cbv [KyberSpec.polyvec_decode KyberSpec.polyvec_decompress].
+    cbv [Nat.div Pos.to_nat du dv k n log2q Nat.divmod fst Pos.iter_op Nat.add Nat.mul].
+    cbv [Pos.pow Pos.iter Pos.mul].
+    cbv [KyberSpec.bits_to_F KyberSpec.bits_to_Z KyberSpec.F_to_bits KyberSpec.split_array].
+    cbv [PolynomialRing.bytes_to_bits PolynomialRing.bits_to_bytes].
+    cbv [PolynomialRing.Rq PolynomialRing.add PolynomialRing.mul PolynomialRing.zero].
+    cbv [Tuple.skipn Tuple.firstn Tuple.seq Tuple.flat_map].
+    rewrite <-!Tuple.on_tuple_default_eq with (d:=byte0).
+    cbn [seq].
+    cbn [from_list_default from_list_default'].
+    cbn [map map' fst snd].
+    cbv [Tuple.on_tuple_default].
+    remember (@to_list (F q)) as X.
+    cbn - [KyberSpec.decode byte byte0 NTT NTT_of_F KyberSpec.matrix_transpose F F.of_Z KyberSpec.matrix_mul Rq_NTT repeat map2 PolynomialRing.scmul PolynomialRing.decompress PolynomialRing.compress fold_right].
+    subst X.
+
+    erewrite <-decode1_eq by reflexivity.
+    erewrite <-decode3_eq by reflexivity.
+    erewrite <-decode5_eq by reflexivity.
+
+    cbv [decode5 decode1].
+    cbv [PolynomialRing.decompress].
+    cbn - [decode3 NTT_of_F KyberSpec.matrix_transpose map2 PolynomialRing.compress Z.shiftr Z.shiftl F F.of_Z Z.b2z get_bit to_list].
+    rewrite !F.to_Z_of_Z.
+    autorewrite with zsimplify_fast.
+    change (Z.shiftr 1 1) with 0.
+    change (Z.shiftr 16 5) with 0.
+ 
+    cbv [NTT].
+
+    cbv [decode3].
+    cbv [NTT_of_F].
+    cbn [n map map' fst snd].
+    cbv [log2q].
+    rewrite !F.to_Z_of_Z.
+    rewrite Z.mod_0_l.
+
+    cbv [KyberSpec.matrix_transpose].
+    cbv [Tuple.seq seq from_list_default from_list_default'].
+    cbv [KyberSpec.matrix_get map map' nth_default hd hd'].
+    cbv [to_list to_list'].
+    cbv [KyberSpec.matrix_mul].
+    cbv [Tuple.seq seq from_list_default from_list_default'].
+    cbv [repeat append].
+    cbv [KyberSpec.matrix_get map map' nth_default hd hd' to_list to_list' fold_right].
+
+    cbv [PolynomialRing.scmul].
+    unfold map at 30 31 32.
+  (* TODO : it might make sense to change all the F (2 ^ l)  things to words, and change bytes also to words. *)
+  Abort.
+    
+End Kyber32.
