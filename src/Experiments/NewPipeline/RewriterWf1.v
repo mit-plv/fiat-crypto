@@ -1128,6 +1128,9 @@ Module Compilers.
           Local Notation normalize_deep_rewrite_rule := (@normalize_deep_rewrite_rule ident var).
           Local Notation under_with_unification_resultT_relation := (@under_with_unification_resultT_relation ident var pident pident_arg_types type_vars_of_pident).
           Local Notation under_with_unification_resultT_relation_hetero := (@under_with_unification_resultT_relation_hetero ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation under_with_unification_resultT_relation1 := (@under_with_unification_resultT_relation1 ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation under_with_unification_resultT_relation1_gen := (@under_with_unification_resultT_relation1_gen ident var pident pident_arg_types type_vars_of_pident).
+
           Local Notation deep_rewrite_ruleTP_gen := (@deep_rewrite_ruleTP_gen ident var).
 
           Local Notation UnderLets_maybe_interp with_lets
@@ -1209,35 +1212,44 @@ Module Compilers.
                  (fun evm
                   => pattern_default_interp' p evm id).
 
+          Definition deep_rewrite_ruleTP_gen_ok_relation
+                     {should_do_again with_opt under_lets is_cps : bool} {t}
+                     (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t)
+            : Prop
+            := @normalize_deep_rewrite_rule_cps_id_hypsT var _ _ _ _ _ v1.
+
           Definition deep_rewrite_ruleTP_gen_good_relation
                      {should_do_again with_opt under_lets is_cps : bool} {t}
                      (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t)
                      (v2 : expr t)
             : Prop
-            := @normalize_deep_rewrite_rule_cps_id_hypsT var _ _ _ _ _ v1
-               /\ (let v1 := normalize_deep_rewrite_rule v1 _ id in
-                   match v1 with
-                   | None => True
-                   | Some v1 => let v1 := UnderLets.interp ident_interp v1 in
-                                (if should_do_again
-                                    return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> Prop
-                                 then
-                                   (fun v1
-                                    => expr.interp ident_interp (reify_expr v1) == expr.interp ident_interp v2)
-                                 else
-                                   (fun v1 => expr.interp ident_interp v1 == expr.interp ident_interp v2))
-                                  v1
-                   end).
+            := (let v1 := normalize_deep_rewrite_rule v1 _ id in
+                match v1 with
+                | None => True
+                | Some v1 => let v1 := UnderLets.interp ident_interp v1 in
+                             (if should_do_again
+                                 return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> Prop
+                              then
+                                (fun v1
+                                 => expr.interp ident_interp (reify_expr v1) == expr.interp ident_interp v2)
+                              else
+                                (fun v1 => expr.interp ident_interp v1 == expr.interp ident_interp v2))
+                               v1
+                end).
 
           Definition rewrite_rule_data_interp_goodT
                      {t} {p : pattern t} (r : @rewrite_rule_data t p)
             : Prop
-            := @under_with_unification_resultT_relation_hetero
-                 _ _ _ _
-                 (fun _ => value_interp_related)
-                 (fun evm => deep_rewrite_ruleTP_gen_good_relation)
+            := @under_with_unification_resultT_relation1
+                 _ _ _
+                 (fun evm => deep_rewrite_ruleTP_gen_ok_relation)
                  (rew_replacement _ _ r)
-                 (pattern_default_interp p).
+               /\ @under_with_unification_resultT_relation_hetero
+                    _ _ _ _
+                    (fun _ => value_interp_related)
+                    (fun evm => deep_rewrite_ruleTP_gen_good_relation)
+                    (rew_replacement _ _ r)
+                    (pattern_default_interp p).
 
           Definition rewrite_rules_interp_goodT
                      (rews : rewrite_rulesT)

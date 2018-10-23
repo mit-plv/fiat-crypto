@@ -240,6 +240,17 @@ Module Compilers.
              (List.rev (PositiveSet.elements p))
              (PositiveMap.empty _).
 
+      Definition under_forall_vars_relation1 {p k1}
+                 (F : forall evm, k1 evm -> Prop)
+        : forall_vars p k1 -> Prop
+        := list_rect
+             (fun ls
+              => forall evm0, forall_vars_body k1 ls evm0 -> Prop)
+             F
+             (fun x xs rec evm0 K1 => forall t, rec _ (K1 t))
+             (List.rev (PositiveSet.elements p))
+             (PositiveMap.empty _).
+
       Definition under_forall_vars_relation {p k1 k2}
                  (F : forall evm, k1 evm -> k2 evm -> Prop)
         : forall_vars p k1 -> forall_vars p k2 -> Prop
@@ -483,6 +494,16 @@ Module Compilers.
                (fun T Ts rec f x => rec (f x))
                ls.
 
+        Definition under_type_of_list_relation1_cps {A1 ls}
+                   (F : A1 -> Prop)
+          : type_of_list_cps A1 ls -> Prop
+          := list_rect
+               (fun ls
+                => type_of_list_cps A1 ls -> Prop)
+               F
+               (fun T Ts rec f1 => forall x, rec (f1 x))
+               ls.
+
         Definition under_type_of_list_relation_cps {A1 A2 ls}
                    (F : A1 -> A2 -> Prop)
           : type_of_list_cps A1 ls -> type_of_list_cps A2 ls -> Prop
@@ -623,6 +644,26 @@ Module Compilers.
                     (@under_with_unification_resultT' _ x evm _ _ F)
              end.
 
+        Fixpoint under_with_unification_resultT'_relation1_gen {t p evm K1}
+                 (FH : forall t, value t -> Prop)
+                 (F : K1 -> Prop)
+                 {struct p}
+          : @with_unification_resultT' t p evm K1 -> Prop
+          := match p return with_unification_resultT' p evm K1 -> Prop with
+             | pattern.Wildcard t => fun f1 => forall v1, FH _ v1 -> F (f1 v1)
+             | pattern.Ident t idc => under_type_of_list_relation1_cps F
+             | pattern.App s d f x
+               => @under_with_unification_resultT'_relation1_gen
+                    _ f evm _
+                    FH
+                    (@under_with_unification_resultT'_relation1_gen _ x evm _ FH F)
+             end.
+
+        Definition under_with_unification_resultT'_relation1 {t p evm K1}
+                 (F : K1 -> Prop)
+          : @with_unification_resultT' t p evm K1 -> Prop
+          := @under_with_unification_resultT'_relation1_gen t p evm K1 (fun _ _ => True) F.
+
         Fixpoint under_with_unification_resultT'_relation_hetero {t p evm K1 K2}
                  (FH : forall t, value t -> value t -> Prop)
                  (F : K1 -> K2 -> Prop)
@@ -657,6 +698,19 @@ Module Compilers.
           : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2
           := pattern.type.under_forall_vars
                (fun evm => under_with_unification_resultT' (F evm)).
+
+        Definition under_with_unification_resultT_relation1_gen {t p K1}
+                   (FH : forall t, value t -> Prop)
+                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> Prop)
+          : @with_unification_resultT t p K1 -> Prop
+          := pattern.type.under_forall_vars_relation1
+               (fun evm => under_with_unification_resultT'_relation1_gen FH (F evm)).
+
+        Definition under_with_unification_resultT_relation1 {t p K1}
+                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> Prop)
+          : @with_unification_resultT t p K1 -> Prop
+          := pattern.type.under_forall_vars_relation1
+               (fun evm => under_with_unification_resultT'_relation1 (F evm)).
 
         Definition under_with_unification_resultT_relation_hetero {t p K1 K2}
                    (FH : forall t, value t -> value t -> Prop)
