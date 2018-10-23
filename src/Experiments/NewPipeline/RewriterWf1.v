@@ -711,6 +711,24 @@ Module Compilers.
             induction ls as [|l ls IHls]; cbn in *; [ tauto | ].
             setoid_rewrite IHls; split; intro H; intros; first [ apply H | apply (H (_, _)) ].
           Qed.
+
+          Lemma under_type_of_list_relation1_cps_always {A1 ls F v}
+                (F_always : forall v, F v : Prop)
+            : @under_type_of_list_relation1_cps A1 ls F v.
+          Proof using Type.
+            cbv [under_type_of_list_relation1_cps] in *.
+            induction ls; cbn in *; eauto.
+          Qed.
+
+          Lemma under_with_unification_resultT'_relation1_gen_always
+                {t p evm K1 FH F v}
+                (F_always : forall v, F v : Prop)
+            : @under_with_unification_resultT'_relation1_gen
+                ident var pident pident_arg_types t p evm K1 FH F v.
+          Proof using Type.
+            revert evm K1 F v F_always.
+            induction p; intros; cbn in *; eauto using @under_type_of_list_relation1_cps_always.
+          Qed.
         End with_var1.
 
         Section with_var2.
