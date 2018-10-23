@@ -701,6 +701,16 @@ Module Compilers.
           Lemma eval_decision_tree_cont_None {T ctx d}
             : @eval_decision_tree var T ctx d (fun _ _ => None) = None.
           Proof using Type. apply eval_decision_tree_cont_None_ext; reflexivity. Qed.
+
+          Lemma related1_app_type_of_list_under_type_of_list_relation1_cps
+                {A1 ls F f}
+            : @under_type_of_list_relation1_cps A1 ls F f
+              <-> (forall args, F (app_type_of_list f args)).
+          Proof.
+            cbv [under_type_of_list_relation1_cps app_type_of_list].
+            induction ls as [|l ls IHls]; cbn in *; [ tauto | ].
+            setoid_rewrite IHls; split; intro H; intros; first [ apply H | apply (H (_, _)) ].
+          Qed.
         End with_var1.
 
         Section with_var2.
