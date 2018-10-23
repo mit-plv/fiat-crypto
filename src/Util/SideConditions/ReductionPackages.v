@@ -39,7 +39,7 @@ Notation None_evar_Prop_package := (@None_evar_Prop_package' unit).
 
 Notation optional_evar_package pkg_type
   := (optional_evar_Prop_package
-        (ltac:(lazymatch eval hnf in pkg_type with evar_Prop_package ?P => exact P end))
+        (ltac:(lazymatch eval hnf in pkg_type%type with evar_Prop_package ?P => exact P end))
         pkg_type)
        (only parsing).
 
