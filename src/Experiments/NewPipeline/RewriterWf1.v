@@ -18,6 +18,8 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.FMapPositive.Equality.
+Require Import Crypto.Util.MSetPositive.Equality.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.ListUtil.SetoidList.
@@ -81,6 +83,155 @@ Module Compilers.
           generalize (PositiveMap.empty base.type).
           induction (List.rev (PositiveSet.elements p)) as [|x xs IHxs]; cbn; eauto.
           intros; break_innermost_match; cbn in *; eauto.
+        Qed.
+
+        Local Lemma app_forall_vars_under_forall_vars_relation1_helper0
+              xs x v evm evm'
+              (H_NoDup : NoDupA PositiveSet.E.eq (x::xs))
+              (H_find : PositiveMap.find x evm' = Some v)
+              (body := fun evm (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap)
+                       => k
+                            match PositiveMap.find i evm with
+                            | Some v => PositiveMap.add i v evm'
+                            | None => evm'
+                            end)
+          : (fold_right (body evm) (fun evm' => evm') xs evm')
+            = (fold_right (body (PositiveMap.add x v evm)) (fun evm' => evm') xs evm').
+        Proof using Type.
+          cbv [PositiveSet.E.eq] in *.
+          subst body; cbv beta.
+          inversion H_NoDup; clear H_NoDup; subst.
+          revert evm evm' H_find.
+          induction xs as [|x' xs IHxs]; cbn [fold_right] in *; [ reflexivity | ]; intros.
+          repeat first [ progress subst
+                       | rewrite PositiveMapAdditionalFacts.gsspec in *
+                       | progress specialize_by_assumption
+                       | progress destruct_head'_and
+                       | match goal with
+                         | [ H : NoDupA _ (cons _ _) |- _ ] => inversion H; clear H
+                         | [ H : context[InA _ _ (cons _ _)] |- _ ] => rewrite InA_cons in H
+                         | [ H : ~(or _ _) |- _ ] => apply Decidable.not_or in H
+                         | [ H : ?x <> ?x |- _ ] => exfalso; apply H; reflexivity
+                         end
+                       | break_innermost_match_step
+                       | match goal with
+                         | [ H : _ |- _ ] => apply H; clear H
+                         end ].
+        Qed.
+
+        Local Lemma app_forall_vars_under_forall_vars_relation1_helper1
+              xs x
+              (H_NoDup : NoDupA PositiveSet.E.eq (x::xs))
+              v evm evm'
+              (body := fun evm (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap)
+                       => k
+                            match PositiveMap.find i evm with
+                            | Some v => PositiveMap.add i v evm'
+                            | None => evm'
+                            end)
+          : (fold_right (body evm) (fun evm' => evm') xs (PositiveMap.add x v evm'))
+            = (fold_right (body (PositiveMap.add x v evm)) (fun evm' => evm') xs (PositiveMap.add x v evm')).
+        Proof using Type.
+          apply app_forall_vars_under_forall_vars_relation1_helper0; [ assumption | ].
+          apply PositiveMap.gss.
+        Qed.
+
+        Local Lemma app_forall_vars_under_forall_vars_relation1_helper2
+              xs x
+              (H_NoDup : NoDupA PositiveSet.E.eq (x::xs))
+              v evm evm'
+              (body := fun evm (i : PositiveMap.key) (k : EvarMap -> EvarMap) (evm' : EvarMap)
+                       => k
+                            match PositiveMap.find i evm with
+                            | Some v => PositiveMap.add i v evm'
+                            | None => evm'
+                            end)
+          : (fold_right (body evm) (fun evm' => evm') xs (PositiveMap.add x v evm'))
+            = (fold_right (body (PositiveMap.add x v evm)) (fun evm' => evm') xs
+                          (match PositiveMap.find x (PositiveMap.add x v evm) with
+                           | Some v => PositiveMap.add x v evm'
+                           | None => evm'
+                           end)).
+        Proof using Type.
+          rewrite PositiveMap.gss; apply app_forall_vars_under_forall_vars_relation1_helper1; assumption.
+        Qed.
+
+        Lemma app_forall_vars_under_forall_vars_relation1
+              {p k1 F f}
+          : @pattern.type.under_forall_vars_relation1 p k1 F f
+            <-> (forall evm fv, pattern.type.app_forall_vars f evm = Some fv -> F _ fv).
+        Proof using Type.
+          revert k1 F f.
+          cbv [pattern.type.under_forall_vars_relation1 pattern.type.app_forall_vars pattern.type.forall_vars].
+          generalize (PositiveMap.empty base.type).
+          pose proof (PositiveSet.elements_spec2w p) as H_NoDup.
+          apply (@NoDupA_rev _ eq _) in H_NoDup.
+          induction (List.rev (PositiveSet.elements p)) as [|x xs IHxs]; cbn in *.
+          { split; intros; inversion_option; subst; eauto. }
+          { intros; setoid_rewrite IHxs; clear IHxs; [ | inversion_clear H_NoDup; assumption ].
+            split; intro H'.
+            { intros; break_innermost_match; break_innermost_match_hyps; eauto; congruence. }
+            { intros t' evm fv H''.
+              (** Now we do a lot of manual equality munging :-( *)
+              let evm := match type of fv with ?k1 (fold_right _ _ _ (PositiveMap.add ?x ?v _)) => constr:(PositiveMap.add x v evm) end in
+              specialize (H' evm).
+              rewrite PositiveMap.gss in H'.
+              lazymatch goal with
+              | [ |- context[fold_right (fun i k evm'' => k match PositiveMap.find i ?evm with _ => _ end) _ ?xs (PositiveMap.add ?x ?v ?evm')] ]
+                => pose proof (@app_forall_vars_under_forall_vars_relation1_helper1 xs x ltac:(assumption) v evm evm') as H''';
+                     cbv beta iota zeta in H'''
+              end.
+              pose (existT k1 _ fv) as fv'.
+              assert (Hf : existT k1 _ fv = fv') by reflexivity.
+              change fv with (projT2 fv').
+              let T := match (eval cbv delta [fv'] in fv') with existT _ ?T _ => T end in
+              change T with (projT1 fv') in H''' |- *.
+              clearbody fv'.
+              destruct fv' as [evm' fv']; cbn [projT1 projT2] in *.
+              subst evm'.
+              apply H'; clear H'.
+              inversion_sigma; subst fv'.
+              rewrite (@Equality.commute_eq_rect _ k1 (fun t => option (k1 t)) (fun _ v => Some v)).
+              rewrite <- H''.
+              clear -H_NoDup.
+              match goal with
+              | [ |- context[list_rect _ _ _ _ _ (?f ?t)] ]
+                => generalize (f t); clear f
+              end.
+              intro f.
+              lazymatch type of f with
+              | fold_right _ _ _ (PositiveMap.add ?x ?v ?evm)
+                => assert (PositiveMap.find x (PositiveMap.add x v evm) = Some v)
+                  by apply PositiveMap.gss;
+                     generalize dependent (PositiveMap.add x v evm); clear evm
+              end.
+              revert dependent evm.
+              induction xs as [|x' xs IHxs]; cbn [list_rect fold_right] in *.
+              { intros; eliminate_hprop_eq; reflexivity. }
+              { repeat first [ progress subst
+                             | progress destruct_head'_and
+                             | match goal with
+                               | [ H : NoDupA _ (cons _ _) |- _ ] => inversion H; clear H
+                               | [ H : context[InA _ _ (cons _ _)] |- _ ] => rewrite InA_cons in H
+                               | [ H : ~(or _ _) |- _ ] => apply Decidable.not_or in H
+                               end ].
+                specialize (IHxs ltac:(constructor; assumption)).
+                intros; break_innermost_match.
+                all: repeat first [ match goal with
+                                    | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _  ]
+                                      => rewrite PositiveMap.gso in H by congruence
+                                    | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
+                                      => assert (a = b) by congruence; (subst a || subst b); (clear H || clear H')
+                                    | [ H : ?x = Some _, H' : ?x = None |- _ ]
+                                      => exfalso; clear -H H'; congruence
+                                    | [ |- None = rew ?pf in None ]
+                                      => progress clear;
+                                         lazymatch type of pf with
+                                         | ?a = ?b => generalize dependent a || generalize dependent b
+                                         end;
+                                         intros; progress subst; reflexivity
+                                    | [ H : _ |- _ ] => apply H; rewrite PositiveMap.gso by congruence; assumption
+                                    end ]. } } }
         Qed.
       End type.
     End pattern.
