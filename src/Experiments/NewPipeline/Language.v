@@ -1645,6 +1645,16 @@ Module Compilers.
            end.
     End reify.
 
+    Fixpoint reify_as_interp {t : type} {struct t}
+      : type.interp base.interp t -> @expr (type.interp base.interp) t
+      := match t return type.interp base.interp t -> expr t with
+         | type.arrow s d
+           => fun (f : type.interp base.interp s -> type.interp base.interp d)
+              => (λ x , @reify_as_interp d (f x))%expr
+         | type.base t
+           => @base.reify _ t
+         end.
+
     Definition Reify_as (t : type) (v : forall var, value var t) : Expr t
       := fun var => reify (v _).
 
