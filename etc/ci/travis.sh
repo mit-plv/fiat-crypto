@@ -15,8 +15,9 @@ python "./etc/coq-scripts/timing/make-one-time-file.py" "time-of-build.log" "tim
 rm -f "${CUR_ARCHIVE}"
 tar -czf "${CUR_ARCHIVE}" time-of-build.log src bbv coqprime || exit $?
 
-if [ ! -f finished.ok ]; then
-  git diff
-fi
+git update-index --assume-unchanged _CoqProject
+git status
+git diff
+
 cat time-of-build-pretty.log
 make "$@" -j2 TIMED=1 || exit $?
