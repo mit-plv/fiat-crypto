@@ -562,6 +562,16 @@ Module Compilers.
           Global Instance rawexpr_equiv_Equivalence : Equivalence rawexpr_equiv.
           Proof using Type. split; exact _. Qed.
 
+          Lemma rawexpr_equiv_expr_to_type_of_rawexpr
+                {t e re}
+            : @rawexpr_equiv_expr t e re -> t = type_of_rawexpr re.
+          Proof using Type.
+            destruct re; cbn [rawexpr_equiv_expr];
+              intros; destruct_head'_and; inversion_sigma;
+                repeat (subst || cbn [eq_rect type_of_rawexpr] in * );
+                reflexivity.
+          Qed.
+
           Lemma swap_swap_list {A n m ls ls'}
             : @swap_list A n m ls = Some ls' -> @swap_list A n m ls' = Some ls.
           Proof using Type.
