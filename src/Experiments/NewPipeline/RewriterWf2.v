@@ -200,7 +200,7 @@ Module Compilers.
                                 end
                               | solve [ eauto ]
                               | progress cbv [Option.bind] in *
-                              | apply related_app_type_of_list_of_forall2_type_of_list_cps ].
+                              | apply related_app_type_of_list_of_under_type_of_list_relation_cps ].
           Qed.
 
           Lemma wf_unify_pattern'_id

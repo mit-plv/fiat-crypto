@@ -233,6 +233,29 @@ Module Compilers.
                                     | [ H : _ |- _ ] => apply H; rewrite PositiveMap.gso by congruence; assumption
                                     end ]. } } }
         Qed.
+
+        Lemma under_forall_vars_relation1_lam_forall_vars
+              {p k1 F f}
+          : @pattern.type.under_forall_vars_relation1 p k1 F (@pattern.type.lam_forall_vars p k1 f)
+            <-> forall ls',
+              List.length ls' = List.length (List.rev (PositiveSet.elements p))
+              -> let evm := fold_left (fun m '(k, v) => PositiveMap.add k v m) (List.combine (List.rev (PositiveSet.elements p)) ls') (PositiveMap.empty _) in
+                 F evm (f evm).
+        Proof using Type.
+          cbv [pattern.type.under_forall_vars_relation1 pattern.type.lam_forall_vars].
+          generalize (PositiveMap.empty base.type).
+          generalize (rev (PositiveSet.elements p)).
+          clear p.
+          intros ls m.
+          revert k1 F f m.
+          induction ls as [|l ls IHls]; cbn [list_rect fold_right fold_left List.length] in *; intros.
+          { split; intro H; [ intros [|] | specialize (H nil eq_refl) ]; cbn [List.length List.combine fold_right] in *; intros; try discriminate; assumption. }
+          { setoid_rewrite IHls; clear IHls.
+            split; intro H; [ intros [|l' ls'] Hls'; [ | specialize (H l' ls') ]
+                            | intros t ls' Hls'; specialize (H (cons t ls')) ];
+            cbn [List.length List.combine fold_left] in *;
+            try discriminate; inversion Hls'; eauto. }
+        Qed.
       End type.
     End pattern.
 
@@ -1089,18 +1112,10 @@ Module Compilers.
                            | progress expr.inversion_wf_constr ].
           Qed.
 
-          Definition forall2_type_of_list_cps {ls K1 K2} (P : K1 -> K2 -> Prop)
-            : type_of_list_cps K1 ls -> type_of_list_cps K2 ls -> Prop
-            := list_rect
-                 (fun ls => type_of_list_cps K1 ls -> type_of_list_cps K2 ls -> Prop)
-                 P
-                 (fun T Ts rec f1 f2 => forall x : T, rec (f1 x) (f2 x))
-                 ls.
-
-          Lemma related_app_type_of_list_of_forall2_type_of_list_cps {K1 K2 ls args}
+          Lemma related_app_type_of_list_of_under_type_of_list_relation_cps {K1 K2 ls args}
                 {v1 v2}
                 (P : _ -> _ -> Prop)
-            : @forall2_type_of_list_cps ls K1 K2 P v1 v2
+            : @under_type_of_list_relation_cps K1 K2 ls P v1 v2
               -> P (app_type_of_list v1 args) (app_type_of_list v2 args).
           Proof using Type.
             induction ls as [|x ls IHls]; [ now (cbn; eauto) | ].
@@ -1156,7 +1171,7 @@ Module Compilers.
                | pattern.Ident t1 idc1, pattern.Ident t2 idc2
                  => fun v1 v2
                     => { pf : existT pident t1 idc1 = existT pident t2 idc2
-                       | forall2_type_of_list_cps
+                       | under_type_of_list_relation_cps
                            P
                            (rew [fun tidc => type_of_list_cps K1 (pident_arg_types (projT1 tidc) (projT2 tidc))] pf in (v1 : type_of_list_cps _ (pident_arg_types _ (projT2 (existT pident _ _)))))
                            v2 }
