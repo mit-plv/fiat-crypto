@@ -428,6 +428,15 @@ Module Compilers.
                (fun T Ts rec k t => rec (fun ts => k (t, ts)))
                ls.
 
+        Lemma app_lam_type_of_list
+              {K ls f args}
+          : @app_type_of_list K ls (@lam_type_of_list ls K f) args = f args.
+        Proof using Type.
+          cbv [app_type_of_list lam_type_of_list].
+          induction ls as [|l ls IHls]; cbn [list_rect type_of_list type_of_list_cps] in *;
+            destruct_head'_unit; destruct_head'_prod; cbn [fst snd] in *; try reflexivity; apply IHls.
+        Qed.
+
         Section with_var1.
           Context {var : type -> Type}.
           Local Notation expr := (@expr.expr base.type ident var).
