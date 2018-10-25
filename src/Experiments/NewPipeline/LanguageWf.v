@@ -855,6 +855,13 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           { etransitivity; [ | apply map_id ]; apply map_ext; auto. }
         Qed.
 
+        Lemma interp_reify_as_interp {t} v1 v2
+          : v1 == v2 -> interp (@GallinaReify.reify_as_interp t v1) == v2.
+        Proof.
+          induction t as [|s IHs d IHd]; cbn [GallinaReify.reify_as_interp type.related interp]; cbv [respectful]; eauto.
+          intro; subst; apply interp_reify.
+        Qed.
+
         Lemma Interp_Reify_as {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (GallinaReify.base.Reify_as t v) = v.
         Proof. apply interp_reify. Qed.
       End interp.
