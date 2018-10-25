@@ -473,6 +473,47 @@ Module Compilers.
         Qed.
       End with_var.
 
+      Section with_cast.
+        Context (cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z).
+        Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
+        Local Notation interp := (@expr.interp _ _ _ (@ident_interp)).
+
+        Lemma interp_reify_and_let_binds_base_cps
+              {t e T k}
+              (P : T -> Prop)
+              (Hk : forall e', interp e' = interp e -> P (UnderLets.interp (@ident_interp) (k e')))
+          : P (UnderLets.interp (@ident_interp) (@reify_and_let_binds_base_cps _ t e T k)).
+        Proof.
+          revert T k P Hk; induction t; cbn [reify_and_let_binds_base_cps]; intros;
+            break_innermost_match;
+            expr.invert_subst; cbn [type.related UnderLets.interp fst snd expr.interp ident_interp] in *; subst; eauto;
+              repeat first [ progress intros
+                           | reflexivity
+                           | progress cbn [expr.interp ident_interp List.map]
+                           | apply (f_equal2 (@pair _ _))
+                           | apply (f_equal2 (@cons _))
+                           | match goal with
+                             | [ H : _ |- _ ] => apply H; clear H
+                             | [ H : SubstVarLike.is_var_fst_snd_pair_opp (reify_list _) = _ |- _ ] => clear H
+                             | [ H : context[interp (reify_list _)] |- _ ]
+                               => rewrite expr.interp_reify_list in H
+                             | [ |- ?Q (UnderLets.interp _ (list_rect ?P ?X ?Y ?ls ?k)) ]
+                               => is_var ls; is_var k;
+                                  revert dependent k; induction ls; cbn [list_rect];
+                                  [ | generalize dependent (list_rect P X Y) ]; intros
+                             end ].
+        Qed.
+
+        Lemma interp_reify_and_let_binds_base
+              {t e}
+          : interp (UnderLets.interp (@ident_interp) (@reify_and_let_binds_base_cps _ t e _ UnderLets.Base))
+            = interp e.
+        Proof.
+          eapply interp_reify_and_let_binds_base_cps; cbn [UnderLets.interp].
+          trivial.
+        Qed.
+      End with_cast.
+
       Lemma Wf_LetBindReturn {t} (e : expr.Expr t) (Hwf : expr.Wf e) : expr.Wf (LetBindReturn e).
       Proof. intros ??; apply wf_let_bind_return, Hwf. Qed.
 
