@@ -41,8 +41,12 @@ nra.cache
 .nra.cache
 
 /remake_curves.log
+/finished.ok
+/time-of-build-pretty.log
+/time-of-build.log
 
 # compilation outputs
+/*.o
 etc/tscfreq
 src/Specific/NISTP256/AMD64/feadd.c
 src/Specific/NISTP256/AMD64/feadd.h
