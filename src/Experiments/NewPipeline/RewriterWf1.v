@@ -1327,7 +1327,7 @@ Module Compilers.
                 then UnderLets.interp ident_interp
                 else (fun x => x)).
 
-          Fixpoint value'_interp_related1
+          Fixpoint value_interp_related1
                    {with_lets1 t}
             : @value' var with_lets1 t
               -> var t
@@ -1340,12 +1340,9 @@ Module Compilers.
                | type.arrow s d
                  => fun (f1 : value' _ s -> value' _ d) (f2 : var s -> var d)
                     => forall x1 x2,
-                        @value'_interp_related1 _ s x1 x2
-                        -> @value'_interp_related1 _ d (f1 x1) (f2 x2)
+                        @value_interp_related1 _ s x1 x2
+                        -> @value_interp_related1 _ d (f1 x1) (f2 x2)
                end.
-
-          Definition value_interp_related1 {t} : @value var t -> var t -> Prop
-            := value'_interp_related1.
 
           Fixpoint value'_interp_related
                    {with_lets1 with_lets2 t}
