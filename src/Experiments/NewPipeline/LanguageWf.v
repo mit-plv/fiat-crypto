@@ -88,7 +88,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_l _ R); [ | | solve [
 Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [ eauto with nocore ] ] : typeclass_instances.
 >>
 *)
-      Global Instance app_curried_Proper_gen {base_type base_interp R t}
+      Global Instance app_curried_Proper_gen {R t}
         : Proper (@type.related base_type base_interp R t ==> type.and_for_each_lhs_of_arrow (@type.related base_type base_interp R)  ==> R (type.final_codomain t))
                  (@type.app_curried base_type base_interp t) | 1.
       Proof.
