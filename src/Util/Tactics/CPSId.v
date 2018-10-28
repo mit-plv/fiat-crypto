@@ -2,7 +2,7 @@
 
 Ltac ensure_complex_continuation allow_option k :=
   lazymatch k with
-  | id => fail
+  | @id _ => fail
   | (fun x => x) => fail
   | _
     => lazymatch allow_option with
