@@ -18,6 +18,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.FMapPositive.Equality.
 Require Import Crypto.Util.MSetPositive.Equality.
 Require Import Crypto.Util.Prod.
@@ -57,6 +58,17 @@ Module Compilers.
           repeat match goal with H : _ |- _ => etransitivity; rewrite H; clear H; [ | reflexivity ] end.
           reflexivity.
         Qed.
+
+        Lemma unify_extracted_cps_id {pt et T k}
+          : @pattern.base.unify_extracted_cps pt et T k = k (@pattern.base.unify_extracted_cps pt et _ id).
+        Proof using Type.
+          revert et T k; induction pt, et; cbn [pattern.base.unify_extracted_cps]; cbv [id] in *; intros;
+            repeat first [ reflexivity
+                         | progress inversion_option
+                         | progress subst
+                         | break_innermost_match_step
+                         | rewrite_hyp !* ].
+        Qed.
       End base.
 
       Module type.
@@ -68,6 +80,18 @@ Module Compilers.
             auto using base.add_var_types_cps_id.
           repeat match goal with H : _ |- _ => etransitivity; rewrite H; clear H; [ | reflexivity ] end.
           reflexivity.
+        Qed.
+
+        Lemma unify_extracted_cps_id {pt et T k}
+          : @pattern.type.unify_extracted_cps pt et T k = k (@pattern.type.unify_extracted_cps pt et _ id).
+        Proof using Type.
+          revert et T k; induction pt, et; cbn [pattern.type.unify_extracted_cps]; cbv [id] in *; intros;
+            repeat first [ reflexivity
+                         | progress inversion_option
+                         | progress subst
+                         | apply base.unify_extracted_cps_id
+                         | break_innermost_match_step
+                         | rewrite_hyp !* ].
         Qed.
 
         Lemma app_forall_vars_under_forall_vars_relation
