@@ -6568,6 +6568,7 @@ src/Util/Strings/OctalString.v
 src/Util/Strings/Show.v
 src/Util/Strings/String.v
 src/Util/Tactics/BreakMatch.v
+src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
 src/Util/Tactics/ChangeInAll.v
 src/Util/Tactics/ClearAll.v

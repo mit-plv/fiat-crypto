@@ -8,6 +8,7 @@ Require Export Crypto.Util.Tactics.ClearDuplicates.
 Require Export Crypto.Util.Tactics.ClearbodyAll.
 Require Export Crypto.Util.Tactics.Contains.
 Require Export Crypto.Util.Tactics.ConvoyDestruct.
+Require Export Crypto.Util.Tactics.CPSId.
 Require Export Crypto.Util.Tactics.DebugPrint.
 Require Export Crypto.Util.Tactics.DestructHead.
 Require Export Crypto.Util.Tactics.DestructHyps.
