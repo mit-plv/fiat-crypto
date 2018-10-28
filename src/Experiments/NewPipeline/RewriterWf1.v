@@ -19,6 +19,7 @@ Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.CPSId.
 Require Import Crypto.Util.FMapPositive.Equality.
 Require Import Crypto.Util.MSetPositive.Equality.
 Require Import Crypto.Util.Prod.
@@ -59,6 +60,9 @@ Module Compilers.
           reflexivity.
         Qed.
 
+        Ltac add_var_types_cps_id :=
+          cps_id_with_option (@add_var_types_cps_id _ _ _ _ _).
+
         Lemma unify_extracted_cps_id {pt et T k}
           : @pattern.base.unify_extracted_cps pt et T k = k (@pattern.base.unify_extracted_cps pt et _ id).
         Proof using Type.
@@ -69,6 +73,9 @@ Module Compilers.
                          | break_innermost_match_step
                          | rewrite_hyp !* ].
         Qed.
+
+        Ltac unify_extracted_cps_id :=
+          cps_id_with_option (@unify_extracted_cps_id _ _ _ _).
       End base.
 
       Module type.
@@ -82,6 +89,9 @@ Module Compilers.
           reflexivity.
         Qed.
 
+        Ltac add_var_types_cps_id :=
+          cps_id_with_option (@add_var_types_cps_id _ _ _ _ _).
+
         Lemma unify_extracted_cps_id {pt et T k}
           : @pattern.type.unify_extracted_cps pt et T k = k (@pattern.type.unify_extracted_cps pt et _ id).
         Proof using Type.
@@ -93,6 +103,9 @@ Module Compilers.
                          | break_innermost_match_step
                          | rewrite_hyp !* ].
         Qed.
+
+        Ltac unify_extracted_cps_id :=
+          cps_id_with_option (@unify_extracted_cps_id _ _ _ _).
 
         Lemma app_forall_vars_under_forall_vars_relation
               {p k1 k2 F v1 v2 evm}
