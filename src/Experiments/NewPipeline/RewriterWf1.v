@@ -50,6 +50,13 @@ Module Compilers.
 
     Module pattern.
       Module base.
+        Lemma subst_relax {t evm}
+        : pattern.base.subst (pattern.base.relax t) evm = Some t.
+        Proof using Type.
+          induction t; cbn; cbv [Option.bind option_map];
+            rewrite_hyp ?*; reflexivity.
+        Qed.
+
         Lemma subst_Some_subst_default {pt evm t}
           : pattern.base.subst pt evm = Some t -> pattern.base.subst_default pt evm = t.
         Proof using Type.
@@ -115,6 +122,13 @@ Module Compilers.
       End base.
 
       Module type.
+        Lemma subst_relax {t evm}
+        : pattern.type.subst (pattern.type.relax t) evm = Some t.
+        Proof using Type.
+          induction t; cbn; cbv [Option.bind option_map];
+            rewrite_hyp ?*; rewrite ?base.subst_relax; reflexivity.
+        Qed.
+
         Lemma subst_Some_subst_default {pt evm t}
           : pattern.type.subst pt evm = Some t -> pattern.type.subst_default pt evm = t.
         Proof using Type.
