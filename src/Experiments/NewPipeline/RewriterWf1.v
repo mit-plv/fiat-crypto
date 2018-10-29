@@ -781,7 +781,7 @@ Module Compilers.
             : @unify_types ident var pident t e p T k = k (@unify_types ident var pident t e p _ id).
           Proof using Type.
             cbv [unify_types]; break_innermost_match; try reflexivity.
-            etransitivity; rewrite pattern.type.add_var_types_cps_id; reflexivity.
+            etransitivity; rewrite pattern.type.add_var_types_cps_id; [ reflexivity | ]; break_innermost_match; reflexivity.
           Qed.
 
           Lemma unify_pattern'_cps_id {t e p evm K v T cont}
