@@ -548,42 +548,6 @@ Module PolynomialRing.
       Lemma Rq_ring : @ring Rq eq zero one opp add sub mul.
       Proof. repeat econstructor; auto; try congruence. Qed.
     End ring_proofs.
-
-    Section compression.
-      Definition compress (d : positive) : Rq -> tuple (F (2 ^ d)) n :=
-        map (fun x : F q => F.of_Z _ ((Z.shiftl (F.to_Z x) d + (q / 2)) / q)).
-      Definition decompress {d : positive} : tuple (F (2 ^ d)) n -> Rq :=
-        map (fun x : F (2 ^ d) => F.of_Z _ (Z.shiftr (F.to_Z x * q + 2^(d-1)) d)).
-    End compression.
-
-    Section sample.
-      (* TODO : Figure out how to make these context proofs be actually required *)
-      Context {stream byte : Type} (default_byte : byte)
-              {bytes_to_bits : forall l, tuple byte l -> tuple bool (8*l)}
-              (* TODO : bits_to_bytes should disallow incorrect length in type *)
-              {bits_to_bytes : forall lx8 l, tuple bool lx8 -> tuple byte l}.
-      Context {bits_to_bytes_correct :
-                 forall l x, bits_to_bytes (8*l) l (bytes_to_bits l x) = x}.
-      Let byte_array := tuple byte.
-      Let bit_array := tuple bool.
-      Let nth_byte {l} (B : byte_array l) i := nth_default default_byte i B.
-      Let nth_bit {l} (B : bit_array l) i := nth_default false i B.
-      (* Equivalent to \sum_{j=0}^{len-1} in_bits_{j} *)
-      Definition sum_bits {n} start len (B : bit_array n) :=
-        fold_right
-          (fun j => Z.add (Z.b2z (nth_bit B (start + j))))
-          0 (List.seq 0 len).
-      (* Algorithm 2 *)
-      (* NOTE : The output is not meant to represent the input, just
-    preserve the input's randomness. *)
-      Definition CBD_sample (eta : nat) (B : byte_array (64*eta)) : Rq :=
-        let B' := bytes_to_bits B in
-        map (fun i =>
-               let a := sum_bits (2*i*eta) eta B' in
-               let b := sum_bits (2*i*eta+eta) eta B' in
-               F.of_Z q (a - b))
-            (Tuple.seq 0 n).
-    End sample.
   End PolynomialRing.
 End PolynomialRing.
   
