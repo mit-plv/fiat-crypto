@@ -279,6 +279,7 @@ src/Experiments/NewPipeline/ExtractionHaskell/word_by_word_montgomery.v
 src/Experiments/NewPipeline/ExtractionOCaml/saturated_solinas.v
 src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas.v
 src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery.v
+src/lattice/PolynomialRing.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
 src/LegacyArithmetic/BarretReduction.v
