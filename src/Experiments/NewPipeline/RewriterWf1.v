@@ -50,6 +50,42 @@ Module Compilers.
 
     Module pattern.
       Module base.
+        Lemma subst_Some_subst_default {pt evm t}
+          : pattern.base.subst pt evm = Some t -> pattern.base.subst_default pt evm = t.
+        Proof using Type.
+          revert t; induction pt;
+            repeat first [ progress cbn [pattern.base.subst pattern.base.subst_default]
+                         | progress cbv [Option.bind option_map]
+                         | progress inversion_option
+                         | progress subst
+                         | progress intros
+                         | reflexivity
+                         | apply (f_equal base.type.list)
+                         | apply (f_equal2 base.type.prod)
+                         | break_innermost_match_step
+                         | break_innermost_match_hyps_step
+                         | solve [ eauto ] ].
+        Qed.
+
+        Lemma subst_relax_evm {pt evm evm' t}
+              (Hevm : forall i v, PositiveMap.find i evm = Some v -> PositiveMap.find i evm' = Some v)
+          : pattern.base.subst pt evm = Some t -> pattern.base.subst pt evm' = Some t.
+        Proof using Type.
+          revert t; induction pt;
+            repeat first [ progress cbn [pattern.base.subst]
+                         | progress cbv [Option.bind option_map]
+                         | progress inversion_option
+                         | progress subst
+                         | progress intros
+                         | reflexivity
+                         | solve [ eauto ]
+                         | break_innermost_match_step
+                         | break_innermost_match_hyps_step
+                         | match goal with
+                           | [ H : forall t, Some _ = Some t -> _ |- _ ] => specialize (H _ eq_refl)
+                           end ].
+        Qed.
+
         Lemma add_var_types_cps_id {t v evm T k}
         : @pattern.base.add_var_types_cps t v evm T k = k (@pattern.base.add_var_types_cps t v evm _ id).
         Proof using Type.
@@ -79,6 +115,48 @@ Module Compilers.
       End base.
 
       Module type.
+        Lemma subst_Some_subst_default {pt evm t}
+          : pattern.type.subst pt evm = Some t -> pattern.type.subst_default pt evm = t.
+        Proof using Type.
+          revert t; induction pt;
+            repeat first [ progress cbn [pattern.type.subst pattern.type.subst_default]
+                         | progress cbv [Option.bind option_map]
+                         | progress inversion_option
+                         | progress subst
+                         | progress intros
+                         | reflexivity
+                         | apply (f_equal type.base)
+                         | apply (f_equal2 type.arrow)
+                         | break_innermost_match_step
+                         | break_innermost_match_hyps_step
+                         | solve [ eauto ]
+                         | apply base.subst_Some_subst_default ].
+        Qed.
+
+        Lemma subst_relax_evm {pt evm evm' t}
+              (Hevm : forall i v, PositiveMap.find i evm = Some v -> PositiveMap.find i evm' = Some v)
+          : pattern.type.subst pt evm = Some t -> pattern.type.subst pt evm' = Some t.
+        Proof using Type.
+          revert t; induction pt;
+            repeat first [ progress cbn [pattern.type.subst]
+                         | progress cbv [Option.bind option_map]
+                         | progress inversion_option
+                         | progress subst
+                         | progress intros
+                         | reflexivity
+                         | solve [ eauto ]
+                         | break_innermost_match_step
+                         | break_innermost_match_hyps_step
+                         | congruence
+                         | match goal with
+                           | [ H : forall t, Some _ = Some t -> _ |- _ ] => specialize (H _ eq_refl)
+                           | [ H : pattern.base.subst _ _ = Some _ |- _ ]
+                             => unique pose proof (base.subst_relax_evm Hevm H)
+                           | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
+                             => assert (a = b) by congruence; (subst a || subst b)
+                           end ].
+        Qed.
+
         Lemma add_var_types_cps_id {t v evm T k}
         : @pattern.type.add_var_types_cps t v evm T k = k (@pattern.type.add_var_types_cps t v evm _ id).
         Proof using Type.
