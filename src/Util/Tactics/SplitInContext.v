@@ -18,6 +18,8 @@ Ltac split_in_context ident funl funr :=
 
 Ltac split_iff := split_in_context iff (fun a b : Prop => a -> b) (fun a b : Prop => b -> a).
 
+Ltac split_contravariant_or := split_in_context_by or (fun A B : Prop => A) (fun A B : Prop => B) ltac:(fun H => intros; eauto 100 using H, or_introl, or_intror, ex_intro, exist, existT with nocore).
+
 Ltac split_and' :=
   repeat match goal with
          | [ H : ?a /\ ?b |- _ ] => let H0 := fresh in let H1 := fresh in
