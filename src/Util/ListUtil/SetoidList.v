@@ -23,3 +23,11 @@ Proof.
   revert ls1 ls2 Hls.
   induction n; intros ls1 ls2 Hls; destruct Hls; cbn; auto.
 Qed.
+
+Lemma eqlistA_eq_iff {A}
+  : forall ls1 ls2, eqlistA (@eq A) ls1 ls2 <-> ls1 = ls2.
+Proof.
+  induction ls1 as [|x xs IHxs], ls2 as [|y ys IHys].
+  all: split; intro H; inversion_clear H; repeat constructor; subst; f_equal; try reflexivity.
+  apply IHxs; assumption.
+Qed.
