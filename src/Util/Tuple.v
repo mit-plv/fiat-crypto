@@ -2,6 +2,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
 Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -1178,3 +1179,277 @@ Proof. intros; apply @fieldwise'_Proper_gen_eq; compute; tauto. Qed.
 Global Instance fieldwise_Proper_flip_impl
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ (flip impl)) ==> eq ==> eq ==> flip impl) (@fieldwise A B n) | 10.
 Proof. intros; apply @fieldwise_Proper_gen_eq; compute; tauto. Qed.
+
+Definition seq start len := from_list_default 0%nat len (seq start len).
+Program Definition flat_map {A B n m} (f : A -> tuple B m) (t : tuple A n)
+  : tuple B (m * n) :=
+  on_tuple (List.flat_map (fun a => to_list m (f a))) _ t.
+Next Obligation.
+  apply length_flat_map.
+  intros; apply length_to_list.
+Defined.
+Program Definition concat {T n m} (t1 : tuple T n) (t2 : tuple T m)
+  : tuple T (n + m) :=
+  on_tuple2 (@List.app T) _ t1 t2.
+Next Obligation. apply app_length. Defined.
+Program Definition firstn {T} n {m} (t : tuple T (n + m)) : tuple T n :=
+  on_tuple (List.firstn n) _ t.
+Next Obligation. autorewrite with distr_length. lia. Defined.
+Program Definition skipn {T} n {m} (t : tuple T (n + m)) : tuple T m :=
+  on_tuple (List.skipn n) _ t.
+Next Obligation. autorewrite with distr_length. lia. Defined.
+Program Definition update_nth {T n} i (f : T -> T) (t : tuple T n) : tuple T n :=
+  on_tuple (update_nth i f) _ t.
+Next Obligation. autorewrite with distr_length. lia. Defined.
+
+Definition on_tuple_default {A B} d (f : list A -> list B) {n m} (xs : tuple A n) :=
+  from_list_default d m (f (to_list n xs)).
+Definition firstn_fill {T} d n {m} (t : tuple T m) : tuple T n :=
+  on_tuple_default d (List.firstn n) t.
+
+Lemma on_tuple_default_eq A B d f n m H xs :
+  @on_tuple_default A B d f n m xs = on_tuple f H xs.
+Proof.
+  cbv [on_tuple on_tuple_default].
+  erewrite <-from_list_default_eq.
+  reflexivity.
+Qed.
+
+Ltac to_default x :=
+  cbv [on_tuple on_tuple2];
+  rewrite <-!(from_list_default_eq x).
+Ltac from_default :=
+  repeat match goal with
+         | |- context [from_list_default ?d ?n ?x] =>
+           let Hpf := fresh in
+           assert (length x = n) by distr_length;
+           rewrite from_list_default_eq with (pf:=Hpf)
+         end.
+Ltac induct N :=
+  induction N; intros;
+  repeat match goal with
+         | x : tuple _ 0%nat |- _ => destruct x
+         | x : tuple _ (S _) |- _ =>
+           progress match goal with
+                    | H : context [append (hd x) (tl x)] |- _ => idtac 
+                    | |- context [append (hd x) (tl x)] => idtac 
+                    | _ => rewrite (subst_append x) in *
+                    end
+         end.
+Ltac rev_induct N :=
+  induction N; intros;
+  repeat match goal with
+         | x : tuple _ 0%nat |- _ => destruct x
+         | x : tuple _ (S _) |- _ =>
+           progress match goal with
+                    | H : context [left_append (left_hd x) (left_tl x)] |- _ => idtac 
+                    | |- context [left_append (left_hd x) (left_tl x)] => idtac 
+                    | _ => rewrite (subst_left_append x) in *
+                    end
+         end.
+
+Hint Rewrite <-@left_append_append : pull_left_append.
+Hint Rewrite @map_left_append : pull_left_append.
+Hint Rewrite @map_append @map2_append @left_tl_append : pull_append.
+Hint Rewrite @left_append_append @to_list_append: pull_append.
+
+(* TODO : move to ListUtil *)
+Lemma length_snoc_full {T} n x t : @length T (t ++ x :: nil) = S n -> length t = n.
+Proof. distr_length. Qed.
+Lemma from_list_snoc {A n} : forall xs a H,
+    @from_list A (S n) (xs ++ a :: nil) H = left_append a (from_list n xs (length_snoc_full n a xs H)).
+Proof.
+  induction n; intros.
+  { inversion H. destruct xs; distr_length; reflexivity. }
+  { inversion H. destruct xs; distr_length.
+    to_default a. autorewrite with push_app. from_default.
+    rewrite !from_list_cons, IHn. to_default a.
+    auto using left_append_append. }
+Qed.
+Lemma seq_S start len : seq start (S len) = append start (seq (S start) len).
+Proof.
+  cbv [seq]. cbn [List.seq].
+  from_default. rewrite from_list_cons.
+  to_default 0%nat; reflexivity.
+Qed. Hint Rewrite seq_S : pull_append.
+Lemma seq_S' start len : seq start (S len) = left_append (start+len)%nat (seq start len).
+Proof.
+  cbv [seq]. rewrite seq_snoc.
+  from_default. rewrite from_list_snoc.
+  to_default 0%nat; reflexivity.
+Qed. Hint Rewrite seq_S' : pull_left_append.
+Lemma map2_left_append n A B C (f : A -> B -> C) :
+  forall (xs : tuple A n) (ys : tuple B n) (x : A) (y : B),
+    map2 f (left_append x xs) (left_append y ys) = left_append (f x y) (map2 f xs ys).
+Proof. induct n; autorewrite with pull_append; [ reflexivity | congruence ]. Qed.
+Hint Rewrite @map2_left_append : pull_left_append.
+Lemma to_list_left_append A n (x : tuple A n) (a : A) :
+  to_list (S n) (left_append a x) = to_list n x ++ a :: nil.
+Proof. induct n; autorewrite with pull_append push_app; [ reflexivity | congruence ]. Qed.
+Hint Rewrite @to_list_left_append : pull_left_append.
+Lemma nth_default_S T n (d:T) i (x : tuple T (S n)) :
+  nth_default d (S i) x = nth_default d i (tl x).
+Proof. reflexivity. Qed.
+Lemma nth_default_0 T n (d:T) (x : tuple T (S n)) :
+  nth_default d 0%nat x = hd x.
+Proof. reflexivity. Qed.
+Hint Rewrite @nth_default_S @nth_default_0 : push_nth_default.
+Hint Rewrite @hd_append @tl_append @left_hd_append @left_tl_append : pull_append.
+Hint Rewrite @hd_left_append @tl_left_append @left_append_left_hd @left_append_left_tl : pull_left_append.
+Lemma nth_default_left_append T n (d:T) :
+  forall i x0 (x : tuple T n),
+    nth_default d i (left_append x0 x) = if (Nat.eq_dec i n) then x0 else nth_default d i x.
+Proof.
+  induct n; destruct i; try destruct (Nat.eq_dec n i);
+    repeat match goal with
+           | _ => progress autorewrite with pull_append push_nth_default
+           | _ => progress rewrite IHn 
+           | _ => progress break_match
+           | _ => omega
+           | _ => reflexivity
+           end.
+Qed.
+Hint Rewrite @nth_default_left_append : pull_left_append.
+Lemma nth_default_append T n (d:T) :
+  forall i x0 (x : tuple T n),
+    nth_default d i (append x0 x) = if (Nat.eq_dec i 0%nat) then x0 else nth_default d (pred i) x.
+Proof.
+  intros; destruct i; break_match; try omega; rewrite ?Nat.pred_succ;
+    autorewrite with push_nth_default pull_append; reflexivity.
+Qed.
+Hint Rewrite @nth_default_append : pull_append.
+Lemma map_nth_default A B (f : A -> B) d fd :
+  fd = f d ->
+  forall n i (t : tuple A n),
+    (i < n)%nat ->
+    nth_default fd i (map f t) = f (nth_default d i t).
+Proof.
+  induct n; subst; [ reflexivity | ].
+  autorewrite with pull_append.
+  break_match; rewrite ?IHn by omega; reflexivity.
+Qed.
+Hint Rewrite @map_nth_default : push_nth_default.
+Lemma nth_default_seq d len :
+  forall i start,
+    (i < len)%nat ->
+    nth_default d i (seq start len) = (start+i)%nat.
+Proof.
+  induct len; [omega | ].
+  autorewrite with pull_left_append.
+  break_match; subst; auto. apply IHlen; lia.
+Qed.
+Hint Rewrite @nth_default_seq : push_nth_default.
+Lemma repeat_append {T} x m : @repeat T x (S m) = append x (repeat x m).
+Proof. reflexivity. Qed.
+Hint Rewrite @repeat_append : pull_append.
+Lemma repeat_left_append {T n} (x : T) : repeat x (S n) = left_append x (repeat x n).
+Proof.
+  induct n; [ reflexivity | ].
+  autorewrite with pull_append.
+  rewrite <-IHn. reflexivity.
+Qed.
+Hint Rewrite @repeat_left_append : pull_left_append.
+Lemma to_list_from_list_default {T n} d (xs : list T) :
+  length xs = n ->
+  to_list n (from_list_default d n xs) = xs.
+Proof.
+  intro H.
+  rewrite from_list_default_eq with (pf:=H).
+  apply to_list_from_list.
+Qed.
+Lemma from_list_default_to_list {T n} d (xs : tuple T n) :
+  from_list_default d n (to_list n xs) = xs.
+Proof.
+  erewrite from_list_default_eq with (pf:=length_to_list _).
+  apply from_list_to_list.
+Qed.
+Lemma update_nth_out_of_bounds {T m} i (d:T) (f:T->T) (xs : tuple T m) :
+  (m <= i)%nat ->
+  update_nth i f xs = xs.
+Proof.
+  intros. cbv [update_nth].
+  to_default d.
+  rewrite update_nth_out_of_bounds by distr_length.
+  apply from_list_default_to_list.
+Qed.
+Lemma update_nth_update_nth_eq {T m} (d:T) (f g:T->T) (xs : tuple T m) :
+  forall i,
+    update_nth i f (update_nth i g xs) = update_nth i (fun x => f (g x)) xs.
+Proof.
+  intros; cbv [update_nth].
+  to_default d.
+  rewrite to_list_from_list_default by distr_length.
+  rewrite update_nth_update_nth_eq.
+  reflexivity.
+Qed.
+Lemma update_nth_ext {T m} (d:T) f g i (xs : tuple T m) :
+  (forall x, f x = g x) ->
+  update_nth i f xs = update_nth i g xs.
+Proof.
+  intros; cbv [update_nth].
+  to_default d. erewrite update_nth_ext by eauto.
+  reflexivity.
+Qed.
+Lemma nth_default_to_list T m d :
+  forall i x,
+    @nth_default T m d i x = List.nth_default d (to_list m x) i.
+Proof.
+  induct m; destruct i; autorewrite with push_nth_default pull_append; auto.
+Qed.
+Lemma nth_default_out_of_bounds T m d :
+  forall i x,
+    (m <= i)%nat ->
+    @nth_default T m d i x = d.
+Proof.
+  induct m; destruct i; autorewrite with push_nth_default pull_append; try omega; try reflexivity.
+  apply IHm; omega.
+Qed.
+Lemma update_nth_append_eq {T m} (f:T->T) (x : tuple T m) x0 :
+  update_nth 0%nat f (append x0 x) = append (f x0) x.
+Proof.
+  cbv [update_nth]. to_default x0.
+  rewrite to_list_append, update_nth_cons.
+  from_default. rewrite from_list_cons, from_list_to_list.
+  reflexivity.
+Qed.
+Lemma update_nth_left_append_neq {T m} (f:T->T):
+  forall i x0 (xs : tuple T m),
+    (i < m)%nat ->
+    update_nth i f (left_append x0 xs) = left_append x0 (update_nth i f xs).
+Proof.
+  intros; cbv [update_nth]. to_default x0.
+  rewrite to_list_left_append.
+  rewrite update_nth_app_l by distr_length.
+  from_default. rewrite from_list_snoc.
+  to_default x0. reflexivity.
+Qed.
+Lemma update_nth_left_append_eq {T m} (f:T->T):
+  forall x0 (xs : tuple T m),
+    update_nth m f (left_append x0 xs) = left_append (f x0) xs.
+Proof.
+  intros; cbv [update_nth]. to_default x0.
+  autorewrite with pull_left_append. 
+  rewrite update_nth_app_r by distr_length.
+  distr_length; autorewrite with natsimplify.
+  rewrite update_nth_cons.
+  from_default. rewrite from_list_snoc, from_list_to_list.
+  reflexivity.
+Qed.
+Lemma map2_zeroes_l {A B m} (f:A->B->B) z x :
+  (forall y, f z y = y) ->
+  map2 f (repeat z m) x = x.
+Proof.
+  intro left_id; induction m; [ destruct x; reflexivity | ].
+  rewrite (subst_append x); cbn [repeat].
+  rewrite map2_append. rewrite left_id.
+  rewrite IHm; reflexivity.
+Qed.
+Lemma map2_update_nth_comm {A B} (f : A -> B -> A) (g : A -> A) (d:A):
+  (forall t s, f (g t) s = g (f t s)) ->
+  forall n i (x : tuple A n) y,
+    map2 f (update_nth i g x) y = update_nth i g (map2 f x y).
+Proof.
+  intros. cbv [update_nth map2 on_tuple on_tuple2].
+  repeat rewrite <-from_list_default_eq with (d0:=d), ?to_list_from_list.
+  rewrite map2_update_nth_comm by assumption. reflexivity.
+Qed.

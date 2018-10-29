@@ -4,6 +4,7 @@ Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Pointed.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Decidable.
@@ -47,6 +48,7 @@ Create HintDb simpl_firstn discriminated.
 Create HintDb simpl_skipn discriminated.
 Create HintDb simpl_fold_right discriminated.
 Create HintDb simpl_sum_firstn discriminated.
+Create HintDb push_app discriminated.
 Create HintDb push_map discriminated.
 Create HintDb push_combine discriminated.
 Create HintDb push_flat_map discriminated.
@@ -64,6 +66,9 @@ Create HintDb push_sum discriminated.
 Create HintDb pull_update_nth discriminated.
 Create HintDb push_update_nth discriminated.
 Create HintDb znonzero discriminated.
+
+Hint Rewrite @app_nil_r @app_nil_l : push_app.
+Hint Rewrite <-app_comm_cons : push_app.
 
 Hint Rewrite
   @app_length
@@ -1703,7 +1708,6 @@ Section OpaqueMap2.
     rewrite map2_cons, !length_cons, IHls1.
     auto.
   Qed.
-  Hint Rewrite @map2_length : distr_length.
 
 
   Lemma map2_app : forall A B C (f : A -> B -> C) ls1 ls2 ls1' ls2',
@@ -1716,6 +1720,31 @@ Section OpaqueMap2.
     rewrite IHls1; auto.
   Qed.
 End OpaqueMap2.
+Hint Rewrite @map2_length : distr_length.
+
+Lemma firstn_map2 A B C (f:A->B->C) xs :
+  forall i ys, firstn i (map2 f xs ys) = map2 f (firstn i xs) (firstn i ys).
+Proof.
+  induction xs; destruct ys; destruct i; autorewrite with push_firstn; try reflexivity; [ ].
+  rewrite !map2_cons, firstn_cons.
+  rewrite IHxs. reflexivity.
+Qed.
+
+Lemma skipn_map2 A B C (f:A->B->C) xs :
+  forall i ys, skipn i (map2 f xs ys) = map2 f (skipn i xs) (skipn i ys).
+Proof.
+  induction xs; destruct ys; destruct i; autorewrite with push_skipn; try reflexivity.
+  { rewrite map2_nil_r; reflexivity. }
+  { rewrite !map2_cons, skipn_cons_S.
+    rewrite IHxs. reflexivity. }
+Qed.
+
+Lemma map2_truncate_l {A B C} (f:A->B->C) ys:
+  forall xs, map2 f xs ys = map2 f (firstn (length ys) xs) ys.
+Proof.
+  induction ys; destruct xs; rewrite ?map2_nil_r, ?map2_nil_l; try reflexivity; [ ].
+  distr_length. rewrite firstn_cons, !map2_cons. rewrite IHys. reflexivity.
+Qed.
 
 Lemma firstn_update_nth {A}
   : forall f m n (xs : list A), firstn m (update_nth n f xs) = update_nth n f (firstn m xs).
@@ -1723,6 +1752,109 @@ Proof.
   induction m; destruct n, xs;
     autorewrite with simpl_firstn simpl_update_nth;
     congruence.
+Qed.
+Lemma update_nth_update_nth_eq {T} (f g:T->T) xs :
+  forall i,
+    update_nth i f (update_nth i g xs) = update_nth i (fun x => f (g x)) xs.
+Proof.
+  induction xs; destruct i; try reflexivity.
+  cbn. rewrite IHxs. reflexivity.
+Qed.
+Lemma update_nth_update_nth_comm {T} (f g:T->T) xs :
+  (forall x, f (g x) = g (f x)) ->
+  forall i j,
+    update_nth i f (update_nth j g xs) = update_nth j g (update_nth i f xs).
+Proof.
+  induction xs; intros; destruct i, j;
+    repeat match goal with
+           | _ => rewrite <-cons_update_nth
+           | _ => rewrite update_nth_cons
+           | _ => reflexivity
+           | _ => congruence
+           end.
+  rewrite IHxs by auto. reflexivity.
+Qed.
+Lemma splice_nth_nth_default {T} (d:T) x :
+  forall i,
+  (i < length x)%nat ->
+  x = splice_nth i (List.nth_default d x i) x.
+Proof.
+  cbv [splice_nth]; induction x; intros; distr_length; [ ].
+  destruct i; [ reflexivity | ].
+  rewrite firstn_cons, nth_default_cons_S, skipn_cons_S.
+  rewrite (IHx i) at 1 by omega.
+  rewrite <-app_comm_cons. reflexivity.
+Qed.
+Lemma update_nth_app_r {T} f :
+  forall (xs ys : list T) i,
+    (length xs <= i)%nat ->
+    update_nth i f (xs ++ ys) = xs ++ update_nth (i - length xs) f ys.
+Proof.
+  intros.
+  destruct (lt_dec i (length xs + length ys)).
+  { destruct xs as [|x0 ?]; [ autorewrite with push_app distr_length natsimplify; reflexivity | ].
+    rewrite <-!splice_nth_equiv_update_nth_update with (d:=x0) by distr_length.
+    cbv [splice_nth].
+    autorewrite with distr_length push_firstn push_skipn push_nth_default push_app in *.
+    break_match; [ omega | ].
+    rewrite Nat.sub_succ_l by omega.
+    rewrite <-app_assoc. reflexivity. }
+  { rewrite !update_nth_out_of_bounds by distr_length. reflexivity. }
+Qed.
+Lemma update_nth_app_l {T} f :
+  forall (xs ys : list T) i,
+    (i < length xs)%nat ->
+    update_nth i f (xs ++ ys) = update_nth i f xs ++ ys.
+Proof.
+  intros.
+  destruct ys as [|y0 ?]; [ autorewrite with push_app; reflexivity | ].
+  rewrite <-!splice_nth_equiv_update_nth_update with (d:=y0) by distr_length.
+  cbv [splice_nth].
+  autorewrite with push_firstn push_skipn push_nth_default.
+  break_match; [ | omega].
+  rewrite <-app_assoc. reflexivity.
+Qed.
+Lemma map2_update_nth_comm' {A B} (f : A -> B -> A) (g : A -> A) (x0:A) (y0:B):
+  (forall t s, f (g t) s = g (f t s)) ->
+  forall i xs ys, map2 f (update_nth i g xs) ys = update_nth i g (map2 f xs ys).
+Proof.
+  intro H; intros.
+  rewrite !update_nth_equiv_splice_nth.
+  break_innermost_match;
+    repeat match goal with
+           | _ => progress distr_length
+           | H : _ |- _ => apply nth_error_error_length in H
+           | _ => lia
+           | _ => reflexivity
+           end.
+  { erewrite (splice_nth_nth_default y0 ys i) at 1 by lia.
+    cbv [splice_nth].
+    rewrite map2_app, map2_cons by (distr_length; lia).
+    rewrite firstn_map2, skipn_map2. rewrite H.
+    repeat match goal with H : _ |- _ =>
+                           progress rewrite
+                                    ?(nth_error_Some_nth_default _ x0),
+                                    ?(nth_error_Some_nth_default _ y0)
+                             in H by (distr_length; lia) end.
+    Option.inversion_option; subst.
+    rewrite nth_default_map2 with (d1:=x0) (d2:=y0).
+    break_match; try lia.
+    reflexivity. }
+  { rewrite map2_truncate_l with (xs0:=splice_nth _ _ _).
+    cbv [splice_nth].
+    rewrite firstn_app_inleft by (distr_length; lia).
+    rewrite firstn_firstn by lia.
+    rewrite <-map2_truncate_l.
+    reflexivity. }
+Qed.
+
+Lemma map2_update_nth_comm {A B} (f : A -> B -> A) (g : A -> A) :
+  (forall t s, f (g t) s = g (f t s)) ->
+  forall i xs ys, map2 f (update_nth i g xs) ys = update_nth i g (map2 f xs ys).
+Proof.
+  intros; destruct xs, ys;
+    autorewrite with simpl_update_nth; rewrite ?map2_nil_r, ?map2_nil_l; try reflexivity.
+  apply map2_update_nth_comm'; assumption.
 Qed.
 
 Hint Rewrite @firstn_update_nth : push_firstn.
@@ -1956,6 +2088,18 @@ Lemma flat_map_singleton A B (f : A -> B) (xs : list A)
 Proof. induction xs; cbn; congruence. Qed.
 Lemma flat_map_ext A B (f g : A -> list B) xs (H : forall x, In x xs -> f x = g x)
   : flat_map f xs = flat_map g xs.
+Lemma length_flat_map {A B} (f : A -> list B) l n :
+  (forall a, In a l -> length (f a) = n) ->
+  length (flat_map f l) = (n * (length l))%nat.
+Proof.
+  induction l; cbn [flat_map]; intros;
+    repeat match goal with
+           | _ => progress autorewrite with distr_length
+           | _ => rewrite Nat.mul_succ_r
+           | H : _ |- _ => rewrite H by auto using in_eq, in_cons
+           | _ => omega
+           end.
+Qed. Hint Rewrite @length_flat_map : distr_length.
 Proof. induction xs; cbn in *; [ reflexivity | rewrite IHxs; f_equal ]; intros; intuition auto. Qed.
 Global Instance flat_map_Proper A B : Proper (pointwise_relation _ eq ==> eq ==> eq) (@flat_map A B).
 Proof. repeat intro; subst; apply flat_map_ext; auto. Qed.
