@@ -751,7 +751,7 @@ Module Compilers.
              end%option.
 
         (* for unfolding help *)
-        Definition type_type_beq := (type.type_beq _ base.type.type_beq).
+        Definition option_type_type_beq := option_beq (type.type_beq _ base.type.type_beq).
 
         Definition unify_types {t} (e : rawexpr) (p : pattern t) : ~> option EvarMap
           := fun T k
@@ -763,7 +763,7 @@ Module Compilers.
                             vars (PositiveMap.empty _) _
                             (fun evm
                              => (* there might be multiple type variables which map to incompatible types; we check for that here *)
-                               if type_type_beq (pattern.type.subst_default pt evm) t
+                               if option_type_type_beq (pattern.type.subst pt evm) (Some t)
                                then k (Some evm)
                                else k None)
                      | None => k None
@@ -2208,7 +2208,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                     base.interp base.try_make_transport_cps
                     type.try_make_transport_cps type.try_transport_cps
                     pattern.type.unify_extracted_cps
-                    Compile.type_type_beq
+                    Compile.option_type_type_beq
                     Let_In Option.sequence Option.sequence_return
                     UnderLets.splice UnderLets.to_expr
                     Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
@@ -2242,7 +2242,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                    Compile.rValueOrExpr
                    Compile.swap_list
                    Compile.type_of_rawexpr
-                   Compile.type_type_beq
+                   Compile.option_type_type_beq
                    Compile.value
                    (*Compile.value'*)
                    Compile.value_of_rawexpr
@@ -2261,7 +2261,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                    UnderLets.reify_and_let_binds_base_cps
                    UnderLets.splice UnderLets.splice_list UnderLets.to_expr
                    base.interp base.base_interp
-                   base.type.base_beq
+                   base.type.base_beq option_beq
                    type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
                    Datatypes.fst Datatypes.snd
                 ] in rewrite_head2).
