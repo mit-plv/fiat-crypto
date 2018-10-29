@@ -78,7 +78,8 @@ Module Compilers.
       Fixpoint add_var_types_cps {t : type} (v : var_types_of t) (evm : EvarMap) : ~> EvarMap
         := fun T k
            => match t return var_types_of t -> T with
-              | type.var p => fun t => k (PositiveMap.add p t evm)
+              | type.var p
+                => fun t => k (PositiveMap.add p t evm)
               | type.prod A B
                 => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
               | type.list A => fun t => @add_var_types_cps A t evm _ k
@@ -749,12 +750,22 @@ Module Compilers.
                => None
              end%option.
 
+        (* for unfolding help *)
+        Definition type_type_beq := (type.type_beq _ base.type.type_beq).
+
         Definition unify_types {t} (e : rawexpr) (p : pattern t) : ~> option EvarMap
           := fun T k
              => match preunify_types e p with
                 | Some (Some (pt, t))
                   => match pattern.type.unify_extracted pt t with
-                     | Some vars => pattern.type.add_var_types_cps vars (PositiveMap.empty _) _ (fun evm => k (Some evm))
+                     | Some vars
+                       => pattern.type.add_var_types_cps
+                            vars (PositiveMap.empty _) _
+                            (fun evm
+                             => (* there might be multiple type variables which map to incompatible types; we check for that here *)
+                               if type_type_beq (pattern.type.subst_default pt evm) t
+                               then k (Some evm)
+                               else k None)
                      | None => k None
                      end
                 | Some None
@@ -2197,6 +2208,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                     base.interp base.try_make_transport_cps
                     type.try_make_transport_cps type.try_transport_cps
                     pattern.type.unify_extracted_cps
+                    Compile.type_type_beq
                     Let_In Option.sequence Option.sequence_return
                     UnderLets.splice UnderLets.to_expr
                     Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
@@ -2230,6 +2242,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                    Compile.rValueOrExpr
                    Compile.swap_list
                    Compile.type_of_rawexpr
+                   Compile.type_type_beq
                    Compile.value
                    (*Compile.value'*)
                    Compile.value_of_rawexpr
@@ -2308,7 +2321,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      (* Redirect "/tmp/fancy_rewrite_head" Print fancy_rewrite_head. *)
+      Redirect "fancy_rewrite_head" Print fancy_rewrite_head.
     End red_fancy.
     Section red_fancy_with_casts.
       Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
@@ -2322,7 +2335,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      (* Redirect "/tmp/fancy_with_casts_rewrite_head" Print fancy_with_casts_rewrite_head. *)
+      Redirect "fancy_with_casts_rewrite_head" Print fancy_with_casts_rewrite_head.
     End red_fancy_with_casts.
     Section red_nbe.
       Context {var : type.type base.type -> Type}
@@ -2339,7 +2352,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      (* Redirect "/tmp/nbe_rewrite_head" Print nbe_rewrite_head. *)
+      Redirect "nbe_rewrite_head" Print nbe_rewrite_head.
     End red_nbe.
 
     Section red_arith.
@@ -2359,7 +2372,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      (* Redirect "/tmp/arith_rewrite_head" Print arith_rewrite_head. *)
+      Redirect "arith_rewrite_head" Print arith_rewrite_head.
     End red_arith.
 
     Section red_arith_with_casts.
@@ -2374,7 +2387,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
       Import RewriterPrintingNotations.
-      (* Redirect "/tmp/arith_with_casts_rewrite_head" Print arith_with_casts_rewrite_head. *)
+      Redirect "arith_with_casts_rewrite_head" Print arith_with_casts_rewrite_head.
     End red_arith_with_casts.
 
     Definition RewriteNBE {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
