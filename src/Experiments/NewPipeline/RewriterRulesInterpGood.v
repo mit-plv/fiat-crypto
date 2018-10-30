@@ -345,6 +345,13 @@ Module Compilers.
       Proof using Type.
         Time start_interp_good.
         Time all: try solve [ repeat interp_good_t_step; (lia + nia) ].
+      Qed.
+
+      Lemma arith_with_casts_rewrite_rules_interp_good
+        : rewrite_rules_interp_goodT arith_with_casts_rewrite_rules.
+      Proof using Type.
+        Time start_interp_good.
+        Time all: try solve [ repeat interp_good_t_step; (lia + nia) ].
         (* This is mainly for display *)
         all: repeat first [ progress cbn [Compile.value' Compile.reify] in *
                           | progress subst
@@ -457,13 +464,6 @@ subgoal 9 (ID 33473) is:
  end
          *)
         1-9: exact admit.
-      Qed.
-
-      Lemma arith_with_casts_rewrite_rules_interp_good
-        : rewrite_rules_interp_goodT arith_with_casts_rewrite_rules.
-      Proof using Type.
-        Time start_interp_good.
-        Time all: try solve [ repeat interp_good_t_step; (lia + nia) ].
       Qed.
 
       Local Ltac fancy_local_t :=

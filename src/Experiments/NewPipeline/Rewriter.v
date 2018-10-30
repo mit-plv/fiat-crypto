@@ -1773,6 +1773,23 @@ Module Compilers.
             ; make_rewriteo (#?ℤ * (?? * ??)) (fun c x y => (x * (y * ##c)) when  (Z.abs c <=? Z.abs max_const_val))
             ; make_rewriteo (#?ℤ * ??) (fun c x => (x * ##c) when  (Z.abs c <=? Z.abs max_const_val))
 
+            ; make_rewrite_step (* _step, so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
+                (#pattern.ident.Z_cast2 @ (??, ??)) (fun r x y => (#(ident.Z_cast (fst r)) @ $x, #(ident.Z_cast (snd r)) @ $y))
+
+            ; make_rewriteol (-??) (fun e => (llet v := e in -$v)  when  negb (SubstVarLike.is_var_fst_snd_pair_opp_cast e)) (* inline negation when the rewriter wouldn't already inline it *)
+           ].
+
+      Definition arith_with_casts_rewrite_rules : rewrite_rulesT
+        := [make_rewrite (#(@pattern.ident.fst '1 '2) @ (??, ??)) (fun _ _ x y => x)
+            ; make_rewrite (#(@pattern.ident.snd '1 '2) @ (??, ??)) (fun _ x _ y => y)
+
+            ; make_rewriteo (#?ℤ   - (-??)) (fun z v =>  v  when  z =? 0)
+            ; make_rewriteo (#?ℤ   -   ?? ) (fun z v => -v  when  z =? 0)
+
+            ; make_rewriteo (#?ℤ << ??) (fun x y => ##0  when  x =? 0)
+
+            ; make_rewrite (-(-??)) (fun v => v)
+
             ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??) (fun s xx y => (##0, ##0)%Z  when  xx =? 0)
             ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ ?? @ #?ℤ) (fun s y xx => (##0, ##0)%Z  when  xx =? 0)
             ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??) (fun s xx y => (y, ##0)%Z  when  xx =? 1)
@@ -1900,19 +1917,10 @@ Module Compilers.
                 (fun s x y => (llet vc := #ident.Z_mul_split @ s @ x @ y in
                                    (#ident.fst @ $vc, #ident.snd @ $vc)))
 
-
-            ; make_rewrite_step (* _step, so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
-                (#pattern.ident.Z_cast2 @ (??, ??)) (fun r x y => (#(ident.Z_cast (fst r)) @ $x, #(ident.Z_cast (snd r)) @ $y))
-
-            ; make_rewriteol (-??) (fun e => (llet v := e in -$v)  when  negb (SubstVarLike.is_var_fst_snd_pair_opp_cast e)) (* inline negation when the rewriter wouldn't already inline it *)
-           ].
-
-      Definition arith_with_casts_rewrite_rules : rewrite_rulesT
-        := [make_rewrite (#(@pattern.ident.fst '1 '2) @ (??, ??)) (fun _ _ x y => x)
-            ; make_rewrite (#(@pattern.ident.snd '1 '2) @ (??, ??)) (fun _ x _ y => y)
             ; make_rewriteo
                 (#pattern.ident.Z_cast @ (#pattern.ident.Z_cast @ ??))
-                (fun r1 r2 x => #(ident.Z_cast r2) @ x  when  ZRange.is_tighter_than_bool (ZRange.normalize r2) (ZRange.normalize r1))].
+                (fun r1 r2 x => #(ident.Z_cast r2) @ x  when  ZRange.is_tighter_than_bool (ZRange.normalize r2) (ZRange.normalize r1))
+           ].
 
       Definition nbe_dtree'
         := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 nbe_rewrite_rules.
