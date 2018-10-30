@@ -714,6 +714,7 @@ Module Pipeline.
       let E := PartialEvaluate E in
       let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0) with_dead_code_elimination with_subst01 E in
       let E := RewriteRules.RewriteArith (2^8) E in (* reassociate small consts *)
+      let E := RewriteAndEliminateDeadAndInline RewriteRules.RewriteArithWithCasts with_dead_code_elimination with_subst01 E in
       let E := match translate_to_fancy with
                | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high E
                | None => E
@@ -723,7 +724,7 @@ Module Pipeline.
       let E' := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
       match E' with
       | inl E
-        => let E := RewriteRules.RewriteArithWithCasts E in
+        => (*let E := RewriteAndEliminateDeadAndInline RewriteRules.RewriteArithWithCasts with_dead_code_elimination with_subst01 E in*)
            let E := match translate_to_fancy with
                     | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancyWithCasts invert_low invert_high E
                     | None => E
