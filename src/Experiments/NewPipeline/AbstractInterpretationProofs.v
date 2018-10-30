@@ -1281,8 +1281,8 @@ Module Compilers.
     assert (arg1_Proper : Proper (type.and_for_each_lhs_of_arrow (@type.related base.type base.interp (fun _ => eq))) arg1)
         by (hnf; etransitivity; [ eassumption | symmetry; eassumption ]).
     assert (arg2_Proper : Proper (type.and_for_each_lhs_of_arrow (@type.related base.type base.interp (fun _ => eq))) arg2)
-        by (hnf; etransitivity; [ symmetry; eassumption | eassumption ]).
-    rewrite <- (@GeneralizeVar.Interp_GeneralizeVar _ E) by auto.
+      by (hnf; etransitivity; [ symmetry; eassumption | eassumption ]).
+    rewrite <- (@GeneralizeVar.Interp_GeneralizeVar _ _ E) by auto.
     apply Interp_EtaExpandWithListInfoFromBound; auto with wf.
   Qed.
 
@@ -1324,7 +1324,6 @@ Module Compilers.
                         | rewrite <- Extract_FromFlat_ToFlat by auto with typeclass_instances; apply Interp_PartialEvaluateWithBounds_bounded; auto
                         | rewrite Extract_FromFlat_ToFlat by auto with wf typeclass_instances
                         | progress intros
-                        | progress cbv [ident.interp]
                         | eapply ZRange.type.base.option.is_tighter_than_is_bounded_by; [ eassumption | ]
                         | solve [ eauto with wf typeclass_instances ]
                         | erewrite !Interp_PartialEvaluateWithBounds

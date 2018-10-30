@@ -1021,13 +1021,11 @@ Module Compilers.
 
       Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
       Proof. exact v. Qed.
-
-      (** Interpret identifiers where [Z_cast] is an opaque identity
-         function when the value is not inside the range *)
-      Definition interp {t} (idc : ident t) : type.interp base.interp t
-        := @gen_interp cast_outside_of_range t idc.
-      Global Arguments interp _ !_ / .
     End with_base.
+
+    (** Interpret identifiers where [Z_cast] is an opaque identity
+        function when the value is not inside the range *)
+    Notation interp := (@gen_interp cast_outside_of_range).
     Notation LiteralUnit := (@Literal base.type.unit).
     Notation LiteralZ := (@Literal base.type.Z).
     Notation LiteralBool := (@Literal base.type.bool).
@@ -1297,14 +1295,13 @@ Module Compilers.
       Notation "x || y" := (#Z_lor @ x @ y)%expr : expr_scope.
       Notation "x 'mod' y" := (#Z_modulo @ x @ y)%expr : expr_scope.
       Notation "- x" := (#Z_opp @ x)%expr : expr_scope.
-      Global Arguments interp _ !_.
       Global Arguments gen_interp _ _ !_.
     End Notations.
   End ident.
   Export ident.Notations.
   Notation ident := ident.ident.
 
-  Global Strategy -1000 [expr.Interp expr.interp ident.interp type.interp base.interp base.base_interp ident.gen_interp].
+  Global Strategy -1000 [expr.Interp expr.interp type.interp base.interp base.base_interp ident.gen_interp].
   Ltac reify var term :=
     expr.reify base.type ident ltac:(base.reify) ident.reify var term.
   Ltac Reify term :=

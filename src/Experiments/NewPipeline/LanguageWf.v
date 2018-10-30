@@ -728,18 +728,21 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       End with_1.
     End interp_gen.
 
-    Section for_interp.
+    Section with_cast.
+      Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
+      Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
+      Local Notation interp := (@expr.interp _ _ _ (@ident_interp)).
+      Local Notation Interp := (@expr.Interp _ _ _ (@ident_interp)).
       Local Open Scope etype_scope.
-      Import defaults.
       Lemma wf_interp_Proper G {t} e1 e2
             (Hwf : @wf _ _ _ _ G t e1 e2)
             (HG : forall t v1 v2, In (existT _ t (v1, v2)) G -> v1 == v2)
         : interp e1 == interp e2.
-      Proof. apply @wf_interp_Proper_gen1 with (G:=G); eauto using ident.interp_Proper. Qed.
+      Proof. apply @wf_interp_Proper_gen1 with (G:=G); eauto using ident.gen_interp_Proper. Qed.
 
-      Lemma Wf_Interp_Proper {t} (e : Expr t) : Wf e -> Proper type.eqv (Interp e).
+      Lemma Wf_Interp_Proper {t} (e : expr.Expr t) : Wf e -> Proper type.eqv (Interp e).
       Proof. repeat intro; apply wf_interp_Proper with (G:=nil); cbn [List.In]; intuition eauto. Qed.
-    End for_interp.
+    End with_cast.
 
     Section invert.
       Section with_var2.
@@ -1420,21 +1423,17 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Proof. apply @Interp_gen2_GeneralizeVar; eassumption. Qed.
     End gen1.
 
-    Lemma interp_from_flat_to_flat'
-          {t} (e1 : expr t) (e2 : expr t) G ctx
-          (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
-                                     -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ v2' == v2))
-          (Hwf : expr.wf G e1 e2)
-          cur_idx
-          (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
-      : interp (from_flat (to_flat' e1 cur_idx) _ ctx) == interp e2.
-    Proof. apply @interp_gen1_from_flat_to_flat' with (G:=G); eauto using ident.interp_Proper. Qed.
+    Section with_cast.
+      Context {cast_outside_of_range : zrange -> Z -> Z}.
 
-    Lemma Interp_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (FromFlat (ToFlat e)) == Interp e.
-    Proof. apply @Interp_gen1_FromFlat_ToFlat; eauto using ident.interp_Proper. Qed.
+      Local Notation Interp := (expr.Interp (@ident.gen_interp cast_outside_of_range)).
 
-    Lemma Interp_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (GeneralizeVar (e _)) == Interp e.
-    Proof. apply Interp_FromFlat_ToFlat, Hwf. Qed.
+      Lemma Interp_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (FromFlat (ToFlat e)) == Interp e.
+      Proof. apply @Interp_gen1_FromFlat_ToFlat; eauto using ident.gen_interp_Proper. Qed.
+
+      Lemma Interp_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (GeneralizeVar (e _)) == Interp e.
+      Proof. apply Interp_FromFlat_ToFlat, Hwf. Qed.
+    End with_cast.
   End GeneralizeVar.
 
   Ltac prove_Wf _ :=

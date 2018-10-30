@@ -45,6 +45,8 @@ nra.cache
 /time-of-build-pretty.log
 /time-of-build.log
 
+/*.out
+
 # compilation outputs
 /*.o
 etc/tscfreq

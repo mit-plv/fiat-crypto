@@ -675,6 +675,30 @@ Module Pipeline.
 
   Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z }.
 
+  Definition RewriteAndEliminateDeadAndInline {t}
+             (DoRewrite : Expr t -> Expr t)
+             (with_dead_code_elimination : bool)
+             (with_subst01 : bool)
+             (E : Expr t)
+    : Expr t
+    := let E := DoRewrite E in
+       (* Note that DCE evaluates the expr with two different [var]
+          arguments, and so results in a pipeline that is 2x slower
+          unless we pass through a uniformly concrete [var] type
+          first *)
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
+       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
+       let E := if with_subst01 then Subst01.Subst01 E else E in
+       let E := UnderLets.LetBindReturn E in
+       let E := DoRewrite E in (* after inlining, see if any new rewrite redexes are available *)
+       dlet_nd e := ToFlat E in
+       let E := FromFlat e in
+       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       E.
+
   Definition BoundsPipeline
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -688,22 +712,7 @@ Module Pipeline.
     := (*let E := expr.Uncurry E in*)
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
       let E := PartialEvaluate E in
-      let E := RewriteRules.RewriteArith 0 E in
-      (* Note that DCE evaluates the expr with two different [var]
-         arguments, and so results in a pipeline that is 2x slower
-         unless we pass through a uniformly concrete [var] type
-         first *)
-      dlet_nd e := ToFlat E in
-      let E := FromFlat e in
-      let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-      dlet_nd e := ToFlat E in
-      let E := FromFlat e in
-      let E := if with_subst01 then Subst01.Subst01 E else E in
-      let E := UnderLets.LetBindReturn E in
-      let E := RewriteRules.RewriteArith 0 E in (* after inlining, see if any new rewrite redexes are available *)
-      dlet_nd e := ToFlat E in
-      let E := FromFlat e in
-      let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+      let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0) with_dead_code_elimination with_subst01 E in
       let E := RewriteRules.RewriteArith (2^8) E in (* reassociate small consts *)
       let E := match translate_to_fancy with
                | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high E
@@ -788,7 +797,8 @@ Module Pipeline.
                  | solve [ auto with interp wf ]
                  | solve [ typeclasses eauto ]
                  | break_innermost_match_step
-                 | solve [ auto 100 with wf ] ].
+                 | solve [ auto 100 with wf ]
+                 | progress intros ].
 
   Class bounds_goodT {t} bounds
     := bounds_good :
@@ -800,6 +810,30 @@ Module Pipeline.
 
   Hint Extern 1 (type_goodT _) => vm_compute; reflexivity : typeclass_instances.
 
+  Lemma Wf_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01
+        (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
+        E
+        (Hwf : Wf E)
+    : Wf (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E).
+  Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
+
+  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf.
+
+  Lemma Interp_RewriteAndEliminateDeadAndInline {cast_outside_of_range} {t} DoRewrite with_dead_code_elimination with_subst01
+        (Interp_DoRewrite : forall E, Wf E -> expr.Interp (@ident.gen_interp cast_outside_of_range) (DoRewrite E) == expr.Interp (@ident.gen_interp cast_outside_of_range) E)
+        (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
+        E
+        (Hwf : Wf E)
+    : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E)
+      == expr.Interp (@ident.gen_interp cast_outside_of_range) E.
+  Proof.
+    cbv [RewriteAndEliminateDeadAndInline Let_In];
+      repeat (wf_interp_t || rewrite !Interp_DoRewrite).
+  Qed.
+
+  Global Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp.
+
+  Local Opaque RewriteAndEliminateDeadAndInline.
   Lemma BoundsPipeline_correct
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -862,6 +896,7 @@ Module Pipeline.
         all: wf_interp_t. }
       { wf_interp_t. } }
   Qed.
+  Local Transparent RewriteAndEliminateDeadAndInline.
 
   Definition BoundsPipeline_correct_transT
              {t}
