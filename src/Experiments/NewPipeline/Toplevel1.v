@@ -831,7 +831,7 @@ Module Pipeline.
       repeat (wf_interp_t || rewrite !Interp_DoRewrite).
   Qed.
 
-  Global Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp.
+  Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp.
 
   Local Opaque RewriteAndEliminateDeadAndInline.
   Lemma BoundsPipeline_correct
