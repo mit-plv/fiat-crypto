@@ -57,7 +57,7 @@ Notation optional_evar_rel_package pkg_type x
         x
         _
         (fun a b
-         => ltac:(lazymatch eval hnf in (pkg_type b) with
+         => ltac:(lazymatch eval hnf in (pkg_type%function b) with
                   | evar_Prop_package ?P
                     => let P := (eval cbv beta in (P a)) in
                        exact P
