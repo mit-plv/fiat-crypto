@@ -59,7 +59,7 @@ Module Compilers.
         = (fun var => @fancy_with_casts_rewrite_head0 var (*invert_low invert_high*)).
     Proof. reflexivity. Qed.
 
-    Lemma arith_with_casts_rewrite_head_eq : (fun var _ => @arith_with_casts_rewrite_head var) = @arith_with_casts_rewrite_head0.
+    Lemma arith_with_casts_rewrite_head_eq : @arith_with_casts_rewrite_head = @arith_with_casts_rewrite_head0.
     Proof. reflexivity. Qed.
 
     Lemma nbe_all_rewrite_rules_eq : @nbe_all_rewrite_rules = @nbe_rewrite_rules.
