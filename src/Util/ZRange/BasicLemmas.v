@@ -157,4 +157,24 @@ Module ZRange.
       try reflexivity;
       try lia.
   Qed.
+
+  Lemma normalize_opp r : normalize (-r) = -(normalize r).
+  Proof.
+    cbv [normalize ZRange.opp]; cbn [lower upper].
+    rewrite <- !Z.opp_min_distr, <- !Z.opp_max_distr.
+    reflexivity.
+  Qed.
+
+  Lemma opp_involutive r : - - r = r.
+  Proof.
+    cbv [opp upper lower]; destruct r; rewrite !Z.opp_involutive; reflexivity.
+  Qed.
+
+  Lemma is_bounded_by_bool_move_opp_normalize r v
+    : is_bounded_by_bool v (ZRange.normalize (-r))
+      = is_bounded_by_bool (-v) (ZRange.normalize r).
+  Proof.
+    rewrite <- is_bounded_by_bool_opp at 1.
+    rewrite normalize_opp, opp_involutive; reflexivity.
+  Qed.
 End ZRange.
