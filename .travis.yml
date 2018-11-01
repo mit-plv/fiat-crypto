@@ -34,6 +34,7 @@ matrix:
   fast_finish: true
 
 stages:
+  - some-early util
   - printlite lite
   - pre-standalone
   - new-pipeline
@@ -44,24 +45,43 @@ stages:
 
 jobs:
   include:
+    - stage: some-early util
+      env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
+      allow_failure: true
+      script: CUR=early ./etc/ci/travis.sh some-early util
+    - stage: some-early util
+      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
+      allow_failure: true
+      script: CUR=early ./etc/ci/travis.sh some-early util
+    - stage: some-early util
+      env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
+      allow_failure: true
+      script: CUR=early ./etc/ci/travis.sh some-early util
+    - stage: some-early util
+      env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: CUR=early ./etc/ci/travis.sh some-early util
+    - stage: some-early util
+      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
+      script: CUR=early ./etc/ci/travis.sh some-early util
+
     - stage: printlite lite
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
       allow_failure: true
-      script: CUR=lite ./etc/ci/travis.sh printlite lite
+      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
     - stage: printlite lite
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
       allow_failure: true
-      script: CUR=lite ./etc/ci/travis.sh printlite lite
+      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
     - stage: printlite lite
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
       allow_failure: true
-      script: CUR=lite ./etc/ci/travis.sh printlite lite
+      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
     - stage: printlite lite
       env: COQ_VERSION="8.8.0"  COQ_PACKAGE="coq-8.8.0" PPA="ppa:jgross-h/many-coq-versions"
-      script: CUR=lite ./etc/ci/travis.sh printlite lite
+      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
     - stage: printlite lite
       env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: CUR=lite ./etc/ci/travis.sh printlite lite
+      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
 
     - stage: pre-standalone
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
