@@ -283,6 +283,8 @@ src/lattice/Bytes.v
 src/lattice/Matrix.v
 src/lattice/PolynomialRing.v
 src/lattice/Spec.v
+src/lattice/specific/Kyber512.v
+src/lattice/specific/Kyber32.v
 src/LegacyArithmetic/ArchitectureToZLike.v
 src/LegacyArithmetic/ArchitectureToZLikeProofs.v
 src/LegacyArithmetic/BarretReduction.v

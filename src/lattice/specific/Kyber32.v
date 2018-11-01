@@ -92,7 +92,7 @@ Module Kyber32.
            x30 x31 = @KyberSpec.encode byte n nmod8 bits_to_bytes 1 x) As encode_eq.
   Proof.
     intros. subst x.
-    cbv - [PolynomialRing.bits_to_bytes byte Tuple.flat_map KyberSpec.F_to_bits Tuple.flat_map F id].
+    cbv - [bits_to_bytes byte Tuple.flat_map KyberSpec.F_to_bits Tuple.flat_map F id].
     cbv [Tuple.flat_map]. Tuple.to_default false.
     cbn - [Z.testbit]. cbv - [F byte] in encode.
     exact eq_refl.
@@ -182,13 +182,13 @@ Module Kyber32.
     cbv [List.seq seq from_list_default from_list_default'].
     cbv [map map'].
     cbv [List.map nth_default hd hd'].
-    cbv [PolynomialRing.mul Lists.to_associational map2 on_tuple2].
+    cbv [PolynomialRing.mul Associational.to_associational map2 on_tuple2].
     rewrite !to_list_from_list.
     cbv [List.seq seq from_list_default from_list_default'].
     cbv [to_list to_list' ListUtil.map2].
-    cbv [Lists.assoc_mul Lists.multerm List.flat_map List.map app].
+    cbv [Associational.assoc_mul Associational.multerm List.flat_map List.map app].
     cbn [fst snd Nat.add].
-    cbv [Lists.from_associational Lists.from_associational'].
+    cbv [Associational.from_associational Associational.from_associational'].
     erewrite fold_right_ext with (g := fun xi => on_tuple_default _ _)
       by (intros; cbv [update_nth]; Tuple.to_default (@F.zero q); reflexivity).
     cbv - [matrix_mul111 PolynomialRing.add F.add F.mul F F.of_Z].
