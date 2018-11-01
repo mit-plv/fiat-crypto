@@ -198,6 +198,8 @@ Module ZRange.
     Infix ">>" := shiftr : zrange_scope.
     Infix "<<" := shiftl : zrange_scope.
     Infix "&'" := land : zrange_scope.
+    (* enable pairing to show up in arguments bound to zrange_scope *)
+    Notation "( x , y , .. , z )" := (pair .. (pair x%zrange y%zrange) .. z%zrange) : zrange_scope.
   End ZRangeNotations.
 End ZRange.
 

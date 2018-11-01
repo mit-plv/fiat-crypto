@@ -887,6 +887,8 @@ Module Compilers.
         | fancy_addm : ident (Z * Z * Z -> Z)
         .
 
+        Global Arguments Z_cast2 _%zrange_scope.
+
         Definition to_fancy {s d : base.type} (idc : ident (s -> d)) : option (fancy.ident s d)
           := match idc in ident t return option match t with
                                                 | type.base s -> type.base d => fancy.ident s d
@@ -1296,6 +1298,8 @@ Module Compilers.
       Notation "x 'mod' y" := (#Z_modulo @ x @ y)%expr : expr_scope.
       Notation "- x" := (#Z_opp @ x)%expr : expr_scope.
       Global Arguments gen_interp _ _ !_.
+
+      Global Arguments ident.Z_cast2 _%zrange_scope.
     End Notations.
   End ident.
   Export ident.Notations.
