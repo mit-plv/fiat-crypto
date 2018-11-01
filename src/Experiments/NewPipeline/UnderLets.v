@@ -69,15 +69,17 @@ Module Compilers.
          | ident.fst _ _
          | ident.snd _ _
          | ident.Z_opp
+         | ident.Z_cast _
+         | ident.Z_cast2 _
            => true
          | _ => false
          end.
-    Definition is_var_fst_snd_pair_opp {var} {t} (e : expr (var:=var) t) : bool
+    Definition is_var_fst_snd_pair_opp_cast {var} {t} (e : expr (var:=var) t) : bool
       := @is_recursively_var_or_ident base.type ident var (@ident_is_var_like) t e.
-    Definition IsVarFstSndPairOpp {t} (e : expr.Expr t) : bool
-      := @is_var_fst_snd_pair_opp (fun _ => unit) t (e _).
+    Definition IsVarFstSndPairOppCast {t} (e : expr.Expr t) : bool
+      := @is_var_fst_snd_pair_opp_cast (fun _ => unit) t (e _).
 
-    Definition SubstVarFstSndPairOpp {t} (e : expr.Expr t) : expr.Expr t
+    Definition SubstVarFstSndPairOppCast {t} (e : expr.Expr t) : expr.Expr t
       := @SubstVarOrIdent base.type ident (@ident_is_var_like) t e.
   End SubstVarLike.
 
@@ -139,7 +141,7 @@ Module Compilers.
         := fun e T k
            => match invert_expr.invert_Var e with
               | Some v => k ($v)%expr
-              | None => if SubstVarLike.is_var_fst_snd_pair_opp e
+              | None => if SubstVarLike.is_var_fst_snd_pair_opp_cast e
                         then k e
                         else UnderLets.UnderLet e (fun v => k ($v)%expr)
               end.

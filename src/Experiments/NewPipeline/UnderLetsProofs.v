@@ -140,8 +140,8 @@ Module Compilers.
       End interp.
     End with_ident.
 
-    Lemma Wf_SubstVarFstSndPairOpp {t} (e : expr.Expr t)
-      : expr.Wf e -> expr.Wf (SubstVarLike.SubstVarFstSndPairOpp e).
+    Lemma Wf_SubstVarFstSndPairOppCast {t} (e : expr.Expr t)
+      : expr.Wf e -> expr.Wf (SubstVarLike.SubstVarFstSndPairOppCast e).
     Proof. apply Wf_SubstVarOrIdent. Qed.
 
     Section with_cast.
@@ -150,14 +150,14 @@ Module Compilers.
       Local Notation interp := (@expr.interp _ _ _ (@ident_interp)).
       Local Notation Interp := (@expr.Interp _ _ _ (@ident_interp)).
 
-      Lemma Interp_SubstVarFstSndPairOpp {t} (e : expr.Expr t) (Hwf : expr.Wf e)
-        : Interp (SubstVarLike.SubstVarFstSndPairOpp e) == Interp e.
+      Lemma Interp_SubstVarFstSndPairOppCast {t} (e : expr.Expr t) (Hwf : expr.Wf e)
+        : Interp (SubstVarLike.SubstVarFstSndPairOppCast e) == Interp e.
       Proof. apply Interp_SubstVarOrIdent, Hwf. Qed.
     End with_cast.
   End SubstVarLike.
 
-  Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarFstSndPairOpp SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
-  Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarFstSndPairOpp @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
+  Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarFstSndPairOppCast SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
+  Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarFstSndPairOppCast @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
 
   Module UnderLets.
     Import UnderLets.Compilers.UnderLets.
@@ -426,7 +426,7 @@ Module Compilers.
           : wf P G (reify_and_let_binds_base_cps e1 T1 k1) (reify_and_let_binds_base_cps e2 T2 k2).
         Proof.
           revert dependent G; induction t; cbn [reify_and_let_binds_base_cps]; intros;
-            try (cbv [SubstVarLike.is_var_fst_snd_pair_opp] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
+            try (cbv [SubstVarLike.is_var_fst_snd_pair_opp_cast] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
             break_innermost_match; wf_reify_and_let_binds_base_cps_t Hk.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.
@@ -502,7 +502,7 @@ Module Compilers.
                            | apply (f_equal2 (@cons _))
                            | match goal with
                              | [ H : _ |- _ ] => apply H; clear H
-                             | [ H : SubstVarLike.is_var_fst_snd_pair_opp (reify_list _) = _ |- _ ] => clear H
+                             | [ H : SubstVarLike.is_var_fst_snd_pair_opp_cast (reify_list _) = _ |- _ ] => clear H
                              | [ H : context[interp (reify_list _)] |- _ ]
                                => rewrite expr.interp_reify_list in H
                              | [ |- ?Q (UnderLets.interp _ (list_rect ?P ?X ?Y ?ls ?k)) ]
@@ -597,7 +597,7 @@ Module Compilers.
           : interp (to_expr (reify_and_let_binds_base_cps e1 _ k1)) == k2 (interp e2).
         Proof.
           revert dependent G; revert dependent t'; induction t; cbn [reify_and_let_binds_base_cps]; intros;
-            try (cbv [SubstVarLike.is_var_fst_snd_pair_opp] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
+            try (cbv [SubstVarLike.is_var_fst_snd_pair_opp_cast] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
             break_innermost_match; interp_to_expr_reify_and_let_binds_base_cps_t Hk.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.

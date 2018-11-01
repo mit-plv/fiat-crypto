@@ -58,7 +58,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℕ -> ℕ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -93,7 +93,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℕ -> ℕ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -128,7 +128,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℕ -> ℕ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -163,7 +163,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℕ -> ℕ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -205,7 +205,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                 s0) -> s)%ptype option (fun x2 : option => x2)
           with
-          | Some (_, _, _, (_, (_, (_, _)), b3, b2)) =>
+          | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b3 * b2)%etype -> b3) ->
@@ -256,7 +256,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                 s0) -> s)%ptype option (fun x2 : option => x2)
           with
-          | Some (_, _, _, (_, (_, (_, _)), b3, b2)) =>
+          | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b3 * b2)%etype -> b2) ->
@@ -311,7 +311,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 s0) -> s)%ptype option (fun x3 : option => x3)
           with
           | Some
-            (_, (_, _), (_, _, _), (_, (_, b7)), (_, (_, (_, _)), b9, b8)) =>
+            (_, (_, _), (_, _, _), (_, (_, b7)), (_, (_, (_, _)), b9, b8))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((((b9 -> b8 -> b7) -> (b9 * b8)%etype -> b7) ->
@@ -421,7 +421,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 unit -> T) -> (projT1 args))%ptype option
               (fun x2 : option => x2)
           with
-          | Some (_, _, (_, _, (_, _)), (_, _), (_, b8), _) =>
+          | Some (_, _, (_, _, (_, _)), (_, _), (_, b8), _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((((unit -> b8) -> (unit -> b8) -> bool -> b8) ->
@@ -500,7 +500,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 ℕ -> P -> P) -> (projT1 args))%ptype option
               (fun x2 : option => x2)
           with
-          | Some (_, _, (_, (_, _), (_, _)), (_, _), (_, (_, b10)), _) =>
+          | Some
+            (_, _, (_, (_, _), (_, _)), (_, _), (_, (_, b10)), _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((((unit -> b10) -> (ℕ -> b10 -> b10) -> ℕ -> b10) ->
@@ -633,7 +634,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          with
          | Some
            (_, _, (_, (_, _, (_, _)), (_, (_, _))), (_, _),
-           (_, (_, _, (_, b16))), _, b) =>
+           (_, (_, _, (_, b16))), _, b)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 ((((((b -> b16) ->
@@ -884,7 +885,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           (fun x2 : option => x2)
       with
       | Some
-        (_, _, (_, (_, (_, _)), (_, _)), (_, _), (_, (_, (_, b12))), b) =>
+        (_, _, (_, (_, (_, _)), (_, _)), (_, _), (_, (_, (_, b12))), b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              (((((unit -> b12) ->
@@ -1119,7 +1120,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  unit -> P) -> A -> (list A) -> P) -> (list args))%ptype
               option (fun x2 : option => x2)
           with
-          | Some (_, _, (_, (_, _), (_, _)), (_, _), (_, (_, b10)), b) =>
+          | Some
+            (_, _, (_, (_, _), (_, _)), (_, _), (_, (_, b10)), b)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((((unit -> b10) ->
@@ -1241,7 +1243,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           with
           | Some
             (_, _, (_, (_, _), (_, _)), (_, _), (_, (_, b10)),
-            (_, (_, _), _, b11)) =>
+            (_, (_, _), _, b11))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((((unit -> b10) ->
@@ -1372,7 +1374,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          (((pattern.base.type.list '1) -> ℕ) -> (pattern.base.type.list '1))%ptype
          (((list T) -> ℕ) -> (list T))%ptype option (fun x0 : option => x0)
      with
-     | Some (_, _, b) =>
+     | Some (_, _, b)%zrange =>
          if
           type.type_beq base.type base.type.type_beq
             (((list b) -> ℕ) -> (list b))%ptype
@@ -1400,7 +1402,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℕ -> ℕ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -1437,7 +1439,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               (((ℕ -> (list A) -> (list A)) -> (projT1 args)) -> (list A))%ptype
               option (fun x1 : option => x1)
           with
-          | Some (_, (_, _), _, b) =>
+          | Some (_, (_, _), _, b)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((ℕ -> (list b) -> (list b)) -> ℕ) -> (list b))%ptype
@@ -1477,7 +1479,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               (((ℕ -> (list A) -> (list A)) -> (projT1 args)) -> (list A))%ptype
               option (fun x1 : option => x1)
           with
-          | Some (_, (_, _), _, b) =>
+          | Some (_, (_, _), _, b)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((ℕ -> (list b) -> (list b)) -> ℕ) -> (list b))%ptype
@@ -1515,7 +1517,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                ℕ)%ptype (((A -> ℕ -> (list A)) -> A) -> (projT1 args))%ptype
               option (fun x1 : option => x1)
           with
-          | Some (_, (_, _), b0, _) =>
+          | Some (_, (_, _), b0, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b0 -> ℕ -> (list b0)) -> b0) -> ℕ)%ptype
@@ -1552,7 +1554,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          ((((list A) -> (list B) -> (list (A * B))) -> (list A)) -> (list B))%ptype
          option (fun x1 : option => x1)
      with
-     | Some (_, (_, (_, _)), b0, b) =>
+     | Some (_, (_, (_, _)), b0, b)%zrange =>
          if
           type.type_beq base.type base.type.type_beq
             ((((list b0) -> (list b) -> (list (b0 * b))) -> (list b0)) ->
@@ -1576,7 +1578,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           ys <- reflect_list (v0 x0);
                           Some
                             (Compilers.reify_list
-                               (map (fun '(x1, y) => (x1, y)%expr_pat)
+                               (map (fun '(x1, y)%zrange => (x1, y)%expr_pat)
                                   (combine xs ys))));
                  (trA <-- @base.try_make_transport_cps
                             (fun A0 : base.type => expr (list (A0 * B))) A A;
@@ -1619,7 +1621,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           ((((A -> B) -> (list A) -> (list B)) -> A -> B) -> (list A))%ptype
           option (fun x1 : option => x1)
       with
-      | Some (_, _, (_, _), (_, b4), b) =>
+      | Some (_, _, (_, _), (_, b4), b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              ((((b -> b4) -> (list b) -> (list b4)) -> b -> b4) -> (list b))%ptype
@@ -1742,7 +1744,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           ((((list A) -> (list A) -> (list A)) -> (list A)) -> (list A))%ptype
           option (fun x1 : option => x1)
       with
-      | Some (_, (_, _), _, b) =>
+      | Some (_, (_, _), _, b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              ((((list b) -> (list b) -> (list b)) -> (list b)) -> (list b))%ptype
@@ -1794,7 +1796,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           (((list A) -> (list A)) -> (list A))%ptype option
           (fun x0 : option => x0)
       with
-      | Some (_, _, b) =>
+      | Some (_, _, b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              (((list b) -> (list b)) -> (list b))%ptype
@@ -1826,7 +1828,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           ((((A -> (list B)) -> (list A) -> (list B)) -> A -> (list B)) ->
            (list A))%ptype option (fun x1 : option => x1)
       with
-      | Some (_, _, (_, _), (_, b4), b) =>
+      | Some (_, _, (_, _), (_, b4), b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              ((((b -> (list b4)) -> (list b) -> (list b4)) -> b -> (list b4)) ->
@@ -1930,7 +1932,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           ((((A -> bool) -> (list A) -> (list A * list A)%etype) -> A -> bool) ->
            (list A))%ptype option (fun x1 : option => x1)
       with
-      | Some (_, _, (_, (_, _)), (_, _), b) =>
+      | Some (_, _, (_, (_, _)), (_, _), b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              ((((b -> bool) -> (list b) -> (list b * list b)%etype) ->
@@ -2165,7 +2167,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           (((((B -> A -> A) -> A -> (list B) -> A) -> B -> A -> A) -> A) ->
            (list B))%ptype option (fun x2 : option => x2)
       with
-      | Some (_, (_, _), (_, (_, _)), (_, (_, _)), b0, b) =>
+      | Some (_, (_, _), (_, (_, _)), (_, (_, _)), b0, b)%zrange =>
           if
            type.type_beq base.type base.type.type_beq
              (((((b -> b0 -> b0) -> b0 -> (list b) -> b0) -> b -> b0 -> b0) ->
@@ -2315,7 +2317,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              ((((ℕ -> (T -> T) -> (list T) -> (list T)) -> (projT1 args)) ->
                T -> T) -> (list T))%ptype option (fun x2 : option => x2)
          with
-         | Some (_, (_, _, (_, _)), _, (_, _), b) =>
+         | Some (_, (_, _, (_, _)), _, (_, _), b)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 ((((ℕ -> (b -> b) -> (list b) -> (list b)) -> ℕ) -> b -> b) ->
@@ -2396,7 +2398,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               ((((T -> (list T) -> ℕ -> T) -> T) -> (list T)) ->
                (projT1 args))%ptype option (fun x2 : option => x2)
           with
-          | Some (_, (_, (_, _)), _, b0, _) =>
+          | Some (_, (_, (_, _)), _, b0, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((((b0 -> (list b0) -> ℕ -> b0) -> b0) -> (list b0)) -> ℕ)%ptype
@@ -2437,7 +2439,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2472,7 +2474,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2507,7 +2509,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2542,7 +2544,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2598,7 +2600,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2633,7 +2635,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2711,7 +2713,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2746,7 +2748,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2781,7 +2783,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2860,7 +2862,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2895,7 +2897,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2930,7 +2932,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -2965,7 +2967,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -3023,7 +3025,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -3062,7 +3064,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
                       option (fun x2 : option => x2)
                   with
-                  | Some (_, _, _) =>
+                  | Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -3077,7 +3079,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        Some
                          (Base
                             (let
-                             '(a1, b1) :=
+                             '(a1, b1)%zrange :=
                               Definitions.Z.mul_split
                                 (let (x2, _) := idc_args in x2)
                                 (let (x2, _) := idc_args0 in x2)
@@ -3110,7 +3112,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
                       option (fun x2 : option => x2)
                   with
-                  | Some (_, _, _) =>
+                  | Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -3125,7 +3127,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        Some
                          (Base
                             (let
-                             '(a1, b1) :=
+                             '(a1, b1)%zrange :=
                               Definitions.Z.add_get_carry_full
                                 (let (x2, _) := idc_args in x2)
                                 (let (x2, _) := idc_args0 in x2)
@@ -3158,7 +3160,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
                       option (fun x2 : option => x2)
                   with
-                  | Some (_, _, _) =>
+                  | Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -3208,7 +3210,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             (projT1 args0)) -> (projT1 args))%ptype option
                           (fun x3 : option => x3)
                       with
-                      | Some (_, _, _, _) =>
+                      | Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -3226,7 +3228,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            Some
                              (Base
                                 (let
-                                 '(a2, b2) :=
+                                 '(a2, b2)%zrange :=
                                   Definitions.Z.add_with_get_carry_full
                                     (let (x3, _) := idc_args in x3)
                                     (let (x3, _) := idc_args0 in x3)
@@ -3262,7 +3264,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
                       option (fun x2 : option => x2)
                   with
-                  | Some (_, _, _) =>
+                  | Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -3277,7 +3279,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        Some
                          (Base
                             (let
-                             '(a1, b1) :=
+                             '(a1, b1)%zrange :=
                               Definitions.Z.sub_get_borrow_full
                                 (let (x2, _) := idc_args in x2)
                                 (let (x2, _) := idc_args0 in x2)
@@ -3315,7 +3317,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             (projT1 args0)) -> (projT1 args))%ptype option
                           (fun x3 : option => x3)
                       with
-                      | Some (_, _, _, _) =>
+                      | Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -3333,7 +3335,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            Some
                              (Base
                                 (let
-                                 '(a2, b2) :=
+                                 '(a2, b2)%zrange :=
                                   Definitions.Z.sub_with_get_borrow_full
                                     (let (x3, _) := idc_args in x3)
                                     (let (x3, _) := idc_args0 in x3)
@@ -3369,7 +3371,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
                       option (fun x2 : option => x2)
                   with
-                  | Some (_, _, _) =>
+                  | Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -3414,7 +3416,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
                       option (fun x2 : option => x2)
                   with
-                  | Some (_, _, _) =>
+                  | Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -3464,7 +3466,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             (projT1 args0)) -> (projT1 args))%ptype option
                           (fun x3 : option => x3)
                       with
-                      | Some (_, _, _, _) =>
+                      | Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -3512,7 +3514,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args0) -> (projT1 args))%ptype option
                   (fun x1 : option => x1)
               with
-              | Some (_, _) =>
+              | Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args0) -> (projT1 args))%ptype
@@ -3589,7 +3591,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  (projT1 args1)) -> (projT1 args0)) -> (projT1 args))%ptype
               option (fun x4 : option => x4)
           with
-          | Some (_, _, (_, (_, _, _)), (_, (_, (_, _)), _, _), _) =>
+          | Some (_, _, (_, (_, _, _)), (_, (_, (_, _)), _, _), _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((((ℤ * ℤ)%etype -> ℤ -> (ℤ * ℤ * ℤ)%etype) ->
@@ -3616,7 +3618,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (##(fancy.interp (invert_Some (to_fancy fancy_selc))
                           (let (x4, _) := idc_args1 in x4,
                           let (x4, _) := idc_args2 in x4,
-                          let (x4, _) := idc_args3 in x4)%core))%expr)
+                          let (x4, _) := idc_args3 in x4)%zrange))%expr)
               else None
           | None => None
           end
@@ -3697,7 +3699,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  (projT1 args1)) -> (projT1 args0)) -> (projT1 args))%ptype
               option (fun x4 : option => x4)
           with
-          | Some (_, _, (_, (_, _, _)), (_, (_, (_, _)), _, _), _) =>
+          | Some (_, _, (_, (_, _, _)), (_, (_, (_, _)), _, _), _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((((ℤ * ℤ)%etype -> ℤ -> (ℤ * ℤ * ℤ)%etype) ->
@@ -3724,7 +3726,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (##(fancy.interp (invert_Some (to_fancy fancy_sell))
                           (let (x4, _) := idc_args1 in x4,
                           let (x4, _) := idc_args2 in x4,
-                          let (x4, _) := idc_args3 in x4)%core))%expr)
+                          let (x4, _) := idc_args3 in x4)%zrange))%expr)
               else None
           | None => None
           end
@@ -3802,7 +3804,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  (projT1 args1)) -> (projT1 args0)) -> (projT1 args))%ptype
               option (fun x4 : option => x4)
           with
-          | Some (_, _, (_, (_, _, _)), (_, (_, (_, _)), _, _), _) =>
+          | Some (_, _, (_, (_, _, _)), (_, (_, (_, _)), _, _), _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((((ℤ * ℤ)%etype -> ℤ -> (ℤ * ℤ * ℤ)%etype) ->
@@ -3829,7 +3831,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (##(fancy.interp (invert_Some (to_fancy fancy_addm))
                           (let (x4, _) := idc_args1 in x4,
                           let (x4, _) := idc_args2 in x4,
-                          let (x4, _) := idc_args3 in x4)%core))%expr)
+                          let (x4, _) := idc_args3 in x4)%zrange))%expr)
               else None
           | None => None
           end

@@ -27,7 +27,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                 s0) -> s)%ptype option (fun x2 : option => x2)
           with
-          | Some (_, _, _, (_, (_, (_, _)), b3, b2)) =>
+          | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b3 * b2)%etype -> b3) ->
@@ -78,7 +78,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                 s0) -> s)%ptype option (fun x2 : option => x2)
           with
-          | Some (_, _, _, (_, (_, (_, _)), b3, b2)) =>
+          | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b3 * b2)%etype -> b2) ->
@@ -222,7 +222,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -244,7 +244,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                 (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
             with
-            | Some (_, _) =>
+            | Some (_, _)%zrange =>
                 if
                  type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                    (ℤ -> (projT1 args))%ptype
@@ -267,7 +267,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (s -> (projT1 args0))%ptype option
                     (fun x2 : option => x2)
                 with
-                | Some (_, _) =>
+                | Some (_, _)%zrange =>
                     if
                      type.type_beq base.type base.type.type_beq
                        (ℤ -> ℤ)%ptype (s -> (projT1 args0))%ptype
@@ -291,7 +291,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    (s -> (projT1 args0))%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       (s -> (projT1 args0))%ptype
@@ -324,7 +324,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                     ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
                 with
-                | Some (_, _) =>
+                | Some (_, _)%zrange =>
                     if
                      type.type_beq base.type base.type.type_beq
                        (ℤ -> ℤ)%ptype ((projT1 args) -> s)%ptype
@@ -348,7 +348,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args) -> s)%ptype
@@ -374,7 +374,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    (s0 -> s)%ptype option (fun x3 : option => x3)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       (s0 -> s)%ptype
@@ -406,7 +406,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
                option (fun x2 : option => x2)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (s -> ℤ)%ptype
@@ -428,7 +428,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
                option (fun x2 : option => x2)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> s)%ptype
@@ -458,7 +458,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    ((projT1 args0) -> (projT1 args))%ptype option
                    (fun x1 : option => x1)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args0) -> (projT1 args))%ptype
@@ -481,7 +481,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -503,7 +503,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -525,7 +525,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -547,7 +547,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                 (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
             with
-            | Some (_, _) =>
+            | Some (_, _)%zrange =>
                 if
                  type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                    (ℤ -> (projT1 args))%ptype
@@ -569,7 +569,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    (s -> (projT1 args0))%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       (s -> (projT1 args0))%ptype
@@ -598,7 +598,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args) -> s)%ptype
@@ -627,7 +627,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -649,7 +649,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -671,7 +671,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -695,7 +695,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -719,7 +719,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    (s0 -> s)%ptype option (fun x3 : option => x3)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       (s0 -> s)%ptype
@@ -750,7 +750,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
                option (fun x2 : option => x2)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (s -> ℤ)%ptype
@@ -772,7 +772,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -796,7 +796,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
                option (fun x2 : option => x2)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> s)%ptype
@@ -818,7 +818,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                 ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
             with
-            | Some (_, _) =>
+            | Some (_, _)%zrange =>
                 if
                  type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                    ((projT1 args) -> ℤ)%ptype
@@ -856,7 +856,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            ((projT1 args2) -> (projT1 args0) -> s2 -> s1)%ptype
                            option (fun x5 : option => x5)
                        with
-                       | Some (_, (_, (_, _))) =>
+                       | Some (_, (_, (_, _)))%zrange =>
                            if
                             type.type_beq base.type base.type.type_beq
                               (ℤ -> ℤ -> ℤ -> ℤ)%ptype
@@ -913,7 +913,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        ((projT1 args2) -> s0 -> s2 -> (projT1 args))%ptype
                        option (fun x5 : option => x5)
                    with
-                   | Some (_, (_, (_, _))) =>
+                   | Some (_, (_, (_, _)))%zrange =>
                        if
                         type.type_beq base.type base.type.type_beq
                           (ℤ -> ℤ -> ℤ -> ℤ)%ptype
@@ -963,7 +963,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    ((projT1 args0) -> s0 -> s)%ptype option
                    (fun x3 : option => x3)
                with
-               | Some (_, (_, _)) =>
+               | Some (_, (_, _))%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (ℤ -> ℤ -> ℤ)%ptype ((projT1 args0) -> s0 -> s)%ptype
@@ -1001,7 +1001,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -1034,7 +1034,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    ((projT1 args0) -> s)%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args0) -> s)%ptype
@@ -1059,7 +1059,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -1081,7 +1081,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -1103,7 +1103,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                     ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
                 with
-                | Some (_, _) =>
+                | Some (_, _)%zrange =>
                     if
                      type.type_beq base.type base.type.type_beq
                        (ℤ -> ℤ)%ptype ((projT1 args) -> s)%ptype
@@ -1127,7 +1127,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args) -> s)%ptype
@@ -1159,7 +1159,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -1183,7 +1183,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                     (s -> (projT1 args))%ptype option (fun x2 : option => x2)
                 with
-                | Some (_, _) =>
+                | Some (_, _)%zrange =>
                     if
                      type.type_beq base.type base.type.type_beq
                        (ℤ -> ℤ)%ptype (s -> (projT1 args))%ptype
@@ -1208,7 +1208,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    (s -> (projT1 args))%ptype option (fun x2 : option => x2)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       (s -> (projT1 args))%ptype
@@ -1240,7 +1240,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -1264,7 +1264,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                    (s0 -> s)%ptype option (fun x3 : option => x3)
                with
-               | Some (_, _) =>
+               | Some (_, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       (s0 -> s)%ptype
@@ -1295,7 +1295,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
                option (fun x2 : option => x2)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (s -> ℤ)%ptype
@@ -1317,7 +1317,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
                option (fun x2 : option => x2)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> s)%ptype
@@ -1362,7 +1362,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | Some _ =>
            if type.type_beq base.type base.type.type_beq ℤ ℤ
            then
-            fv <- (if negb (SubstVarLike.is_var_fst_snd_pair_opp x)
+            fv <- (if negb (SubstVarLike.is_var_fst_snd_pair_opp_cast x)
                    then
                     Some
                       (UnderLet x
@@ -1388,7 +1388,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -1406,7 +1406,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
           with
-          | Some (_, _) =>
+          | Some (_, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                  (ℤ -> (projT1 args))%ptype
@@ -1436,7 +1436,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
           with
-          | Some (_, _) =>
+          | Some (_, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                  (ℤ -> (projT1 args))%ptype
@@ -1454,7 +1454,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
              (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
          with
-         | Some (_, _) =>
+         | Some (_, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                 (ℤ -> (projT1 args))%ptype
@@ -1492,7 +1492,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -1514,7 +1514,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
            with
-           | Some (_, _) =>
+           | Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -1548,7 +1548,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((projT1 args0) -> (projT1 args)) -> ℤ)%ptype option
                    (fun x2 : option => x2)
                with
-               | Some (_, _, _) =>
+               | Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1575,7 +1575,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((projT1 args0) -> ℤ) -> (projT1 args))%ptype option
                    (fun x2 : option => x2)
                with
-               | Some (_, _, _) =>
+               | Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1602,7 +1602,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((projT1 args0) -> (projT1 args)) -> ℤ)%ptype option
                    (fun x2 : option => x2)
                with
-               | Some (_, _, _) =>
+               | Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1629,7 +1629,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((projT1 args0) -> ℤ) -> (projT1 args))%ptype option
                    (fun x2 : option => x2)
                with
-               | Some (_, _, _) =>
+               | Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1656,7 +1656,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((projT1 args0) -> (projT1 args)) -> ℤ)%ptype option
                    (fun x2 : option => x2)
                with
-               | Some (_, _, _) =>
+               | Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1683,7 +1683,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((projT1 args0) -> ℤ) -> (projT1 args))%ptype option
                    (fun x2 : option => x2)
                with
-               | Some (_, _, _) =>
+               | Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1707,7 +1707,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
            ((ℤ -> ℤ) -> ℤ)%ptype option (fun x2 : option => x2)
        with
-       | Some (_, _, _) =>
+       | Some (_, _, _)%zrange =>
            if
             type.type_beq base.type base.type.type_beq ((ℤ -> ℤ) -> ℤ)%ptype
               ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1731,7 +1731,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
                ((ℤ -> s) -> ℤ)%ptype option (fun x3 : option => x3)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> s) -> ℤ)%ptype
@@ -1760,7 +1760,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
                ((ℤ -> ℤ) -> s)%ptype option (fun x3 : option => x3)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> ℤ) -> s)%ptype
@@ -1790,7 +1790,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                ((ℤ -> (projT1 args)) -> ℤ)%ptype option
                (fun x2 : option => x2)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> (projT1 args)) -> ℤ)%ptype
@@ -1822,7 +1822,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                ((ℤ -> ℤ) -> (projT1 args))%ptype option
                (fun x2 : option => x2)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> ℤ) -> (projT1 args))%ptype
@@ -1854,7 +1854,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                ((ℤ -> (projT1 args)) -> ℤ)%ptype option
                (fun x2 : option => x2)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> (projT1 args)) -> ℤ)%ptype
@@ -1877,7 +1877,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                ((ℤ -> ℤ) -> (projT1 args))%ptype option
                (fun x2 : option => x2)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> ℤ) -> (projT1 args))%ptype
@@ -1896,7 +1896,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
            ((ℤ -> ℤ) -> ℤ)%ptype option (fun x2 : option => x2)
        with
-       | Some (_, _, _) =>
+       | Some (_, _, _)%zrange =>
            if
             type.type_beq base.type base.type.type_beq ((ℤ -> ℤ) -> ℤ)%ptype
               ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1921,7 +1921,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (((projT1 args) -> ℤ) -> ℤ)%ptype option
                (fun x2 : option => x2)
            with
-           | Some (_, _, _) =>
+           | Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype (((projT1 args) -> ℤ) -> ℤ)%ptype
@@ -1940,7 +1940,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
            ((ℤ -> ℤ) -> ℤ)%ptype option (fun x2 : option => x2)
        with
-       | Some (_, _, _) =>
+       | Some (_, _, _)%zrange =>
            if
             type.type_beq base.type base.type.type_beq ((ℤ -> ℤ) -> ℤ)%ptype
               ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1967,7 +1967,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (((ℤ -> (projT1 args0)) -> s) -> ℤ)%ptype option
                     (fun x4 : option => x4)
                 with
-                | Some (_, _, _, _) =>
+                | Some (_, _, _, _)%zrange =>
                     if
                      type.type_beq base.type base.type.type_beq
                        (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2000,7 +2000,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> (projT1 args0)) -> s) -> ℤ)%ptype option
                    (fun x4 : option => x4)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2041,7 +2041,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (((ℤ -> (projT1 args0)) -> ℤ) -> s)%ptype option
                     (fun x4 : option => x4)
                 with
-                | Some (_, _, _, _) =>
+                | Some (_, _, _, _)%zrange =>
                     if
                      type.type_beq base.type base.type.type_beq
                        (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2074,7 +2074,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> (projT1 args0)) -> ℤ) -> s)%ptype option
                    (fun x4 : option => x4)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2115,7 +2115,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> (projT1 args0)) -> (projT1 args)) -> ℤ)%ptype
                    option (fun x3 : option => x3)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2159,7 +2159,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> (projT1 args0)) -> ℤ) -> (projT1 args))%ptype
                    option (fun x3 : option => x3)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2206,7 +2206,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        ((((projT1 args0) -> (projT1 args1)) -> (projT1 args)) ->
                         ℤ)%ptype option (fun x3 : option => x3)
                    with
-                   | Some (_, _, _, _) =>
+                   | Some (_, _, _, _)%zrange =>
                        if
                         type.type_beq base.type base.type.type_beq
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2241,7 +2241,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        ((((projT1 args0) -> (projT1 args1)) -> ℤ) ->
                         (projT1 args))%ptype option (fun x3 : option => x3)
                    with
-                   | Some (_, _, _, _) =>
+                   | Some (_, _, _, _)%zrange =>
                        if
                         type.type_beq base.type base.type.type_beq
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2273,7 +2273,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (((ℤ -> (projT1 args)) -> ℤ) -> ℤ)%ptype option
                (fun x3 : option => x3)
            with
-           | Some (_, _, _, _) =>
+           | Some (_, _, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2305,7 +2305,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((ℤ -> s) -> s0) -> ℤ)%ptype
                    option (fun x5 : option => x5)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2340,7 +2340,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((ℤ -> s) -> ℤ) -> s0)%ptype
                    option (fun x5 : option => x5)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2376,7 +2376,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> s) -> (projT1 args)) -> ℤ)%ptype option
                    (fun x4 : option => x4)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2414,7 +2414,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> s) -> ℤ) -> (projT1 args))%ptype option
                    (fun x4 : option => x4)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2459,7 +2459,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (((ℤ -> ℤ) -> (projT1 args0)) -> (projT1 args))%ptype
                    option (fun x3 : option => x3)
                with
-               | Some (_, _, _, _) =>
+               | Some (_, _, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2495,7 +2495,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          pattern.type.unify_extracted_cps (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
            (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype option (fun x3 : option => x3)
        with
-       | Some (_, _, _, _) =>
+       | Some (_, _, _, _)%zrange =>
            if
             type.type_beq base.type base.type.type_beq
               (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2517,7 +2517,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
          ((ℤ -> ℤ) -> ℤ)%ptype option (fun x2 : option => x2)
      with
-     | Some (_, _, _) =>
+     | Some (_, _, _)%zrange =>
          if
           type.type_beq base.type base.type.type_beq ((ℤ -> ℤ) -> ℤ)%ptype
             ((ℤ -> ℤ) -> ℤ)%ptype
@@ -2537,7 +2537,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        pattern.type.unify_extracted_cps (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype option (fun x3 : option => x3)
      with
-     | Some (_, _, _, _) =>
+     | Some (_, _, _, _)%zrange =>
          if
           type.type_beq base.type base.type.type_beq
             (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2576,7 +2576,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                s0) -> s)%ptype option (fun x2 : option => x2)
          with
-         | Some (_, (_, (_, _)), _, _) =>
+         | Some (_, (_, (_, _)), _, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 (((ℤ -> ℤ -> (ℤ * ℤ)%etype) -> ℤ) -> ℤ)%ptype

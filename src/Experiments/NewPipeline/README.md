@@ -45,7 +45,7 @@ The files contain:
   substituting away var-like things (this is used to ensure that when we output
   C code, aliasing the input and the output arrays doesn't cause issues).
   Defines the passes:
-  + SubstVarFstSndPairOpp
+  + SubstVarFstSndPairOppCast
 
 - AbstractInterpretation.v: type-code-based ZRange definitions, abstract
   interpretation of identifiers (which does let-lifting, for historical reasons,
