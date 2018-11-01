@@ -236,7 +236,7 @@ Module Compilers.
               | progress cbn [fst snd projT1 projT2] in *
               | progress intros
               | progress cbv [id pattern.ident.arg_types Compile.value cpsbind cpscall cpsreturn cps_option_bind type_base ident.smart_Literal rwhen rwhenl nth_default SubstVarLike.is_var_fst_snd_pair_opp] in *
-              | progress cbv [Compile.option_bind' Compile.castbe Compile.castb Compile.castv] in *
+              | progress cbv [Compile.option_bind'] in *
               | progress type_beq_to_eq
               | progress type.inversion_type
               | progress rewrite_type_transport_correct
