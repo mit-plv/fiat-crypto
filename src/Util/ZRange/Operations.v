@@ -189,7 +189,7 @@ Module ZRange.
   Notation land := land_bounds.
   Notation lor := lor_bounds.
 
-  Module ZRangeNotations.
+  Module Export ZRangeNotations.
     Notation "- x" := (opp x) : zrange_scope.
     Infix "+" := add : zrange_scope.
     Infix "-" := sub : zrange_scope.
@@ -200,3 +200,5 @@ Module ZRange.
     Infix "&'" := land : zrange_scope.
   End ZRangeNotations.
 End ZRange.
+
+Export ZRange.ZRangeNotations.
