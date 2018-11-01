@@ -1168,18 +1168,6 @@ Module Compilers.
         Definition compile_rewrites (fuel : nat) (ps : rewrite_rulesT)
           := compile_rewrites' fuel (enumerate (List.map (fun p => to_raw_pattern (pattern.pattern_of_anypattern (projT1 p)) :: nil) ps)).
 
-        (** XXX MOVEME? *)
-        Definition mkcast {P : type -> Type} {t1 t2 : type} : ~> (option (P t1 -> P t2))
-          := fun T k => type.try_make_transport_cps base.try_make_transport_cps P t1 t2 _ k.
-        Definition cast {P : type -> Type} {t1 t2 : type} (v : P t1) : ~> (option (P t2))
-          := fun T k => type.try_transport_cps base.try_make_transport_cps P t1 t2 v _ k.
-        Definition castb {P : base.type -> Type} {t1 t2 : base.type} (v : P t1) : ~> (option (P t2))
-          := fun T k => base.try_transport_cps P t1 t2 v _ k.
-        Definition castbe {t1 t2 : base.type} (v : expr t1) : ~> (option (expr t2))
-          := @castb expr t1 t2 v.
-        Definition castv {t1 t2} (v : value t1) : ~> (option (value t2))
-          := fun T k => type.try_transport_cps base.try_make_transport_cps value t1 t2 v _ k.
-
         Section with_do_again.
           Context (dtree : decision_tree)
                   (rewrite_rules : rewrite_rulesT)
@@ -1279,7 +1267,6 @@ Module Compilers.
         Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
         Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
         Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-        Local Notation castv := (@castv ident var).
 
         Definition make_base_Literal_pattern (t : base.type.base) : pattern t
           := Eval cbv [pattern.ident.of_typed_ident] in
@@ -1521,7 +1508,6 @@ Module Compilers.
       Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
       Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
       Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-      Local Notation castv := (@castv ident var).
       Definition pident_unify_unknown := @pattern.ident.unify.
       Definition invert_bind_args_unknown := @pattern.Raw.ident.invert_bind_args.
       Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var (@pattern.ident.eta_ident_cps) (@pattern.ident) (@pattern.ident.arg_types) (@pattern.ident.unify) pident_unify_unknown pattern.Raw.ident (@pattern.ident.type_vars) (@pattern.Raw.ident.full_types) (@pattern.Raw.ident.invert_bind_args) invert_bind_args_unknown (@pattern.Raw.ident.type_of) (@pattern.Raw.ident.to_typed) pattern.Raw.ident.is_simple).
