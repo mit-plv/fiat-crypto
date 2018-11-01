@@ -3002,9 +3002,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               if type.type_beq base.type base.type.type_beq ℤ (projT1 args)
               then
                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-               Some
-                 (Base
-                    (##(Definitions.Z.bneg (let (x0, _) := idc_args in x0)))%expr)
+               Some (Base (##(Z.bneg (let (x0, _) := idc_args in x0)))%expr)
               else None
           | None => None
           end
@@ -3036,8 +3034,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   ##(projT2 args);
                    Some
                      (Base
-                        (##(Definitions.Z.lnot_modulo
-                              (let (x1, _) := idc_args in x1)
+                        (##(Z.lnot_modulo (let (x1, _) := idc_args in x1)
                               (let (x1, _) := idc_args0 in x1)))%expr)
                   else None
               | None => None
@@ -3080,8 +3077,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          (Base
                             (let
                              '(a1, b1)%zrange :=
-                              Definitions.Z.mul_split
-                                (let (x2, _) := idc_args in x2)
+                              Z.mul_split (let (x2, _) := idc_args in x2)
                                 (let (x2, _) := idc_args0 in x2)
                                 (let (x2, _) := idc_args1 in x2) in
                               ((##a1)%expr, (##b1)%expr)%expr_pat))
@@ -3128,7 +3124,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          (Base
                             (let
                              '(a1, b1)%zrange :=
-                              Definitions.Z.add_get_carry_full
+                              Z.add_get_carry_full
                                 (let (x2, _) := idc_args in x2)
                                 (let (x2, _) := idc_args0 in x2)
                                 (let (x2, _) := idc_args1 in x2) in
@@ -3174,7 +3170,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       ##(projT2 args);
                        Some
                          (Base
-                            (##(Definitions.Z.add_with_carry
+                            (##(Z.add_with_carry
                                   (let (x2, _) := idc_args in x2)
                                   (let (x2, _) := idc_args0 in x2)
                                   (let (x2, _) := idc_args1 in x2)))%expr)
@@ -3229,7 +3225,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                              (Base
                                 (let
                                  '(a2, b2)%zrange :=
-                                  Definitions.Z.add_with_get_carry_full
+                                  Z.add_with_get_carry_full
                                     (let (x3, _) := idc_args in x3)
                                     (let (x3, _) := idc_args0 in x3)
                                     (let (x3, _) := idc_args1 in x3)
@@ -3280,7 +3276,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          (Base
                             (let
                              '(a1, b1)%zrange :=
-                              Definitions.Z.sub_get_borrow_full
+                              Z.sub_get_borrow_full
                                 (let (x2, _) := idc_args in x2)
                                 (let (x2, _) := idc_args0 in x2)
                                 (let (x2, _) := idc_args1 in x2) in
@@ -3336,7 +3332,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                              (Base
                                 (let
                                  '(a2, b2)%zrange :=
-                                  Definitions.Z.sub_with_get_borrow_full
+                                  Z.sub_with_get_borrow_full
                                     (let (x3, _) := idc_args in x3)
                                     (let (x3, _) := idc_args0 in x3)
                                     (let (x3, _) := idc_args1 in x3)
@@ -3385,8 +3381,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       ##(projT2 args);
                        Some
                          (Base
-                            (##(Definitions.Z.zselect
-                                  (let (x2, _) := idc_args in x2)
+                            (##(Z.zselect (let (x2, _) := idc_args in x2)
                                   (let (x2, _) := idc_args0 in x2)
                                   (let (x2, _) := idc_args1 in x2)))%expr)
                       else None
@@ -3430,8 +3425,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       ##(projT2 args);
                        Some
                          (Base
-                            (##(Definitions.Z.add_modulo
-                                  (let (x2, _) := idc_args in x2)
+                            (##(Z.add_modulo (let (x2, _) := idc_args in x2)
                                   (let (x2, _) := idc_args0 in x2)
                                   (let (x2, _) := idc_args1 in x2)))%expr)
                       else None
@@ -3483,8 +3477,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           ##(projT2 args);
                            Some
                              (Base
-                                (##(Definitions.Z.rshi
-                                      (let (x3, _) := idc_args in x3)
+                                (##(Z.rshi (let (x3, _) := idc_args in x3)
                                       (let (x3, _) := idc_args0 in x3)
                                       (let (x3, _) := idc_args1 in x3)
                                       (let (x3, _) := idc_args2 in x3)))%expr)
@@ -3525,8 +3518,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   ##(projT2 args);
                    Some
                      (Base
-                        (##(Definitions.Z.cc_m
-                              (let (x1, _) := idc_args in x1)
+                        (##(Z.cc_m (let (x1, _) := idc_args in x1)
                               (let (x1, _) := idc_args0 in x1)))%expr)
                   else None
               | None => None

@@ -7,6 +7,7 @@ Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Experiments.NewPipeline.Language.
@@ -397,6 +398,17 @@ Module Compilers.
       Notation "x &' y" := (#ident.Z_land @ x @ y) : pattern_scope.
       Notation "x 'mod' y" := (#ident.Z_modulo @ x @ y)%pattern : pattern_scope.
       Notation "- x" := (#ident.Z_opp @ x) : pattern_scope.
+
+      Notation "??'" := (#ident.Z_cast @ Wildcard _) : pattern_scope.
+      Notation "x -' y" := (#ident.Z_cast @ (#ident.Z_sub @ x @ y)) : pattern_scope.
+      Notation "x +' y" := (#ident.Z_cast @ (#ident.Z_add @ x @ y)) : pattern_scope.
+      Notation "x /' y" := (#ident.Z_cast @ (#ident.Z_div @ x @ y)) : pattern_scope.
+      Notation "x *' y" := (#ident.Z_cast @ (#ident.Z_mul @ x @ y)) : pattern_scope.
+      Notation "x >>' y" := (#ident.Z_cast @ (#ident.Z_shiftr @ x @ y)) : pattern_scope.
+      Notation "x <<' y" := (#ident.Z_cast @ (#ident.Z_shiftl @ x @ y)) : pattern_scope.
+      Notation "x &'' y" := (#ident.Z_cast @ (#ident.Z_land @ x @ y)) : pattern_scope.
+      Notation "x 'mod'' y" := (#ident.Z_cast @ (#ident.Z_modulo @ x @ y))%pattern : pattern_scope.
+      Notation "-' x" := (#ident.Z_cast @ (#ident.Z_opp @ x)) : pattern_scope.
     End Notations.
   End pattern.
   Export pattern.Notations.
@@ -1779,143 +1791,189 @@ Module Compilers.
             ; make_rewriteol (-??) (fun e => (llet v := e in -$v)  when  negb (SubstVarLike.is_var_fst_snd_pair_opp_cast e)) (* inline negation when the rewriter wouldn't already inline it *)
            ].
 
+      Let cst {var} (r : zrange) (e : @expr.expr _ _ var _) := (#(ident.Z_cast r) @ e)%expr.
+      Let cst' {var} (r : zrange) (e : @expr.expr _ _ var _) := (#(ident.Z_cast (-r)) @ e)%expr.
+      Let cst2 {var} (r : zrange * zrange) (e : @expr.expr _ _ var _) := (#(ident.Z_cast2 r) @ e)%expr.
+
+      Let llet2_opp2 (rvc : zrange * zrange) e
+        := (let rvc' := (fst rvc, -snd rvc)%zrange in
+            let cst' e := #(ident.Z_cast2 rvc') @ e in
+            let cst1 e := #(ident.Z_cast (fst rvc)) @ e in
+            let cst2 e := #(ident.Z_cast (snd rvc)) @ e in
+            let cst2' e := #(ident.Z_cast (-snd rvc)) @ e in
+            (llet vc := cst' e in
+                 (cst1 (#ident.fst @ (cst' ($vc))), cst2 (-(cst2' (#ident.snd @ (cst' ($vc))))))))%expr.
+
+      Let llet2 (rvc : zrange * zrange) e
+        := ((llet vc := cst2 rvc e in
+                 (cst (fst rvc) (#ident.fst @ (cst2 rvc ($vc))),
+                  cst (snd rvc) (#ident.snd @ (cst2 rvc ($vc))))))%expr.
+
       Definition arith_with_casts_rewrite_rules : rewrite_rulesT
         := [make_rewrite (#(@pattern.ident.fst '1 '2) @ (??, ??)) (fun _ _ x y => x)
             ; make_rewrite (#(@pattern.ident.snd '1 '2) @ (??, ??)) (fun _ x _ y => y)
 
-            ; make_rewriteo (#?ℤ   - (-??)) (fun z v =>  v  when  z =? 0)
+            ; make_rewriteo
+                (#?ℤ   - (-'??'))
+                (fun z rnv rv v => cst rv v  when  (z =? 0) && (ZRange.normalize rv <=? -ZRange.normalize rnv)%zrange)
             ; make_rewriteo (#?ℤ   -   ?? ) (fun z v => -v  when  z =? 0)
 
             ; make_rewriteo (#?ℤ << ??) (fun x y => ##0  when  x =? 0)
 
-            ; make_rewrite (-(-??)) (fun v => v)
+            ; make_rewriteo (-(-'??')) (fun rnv rv v => cst rv v  when (ZRange.normalize rv <=? -ZRange.normalize rnv)%zrange)
 
             ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??) (fun s xx y => (##0, ##0)%Z  when  xx =? 0)
             ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ ?? @ #?ℤ) (fun s y xx => (##0, ##0)%Z  when  xx =? 0)
-            ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??) (fun s xx y => (y, ##0)%Z  when  xx =? 1)
-            ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ ?? @ #?ℤ) (fun s y xx => (y, ##0)%Z  when  xx =? 1)
-            ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??) (fun s xx y => (-y, ##0%Z)  when  xx =? (-1))
-            ; make_rewriteo (#pattern.ident.Z_mul_split @ #?ℤ @ ?? @ #?ℤ) (fun s y xx => (-y, ##0%Z)  when  xx =? (-1))
-
-            ; make_rewritel
-                (#pattern.ident.Z_add_get_carry @ ?? @ (-??) @ ??)
-                (fun s y x => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ y in
-                                   (#ident.fst @ $vc, -(#ident.snd @ $vc))))
-            ; make_rewritel
-                (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ (-??))
-                (fun s x y => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ y in
-                                   (#ident.fst @ $vc, -(#ident.snd @ $vc))))
-            ; make_rewriteol
-                (#pattern.ident.Z_add_get_carry @ ?? @ #?ℤ @ ??)
-                (fun s yy x => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z in
-                                    (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                 when  yy <? 0)
-            ; make_rewriteol
-                (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ #?ℤ)
-                (fun s x yy => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z in
-                                    (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                 when  yy <? 0)
+            ; make_rewriteo
+                (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??')
+                (fun s xx ry y => (cst ry y, ##0)%Z  when  (xx =? 1) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
+            ; make_rewriteo
+                (#pattern.ident.Z_mul_split @ #?ℤ @ ??' @ #?ℤ)
+                (fun s ry y xx => (cst ry y, ##0)%Z  when  (xx =? 1) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
+                (*
+            ; make_rewriteo
+                (#pattern.ident.Z_mul_split @ #?ℤ @ #?ℤ @ ??')
+                (fun s xx ry y => (cst' ry (-cst ry y), ##0%Z)  when  (xx =? (-1)) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
+            ; make_rewriteo
+                (#pattern.ident.Z_mul_split @ #?ℤ @ ??' @ #?ℤ)
+                (fun s ry y xx => (cst' ry (-cst ry y), ##0%Z)  when  (xx =? (-1)) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
+                 *)
 
 
-            ; make_rewritel
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ (-??) @ (-??) @ ??)
-                (fun s c y x => (llet vc := #ident.Z_sub_with_get_borrow @ s @ c @ x @ y in
-                                     (#ident.fst @ $vc, -(#ident.snd @ $vc))))
-            ; make_rewritel
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ (-??) @ ?? @ (-??))
-                (fun s c x y => (llet vc := #ident.Z_sub_with_get_borrow @ s @ c @ x @ y in
-                                     (#ident.fst @ $vc, -(#ident.snd @ $vc))))
             ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ (-??) @ ??)
-                (fun s cc y x => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ y in
-                                      (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                   when  cc =? 0)
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_get_carry @ ?? @ (-'??') @ ??))
+                (fun rvc s rny ry y x
+                 => (llet2_opp2 rvc (#ident.Z_sub_get_borrow @ s @ x @ cst ry y))
+                      when (ZRange.normalize ry <=? -ZRange.normalize rny)%zrange)
             ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ (-??) @ ??)
-                (fun s cc y x => (llet vc := #ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ y in
-                                      (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                   when  cc <? 0)
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ (-'??')))
+                (fun rvc s x rny ry y
+                 => (llet2_opp2 rvc (#ident.Z_sub_get_borrow @ s @ x @ cst ry y))
+                      when (ZRange.normalize ry <=? -ZRange.normalize rny)%zrange)
             ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ (-??))
-                (fun s cc x y => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ y in
-                                      (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                   when  cc =? 0)
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_get_carry @ ?? @ #?ℤ @ ??))
+                (fun rvc s yy x
+                 => (llet2_opp2 rvc (#ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z))
+                      when  yy <? 0)
             ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ (-??))
-                (fun s cc x y => (llet vc := #ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ y in
-                                      (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                   when  cc <? 0)
-            ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ (-??) @ #?ℤ @ ??)
-                (fun s c yy x => (llet vc := #ident.Z_sub_with_get_borrow @ s @ c @ x @ ##(-yy)%Z in
-                                      (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                   when  yy <=? 0)
-            ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ (-??) @ ?? @ #?ℤ)
-                (fun s c x yy => (llet vc := #ident.Z_sub_with_get_borrow @ s @ c @ x @ ##(-yy)%Z in
-                                      (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                   when  yy <=? 0)
-            ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ #?ℤ @ ??)
-                (fun s cc yy x => (llet vc := #ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ ##(-yy)%Z in
-                                       (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                    when  (yy <=? 0) && (cc <=? 0) && ((yy + cc) <? 0)) (* at least one must be strictly negative *)
-            ; make_rewriteol
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ #?ℤ)
-                (fun s cc x yy => (llet vc := #ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ ##(-yy)%Z in
-                                       (#ident.fst @ $vc, -(#ident.snd @ $vc)))
-                                    when  (yy <=? 0) && (cc <=? 0) && ((yy + cc) <? 0)) (* at least one must be strictly negative *)
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ #?ℤ))
+                (fun rvc s x yy => (llet2_opp2 rvc (#ident.Z_sub_get_borrow @ s @ x @ ##(-yy)%Z))
+                                     when  yy <? 0)
 
 
-            ; make_rewriteo (#pattern.ident.Z_add_get_carry @ ?? @ #?ℤ @ ??) (fun s xx y => (y, ##0)  when  xx =? 0)
-            ; make_rewriteo (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ #?ℤ) (fun s y xx => (y, ##0)  when  xx =? 0)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ (-'??') @ (-'??') @ ??))
+                (fun rvc s rnc rc c rny ry y x
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ (cst rc c) @ x @ (cst ry y)))
+                      when ((ZRange.normalize ry <=? -ZRange.normalize rny) && (ZRange.normalize rc <=? -ZRange.normalize rnc))%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ (-'??') @ ?? @ (-'??')))
+                (fun rvc s rnc rc c x rny ry y
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ (cst rc c) @ x @ (cst ry y)))
+                      when ((ZRange.normalize ry <=? -ZRange.normalize rny) && (ZRange.normalize rc <=? -ZRange.normalize rnc))%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ (-'??') @ ??))
+                (fun rvc s cc rny ry y x
+                 => (llet2_opp2 rvc (#ident.Z_sub_get_borrow @ s @ x @ cst ry y))
+                      when  (cc =? 0) && (ZRange.normalize ry <=? -ZRange.normalize rny)%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ (-'??') @ ??))
+                (fun rvc s cc rny ry y x
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ cst ry y))
+                      when  (cc <? 0) && (ZRange.normalize ry <=? -ZRange.normalize rny)%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ (-'??')))
+                (fun rvc s cc x rny ry y
+                 => (llet2_opp2 rvc (#ident.Z_sub_get_borrow @ s @ x @ cst ry y))
+                      when  (cc =? 0) && (ZRange.normalize ry <=? -ZRange.normalize rny)%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ (-'??')))
+                (fun rvc s cc x rny ry y
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ cst ry y))
+                      when  (cc <? 0) && (ZRange.normalize ry <=? -ZRange.normalize rny)%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ (-'??') @ #?ℤ @ ??))
+                (fun rvc s rnc rc c yy x
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ cst rc c @ x @ ##(-yy)%Z))
+                      when  (yy <=? 0) && (ZRange.normalize rc <=? -ZRange.normalize rnc)%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ (-'??') @ ?? @ #?ℤ))
+                (fun rvc s rnc rc c x yy
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ cst rc c @ x @ ##(-yy)%Z))
+                      when  (yy <=? 0) && (ZRange.normalize rc <=? -ZRange.normalize rnc)%zrange)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ #?ℤ @ ??))
+                (fun rvc s cc yy x
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ ##(-yy)%Z))
+                      when  (yy <=? 0) && (cc <=? 0) && ((yy + cc) <? 0)) (* at least one must be strictly negative *)
+            ; make_rewriteol
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ #?ℤ))
+                (fun rvc s cc x yy
+                 => (llet2_opp2 rvc (#ident.Z_sub_with_get_borrow @ s @ ##(-cc)%Z @ x @ ##(-yy)%Z))
+                      when  (yy <=? 0) && (cc <=? 0) && ((yy + cc) <? 0)) (* at least one must be strictly negative *)
+
+
+            ; make_rewrite
+                (#pattern.ident.Z_add_get_carry @ #?ℤ @ #?ℤ @ #?ℤ)
+                (fun s xx yy => ##(Z.add_get_carry_full s xx yy))
+            ; make_rewriteo
+                (#pattern.ident.Z_add_get_carry @ #?ℤ @ #?ℤ @ ??')
+                (fun s xx ry y => (cst ry y, ##0)  when  (xx =? 0) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
+            ; make_rewriteo
+                (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??' @ #?ℤ)
+                (fun s ry y xx => (cst ry y, ##0)  when  (xx =? 0) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
 
             ; make_rewriteo (#pattern.ident.Z_add_with_carry @ #?ℤ @ ?? @ ??) (fun cc x y => x + y  when  cc =? 0)
             (*; make_rewrite_step (#pattern.ident.Z_add_with_carry @ ?? @ ?? @ ??) (fun x y z => $x + $y + $z)*)
 
+            ; make_rewrite
+                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ #?ℤ)
+                (fun s cc xx yy => ##(Z.add_with_get_carry_full s cc xx yy))
             ; make_rewriteo
-                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ ??) (fun s cc xx y => (y, ##0)   when   (cc =? 0) && (xx =? 0))
+                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ ??')
+                (fun s cc xx ry y => (cst ry y, ##0)   when   (cc =? 0) && (xx =? 0) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
             ; make_rewriteo
-                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ?? @ #?ℤ) (fun s cc y xx => (y, ##0)   when   (cc =? 0) && (xx =? 0))
+                (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??' @ #?ℤ)
+                (fun s cc ry y xx => (cst ry y, ##0)   when   (cc =? 0) && (xx =? 0) && (ZRange.normalize ry <=? r[0~>s-1])%zrange)
             (*; make_rewriteo
                 (#pattern.ident.Z_add_with_get_carry @ ?? @ ?? @ #?ℤ @ #?ℤ) (fun s c xx yy => (c, ##0) when   (xx =? 0) && (yy =? 0))*)
             ; make_rewriteol (* carry = 0: ADC x y -> ADD x y *)
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ ??)
-                (fun s cc x y => (llet vc := #ident.Z_add_get_carry @ s @ x @ y in
-                                      (#ident.fst @ $vc, #ident.snd @ $vc))
-                                   when  cc =? 0)
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ #?ℤ @ ?? @ ??))
+                (fun rvc s cc x y
+                 => (llet2 rvc (#ident.Z_add_get_carry @ s @ x @ y))
+                      when  cc =? 0)
             ; make_rewriteol (* ADC 0 0 -> (ADX 0 0, 0) *) (* except we don't do ADX, because C stringification doesn't handle it *)
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ ?? @ #?ℤ @ #?ℤ)
-                (fun s c xx yy => (llet vc := #ident.Z_add_with_get_carry @ s @ c @ ##xx @ ##yy in
-                                       (#ident.fst @ $vc, ##0))
-                                    when  (xx =? 0) && (yy =? 0))
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ #?ℤ @ #?ℤ))
+                (fun rvc s rc c xx yy
+                 => (llet vc := cst2 rvc (#ident.Z_add_with_get_carry @ ##s @ cst rc c @ ##xx @ ##yy) in
+                         (cst (fst rvc) (#ident.fst @ cst2 rvc ($vc)), ##0))
+                      when  (xx =? 0) && (yy =? 0) && (ZRange.normalize rc <=? r[0~>s-1])%zrange && is_bounded_by_bool 0 (snd rvc))
 
 
             (* let-bind any adc/sbb/mulx *)
             ; make_rewritel
-                (#pattern.ident.Z_add_with_get_carry @ ?? @ ?? @ ?? @ ??)
-                (fun s c x y => (llet vc := #ident.Z_add_with_get_carry @ s @ c @ x @ y in
-                                     (#ident.fst @ $vc, #ident.snd @ $vc)))
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_with_get_carry @ ?? @ ?? @ ?? @ ??))
+                (fun rvc s c x y => llet2 rvc (#ident.Z_add_with_get_carry @ s @ c @ x @ y))
             ; make_rewritel
-                (#pattern.ident.Z_add_with_carry @ ?? @ ?? @ ??)
-                (fun c x y => (llet vc := #ident.Z_add_with_carry @ c @ x @ y in
-                                   ($vc)))
+                (#pattern.ident.Z_cast @ (#pattern.ident.Z_add_with_carry @ ?? @ ?? @ ??))
+                (fun rv c x y => (llet vc := cst rv (#ident.Z_add_with_carry @ c @ x @ y) in
+                                      (cst rv ($vc))))
             ; make_rewritel
-                (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ ??)
-                (fun s x y => (llet vc := #ident.Z_add_get_carry @ s @ x @ y in
-                                   (#ident.fst @ $vc, #ident.snd @ $vc)))
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_add_get_carry @ ?? @ ?? @ ??))
+                (fun rvc s x y => llet2 rvc (#ident.Z_add_get_carry @ s @ x @ y))
             ; make_rewritel
-                (#pattern.ident.Z_sub_with_get_borrow @ ?? @ ?? @ ?? @ ??)
-                (fun s c x y => (llet vc := #ident.Z_sub_with_get_borrow @ s @ c @ x @ y in
-                                     (#ident.fst @ $vc, #ident.snd @ $vc)))
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_sub_with_get_borrow @ ?? @ ?? @ ?? @ ??))
+                (fun rvc s c x y => llet2 rvc (#ident.Z_sub_with_get_borrow @ s @ c @ x @ y))
             ; make_rewritel
-                (#pattern.ident.Z_sub_get_borrow @ ?? @ ?? @ ??)
-                (fun s x y => (llet vc := #ident.Z_sub_get_borrow @ s @ x @ y in
-                                   (#ident.fst @ $vc, #ident.snd @ $vc)))
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_sub_get_borrow @ ?? @ ?? @ ??))
+                (fun rvc s x y => llet2 rvc (#ident.Z_sub_get_borrow @ s @ x @ y))
             ; make_rewritel
-                (#pattern.ident.Z_mul_split @ ?? @ ?? @ ??)
-                (fun s x y => (llet vc := #ident.Z_mul_split @ s @ x @ y in
-                                   (#ident.fst @ $vc, #ident.snd @ $vc)))
+                (#pattern.ident.Z_cast2 @ (#pattern.ident.Z_mul_split @ ?? @ ?? @ ??))
+                (fun rvc s x y => llet2 rvc (#ident.Z_mul_split @ s @ x @ y))
+
+            ; make_rewriteo (#pattern.ident.Z_cast @ #?ℤ) (fun r v => ##v  when  is_bounded_by_bool v r)
+
+            ; make_rewrite_step (#pattern.ident.Z_cast2 @ (??, ??)) (fun r v1 v2 => (#(ident.Z_cast (fst r)) @ $v1, #(ident.Z_cast (snd r)) @ $v2))
 
             ; make_rewriteo
                 (#pattern.ident.Z_cast @ (#pattern.ident.Z_cast @ ??))
@@ -2389,7 +2447,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
     Definition RewriteArith (max_const_val : Z) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (@arith_rewrite_head max_const_val) arith_default_fuel t e.
     Definition RewriteArithWithCasts {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var do_again => @arith_with_casts_rewrite_head var) arith_with_casts_default_fuel t e.
+      := @Compile.Rewrite (@arith_with_casts_rewrite_head) arith_with_casts_default_fuel t e.
     Definition RewriteToFancy
                (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
