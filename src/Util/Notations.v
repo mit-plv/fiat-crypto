@@ -29,6 +29,13 @@ Reserved Infix "=ₙ?" (at level 70, no associativity).
 Reserved Infix "=ℤ?" (at level 70, no associativity).
 Reserved Infix "=ᶻ?" (at level 70, no associativity).
 Reserved Infix "=ⁿ?" (at level 70, no associativity).
+Reserved Notation "x +' y" (at level 50, left associativity).
+Reserved Notation "x -' y" (at level 50, left associativity).
+Reserved Notation "x *' y" (at level 40, left associativity).
+Reserved Notation "x /' y" (at level 40, left associativity).
+Reserved Notation "-' x" (at level 35, right associativity).
+Reserved Notation "/' x" (at level 35, right associativity).
+Reserved Notation "x ^' y" (at level 30, right associativity).
 Reserved Infix ".+" (at level 50).
 Reserved Infix ".*" (at level 50).
 Reserved Notation "' x" (at level 20, no associativity, format "' x").
@@ -36,17 +43,22 @@ Reserved Notation "x ^ 2" (at level 30, format "x ^ 2").
 Reserved Notation "x ^ 3" (at level 30, format "x ^ 3").
 Reserved Notation "2 ^ e" (at level 30, format "2 ^ e", only printing).
 Reserved Infix "mod" (at level 40, no associativity).
+Reserved Infix "mod'" (at level 40, no associativity).
 Reserved Notation "'canonical' 'encoding' 'of' T 'as' B" (at level 50).
 Reserved Notation "@ 'is_eq_dec' T R" (at level 10, T at level 8, R at level 8).
 Reserved Infix "@" (left associativity, at level 11).
 Reserved Infix "@1" (left associativity, at level 11).
 Reserved Infix "@₁" (left associativity, at level 11).
 Reserved Infix "@@" (left associativity, at level 11).
+Reserved Infix "<<'" (at level 30, no associativity).
+Reserved Infix ">>'" (at level 30, no associativity).
 Reserved Infix "<<" (at level 30, no associativity).
 Reserved Infix ">>" (at level 30, no associativity).
 Reserved Infix ">>>" (at level 30, no associativity).
 Reserved Infix "&'" (at level 50). (* N.B.  If we used '&', it would conflict with [{ a : T & P}] for [sigT] *)
+Reserved Infix "&''" (at level 50).
 Reserved Infix "∣" (at level 50).
+Reserved Infix "∣'" (at level 50).
 Reserved Infix "~=" (at level 70).
 Reserved Infix "==" (at level 70, no associativity).
 Reserved Notation "x == y  :>  T"
@@ -153,6 +165,8 @@ Reserved Notation "# x" (at level 55, x at level 9, format "# x"). (* 55, so we 
  *)
 Reserved Notation "## x" (at level 9, x at level 9, format "## x").
 Reserved Notation "### x" (at level 9, x at level 9, format "### x").
+Reserved Notation "#### x" (at level 9, x at level 9, format "#### x").
+Reserved Notation "##### x" (at level 9, x at level 9, format "##### x").
 Reserved Notation "\ x .. y , t" (at level 200, x binder, y binder, right associativity, format "\  x .. y , '//' t").
 
 (* TODO: Remove these when https://github.com/mit-plv/bbv/pull/13 is merged *)
