@@ -471,83 +471,81 @@ Module PolynomialRing.
                    n (Associational.assoc_mul (Associational.to_associational n p)
                                               (Associational.to_associational n q)).
 
-    Section ring_proofs.
-      Hint Rewrite @map_append @map2_append @Tuple.repeat_append : pull_append.
-      Hint Rewrite (@associative (F q)) using (apply F.commutative_ring_modulo): fsimpl.
-      Hint Rewrite (@left_identity (F q)) using (apply F.commutative_ring_modulo): fsimpl.
-      Hint Rewrite (@right_identity (F q)) using (apply F.commutative_ring_modulo): fsimpl.
-      Hint Rewrite (@left_inverse (F q)) using (apply F.commutative_ring_modulo): fsimpl.
-      Local Ltac induct :=
-        cbv [Rq zero one opp add sub mul] in *;
-        Tuple.induct n.
+    Hint Rewrite @map_append @map2_append @Tuple.repeat_append : pull_append.
+    Hint Rewrite (@associative (F q)) using (apply F.commutative_ring_modulo): fsimpl.
+    Hint Rewrite (@left_identity (F q)) using (apply F.commutative_ring_modulo): fsimpl.
+    Hint Rewrite (@right_identity (F q)) using (apply F.commutative_ring_modulo): fsimpl.
+    Hint Rewrite (@left_inverse (F q)) using (apply F.commutative_ring_modulo): fsimpl.
+    Local Ltac induct :=
+      cbv [Rq zero one opp add sub mul] in *;
+      Tuple.induct n.
 
-      Lemma add_assoc x y z : add x (add y z) = add (add x y) z.
-      Proof.
-        induct; [ reflexivity | ].
-        autorewrite with pull_append fsimpl.
-        congruence.
-      Qed.
-      Lemma add_comm x y : add x y = add y x.
-      Proof.
-        induct; [ reflexivity | ].
-        autorewrite with pull_append.
-        f_equal; auto; apply commutative.
-      Qed.
-      Lemma add_zero_l x : add zero x = x.
-      Proof.
-        induct; [ reflexivity | ].
-        autorewrite with pull_append fsimpl.
-        congruence.
-      Qed.
-      Lemma add_zero_r x : add x zero = x.
-      Proof. rewrite add_comm; apply add_zero_l. Qed.
-      Lemma add_opp_l x : add (opp x) x = zero.
-      Proof.
-        induct; [ reflexivity | ].
-        autorewrite with pull_append fsimpl.
-        congruence.
-      Qed.
-      Lemma add_opp_r x : add x (opp x) = zero.
-      Proof. rewrite add_comm; apply add_opp_l. Qed.
-      Lemma mul_assoc x y z : mul x (mul y z) = mul (mul x y) z.
-      Proof.
-        cbv [mul].
-        rewrite Associational.assoc_mul_trim_high_l, Associational.assoc_mul_trim_high_r.
-        rewrite Associational.assoc_mul_assoc.
-        reflexivity.
-      Qed.
-      Lemma mul_comm x y : mul x y = mul y x.
-      Proof. apply Associational.from_associational_assoc_mul_comm. Qed.
-      Lemma mul_one_r x : mul x one = x.
-      Proof.
-        cbv [mul one zero Rq] in *.
-        rewrite Associational.assoc_mul_trim_high_r.
-        Tuple.rev_induct n; [ reflexivity | ].
-        rewrite Associational.to_associational_left_append.
-        rewrite Associational.assoc_mul_app_distr_r, Associational.assoc_mul_cons_l, Associational.assoc_mul_nil_l.
-        rewrite Associational.multerm_cons_l, Associational.multerm_nil_l.
-        autorewrite with push_app cancel_pair.
-        rewrite Associational.from_associational_app'.
-        rewrite Associational.assoc_mul_one_r.
-        rewrite Associational.from_associational'_cons, Associational.from_associational'_nil.
-        autorewrite with natsimplify cancel_pair.
-        rewrite Associational.from_associational_left_append by apply Associational.to_associational_index_upper_bound.
-        rewrite Associational.from_associational_to_associational.
-        rewrite Tuple.update_nth_left_append_eq.
-        rewrite !right_identity.
-        reflexivity.
-      Qed.
-      Lemma mul_one_l x : mul one x = x.
-      Proof. rewrite mul_comm; apply mul_one_r. Qed.
-      Lemma mul_add_distr_l a b c : mul a (add b c) = add (mul a b) (mul a c).
-      Proof. apply Associational.assoc_mul_add_distr_l. Qed.
-      Lemma mul_add_distr_r a b c : mul (add b c) a = add (mul b a) (mul c a).
-      Proof. rewrite mul_comm, mul_add_distr_l, !(mul_comm a); reflexivity. Qed.
+    Lemma add_assoc x y z : add x (add y z) = add (add x y) z.
+    Proof.
+      induct; [ reflexivity | ].
+      autorewrite with pull_append fsimpl.
+      congruence.
+    Qed.
+    Lemma add_comm x y : add x y = add y x.
+    Proof.
+      induct; [ reflexivity | ].
+      autorewrite with pull_append.
+      f_equal; auto; apply commutative.
+    Qed.
+    Lemma add_zero_l x : add zero x = x.
+    Proof.
+      induct; [ reflexivity | ].
+      autorewrite with pull_append fsimpl.
+      congruence.
+    Qed.
+    Lemma add_zero_r x : add x zero = x.
+    Proof. rewrite add_comm; apply add_zero_l. Qed.
+    Lemma add_opp_l x : add (opp x) x = zero.
+    Proof.
+      induct; [ reflexivity | ].
+      autorewrite with pull_append fsimpl.
+      congruence.
+    Qed.
+    Lemma add_opp_r x : add x (opp x) = zero.
+    Proof. rewrite add_comm; apply add_opp_l. Qed.
+    Lemma mul_assoc x y z : mul x (mul y z) = mul (mul x y) z.
+    Proof.
+      cbv [mul].
+      rewrite Associational.assoc_mul_trim_high_l, Associational.assoc_mul_trim_high_r.
+      rewrite Associational.assoc_mul_assoc.
+      reflexivity.
+    Qed.
+    Lemma mul_comm x y : mul x y = mul y x.
+    Proof. apply Associational.from_associational_assoc_mul_comm. Qed.
+    Lemma mul_one_r x : mul x one = x.
+    Proof.
+      cbv [mul one zero Rq] in *.
+      rewrite Associational.assoc_mul_trim_high_r.
+      Tuple.rev_induct n; [ reflexivity | ].
+      rewrite Associational.to_associational_left_append.
+      rewrite Associational.assoc_mul_app_distr_r, Associational.assoc_mul_cons_l, Associational.assoc_mul_nil_l.
+      rewrite Associational.multerm_cons_l, Associational.multerm_nil_l.
+      autorewrite with push_app cancel_pair.
+      rewrite Associational.from_associational_app'.
+      rewrite Associational.assoc_mul_one_r.
+      rewrite Associational.from_associational'_cons, Associational.from_associational'_nil.
+      autorewrite with natsimplify cancel_pair.
+      rewrite Associational.from_associational_left_append by apply Associational.to_associational_index_upper_bound.
+      rewrite Associational.from_associational_to_associational.
+      rewrite Tuple.update_nth_left_append_eq.
+      rewrite !right_identity.
+      reflexivity.
+    Qed.
+    Lemma mul_one_l x : mul one x = x.
+    Proof. rewrite mul_comm; apply mul_one_r. Qed.
+    Lemma mul_add_distr_l a b c : mul a (add b c) = add (mul a b) (mul a c).
+    Proof. apply Associational.assoc_mul_add_distr_l. Qed.
+    Lemma mul_add_distr_r a b c : mul (add b c) a = add (mul b a) (mul c a).
+    Proof. rewrite mul_comm, mul_add_distr_l, !(mul_comm a); reflexivity. Qed.
 
-      Local Hint Resolve add_assoc add_comm add_zero_l add_zero_r add_opp_l add_opp_r mul_assoc mul_one_l mul_one_r mul_add_distr_l mul_add_distr_r.
-      Lemma Rq_ring : @ring Rq eq zero one opp add sub mul.
-      Proof. repeat econstructor; auto; try congruence. Qed.
-    End ring_proofs.
+    Local Hint Resolve add_assoc add_comm add_zero_l add_zero_r add_opp_l add_opp_r mul_assoc mul_one_l mul_one_r mul_add_distr_l mul_add_distr_r.
+    Lemma Rq_ring : @ring Rq eq zero one opp add sub mul.
+    Proof. repeat econstructor; auto; try congruence. Qed.
   End PolynomialRing.
 End PolynomialRing.
-  
+
