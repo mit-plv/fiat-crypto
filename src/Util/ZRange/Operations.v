@@ -177,4 +177,16 @@ Module ZRange.
     := lower r <= upper r.
   Definition goodb (r : zrange) : bool
     := (lower r <=? upper r)%Z.
+
+  Notation opp := (ZRange.two_corners Z.opp).
+  Notation log2 := (ZRange.two_corners Z.log2).
+  Notation log2_up := (ZRange.two_corners Z.log2_up).
+  Notation add := (ZRange.four_corners Z.add).
+  Notation sub := (ZRange.four_corners Z.sub).
+  Notation mul := (ZRange.four_corners Z.mul).
+  Notation div := (ZRange.four_corners_and_zero Z.div).
+  Notation shiftr := (ZRange.four_corners_and_zero Z.shiftr).
+  Notation shiftl := (ZRange.four_corners_and_zero Z.shiftl).
+  Notation land := land_bounds.
+  Notation lor := lor_bounds.
 End ZRange.
