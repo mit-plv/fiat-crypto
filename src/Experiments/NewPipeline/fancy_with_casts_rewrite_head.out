@@ -1,0 +1,203 @@
+fancy_with_casts_rewrite_head = 
+match idc in (Compilers.ident t) return (Compile.value' true t) with
+| @Literal t v => Base (##v)%expr
+| Nat_succ => fun x : expr ℕ => Base (#(Nat_succ)%expr @ x)%expr_pat
+| Nat_pred => fun x : expr ℕ => Base (#(Nat_pred)%expr @ x)%expr_pat
+| Nat_max => fun x x0 : expr ℕ => Base (#(Nat_max)%expr @ x @ x0)%expr_pat
+| Nat_mul => fun x x0 : expr ℕ => Base (#(Nat_mul)%expr @ x @ x0)%expr_pat
+| Nat_add => fun x x0 : expr ℕ => Base (#(Nat_add)%expr @ x @ x0)%expr_pat
+| Nat_sub => fun x x0 : expr ℕ => Base (#(Nat_sub)%expr @ x @ x0)%expr_pat
+| @nil t => Base []%expr_pat
+| @cons t => fun (x : expr t) (x0 : expr (list t)) => Base (x :: x0)%expr_pat
+| @pair A B => fun (x : expr A) (x0 : expr B) => Base (x, x0)%expr_pat
+| @fst A B => fun x : expr (A * B)%etype => Base (#(fst)%expr @ x)%expr_pat
+| @snd A B => fun x : expr (A * B)%etype => Base (#(snd)%expr @ x)%expr_pat
+| @prod_rect A B T =>
+    fun (x : expr A -> expr B -> UnderLets (expr T))
+      (x0 : expr (A * B)%etype) =>
+    Base
+      (#(prod_rect)%expr @
+       (λ (x1 : var A)(x2 : var B),
+        to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat
+| @bool_rect T =>
+    fun (x x0 : expr unit -> UnderLets (expr T)) (x1 : expr bool) =>
+    Base
+      (#(bool_rect)%expr @ (λ x2 : var unit,
+                            to_expr (x ($x2)))%expr @
+       (λ x2 : var unit,
+        to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+| @nat_rect P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr ℕ -> expr P -> UnderLets (expr P)) (x1 : expr ℕ) =>
+    Base
+      (#(nat_rect)%expr @ (λ x2 : var unit,
+                           to_expr (x ($x2)))%expr @
+       (λ (x2 : var ℕ)(x3 : var P),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @nat_rect_arrow P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr ℕ ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr ℕ) (x2 : expr P) =>
+    Base
+      (#(nat_rect_arrow)%expr @ (λ x3 : var P,
+                                 to_expr (x ($x3)))%expr @
+       (λ (x3 : var ℕ)(x4 : var (P -> Q)%ptype)(x5 : var P),
+        to_expr
+          (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+       x1 @ x2)%expr_pat
+| @list_rect A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(list_rect)%expr @ (λ x2 : var unit,
+                            to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
+        to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @list_case A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(list_case)%expr @ (λ x2 : var unit,
+                            to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A)),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @List_length T =>
+    fun x : expr (list T) => Base (#(List_length)%expr @ x)%expr_pat
+| List_seq => fun x x0 : expr ℕ => Base (#(List_seq)%expr @ x @ x0)%expr_pat
+| @List_firstn A =>
+    fun (x : expr ℕ) (x0 : expr (list A)) =>
+    Base (#(List_firstn)%expr @ x @ x0)%expr_pat
+| @List_skipn A =>
+    fun (x : expr ℕ) (x0 : expr (list A)) =>
+    Base (#(List_skipn)%expr @ x @ x0)%expr_pat
+| @List_repeat A =>
+    fun (x : expr A) (x0 : expr ℕ) =>
+    Base (#(List_repeat)%expr @ x @ x0)%expr_pat
+| @List_combine A B =>
+    fun (x : expr (list A)) (x0 : expr (list B)) =>
+    Base (#(List_combine)%expr @ x @ x0)%expr_pat
+| @List_map A B =>
+    fun (x : expr A -> UnderLets (expr B)) (x0 : expr (list A)) =>
+    Base
+      (#(List_map)%expr @ (λ x1 : var A,
+                           to_expr (x ($x1)))%expr @ x0)%expr_pat
+| @List_app A => fun x x0 : expr (list A) => Base (x ++ x0)%expr
+| @List_rev A =>
+    fun x : expr (list A) => Base (#(List_rev)%expr @ x)%expr_pat
+| @List_flat_map A B =>
+    fun (x : expr A -> UnderLets (expr (list B))) (x0 : expr (list A)) =>
+    Base
+      (#(List_flat_map)%expr @ (λ x1 : var A,
+                                to_expr (x ($x1)))%expr @ x0)%expr_pat
+| @List_partition A =>
+    fun (x : expr A -> UnderLets (expr bool)) (x0 : expr (list A)) =>
+    Base
+      (#(List_partition)%expr @ (λ x1 : var A,
+                                 to_expr (x ($x1)))%expr @ x0)%expr_pat
+| @List_fold_right A B =>
+    fun (x : expr B -> expr A -> UnderLets (expr A)) (x0 : expr A)
+      (x1 : expr (list B)) =>
+    Base
+      (#(List_fold_right)%expr @
+       (λ (x2 : var B)(x3 : var A),
+        to_expr (x ($x2) ($x3)))%expr @ x0 @ x1)%expr_pat
+| @List_update_nth T =>
+    fun (x : expr ℕ) (x0 : expr T -> UnderLets (expr T)) (x1 : expr (list T))
+    =>
+    Base
+      (#(List_update_nth)%expr @ x @ (λ x2 : var T,
+                                      to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+| @List_nth_default T =>
+    fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
+    Base (#(List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+| Z_add => fun x x0 : expr ℤ => Base (x + x0)%expr
+| Z_mul => fun x x0 : expr ℤ => Base (x * x0)%expr
+| Z_pow => fun x x0 : expr ℤ => Base (#(Z_pow)%expr @ x @ x0)%expr_pat
+| Z_sub => fun x x0 : expr ℤ => Base (x - x0)%expr
+| Z_opp => fun x : expr ℤ => Base (- x)%expr
+| Z_div => fun x x0 : expr ℤ => Base (x / x0)%expr
+| Z_modulo => fun x x0 : expr ℤ => Base (x mod x0)%expr
+| Z_log2 => fun x : expr ℤ => Base (#(Z_log2)%expr @ x)%expr_pat
+| Z_log2_up => fun x : expr ℤ => Base (#(Z_log2_up)%expr @ x)%expr_pat
+| Z_eqb => fun x x0 : expr ℤ => Base (#(Z_eqb)%expr @ x @ x0)%expr_pat
+| Z_leb => fun x x0 : expr ℤ => Base (#(Z_leb)%expr @ x @ x0)%expr_pat
+| Z_geb => fun x x0 : expr ℤ => Base (#(Z_geb)%expr @ x @ x0)%expr_pat
+| Z_of_nat => fun x : expr ℕ => Base (#(Z_of_nat)%expr @ x)%expr_pat
+| Z_to_nat => fun x : expr ℤ => Base (#(Z_to_nat)%expr @ x)%expr_pat
+| Z_shiftr => fun x x0 : expr ℤ => Base (x >> x0)%expr
+| Z_shiftl => fun x x0 : expr ℤ => Base (x << x0)%expr
+| Z_land => fun x x0 : expr ℤ => Base (x &' x0)%expr
+| Z_lor => fun x x0 : expr ℤ => Base (x || x0)%expr
+| Z_bneg => fun x : expr ℤ => Base (#(Z_bneg)%expr @ x)%expr_pat
+| Z_lnot_modulo =>
+    fun x x0 : expr ℤ => Base (#(Z_lnot_modulo)%expr @ x @ x0)%expr_pat
+| Z_mul_split =>
+    fun x x0 x1 : expr ℤ => Base (#(Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
+| Z_add_get_carry =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+| Z_add_with_carry =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
+| Z_add_with_get_carry =>
+    fun x x0 x1 x2 : expr ℤ =>
+    Base (#(Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+| Z_sub_get_borrow =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
+| Z_sub_with_get_borrow =>
+    fun x x0 x1 x2 : expr ℤ =>
+    Base (#(Z_sub_with_get_borrow)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+| Z_zselect =>
+    fun x x0 x1 : expr ℤ => Base (#(Z_zselect)%expr @ x @ x0 @ x1)%expr_pat
+| Z_add_modulo =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_add_modulo)%expr @ x @ x0 @ x1)%expr_pat
+| Z_rshi =>
+    fun x x0 x1 x2 : expr ℤ =>
+    Base (#(Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+| Z_cc_m => fun x x0 : expr ℤ => Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat
+| Z_cast range => fun x : expr ℤ => Base (#(Z_cast range)%expr @ x)%expr_pat
+| Z_cast2 range =>
+    fun x : expr (ℤ * ℤ)%etype => Base (#(Z_cast2 range)%expr @ x)%expr_pat
+| fancy_add log2wordmax imm =>
+    fun x : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_add log2wordmax imm)%expr @ x)%expr_pat
+| fancy_addc log2wordmax imm =>
+    fun x : expr (ℤ * ℤ * ℤ)%etype =>
+    Base (#(fancy_addc log2wordmax imm)%expr @ x)%expr_pat
+| fancy_sub log2wordmax imm =>
+    fun x : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_sub log2wordmax imm)%expr @ x)%expr_pat
+| fancy_subb log2wordmax imm =>
+    fun x : expr (ℤ * ℤ * ℤ)%etype =>
+    Base (#(fancy_subb log2wordmax imm)%expr @ x)%expr_pat
+| fancy_mulll log2wordmax =>
+    fun x : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_mulll log2wordmax)%expr @ x)%expr_pat
+| fancy_mullh log2wordmax =>
+    fun x : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_mullh log2wordmax)%expr @ x)%expr_pat
+| fancy_mulhl log2wordmax =>
+    fun x : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_mulhl log2wordmax)%expr @ x)%expr_pat
+| fancy_mulhh log2wordmax =>
+    fun x : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_mulhh log2wordmax)%expr @ x)%expr_pat
+| fancy_rshi log2wordmax x =>
+    fun x0 : expr (ℤ * ℤ)%etype =>
+    Base (#(fancy_rshi log2wordmax x)%expr @ x0)%expr_pat
+| fancy_selc =>
+    fun x : expr (ℤ * ℤ * ℤ)%etype => Base (#(fancy_selc)%expr @ x)%expr_pat
+| fancy_selm log2wordmax =>
+    fun x : expr (ℤ * ℤ * ℤ)%etype =>
+    Base (#(fancy_selm log2wordmax)%expr @ x)%expr_pat
+| fancy_sell =>
+    fun x : expr (ℤ * ℤ * ℤ)%etype => Base (#(fancy_sell)%expr @ x)%expr_pat
+| fancy_addm =>
+    fun x : expr (ℤ * ℤ * ℤ)%etype => Base (#(fancy_addm)%expr @ x)%expr_pat
+end
+     : Compile.value' true t
