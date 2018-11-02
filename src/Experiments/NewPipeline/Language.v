@@ -914,11 +914,24 @@ Module Compilers.
       Section gen.
         Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
 
+        Definition is_more_pos_than_neg (r : zrange) (v : BinInt.Z) : bool
+          := ((Z.abs (lower r) <? Z.abs (upper r)) (* if more of the range is above 0 than below 0 *)
+              || ((lower r =? upper r) && (0 <=? lower r))
+              || ((Z.abs (lower r) =? Z.abs (upper r)) && (0 <=? v))).
+
+        (** We ensure that [ident.cast] is symmetric under [Z.opp], as
+            this makes some rewrite rules much, much easier to
+            prove. *)
+        Let cast_outside_of_range' (r : zrange) (v : BinInt.Z) : BinInt.Z
+          := ((cast_outside_of_range r v - lower r) mod (upper r - lower r + 1)) + lower r.
+
         Definition cast (r : zrange) (x : BinInt.Z)
           := let r := ZRange.normalize r in
              if (lower r <=? x) && (x <=? upper r)
              then x
-             else ((cast_outside_of_range r x - lower r) mod (upper r - lower r + 1)) + lower r.
+             else if is_more_pos_than_neg r x
+                  then cast_outside_of_range' r x
+                  else -cast_outside_of_range' (-r) (-x).
 
         Local Notation wordmax log2wordmax := (2 ^ log2wordmax).
         Local Notation half_bits log2wordmax := (log2wordmax / 2).
