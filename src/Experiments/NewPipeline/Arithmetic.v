@@ -15,6 +15,7 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Prod.
@@ -2134,13 +2135,13 @@ Module Rows.
           (map weight (seq 0 fuel)).
 
       (* TODO : move sat_reduce and repeat_sat_reduce to Saturated.Associational *)
-      Definition sat_reduce base s c n (p : list (Z * Z)) :=
-        let '(s', _) := adjust_s (S (S n)) s in
+      Definition sat_reduce base s s' c (p : list (Z * Z)) :=
         let lo_hi := Associational.split s' p in
         fst lo_hi ++ (Associational.sat_mul_const base [(1, s'/s)] (Associational.sat_mul_const base c (snd lo_hi))).
 
       Definition repeat_sat_reduce base s c (p : list (Z * Z)) n :=
-        fold_right (fun _ q => sat_reduce base s c n q) p (seq 0 n).
+        let '(s', _) := adjust_s (S (S n)) s in
+        fold_right (fun _ q => sat_reduce base s s' c q) p (seq 0 n).
 
       Definition mulmod base s c n nreductions (p q : list Z) :=
         let p_a := Positional.to_associational weight n p in
@@ -2232,16 +2233,17 @@ Module Rows.
         { break_match; cbn in *; auto. }
       Qed.
 
-      Lemma eval_sat_reduce base s c n p :
+      Lemma eval_sat_reduce base s s' c p :
         base <> 0 -> s - Associational.eval c <> 0 -> s <> 0 ->
-        Associational.eval (sat_reduce base s c n p) mod (s - Associational.eval c)
+        s' mod s = 0 -> s' <> 0 ->
+        Associational.eval (sat_reduce base s s' c p) mod (s - Associational.eval c)
         = Associational.eval p mod (s - Associational.eval c).
       Proof using wprops.
         intros; cbv [sat_reduce].
-        lazymatch goal with |- context[adjust_s ?fuel ?s] => destruct (adjust_s_invariant fuel s ltac:(assumption)) as [Hmod ?] end.
         eta_expand; autorewrite with push_eval zsimplify_const; cbn [fst snd].
         rewrite !Z.mul_assoc, <- (Z.mul_comm (Associational.eval c)), <- !Z.mul_assoc, <-Associational.reduction_rule by auto.
-        autorewrite with zsimplify_const; rewrite !Z.mul_assoc, Z.mul_div_eq_full, Hmod by auto.
+        autorewrite with zsimplify_const; rewrite !Z.mul_assoc, Z.mul_div_eq_full by auto.
+        rewrite_hyp !*.
         autorewrite with zsimplify_const push_eval; trivial.
       Qed.
       Hint Rewrite eval_sat_reduce using auto : push_eval.
@@ -2251,8 +2253,9 @@ Module Rows.
         Associational.eval (repeat_sat_reduce base s c p n) mod (s - Associational.eval c)
         = Associational.eval p mod (s - Associational.eval c).
       Proof using wprops.
-        intros; cbv [repeat_sat_reduce].
-        apply fold_right_invariant; intros; autorewrite with push_eval; auto.
+        intros; cbv [repeat_sat_reduce]; eta_expand.
+        apply fold_right_invariant; intros; autorewrite with push_eval; auto;
+          apply adjust_s_invariant; assumption.
       Qed.
       Hint Rewrite eval_repeat_sat_reduce using auto : push_eval.
 
