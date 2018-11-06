@@ -11,24 +11,12 @@ Create HintDb coeffsimpl discriminated.
 Create HintDb locsimpl discriminated.
 Create HintDb push_mul discriminated.
 
-(*
-Record coefficient_ring {coeff : Type} :=
-  { czero; cone; copp; cadd; csub; cmul;
-    cring : @commutative_ring coeff eq czero cone copp cadd csub cmul; }.
-Class location_monoid {loc : Type} :=
-  { lop; lid;
-    lmonoid : @monoid loc eq lop lid;
-    lop_comm : is_commutative (eq:=eq) (op:=lop); }.
-
-*)
 Class weighted_mul_preconditions {coeff loc : Type} :=
   { czero; cone; copp; cadd; csub; cmul;
     cring : @commutative_ring coeff eq czero cone copp cadd csub cmul;
     lop; lid;
     lmonoid : @monoid loc eq lop lid;
     lop_commutative : is_commutative (eq:=eq) (op:=lop);
-    (* coeff_ring : @coefficient_ring coeff;
-    loc_monoid : @location_monoid loc; *)
     index_to_loc : nat -> loc;
     loc_to_index : coeff * loc -> coeff * nat;
     loc_to_index_zero : forall l, fst (loc_to_index (czero, l)) = czero;
@@ -45,19 +33,6 @@ Class weighted_mul_preconditions {coeff loc : Type} :=
                loc_to_index (cmul (fst (loc_to_index t)) c, lop (index_to_loc (snd (loc_to_index t))) l)
                = loc_to_index (cmul (fst t) c, lop (snd t) l);
   }.
-
-(* TODO : move to ListUtil *)
-Lemma nth_default_combine {A B} d1 d2 :
-  forall x y i,
-    length x = length y ->
-    @List.nth_default (A*B) (d1, d2) (combine x y) i = (List.nth_default d1 x i, List.nth_default d2 y i).
-Proof.
-  induction x; destruct i, y; distr_length;
-    autorewrite with push_nth_default push_combine; auto.
-Qed.
-(* TODO : move to ListUtil *)
-Hint Rewrite @combine_app_samelength using solve [distr_length] : push_combine.
-Hint Rewrite @nth_default_combine using solve [distr_length] : push_nth_default.
 
 Section associational.
   Context {coeff loc : Type}.
@@ -95,28 +70,14 @@ Section associational.
     List.map (fun y => ((fst x * fst y)%coeff, (snd x + snd y)%loc)) a.
   Definition mul (a b : list term) : list term := List.flat_map (multerm b) a.
 
-  (* TODO : make this exported from Tuple.v *)
-  Hint Rewrite @Tuple.seq_S'
-       @Tuple.map2_left_append
-       @Tuple.to_list_left_append
-       @Tuple.repeat_left_append : pull_left_append.
-
-  (* TODO : make this exported from ListUtil.v *)
-  Hint Rewrite <- app_assoc : push_app.
-
-  Hint Rewrite loc_to_index_zero : coeffsimpl.
-  Hint Rewrite loc_to_index_coeff_add : coeffsimpl.
+  Hint Rewrite loc_to_index_zero loc_to_index_coeff_add : coeffsimpl.
   Hint Rewrite loc_to_index_index_to_loc : locsimpl.
-  Hint Rewrite (@left_identity coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@right_identity coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@left_identity loc) using apply lmonoid : locsimpl.
-  Hint Rewrite (@right_identity loc) using apply lmonoid : locsimpl.
-  Hint Rewrite (@associative coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@left_distributive coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@right_distributive coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@Ring.mul_0_l coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@Ring.mul_0_r coeff) using apply cring : coeffsimpl.
-  Hint Rewrite (@associative loc) using apply lmonoid : locsimpl.
+  Hint Rewrite
+       (@associative coeff)
+       (@left_identity coeff) (@right_identity coeff)
+       (@left_distributive coeff) (@right_distributive coeff)
+       (@Ring.mul_0_l coeff) (@Ring.mul_0_r coeff) using apply cring : coeffsimpl.
+  Hint Rewrite (@left_identity loc) (@right_identity loc) (@associative loc) using apply lmonoid : locsimpl.
   Hint Resolve in_eq in_cons.
 
   (* Simplify goals that include [List.In] *)
@@ -266,6 +227,7 @@ Section associational.
       from_associational' m x (from_associational' m y start) =
       from_associational' m y (from_associational' m x start).
   Proof. induction x; push. Qed.
+  Hint Resolve from_associational'_comm.
   Lemma multerm_add m x a b i start :
     from_associational' m (multerm x (a + b, i)) start
     = from_associational' m (multerm x (a, i)) (from_associational' m (multerm x (b, i)) start).
@@ -307,18 +269,13 @@ Section associational.
   Hint Rewrite from_associational_app : push_from_associational.
   Lemma from_associational_app' m x y :
     from_associational m (x ++ y) = from_associational' m y (from_associational m x).
-  Proof.
-    rewrite from_associational_app.
-    cbv [from_associational]; auto using from_associational'_comm.
-  Qed.
+  Proof. cbv [from_associational]; push. Qed.
   Lemma from_associational_left_append m x :
     (forall xi, In xi x -> (snd (loc_to_index xi) < m)%nat) ->
     (from_associational (S m) x) = left_append 0 (from_associational m x).
   Proof. cbv [from_associational]; push. Qed.
   Hint Rewrite from_associational_left_append using omega : pull_left_append.
 
-  (* TODO : export from ListUtil *)
-  Hint Rewrite @update_nth_app_r @update_nth_app_l @update_nth_cons using solve [distr_length] : push_update_nth.
   Lemma from_associational_to_associational m x :
     from_associational m (to_associational x) = x.
   Proof.
@@ -387,12 +344,6 @@ Section associational.
   Lemma from_associational_mul_comm m x : forall y,
       from_associational m (mul x y) = from_associational m (mul y x).
   Proof. induction x; push. Qed.
-
-  (*** TODO : move to Tuple.v ***)
-  Lemma update_nth_unit T i f t (d:T) : @update_nth T 0 i f t = tt.
-  Proof.
-    destruct t; cbv [update_nth]. Tuple.to_default d. reflexivity.
-  Qed.
 
   (*** Working with ones ***)
   Lemma one_left_append m :

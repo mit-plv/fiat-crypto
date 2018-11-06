@@ -1453,3 +1453,7 @@ Proof.
   repeat rewrite <-from_list_default_eq with (d0:=d), ?to_list_from_list.
   rewrite map2_update_nth_comm by assumption. reflexivity.
 Qed.
+Lemma update_nth_unit T i f t (d:T) : @update_nth T 0 i f t = tt.
+Proof.
+  destruct t; cbv [update_nth]. Tuple.to_default d. reflexivity.
+Qed.

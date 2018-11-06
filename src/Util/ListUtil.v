@@ -68,7 +68,7 @@ Create HintDb push_update_nth discriminated.
 Create HintDb znonzero discriminated.
 
 Hint Rewrite @app_nil_r @app_nil_l : push_app.
-Hint Rewrite <-app_comm_cons : push_app.
+Hint Rewrite <- app_comm_cons app_assoc: push_app.
 
 Hint Rewrite
   @app_length
@@ -86,6 +86,8 @@ Hint Rewrite
 Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 Ltac distr_length := autorewrite with distr_length in *;
   try solve [simpl in *; omega].
+
+Hint Rewrite @in_combine_r @in_combine_l using solve [distr_length] : push_combine.
 
 Module Export List.
   Local Set Implicit Arguments.
@@ -814,6 +816,7 @@ Lemma combine_app_samelength : forall {A B} (xs xs':list A) (ys ys':list B),
 Proof.
   induction xs, xs', ys, ys'; boring; omega.
 Qed.
+Hint Rewrite @combine_app_samelength using solve [distr_length] : push_combine.
 
 Lemma map_fst_combine {A B} (xs:list A) (ys:list B) : List.map fst (List.combine xs ys) = List.firstn (length ys) xs.
 Proof.
@@ -1027,6 +1030,16 @@ Qed.
 Hint Rewrite @skipn_combine : push_skipn.
 Hint Rewrite <- @skipn_combine : pull_skipn.
 
+Lemma nth_default_combine {A B} d1 d2 :
+  forall x y i,
+    length x = length y ->
+    @nth_default (A*B) (d1, d2) (combine x y) i = (nth_default d1 x i, nth_default d2 y i).
+Proof.
+  induction x; destruct i, y; distr_length;
+    autorewrite with push_nth_default push_combine; auto.
+Qed.
+Hint Rewrite @nth_default_combine using solve [distr_length] : push_nth_default.
+
 Lemma break_list_last: forall {T} (xs:list T),
   xs = nil \/ exists xs' y, xs = xs' ++ y :: nil.
 Proof.
@@ -1076,6 +1089,7 @@ Lemma update_nth_cons : forall {T} f (u0 : T) us, update_nth 0 f (u0 :: us) = (f
 Proof. reflexivity. Qed.
 
 Hint Rewrite @update_nth_cons : simpl_update_nth.
+Hint Rewrite @update_nth_cons : push_update_nth.
 
 Lemma set_nth_cons : forall {T} (x u0 : T) us, set_nth 0 x (u0 :: us) = x :: us.
 Proof. intros; apply update_nth_cons. Qed.
@@ -1797,8 +1811,7 @@ Proof.
     cbv [splice_nth].
     autorewrite with distr_length push_firstn push_skipn push_nth_default push_app in *.
     break_match; [ omega | ].
-    rewrite Nat.sub_succ_l by omega.
-    rewrite <-app_assoc. reflexivity. }
+    rewrite Nat.sub_succ_l by omega. reflexivity. }
   { rewrite !update_nth_out_of_bounds by distr_length. reflexivity. }
 Qed.
 Lemma update_nth_app_l {T} f :
@@ -1814,6 +1827,7 @@ Proof.
   break_match; [ | omega].
   rewrite <-app_assoc. reflexivity.
 Qed.
+Hint Rewrite @update_nth_app_r @update_nth_app_l using solve [distr_length] : push_update_nth.
 Lemma map2_update_nth_comm' {A B} (f : A -> B -> A) (g : A -> A) (x0:A) (y0:B):
   (forall t s, f (g t) s = g (f t s)) ->
   forall i xs ys, map2 f (update_nth i g xs) ys = update_nth i g (map2 f xs ys).
