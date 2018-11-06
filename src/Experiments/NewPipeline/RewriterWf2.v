@@ -17,6 +17,7 @@ Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.CPSId.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Option.
@@ -130,53 +131,46 @@ Module Compilers.
           (** TODO: Move Me up *)
           Local Notation unify_pattern'1 := (@unify_pattern' ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
           Local Notation unify_pattern'2 := (@unify_pattern' ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
-          Local Notation unify_pattern1 := (@unify_pattern ident var1 pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
-          Local Notation unify_pattern2 := (@unify_pattern ident var2 pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
-          Local Notation wf_with_unification_resultT' := (@wf_with_unification_resultT' ident pident pident_arg_types var1 var2).
+          Local Notation unify_pattern1 := (@unify_pattern ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
+          Local Notation unify_pattern2 := (@unify_pattern ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
+          Local Notation wf_unification_resultT' := (@wf_unification_resultT' ident pident pident_arg_types var1 var2).
+          Local Notation wf_unification_resultT := (@wf_unification_resultT ident pident pident_arg_types var1 var2).
           Local Notation wf_with_unification_resultT := (@wf_with_unification_resultT ident pident pident_arg_types type_vars_of_pident var1 var2).
           Local Notation wf_with_unif_rewrite_ruleTP_gen := (@wf_with_unif_rewrite_ruleTP_gen ident pident pident_arg_types type_vars_of_pident var1 var2).
           Local Notation wf_deep_rewrite_ruleTP_gen := (@wf_deep_rewrite_ruleTP_gen ident var1 var2).
+          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps ident var1 pident pident_arg_types type_vars_of_pident).
+          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation wf_app_with_unification_resultT := (@wf_app_with_unification_resultT ident pident pident_arg_types type_vars_of_pident var1 var2).
 
           (* Because [proj1] and [proj2] in the stdlib are opaque *)
           Local Notation proj1 x := (let (a, b) := x in a).
           Local Notation proj2 x := (let (a, b) := x in b).
 
           Lemma wf_unify_pattern'
-                (G : list { t : _ & (var1 t * var2 t)%type })
-                {t1 t2 t'} {p1 : pattern t1} {p2 : pattern t2} {evm1 evm2 : EvarMap} {re1 re2 e1 e2} {K1 K2}
-                (PK : K1 (pattern.type.subst_default t1 evm1) -> K2 (pattern.type.subst_default t2 evm2) -> Prop)
-                {T1 T2}
-                (PT : T1 -> T2 -> Prop)
-                {v1 v2}
-                {cont1 : K1 _ -> option T1}
-                {cont2 : K2 _ -> option T2}
+                {G : list { t : _ & (var1 t * var2 t)%type }}
+                {t t'} {p : pattern t} {evm : EvarMap} {re1 re2 e1 e2}
                 (He : @wf_rawexpr G t' re1 e1 re2 e2)
-                (Hv : @wf_with_unification_resultT' G t1 t2 p1 p2 evm1 evm2 _ _ PK v1 v2)
-                (HT : forall v1 v2, PK v1 v2 -> option_eq PT (cont1 v1) (cont2 v2))
             : option_eq
-                PT
-                (@unify_pattern'1 t1 re1 p1 evm1 K1 v1 T1 cont1)
-                (@unify_pattern'2 t2 re2 p2 evm2 K2 v2 T2 cont2).
-          Proof using pident_unify_unknown_correct.
-            revert dependent p2; intro p2; revert dependent re1; revert dependent re2; revert t' e1 e2; revert dependent evm1; revert dependent evm2; revert dependent K1; revert dependent K2; revert t2 p2.
-            induction p1, p2; intros; cbn [unify_pattern'].
-            all: repeat first [ progress cbn [with_unification_resultT' wf_with_unification_resultT' Option.bind eq_rect eq_sigT eq_sigT_uncurried eq_existT_uncurried] in *
-                              | progress cbv [option_bind'] in *
+                (wf_unification_resultT' G)
+                (@unify_pattern'1 _ re1 p evm _ (@Some _))
+                (@unify_pattern'2 _ re2 p evm _ (@Some _)).
+          Proof using Type.
+            revert t' e1 e2 re1 re2 He; induction p; intros; cbn [unify_pattern'].
+            all: repeat first [ progress cbn [Option.bind eq_rect option_eq] in *
                               | assumption
                               | reflexivity
                               | exfalso; assumption
                               | progress subst
-                              | progress destruct_head'_sig
-                              | progress inversion_sigma
                               | progress rewrite_type_transport_correct
                               | progress type_beq_to_eq
+                              | progress inversion_option
                               | match goal with
                                 | [ H : @wf_rawexpr ?G ?t ?re1 ?e1 ?re2 ?e2 |- context[match ?re1 with _ => _ end] ]
                                   => is_var t; is_var re1; is_var e1; is_var re2; is_var e2; is_var G;
                                      destruct H
                                 end
-                              | rewrite !pident_unify_unknown_correct
                               | break_innermost_match_step
+                              | progress cps_id'_with_option unify_pattern'_cps_id
                               | match goal with
                                 | [ |- context[rew ?pf in _] ]
                                   => is_var pf;
@@ -192,152 +186,78 @@ Module Compilers.
                                 | [ He : wf_rawexpr ?G ?re1 _ ?re2 _
                                     |- wf_value ?G (rew ?pf in value_of_rawexpr ?re1) (value_of_rawexpr ?re2) ]
                                   => apply (wf_value_of_wf_rawexpr_gen (pf2:=eq_refl) He)
+                                | [ He : wf_rawexpr ?G ?re1 _ ?re2 _
+                                    |- wf_unification_resultT' ?G (rew ?pf in value_of_rawexpr ?re1) (rew ?pf2 in value_of_rawexpr ?re2) ]
+                                  => apply (wf_value_of_wf_rawexpr_gen He)
                                 | [ H : wf_rawexpr _ _ _ _ _ |- _ ]
                                   => progress (try (unique pose proof (proj1 (eq_type_of_rawexpr_of_wf H)));
                                                try (unique pose proof (proj2 (eq_type_of_rawexpr_of_wf H))))
                                 | [ H : ?t1 <> ?t2 |- _ ]
                                   => exfalso; apply H; congruence
-                                end
-                              | solve [ eauto ]
-                              | progress cbv [Option.bind] in *
-                              | apply related_app_type_of_list_of_under_type_of_list_relation_cps ].
-          Qed.
-
-          Lemma wf_unify_pattern'_id
-                (G : list { t : _ & (var1 t * var2 t)%type })
-                {t1 t2 t'} {p1 : pattern t1} {p2 : pattern t2} {evm1 evm2 : EvarMap} {re1 re2 e1 e2} {K1 K2}
-                (PK : K1 (pattern.type.subst_default t1 evm1) -> K2 (pattern.type.subst_default t2 evm2) -> Prop)
-                {v1 v2}
-                (He : @wf_rawexpr G t' re1 e1 re2 e2)
-                (Hv : @wf_with_unification_resultT' G t1 t2 p1 p2 evm1 evm2 _ _ PK v1 v2)
-            : option_eq
-                PK
-                (@unify_pattern'1 t1 re1 p1 evm1 K1 v1 _ (@Some _))
-                (@unify_pattern'2 t2 re2 p2 evm2 K2 v2 _ (@Some _)).
-          Proof using pident_unify_unknown_correct.
-            eapply wf_unify_pattern'; try eassumption; eauto.
+                                | [ |- context[(rew [?P] ?pf in ?f) ?v] ]
+                                  => lazymatch P with
+                                     | fun x : ?A => forall y : @?B x, @?C x y
+                                       => replace ((rew [P] pf in f) v) with (rew [fun x : A => C x v] pf in f v)
+                                         by (case pf; reflexivity)
+                                     end
+                                | [ H : (forall t e1 e2 re1 re2, wf_rawexpr _ _ _ _ _ -> option_eq _ (unify_pattern'1 re1 ?p1 ?evm _ (@Some _)) _)
+                                    |- context[unify_pattern'1 ?re1' ?p1 ?evm _ (@Some _)] ]
+                                  => specialize (H _ _ _ re1' _ ltac:(eassumption))
+                                | [ H : option_eq ?R ?x ?y |- _ ]
+                                  => destruct x eqn:?, y eqn:?; cbv [option_eq] in H
+                                | [ |- wf_unification_resultT' _ (_, _) (_, _) ] => split; assumption
+                                end ].
           Qed.
 
           Lemma wf_unify_pattern
-                (G : list { t : _ & (var1 t * var2 t)%type })
-                {t t'} {p : pattern t} {re1 re2 e1 e2} {K1 K2}
-                (PK : forall t, K1 t -> K2 t -> Prop)
-                {T1 T2}
-                (PT : T1 -> T2 -> Prop)
-                {v1 v2}
-                {cont1 : K1 _ -> option T1}
-                {cont2 : K2 _ -> option T2}
+                {G : list { t : _ & (var1 t * var2 t)%type }}
+                {t t'} {p : pattern t} {re1 re2 e1 e2}
                 (He : @wf_rawexpr G t' re1 e1 re2 e2)
-                (Hv : @wf_with_unification_resultT G t p _ _ (fun evm => PK _) v1 v2)
-                (HT : forall t v1 v2 pf1 pf2, PK t (rew [K1] pf1 in v1) (rew [K2] pf2 in v2) -> option_eq PT (cont1 v1) (cont2 v2))
             : option_eq
-                PT
-                (@unify_pattern1 t re1 p K1 v1 T1 cont1)
-                (@unify_pattern2 t re2 p K2 v2 T2 cont2).
-          Proof using pident_unify_unknown_correct.
-            cbv [unify_pattern].
-            erewrite wf_unify_types_cps by eassumption.
-            repeat (rewrite unify_types_cps_id; set (unify_types _ _ _ id)).
-            repeat match goal with v := unify_types _ _ _ id |- _ => subst v end.
-            cbv [Compile.wf_with_unification_resultT] in *.
-            revert dependent cont2; revert dependent cont1.
-            let lem := constr:(eq_type_of_rawexpr_of_wf ltac:(eassumption)) in
-            rewrite (proj1 lem), (proj2 lem).
-            intros; specialize (fun v1 v2 => HT _ v1 v2 eq_refl eq_refl); cbn [eq_rect] in *.
-            repeat first [ progress subst
-                         | progress intros
-                         | progress cbv beta in *
-                         | match goal with
-                           | [ |- ?R ?x ?x ] => reflexivity
-                           | [ |- option_eq ?RB (Option.bind ?a ?b) (Option.bind ?a' ?b') ]
-                             => eapply Option.bind_Proper_option_eq_hetero
-                           | [ |- option_eq _ (pattern.type.app_forall_vars _ _) (pattern.type.app_forall_vars _ _) ]
-                             => refine (pattern.type.app_forall_vars_under_forall_vars_relation _)
-                           | [ |- option_eq _ (@unify_pattern'1 _ _ _ _ _ _ _ _) (@unify_pattern'2 _ _ _ _ _ _ _ _) ]
-                             => eapply wf_unify_pattern'
-                           | [ H1 : forall v1 v2, ?PK _ v1 v2 -> option_eq ?PT (?f1 v1) (?f2 v2),
-                                 H2 : ?RA ?a1 ?a2
-                                 |- option_eq ?PT (?f1 (?a1 _)) (?f2 (?a2 _)) ]
-                             => eapply H1; refine H2
-                           end
-                         | eassumption
-                         | progress rewrite_type_transport_correct ].
-            (* We separate this into two separate [repeat first] statements because we need to unify evars across goals before proceeding here *)
-            repeat first [ reflexivity
-                         | exfalso; assumption
-                         | progress subst
-                         | progress cbn [eq_rect Option.bind option_eq] in *
-                         | progress type_beq_to_eq
-                         | assumption
-                         | progress break_match ].
-          Qed.
-
-          Lemma wf_unify_pattern_id
-                (G : list { t : _ & (var1 t * var2 t)%type })
-                {t t'} {p : pattern t} {re1 re2 e1 e2} {K1 K2}
-                (PK : forall t1 t2, K1 t1 -> K2 t2 -> Prop)
-                {v1 v2}
-                (He : @wf_rawexpr G t' re1 e1 re2 e2)
-                (Hv : @wf_with_unification_resultT G t p _ _ (fun evm => PK _ _) v1 v2)
-            : option_eq
-                (PK _ _)
-                (@unify_pattern1 t re1 p K1 v1 _ (@Some _))
-                (@unify_pattern2 t re2 p K2 v2 _ (@Some _)).
-          Proof using pident_unify_unknown_correct.
-            eapply wf_unify_pattern with (PK:=fun t => PK t t); try eassumption.
-            intros ? ? ? pf1 pf2; destruct pf1, pf2; cbn; trivial.
+                (wf_unification_resultT G)
+                (@unify_pattern1 t re1 p _ (@Some _))
+                (@unify_pattern2 t re2 p _ (@Some _)).
+          Proof using Type.
+            cbv [unify_pattern wf_unification_resultT].
+            cps_id'_with_option unify_types_cps_id.
+            rewrite <- (wf_unify_types He).
+            cbv [Option.bind]; break_innermost_match_step; [ | reflexivity ].
+            cps_id'_with_option unify_pattern'_cps_id.
+            pose proof (@wf_unify_pattern' G t t' p ltac:(assumption) re1 re2 e1 e2 He) as H'.
+            match goal with
+            | [ H : option_eq ?R ?x ?y |- _ ]
+              => destruct x eqn:?, y eqn:?; cbv [option_eq] in H
+            end; try solve [ reflexivity | inversion_option | exfalso; assumption ];
+              cbn [Option.bind option_eq].
+            cbv [related_unification_resultT related_sigT_by_eq]; exists eq_refl.
+            cbn [eq_rect projT1 projT2].
+            assumption.
           Qed.
 
           Lemma wf_normalize_deep_rewrite_rule
                 {G}
                 {t}
-                {should_do_again1 with_opt1 under_lets1 is_cps1}
-                {should_do_again2 with_opt2 under_lets2 is_cps2}
+                {should_do_again1 with_opt1 under_lets1}
+                {should_do_again2 with_opt2 under_lets2}
                 {r1 r2}
-                (Hwf : @wf_deep_rewrite_ruleTP_gen G t should_do_again1 with_opt1 under_lets1 is_cps1 should_do_again2 with_opt2 under_lets2 is_cps2 r1 r2)
+                (Hwf : @wf_deep_rewrite_ruleTP_gen G t should_do_again1 with_opt1 under_lets1 should_do_again2 with_opt2 under_lets2 r1 r2)
             : option_eq
                 (UnderLets.wf (fun G' => wf_maybe_do_again_expr G') G)
-                (normalize_deep_rewrite_rule r1 _ id) (normalize_deep_rewrite_rule r2 _ id).
+                (normalize_deep_rewrite_rule r1) (normalize_deep_rewrite_rule r2).
           Proof using Type.
             clear -Hwf.
             all: destruct_head'_bool.
-            all: cbv [normalize_deep_rewrite_rule wf_deep_rewrite_ruleTP_gen deep_rewrite_ruleTP_gen] in *.
+            all: cbv [normalize_deep_rewrite_rule wf_deep_rewrite_ruleTP_gen deep_rewrite_ruleTP_gen maybe_option_eq] in *.
             all: destruct_head'_and.
             all: repeat first [ assumption
                               | exfalso; assumption
                               | progress cbv [Option.bind option_eq wf_maybe_under_lets_expr] in *
                               | progress inversion_option
-                              | progress subst
                               | match goal with
                                 | [ |- ?x = ?x ] => reflexivity
-                                | [ H : forall T K, ?f T K = @?v T K, H' : context[?f ?T' ?K'] |- _ ]
-                                  => lazymatch v with
-                                     | context[f]
-                                       => lazymatch K' with
-                                          | id => fail
-                                          | @Some _ => fail
-                                          | _ => idtac
-                                          end
-                                     | _ => idtac
-                                     end;
-                                     rewrite (H T' K') in H'
-                                | [ H : forall T K, ?f T K = @?v T K |- context[?f ?T' ?K'] ]
-                                  => lazymatch v with
-                                     | context[f]
-                                       => lazymatch K' with
-                                          | id => fail
-                                          | @Some _ => fail
-                                          | _ => idtac
-                                          end
-                                     | _ => idtac
-                                     end;
-                                     rewrite (H T' K')
-                                | [ H : context[id ?x] |- _ ] => change (id x) with x in H
-                                | [ |- context[id ?x] ] => change (id x) with x
                                 | [ |- UnderLets.wf _ _ _ _ ] => constructor
                                 end
-                              | break_innermost_match_step
-                              | break_innermost_match_hyps_step ].
+                              | break_innermost_match_step ].
           Qed.
 
           Local Ltac fin_handle_list :=
@@ -625,10 +545,15 @@ Module Compilers.
           Local Notation wf_reflect := (@wf_reflect ident var1 var2).
           Local Notation wf_reify := (@wf_reify ident var1 var2).
 
+          Local Lemma Some_neq_None_helper {A B x y} : @Some A x = None <-> @Some B y = None.
+          Proof using Type. clear; intuition congruence. Qed.
+
           Local Ltac fin_t_common_step :=
             first [ match goal with
-                    | [ |- (Some _ = None <-> Some _ = None) /\ _ ] => split; [ clear; solve [ intuition congruence ] | ]
-                    | [ |- (?x = ?x <-> ?y = ?y) /\ _ ] => split; [ clear; intuition congruence | ]
+                    | [ |- (Some _ = None <-> Some _ = None) /\ _ ] => split; [ exact Some_neq_None_helper | ]
+                    | [ |- (?x = ?x <-> ?y = ?y) /\ _ ] => split; [ clear; split; reflexivity | ]
+                    | [ |- (Some _ = None <-> None = None) /\ _ ] => exfalso
+                    | [ |- (None = None <-> Some _ = None) /\ _ ] => exfalso
                     end ].
           Local Ltac handle_lists_of_rewrite_rules :=
             repeat first [ match goal with
@@ -676,6 +601,8 @@ Module Compilers.
             match goal with H : _ <> _ |- _ => idtac end;
             exfalso;
             repeat match goal with
+                   | [ H : ?x <> ?x |- False ] => apply H, eq_refl
+                   | [ H : ?x = ?y, H' : ?x <> ?y |- False ] => apply H', H
                    | [ H : ?T |- _ ]
                      => lazymatch T with
                         | _ = _ :> type.type _ => fail
@@ -725,85 +652,49 @@ Module Compilers.
                                      | [ |- context[rew [fun t => @UnderLets ?varp (@?P t)] ?pf in (@UnderLets.Base ?base_type ?ident ?var ?T ?a)] ]
                                        => rewrite ap_transport_Base
                                      | [ |- True ] => exact I
+                                     | [ H : False |- _ ] => exfalso; exact H
                                      end
-                                   | progress cbv [wf_rewrite_rule_data wf_with_unif_rewrite_ruleTP_gen option_bind' normalize_deep_rewrite_rule_cps_id_hypsT] in *
-                                   | lazymatch goal with
-                                     | [ |- (@unify_pattern1 ?t ?re1 ?p ?K1 ?v1 ?T1 ?cont1 = None
-                                             <-> @unify_pattern2 ?t ?re2 ?p ?K2 ?v2 ?T2 ?cont2 = None)
-                                            /\ _ ]
-                                       => let H := fresh in
-                                          pose proof (fun PK PT => @wf_unify_pattern _ t _ p re1 re2 _ _ K1 K2 PK T1 T2 PT v1 v2 cont1 cont2 ltac:(eassumption)) as H;
-                                            specialize (fun PK pf PT => H PK PT pf);
-                                            cbv beta in *;
-                                            (* grumble grumble dependent type hacking *)
-                                            lazymatch type of H with
-                                            | forall PK, wf_with_unification_resultT ?G (fun evm : ?EVM => PK (?t evm)) ?v1 ?v2 -> _
-                                              => lazymatch goal with
-                                                 | [ H0 : wf_with_unification_resultT G (fun evm : EVM => ?PK') v1 v2 |- _ ]
-                                                   => let PK'' := fresh in
-                                                      let PK'
-                                                          := constr:(
-                                                               fun evm : EVM
-                                                               => match PK' with
-                                                                  | PK''
-                                                                    => ltac:(
-                                                                         let PK' := (eval cbv delta [PK''] in PK'') in
-                                                                         let PK' := match (eval pattern (t evm) in PK') with ?PK' _ => PK' end in
-                                                                         exact PK'
-                                                                       )
-                                                                  end) in
-                                                      let PK' := lazymatch PK' with (fun _ => ?f) => f end in
-                                                      specialize (H PK' H0)
-                                                 end
-                                            end;
-                                            (* end grumbling *)
-                                            (*rewrite unify_pattern_cps_id with (var:=var1), unify_pattern_cps_id with (var:=var2) in H |- *;*)
-                                            (destruct (@unify_pattern1 t re1 p K1 v1 T1 cont1) eqn:?,
-                                                      (@unify_pattern2 t re2 p K2 v2 T2 cont2) eqn:?);
-                                            cbn [Option.bind option_eq pattern.type_of_anypattern pattern.pattern_of_anypattern] in H |- *;
-                                            [ split; [ clear; split | apply H; clear H ]
-                                            | refine ((fun pf => _) _); [ exfalso | eapply (H (fun _ _ => True)) ]; [ (assumption || discriminate) | clear H ]..
-                                            | ]
-                                     | [ H : wf_deep_rewrite_ruleTP_gen _ _ _ |- option_eq ?R (normalize_deep_rewrite_rule _ _ (fun x => x)) (normalize_deep_rewrite_rule _ _ (fun y => y)) ]
-                                       => exact (wf_normalize_deep_rewrite_rule H)
-                                     | [ |- option_eq _ (normalize_deep_rewrite_rule _ _ _) (normalize_deep_rewrite_rule _ _ _) ]
-                                       => rewrite @normalize_deep_rewrite_rule_cps_id with (var:=var1), @normalize_deep_rewrite_rule_cps_id with (var:=var2)
-                                     | [ |- ?x = ?x ] => reflexivity
-                                     end
-                                   | progress intros
-                                   | progress cbn [Option.bind option_eq eq_rect eq_sym eq_trans] in *
-                                   | progress inversion_option
                                    | progress subst
+                                   | progress cbn [Option.bind option_eq projT1 projT2 eq_rect eq_sym eq_trans] in *
+                                   | progress inversion_option
+                                   | progress destruct_head'_sigT
+                                   | progress destruct_head'_sig
+                                   | progress cbv [wf_rewrite_rule_data wf_with_unif_rewrite_ruleTP_gen option_bind' related_sigT_by_eq] in *
+                                   | progress intros
                                    | match goal with
+                                     | [ H : wf_rawexpr _ ?r _ _ _ |- context[unify_pattern1 ?r ?pv _ (@Some _)] ]
+                                       => let H' := fresh in
+                                          pose proof (wf_unify_pattern (p:=pv) H) as H';
+                                            lazymatch type of H' with
+                                            | option_eq _ ?x ?y => destruct x eqn:?, y eqn:?; cbv [option_eq] in H'
+                                            end
+                                     | [ H : wf_deep_rewrite_ruleTP_gen _ ?r1 ?r2
+                                         |- context[normalize_deep_rewrite_rule ?r1] ]
+                                       => let H' := fresh in
+                                          pose proof (wf_normalize_deep_rewrite_rule H) as H';
+                                            lazymatch type of H' with
+                                            | option_eq _ ?x ?y => destruct x eqn:?, y eqn:?; cbv [option_eq] in H'
+                                            end
+                                     | [ H : (forall x y, wf_unification_resultT _ x y -> option_eq _ (app_with_unification_resultT_cps1 ?r1 x _ (@Some _)) (app_with_unification_resultT_cps2 ?r2 y _ (@Some _))),
+                                             H' : wf_unification_resultT _ ?xv ?yv
+                                         |- context[app_with_unification_resultT_cps1 ?r1 ?xv _ (@Some _)] ]
+                                       => specialize (H _ _ H')
+                                     | [ H : option_eq _ ?x ?y |- _ ] => destruct x eqn:?, y eqn:?; cbv [option_eq] in H
                                      | [ |- UnderLets.wf _ _ _ _ ] => constructor
                                      | [ |- expr.wf _ (rew _ in expr_of_rawexpr _) (rew _ in expr_of_rawexpr _) ]
                                        => apply wf_expr_of_wf_rawexpr'
-                                     | [ H : wf_deep_rewrite_ruleTP_gen _ _ _ |- option_eq ?R (normalize_deep_rewrite_rule _ _ (fun x => x)) (normalize_deep_rewrite_rule _ _ (fun y => y)) ]
-                                       => exact (wf_normalize_deep_rewrite_rule H)
-                                     | [ H : wf_deep_rewrite_ruleTP_gen _ _ _ |- (match ?b with true => _ | false => _ end) _ ]
-                                       => clear -H;
-                                            solve [
-                                                destruct_head' (@rewrite_ruleTP);
-                                                  repeat first [ exact I
-                                                               | exfalso; assumption
-                                                               | progress cbn [Compile.rew_should_do_again Compile.rew_under_lets Compile.rew_is_cps Compile.rew_with_opt Compile.rew_replacement] in *
-                                                               | progress destruct_head'_bool
-                                                               | progress cbv [wf_deep_rewrite_ruleTP_gen] in *
-                                                               | progress destruct_head'_and
-                                                               | solve [ auto ]
-                                                               | progress destruct_head' (@eq) ]
-                                              ]
                                      end
-                                   | progress cbv [type.try_transport_cps(* type.try_make_transport_cps*)]
+                                   | progress cps_id'_with_option unify_pattern_cps_id
+                                   | progress cps_id'_with_option app_with_unification_resultT_cps_id
                                    | lazymatch goal with
                                      | [ |- context[type.try_make_transport_cps] ]
                                        => progress rewrite_type_transport_correct
                                      | [ |- context[base.try_make_transport_cps] ]
                                        => progress rewrite_type_transport_correct
                                      end
+                                   | progress type_beq_to_eq
+                                   | break_match_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
                                    | match goal with
-                                     | [ |- context[match Sumbool.sumbool_of_bool ?b with _ => _ end] ]
-                                       => destruct (Sumbool.sumbool_of_bool b)
                                      | [ H : wf_rawexpr _ _ _ _ _ |- _ ]
                                        => let lem1 := constr:(proj1 (eq_type_of_rawexpr_of_wf H)) in
                                           let lem2 := constr:(proj2 (eq_type_of_rawexpr_of_wf H)) in
@@ -815,23 +706,9 @@ Module Compilers.
                                                       | ?x = ?x => idtac
                                                       | _ => try (unique pose proof lem2)
                                                       end)
-                                     | [ |- context[Option.bind _ (fun _ => None)] ] => rewrite !Option.bind_zero_r
                                      end
-                                   | progress type_beq_to_eq
                                    | solve [ try_solve_by_type_of_rawexpr_eqn ]
                                    | match goal with
-                                     | [ H : unify_pattern1 _ _ _ _ _ = _ |- _ ] => clear H
-                                     | [ H : unify_pattern2 _ _ _ _ _ = _ |- _ ] => clear H
-                                     | [ H : ?x = ?x |- _ ] => clear H
-                                     | [ |- option_eq _ (Option.bind _ _) (Option.bind _ _) ]
-                                       => repeat match goal with
-                                                 | [ H : type_of_rawexpr _ = type_of_rawexpr _ |- _ ]
-                                                   => lazymatch goal with
-                                                      | [ |- context[H] ] => destruct H
-                                                      | [ H' : context[H] |- _ ] => destruct H
-                                                      end
-                                                 end;
-                                            eapply Option.bind_Proper_option_eq_hetero
                                      | [ |- context[rew ?pf in _] ]
                                        => lazymatch pf with
                                           | context[eq_type_of_rawexpr_of_wf] => destruct pf
@@ -849,6 +726,12 @@ Module Compilers.
                          | match goal with
                            | [ H : wf_maybe_do_again_expr _ ?v _ |- context[?v] ] => clear -H wf_do_again; cbv [wf_maybe_do_again_expr maybe_do_again] in *
                            | [ |- UnderLets.wf _ _ _ _ ] => constructor
+                           | [ |- context[type.decode _ _ ?pf ] ]
+                             => is_var pf;
+                                lazymatch type of pf with
+                                | match ?t with type.base _ => _ | _ => _ end
+                                  => destruct t eqn:?
+                                end
                            end
                          | progress destruct_head (@rewrite_ruleTP)
                          | solve [ eauto ] ].
