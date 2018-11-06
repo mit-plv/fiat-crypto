@@ -2131,7 +2131,7 @@ Module Rows.
                    then (w_i, true)
                    else res)
           (s, false)
-          (map weight (seq 0 fuel)).
+          (map weight (List.rev (seq 0 fuel))).
 
       (* TODO : move sat_reduce and repeat_sat_reduce to Saturated.Associational *)
       Definition sat_reduce base s c n (p : list (Z * Z)) :=
@@ -2226,7 +2226,7 @@ Module Rows.
         fst (adjust_s fuel s) mod s = 0
         /\ fst (adjust_s fuel s) <> 0.
       Proof.
-        cbv [adjust_s]; rewrite fold_right_map; generalize (seq 0 fuel); intro ls; induction ls as [|l ls IHls];
+        cbv [adjust_s]; rewrite fold_right_map; generalize (List.rev (seq 0 fuel)); intro ls; induction ls as [|l ls IHls];
           cbn.
         { rewrite Z.mod_same by assumption; auto. }
         { break_match; cbn in *; auto. }
