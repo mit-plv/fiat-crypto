@@ -11,6 +11,9 @@ Create HintDb coeffsimpl discriminated.
 Create HintDb locsimpl discriminated.
 Create HintDb push_mul discriminated.
 
+(* TODO : ListUtil *)
+Hint Rewrite @ListUtil.nth_default_out_of_bounds using solve [distr_length] : push_nth_default.
+
 Class weighted_mul_preconditions {coeff loc : Type} :=
   { czero; cone; copp; cadd; csub; cmul;
     cring : @commutative_ring coeff eq czero cone copp cadd csub cmul;
@@ -78,7 +81,7 @@ Section associational.
        (@left_distributive coeff) (@right_distributive coeff)
        (@Ring.mul_0_l coeff) (@Ring.mul_0_r coeff) using apply cring : coeffsimpl.
   Hint Rewrite (@left_identity loc) (@right_identity loc) (@associative loc) using apply lmonoid : locsimpl.
-  Hint Resolve in_eq in_cons.
+  Hint Resolve in_eq in_cons loc_to_index_add_mono.
 
   (* Simplify goals that include [List.In] *)
   Ltac inversion_In :=
@@ -96,10 +99,14 @@ Section associational.
   Ltac push :=
     repeat match goal with
            | _ => progress intros
+           | _ => rewrite Tuple.update_nth_out_of_bounds by eauto using le_trans, 0 with omega
+           | _ => rewrite Tuple.nth_default_to_list
+           | _ => rewrite seq_snoc
            | _ => progress autorewrite with push_mul push_app cancel_pair in *
-           | _ => progress autorewrite with push_fold_right push_from_associational in *
+           | _ => progress autorewrite with push_from_associational in *
            | _ => progress autorewrite with pull_left_append push_to_associational in *
            | _ => progress autorewrite with coeffsimpl locsimpl in *
+           | _ => progress autorewrite with push_fold_right push_map push_combine push_nth_default push_firstn push_skipn natsimplify in *
            | _ => progress inversion_In; subst
            | _ => solve [eauto]
            | _ => reflexivity
@@ -136,13 +143,7 @@ Section associational.
   Lemma multerm_out_of_bounds m x a start:
     (m <= snd (loc_to_index a))%nat ->
     from_associational' m (multerm x a) start = start.
-  Proof.
-    cbv [from_associational' add_to_nth]; induction x; push.
-    autorewrite with push_fold_right.
-    rewrite Tuple.update_nth_out_of_bounds; try apply 0; auto; [ ].
-    destruct a; etransitivity; [ | eapply loc_to_index_add_mono ].
-    autorewrite with cancel_pair; eassumption.
-  Qed.
+  Proof. cbv [from_associational' add_to_nth]; induction x; destruct a; push. Qed.
   Hint Rewrite multerm_out_of_bounds using omega : push_mul.
 
   (*** Associativity ***)
@@ -159,35 +160,21 @@ Section associational.
   Hint Rewrite to_associational_nil : push_to_associational.
   Lemma to_associational_left_append m (x : positional m) x0 :
     to_associational (left_append x0 x) = (to_associational x) ++ ((x0, index_to_loc m) :: nil).
-  Proof.
-    cbv [to_associational]. rewrite seq_snoc.
-    autorewrite with pull_left_append push_map push_combine natsimplify.
-    reflexivity.
-  Qed.
+  Proof. cbv [to_associational]. rewrite seq_snoc. push. Qed.
   Hint Rewrite to_associational_left_append : push_to_associational.
-  Lemma nth_default_to_associational d m :
-    forall (x : positional m) i,
-      List.nth_default (d, index_to_loc i) (to_associational x) i = (nth_default d i x, index_to_loc i).
+  Lemma nth_default_to_associational d m x i :
+    List.nth_default (d, index_to_loc i) (@to_associational m x) i = (nth_default d i x, index_to_loc i).
+  Proof. cbv [to_associational]; destruct (dec (i < m)%nat); rewrite nth_default_to_list; push. Qed.
+  Hint Rewrite nth_default_to_associational : push_nth_default.
+  Lemma to_associational_update_nth m f i x:
+    (i < m)%nat ->
+    @to_associational m (Tuple.update_nth i f x) =
+    splice_nth i (f (nth_default 0 i x), index_to_loc i) (to_associational x).
   Proof.
-    intros. cbv [to_associational]. rewrite nth_default_to_list; autorewrite with push_nth_default.
-    destruct (dec (i < m)%nat).
-    { rewrite nth_default_seq_inbounds by omega. reflexivity. }
-    { rewrite !ListUtil.nth_default_out_of_bounds by distr_length.
-      reflexivity. }
-  Qed.
-  Lemma to_associational_update_nth m f :
-    forall i (x : positional m),
-      (i < m)%nat ->
-      to_associational (Tuple.update_nth i f x) =
-      splice_nth i (f (nth_default 0 i x), index_to_loc i) (to_associational x).
-  Proof.
-    intros. cbv [to_associational Tuple.update_nth]. Tuple.to_default 0.
-    rewrite Tuple.to_list_from_list_default by distr_length.
+    intros. cbv [to_associational]. simpl_add_to_nth.
     rewrite <-splice_nth_equiv_update_nth_update with (d:=0) by distr_length.
-    rewrite (splice_nth_nth_default (index_to_loc 0) (List.map index_to_loc (List.seq 0 m)) i) at 1 by distr_length.
-    cbv [splice_nth]. autorewrite with push_combine push_firstn push_skipn push_nth_default natsimplify.
-    rewrite <-Tuple.nth_default_to_list.
-    reflexivity.
+    rewrite (splice_nth_nth_default (index_to_loc 0) (List.map _ (List.seq 0 m)) i) at 1 by distr_length.
+    cbv [splice_nth]. push.
   Qed.
   Lemma to_associational_index_upper_bound m x :
     forall xi,
@@ -210,17 +197,10 @@ Section associational.
   Hint Rewrite from_associational'_app : push_from_associational.
   Lemma add_to_nth_comm m ai bj (x : positional m) :
     add_to_nth ai (add_to_nth bj x) = add_to_nth bj (add_to_nth ai x).
-  Proof.
-    simpl_add_to_nth.
-    rewrite update_nth_update_nth_comm by (intros; rewrite !associative; f_equal; apply commutative).
-    reflexivity.
-  Qed.
+  Proof. simpl_add_to_nth; rewrite update_nth_update_nth_comm; push; f_equal; apply commutative. Qed.
   Lemma from_associational'_add_to_nth_comm m x : forall ai start,
       from_associational' m x (add_to_nth ai start) = add_to_nth ai (from_associational' m x start).
-  Proof.
-    cbv [from_associational']; induction x; push.
-    rewrite IHx, add_to_nth_comm. reflexivity.
-  Qed.
+  Proof. cbv [from_associational']; induction x; push. rewrite IHx, add_to_nth_comm. reflexivity. Qed.
   Hint Rewrite from_associational'_add_to_nth_comm : push_from_associational.
   Lemma from_associational'_comm m x :
     forall y start,
@@ -232,9 +212,7 @@ Section associational.
     from_associational' m (multerm x (a + b, i)) start
     = from_associational' m (multerm x (a, i)) (from_associational' m (multerm x (b, i)) start).
   Proof.
-    induction x; push.
-    rewrite IHx; clear IHx.
-    simpl_add_to_nth.
+    induction x; push; [ ]; rewrite IHx; clear IHx. simpl_add_to_nth.
     repeat match goal with |- context [loc_to_index (_ ?x ?y, ?i)] =>
                            rewrite <-(loc_to_index_eq i 0 (_ x y)) end.
     rewrite ListUtil.update_nth_update_nth_eq.
@@ -246,10 +224,9 @@ Section associational.
       (forall xi, In xi x -> (snd (loc_to_index xi) < m)%nat) ->
       (from_associational' (S m) x (left_append start0 start)) = left_append start0 (from_associational' m x start).
   Proof.
-    induction x; push; [ ].
-    rewrite <-!from_associational'_add_to_nth_comm.
+    induction x; push; [ ]. rewrite <-!from_associational'_add_to_nth_comm.
     cbv [add_to_nth]; rewrite update_nth_left_append_neq by auto.
-    rewrite IHx by auto; reflexivity.
+    rewrite IHx by auto. reflexivity.
   Qed.
   Hint Rewrite from_associational'_left_append using (eauto; omega) : pull_left_append.
 
@@ -281,12 +258,10 @@ Section associational.
   Proof.
     cbv [from_associational to_associational positional] in *; Tuple.rev_induct m;
       repeat match goal with
-             | _ => rewrite seq_snoc
              | _ => rewrite IHm
              | _ => Tuple.from_default; rewrite from_list_snoc, from_list_to_list
-             | _ => progress autorewrite with push_map push_combine push_update_nth distr_length natsimplify
              | _ => progress simpl_add_to_nth
-             | _ => progress push
+             | _ => progress push; autorewrite with push_update_nth distr_length
              end.
   Qed.
   Lemma add_from_associational :
@@ -350,7 +325,7 @@ Section associational.
     (O < m)%nat ->
     one (S m) = left_append 0 (one m).
   Proof.
-    cbv [one zero add_to_nth]; induction m; cbn [repeat]; push; [ omega | ].
+    cbv [one zero add_to_nth]; induction m; cbn [repeat]; push; [ ].
     rewrite !update_nth_append_eq.
     rewrite left_append_append, <-repeat_left_append.
     reflexivity.
@@ -407,21 +382,15 @@ Section associational.
     from_associational m (mul (@to_associational m (from_associational m x)) y) = from_associational m (mul x y).
   Proof.
     induction x as [|x0 ?]; push; eauto using from_associational_mul_zeroes; [ ].
-    destruct (dec (snd (loc_to_index x0) < m)%nat).
-    { rewrite <-IHx. clear IHx.
-      cbv [add_to_nth]. rewrite to_associational_update_nth by omega.
-      rewrite (splice_nth_nth_default (0, index_to_loc (snd (loc_to_index x0))) (to_associational (from_associational _ x)) (snd (loc_to_index x0))) at 2 by (cbv [to_associational]; distr_length; lia).
-      cbv [splice_nth]. push.
-      rewrite nth_default_to_associational, multerm_loc_to_index.
-      apply from_associational'_comm. }
-    { cbv [add_to_nth]; rewrite Tuple.update_nth_out_of_bounds by (apply 0 || omega).
-      rewrite multerm_out_of_bounds by (autorewrite with cancel_pair; omega).
-      apply IHx. }
+    destruct (dec (snd (loc_to_index x0) < m)%nat); cbv [add_to_nth]; push; [ ].
+    rewrite <-IHx. clear IHx. rewrite to_associational_update_nth by omega.
+    rewrite (splice_nth_nth_default (0, index_to_loc (snd (loc_to_index x0))) (to_associational (from_associational _ x)) (snd (loc_to_index x0))) at 2 by (cbv [to_associational]; distr_length; lia).
+    cbv [splice_nth]; push; rewrite multerm_loc_to_index. auto.
   Qed.
   Lemma mul_trim_high_r m x y:
     from_associational m (mul x (to_associational (from_associational m y))) = from_associational m (mul x y).
   Proof.
-    rewrite from_associational_mul_comm. rewrite mul_trim_high_l.
+    rewrite from_associational_mul_comm, mul_trim_high_l.
     apply from_associational_mul_comm.
   Qed.
 
