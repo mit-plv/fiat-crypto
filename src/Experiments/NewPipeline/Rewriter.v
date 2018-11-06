@@ -636,6 +636,15 @@ Module Compilers.
         Definition reveal_rawexpr_cps (e : rawexpr) : ~> rawexpr
           := reveal_rawexpr_cps_gen None e.
 
+        (** First, the uncurried form *)
+        Fixpoint unification_resultT' {t} (p : pattern t) (evm : EvarMap) : Type
+          := match p return Type with
+             | pattern.Wildcard t => value (pattern.type.subst_default t evm)
+             | pattern.Ident t idc => type_of_list (pident_arg_types t idc)
+             | pattern.App s d f x
+               => @unification_resultT' _ f evm * @unification_resultT' _ x evm
+             end%type.
+
         Fixpoint with_unification_resultT' {t} (p : pattern t) (evm : EvarMap) (K : Type) : Type
           := match p return Type with
              | pattern.Wildcard t => value (pattern.type.subst_default t evm) -> K
@@ -643,6 +652,43 @@ Module Compilers.
              | pattern.App s d f x
                => @with_unification_resultT' _ f evm (@with_unification_resultT' _ x evm K)
              end%type.
+
+        Fixpoint app_with_unification_resultT' {t p evm K} {struct p}
+          : @with_unification_resultT' t p evm K -> @unification_resultT' t p evm -> K
+          := match p return with_unification_resultT' p evm K -> unification_resultT' p evm -> K with
+             | pattern.Wildcard t => fun f x => f x
+             | pattern.Ident t idc => app_type_of_list
+             | pattern.App s d f x
+               => fun F (xy : unification_resultT' f _ * unification_resultT' x _)
+                  => @app_with_unification_resultT'
+                       _ x _ _
+                       (@app_with_unification_resultT'
+                          _ f _ _ F (fst xy))
+                       (snd xy)
+             end.
+
+        (** TODO: Maybe have a fancier version of this that doesn't
+             actually need to insert casts, by doing a fixpoint on the
+             list of elements / the evar map *)
+        Fixpoint app_transport_with_unification_resultT'_cps {t p evm1 evm2 K} {struct p}
+          : @with_unification_resultT' t p evm1 K -> @unification_resultT' t p evm2 -> forall T, (K -> option T) -> option T
+          := fun f x T k
+             => match p return with_unification_resultT' p evm1 K -> unification_resultT' p evm2 -> option T with
+                | pattern.Wildcard t
+                  => fun f x
+                     => (tr <- type.try_make_transport_cps base.try_make_transport_cps value _ _;
+                           (tr <- tr;
+                              k (f (tr x)))%option)%cps
+             | pattern.Ident t idc => fun f x => k (app_type_of_list f x)
+             | pattern.App s d f x
+               => fun F (xy : unification_resultT' f _ * unification_resultT' x _)
+                  => @app_transport_with_unification_resultT'_cps
+                       _ f _ _ _ F (fst xy) T
+                       (fun F'
+                        => @app_transport_with_unification_resultT'_cps
+                             _ x _ _ _ F' (snd xy) T
+                             (fun x' => k x'))
+             end%option f x.
 
         Fixpoint under_with_unification_resultT' {t p evm K1 K2}
                  (F : K1 -> K2)
@@ -657,46 +703,6 @@ Module Compilers.
                     (@under_with_unification_resultT' _ x evm _ _ F)
              end.
 
-        Fixpoint under_with_unification_resultT'_relation1_gen {t p evm K1}
-                 (FH : forall t, value t -> Prop)
-                 (F : K1 -> Prop)
-                 {struct p}
-          : @with_unification_resultT' t p evm K1 -> Prop
-          := match p return with_unification_resultT' p evm K1 -> Prop with
-             | pattern.Wildcard t => fun f1 => forall v1, FH _ v1 -> F (f1 v1)
-             | pattern.Ident t idc => under_type_of_list_relation1_cps F
-             | pattern.App s d f x
-               => @under_with_unification_resultT'_relation1_gen
-                    _ f evm _
-                    FH
-                    (@under_with_unification_resultT'_relation1_gen _ x evm _ FH F)
-             end.
-
-        Definition under_with_unification_resultT'_relation1 {t p evm K1}
-                 (F : K1 -> Prop)
-          : @with_unification_resultT' t p evm K1 -> Prop
-          := @under_with_unification_resultT'_relation1_gen t p evm K1 (fun _ _ => True) F.
-
-        Fixpoint under_with_unification_resultT'_relation_hetero {t p evm K1 K2}
-                 (FH : forall t, value t -> value t -> Prop)
-                 (F : K1 -> K2 -> Prop)
-                 {struct p}
-          : @with_unification_resultT' t p evm K1 -> @with_unification_resultT' t p evm K2 -> Prop
-          := match p return with_unification_resultT' p evm K1 -> with_unification_resultT' p evm K2 -> Prop with
-             | pattern.Wildcard t => fun f1 f2 => forall v1 v2, FH _ v1 v2 -> F (f1 v1) (f2 v2)
-             | pattern.Ident t idc => under_type_of_list_relation_cps F
-             | pattern.App s d f x
-               => @under_with_unification_resultT'_relation_hetero
-                    _ f evm _ _
-                    FH
-                    (@under_with_unification_resultT'_relation_hetero _ x evm _ _ FH F)
-             end.
-
-        Definition under_with_unification_resultT'_relation {t p evm K1 K2}
-                 (F : K1 -> K2 -> Prop)
-          : @with_unification_resultT' t p evm K1 -> @with_unification_resultT' t p evm K2 -> Prop
-          := @under_with_unification_resultT'_relation_hetero t p evm K1 K2 (fun _ => eq) F.
-
         Definition ident_collect_vars := (fun t idc => fold_right PositiveSet.union PositiveSet.empty (List.map pattern.type.collect_vars (type_vars_of_pident t idc))).
 
         Definition with_unification_resultT {t} (p : pattern t) (K : type -> Type) : Type
@@ -706,37 +712,23 @@ Module Compilers.
                   t p)
                (fun evm => with_unification_resultT' p evm (K (pattern.type.subst_default t evm))).
 
+        Definition unification_resultT {t} (p : pattern t) : Type
+          := { evm : EvarMap & unification_resultT' p evm }.
+
+        Definition app_with_unification_resultT_cps {t p K}
+          : @with_unification_resultT t p K -> @unification_resultT t p -> forall T, ({ evm' : _ & K (pattern.type.subst_default t evm') } -> option T) -> option T
+          := fun f x T k
+             => (f' <- pattern.type.app_forall_vars f (projT1 x);
+                   app_transport_with_unification_resultT'_cps
+                     f' (projT2 x) _
+                     (fun fx
+                      => k (existT _ _ fx)))%option.
+
         Definition under_with_unification_resultT {t p K1 K2}
                  (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm))
           : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2
           := pattern.type.under_forall_vars
                (fun evm => under_with_unification_resultT' (F evm)).
-
-        Definition under_with_unification_resultT_relation1_gen {t p K1}
-                   (FH : forall t, value t -> Prop)
-                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> Prop)
-          : @with_unification_resultT t p K1 -> Prop
-          := pattern.type.under_forall_vars_relation1
-               (fun evm => under_with_unification_resultT'_relation1_gen FH (F evm)).
-
-        Definition under_with_unification_resultT_relation1 {t p K1}
-                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> Prop)
-          : @with_unification_resultT t p K1 -> Prop
-          := pattern.type.under_forall_vars_relation1
-               (fun evm => under_with_unification_resultT'_relation1 (F evm)).
-
-        Definition under_with_unification_resultT_relation_hetero {t p K1 K2}
-                   (FH : forall t, value t -> value t -> Prop)
-                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
-          : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2 -> Prop
-          := pattern.type.under_forall_vars_relation
-               (fun evm => under_with_unification_resultT'_relation_hetero FH (F evm)).
-
-        Definition under_with_unification_resultT_relation {t p K1 K2}
-                   (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
-          : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2 -> Prop
-          := pattern.type.under_forall_vars_relation
-               (fun evm => under_with_unification_resultT'_relation (F evm)).
 
         Fixpoint preunify_types {t} (e : rawexpr) (p : pattern t) {struct p}
           : option (option (ptype * type))
@@ -787,49 +779,43 @@ Module Compilers.
 
         Definition option_bind' {A B} := @Option.bind A B. (* for help with unfolding *)
 
-        Fixpoint unify_pattern' {t} (e : rawexpr) (p : pattern t) {evm : EvarMap} {K : type -> Type} {struct p}
-          : (with_unification_resultT' p evm (K (pattern.type.subst_default t evm)))
-            -> forall T, (K (pattern.type.subst_default t evm) -> option T) -> option T
-          := match p in pattern.pattern t, e return with_unification_resultT' p evm (K (pattern.type.subst_default t evm)) -> forall T, (K (pattern.type.subst_default t evm) -> option T) -> option T with
+        Fixpoint unify_pattern' {t} (e : rawexpr) (p : pattern t) (evm : EvarMap) {struct p}
+          : forall T, (unification_resultT' p evm -> option T) -> option T
+          := match p, e return forall T, (unification_resultT' p evm -> option T) -> option T with
              | pattern.Wildcard t', _
-               => fun k T k'
+               => fun T k
                   => (tro <- type.try_make_transport_cps (@base.try_make_transport_cps) value _ _;
                         (tr <- tro;
-                           k' (k (tr (value_of_rawexpr e))))%option)
+                           (k (tr (value_of_rawexpr e))))%option)%cps
              | pattern.Ident t pidc, rIdent known _ idc _ _
-               => fun k T k'
+               => fun T k
                   => (if known
                       then Option.bind (pident_unify _ _ pidc idc)
                       else option_bind' (pident_unify_unknown _ _ pidc idc))
-                       (fun idc_args
-                        => k' (app_type_of_list k idc_args))
+                       k
              | pattern.App s d pf px, rApp f x _ _
-               => fun k T k'
+               => fun T k
                   => @unify_pattern'
-                       _ f pf evm (fun t => with_unification_resultT' px evm (K (type.codomain t))) k T
-                       (fun f'
+                       _ f pf evm T
+                       (fun fv
                         => @unify_pattern'
-                             _ x px evm (fun _ => K _) f' T k')
+                             _ x px evm T
+                             (fun xv
+                              => k (fv, xv)))
              | pattern.Ident _ _, _
              | pattern.App _ _ _ _, _
-               => fun _ _ k => None
-             end%cps.
+               => fun _ k => None
+             end%option.
 
-        Definition unify_pattern {t} (e : rawexpr) (p : pattern t) {K : type -> Type}
-                   (k : with_unification_resultT p K)
-          : forall T, (K (type_of_rawexpr e) -> option T) -> option T
+        Definition unify_pattern {t} (e : rawexpr) (p : pattern t)
+          : forall T, (unification_resultT p -> option T) -> option T
           := fun T cont
              => unify_types
                   e p _
                   (fun evm
                    => evm <- evm;
-                        k' <- pattern.type.app_forall_vars k evm;
                         unify_pattern'
-                          e p k' _
-                          (fun res
-                           => tr <- type.try_make_transport_cps (@base.try_make_transport_cps) K _ _;
-                                (tr <- tr;
-                                   cont (tr res))%option)%cps)%option.
+                          e p evm T (fun v => cont (existT _ _ v)))%option.
 
         (** We follow
             http://moscova.inria.fr/~maranget/papers/ml05e-maranget.pdf,
@@ -954,42 +940,34 @@ Module Compilers.
                   end
              end%option.
 
-        Local Notation deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets is_cps t
-          := ((if is_cps
-               then fun T => forall T', (T -> option T') -> option T'
-               else fun T => T)
-                match (@expr.expr base.type ident (if should_do_again then value else var) t) with
-                | x0 => match (if under_lets then UnderLets x0 else x0) with
-                        | x1 => if with_opt then option x1 else x1
-                        end
-                end).
+        Local Notation deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets t
+          := (match (@expr.expr base.type ident (if should_do_again then value else var) t) with
+              | x0 => match (if under_lets then UnderLets x0 else x0) with
+                      | x1 => if with_opt then option x1 else x1
+                      end
+              end).
 
-        Definition deep_rewrite_ruleTP_gen (should_do_again : bool) (with_opt : bool) (under_lets : bool) (is_cps : bool) t
-          := deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets is_cps t.
+        Definition deep_rewrite_ruleTP_gen (should_do_again : bool) (with_opt : bool) (under_lets : bool) t
+          := deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets t.
 
-        Definition normalize_deep_rewrite_rule {should_do_again with_opt under_lets is_cps t}
-          : deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t
-            -> deep_rewrite_ruleTP_gen should_do_again true true true t
-          := match with_opt, under_lets, is_cps with
-             | true, true, true => fun x => x
-             | false, true, true => fun x_cps _ k => x_cps _ (fun x => k (Some x))
-             | true, false, true => fun x_cps _ k => x_cps _ (fun x => x <- x; k (Some (UnderLets.Base x)))%option
-             | false, false, true => fun x_cps _ k => x_cps _ (fun x => k (Some (UnderLets.Base x)))
-             | true, true, false => fun x _ k => k x
-             | false, true, false => fun x _ k => k (Some x)
-             | true, false, false => fun x _ k => (x <- x; k (Some (UnderLets.Base x)))%option
-             | false, false, false => fun x _ k => k (Some (UnderLets.Base x))
+        Definition normalize_deep_rewrite_rule {should_do_again with_opt under_lets t}
+          : deep_rewrite_ruleTP_gen should_do_again with_opt under_lets t
+            -> deep_rewrite_ruleTP_gen should_do_again true true t
+          := match with_opt, under_lets with
+             | true , true  => fun x => x
+             | false, true  => fun x => Some x
+             | true , false => fun x => (x <- x; Some (UnderLets.Base x))%option
+             | false, false => fun x => Some (UnderLets.Base x)
              end%cps.
 
-        Definition with_unif_rewrite_ruleTP_gen {t} (p : pattern t) (should_do_again : bool) (with_opt : bool) (under_lets : bool) (is_cps : bool)
-          := with_unification_resultT p (fun t => deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets is_cps t).
+        Definition with_unif_rewrite_ruleTP_gen {t} (p : pattern t) (should_do_again : bool) (with_opt : bool) (under_lets : bool)
+          := with_unification_resultT p (fun t => deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets t).
 
         Record rewrite_rule_data {t} {p : pattern t} :=
           { rew_should_do_again : bool;
             rew_with_opt : bool;
             rew_under_lets : bool;
-            rew_is_cps : bool;
-            rew_replacement : with_unif_rewrite_ruleTP_gen p rew_should_do_again rew_with_opt rew_under_lets rew_is_cps }.
+            rew_replacement : with_unif_rewrite_ruleTP_gen p rew_should_do_again rew_with_opt rew_under_lets }.
 
         Definition rewrite_ruleTP
           := (fun p : anypattern => @rewrite_rule_data _ (pattern.pattern_of_anypattern p)).
@@ -1019,37 +997,37 @@ Module Compilers.
             := let 'existT p f := pf in
                let should_do_again := rew_should_do_again f in
                unify_pattern
-                 e' (pattern.pattern_of_anypattern p) (rew_replacement f) _
-                 (fun fv
-                  => normalize_deep_rewrite_rule
-                       fv _
-                       (fun fv
-                        => option_bind'
-                             fv
-                             (fun fv
-                              => (tr <- type.try_make_transport_cps (@base.try_make_transport_cps) _ _ _;
-                                    (tr <- tr;
-                                       (tr' <- type.try_make_transport_cps (@base.try_make_transport_cps) _ _ _;
-                                          (tr' <- tr';
-                                             Some (fv <-- fv;
+                 e' (pattern.pattern_of_anypattern p) _
+                 (fun x
+                  => app_with_unification_resultT_cps
+                       (rew_replacement f) x _
+                       (fun f'
+                        => (tr <- type.try_make_transport_cps (@base.try_make_transport_cps) _ _ _;
+                              (tr <- tr;
+                                 (tr' <- type.try_make_transport_cps (@base.try_make_transport_cps) _ _ _;
+                                    (tr' <- tr';
+                                       option_bind'
+                                         (normalize_deep_rewrite_rule (projT2 f'))
+                                         (fun fv
+                                          => Some (fv <-- fv;
                                                      fv <-- maybe_do_again should_do_again (base_type_of (type_of_rawexpr e')) (tr fv);
-                                                     UnderLets.Base (tr' fv))%under_lets)%option)%cps)%option)%cps)%cps)).
+                                                     UnderLets.Base (tr' fv))%under_lets))%option)%cps)%option)%cps)%cps).
 
-        Definition eval_rewrite_rules
-                   (d : decision_tree)
-                   (rews : rewrite_rulesT)
-                   (e : rawexpr)
-          : UnderLets (expr (type_of_rawexpr e))
-          := let defaulte := expr_of_rawexpr e in
-              (eval_decision_tree
-                 (e::nil) d
-                 (fun k ctx
-                  => match ctx return option (UnderLets (expr (type_of_rawexpr e))) with
-                    | e'::nil
-                      => (pf <- nth_error rews k; rewrite_with_rule defaulte e' pf)%option
-                    | _ => None
-                    end);;;
-                 (UnderLets.Base defaulte))%option.
+          Definition eval_rewrite_rules
+                     (d : decision_tree)
+                     (rews : rewrite_rulesT)
+                     (e : rawexpr)
+            : UnderLets (expr (type_of_rawexpr e))
+            := let defaulte := expr_of_rawexpr e in
+               (eval_decision_tree
+                  (e::nil) d
+                  (fun k ctx
+                   => match ctx return option (UnderLets (expr (type_of_rawexpr e))) with
+                      | e'::nil
+                        => (pf <- nth_error rews k; rewrite_with_rule defaulte e' pf)%option
+                      | _ => None
+                      end);;;
+                  (UnderLets.Base defaulte))%option.
         End eval_rewrite_rules.
 
         Local Notation enumerate ls
@@ -1418,7 +1396,6 @@ Module Compilers.
                   => {| rew_should_do_again := false;
                         rew_with_opt := false;
                         rew_under_lets := false;
-                        rew_is_cps := false;
                         rew_replacement
                         := under_with_unification_resultT
                              (fun evm v => ident.smart_Literal v)
@@ -1535,7 +1512,7 @@ Module Compilers.
         := (existT
               rewrite_ruleTP
               (@Build_anypattern _ p%pattern)
-              (@Build_rewrite_rule_data _ p%pattern should_do_again with_opt under_lets false (* is_cps *) f)).
+              (@Build_rewrite_rule_data _ p%pattern should_do_again with_opt under_lets f)).
       (* %cps%option%under_lets *)
       Notation make_rewrite p f
         := (make_rewrite_gen false false false p f%rewrite%expr%list%Z%bool).
@@ -2256,18 +2233,23 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
     End RewriterPrintingNotations.
 
     Ltac make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
-      (eval cbv -[pr2_rewrite_rules
-                    base.interp base.try_make_transport_cps
-                    type.try_make_transport_cps type.try_transport_cps
-                    pattern.type.unify_extracted_cps
-                    Compile.option_type_type_beq
-                    Let_In Option.sequence Option.sequence_return
-                    UnderLets.splice UnderLets.to_expr
-                    Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                    Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
-                    Compile.value'
-                    SubstVarLike.is_var_fst_snd_pair_opp_cast
-                 ] in rewrite_head0).
+      let rewrite_head1
+          := (eval cbv -[pr2_rewrite_rules
+                           base.interp base.try_make_transport_cps
+                           type.try_make_transport_cps
+                           pattern.type.unify_extracted_cps
+                           Compile.option_type_type_beq
+                           Let_In Option.sequence Option.sequence_return
+                           UnderLets.splice UnderLets.to_expr
+                           Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
+                           Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
+                           Compile.value'
+                           SubstVarLike.is_var_fst_snd_pair_opp_cast
+                        ] in rewrite_head0) in
+      let rewrite_head1
+          := (eval cbn [type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps]
+               in rewrite_head1) in
+      rewrite_head1.
     Ltac timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
       constr:(ltac:(time (idtac; let v := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in exact v))).
     Ltac make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
@@ -2276,6 +2258,9 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                    projT1 projT2
                    cpsbind cpscall cps_option_bind cpsreturn
                    PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
+                   pattern.type.subst_default pattern.base.subst_default
+                   PositiveMap.add PositiveMap.find PositiveMap.empty
+                   PositiveSet.rev PositiveSet.rev_append
                    pattern.ident.arg_types
                    Compile.eval_decision_tree
                    Compile.eval_rewrite_rules
@@ -2290,7 +2275,6 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                    Compile.rew_with_opt
                    Compile.rew_under_lets
                    Compile.rew_replacement
-                   Compile.rew_is_cps
                    Compile.rValueOrExpr
                    Compile.swap_list
                    Compile.type_of_rawexpr

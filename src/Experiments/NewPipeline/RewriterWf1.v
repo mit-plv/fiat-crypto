@@ -548,7 +548,9 @@ Module Compilers.
         Local Notation reveal_rawexpr_gen assume_known e := (@reveal_rawexpr_cps_gen ident _ assume_known e _ id).
         Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps ident _ e _ id).
         Local Notation unify_pattern' var := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
-        Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown type_vars_of_pident).
+        Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown).
+        Local Notation app_transport_with_unification_resultT'_cps var := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
+        Local Notation app_with_unification_resultT_cps var := (@app_with_unification_resultT_cps ident var pident pident_arg_types type_vars_of_pident).
 
         Definition lam_type_of_list {ls K} : (type_of_list ls -> K) -> type_of_list_cps K ls
           := list_rect
@@ -876,12 +878,12 @@ Module Compilers.
             etransitivity; rewrite pattern.type.add_var_types_cps_id; [ reflexivity | ]; break_innermost_match; reflexivity.
           Qed.
 
-          Lemma unify_pattern'_cps_id {t e p evm K v T cont}
-            : @unify_pattern' var t e p evm K v T cont
-              = (v' <- @unify_pattern' var t e p evm K v _ (@Some _); cont v')%option.
+          Lemma unify_pattern'_cps_id {t e p evm T cont}
+            : @unify_pattern' var t e p evm T cont
+              = (v' <- @unify_pattern' var t e p evm _ (@Some _); cont v')%option.
           Proof using Type.
             clear.
-            revert e evm K v T cont; induction p; intros; cbn in *;
+            revert e evm T cont; induction p; intros; cbn in *;
               repeat first [ progress rewrite_type_transport_correct
                            | reflexivity
                            | progress cbv [Option.bind cpscall option_bind'] in *
@@ -889,9 +891,9 @@ Module Compilers.
                            | break_innermost_match_step ].
           Qed.
 
-          Lemma unify_pattern_cps_id {t e p K v T cont}
-            : @unify_pattern var t e p K v T cont
-              = (v' <- @unify_pattern var t e p K v _ (@Some _); cont v')%option.
+          Lemma unify_pattern_cps_id {t e p T cont}
+            : @unify_pattern var t e p T cont
+              = (v' <- @unify_pattern var t e p _ (@Some _); cont v')%option.
           Proof using Type.
             clear.
             cbv [unify_pattern].
@@ -900,44 +902,46 @@ Module Compilers.
                          | progress rewrite_type_transport_correct
                          | progress cbv [Option.bind cpscall option_bind'] in *
                          | match goal with
-                           | [ |- @unify_pattern' _ _ _ _ _ _ _ _ _ = _ ]
+                           | [ |- @unify_pattern' _ _ _ _ _ _ _ = _ ]
                              => etransitivity; rewrite unify_pattern'_cps_id; [ | reflexivity ]
                            end
                          | break_innermost_match_step
                          | break_match_step ltac:(fun _ => idtac) ].
           Qed.
 
-          Section normalize_deep_rewrite_rule_cps_id.
-            Context {should_do_again with_opt under_lets is_cps : bool}
-                    {t}
-                    {v : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t}
-                    {T}
-                    {k : option (UnderLets var (@expr.expr base.type ident (if should_do_again then @value var else var) t)) -> option T}.
+          Lemma app_transport_with_unification_resultT'_cps_id {t p evm1 evm2 K f v T cont}
+            : @app_transport_with_unification_resultT'_cps var t p evm1 evm2 K f v T cont
+              = (res <- @app_transport_with_unification_resultT'_cps var t p evm1 evm2 K f v _ (@Some _); cont res)%option.
+          Proof using Type.
+            revert K f v T cont; induction p; cbn [app_transport_with_unification_resultT'_cps]; intros.
+            all: repeat first [ progress rewrite_type_transport_correct
+                              | progress type_beq_to_eq
+                              | progress cbn [Option.bind with_unification_resultT' unification_resultT'] in *
+                              | progress subst
+                              | reflexivity
+                              | progress fold (@with_unification_resultT' ident var pident pident_arg_types)
+                              | progress inversion_option
+                              | break_innermost_match_step
+                              | match goal with
+                                | [ H : context G[fun x => ?f x] |- _ ] => let G' := context G[f] in change G' in H
+                                | [ |- context G[fun x => ?f x] ] => let G' := context G[f] in change G'
+                                | [ H : forall K f v T cont, _ cont = _ |- _ ] => progress cps_id'_with_option H
+                                end
+                              | progress cbv [Option.bind] ].
+          Qed.
 
-            Definition normalize_deep_rewrite_rule_cps_id_hypsT
-              := ((match is_cps, with_opt return @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t -> Prop
-                   with
-                   | true, true => fun v => forall T k, v T k = k (v _ id)
-                   | true, false => fun v => forall T k, v T k = (v' <- v _ (@Some _); k v')%option
-                   | false, _ => fun _ => True
-                   end)
-                    v).
-
-            Lemma normalize_deep_rewrite_rule_cps_id
-                  (Hk : k None = None)
-                  (Hv : normalize_deep_rewrite_rule_cps_id_hypsT)
-              : @normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v T k = k (@normalize_deep_rewrite_rule ident var should_do_again with_opt under_lets is_cps t v _ id).
-            Proof using Type.
-              clear -Hk Hv; cbv [normalize_deep_rewrite_rule_cps_id_hypsT] in *; cbn in *.
-              repeat first [ progress cbn in *
-                           | progress destruct_head'_bool
-                           | reflexivity
-                           | progress cbv [id Option.bind] in *
-                           | solve [ auto ]
-                           | break_innermost_match_step
-                           | rewrite Hv; (solve [ auto ] + break_innermost_match_step) ].
-            Qed.
-          End normalize_deep_rewrite_rule_cps_id.
+          Lemma app_with_unification_resultT_cps_id {t p K f v T cont}
+            : @app_with_unification_resultT_cps var t p K f v T cont
+              = (res <- @app_with_unification_resultT_cps var t p K f v _ (@Some _); cont res)%option.
+          Proof using Type.
+            cbv [app_with_unification_resultT_cps].
+            repeat first [ progress cbv [Option.bind] in *
+                         | reflexivity
+                         | progress subst
+                         | progress inversion_option
+                         | progress break_match
+                         | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id ].
+          Qed.
 
           Lemma reveal_rawexpr_cps_gen_id assume_known e T k
             : @reveal_rawexpr_cps_gen ident var assume_known e T k = k (reveal_rawexpr_gen assume_known e).
@@ -1041,7 +1045,7 @@ Module Compilers.
             cbv [under_type_of_list_relation1_cps] in *.
             induction ls; cbn in *; eauto.
           Qed.
-
+          (*
           Lemma under_with_unification_resultT'_relation1_gen_always
                 {t p evm K1 FH F v}
                 (F_always : forall v, F v : Prop)
@@ -1051,6 +1055,7 @@ Module Compilers.
             revert evm K1 F v F_always.
             induction p; intros; cbn in *; eauto using @under_type_of_list_relation1_cps_always.
           Qed.
+           *)
         End with_var1.
 
         Section with_var2.
@@ -1078,6 +1083,10 @@ Module Compilers.
           Local Notation with_unification_resultT'2 := (@with_unification_resultT' ident var2 pident pident_arg_types).
           Local Notation with_unification_resultT1 := (@with_unification_resultT ident var1 pident pident_arg_types type_vars_of_pident).
           Local Notation with_unification_resultT2 := (@with_unification_resultT ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation unification_resultT'1 := (@unification_resultT' ident var1 pident pident_arg_types).
+          Local Notation unification_resultT'2 := (@unification_resultT' ident var2 pident pident_arg_types).
+          Local Notation unification_resultT1 := (@unification_resultT ident var1 pident pident_arg_types).
+          Local Notation unification_resultT2 := (@unification_resultT ident var2 pident pident_arg_types).
           Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types type_vars_of_pident).
           Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types type_vars_of_pident).
           Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types type_vars_of_pident).
@@ -1287,52 +1296,163 @@ Module Compilers.
             erewrite wf_unify_types by eassumption; reflexivity.
           Qed.
 
-          Fixpoint wf_with_unification_resultT'
-                   (G : list {t : _ & (var1 t * var2 t)%type})
-                   {t1 t2} {p1 : pattern t1} {p2 : pattern t2} {evm1 evm2 : EvarMap} {K1 K2}
-                   (P : K1 -> K2 -> Prop)
-                   {struct p1}
-            : @with_unification_resultT'1 t1 p1 evm1 K1
-              -> @with_unification_resultT'2 t2 p2 evm2 K2
-              -> Prop
-            := match p1 in pattern.pattern t1, p2 in pattern.pattern t2
-                     return @with_unification_resultT'1 t1 p1 evm1 K1
-                            -> @with_unification_resultT'2 t2 p2 evm2 K2
-                            -> Prop
-               with
-               | pattern.Wildcard t1, pattern.Wildcard t2
-                 => fun f1 f2
-                    => { pf : pattern.type.subst_default t1 evm1 = pattern.type.subst_default t2 evm2
-                       | forall v1 v2,
-                           wf_value G (rew [value] pf in v1) v2
-                           -> P (f1 v1) (f2 v2) }
-               | pattern.Ident t1 idc1, pattern.Ident t2 idc2
-                 => fun v1 v2
-                    => { pf : existT pident t1 idc1 = existT pident t2 idc2
-                       | under_type_of_list_relation_cps
-                           P
-                           (rew [fun tidc => type_of_list_cps K1 (pident_arg_types (projT1 tidc) (projT2 tidc))] pf in (v1 : type_of_list_cps _ (pident_arg_types _ (projT2 (existT pident _ _)))))
-                           v2 }
-               | pattern.App s1 d1 f1 x1, pattern.App s2 d2 f2 x2
-                 => fun (v1 : with_unification_resultT'1 f1 evm1 (with_unification_resultT'1 x1 evm1 K1))
-                        (v2 : with_unification_resultT'2 f2 evm2 (with_unification_resultT'2 x2 evm2 K2))
-                    => @wf_with_unification_resultT'
-                         G _ _ f1 f2 evm1 evm2 _ _
-                         (@wf_with_unification_resultT' G _ _ x1 x2 evm1 evm2 _ _ P)
-                         v1 v2
-               | pattern.Wildcard _, _
-               | pattern.Ident _ _, _
-               | pattern.App _ _ _ _, _
-                 => fun _ _ => False
+          Fixpoint related_unification_resultT' (R : forall t, @value var1 t -> @value var2 t -> Prop) {t p evm}
+            : @unification_resultT'1 t p evm -> @unification_resultT'2 t p evm -> Prop
+            := match p return unification_resultT'1 p evm -> unification_resultT'2 p evm -> Prop with
+               | pattern.Wildcard t => R _
+               | pattern.Ident t idc => eq
+               | pattern.App s d f x
+                 => fun (v1 : unification_resultT'1 f evm * unification_resultT'1 x evm)
+                        (v2 : unification_resultT'2 f evm * unification_resultT'2 x evm)
+                    => @related_unification_resultT' R _ _ _ (fst v1) (fst v2)
+                       /\ @related_unification_resultT' R  _ _ _ (snd v1) (snd v2)
                end.
 
-          Definition wf_with_unification_resultT
-                     G {t} {p : pattern t} {K1 K2 : type -> Type}
-                     (P : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
+          Definition wf_unification_resultT' (G : list {t1 : type & (var1 t1 * var2 t1)%type}) {t p evm}
+            : @unification_resultT'1 t p evm -> @unification_resultT'2 t p evm -> Prop
+            := @related_unification_resultT' (fun _ => wf_value G) t p evm.
+
+          (** TODO: MOVE ME? *)
+          Definition related_sigT_by_eq {A P1 P2} (R : forall x : A, P1 x -> P2 x -> Prop)
+                     (x : @sigT A P1) (y : @sigT A P2)
+            : Prop
+            := { pf : projT1 x = projT1 y
+               | R _ (rew pf in projT2 x) (projT2 y) }.
+
+          Definition related_unification_resultT (R : forall t, @value var1 t -> @value var2 t -> Prop) {t p}
+            : @unification_resultT1 t p -> @unification_resultT2 t p -> Prop
+            := related_sigT_by_eq (@related_unification_resultT' R t p).
+
+          Definition wf_unification_resultT (G : list {t1 : type & (var1 t1 * var2 t1)%type}) {t p}
+            : @unification_resultT1 t p -> @unification_resultT2 t p -> Prop
+            := @related_unification_resultT (fun _ => wf_value G) t p.
+
+          Fixpoint under_with_unification_resultT'_relation_hetero {t p evm K1 K2}
+                   (FH : forall t, value t -> value t -> Prop)
+                   (F : K1 -> K2 -> Prop)
+                   {struct p}
+            : @with_unification_resultT'1 t p evm K1 -> @with_unification_resultT'2 t p evm K2 -> Prop
+            := match p return with_unification_resultT'1 p evm K1 -> with_unification_resultT'2 p evm K2 -> Prop with
+               | pattern.Wildcard t => fun f1 f2 => forall v1 v2, FH _ v1 v2 -> F (f1 v1) (f2 v2)
+               | pattern.Ident t idc => under_type_of_list_relation_cps F
+               | pattern.App s d f x
+                 => @under_with_unification_resultT'_relation_hetero
+                      _ f evm _ _
+                      FH
+                      (@under_with_unification_resultT'_relation_hetero _ x evm _ _ FH F)
+               end.
+
+          Definition under_with_unification_resultT_relation_hetero {t p K1 K2}
+                     (FH : forall t, value t -> value t -> Prop)
+                     (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
             : @with_unification_resultT1 t p K1 -> @with_unification_resultT2 t p K2 -> Prop
             := pattern.type.under_forall_vars_relation
-                 (fun evm v1 v2
-                  => wf_with_unification_resultT' G (P _) v1 v2).
+                 (fun evm => under_with_unification_resultT'_relation_hetero FH (F evm)).
+
+          Definition wf_with_unification_resultT
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {t} {p : pattern t} {K1 K2 : type -> Type}
+                     (P : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
+            : @with_unification_resultT1 t p K1 -> @with_unification_resultT2 t p K2 -> Prop
+            := under_with_unification_resultT_relation_hetero
+                 (fun t => wf_value G)
+                 P.
+
+          Lemma related_app_with_unification_resultT' {t p evm K1 K2}
+                R1 R2
+                f1 f2 v1 v2
+            : @under_with_unification_resultT'_relation_hetero
+                t p evm K1 K2 R1 R2 f1 f2
+              -> @related_unification_resultT' R1 t p evm v1 v2
+              -> R2 (@app_with_unification_resultT' _ _ _ _ t p evm K1 f1 v1)
+                    (@app_with_unification_resultT' _ _ _ _ t p evm K2 f2 v2).
+          Proof using Type.
+            revert K1 K2 R1 R2 f1 f2 v1 v2; induction p; cbn in *; intros; subst; destruct_head'_and;
+              try apply related_app_type_of_list_of_under_type_of_list_relation_cps;
+              auto.
+            repeat match goal with H : _ |- _ => eapply H; eauto; clear H end.
+          Qed.
+
+          Lemma related_app_transport_with_unification_resultT' {t p evm1 evm2 K1 K2}
+                R1 R2
+                f1 f2 v1 v2
+            : @under_with_unification_resultT'_relation_hetero
+                t p evm1 K1 K2 R1 R2 f1 f2
+              -> @related_unification_resultT' R1 t p evm2 v1 v2
+              -> option_eq
+                   R2
+                   (@app_transport_with_unification_resultT'_cps _ t p evm1 evm2 K1 f1 v1 _ (@Some _))
+                   (@app_transport_with_unification_resultT'_cps _ t p evm1 evm2 K2 f2 v2 _ (@Some _)).
+          Proof using Type.
+            revert K1 K2 R1 R2 f1 f2 v1 v2; induction p; cbn in *; intros; subst; destruct_head'_and;
+              try apply related_app_type_of_list_of_under_type_of_list_relation_cps;
+              auto.
+            all: repeat first [ progress rewrite_type_transport_correct
+                              | progress type_beq_to_eq
+                              | break_innermost_match_step
+                              | reflexivity
+                              | progress cbn [Option.bind option_eq] in *
+                              | progress fold (@with_unification_resultT'1) (@with_unification_resultT'2)
+                              | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
+                              | progress cbv [eq_rect]
+                              | solve [ auto ]
+                              | exfalso; assumption
+                              | progress inversion_option
+                              | match goal with
+                                | [ H : (forall K1 K2 R1 R2 (f1 : with_unification_resultT'1 ?p1 ?evm1 K1), _)
+                                    |- context[@app_transport_with_unification_resultT'_cps _ ?t ?p1 ?evm1 ?evm2 ?K1' ?f1' ?v1' _ _] ]
+                                  => specialize (H K1' _ _ _ f1' _ v1' _ ltac:(eassumption) ltac:(eassumption))
+                                | [ H : option_eq ?R ?x ?y |- _ ]
+                                  => destruct x eqn:?, y eqn:?; cbv [option_eq] in H
+                                end ].
+          Qed.
+
+          Lemma related_app_with_unification_resultT {t p K1 K2}
+                R1 R2
+                f1 f2 v1 v2
+            : @under_with_unification_resultT_relation_hetero
+                t p K1 K2 R1 R2 f1 f2
+              -> @related_unification_resultT R1 t p v1 v2
+              -> option_eq
+                   (related_sigT_by_eq R2)
+                   (@app_with_unification_resultT_cps _ t p K1 f1 v1 _ (@Some _))
+                   (@app_with_unification_resultT_cps _ t p K2 f2 v2 _ (@Some _)).
+          Proof using Type.
+            cbv [related_unification_resultT under_with_unification_resultT_relation_hetero app_with_unification_resultT_cps related_sigT_by_eq unification_resultT] in *.
+            repeat first [ progress destruct_head'_sigT
+                         | progress destruct_head'_sig
+                         | progress subst
+                         | progress intros
+                         | progress cbn [eq_rect Option.bind projT1 projT2 option_eq] in *
+                         | exfalso; assumption
+                         | progress inversion_option
+                         | reflexivity
+                         | (exists eq_refl)
+                         | assumption
+                         | match goal with
+                           | [ H : pattern.type.under_forall_vars_relation ?R ?f1 ?f2
+                               |- context[pattern.type.app_forall_vars ?f1 ?x] ]
+                             => apply (pattern.type.app_forall_vars_under_forall_vars_relation (evm:=x)) in H
+                           | [ H : option_eq ?R ?x ?y |- _ ]
+                             => destruct x eqn:?, y eqn:?; cbv [option_eq] in H
+                           end
+                         | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
+                         | match goal with
+                           | [ H : under_with_unification_resultT'_relation_hetero _ _ _ _, H' : related_unification_resultT' _ _ _ |- _ ]
+                             => pose proof (related_app_transport_with_unification_resultT' _ _ _ _ _ _ H H'); clear H'
+                           end ].
+          Qed.
+
+          Lemma wf_app_with_unification_resultT G {t p K1 K2}
+                R
+                f1 f2 v1 v2
+            : @wf_with_unification_resultT G t p K1 K2 R f1 f2
+              -> @wf_unification_resultT G t p v1 v2
+              -> option_eq
+                   (related_sigT_by_eq R)
+                   (@app_with_unification_resultT_cps _ t p K1 f1 v1 _ (@Some _))
+                   (@app_with_unification_resultT_cps _ t p K2 f2 v2 _ (@Some _)).
+          Proof using Type. apply related_app_with_unification_resultT. Qed.
 
           Definition wf_maybe_do_again_expr
                      {t}
@@ -1375,66 +1495,45 @@ Module Compilers.
                | _, _ => fun _ _ => False
                end.
 
+          Definition maybe_option_eq {A B} {opt1 opt2 : bool} (R : A -> B -> Prop)
+            : (if opt1 then option A else A) -> (if opt2 then option B else B) -> Prop
+            := match opt1, opt2 with
+               | true, true => option_eq R
+               | false, false => R
+               | _, _ => fun _ _ => False
+               end.
+
           Definition wf_deep_rewrite_ruleTP_gen
                      (G : list {t : _ & (var1 t * var2 t)%type})
                      {t}
-                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1 : bool}
-                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2 : bool}
-            : deep_rewrite_ruleTP_gen1 rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1 t
-              -> deep_rewrite_ruleTP_gen2 rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2 t
+                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1 : bool}
+                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2 : bool}
+            : deep_rewrite_ruleTP_gen1 rew_should_do_again1 rew_with_opt1 rew_under_lets1 t
+              -> deep_rewrite_ruleTP_gen2 rew_should_do_again2 rew_with_opt2 rew_under_lets2 t
               -> Prop
-            := match rew_is_cps1, rew_is_cps2, rew_with_opt1, rew_with_opt2
-                     return (if rew_is_cps1
-                             then fun T => forall T', (T -> option T') -> option T'
-                             else fun T => T)
-                              (if rew_with_opt1 then option _ else _)
-                            -> (if rew_is_cps2
-                                then fun T => forall T', (T -> option T') -> option T'
-                                else fun T => T)
-                                 (if rew_with_opt2 then option _ else _)
-                            -> Prop
-               with
-               | true, true, true, true
-                 => fun f1 f2
-                    => (forall T K, f1 T K = K (f1 _ id))
-                       /\ (forall T K, f2 T K = K (f2 _ id))
-                       /\ option_eq
-                            (wf_maybe_under_lets_expr
-                               wf_maybe_do_again_expr
-                               G)
-                            (f1 _ id) (f2 _ id)
-               | true, true, false, false
-                 => fun (f1 f2 : forall T, _ -> option T)
-                    => (forall T K, f1 T K = (fv <- f1 _ (@Some _); K fv)%option)
-                       /\ (forall T K, f2 T K = (fv <- f2 _ (@Some _); K fv)%option)
-                       /\ option_eq
-                            (wf_maybe_under_lets_expr
-                               wf_maybe_do_again_expr
-                               G)
-                            (f1 _ (@Some _)) (f2 _ (@Some _))
-               | false, false, true, true
-                 => option_eq
-                      (wf_maybe_under_lets_expr
-                         wf_maybe_do_again_expr
-                         G)
-               | false, false, false, false
-                 => wf_maybe_under_lets_expr
-                      wf_maybe_do_again_expr
-                      G
-               | _, _, _, _ => fun _ _ => False
-               end.
+            := maybe_option_eq
+                 (wf_maybe_under_lets_expr
+                    wf_maybe_do_again_expr
+                    G).
 
           Definition wf_with_unif_rewrite_ruleTP_gen
                      (G : list {t : _ & (var1 t * var2 t)%type})
                      {t} {p : pattern t}
-                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1}
-                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2}
-            : with_unif_rewrite_ruleTP_gen1 p rew_should_do_again1 rew_with_opt1 rew_under_lets1 rew_is_cps1
-              -> with_unif_rewrite_ruleTP_gen2 p rew_should_do_again2 rew_with_opt2 rew_under_lets2 rew_is_cps2
+                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1}
+                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2}
+            : with_unif_rewrite_ruleTP_gen1 p rew_should_do_again1 rew_with_opt1 rew_under_lets1
+              -> with_unif_rewrite_ruleTP_gen2 p rew_should_do_again2 rew_with_opt2 rew_under_lets2
               -> Prop
-            := wf_with_unification_resultT
-                 G
-                 (fun evm => wf_deep_rewrite_ruleTP_gen G).
+            := fun f g
+               => forall x y,
+                   wf_unification_resultT G x y
+                   -> option_eq
+                        (fun (fx : { evm : _ & deep_rewrite_ruleTP_gen1 rew_should_do_again1 rew_with_opt1 rew_under_lets1 _ })
+                             (gy : { evm : _ & deep_rewrite_ruleTP_gen2 rew_should_do_again2 rew_with_opt2 rew_under_lets2 _ })
+                         => related_sigT_by_eq
+                              (fun _ => wf_deep_rewrite_ruleTP_gen G) fx gy)
+                        (app_with_unification_resultT_cps _ f x _ (@Some _))
+                        (app_with_unification_resultT_cps _ g y _ (@Some _)).
 
           Definition wf_rewrite_rule_data
                      (G : list {t : _ & (var1 t * var2 t)%type})
@@ -1456,6 +1555,64 @@ Module Compilers.
                                G
                                (rew [fun tp => @rewrite_rule_data1 _ (pattern.pattern_of_anypattern tp)] pf in r1)
                                r2 }).
+
+          Definition wf_with_unif_rewrite_ruleTP_gen_curried
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {t} {p : pattern t}
+                     {rew_should_do_again1 rew_with_opt1 rew_under_lets1}
+                     {rew_should_do_again2 rew_with_opt2 rew_under_lets2}
+            : with_unif_rewrite_ruleTP_gen1 p rew_should_do_again1 rew_with_opt1 rew_under_lets1
+              -> with_unif_rewrite_ruleTP_gen2 p rew_should_do_again2 rew_with_opt2 rew_under_lets2
+              -> Prop
+            := wf_with_unification_resultT
+                 G
+                 (fun evm => wf_deep_rewrite_ruleTP_gen G).
+
+          Definition wf_rewrite_rule_data_curried
+                     (G : list {t : _ & (var1 t * var2 t)%type})
+                     {t} {p : pattern t}
+                     (r1 : @rewrite_rule_data1 t p)
+                     (r2 : @rewrite_rule_data2 t p)
+            : Prop
+            := wf_with_unif_rewrite_ruleTP_gen_curried G (rew_replacement _ _ r1) (rew_replacement _ _ r2).
+
+          Definition rewrite_rules_goodT_curried
+                     (rew1 : rewrite_rulesT1) (rew2 : rewrite_rulesT2)
+            : Prop
+            := length rew1 = length rew2
+               /\ (forall p1 r1 p2 r2,
+                      List.In (existT _ p1 r1, existT _ p2 r2) (combine rew1 rew2)
+                      -> { pf : p1 = p2
+                         | forall G,
+                             wf_rewrite_rule_data_curried
+                               G
+                               (rew [fun tp => @rewrite_rule_data1 _ (pattern.pattern_of_anypattern tp)] pf in r1)
+                               r2 }).
+
+          Lemma rewrite_rules_goodT_by_curried rew1 rew2
+            : rewrite_rules_goodT_curried rew1 rew2 -> rewrite_rules_goodT rew1 rew2.
+          Proof using Type.
+            cbv [rewrite_rules_goodT rewrite_rules_goodT_curried wf_rewrite_rule_data_curried wf_rewrite_rule_data wf_with_unif_rewrite_ruleTP_gen wf_with_unif_rewrite_ruleTP_gen_curried].
+            intros [Hlen H]; split; [ exact Hlen | clear Hlen ].
+            repeat (let x := fresh "x" in intro x; specialize (H x)).
+            destruct H as [H0 H]; exists H0.
+            repeat (let x := fresh "x" in intro x; specialize (H x)).
+            intros X Y HXY.
+            pose proof (wf_app_with_unification_resultT _ _ _ _ _ _ ltac:(eassumption) ltac:(eassumption)) as H'.
+            cps_id'_with_option app_with_unification_resultT_cps_id.
+            cbv [deep_rewrite_ruleTP_gen] in *.
+            let H1 := fresh in
+            let H2 := fresh in
+            lazymatch type of H' with
+            | option_eq ?R ?x ?y
+              => destruct x eqn:H1, y eqn:H2; cbv [option_eq] in H'
+            end.
+            all: repeat first [ progress cbn [option_eq]
+                              | reflexivity
+                              | progress inversion_option
+                              | exfalso; assumption
+                              | assumption ].
+          Qed.
         End with_var2.
 
         Section with_interp.
@@ -1468,10 +1625,6 @@ Module Compilers.
           Local Notation with_unif_rewrite_ruleTP_gen := (@with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types type_vars_of_pident).
           Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
           Local Notation normalize_deep_rewrite_rule := (@normalize_deep_rewrite_rule ident var).
-          Local Notation under_with_unification_resultT_relation := (@under_with_unification_resultT_relation ident var pident pident_arg_types type_vars_of_pident).
-          Local Notation under_with_unification_resultT_relation_hetero := (@under_with_unification_resultT_relation_hetero ident var pident pident_arg_types type_vars_of_pident).
-          Local Notation under_with_unification_resultT_relation1 := (@under_with_unification_resultT_relation1 ident var pident pident_arg_types type_vars_of_pident).
-          Local Notation under_with_unification_resultT_relation1_gen := (@under_with_unification_resultT_relation1_gen ident var pident pident_arg_types type_vars_of_pident).
 
           Local Notation deep_rewrite_ruleTP_gen := (@deep_rewrite_ruleTP_gen ident var).
 
@@ -1566,23 +1719,17 @@ Module Compilers.
                                 => k (expr.App ef ex)))
                end.
 
-          Definition pattern_default_interp {t} (p : pattern t) : @with_unif_rewrite_ruleTP_gen t p false false false false
+          Definition pattern_default_interp {t} (p : pattern t) : @with_unif_rewrite_ruleTP_gen t p false false false
             := pattern.type.lam_forall_vars
                  (fun evm
                   => pattern_default_interp' p evm id).
 
-          Definition deep_rewrite_ruleTP_gen_ok_relation
-                     {should_do_again with_opt under_lets is_cps : bool} {t}
-                     (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t)
-            : Prop
-            := @normalize_deep_rewrite_rule_cps_id_hypsT var _ _ _ _ _ v1.
-
           Definition deep_rewrite_ruleTP_gen_good_relation
-                     {should_do_again with_opt under_lets is_cps : bool} {t}
-                     (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets is_cps t)
+                     {should_do_again with_opt under_lets : bool} {t}
+                     (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets t)
                      (v2 : expr t)
             : Prop
-            := (let v1 := normalize_deep_rewrite_rule v1 _ id in
+            := (let v1 := normalize_deep_rewrite_rule v1 in
                 match v1 with
                 | None => True
                 | Some v1 => let v1 := UnderLets.interp ident_interp v1 in
@@ -1599,16 +1746,17 @@ Module Compilers.
           Definition rewrite_rule_data_interp_goodT
                      {t} {p : pattern t} (r : @rewrite_rule_data t p)
             : Prop
-            := @under_with_unification_resultT_relation1
-                 _ _ _
-                 (fun evm => deep_rewrite_ruleTP_gen_ok_relation)
-                 (rew_replacement _ _ r)
-               /\ @under_with_unification_resultT_relation_hetero
-                    _ _ _ _
-                    (fun _ => value_interp_related)
-                    (fun evm => deep_rewrite_ruleTP_gen_good_relation)
-                    (rew_replacement _ _ r)
-                    (pattern_default_interp p).
+            := forall x y,
+              related_unification_resultT (fun t => value_interp_related) x y
+              -> option_eq
+                   (fun fx gy
+                    => related_sigT_by_eq
+                         (fun evm
+                          => @deep_rewrite_ruleTP_gen_good_relation
+                               (rew_should_do_again _ _ r) (rew_with_opt _ _ r) (rew_under_lets _ _ r) (pattern.type.subst_default t evm))
+                         fx gy)
+                   (app_with_unification_resultT_cps _ (rew_replacement _ _ r) x _ (@Some _))
+                   (app_with_unification_resultT_cps _ (pattern_default_interp p) y _ (@Some _)).
 
           Definition rewrite_rules_interp_goodT
                      (rews : rewrite_rulesT)
@@ -1616,6 +1764,45 @@ Module Compilers.
             := forall p r,
               List.In (existT _ p r) rews
               -> rewrite_rule_data_interp_goodT r.
+
+          Definition rewrite_rule_data_interp_goodT_curried
+                     {t} {p : pattern t} (r : @rewrite_rule_data t p)
+            : Prop
+            := under_with_unification_resultT_relation_hetero
+                 (fun _ => value_interp_related)
+                 (fun evm => deep_rewrite_ruleTP_gen_good_relation)
+                 (rew_replacement _ _ r)
+                 (pattern_default_interp p).
+
+          Definition rewrite_rules_interp_goodT_curried
+                     (rews : rewrite_rulesT)
+            : Prop
+            := forall p r,
+              List.In (existT _ p r) rews
+              -> rewrite_rule_data_interp_goodT_curried r.
+
+          Lemma rewrite_rules_interp_goodT_by_curried rews
+            : rewrite_rules_interp_goodT_curried rews -> rewrite_rules_interp_goodT rews.
+          Proof using Type.
+            cbv [rewrite_rules_interp_goodT rewrite_rules_interp_goodT_curried rewrite_rule_data_interp_goodT rewrite_rule_data_interp_goodT_curried].
+            intro H.
+            repeat (let x := fresh "x" in intro x; specialize (H x)).
+            intros X Y HXY.
+            pose proof (related_app_with_unification_resultT _ _ _ _ _ _ ltac:(eassumption) ltac:(eassumption)) as H'.
+            cps_id'_with_option app_with_unification_resultT_cps_id.
+            cbv [deep_rewrite_ruleTP_gen] in *.
+            let H1 := fresh in
+            let H2 := fresh in
+            lazymatch type of H' with
+            | option_eq ?R ?x ?y
+              => destruct x eqn:H1, y eqn:H2; cbv [option_eq] in H'
+            end.
+            all: repeat first [ progress cbn [option_eq]
+                              | reflexivity
+                              | progress inversion_option
+                              | exfalso; assumption
+                              | assumption ].
+          Qed.
         End with_interp.
       End with_var.
     End Compile.

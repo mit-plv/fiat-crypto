@@ -42,10 +42,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- ident.unify pattern.ident.pair pair;
                v <- type.try_make_transport_cps s0 b3;
                _ <- type.try_make_transport_cps s b2;
-               v1 <- base.try_make_transport_cps b3 A;
-               v2 <- base.try_make_transport_cps A A;
-               v3 <- base.try_make_transport_cps A A;
-               Some (Base (v3 (v2 (v1 (v (Compile.reflect x1))))))
+               v1 <- base.try_make_transport_cps b3 b3;
+               _ <- base.try_make_transport_cps b2 b2;
+               v3 <- base.try_make_transport_cps b3 A;
+               v4 <- base.try_make_transport_cps A A;
+               Some (Base (v4 (v3 (v1 (v (Compile.reflect x1))))))
               else None
           | None => None
           end
@@ -93,10 +94,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- ident.unify pattern.ident.pair pair;
                _ <- type.try_make_transport_cps s0 b3;
                v0 <- type.try_make_transport_cps s b2;
-               v1 <- base.try_make_transport_cps b2 B;
-               v2 <- base.try_make_transport_cps B B;
-               v3 <- base.try_make_transport_cps B B;
-               Some (Base (v3 (v2 (v1 (v0 (Compile.reflect x0))))))
+               _ <- base.try_make_transport_cps b3 b3;
+               v2 <- base.try_make_transport_cps b2 b2;
+               v3 <- base.try_make_transport_cps b2 B;
+               v4 <- base.try_make_transport_cps B B;
+               Some (Base (v4 (v3 (v2 (v0 (Compile.reflect x0))))))
               else None
           | None => None
           end
@@ -227,11 +229,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some x0
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some x0
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -249,12 +253,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                    (ℤ -> (projT1 args))%ptype
                 then
-                 idc_args <- ident.unify pattern.ident.Literal
-                               ##(projT2 args);
-                 x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                        then Some x
-                        else None);
-                 Some (Base x1)
+                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                 fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                               then Some x
+                               else None);
+                        Some (Base x1));
+                 Some (fv0 <-- fv;
+                       Base fv0)%under_lets
                 else None
             | None => None
             end);;
@@ -273,15 +278,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (ℤ -> ℤ)%ptype (s -> (projT1 args0))%ptype
                     then
                      v <- type.try_make_transport_cps s ℤ;
-                     idc_args <- ident.unify pattern.ident.Literal
-                                   ##(projT2 args0);
-                     x2 <- (if (let (x2, _) := idc_args in x2) >? 0
-                            then
-                             Some
-                               (##(let (x2, _) := idc_args in x2) -
-                                v (Compile.reflect x1))%expr
-                            else None);
-                     Some (Base x2)
+                     xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                     fv <- (x2 <- (if (let (x2, _) := xv in x2) >? 0
+                                   then
+                                    Some
+                                      (##(let (x2, _) := xv in x2) -
+                                       v (Compile.reflect x1))%expr
+                                   else None);
+                            Some (Base x2));
+                     Some (fv0 <-- fv;
+                           Base fv0)%under_lets
                     else None
                 | None => None
                 end);;
@@ -297,16 +303,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (s -> (projT1 args0))%ptype
                    then
                     v <- type.try_make_transport_cps s ℤ;
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args0);
-                    x2 <- (if (let (x2, _) := idc_args in x2) <? 0
-                           then
-                            Some
-                              (-
-                               (v (Compile.reflect x1) +
-                                ##(- (let (x2, _) := idc_args in x2))%Z))%expr
-                           else None);
-                    Some (Base x2)
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) <? 0
+                                  then
+                                   Some
+                                     (-
+                                      (v (Compile.reflect x1) +
+                                       ##(- (let (x2, _) := xv in x2))%Z))%expr
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -329,16 +336,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      type.type_beq base.type base.type.type_beq
                        (ℤ -> ℤ)%ptype ((projT1 args) -> s)%ptype
                     then
-                     idc_args <- ident.unify pattern.ident.Literal
-                                   ##(projT2 args);
+                     xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                      v <- type.try_make_transport_cps s ℤ;
-                     x2 <- (if (let (x2, _) := idc_args in x2) >? 0
-                            then
-                             Some
-                               (##(let (x2, _) := idc_args in x2) -
-                                v (Compile.reflect x1))%expr
-                            else None);
-                     Some (Base x2)
+                     fv <- (x2 <- (if (let (x2, _) := xv in x2) >? 0
+                                   then
+                                    Some
+                                      (##(let (x2, _) := xv in x2) -
+                                       v (Compile.reflect x1))%expr
+                                   else None);
+                            Some (Base x2));
+                     Some (fv0 <-- fv;
+                           Base fv0)%under_lets
                     else None
                 | None => None
                 end);;
@@ -353,17 +361,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args) -> s)%ptype
                    then
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args);
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                     v <- type.try_make_transport_cps s ℤ;
-                    x2 <- (if (let (x2, _) := idc_args in x2) <? 0
-                           then
-                            Some
-                              (-
-                               (##(- (let (x2, _) := idc_args in x2))%Z +
-                                v (Compile.reflect x1)))%expr
-                           else None);
-                    Some (Base x2)
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) <? 0
+                                  then
+                                   Some
+                                     (-
+                                      (##(- (let (x2, _) := xv in x2))%Z +
+                                       v (Compile.reflect x1)))%expr
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -463,14 +472,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args0) -> (projT1 args))%ptype
                    then
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args0);
-                    idc_args0 <- ident.unify pattern.ident.Literal
-                                   ##(projT2 args);
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                    xv0 <- ident.unify pattern.ident.Literal ##(projT2 args);
                     Some
                       (Base
-                         (##((let (x1, _) := idc_args in x1) *
-                             (let (x1, _) := idc_args0 in x1))%Z)%expr)
+                         (##((let (x1, _) := xv in x1) *
+                             (let (x1, _) := xv0 in x1))%Z)%expr)
                    else None
                | None => None
                end
@@ -486,11 +493,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some (##0)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some (##0)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -508,11 +517,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some (##0)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some (##0)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -530,11 +541,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 1
-                       then Some x0
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 1
+                              then Some x0
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -552,12 +565,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                    (ℤ -> (projT1 args))%ptype
                 then
-                 idc_args <- ident.unify pattern.ident.Literal
-                               ##(projT2 args);
-                 x1 <- (if (let (x1, _) := idc_args in x1) =? 1
-                        then Some x
-                        else None);
-                 Some (Base x1)
+                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                 fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 1
+                               then Some x
+                               else None);
+                        Some (Base x1));
+                 Some (fv0 <-- fv;
+                       Base fv0)%under_lets
                 else None
             | None => None
             end);;
@@ -575,12 +589,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (s -> (projT1 args0))%ptype
                    then
                     v <- type.try_make_transport_cps s ℤ;
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args0);
-                    x2 <- (if (let (x2, _) := idc_args in x2) =? -1
-                           then Some (v (Compile.reflect x1))
-                           else None);
-                    Some (Base x2)
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) =? -1
+                                  then Some (v (Compile.reflect x1))
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -603,13 +618,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args) -> s)%ptype
                    then
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args);
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                     v <- type.try_make_transport_cps s ℤ;
-                    x2 <- (if (let (x2, _) := idc_args in x2) =? -1
-                           then Some (v (Compile.reflect x1))
-                           else None);
-                    Some (Base x2)
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) =? -1
+                                  then Some (v (Compile.reflect x1))
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -632,11 +648,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? -1
-                       then Some (- x0)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? -1
+                              then Some (- x0)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -654,11 +672,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? -1
-                       then Some (- x)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? -1
+                              then Some (- x)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -676,13 +696,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) <? 0
-                       then
-                        Some
-                          (- (##(- (let (x1, _) := idc_args in x1))%Z * x0))%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) <? 0
+                              then
+                               Some
+                                 (- (##(- (let (x1, _) := xv in x1))%Z * x0))%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -700,13 +722,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) <? 0
-                       then
-                        Some
-                          (- (x * ##(- (let (x1, _) := idc_args in x1))%Z))%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) <? 0
+                              then
+                               Some
+                                 (- (x * ##(- (let (x1, _) := xv in x1))%Z))%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -777,16 +801,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if
-                        ((let (x1, _) := idc_args in x1) =?
-                         2 ^ Z.log2 (let (x1, _) := idc_args in x1)) &&
-                        negb ((let (x1, _) := idc_args in x1) =? 2)
-                       then
-                        Some
-                          (x << ##(Z.log2 (let (x1, _) := idc_args in x1)))%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if
+                               ((let (x1, _) := xv in x1) =?
+                                2 ^ Z.log2 (let (x1, _) := xv in x1)) &&
+                               negb ((let (x1, _) := xv in x1) =? 2)
+                              then
+                               Some
+                                 (x << ##(Z.log2 (let (x1, _) := xv in x1)))%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -823,17 +849,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                    ((projT1 args) -> ℤ)%ptype
                 then
-                 idc_args <- ident.unify pattern.ident.Literal
-                               ##(projT2 args);
-                 x1 <- (if
-                         ((let (x1, _) := idc_args in x1) =?
-                          2 ^ Z.log2 (let (x1, _) := idc_args in x1)) &&
-                         negb ((let (x1, _) := idc_args in x1) =? 2)
-                        then
-                         Some
-                           (x0 << ##(Z.log2 (let (x1, _) := idc_args in x1)))%expr
-                        else None);
-                 Some (Base x1)
+                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                 fv <- (x1 <- (if
+                                ((let (x1, _) := xv in x1) =?
+                                 2 ^ Z.log2 (let (x1, _) := xv in x1)) &&
+                                negb ((let (x1, _) := xv in x1) =? 2)
+                               then
+                                Some
+                                  (x0 << ##(Z.log2 (let (x1, _) := xv in x1)))%expr
+                               else None);
+                        Some (Base x1));
+                 Some (fv0 <-- fv;
+                       Base fv0)%under_lets
                 else None
             | None => None
             end);;
@@ -862,25 +889,27 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               (ℤ -> ℤ -> ℤ -> ℤ)%ptype
                               ((projT1 args2) -> (projT1 args0) -> s2 -> s1)%ptype
                            then
-                            idc_args <- ident.unify pattern.ident.Literal
-                                          ##(projT2 args2);
-                            idc_args0 <- ident.unify pattern.ident.Literal
-                                           ##(projT2 args0);
+                            xv <- ident.unify pattern.ident.Literal
+                                    ##(projT2 args2);
+                            xv0 <- ident.unify pattern.ident.Literal
+                                     ##(projT2 args0);
                             v <- type.try_make_transport_cps s2 ℤ;
                             v0 <- type.try_make_transport_cps s1 ℤ;
-                            x5 <- (if
-                                    (Z.abs (let (x5, _) := idc_args in x5) <=?
-                                     Z.abs max_const_val) &&
-                                    (Z.abs (let (x5, _) := idc_args0 in x5) <=?
-                                     Z.abs max_const_val)
-                                   then
-                                    Some
-                                      (v (Compile.reflect x4) *
-                                       (v0 (Compile.reflect x3) *
-                                        (##(let (x5, _) := idc_args in x5) *
-                                         ##(let (x5, _) := idc_args0 in x5))))%expr
-                                   else None);
-                            Some (Base x5)
+                            fv <- (x5 <- (if
+                                           (Z.abs (let (x5, _) := xv in x5) <=?
+                                            Z.abs max_const_val) &&
+                                           (Z.abs (let (x5, _) := xv0 in x5) <=?
+                                            Z.abs max_const_val)
+                                          then
+                                           Some
+                                             (v (Compile.reflect x4) *
+                                              (v0 (Compile.reflect x3) *
+                                               (##(let (x5, _) := xv in x5) *
+                                                ##(let (x5, _) := xv0 in x5))))%expr
+                                          else None);
+                                   Some (Base x5));
+                            Some (fv0 <-- fv;
+                                  Base fv0)%under_lets
                            else None
                        | None => None
                        end
@@ -919,25 +948,27 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (ℤ -> ℤ -> ℤ -> ℤ)%ptype
                           ((projT1 args2) -> s0 -> s2 -> (projT1 args))%ptype
                        then
-                        idc_args <- ident.unify pattern.ident.Literal
-                                      ##(projT2 args2);
+                        xv <- ident.unify pattern.ident.Literal
+                                ##(projT2 args2);
                         v <- type.try_make_transport_cps s0 ℤ;
                         v0 <- type.try_make_transport_cps s2 ℤ;
-                        idc_args0 <- ident.unify pattern.ident.Literal
-                                       ##(projT2 args);
-                        x5 <- (if
-                                (Z.abs (let (x5, _) := idc_args in x5) <=?
-                                 Z.abs max_const_val) &&
-                                (Z.abs (let (x5, _) := idc_args0 in x5) <=?
-                                 Z.abs max_const_val)
-                               then
-                                Some
-                                  (v (Compile.reflect x2) *
-                                   (v0 (Compile.reflect x4) *
-                                    (##(let (x5, _) := idc_args in x5) *
-                                     ##(let (x5, _) := idc_args0 in x5))))%expr
-                               else None);
-                        Some (Base x5)
+                        xv0 <- ident.unify pattern.ident.Literal
+                                 ##(projT2 args);
+                        fv <- (x5 <- (if
+                                       (Z.abs (let (x5, _) := xv in x5) <=?
+                                        Z.abs max_const_val) &&
+                                       (Z.abs (let (x5, _) := xv0 in x5) <=?
+                                        Z.abs max_const_val)
+                                      then
+                                       Some
+                                         (v (Compile.reflect x2) *
+                                          (v0 (Compile.reflect x4) *
+                                           (##(let (x5, _) := xv in x5) *
+                                            ##(let (x5, _) := xv0 in x5))))%expr
+                                      else None);
+                               Some (Base x5));
+                        Some (fv0 <-- fv;
+                              Base fv0)%under_lets
                        else None
                    | None => None
                    end
@@ -968,20 +999,21 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     type.type_beq base.type base.type.type_beq
                       (ℤ -> ℤ -> ℤ)%ptype ((projT1 args0) -> s0 -> s)%ptype
                    then
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args0);
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
                     v <- type.try_make_transport_cps s0 ℤ;
                     v0 <- type.try_make_transport_cps s ℤ;
-                    x3 <- (if
-                            Z.abs (let (x3, _) := idc_args in x3) <=?
-                            Z.abs max_const_val
-                           then
-                            Some
-                              (v (Compile.reflect x2) *
-                               (v0 (Compile.reflect x1) *
-                                ##(let (x3, _) := idc_args in x3)))%expr
-                           else None);
-                    Some (Base x3)
+                    fv <- (x3 <- (if
+                                   Z.abs (let (x3, _) := xv in x3) <=?
+                                   Z.abs max_const_val
+                                  then
+                                   Some
+                                     (v (Compile.reflect x2) *
+                                      (v0 (Compile.reflect x1) *
+                                       ##(let (x3, _) := xv in x3)))%expr
+                                  else None);
+                           Some (Base x3));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -1006,14 +1038,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if
-                        Z.abs (let (x1, _) := idc_args in x1) <=?
-                        Z.abs max_const_val
-                       then
-                        Some (x0 * ##(let (x1, _) := idc_args in x1))%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if
+                               Z.abs (let (x1, _) := xv in x1) <=?
+                               Z.abs max_const_val
+                              then
+                               Some (x0 * ##(let (x1, _) := xv in x1))%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1039,13 +1073,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args0) -> s)%ptype
                    then
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args0);
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
                     v <- type.try_make_transport_cps s ℤ;
-                    x2 <- (if (let (x2, _) := idc_args in x2) =? 0
-                           then Some (v (Compile.reflect x1))
-                           else None);
-                    Some (Base x2)
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) =? 0
+                                  then Some (v (Compile.reflect x1))
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -1064,11 +1099,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some (- x0)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some (- x0)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1086,11 +1123,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some x
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some x
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1108,16 +1147,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      type.type_beq base.type base.type.type_beq
                        (ℤ -> ℤ)%ptype ((projT1 args) -> s)%ptype
                     then
-                     idc_args <- ident.unify pattern.ident.Literal
-                                   ##(projT2 args);
+                     xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                      v <- type.try_make_transport_cps s ℤ;
-                     x2 <- (if (let (x2, _) := idc_args in x2) >? 0
-                            then
-                             Some
-                               (##(let (x2, _) := idc_args in x2) +
-                                v (Compile.reflect x1))%expr
-                            else None);
-                     Some (Base x2)
+                     fv <- (x2 <- (if (let (x2, _) := xv in x2) >? 0
+                                   then
+                                    Some
+                                      (##(let (x2, _) := xv in x2) +
+                                       v (Compile.reflect x1))%expr
+                                   else None);
+                            Some (Base x2));
+                     Some (fv0 <-- fv;
+                           Base fv0)%under_lets
                     else None
                 | None => None
                 end);;
@@ -1132,16 +1172,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                       ((projT1 args) -> s)%ptype
                    then
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args);
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                     v <- type.try_make_transport_cps s ℤ;
-                    x2 <- (if (let (x2, _) := idc_args in x2) <? 0
-                           then
-                            Some
-                              (v (Compile.reflect x1) -
-                               ##(- (let (x2, _) := idc_args in x2))%Z)%expr
-                           else None);
-                    Some (Base x2)
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) <? 0
+                                  then
+                                   Some
+                                     (v (Compile.reflect x1) -
+                                      ##(- (let (x2, _) := xv in x2))%Z)%expr
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -1164,13 +1205,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) <? 0
-                       then
-                        Some
-                          (- (##(- (let (x1, _) := idc_args in x1))%Z + x0))%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) <? 0
+                              then
+                               Some
+                                 (- (##(- (let (x1, _) := xv in x1))%Z + x0))%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1189,16 +1232,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (ℤ -> ℤ)%ptype (s -> (projT1 args))%ptype
                     then
                      v <- type.try_make_transport_cps s ℤ;
-                     idc_args <- ident.unify pattern.ident.Literal
-                                   ##(projT2 args);
-                     x2 <- (if (let (x2, _) := idc_args in x2) >? 0
-                            then
-                             Some
-                               (-
-                                (v (Compile.reflect x1) +
-                                 ##(let (x2, _) := idc_args in x2)))%expr
-                            else None);
-                     Some (Base x2)
+                     xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                     fv <- (x2 <- (if (let (x2, _) := xv in x2) >? 0
+                                   then
+                                    Some
+                                      (-
+                                       (v (Compile.reflect x1) +
+                                        ##(let (x2, _) := xv in x2)))%expr
+                                   else None);
+                            Some (Base x2));
+                     Some (fv0 <-- fv;
+                           Base fv0)%under_lets
                     else None
                 | None => None
                 end);;
@@ -1214,15 +1258,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (s -> (projT1 args))%ptype
                    then
                     v <- type.try_make_transport_cps s ℤ;
-                    idc_args <- ident.unify pattern.ident.Literal
-                                  ##(projT2 args);
-                    x2 <- (if (let (x2, _) := idc_args in x2) <? 0
-                           then
-                            Some
-                              (##(- (let (x2, _) := idc_args in x2))%Z -
-                               v (Compile.reflect x1))%expr
-                           else None);
-                    Some (Base x2)
+                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                    fv <- (x2 <- (if (let (x2, _) := xv in x2) <? 0
+                                  then
+                                   Some
+                                     (##(- (let (x2, _) := xv in x2))%Z -
+                                      v (Compile.reflect x1))%expr
+                                  else None);
+                           Some (Base x2));
+                    Some (fv0 <-- fv;
+                          Base fv0)%under_lets
                    else None
                | None => None
                end
@@ -1245,13 +1290,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) <? 0
-                       then
-                        Some
-                          (x + ##(- (let (x1, _) := idc_args in x1))%Z)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) <? 0
+                              then
+                               Some
+                                 (x + ##(- (let (x1, _) := xv in x1))%Z)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1363,14 +1410,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            if type.type_beq base.type base.type.type_beq ℤ ℤ
            then
             fv <- (if negb (SubstVarLike.is_var_fst_snd_pair_opp_cast x)
-                   then
-                    Some
-                      (UnderLet x
-                         (fun
-                            v : var
-                                  (base.subst_default ℤ
-                                     (PositiveMap.empty base.type)) =>
-                          Base (- $v)%expr))
+                   then Some (UnderLet x (fun v : var ℤ => Base (- $v)%expr))
                    else None);
             Some (fv0 <-- fv;
                   Base fv0)%under_lets
@@ -1393,11 +1433,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 1
-                       then Some x
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 1
+                              then Some x
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end);;
@@ -1411,15 +1453,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                  (ℤ -> (projT1 args))%ptype
               then
-               idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-               x1 <- (if
-                       (let (x1, _) := idc_args in x1) =?
-                       2 ^ Z.log2 (let (x1, _) := idc_args in x1)
-                      then
-                       Some
-                         (x >> ##(Z.log2 (let (x1, _) := idc_args in x1)))%expr
-                      else None);
-               Some (Base x1)
+               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+               fv <- (x1 <- (if
+                              (let (x1, _) := xv in x1) =?
+                              2 ^ Z.log2 (let (x1, _) := xv in x1)
+                             then
+                              Some
+                                (x >> ##(Z.log2 (let (x1, _) := xv in x1)))%expr
+                             else None);
+                      Some (Base x1));
+               Some (fv0 <-- fv;
+                     Base fv0)%under_lets
               else None
           | None => None
           end
@@ -1441,11 +1485,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                  (ℤ -> (projT1 args))%ptype
               then
-               idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-               x1 <- (if (let (x1, _) := idc_args in x1) =? 1
-                      then Some (##0)%expr
-                      else None);
-               Some (Base x1)
+               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+               fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 1
+                             then Some (##0)%expr
+                             else None);
+                      Some (Base x1));
+               Some (fv0 <-- fv;
+                     Base fv0)%under_lets
               else None
           | None => None
           end);;
@@ -1459,15 +1505,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                 (ℤ -> (projT1 args))%ptype
              then
-              idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-              x1 <- (if
-                      (let (x1, _) := idc_args in x1) =?
-                      2 ^ Z.log2 (let (x1, _) := idc_args in x1)
-                     then
-                      Some
-                        (x &' ##((let (x1, _) := idc_args in x1) - 1)%Z)%expr
-                     else None);
-              Some (Base x1)
+              xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+              fv <- (x1 <- (if
+                             (let (x1, _) := xv in x1) =?
+                             2 ^ Z.log2 (let (x1, _) := xv in x1)
+                            then
+                             Some
+                               (x &' ##((let (x1, _) := xv in x1) - 1)%Z)%expr
+                            else None);
+                     Some (Base x1));
+              Some (fv0 <-- fv;
+                    Base fv0)%under_lets
              else None
          | None => None
          end
@@ -1497,11 +1545,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some (##0)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some (##0)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1519,11 +1569,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
                then
-                idc_args <- ident.unify pattern.ident.Literal ##(projT2 args);
-                x1 <- (if (let (x1, _) := idc_args in x1) =? 0
-                       then Some (##0)%expr
-                       else None);
-                Some (Base x1)
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x1 <- (if (let (x1, _) := xv in x1) =? 0
+                              then Some (##0)%expr
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
                else None
            | None => None
            end
@@ -1589,12 +1641,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v <- type.try_make_transport_cps s0 ℤ;
               v0 <- type.try_make_transport_cps s ℤ;
               Some
-                (fv <-- do_again (ℤ * ℤ)
-                          (#(Z_cast (Datatypes.fst range))%expr @
-                           ($(v (Compile.reflect x1)))%expr,
-                          #(Z_cast (Datatypes.snd range))%expr @
-                          ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
-                 Base fv)%under_lets
+                (fv0 <-- do_again (ℤ * ℤ)
+                           (#(Z_cast (Datatypes.fst range))%expr @
+                            ($(v (Compile.reflect x1)))%expr,
+                           #(Z_cast (Datatypes.snd range))%expr @
+                           ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
+                 Base fv0)%under_lets
              else None
          | None => None
          end
