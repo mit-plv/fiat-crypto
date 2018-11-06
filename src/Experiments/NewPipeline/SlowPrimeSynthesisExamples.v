@@ -748,9 +748,9 @@ Module P256_32.
   Local Notation "'adc32' '(' c ',' x ',' y ')'" :=
     (#(Z_cast2 (uint32, bool)%core) @ (#Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) 4294967296) @ c @ x @ y))%expr (at level 50) : expr_scope.
 
-  (* Print is too slow (it takes about an hour) *)
+  (* Print is too slow *)
 
-  (*Time Print mulmod.*)
+  Time Print mulmod.
 
   (*
 mulmod =
