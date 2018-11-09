@@ -16,12 +16,23 @@ Ltac ensure_complex_continuation allow_option k :=
        end
   end.
 
-Ltac cps_id_step allow_option lem :=
+Ltac continuation_of_rhs eqn :=
+  match eqn with
+  | ?lhs = ?k ?rhs => k
+  end.
+
+Ltac continuation_of_lhs eqn :=
+  match eqn with
+  | ?lhs ?k = ?rhs => k
+  end.
+
+Ltac cps_id_step continuation_of_eqn allow_option lem :=
   let lem := open_constr:(lem) in
   lazymatch type of lem with
-  | ?T -> _ => cps_id_step allow_option open_constr:(lem _)
-  | ?lhs = ?k ?rhs
-    => match goal with
+  | ?T -> _ => cps_id_step continuation_of_eqn allow_option open_constr:(lem _)
+  | ?lhs = ?rhs :> ?T
+    => let k := continuation_of_eqn (@eq T lhs rhs) in
+       match goal with
        | [ |- context[?e] ]
          => (* take advantage of lazymatch treating evars as holes/wildcards *)
          lazymatch e with
@@ -41,6 +52,9 @@ Ltac cps_id_step allow_option lem :=
        end
   end.
 
-Ltac cps_id allow_option lem := repeat cps_id_step allow_option lem.
+Ltac cps_id allow_option lem := repeat cps_id_step continuation_of_rhs allow_option lem.
+Ltac cps_id' allow_option lem := repeat cps_id_step continuation_of_lhs allow_option lem.
 Tactic Notation "cps_id_with_option" uconstr(lem) := cps_id true lem.
 Tactic Notation "cps_id_no_option" uconstr(lem) := cps_id false lem.
+Tactic Notation "cps_id'_with_option" uconstr(lem) := cps_id' true lem.
+Tactic Notation "cps_id'_no_option" uconstr(lem) := cps_id' false lem.
