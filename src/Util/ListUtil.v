@@ -2205,3 +2205,10 @@ Proof. induction ls; cbn; eauto. Qed.
 Lemma eq_map_list_rect {A B} f (ls : list _)
   : @List.map A B f ls = list_rect _ nil (fun x _ rec => f x :: rec) ls.
 Proof. induction ls; cbn; eauto. Qed.
+
+Lemma map_repeat {A B} (f : A -> B) v k
+  : List.map f (List.repeat v k) = List.repeat (f v) k.
+Proof. induction k; cbn; f_equal; assumption. Qed.
+Lemma map_const {A B} (v : B) (ls : list A)
+  : List.map (fun _ => v) ls = List.repeat v (List.length ls).
+Proof. induction ls; cbn; f_equal; assumption. Qed.
