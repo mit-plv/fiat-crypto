@@ -212,12 +212,12 @@ Module Projective.
       all: try abstract fsatz.
 
       (* zero + P = P   -- cases for x and y *)
-      assert (X1 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz.
-      assert (X1 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz.
+      { assert (X1 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz. }
+      { assert (X1 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz. }
 
       (* P  + zero = P   -- cases for x and y *)
-      assert (X2 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz.
-      assert (X2 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz.
+      { assert (X2 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz. }
+      { assert (X2 = 0) by (setoid_subst_rel Feq; Nsatz.nsatz_power 3%nat); t; fsatz. }
     Qed.
   End Projective.
 End Projective.
