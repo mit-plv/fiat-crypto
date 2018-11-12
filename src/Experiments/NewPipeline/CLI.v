@@ -1,3 +1,4 @@
+Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Lists.List.
@@ -31,6 +32,18 @@ Module ForExtraction.
        sgn * Z.of_N (parse_N s).
   Definition parse_nat (s : string) : nat
     := N.to_nat (parse_N s).
+  Definition parse_Q (s : string) : option Q
+    := match List.map parse_Z (String.split "/" s) with
+       | [num;Zpos den] => Some (Qmake num den)
+       | [num] => Some (Qmake num 1)
+       | _ => None
+       end.
+  Definition parse_bool (s : string) : option bool
+    := if string_dec s "true"
+       then Some true
+       else if string_dec s "false"
+            then Some false
+            else None.
 
   Definition parse_n (n : string) : nat
     := parse_nat n.
