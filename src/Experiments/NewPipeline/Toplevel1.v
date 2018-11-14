@@ -688,10 +688,9 @@ Module Pipeline.
           first *)
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
-       dlet_nd e := ToFlat E in
-       let E := FromFlat e in
-       let E := if with_subst01 then Subst01.Subst01 E else E in
+       let E := if with_subst01 then Subst01.Subst01 E
+                else if with_dead_code_elimination then DeadCodeElimination.EliminateDead E
+                     else E in
        let E := UnderLets.LetBindReturn E in
        let E := DoRewrite E in (* after inlining, see if any new rewrite redexes are available *)
        dlet_nd e := ToFlat E in
