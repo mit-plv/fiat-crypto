@@ -9,7 +9,6 @@ Local Open Scope Z_scope.
 Module PolynomialRing.
   Section PolynomialRing.
     Context {n : nat} {q : BinNums.positive}.
-    Definition Rq : Type := tuple (F q) n.
 
     Instance weighted_mul_pre : @weighted_mul_preconditions (F q) nat.
     Proof.
@@ -18,6 +17,7 @@ Module PolynomialRing.
       { intros. cbn. apply le_plus_l. }
     Defined.
 
+    Definition Rq : Type := tuple (F q) n.
     Definition zero : Rq := repeat 0%F n.
     Definition one : Rq := (from_associational n ((1%F, 0%nat) :: nil)).
     Definition opp : Rq -> Rq := map F.opp.
