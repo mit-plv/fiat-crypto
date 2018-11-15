@@ -353,6 +353,25 @@ Module Compilers.
           : expr.interp ident_interp (interp (of_expr x)) = expr.interp ident_interp x.
         Proof. induction x; cbn [expr.interp interp of_expr]; cbv [LetIn.Let_In]; eauto. Qed.
       End for_interp.
+
+      Section for_interp2.
+        Context {base_interp1 base_interp2 : base_type -> Type}
+                {ident_interp1 : forall t, ident t -> type.interp base_interp1 t}
+                {ident_interp2 : forall t, ident t -> type.interp base_interp2 t}.
+
+        Lemma wf_interp_Proper {T1 T2}
+              {P : list { t : type & type.interp base_interp1 t * type.interp base_interp2 t }%type -> T1 -> T2 -> Prop}
+              {G v1 v2}
+              (Hwf : @wf _ _ T1 T2 P G v1 v2)
+          : exists seg, P (seg ++ G) (interp ident_interp1 v1) (interp ident_interp2 v2).
+        Proof using Type.
+          induction Hwf; [ exists nil; cbn [List.app]; assumption | ].
+          let H := match goal with H : forall v1 v2, ex _ |- _ => H end in
+          edestruct H as [seg ?]; eexists (seg ++ [_]).
+          rewrite <- List.app_assoc; cbn [List.app].
+          eassumption.
+        Qed.
+      End for_interp2.
     End with_ident.
 
     Section reify.
