@@ -1695,8 +1695,54 @@ Module Compilers.
                         -> @value'_interp_related _ _ d (f1 x1) (f2 x2)
                end.
 
+          Lemma value'_interp_related_sym_iff {with_lets1 with_lets2 t v1 v2}
+            : @value'_interp_related with_lets1 with_lets2 t v1 v2
+              <-> @value'_interp_related with_lets2 with_lets1 t v2 v1.
+          Proof using Type.
+            split; revert with_lets1 with_lets2 v1 v2; induction t as [|s IHs d IHd];
+              cbn [value'_interp_related]; intros.
+            all: solve [ symmetry; assumption | eauto ].
+          Qed.
+
+          Lemma value'_interp_related_trans {with_lets1 with_lets2 with_lets3 t v1 v2 v3}
+            : @value'_interp_related with_lets1 with_lets2 t v1 v2
+              -> @value'_interp_related with_lets2 with_lets3 t v2 v3
+              -> @value'_interp_related with_lets1 with_lets3 t v1 v3.
+          Proof using Type.
+            intros H0 H1; revert with_lets1 with_lets2 with_lets3 v1 v2 v3 H0 H1; induction t as [|s IHs d IHd];
+              cbn [value'_interp_related]; intros.
+            all: try solve [ etransitivity; eassumption ].
+            eapply IHd; [ eapply H0; eassumption | eapply H1 ].
+            eapply IHs; [ eapply value'_interp_related_sym_iff | ]; eassumption.
+          Qed.
+
+          Global Instance value'_interp_related_Symmetric {with_lets t}
+            : Symmetric (@value'_interp_related with_lets with_lets t) | 10
+            := fun v1 v2 => proj1 value'_interp_related_sym_iff.
+          Global Instance value'_interp_related_Transitive {with_lets t}
+            : Transitive (@value'_interp_related with_lets with_lets t) | 10
+            := fun v1 v2 v3 => value'_interp_related_trans.
+
           Definition value_interp_related {t} : relation (@value var t)
             := value'_interp_related.
+
+          Lemma value_interp_related_sym_iff {t v1 v2}
+            : @value_interp_related t v1 v2
+              <-> @value_interp_related t v2 v1.
+          Proof using Type. apply value'_interp_related_sym_iff. Qed.
+
+          Lemma value_interp_related_trans {t v1 v2 v3}
+            : @value_interp_related t v1 v2
+              -> @value_interp_related t v2 v3
+              -> @value_interp_related t v1 v3.
+          Proof using Type. apply value'_interp_related_trans. Qed.
+
+          Global Instance value_interp_related_Symmetric {t}
+            : Symmetric (@value_interp_related t) | 10
+            := fun v1 v2 => proj1 value_interp_related_sym_iff.
+          Global Instance value_interp_related_Transitive {t}
+            : Transitive (@value_interp_related t) | 10
+            := fun v1 v2 v3 => value_interp_related_trans.
 
           Lemma interp_reify_reflect {with_lets t} e v
             : expr.interp ident_interp e == v -> expr.interp ident_interp (@reify _ with_lets t (reflect e)) == v.
