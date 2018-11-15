@@ -1319,6 +1319,15 @@ Module Compilers.
             := { pf : projT1 x = projT1 y
                | R _ (rew pf in projT2 x) (projT2 y) }.
 
+          Definition map_related_sigT_by_eq {A P1 P2} {R1 R2 : forall x : A, P1 x -> P2 x -> Prop}
+                     (HR : forall x v1 v2, R1 x v1 v2 -> R2 x v1 v2)
+                     (x : @sigT A P1) (y : @sigT A P2)
+            : @related_sigT_by_eq A P1 P2 R1 x y -> @related_sigT_by_eq A P1 P2 R2 x y.
+          Proof using Type.
+            destruct x, y; cbv [related_sigT_by_eq projT1 projT2].
+            intro H; exists (proj1_sig H); apply HR, (proj2_sig H).
+          Qed.
+
           Definition related_unification_resultT (R : forall t, @value var1 t -> @value var2 t -> Prop) {t p}
             : @unification_resultT1 t p -> @unification_resultT2 t p -> Prop
             := related_sigT_by_eq (@related_unification_resultT' R t p).
@@ -1453,6 +1462,25 @@ Module Compilers.
                    (@app_with_unification_resultT_cps _ t p K1 f1 v1 _ (@Some _))
                    (@app_with_unification_resultT_cps _ t p K2 f2 v2 _ (@Some _)).
           Proof using Type. apply related_app_with_unification_resultT. Qed.
+
+          Definition map_related_unification_resultT' {R1 R2 : forall t : type, value t -> value t -> Prop}
+                     (HR : forall t v1 v2, R1 t v1 v2 -> R2 t v1 v2)
+                     {t p evm v1 v2}
+            : @related_unification_resultT' R1 t p evm v1 v2
+              -> @related_unification_resultT' R2 t p evm v1 v2.
+          Proof using Type.
+            induction p; cbn [related_unification_resultT']; intuition auto.
+          Qed.
+
+          Definition map_related_unification_resultT {R1 R2 : forall t : type, value t -> value t -> Prop}
+                     (HR : forall t v1 v2, R1 t v1 v2 -> R2 t v1 v2)
+                     {t p v1 v2}
+            : @related_unification_resultT R1 t p v1 v2
+              -> @related_unification_resultT R2 t p v1 v2.
+          Proof using Type.
+            cbv [related_unification_resultT]; apply map_related_sigT_by_eq; intros *.
+            apply map_related_unification_resultT'; auto.
+          Qed.
 
           Definition wf_maybe_do_again_expr
                      {t}
