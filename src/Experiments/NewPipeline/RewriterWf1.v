@@ -385,6 +385,20 @@ Module Compilers.
             cbn [List.length List.combine fold_left] in *;
             try discriminate; inversion Hls'; eauto. }
         Qed.
+
+        Lemma app_forall_vars_lam_forall_vars {p k f evm v}
+          : @pattern.type.app_forall_vars p k (pattern.type.lam_forall_vars f) evm = Some v
+            -> v = f _.
+        Proof using Type.
+          revert v; cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars].
+          generalize (rev (PositiveSet.elements p)); clear p; intro ls.
+          generalize (PositiveMap.empty base.type).
+          induction ls as [|x xs IHxs]; cbn [list_rect fold_right]; [ congruence | ].
+          intros t v H; eapply IHxs; clear IHxs.
+          rewrite <- H.
+          break_innermost_match; [ | now discriminate ].
+          reflexivity.
+        Qed.
       End type.
     End pattern.
 
