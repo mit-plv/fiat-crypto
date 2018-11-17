@@ -20,6 +20,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.CPSId.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Sigma.Related.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
