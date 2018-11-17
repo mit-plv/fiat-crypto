@@ -24,6 +24,7 @@ Require Import Crypto.Util.FMapPositive.Equality.
 Require Import Crypto.Util.MSetPositive.Equality.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
+Require Import Crypto.Util.Sigma.Related.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Option.
@@ -1325,22 +1326,6 @@ Module Compilers.
           Definition wf_unification_resultT' (G : list {t1 : type & (var1 t1 * var2 t1)%type}) {t p evm}
             : @unification_resultT'1 t p evm -> @unification_resultT'2 t p evm -> Prop
             := @related_unification_resultT' (fun _ => wf_value G) t p evm.
-
-          (** TODO: MOVE ME? *)
-          Definition related_sigT_by_eq {A P1 P2} (R : forall x : A, P1 x -> P2 x -> Prop)
-                     (x : @sigT A P1) (y : @sigT A P2)
-            : Prop
-            := { pf : projT1 x = projT1 y
-               | R _ (rew pf in projT2 x) (projT2 y) }.
-
-          Definition map_related_sigT_by_eq {A P1 P2} {R1 R2 : forall x : A, P1 x -> P2 x -> Prop}
-                     (HR : forall x v1 v2, R1 x v1 v2 -> R2 x v1 v2)
-                     (x : @sigT A P1) (y : @sigT A P2)
-            : @related_sigT_by_eq A P1 P2 R1 x y -> @related_sigT_by_eq A P1 P2 R2 x y.
-          Proof using Type.
-            destruct x, y; cbv [related_sigT_by_eq projT1 projT2].
-            intro H; exists (proj1_sig H); apply HR, (proj2_sig H).
-          Qed.
 
           Definition related_unification_resultT (R : forall t, @value var1 t -> @value var2 t -> Prop) {t p}
             : @unification_resultT1 t p -> @unification_resultT2 t p -> Prop

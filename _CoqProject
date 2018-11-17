@@ -6561,6 +6561,7 @@ src/Util/SideConditions/RingPackage.v
 src/Util/Sigma/Associativity.v
 src/Util/Sigma/Lift.v
 src/Util/Sigma/MapProjections.v
+src/Util/Sigma/Related.v
 src/Util/Strings/Ascii.v
 src/Util/Strings/BinaryString.v
 src/Util/Strings/Decimal.v
