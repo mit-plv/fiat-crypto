@@ -1643,14 +1643,12 @@ Module Fancy.
   Section ISA.
     Import CC.
 
-    (* For the C flag, we have to consider cases with a negative result (like the one returned by an underflowing borrow).
-       In these cases, we want to set the C flag to true. *)
     Definition cc_spec (x : CC.code) (result : BinInt.Z) : bool :=
       match x with
-      | CC.C => if result <? 0 then true else Z.testbit result 256
-      | CC.M => Z.testbit result 255
-      | CC.L => Z.testbit result 0
-      | CC.Z => result =? 0
+      | CC.C => Z.testbit result 256 (* carry bit *)
+      | CC.M => Z.testbit result 255 (* most significant bit *)
+      | CC.L => Z.testbit result 0   (* least significant bit *)
+      | CC.Z => result =? 0          (* whether equal to zero *)
       end.
 
     Local Definition lower128 x := (Z.land x (Z.ones 128)).
@@ -2010,15 +2008,23 @@ Module Fancy.
       := @of_prefancy_step of_prefancy next_name t e.
 
     Section Proofs.
-      Context (name_eqb : name -> name -> bool) (cc_spec : CC.code -> Z -> bool).
+      Context (name_eqb : name -> name -> bool).
       Context (name_lt : name -> name -> Prop)
               (name_lt_trans : forall n1 n2 n3,
                   name_lt n1 n2 -> name_lt n2 n3 -> name_lt n1 n3)
               (name_lt_irr : forall n, ~ name_lt n n)
-              (name_lt_succ : forall n, name_lt n (name_succ n)).
-      Definition wordmax := 2^256.
+              (name_lt_succ : forall n, name_lt n (name_succ n))
+              (name_eqb_eq : forall n1 n2, name_eqb n1 n2 = true -> n1 = n2)
+              (name_eqb_neq : forall n1 n2, name_eqb n1 n2 = false -> n1 <> n2).
+      Local Notation wordmax := (2^256).
+      Local Notation interp := (interp name_eqb wordmax cc_spec).
+      Local Notation uint256 := r[0~>wordmax-1]%zrange.
+      Definition cast_oor r v := v mod (upper r + 1).
+      Local Notation "'existZ' x" := (existT _ (type.base (base.type.type_base tZ)) x) (at level 200).
+      Local Notation "'existZZ' x" := (existT _ (type.base (base.type.type_base tZ * base.type.type_base tZ)%etype) x) (at level 200).
+      Local Notation cinterp := (expr.interp (@ident.gen_interp cast_oor)).
       Definition interp_if_Z {t} (e : cexpr t) : option Z :=
-        option_map (@defaults.interp tZ)
+        option_map (expr.interp (@ident.gen_interp cast_oor) (t:=tZ))
                    (type.try_transport
                       (@base.try_make_transport_cps)
                       _ _ tZ e).
@@ -2028,11 +2034,11 @@ Module Fancy.
         exists e',
           (type.try_transport
              (@base.try_make_transport_cps) _ _ tZ e) = Some e' /\
-          @defaults.interp tZ e' = r.
+          expr.interp (@ident.gen_interp cast_oor) (t:=tZ) e' = r.
       Proof.
         clear. cbv [interp_if_Z option_map].
         break_match; inversion 1; intros.
-        subst; eexists; tauto.
+        subst; eexists. tauto.
       Qed.
 
       Lemma try_transport_change_var {var1 var2} G t1 t2 e1 e2 x :
@@ -2047,8 +2053,6 @@ Module Fancy.
           LanguageWf.Compilers.expr.wf G x y.
       Admitted.
 
-      (* TODO : make valid_scalar_app only work if applied to a thing*)
-      Check (fun a b => #ident.pair @ a @ b)%expr.
       Inductive valid_scalar
         : forall t, @cexpr var t -> Prop :=
       | valid_scalar_var :
@@ -2158,21 +2162,21 @@ Module Fancy.
         => fun args : @cexpr var (tZ * tZ * tZ) => Some (existT _ ADDM (of_prefancy_scalar args))
       | _ => fun _ => None
       end.
-*)
+         *)
       Inductive valid_expr
         : forall t, @cexpr var t -> Prop :=
       | valid_LetInZ :
-          forall s d r idc x f,
+          forall s d idc x f,
             valid_scalar _ x ->
             valid_ident idc ->
             (forall x, valid_expr _ (f x)) ->
-            valid_expr _ (LetInAppIdentZ s d r (expr.Ident idc) x f)
+            valid_expr _ (LetInAppIdentZ s d uint256 (expr.Ident idc) x f)
       | valid_LetInZZ :
-          forall s d r idc x f,
+          forall s d idc x f,
             valid_scalar _ x ->
             valid_ident idc ->
             (forall x, valid_expr _ (f x)) ->
-            valid_expr _ (LetInAppIdentZZ s d r (expr.Ident idc) x f)
+            valid_expr _ (LetInAppIdentZZ s d (uint256, r[0~>1]) (expr.Ident idc) x f)
       | valid_Ret :
           forall x,
             valid_scalar (type.base (base.type.type_base tZ)) x ->
@@ -2201,15 +2205,15 @@ Module Fancy.
              (fun x : type.interp base.interp s =>
                 interp_scalar ctx (f (expr.Var x)))) *)
         end.
-      
+
       Lemma of_prefancy_scalar_correct
             {t} (e1 : @cexpr var t) (e2 : cexpr t)
             G (ctx : name -> Z):
         valid_scalar t e1 ->
         LanguageWf.Compilers.expr.wf G e1 e2 ->
-        (forall v1 v2, In (existT _ (type.base (base.type.type_base tZ)) (v1, v2)) G -> ctx v1 = v2) ->
-        (forall n v, consts v = Some n -> ctx n = v) ->
-        interp_scalar ctx (of_prefancy_scalar e1) = defaults.interp e2.
+        (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
+        (forall v1 v2, In (existZ (v1, v2)) G -> ctx v1 = v2) ->
+        interp_scalar ctx (of_prefancy_scalar e1) = cinterp e2.
       Proof.
         induction 1; inversion 1;
           cbv [interp_if_Z option_map];
@@ -2228,26 +2232,13 @@ Module Fancy.
                     | progress LanguageInversion.Compilers.type.inversion_type
                     | solve [auto]
                     ].
-Admitted.
-(*
-        [> ].
-
-        erewrite IHwf1.
-        
-        
-            
-            
-      Qed. *)
+      Admitted.
 
       Lemma of_prefancy_ident_Some {s d} idc:
         @valid_ident (type_base s) (type_base d) idc ->
         forall x, of_prefancy_ident idc x <> None.
       Admitted.
 
-      Axiom name_eqb_eq : forall n1 n2,
-          name_eqb n1 n2 = true -> n1 = n2.
-      Axiom name_eqb_neq : forall n1 n2,
-          name_eqb n1 n2 = false -> n1 <> n2.
       Ltac name_eqb_to_eq :=
         repeat match goal with
                | H : name_eqb _ _ = true |- _ => apply name_eqb_eq in H
@@ -2265,8 +2256,8 @@ Admitted.
                       progress subst
                     | progress inversion_sigma
                     | progress inversion_option
-                    | progress Prod.inversion_prod
                     | progress inversion_of_prefancy_ident
+                    | progress Prod.inversion_prod
                     | progress cbv [id]
                     | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_scalar interp_base interp invert_expr.invert_Ident interp_if_Z option_map] in *
                     | progress LanguageInversion.Compilers.type_beq_to_eq
@@ -2288,130 +2279,195 @@ Admitted.
                | _ => progress hammer
                | H : valid_scalar _ (expr.Ident _) |- _ =>
                  inversion H; clear H
-               | |- _ = expr.interp _ ?f (expr.interp _ ?x) =>
+               | |- _ = cinterp ?f (cinterp ?x) =>
                  transitivity
-                   (expr.interp (@ident.interp) (f @ x)%expr);
+                   (cinterp (f @ x)%expr);
                  [ | reflexivity ];
                  erewrite <-of_prefancy_scalar_correct by (try reflexivity; eassumption)
                end.
 
-      Lemma of_prefancy_identZ_correct {s} idc:
-        @valid_ident (type_base s) (type_base tZ) idc ->
-        forall (x : @cexpr var _) i ctx G cc x2,
-          LanguageWf.Compilers.expr.wf G (#idc @ x)%expr_pat x2 ->
-          (forall v1 v2,
-              In (existT _ (type.base (base.type.type_base tZ)) (v1, v2)) G -> ctx v1 = v2) ->
-          (forall (n : name) (v : Z), consts v = Some n -> ctx n = v) ->
-          valid_scalar _ x ->
-          of_prefancy_ident idc x = Some i ->
-          spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = expr.interp (@ident.interp) x2.
+      (* TODO(jgross) : This should be *way* easier to prove than it
+      currently is. In particular, please add to
+      LanguageWf.Compilers.ident.cast_cases that if is_bounded_by is
+      false, then the cast-outside-of-range function is applied. *)
+      Lemma cast_mod r v :
+        lower r = 0 -> lower r <= upper r ->
+        ident.cast cast_oor r v = v mod (upper r + 1).
+      Proof.
+        intros.
+        assert (ZRange.normalize r = r) as Hnorm.
+        { destruct r; cbv [ZRange.normalize]; cbn in *.
+          f_equal; lia. }
+        destruct (@LanguageWf.Compilers.ident.cast_cases cast_oor r v) as [? [ [Hbounded Heq] | ? ] ].
+        { rewrite Hnorm in *.
+          rewrite Heq. rewrite Z.mod_small; [ reflexivity | ].
+          cbv [is_bounded_by_bool] in Hbounded. cbn in Hbounded.
+          apply Bool.andb_true_iff in Hbounded. destruct Hbounded.
+          Z.ltb_to_lt. lia. }
+        { admit. (* This is the annoying part *) } 
       Admitted.
 
-      (* TODO : will require something about carries at some point *)
-      Lemma of_prefancy_identZZ_correct {s} idc:
-        @valid_ident (type_base s) (type_base (tZ * tZ)) idc ->
-        forall (x : @cexpr var _) i ctx G cc x2,
+      Lemma of_prefancy_identZ_correct {s} idc:
+        @valid_ident (type_base s) (type_base tZ) idc ->
+        forall (x : @cexpr var _) i ctx G cc x2 f,
           LanguageWf.Compilers.expr.wf G (#idc @ x)%expr_pat x2 ->
-          (forall v1 v2,
-              In (existT _ (type.base (base.type.type_base tZ)) (v1, v2)) G -> ctx v1 = v2) ->
-          (forall (n : name) (v : Z), consts v = Some n -> ctx n = v) ->
+          LanguageWf.Compilers.expr.wf G #(ident.Z_cast uint256) f ->
+          (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
+          (forall v1 v2, In (existZ (v1, v2)) G -> ctx v1 = v2) ->
           valid_scalar _ x ->
           of_prefancy_ident idc x = Some i ->
-          spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = fst (expr.interp (@ident.interp) x2).
+          spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2)).
+      Admitted.
+
+      Lemma of_prefancy_identZZ_correct {s} idc:
+        @valid_ident (type_base s) (type_base (tZ * tZ)) idc ->
+        forall (x : @cexpr var _) i ctx G cc x2 f,
+          LanguageWf.Compilers.expr.wf G (#idc @ x)%expr_pat x2 ->
+          LanguageWf.Compilers.expr.wf G #(ident.Z_cast2 (uint256, r[0~>1])) f ->
+          (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
+          (forall v1 v2, In (existZ (v1, v2)) G -> ctx v1 = v2) ->
+          valid_scalar _ x ->
+          of_prefancy_ident idc x = Some i ->
+          spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = fst (cinterp f (cinterp x2)).
       Proof.
         inversion 1; inversion 1; cbn [of_prefancy_ident].
         { intros; hammer.
           cbv [of_prefancy_ident] in *.
           repeat match goal with
+                 | _ => progress cbn [fst snd] in *
                  | _ => progress hammer
                  | _ => progress LanguageWf.Compilers.expr.inversion_wf_one_constr
+                 | H : { _ | _ } |- _ => destruct H
+                 | H : _ /\ _ |- _ => destruct H
+                 | H : upper _ = _ |- _ => rewrite H
+                 | _ => rewrite cast_mod by (cbv; congruence)
                  | H : _ |- _ =>
                    apply LanguageInversion.Compilers.expr.invert_Ident_Some in H
+                 | H : _ |- _ =>
+                   apply LanguageInversion.Compilers.expr.invert_App_Some in H
                  | _ => erewrite <-of_prefancy_scalar_correct with (ctx0:= ctx) by eauto
-                 end. }
+                 end.
+          cbn. cbv [Z.add_with_carry].
+          autorewrite with zsimplify_fast.
+          reflexivity. }
         (* There will be more cases once valid_ident is expanded *)
       Qed.
 
+      Lemma identZZ_writes {s} idc:
+        @valid_ident (type_base s) (type_base (tZ * tZ)) idc ->
+        forall x i, of_prefancy_ident idc x = Some i ->
+                    In CC.C (writes_conditions (projT1 i)).
+      Proof.
+        inversion 1;
+          repeat match goal with
+                 | _ => progress intros
+                 | _ => progress cbn [of_prefancy_ident] in *
+                 | _ => progress hammer; Z.ltb_to_lt
+                 | _ => congruence
+                 end; [ ].
+        cbv; tauto.
+      Qed.
 
+      Lemma cc_spec_c v :
+        Z.b2z (cc_spec CC.C v) = (v / wordmax) mod 2.
+      Proof.
+        cbv [cc_spec]; apply Z.testbit_spec'. omega.
+      Qed.
+
+      (* carries *)
+      Lemma of_prefancy_identZZ_correct' {s} idc:
+        @valid_ident (type_base s) (type_base (tZ * tZ)) idc ->
+        forall (x : @cexpr var _) i ctx G cc x2 f,
+          LanguageWf.Compilers.expr.wf G (#idc @ x)%expr_pat x2 ->
+          LanguageWf.Compilers.expr.wf G #(ident.Z_cast2 (uint256, r[0~>1])) f ->
+          (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
+          (forall v1 v2, In (existZ (v1, v2)) G -> ctx v1 = v2) ->
+          valid_scalar _ x ->
+          of_prefancy_ident idc x = Some i ->
+          Z.b2z (cc_spec CC.C (spec (projT1 i) (Tuple.map ctx (projT2 i)) cc)) = snd (cinterp f (cinterp x2)).
+      Proof.
+        inversion 1; inversion 1; cbn [of_prefancy_ident].
+        { intros; hammer.
+          cbv [of_prefancy_ident] in *.
+          repeat match goal with
+                 | _ => progress cbn [fst snd] in *
+                 | _ => progress hammer
+                 | _ => progress LanguageWf.Compilers.expr.inversion_wf_one_constr
+                 | H : { _ | _ } |- _ => destruct H
+                 | H : _ /\ _ |- _ => destruct H
+                 | H : upper _ = _ |- _ => rewrite H
+                 | _ => rewrite cast_mod by (cbv; congruence)
+                 | H : _ |- _ =>
+                   apply LanguageInversion.Compilers.expr.invert_Ident_Some in H
+                 | H : _ |- _ =>
+                   apply LanguageInversion.Compilers.expr.invert_App_Some in H
+                 | _ => erewrite <-of_prefancy_scalar_correct with (ctx0:= ctx) by eauto
+                 end.
+          rewrite cc_spec_c.
+          cbn. cbv [Z.add_with_carry].
+          autorewrite with zsimplify_fast.
+          reflexivity. }
+        (* There will be more cases once valid_ident is expanded *)
+      Qed.
+
+      (* Common side conditions for cases in of_prefancy_correct *)
+      Local Ltac side_cond :=
+        repeat match goal with
+               | _ => progress intros
+               | _ => progress cbn [In] in *
+               | H : _ \/ _ |- _ => destruct H
+               | [H : forall _ _, In _ ?l -> _, H' : In _ ?l |- _] =>
+                 let H'' := fresh in
+                 pose proof H'; apply H in H''; clear H
+               | H : name_lt ?n ?n |- _ =>
+                 specialize (name_lt_irr n); contradiction
+               | _ => progress hammer
+               | _ => solve [eauto]
+               end.
+      
       (* TODO: preconditions saying name_succ also returns names not in G *)
       Lemma of_prefancy_correct
             {t} (e1 : @cexpr var t) (e2 : @cexpr _ t):
         valid_expr _ e1 ->
         forall G,
         LanguageWf.Compilers.expr.wf G e1 e2 ->
-        forall ctx,
-          (forall n v, consts v = Some n -> ctx n = v) ->
-        (forall v1 v2, In (existT _ (type.base (base.type.type_base tZ)) (v1, v2)) G -> ctx v1 = v2) ->
-        forall next_name cc result,
-          (forall n v2,
-              In (existT _ (type.base (base.type.type_base tZ)) (n, v2)) G -> name_lt n next_name) ->
+        forall ctx cc,
+          (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
+          (forall v1 v2, In (existZ (v1, v2)) G -> ctx v1 = v2) ->
+          (forall v1 v2, In (existZZ (v1, v2)) G -> ctx (fst v1) = (fst v2)) ->
+        forall next_name result,
+          (forall n v2, In (existZ (n, v2)) G -> name_lt n next_name) ->
+          (forall n v2, In (existZZ (n, v2)) G -> name_lt (fst n) next_name) ->
           (interp_if_Z e2 = Some result) ->
-          interp name_eqb wordmax cc_spec (@of_prefancy next_name t e1) cc ctx = result.
+          interp (@of_prefancy next_name t e1) cc ctx = result.
       Proof.
         induction 1; inversion 1; cbv [interp_if_Z];
           cbn [of_prefancy of_prefancy_step]; intros;
-            try solve [prove_Ret]; [ | ].
-        { hammer; [ ].
-          match goal with
-          | |- interp _ _ _ _ _ ?ctx' = _ =>
-            erewrite H2 with
-                (G := (existT _ (type.base (base.type.type_base tZ)) (next_name, ctx' next_name)) :: G)
-                (e2 := _ (ctx' next_name))
-          end;
-          repeat match goal with
-                   | _ => progress intros
-                   | _ => progress cbn [In] in *
-                   | H : _ \/ _ |- _ => destruct H
-                   | [H : forall _ _, In _ ?l -> _, H' : In _ ?l |- _] =>
-                     let H'' := fresh in
-                     pose proof H'; apply H in H''; clear H
-                   | H : name_lt ?n ?n |- _ =>
-                     specialize (name_lt_irr n); contradiction
-                   | _ => progress hammer
-                   | _ => solve [eauto]
-                 end.
-          2 : { cbn; cbv [id]; cbn.
-                inversion wf_x; hammer.
-                erewrite of_prefancy_identZ_correct by eassumption.
-                cbv [Let_In].
-                (* TODO : how do I get rid of the cast? *)
-                
-          { cbn.
-            inversion wf_x; hammer.
-            erewrite of_prefancy_identZ_correct by eassumption.
-            SearchAbout x3.
-            SearchAbout x.
-            SearchAbout next_name.
-            cbn.
-            rewrite 
-            SearchAbout x2.
-            SearchAbout x.
-            SearchAbout v.
-            SearchAbout next_name.
-            cbv.
-            reflexivity. } }
-        { hammer; [ ].
-          match goal with
-          | |- interp _ _ _ _ _ ?ctx' = _ =>
-            erewrite H2 with
-                (G := (existT _ (type.base (base.type.type_base tZ)) (next_name, ctx' next_name)) :: G)
-                (e2 := _ (ctx' next_name))
-          end;
-          repeat match goal with
-                   | _ => progress intros
-                   | _ => progress cbn [In] in *
-                   | H : _ \/ _ |- _ => destruct H
-                   | [H : forall _ _, In _ ?l -> _, H' : In _ ?l |- _] =>
-                     let H'' := fresh in
-                     pose proof H'; apply H in H''; clear H
-                   | H : name_lt ?n ?n |- _ =>
-                     specialize (name_lt_irr n); contradiction
-                   | _ => progress hammer
-                   | _ => solve [eauto]
-                 end.
-          { cbv [interp_if_Z option_map]; hammer.
-            erewrite of_prefancy_ident_correct by eassumption.
-            reflexivity. } }
+            try solve [prove_Ret]; [ | ]; hammer;
+              match goal with
+              | H : context [interp (of_prefancy _ _) _ _ = _]
+                |- interp _ ?cc' ?ctx' = _ =>
+                match goal with
+                  | _ : context [LetInAppIdentZ _ _ _ _ _ _] |-  _=>
+                    erewrite H with
+                        (G := (existZ (next_name, ctx' next_name)) :: G)
+                        (e2 := _ (ctx' next_name))
+                  | _ : context [LetInAppIdentZZ _ _ _ _ _ _] |-  _=>
+                    erewrite H with
+                        (G := (existZZ ((next_name, error), (ctx' next_name, Z.b2z (CC.cc_c cc')))) :: G)
+                        (e2 := _ (ctx' next_name, Z.b2z (CC.cc_c cc')))
+                  end
+              end; side_cond; [ | ].
+        { cbn - [cc_spec]; cbv [id]; cbn - [cc_spec].
+          inversion wf_x; hammer.
+          erewrite of_prefancy_identZ_correct by eassumption.
+          reflexivity. }
+        { cbn - [cc_spec]; cbv [id]; cbn - [cc_spec].
+          match goal with H : _ |- _ => pose proof H; apply identZZ_writes in H; [ | assumption] end. 
+          inversion wf_x; hammer.
+          erewrite of_prefancy_identZZ_correct by eassumption.
+          erewrite of_prefancy_identZZ_correct' by eassumption.
+          rewrite <-surjective_pairing. reflexivity. }
       Qed.
     End Proofs.
   End of_prefancy.
@@ -2489,19 +2545,111 @@ Admitted.
         fun x1 x2 =>
           existT _ _ (fst x1, fst x2) :: var_pairs (snd x1) (snd x2)
       end.
-    
 
-    Lemma of_Expr_correct next_name consts error cc ctx
+    Local Notation existZ := (existT _  (type.base (base.type.type_base base.type.Z))).
+    Local Notation existZZ := (existT _  (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)).
+    
+    Fixpoint make_ctx' n (consts_list : list Z) : positive -> Z :=
+      match consts_list with
+      | [] => fun _ => 0
+      | v :: l' => fun m => if (m =? n)%positive then v else make_ctx' (Pos.succ n) l' m
+      end.
+    Definition make_ctx := make_ctx' 1%positive.
+
+    Fixpoint make_pairs' n (consts_list : list Z) :
+             list {t : Compilers.type base.type.type & (var positive t * @type.interp base.type base.interp t)%type } :=
+      match consts_list with
+      | [] => []
+      | v :: l' => existZ (n, v) :: make_pairs' (Pos.succ n) l'
+      end.
+    Definition make_pairs := make_pairs' 1%positive.
+
+    Fixpoint make_consts' n (consts_list : list Z) : Z -> option positive :=
+      match consts_list with
+      | [] => fun _ => None
+      | v :: l' => fun x => if x =? v then Some n else make_consts' (Pos.succ n) l' x
+      end.
+    Definition make_consts := make_consts' 1%positive.
+
+    Local Ltac ez :=
+      repeat match goal with
+             | _ => progress intros
+             | _ => progress subst
+             | H : _ \/ _ |- _ => destruct H
+             | H : _ |- _ => rewrite Pos.eqb_eq in H
+             | H : _ |- _ => rewrite Pos.eqb_neq in H
+             | _ => progress break_innermost_match
+             | _ => progress break_match_hyps
+             | _ => progress inversion_sigma 
+             | _ => progress inversion_option 
+             | _ => progress Prod.inversion_prod 
+             | _ => progress HProp.eliminate_hprop_eq
+             | _ => progress Z.ltb_to_lt
+             | _ => reflexivity
+             | _ => congruence
+             | _ => solve [auto]
+             end.
+    
+    
+    Lemma make_consts_ok consts_list n v :
+      make_consts consts_list v = Some n ->
+      In (existZ (n, v)%zrange) (make_pairs consts_list).
+    Proof.
+      cbv [make_consts make_pairs]. generalize 1%positive.
+      induction consts_list; cbn; ez.
+    Qed.
+
+    Lemma make_pairs'_index_lt consts_list :
+      forall n v1 v2,
+      In (existZ (v1, v2)%zrange) (make_pairs' n consts_list) ->
+      (n <= v1)%positive.
+    Proof.
+      induction consts_list; cbn; [ contradiction | ].
+      intros. destruct H; ez.
+      apply IHconsts_list in H. lia.
+    Qed.
+      
+    Lemma make_pairs_ok consts_list:
+      forall v1 v2,
+        In (existZ (v1, v2)%zrange) (make_pairs consts_list) ->
+      make_ctx consts_list v1 = v2.
+    Proof.
+      cbv [make_ctx make_pairs]. generalize 1%positive.
+      induction consts_list; cbn; [ tauto | ].
+      repeat match goal with
+             | _ => progress cbn [eq_rect fst snd] in *
+             | H : _ |- _ => apply make_pairs'_index_lt in H; lia
+             | _ => progress ez
+             end.
+    Qed.
+
+    Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r.
+    Hint Resolve in_or_app.
+    Hint Resolve make_consts_ok make_pairs_ok.
+    Lemma of_Expr_correct consts_list error cc
           t (e : Expr t)
           (x1 : type.for_each_lhs_of_arrow (var positive) t)
           (x2 : type.for_each_lhs_of_arrow _ t) result :
       let e1 := (invert_expr.smart_App_curried (e _) x1) in
       let e2 := (invert_expr.smart_App_curried (e _) x2) in
-      (LanguageWf.Compilers.expr.wf (var_pairs x1 x2) e1 e2) ->
-      valid_expr _ _ e1 ->
+      let ctx := make_ctx consts_list in
+      let consts := make_consts consts_list in
+      let next_name := Pos.of_nat (length consts_list) in
+      let G := make_pairs consts_list ++ var_pairs x1 x2 in
+      (LanguageWf.Compilers.expr.wf G e1 e2) ->
+      valid_expr _ consts _ e1 ->
       interp_if_Z e2 = Some result ->
       interp Pos.eqb wordmax cc_spec (of_Expr next_name consts e x1 error) cc ctx = result.
-    Proof. cbv [of_Expr]; eauto using of_prefancy_correct. Qed.
+    Proof.
+      cbv [of_Expr]; intros.
+      eapply of_prefancy_correct with (name_lt := Pos.lt); eauto; try apply Pos.eqb_neq.
+      { intros. apply make_pairs_ok.
+        eauto using in_app_or.
+        apply in_app_or in H2.
+        eapply in_app_or.
+      
+
+    Qed.
   End Proofs.
 End Fancy.
 
