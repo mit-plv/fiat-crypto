@@ -22,12 +22,14 @@ Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.CPSId.
 Require Import Crypto.Util.FMapPositive.Equality.
 Require Import Crypto.Util.MSetPositive.Equality.
+Require Import Crypto.Util.MSetPositive.Facts.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Sigma.Related.
 Require Import Crypto.Util.ListUtil.SetoidList.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Logic.ExistsEqAnd.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.HProp.
@@ -92,6 +94,189 @@ Module Compilers.
                          | match goal with
                            | [ H : forall t, Some _ = Some t -> _ |- _ ] => specialize (H _ eq_refl)
                            end ].
+        Qed.
+
+        Local Ltac t_subst_eq_iff :=
+          repeat first [ progress cbn [pattern.base.collect_vars pattern.base.subst]
+                       | reflexivity
+                       | assumption
+                       | congruence
+                       | match goal with
+                         | [ |- context[PositiveSet.mem _ (PositiveSet.add _ _)] ]
+                           => setoid_rewrite PositiveSetFacts.add_b
+                         | [ |- context[PositiveSet.mem _ PositiveSet.empty] ]
+                           => setoid_rewrite PositiveSetFacts.empty_b
+                         | [ |- context[PositiveSet.mem _ (PositiveSet.union _ _)] ]
+                           => setoid_rewrite PositiveSetFacts.union_b
+                         | [ |- context[orb _ false] ]
+                           => setoid_rewrite Bool.orb_false_r
+                         | [ |- context[orb _ _ = true] ]
+                           => setoid_rewrite Bool.orb_true_iff
+                         | _ => progress cbv [PositiveSetFacts.eqb Option.bind option_map]
+                         end
+                       | progress intros
+                       | progress subst
+                       | progress specialize_by (exact eq_refl)
+                       | progress specialize_by_assumption
+                       | progress inversion_option
+                       | progress destruct_head'_and
+                       | progress destruct_head'_ex
+                       | progress specialize_by discriminate
+                       | match goal with
+                         | [ |- iff _ _ ] => split
+                         | [ H : base.type.prod _ _ = base.type.prod _ _ |- _ ] => inversion H; clear H
+                         | [ H : base.type.list _ = base.type.list _ |- _ ] => inversion H; clear H
+                         | [ H : Some _ = _ |- _ ] => symmetry in H
+                         | [ H : None = _ |- _ ] => symmetry in H
+                         | [ H : ?x = Some _ |- context[?x] ] => rewrite H
+                         | [ H : ?x = None |- context[?x] ] => rewrite H
+                         | [ |- (?x = None /\ _) \/ _ ]
+                           => destruct x eqn:?; [ right | left ]
+                         | [ |- Some _ <> _ /\ _ ] => split; [ congruence | ]
+                         | [ |- ?x = ?x /\ _ ] => split; [ reflexivity | ]
+                         | [ |- exists t', (if PositiveSetFacts.eq_dec ?t t' then true else false) = true /\ _ ]
+                           => exists t
+                         | [ H : forall t', (if PositiveSetFacts.eq_dec ?t t' then true else false) = true -> _ |- _ ]
+                           => specialize (H t)
+                         | [ H : (Some _ = None /\ _) \/ _ -> _ |- _ ]
+                           => specialize (fun pf => H (or_intror pf))
+                         | [ H : _ /\ _ -> _ |- _ ]
+                           => specialize (fun pf1 pf2 => H (conj pf1 pf2))
+                         end
+                       | progress cbv [Option.bind option_map] in *
+                       | progress split_contravariant_or
+                       | apply conj
+                       | progress destruct_head'_or
+                       | break_innermost_match_step
+                       | break_innermost_match_hyps_step
+                       | solve [ eauto ] ].
+
+        Lemma subst_eq_iff {t evm1 evm2}
+          : pattern.base.subst t evm1 = pattern.base.subst t evm2
+            <-> ((pattern.base.subst t evm1 = None
+                  /\ pattern.base.subst t evm2 = None)
+                 \/ (forall t', PositiveSet.mem t' (pattern.base.collect_vars t) = true -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)).
+        Proof using Type. split; induction t; t_subst_eq_iff. Qed.
+
+        Lemma subst_eq_if_mem {t evm1 evm2}
+          : (forall t', PositiveSet.mem t' (pattern.base.collect_vars t) = true -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)
+            -> pattern.base.subst t evm1 = pattern.base.subst t evm2.
+        Proof using Type. rewrite subst_eq_iff; eauto. Qed.
+
+        Lemma subst_eq_Some_if_mem {t evm1 evm2}
+          : pattern.base.subst t evm1 <> None
+            -> (forall t', PositiveSet.mem t' (pattern.base.collect_vars t) = true -> PositiveMap.find t' evm1 <> None -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)
+            -> pattern.base.subst t evm1 = pattern.base.subst t evm2.
+        Proof using Type. induction t; t_subst_eq_iff. Qed.
+
+        Local Instance subst_Proper
+          : Proper (eq ==> @PositiveMap.Equal _ ==> eq) pattern.base.subst.
+        Proof using Type.
+          intros t t' ? ? ? ?; subst t'; cbv [Proper respectful PositiveMap.Equal] in *.
+          apply subst_eq_if_mem; auto.
+        Qed.
+
+        Local Notation mk_new_evm0 evm ls
+          := (fold_right
+                (fun i k evm'
+                 => k match PositiveMap.find i evm with
+                      | Some v => PositiveMap.add i v evm'
+                      | None => evm'
+                      end) (fun evm => evm)
+                (List.rev ls)) (only parsing).
+
+        Local Notation mk_new_evm evm ps
+          := (mk_new_evm0
+                evm
+                (PositiveSet.elements ps)) (only parsing).
+
+        Lemma fold_right_evar_map_find_In'' {A} evm ps evm0 k
+          : PositiveMap.find k (mk_new_evm evm ps evm0)
+            = if in_dec PositiveSet.E.eq_dec k (List.rev (PositiveSet.elements ps))
+              then match PositiveMap.find k evm with
+                   | Some v => Some v
+                   | None => PositiveMap.find k evm0
+                   end
+              else @PositiveMap.find A k evm0.
+        Proof using Type.
+          revert evm evm0.
+          induction (List.rev (PositiveSet.elements ps)) as [|x xs IHxs]; cbn [fold_right List.In]; intros;
+            [ | rewrite IHxs; clear IHxs ].
+          all: repeat first [ progress split_iff
+                            | progress subst
+                            | break_innermost_match_step
+                            | solve [ exfalso; eauto
+                                    | eauto ]
+                            | progress cbn [List.In] in *
+                            | progress destruct_head'_or
+                            | congruence
+                            | rewrite PositiveMapAdditionalFacts.gsspec ].
+        Qed.
+
+        Lemma fold_right_evar_map_find_In' {A} evm ps evm0 k
+          : PositiveMap.find k (mk_new_evm evm ps evm0)
+            = if in_dec PositiveSet.E.eq_dec k (PositiveSet.elements ps)
+              then match PositiveMap.find k evm with
+                   | Some v => Some v
+                   | None => PositiveMap.find k evm0
+                   end
+              else @PositiveMap.find A k evm0.
+        Proof using Type.
+          rewrite fold_right_evar_map_find_In''; break_innermost_match; try reflexivity.
+          all: rewrite <- in_rev in *; tauto.
+        Qed.
+
+        Lemma fold_right_evar_map_find_In {A} evm ps evm0 k
+          : PositiveMap.find k (mk_new_evm evm ps evm0)
+            = if PositiveSet.mem k ps
+              then match PositiveMap.find k evm with
+                   | Some v => Some v
+                   | None => PositiveMap.find k evm0
+                   end
+              else @PositiveMap.find A k evm0.
+        Proof using Type.
+          pose proof (PositiveSet.elements_spec1 ps k) as He.
+          rewrite <- PositiveSet.mem_spec in He.
+          rewrite InA_alt in He.
+          cbv [PositiveSet.E.eq] in *.
+          ex_eq_and.
+          split_iff.
+          rewrite fold_right_evar_map_find_In'; break_match; try reflexivity;
+            intuition congruence.
+        Qed.
+
+        Lemma fold_right_evar_map_find_elements_Proper {A}
+          : Proper (PositiveSet.Equal ==> @PositiveMap.Equal A ==> @PositiveMap.Equal _ ==> @PositiveMap.Equal _) (fun ps evm => mk_new_evm evm ps).
+        Proof using Type.
+          intros ps ps' Hps evm evm' Hevm evm0 evm0' Hevm0.
+          cbv [PositiveMap.Equal] in *.
+          apply PositiveSetFacts.elements_Proper_Equal in Hps.
+          intro y.
+          apply (f_equal (@List.rev _)) in Hps.
+          revert dependent evm; revert dependent evm'.
+          generalize dependent (List.rev (PositiveSet.elements ps)); intro ls.
+          generalize dependent (List.rev (PositiveSet.elements ps')); intro ls'.
+          clear ps ps'; intro; subst ls'.
+          revert evm0 evm0' Hevm0; induction ls as [|l ls IHls]; cbn [fold_right] in *; intros;
+            [ now eauto | apply IHls; clear IHls ].
+          all: repeat first [ progress intros
+                            | solve [ eauto ]
+                            | progress subst
+                            | rewrite_hyp !*
+                            | congruence
+                            | break_innermost_match_step
+                            | rewrite PositiveMapAdditionalFacts.gsspec ].
+        Qed.
+
+        Lemma eq_subst_types_pattern_collect_vars pt t evm evm0
+              (evm' := mk_new_evm evm (pattern.base.collect_vars pt) evm0)
+              (Hty : pattern.base.subst pt evm = Some t)
+          : pattern.base.subst pt evm' = Some t.
+        Proof using Type.
+          rewrite <- Hty; symmetry; apply subst_eq_Some_if_mem; subst evm'; intros; try congruence; [].
+          rewrite fold_right_evar_map_find_In; rewrite_hyp !*.
+          destruct (PositiveMap.find t' evm) eqn:H'; [ reflexivity | ].
+          congruence.
         Qed.
 
         Lemma add_var_types_cps_id {t v evm T k}
