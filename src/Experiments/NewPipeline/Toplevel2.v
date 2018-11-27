@@ -2612,9 +2612,16 @@ Module Fancy.
              end.
     Qed.
 
+    Lemma no_pairs consts_list v1 v2 :
+      In (existZZ (v1, v2)%zrange) (make_pairs consts_list) -> False.
+    Proof.
+      induction consts_list; cbn; [ tauto | ].
+      destruct 1; congruence || tauto.
+    Qed.
+
     Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r.
     Hint Resolve in_or_app.
-    Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok.
+    Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok no_pairs.
     Lemma of_Expr_correct next_name consts_list arg_list error cc
           t (e : Expr t)
           (x1 : type.for_each_lhs_of_arrow (var positive) t)
@@ -2624,6 +2631,7 @@ Module Fancy.
       let ctx := make_ctx (consts_list ++ arg_list) in
       let consts := make_consts consts_list in
       let G := make_pairs consts_list ++ make_pairs arg_list in
+      (forall n v, In (n, v) (consts_list ++ arg_list) -> (n < next_name)%positive) ->
       (forall n v1 v2, In (n, v1) (consts_list ++ arg_list) ->
                        In (n, v2) (consts_list ++ arg_list) -> v1 = v2) (* no duplicate names *) ->
       (LanguageWf.Compilers.expr.wf G e1 e2) ->
@@ -2632,13 +2640,16 @@ Module Fancy.
       interp Pos.eqb wordmax cc_spec (of_Expr next_name consts e x1 error) cc ctx = result.
     Proof.
       cbv [of_Expr]; intros.
-      eapply of_prefancy_correct with (name_lt := Pos.lt); eauto; try apply Pos.eqb_neq.
-      (* 4 goals *)
-      { intros.
-        apply make_ctx_ok; auto.
-        apply make_pairs_ok. cbv [make_pairs]; rewrite map_app. auto. }
-      { 
-    Admitted.
+      eapply of_prefancy_correct with (name_lt := Pos.lt); eauto;
+        try apply Pos.eqb_neq; [ | | | ]; intros;
+          try solve [apply make_ctx_ok; auto; apply make_pairs_ok;
+                     cbv [make_pairs]; rewrite map_app; auto ];
+          repeat match goal with
+                 | H : _ |- _ => apply in_app_or in H; destruct H
+                 | _ => solve [eauto]
+                 | _ => solve [exfalso; eauto]
+                 end.
+    Qed.
   End Proofs.
 End Fancy.
 
@@ -3127,7 +3138,7 @@ Module Barrett256.
   Qed.
    *)
   Definition barrett_red256_fancy' (xLow xHigh RegMuLow RegMod RegZero error : positive) :=
-    Fancy.of_Expr 3%positive
+    Fancy.of_Expr 6%positive
                   (Fancy.make_consts [(RegMuLow, muLow); (RegMod, M); (RegZero, 0)])
                   barrett_red256
                   (xLow, (xHigh, tt))
@@ -3195,6 +3206,8 @@ Module Barrett256.
     cbv [barrett_red256_fancy'].
     rewrite <-barrett_red256_correct_full by auto.
     eapply Fancy.of_Expr_correct with (x2 := (xLow, (xHigh, tt))).
+    { cbn; intros; subst RegZero RegMod RegMuLow RegxHigh RegxLow.
+      intuition; Prod.inversion_prod; subst; cbv; congruence. }
     { cbn; intros; subst RegZero RegMod RegMuLow RegxHigh RegxLow.
       intuition; Prod.inversion_prod; subst; congruence. }
     { cbn.
