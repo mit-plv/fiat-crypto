@@ -2549,27 +2549,20 @@ Module Fancy.
     Local Notation existZ := (existT _  (type.base (base.type.type_base base.type.Z))).
     Local Notation existZZ := (existT _  (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%etype)).
     
-    Fixpoint make_ctx' n (consts_list : list Z) : positive -> Z :=
-      match consts_list with
+    Fixpoint make_ctx (var_list : list (positive * Z)) : positive -> Z :=
+      match var_list with
       | [] => fun _ => 0
-      | v :: l' => fun m => if (m =? n)%positive then v else make_ctx' (Pos.succ n) l' m
+      | (n, v) :: l' => fun m => if (m =? n)%positive then v else make_ctx l' m
       end.
-    Definition make_ctx := make_ctx' 1%positive.
 
-    Fixpoint make_pairs' n (consts_list : list Z) :
-             list {t : Compilers.type base.type.type & (var positive t * @type.interp base.type base.interp t)%type } :=
-      match consts_list with
-      | [] => []
-      | v :: l' => existZ (n, v) :: make_pairs' (Pos.succ n) l'
-      end.
-    Definition make_pairs := make_pairs' 1%positive.
+    Definition make_pairs :
+      list (positive * Z) -> list {t : Compilers.type base.type.type & (var positive t * @type.interp base.type base.interp t)%type } := map (fun x => existZ x).
 
-    Fixpoint make_consts' n (consts_list : list Z) : Z -> option positive :=
+    Fixpoint make_consts (consts_list : list (positive * Z)) : Z -> option positive :=
       match consts_list with
       | [] => fun _ => None
-      | v :: l' => fun x => if x =? v then Some n else make_consts' (Pos.succ n) l' x
+      | (n, v) :: l' => fun x => if x =? v then Some n else make_consts l' x
       end.
-    Definition make_consts := make_consts' 1%positive.
 
     Local Ltac ez :=
       repeat match goal with
@@ -2587,7 +2580,7 @@ Module Fancy.
              | _ => progress Z.ltb_to_lt
              | _ => reflexivity
              | _ => congruence
-             | _ => solve [auto]
+             | _ => solve [eauto]
              end.
     
     
@@ -2595,47 +2588,44 @@ Module Fancy.
       make_consts consts_list v = Some n ->
       In (existZ (n, v)%zrange) (make_pairs consts_list).
     Proof.
-      cbv [make_consts make_pairs]. generalize 1%positive.
-      induction consts_list; cbn; ez.
-    Qed.
-
-    Lemma make_pairs'_index_lt consts_list :
-      forall n v1 v2,
-      In (existZ (v1, v2)%zrange) (make_pairs' n consts_list) ->
-      (n <= v1)%positive.
-    Proof.
-      induction consts_list; cbn; [ contradiction | ].
-      intros. destruct H; ez.
-      apply IHconsts_list in H. lia.
+      cbv [make_pairs]; induction consts_list as [|[ ? ? ] ?]; cbn; ez.
     Qed.
       
     Lemma make_pairs_ok consts_list:
       forall v1 v2,
         In (existZ (v1, v2)%zrange) (make_pairs consts_list) ->
-      make_ctx consts_list v1 = v2.
+        In (v1, v2) consts_list.
     Proof.
-      cbv [make_ctx make_pairs]. generalize 1%positive.
-      induction consts_list; cbn; [ tauto | ].
+      cbv [make_pairs]. induction consts_list as [| [ n v ] ? ]; cbn; [ tauto | ]. ez.
+    Qed.
+    Lemma make_ctx_ok consts_list:
+      (forall n v1 v2, In (n, v1) consts_list ->
+                       In (n, v2) consts_list -> v1 = v2) ->
+      forall n v,
+        In (n, v) consts_list ->
+      make_ctx consts_list n = v.
+    Proof.
+      induction consts_list as [| [ n v ] ? ]; cbn; [ tauto | ].
       repeat match goal with
              | _ => progress cbn [eq_rect fst snd] in *
-             | H : _ |- _ => apply make_pairs'_index_lt in H; lia
              | _ => progress ez
              end.
     Qed.
 
     Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r.
     Hint Resolve in_or_app.
-    Hint Resolve make_consts_ok make_pairs_ok.
-    Lemma of_Expr_correct consts_list error cc
+    Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok.
+    Lemma of_Expr_correct next_name consts_list arg_list error cc
           t (e : Expr t)
           (x1 : type.for_each_lhs_of_arrow (var positive) t)
           (x2 : type.for_each_lhs_of_arrow _ t) result :
       let e1 := (invert_expr.smart_App_curried (e _) x1) in
       let e2 := (invert_expr.smart_App_curried (e _) x2) in
-      let ctx := make_ctx consts_list in
+      let ctx := make_ctx (consts_list ++ arg_list) in
       let consts := make_consts consts_list in
-      let next_name := Pos.of_nat (length consts_list) in
-      let G := make_pairs consts_list ++ var_pairs x1 x2 in
+      let G := make_pairs consts_list ++ make_pairs arg_list in
+      (forall n v1 v2, In (n, v1) (consts_list ++ arg_list) ->
+                       In (n, v2) (consts_list ++ arg_list) -> v1 = v2) (* no duplicate names *) ->
       (LanguageWf.Compilers.expr.wf G e1 e2) ->
       valid_expr _ consts _ e1 ->
       interp_if_Z e2 = Some result ->
@@ -2643,13 +2633,12 @@ Module Fancy.
     Proof.
       cbv [of_Expr]; intros.
       eapply of_prefancy_correct with (name_lt := Pos.lt); eauto; try apply Pos.eqb_neq.
-      { intros. apply make_pairs_ok.
-        eauto using in_app_or.
-        apply in_app_or in H2.
-        eapply in_app_or.
-      
-
-    Qed.
+      (* 4 goals *)
+      { intros.
+        apply make_ctx_ok; auto.
+        apply make_pairs_ok. cbv [make_pairs]; rewrite map_app. auto. }
+      { 
+    Admitted.
   End Proofs.
 End Fancy.
 
@@ -3139,7 +3128,7 @@ Module Barrett256.
    *)
   Definition barrett_red256_fancy' (xLow xHigh RegMuLow RegMod RegZero error : positive) :=
     Fancy.of_Expr 3%positive
-                  (fun z => if z =? muLow then Some RegMuLow else if z =? M then Some RegMod else if z =? 0 then Some RegZero else None)
+                  (Fancy.make_consts [(RegMuLow, muLow); (RegMod, M); (RegZero, 0)])
                   barrett_red256
                   (xLow, (xHigh, tt))
                   error.
@@ -3177,46 +3166,51 @@ Module Barrett256.
       econstructor; intros; [ step | ];
       solve [two_step]
     | try branching_step ].
-        
-  Lemma barrett_red256_fancy_correct cc_start_state ctx :
-    forall xLow xHigh RegxLow RegxHigh RegMuLow RegMod RegZero error,
+
+  (* TODO(jgross) 
+     There's probably a more general statement to make here about the
+     correctness of smart_App_curried, but I'm not sure what it is. *)
+  Lemma interp_smart_App_curried_2 :
+    forall s1 s2 d (e : Compilers.expr (s1 -> s2 -> type.base d))
+           (x1 : @type.interp base.type base.interp s1)
+           (x2 : @type.interp base.type base.interp s2),
+      interp (invert_expr.smart_App_curried e (x1, (x2, tt))) = interp e x1 x2.
+  Admitted.
+
+  Lemma barrett_red256_fancy_correct cc_start_state :
+    forall xLow xHigh error,
       0 <= xLow < 2 ^ machine_wordsize ->
       0 <= xHigh < M ->
-      ctx RegxHigh = xHigh ->
-      ctx RegxLow = xLow ->
-      ctx RegMuLow = muLow ->
-      ctx RegMod = M ->
-      ctx RegZero = 0 ->
-      Fancy.interp Pos.eqb Fancy.wordmax Fancy.cc_spec (barrett_red256_fancy RegxLow RegxHigh RegMuLow RegMod RegZero error) cc_start_state ctx = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
+      let RegZero := 1%positive in
+      let RegMod := 2%positive in
+      let RegMuLow := 3%positive in
+      let RegxHigh := 4%positive in
+      let RegxLow := 5%positive in
+      let consts_list := [(RegMuLow, muLow); (RegMod, M); (RegZero, 0)] in
+      let arg_list := [(RegxHigh, xHigh); (RegxLow, xLow)] in
+      Fancy.interp Pos.eqb Fancy.wordmax Fancy.cc_spec (barrett_red256_fancy RegxLow RegxHigh RegMuLow RegMod RegZero error) cc_start_state (Fancy.make_ctx (consts_list ++ arg_list)) = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
   Proof.
     intros.
     rewrite barrett_red256_fancy_eq.
     cbv [barrett_red256_fancy'].
     rewrite <-barrett_red256_correct_full by auto.
     eapply Fancy.of_Expr_correct with (x2 := (xLow, (xHigh, tt))).
-    { cbv [Fancy.var_pairs]; cbn [fst snd].
+    { cbn; intros; subst RegZero RegMod RegMuLow RegxHigh RegxLow.
+      intuition; Prod.inversion_prod; subst; congruence. }
+    { cbn.
       repeat match goal with
-             | _ => progress branching_step
-             | _ => progress repeat (econstructor; intros; [ solve[step] | ])
-             | _ => solve [econstructor; intros; step]
+             | _ => apply expr.WfLetIn
+             | _ => progress step
+             | _ => econstructor
              end. }
     { admit. (* valid_expr *) }
     { cbn - [barrett_red256].
       cbv [id].
       cbv [expr.Interp].
-      cbn - [expr.interp].
-      Print expr.interp.
-      cbn - [ident.interp].
-      SearchAbout expr.interp.
-      f_equal.
-      apply f_equal2.
-      reflexivity.
-      cbn.
-      cbv [invert_expr.smart_App_curried].
-      reflexivity.
-      SearchAbout invert_expr.smart_App_curried.
-      
-  Qed.
+      replace (@ident.gen_interp Fancy.cast_oor) with (@ident.interp) by admit. (* TODO(jgross): need to be able to say that I can switch out cast_outside_of_range because bounds checking works *)
+      rewrite <-interp_smart_App_curried_2.
+      reflexivity. }
+  Admitted.
 
   Import Fancy.Registers.
 
