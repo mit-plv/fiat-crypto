@@ -2109,6 +2109,13 @@ Module Compilers.
                                 | (idtac + symmetry); assumption ]. }
           Qed.
 
+          Lemma value_interp_self_related_of_ok {with_lets t v}
+            : @value_interp_ok with_lets t v
+              -> value'_interp v == value'_interp v.
+          Proof using Type.
+            intro H; apply value_interp_related_iff_of_ok; assumption.
+          Qed.
+
           Lemma interp_of_wf_reify_expr G {t}
                 (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> expr.interp ident_interp (reify v1) == v2)
                 e1 e2
