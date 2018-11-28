@@ -2186,6 +2186,12 @@ Module Compilers.
                                 | (idtac + symmetry); assumption ]. }
           Qed.
 
+          Lemma unfold_value'_interp_arrow {with_lets s d}
+            : @value'_interp with_lets (type.arrow s d)
+              = (fun (f : @value' _ with_lets (type.arrow s d)) (x : var s)
+                 => @value'_interp _ d (f (reflect (expr.Var x)))).
+          Proof using Type. reflexivity. Qed.
+
           Lemma value_interp_self_related_of_ok {with_lets t v}
             : @value_interp_ok with_lets t v
               -> value'_interp v == value'_interp v.
