@@ -2193,6 +2193,45 @@ Module Compilers.
             intro H; apply value_interp_related_iff_of_ok; assumption.
           Qed.
 
+          Lemma value_interp_ok_arrow {with_lets s d f}
+            : @value_interp_ok with_lets (type.arrow s d) f
+              <-> (forall x y,
+                      value_interp_ok x
+                      -> value_interp_ok y
+                      -> value'_interp x == value'_interp y
+                      -> value_interp_ok (f x)
+                         /\ value_interp_ok (f y)
+                         /\ value'_interp (f x) == value'_interp (f y)).
+          Proof using Type.
+            cbv [value_interp_ok]; cbn [value'_interp_related value'] in *.
+            split; intros H x y; [ | specialize (H x y) ].
+            all: repeat first [ progress intros
+                              | apply conj
+                              | progress destruct_head'_and
+                              | progress cbv [value_interp_ok] in *
+                              | solve [ auto ]
+                              | progress specialize_by_assumption
+                              | match goal with
+                                | [ H : (forall x1 x2, x1 === x2 -> ?f x1 === ?f x2) |- ?f _ === ?f _ ]
+                                  => apply H
+                                | [ |- _ == _ ] => rewrite <- value_interp_related_iff_of_ok
+                                | [ H : _ == _ |- _ ] => revert H; rewrite <- value_interp_related_iff_of_ok
+                                | [ H : ?x === ?y |- _ ]
+                                  => progress ((try unique assert (x === x) by (etransitivity; (idtac + symmetry); eassumption));
+                                               (try unique assert (y === y) by (etransitivity; (idtac + symmetry); eassumption)))
+                                | [ H : _ == _ -> _ |- _ ]
+                                  => specialize (fun H1 H2 H3 => H (proj1 (value_interp_related_iff_of_ok H1 H2) H3))
+                                end ].
+          Qed.
+
+          Lemma value_interp_ok_base {with_lets t x}
+            : @value_interp_ok with_lets (type.base t) x
+              <-> (value'_interp x == value'_interp x).
+          Proof using Type.
+            cbv [value'_interp value_interp_ok reify value'_interp_related].
+            break_innermost_match; rewrite ?UnderLets.interp_to_expr; reflexivity.
+          Qed.
+
           Lemma interp_of_wf_reify_expr G {t}
                 (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> expr.interp ident_interp (reify v1) == v2)
                 e1 e2
