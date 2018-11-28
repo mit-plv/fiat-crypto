@@ -787,7 +787,7 @@ Module Compilers.
                        | _ => False
                        end
                | rExpr t e => e === e1
-               | rValue t e => reify e === e1
+               | rValue t e => False
                end.
 
           Definition rawexpr_ok (r : rawexpr) := rawexpr_equiv_expr (expr_of_rawexpr r) r.
@@ -797,13 +797,8 @@ Module Compilers.
                | rExpr t e, r
                | r, rExpr t e
                  => rawexpr_equiv_expr e r
-                                       (*
                | rValue t1 e1, rValue t2 e2
                  => existT _ t1 e1 = existT _ t2 e2
-                                        *)
-               | rValue t e, r
-               | r, rValue t e
-                 => rawexpr_equiv_expr (reify e) r
                | rIdent _ t1 idc1 t'1 alt1, rIdent _ t2 idc2 t'2 alt2
                  => alt1 === alt2
                     /\ (existT ident _ idc1 = existT ident _ idc2)
@@ -811,6 +806,7 @@ Module Compilers.
                  => alt1 === alt2
                     /\ rawexpr_equiv f1 f2
                     /\ rawexpr_equiv x1 x2
+               | rValue _ _, _
                | rIdent _ _ _ _ _, _
                | rApp _ _ _ _, _
                  => False
@@ -932,7 +928,7 @@ Module Compilers.
             destruct re; cbn [rawexpr_equiv_expr];
               intros; destruct_head'_and; inversion_sigma;
                 repeat (subst || cbn [eq_rect type_of_rawexpr] in * );
-                reflexivity.
+                solve [ reflexivity | exfalso; assumption ].
           Qed.
 
           Lemma swap_swap_list {A n m ls ls'}
