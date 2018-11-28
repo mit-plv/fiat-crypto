@@ -786,7 +786,9 @@ Module Compilers.
                          => rawexpr_equiv_expr f' f /\ rawexpr_equiv_expr x' x
                        | _ => False
                        end
-               | rExpr t e => e === e1
+               | rExpr t e
+               | rValue (type.base t) e
+                 => e === e1
                | rValue t e => False
                end.
 
@@ -796,6 +798,8 @@ Module Compilers.
             := match r1, r2 with
                | rExpr t e, r
                | r, rExpr t e
+               | rValue (type.base t) e, r
+               | r, rValue (type.base t) e
                  => rawexpr_equiv_expr e r
                | rValue t1 e1, rValue t2 e2
                  => existT _ t1 e1 = existT _ t2 e2
@@ -926,7 +930,7 @@ Module Compilers.
             : @rawexpr_equiv_expr t e re -> t = type_of_rawexpr re.
           Proof using Type.
             destruct re; cbn [rawexpr_equiv_expr];
-              intros; destruct_head'_and; inversion_sigma;
+              intros; break_innermost_match_hyps; destruct_head'_and; inversion_sigma;
                 repeat (subst || cbn [eq_rect type_of_rawexpr] in * );
                 solve [ reflexivity | exfalso; assumption ].
           Qed.
@@ -1149,6 +1153,18 @@ Module Compilers.
           Lemma reveal_rawexpr_cps_id e T k
             : @reveal_rawexpr_cps ident var e T k = k (reveal_rawexpr e).
           Proof. apply reveal_rawexpr_cps_gen_id. Qed.
+
+          Lemma reveal_rawexpr_equiv e
+            : rawexpr_equiv (reveal_rawexpr e) e.
+          Proof using Type.
+            cbv [reveal_rawexpr_cps]; induction e.
+            all: repeat first [ progress cbn [rawexpr_equiv reveal_rawexpr_cps_gen value'] in *
+                              | progress cbv [id value] in *
+                              | break_innermost_match_step
+                              | progress expr.invert_match
+                              | reflexivity
+                              | apply conj ].
+          Qed.
 
           Fixpoint eval_decision_tree_cont_None_ext
                    {T ctx d cont}
