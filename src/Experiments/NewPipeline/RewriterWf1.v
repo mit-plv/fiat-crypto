@@ -792,8 +792,6 @@ Module Compilers.
                | rValue t e => False
                end.
 
-          Definition rawexpr_ok (r : rawexpr) := rawexpr_equiv_expr (expr_of_rawexpr r) r.
-
           Fixpoint rawexpr_equiv (r1 r2 : rawexpr) : Prop
             := match r1, r2 with
                | rExpr t e, r
@@ -925,7 +923,7 @@ Module Compilers.
           Global Instance rawexpr_equiv_Equivalence : Equivalence rawexpr_equiv.
           Proof using Type. split; exact _. Qed.
 
-          Lemma rawexpr_equiv_expr_to_type_of_rawexpr
+          Lemma eq_type_of_rawexpr_equiv_expr
                 {t e re}
             : @rawexpr_equiv_expr t e re -> t = type_of_rawexpr re.
           Proof using Type.
@@ -934,6 +932,72 @@ Module Compilers.
                 repeat (subst || cbn [eq_rect type_of_rawexpr] in * );
                 solve [ reflexivity | exfalso; assumption ].
           Qed.
+
+          Lemma eq_type_of_rawexpr_equiv
+                {r1 r2}
+            : rawexpr_equiv r1 r2 -> type_of_rawexpr r1 = type_of_rawexpr r2.
+          Proof using Type.
+            revert r2; induction r1, r2.
+            all: repeat first [ progress cbn [rawexpr_equiv type_of_rawexpr] in *
+                              | progress subst
+                              | progress destruct_head'_and
+                              | progress inversion_sigma
+                              | reflexivity
+                              | exfalso; assumption
+                              | progress intros
+                              | break_innermost_match_hyps_step
+                              | match goal with
+                                | [ H : rawexpr_equiv_expr _ _ |- _ ] => apply eq_type_of_rawexpr_equiv_expr in H
+                                end
+                              | progress type.inversion_type ].
+          Qed.
+
+          Lemma eq_expr_of_rawexpr_equiv_expr' {t e re}
+                (H : @rawexpr_equiv_expr t e re)
+            : forall pf, expr_of_rawexpr re = rew [expr] pf in e.
+          Proof using Type.
+            revert t e H; induction re.
+            all: repeat first [ progress cbn [expr_of_rawexpr rawexpr_equiv_expr type_of_rawexpr eq_rect] in *
+                              | progress subst
+                              | progress destruct_head'_and
+                              | progress destruct_head'_False
+                              | progress inversion_sigma
+                              | progress eliminate_hprop_eq
+                              | reflexivity
+                              | progress intros
+                              | break_innermost_match_hyps_step ].
+          Qed.
+
+          Lemma eq_expr_of_rawexpr_equiv_expr {t e re}
+                (H : @rawexpr_equiv_expr t e re)
+            : expr_of_rawexpr re = rew [expr] eq_type_of_rawexpr_equiv_expr H in e.
+          Proof using Type. apply eq_expr_of_rawexpr_equiv_expr'; assumption. Qed.
+
+          Lemma eq_expr_of_rawexpr_equiv' {t r1 r2}
+                (H : rawexpr_equiv r1 r2)
+            : forall pf1 pf2 : _ = t,
+              rew [expr] pf1 in expr_of_rawexpr r1 = rew [expr] pf2 in expr_of_rawexpr r2.
+          Proof using Type.
+            revert r2 t H; induction r1, r2.
+            all: repeat first [ progress cbn [expr_of_rawexpr rawexpr_equiv type_of_rawexpr eq_rect] in *
+                              | progress subst
+                              | progress destruct_head'_and
+                              | progress destruct_head'_False
+                              | progress inversion_sigma
+                              | progress eliminate_hprop_eq
+                              | reflexivity
+                              | progress intros
+                              | break_innermost_match_hyps_step
+                              | match goal with
+                                | [ H : rawexpr_equiv_expr _ _ |- _ ]
+                                  => generalize (eq_type_of_rawexpr_equiv_expr H) (eq_expr_of_rawexpr_equiv_expr H); clear H
+                                end ].
+          Qed.
+
+          Lemma eq_expr_of_rawexpr_equiv {r1 r2}
+                (H : rawexpr_equiv r1 r2)
+            : rew [expr] eq_type_of_rawexpr_equiv H in expr_of_rawexpr r1 = expr_of_rawexpr r2.
+          Proof using Type. apply eq_expr_of_rawexpr_equiv' with (pf2:=eq_refl); assumption. Qed.
 
           Lemma swap_swap_list {A n m ls ls'}
             : @swap_list A n m ls = Some ls' -> @swap_list A n m ls' = Some ls.
@@ -1879,6 +1943,7 @@ Module Compilers.
                end.
 
           Local Infix "===" := value'_interp_related : type_scope.
+          Local Notation "e1 ==== e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
 
           Definition value_interp_related {t} : relation (@value var t)
             := value'_interp_related.
@@ -2148,6 +2213,131 @@ Module Compilers.
                               | apply interp_reify_reflect
                               | solve [ auto ] ].
           Qed.
+
+          Fixpoint rawexpr_interp_ok (r : rawexpr) : Prop
+            := match r with
+               | rIdent _ t idc t' alt => expr.Ident idc ==== alt
+               | rExpr t e
+               | rValue (type.base t) e
+                 => exists G,
+                    (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
+                    /\ expr.wf G e e
+               | rValue t v => value_interp_ok v
+               | rApp f x t alt
+                 => rawexpr_interp_ok f
+                    /\ rawexpr_interp_ok x
+                    /\ exists s d
+                              (pff : type_of_rawexpr f = type.arrow s d)
+                              (pfx : type_of_rawexpr x = s),
+                        (((rew pff in expr_of_rawexpr f) @ (rew pfx in expr_of_rawexpr x))%expr)
+                          ==== alt
+               end.
+
+          Lemma rawexpr_equiv_expr_ok_iff {t e r} (H : @rawexpr_equiv_expr _ t e r)
+            : rawexpr_interp_ok r
+              <-> (exists G,
+                      (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
+                      /\ expr.wf G e e).
+          Proof using Type.
+            split; revert t e H; induction r.
+            all: unshelve
+                   (repeat
+                      first [ progress cbn [rawexpr_interp_ok rawexpr_equiv_expr List.In eq_rect] in *
+                            | progress subst
+                            | progress destruct_head'_and
+                            | progress destruct_head' iff
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_sig
+                            | progress destruct_head'_False
+                            | progress specialize_by_assumption
+                            | progress inversion_sigma
+                            | progress eliminate_hprop_eq
+                            | reflexivity
+                            | progress intros
+                            | break_innermost_match_step
+                            | break_innermost_match_hyps_step
+                            | progress expr.invert_match
+                            | progress expr.inversion_wf_constr
+                            | rewrite in_app_iff in *
+                            | (exists eq_refl)
+                            | apply conj
+                            | match goal with
+                              | [ |- expr.wf _ _ _ ] => constructor
+                              | [ H : forall t e, rawexpr_equiv_expr e ?r -> _, H' : rawexpr_equiv_expr _ ?r |- _ ]
+                                => specialize (H _ _ H')
+                              | [ H : (exists G, _ /\ expr.wf G ?e1 ?e2) -> _, H' : expr.wf ?G' ?e1 ?e2 |- _ ]
+                                => specialize (fun pf1 => H (ex_intro _ G' (conj pf1 H')))
+                              | [ G1 : list ?T, G2 : list ?T |- @ex (list ?T) _ ] => exists (G1 ++ G2)%list
+                              | [ G : list ?T |- @ex (list ?T) _ ] => exists G
+                              | [ |- @ex (list ?T) _ ] => exists (@nil T)
+                              | [ H : ?T, H' : ?T |- _ ] => clear H'
+                              | [ |- ex _ ] => eexists
+                              end
+                            | solve [ eauto ]
+                            | progress destruct_head'_or
+                            | solve [ wf_unsafe_t; wf_safe_t ]
+                            | unshelve erewrite eq_expr_of_rawexpr_equiv_expr; [ .. | eassumption | ]; []
+                            | match goal with
+                              | [ H : ?x = ?y |- _ ] => progress unify x y
+                              | [ |- context[rew ?pf in _] ] => tryif is_var pf then destruct pf else generalize pf
+                              end ]).
+            repeat first [ progress subst
+                         | congruence
+                         | match goal with
+                           | [ H : rawexpr_equiv_expr _ _ |- _ = _ :> type ] => apply eq_type_of_rawexpr_equiv_expr in H
+                           end ].
+          Qed.
+
+          Lemma rawexpr_equiv_ok_iff {r1 r2} (H : rawexpr_equiv r1 r2)
+            : rawexpr_interp_ok r1 <-> rawexpr_interp_ok r2.
+          Proof using Type.
+            split; revert r1 r2 H; induction r1.
+            all: repeat first [ progress cbn [rawexpr_interp_ok rawexpr_equiv eq_rect projT1 projT2] in *
+                              | progress subst
+                              | progress inversion_sigma
+                              | progress destruct_head'_ex
+                              | progress destruct_head'_and
+                              | progress destruct_head' iff
+                              | progress destruct_head'_sig
+                              | progress destruct_head'_False
+                              | progress eliminate_hprop_eq
+                              | progress specialize_by_assumption
+                              | reflexivity
+                              | eassumption
+                              | progress intros
+                              | break_innermost_match_hyps_step
+                              | erewrite <- rawexpr_equiv_expr_ok_iff by eassumption
+                              | apply conj
+                              | (exists eq_refl)
+                              | solve [ eauto ]
+                              | match goal with
+                                | [ H : rawexpr_equiv_expr _ _ |- _ ] => apply rawexpr_equiv_expr_ok_iff in H
+                                | [ H : (exists G, _ /\ expr.wf G ?e1 ?e2) -> _, H' : expr.wf ?G' ?e1 ?e2 |- _ ]
+                                  => specialize (fun pf1 => H (ex_intro _ G' (conj pf1 H')))
+                                | [ H : type.arrow _ _ = type.arrow _ _ |- _ ] => progress type.inversion_type
+                                | [ H : rawexpr_equiv _ _ |- _ ==== _ ]
+                                  => generalize (eq_type_of_rawexpr_equiv H) (eq_expr_of_rawexpr_equiv H); clear H
+                                | [ |- context[rew ?pf in _] ] => is_evar pf; generalize pf
+                                end ].
+            all: match goal with |- exists s d pff pfx, _ ==== _ => idtac end.
+            all: repeat first [ progress intros
+                              | progress subst
+                              | progress cbn [eq_rect] in *
+                              | (exists eq_refl)
+                              | reflexivity
+                              | match goal with
+                                | [ H : rawexpr_equiv ?r1 ?r2 |- _ ]
+                                  => generalize (eq_type_of_rawexpr_equiv H) (eq_expr_of_rawexpr_equiv H); clear H
+                                | [ |- context[expr_of_rawexpr ?r] ] => generalize dependent (expr_of_rawexpr r)
+                                | [ H : type_of_rawexpr ?r = _ |- _ ] => generalize dependent (type_of_rawexpr r)
+                                | [ H : _ = type_of_rawexpr ?r |- _ ] => generalize dependent (type_of_rawexpr r)
+                                | [ |- ex _ ] => eexists
+                                end ].
+          Qed.
+
+          Lemma reveal_rawexpr_ok_iff {r}
+            : rawexpr_interp_ok (reveal_rawexpr r) <-> rawexpr_interp_ok r.
+          Proof using Type. apply rawexpr_equiv_ok_iff, reveal_rawexpr_equiv. Qed.
 
           Fixpoint pattern_default_interp' {K t} (p : pattern t) evm {struct p} : (expr (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' t p evm K
             := match p in pattern.pattern t return (expr (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' t p evm K with
