@@ -1921,6 +1921,11 @@ Module Compilers.
                 then UnderLets.interp ident_interp
                 else (fun x => x)).
 
+          Local Notation UnderLets_maybe_wf with_lets G
+            := (if with_lets as with_lets' return (if with_lets' then UnderLets var _ else _) -> (if with_lets' then UnderLets var _ else _) -> _
+                then UnderLets.wf (fun G' => expr.wf G') G
+                else expr.wf G).
+
           Definition value'_interp {with_lets t} (v : @value' var with_lets t)
             : var t
             := expr.interp ident_interp (reify v).
@@ -1950,6 +1955,28 @@ Module Compilers.
 
           Definition value_interp_ok {with_lets t} : @value' var with_lets t -> Prop
             := fun v => value'_interp_related v v.
+
+          Local Notation G_good G
+            := (forall t v1 v2, List.In (existT (fun t => (var t * var t)%type) t (v1, v2)) G -> v1 == v2)
+                 (only parsing).
+
+          Definition value_or_expr_interp_ok {with_lets t} : @value' var with_lets t -> Prop
+            := match t with
+               | type.base _
+                 => fun v => exists G, G_good G /\ UnderLets_maybe_wf with_lets G v v
+               | type.arrow _ _
+                 => value_interp_ok
+               end.
+
+          Lemma value_interp_ok_of_value_or_expr_interp_ok {with_lets t v}
+            : @value_or_expr_interp_ok with_lets t v
+              -> value_interp_ok v.
+          Proof using ident_interp_Proper.
+            cbv [value_or_expr_interp_ok]; break_innermost_match; [ | | exact id ]; cbv [value_interp_ok value'_interp_related]; rewrite <- ?UnderLets.interp_to_expr.
+            all: intros [G [H1 H2] ].
+            all: eapply expr.wf_interp_Proper_gen1; try eassumption.
+            apply UnderLets.wf_to_expr; assumption.
+          Qed.
 
           Lemma value'_interp_related_sym_iff {with_lets1 with_lets2 t v1 v2}
             : @value'_interp_related with_lets1 with_lets2 t v1 v2
