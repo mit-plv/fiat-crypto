@@ -15,6 +15,10 @@ Ltac inversion_head T := inversion_all_matches ltac:(destruct_head_matcher T).
 Ltac inversion_one_head T := inversion_one_match ltac:(destruct_head_matcher T).
 Ltac inversion_head' T := inversion_all_matches' ltac:(destruct_head_matcher T).
 
+Ltac inversion_clear_head T := inversion_clear_all_matches ltac:(destruct_head_matcher T).
+Ltac inversion_clear_one_head T := inversion_clear_one_match ltac:(destruct_head_matcher T).
+Ltac inversion_clear_head' T := inversion_clear_all_matches' ltac:(destruct_head_matcher T).
+
 
 Ltac head_hnf_matcher T HT :=
   match head_hnf HT with
@@ -27,6 +31,10 @@ Ltac destruct_head_hnf' T := destruct_all_matches' ltac:(head_hnf_matcher T).
 Ltac inversion_head_hnf T := inversion_all_matches ltac:(head_hnf_matcher T).
 Ltac inversion_one_head_hnf T := inversion_one_match ltac:(head_hnf_matcher T).
 Ltac inversion_head_hnf' T := inversion_all_matches' ltac:(head_hnf_matcher T).
+
+Ltac inversion_clear_head_hnf T := inversion_clear_all_matches ltac:(head_hnf_matcher T).
+Ltac inversion_clear_one_head_hnf T := inversion_clear_one_match ltac:(head_hnf_matcher T).
+Ltac inversion_clear_head_hnf' T := inversion_clear_all_matches' ltac:(head_hnf_matcher T).
 
 (** Faster versions for some common connectives *)
 Ltac destruct_one_head'_ex := match goal with H : ex _ |- _ => destruct H end.
