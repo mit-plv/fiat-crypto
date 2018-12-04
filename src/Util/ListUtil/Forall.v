@@ -4,6 +4,8 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Option.
 
 Definition Forallb {A} (P : A -> bool) (ls : list A) : bool
   := List.fold_right andb true (List.map P ls).
@@ -152,21 +154,24 @@ Proof using Type.
   revert ys; induction xs as [|x xs IHxs], ys as [|y ys];
     [ | | | specialize (IHxs ys) ]; t_Forall2.
   all: repeat first [ t_Forall2_step
-                    | rewrite nth_error_nil_error
                     | progress cbn [option_eq nth_error] in *
                     | progress inversion_option
                     | match goal with
                       | [ H : forall x, nth_error (cons _ _) x = None |- _ ] => specialize (H O)
                       | [ H : forall x, option_eq _ (nth_error (cons _ _) x) None |- _ ] => specialize (H O)
-                      | [ H : context[nth_error nil _] |- _ ]
-                        => rewrite nth_error_nil_error in H || setoid_rewrite nth_error_nil_error in H
                       | [ |- context[nth_error (cons _ _) ?x] ] => is_var x; destruct x
+                      | [ H : forall i, option_eq _ _ (nth_error (cons _ _) ?x) |- _ ]
+                        => pose proof (H O);
+                           pose proof (fun i => H (S i));
+                           clear H
                       | [ H : forall i, option_eq _ (nth_error (cons _ _) ?x) _ |- _ ]
                         => pose proof (H O);
                            pose proof (fun i => H (S i));
                            clear H
+                      | [ |- context[nth_error nil ?x] ] => is_var x; destruct x
                       end ].
 Qed.
+
 Lemma Forall2_forall_iff'' {A B R xs ys d1 d2}
   : (@Forall2 A B R xs ys /\ R d1 d2)
     <-> (length xs = length ys
@@ -188,8 +193,10 @@ Proof using Type.
                     | break_innermost_match_step
                     | break_innermost_match_hyps_step
                     | match goal with
-                      | [ H : nth_error _ _ = None |- _ ] => apply nth_error_error_length in H
-                      | [ H : nth_error _ _ = Some _ |- _ ] => apply nth_error_value_length in H
+                      | [ H : nth_error _ _ = None |- _ ] => rewrite nth_error_None in H
+                      | [ H : nth_error ?l ?n = Some _ |- _ ]
+                        => assert (n < List.length l) by (apply nth_error_Some; congruence);
+                           clear H
                       end
                     | lia ].
 Qed.
