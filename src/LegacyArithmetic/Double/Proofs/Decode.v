@@ -22,7 +22,7 @@ Section decode.
   Context {n W} {decode : decoder n W}.
   Section with_k.
     Context {k : nat}.
-    Local Notation limb_widths := (repeat n k).
+    Local Notation limb_widths := (List.repeat n k).
 
     Lemma decode_bounded {isdecode : is_decode decode} w
       : 0 <= n -> Pow2Base.bounded limb_widths (List.map decode (rev (to_list k w))).
@@ -56,7 +56,7 @@ Section decode.
   End with_k.
 
   Local Arguments Pow2Base.base_from_limb_widths : simpl never.
-  Local Arguments repeat : simpl never.
+  Local Arguments List.repeat : simpl never.
   Local Arguments Z.mul !_ !_.
   Lemma tuple_decoder_S {k} w : 0 <= n -> (tuple_decoder (k := S (S k)) w = tuple_decoder (k := S k) (fst w) + (decode (snd w) << (S k * n)))%Z.
   Proof using Type.
