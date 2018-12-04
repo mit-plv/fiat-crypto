@@ -38,6 +38,7 @@ Local Ltac t_Forall2_step :=
         | progress split_iff
         | apply conj
         | progress cbn [List.map List.seq List.repeat List.rev List.firstn List.skipn List.length] in *
+        | exfalso; assumption
         | solve [ eauto ]
         | match goal with
           | [ |- List.Forall2 _ _ _ ] => constructor
@@ -142,4 +143,53 @@ Lemma Forall2_combine {A B C D R1 R2 R3 ls1 ls2 ls3 ls4}
     -> List.Forall2 R3 (List.combine ls1 ls3) (List.combine ls2 ls4).
 Proof using Type.
   revert ls2 ls3 ls4; induction ls1, ls2, ls3, ls4; t_Forall2.
+Qed.
+
+Lemma Forall2_forall_iff_nth_error {A B R xs ys}
+  : @Forall2 A B R xs ys
+    <-> forall i, option_eq R (nth_error xs i) (nth_error ys i).
+Proof using Type.
+  revert ys; induction xs as [|x xs IHxs], ys as [|y ys];
+    [ | | | specialize (IHxs ys) ]; t_Forall2.
+  all: repeat first [ t_Forall2_step
+                    | rewrite nth_error_nil_error
+                    | progress cbn [option_eq nth_error] in *
+                    | progress inversion_option
+                    | match goal with
+                      | [ H : forall x, nth_error (cons _ _) x = None |- _ ] => specialize (H O)
+                      | [ H : forall x, option_eq _ (nth_error (cons _ _) x) None |- _ ] => specialize (H O)
+                      | [ H : context[nth_error nil _] |- _ ]
+                        => rewrite nth_error_nil_error in H || setoid_rewrite nth_error_nil_error in H
+                      | [ |- context[nth_error (cons _ _) ?x] ] => is_var x; destruct x
+                      | [ H : forall i, option_eq _ (nth_error (cons _ _) ?x) _ |- _ ]
+                        => pose proof (H O);
+                           pose proof (fun i => H (S i));
+                           clear H
+                      end ].
+Qed.
+Lemma Forall2_forall_iff'' {A B R xs ys d1 d2}
+  : (@Forall2 A B R xs ys /\ R d1 d2)
+    <-> (length xs = length ys
+         /\ (forall i, R (nth_default d1 xs i) (nth_default d2 ys i))).
+Proof using Type.
+  t_Forall2; cbv [nth_default] in *.
+  all: repeat first [ eapply eq_length_Forall2; eassumption
+                    | rewrite Forall2_forall_iff_nth_error
+                    | t_Forall2_step
+                    | progress cbn [option_eq] in *
+                    | progress inversion_option
+                    | match goal with
+                      | [ H : Forall2 _ _ _ |- _ ] => rewrite Forall2_forall_iff_nth_error in H
+                      | [ H : forall i : nat, _ |- context[nth_error _ ?n] ]
+                        => specialize (H n)
+                      | [ H' : List.length ?ls = _, H : forall i : nat, _ |- _ ]
+                        => specialize (H (List.length ls)); rewrite ?nth_error_length_error in H by lia
+                      end
+                    | break_innermost_match_step
+                    | break_innermost_match_hyps_step
+                    | match goal with
+                      | [ H : nth_error _ _ = None |- _ ] => apply nth_error_error_length in H
+                      | [ H : nth_error _ _ = Some _ |- _ ] => apply nth_error_value_length in H
+                      end
+                    | lia ].
 Qed.
