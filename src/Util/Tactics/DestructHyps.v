@@ -30,11 +30,6 @@ Ltac inversion_all_matches_then matcher tac :=
 Ltac inversion_one_match_then matcher tac :=
   do_one_match_then matcher ltac:(fun H => inversion H; subst) tac.
 
-Ltac inversion_clear_all_matches_then matcher tac :=
-  do_all_matches_then matcher ltac:(fun H => inversion H; clear H; subst) tac.
-Ltac inversion_clear_one_match_then matcher tac :=
-  do_one_match_then matcher ltac:(fun H => inversion H; clear H; subst) tac.
-
 Ltac destruct_all_matches matcher :=
   destruct_all_matches_then matcher ltac:( simpl in * ).
 Ltac destruct_one_match matcher := destruct_one_match_then matcher ltac:( simpl in * ).
@@ -43,10 +38,6 @@ Ltac destruct_all_matches' matcher := destruct_all_matches_then matcher idtac.
 Ltac inversion_all_matches matcher := inversion_all_matches_then matcher ltac:( simpl in * ).
 Ltac inversion_one_match matcher := inversion_one_match_then matcher ltac:( simpl in * ).
 Ltac inversion_all_matches' matcher := inversion_all_matches_then matcher idtac.
-
-Ltac inversion_clear_all_matches matcher := inversion_clear_all_matches_then matcher ltac:( simpl in * ).
-Ltac inversion_clear_one_match matcher := inversion_clear_one_match_then matcher ltac:( simpl in * ).
-Ltac inversion_clear_all_matches' matcher := inversion_clear_all_matches_then matcher idtac.
 
 (* matches anything whose type has a [T] in it *)
 Ltac destruct_type_matcher T HT :=
