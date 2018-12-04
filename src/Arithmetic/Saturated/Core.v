@@ -398,7 +398,7 @@ Module Columns.
     Lemma map_sum_nils n : map sum (nils n) = B.Positional.zeros n.
     Proof using Type.
       cbv [nils B.Positional.zeros]; induction n as [|n]; [reflexivity|].
-      change (repeat nil (S n)) with (@nil Z :: repeat nil n).
+      change (List.repeat nil (S n)) with (@nil Z :: List.repeat nil n).
       rewrite Tuple.map_repeat, sum_nil. reflexivity.
     Qed.
 

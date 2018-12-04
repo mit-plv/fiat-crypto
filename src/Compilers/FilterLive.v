@@ -46,7 +46,7 @@ Section language.
             match ns with
             | Some n =>
               @filter_live_namesf
-                (prefix ++ repeat dead_name (count_pairs tx))%list remaining' _
+                (prefix ++ List.repeat dead_name (count_pairs tx))%list remaining' _
                 (eC (SmartValf (fun _ => list Name) (fun _ => namesx ++ names_to_list n)%list _))
             | None => nil
             end
