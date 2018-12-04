@@ -178,29 +178,6 @@ Module Export List.
     Qed.
   End Facts.
 
-  Section Repeat.
-
-    Variable A : Type.
-    Fixpoint repeat (x : A) (n: nat ) :=
-      match n with
-      | O => []
-      | S k => x::(repeat x k)
-      end.
-
-    Theorem repeat_length x n:
-      length (repeat x n) = n.
-    Proof using Type.
-      induction n as [| k Hrec]; simpl; rewrite ?Hrec; reflexivity.
-    Qed.
-
-    Theorem repeat_spec n x y:
-      In y (repeat x n) -> y=x.
-    Proof using Type.
-      induction n as [|k Hrec]; simpl; destruct 1; auto.
-    Qed.
-
-  End Repeat.
-
   Section Cutting.
 
     Variable A : Type.
