@@ -33,9 +33,12 @@ Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.SetEvars.
+Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.ForallIn.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
@@ -101,7 +104,7 @@ Module Compilers.
       Local Ltac do_cbv0 :=
         cbv [id
                Compile.rewrite_rules_interp_goodT_curried
-               Compile.rewrite_rule_data_interp_goodT_curried Compile.under_with_unification_resultT_relation_hetero Compile.under_with_unification_resultT'_relation_hetero Compile.wf_with_unification_resultT Compile.under_type_of_list_relation_cps Compile.under_type_of_list_relation1_cps pattern.pattern_of_anypattern pattern.type_of_anypattern Compile.rew_replacement Compile.rew_should_do_again Compile.rew_with_opt Compile.rew_under_lets Compile.wf_with_unification_resultT Compile.pattern_default_interp pattern.type.under_forall_vars_relation pattern.type.under_forall_vars_relation1 Compile.deep_rewrite_ruleTP_gen Compile.with_unification_resultT' pattern.ident.arg_types pattern.type.lam_forall_vars Compile.pattern_default_interp' pattern.collect_vars PositiveMap.empty Compile.ident_collect_vars pattern.ident.type_vars pattern.type.collect_vars PositiveSet.elements PositiveSet.union pattern.base.collect_vars PositiveSet.empty PositiveSet.xelements Compile.lam_type_of_list id pattern.ident.to_typed Compile.under_type_of_list_relation_cps Compile.deep_rewrite_ruleTP_gen_good_relation Compile.normalize_deep_rewrite_rule pattern.type.subst_default PositiveSet.add PositiveSet.rev PositiveSet.rev_append PositiveMap.add Compile.option_bind' Compile.wf_value Compile.value pattern.base.subst_default PositiveMap.find Compile.rewrite_ruleTP ident.smart_Literal Compile.value_interp_related Compile.value'_interp_related].
+               Compile.rewrite_rule_data_interp_goodT_curried Compile.under_with_unification_resultT_relation_hetero Compile.under_with_unification_resultT'_relation_hetero Compile.wf_with_unification_resultT Compile.under_type_of_list_relation_cps Compile.under_type_of_list_relation1_cps pattern.pattern_of_anypattern pattern.type_of_anypattern Compile.rew_replacement Compile.rew_should_do_again Compile.rew_with_opt Compile.rew_under_lets Compile.wf_with_unification_resultT Compile.pattern_default_interp pattern.type.under_forall_vars_relation pattern.type.under_forall_vars_relation1 Compile.deep_rewrite_ruleTP_gen Compile.with_unification_resultT' pattern.ident.arg_types pattern.type.lam_forall_vars Compile.pattern_default_interp' pattern.collect_vars PositiveMap.empty Compile.ident_collect_vars pattern.ident.type_vars pattern.type.collect_vars PositiveSet.elements PositiveSet.union pattern.base.collect_vars PositiveSet.empty PositiveSet.xelements Compile.lam_type_of_list id pattern.ident.to_typed Compile.under_type_of_list_relation_cps Compile.deep_rewrite_ruleTP_gen_good_relation Compile.normalize_deep_rewrite_rule pattern.type.subst_default PositiveSet.add PositiveSet.rev PositiveSet.rev_append PositiveMap.add Compile.option_bind' Compile.wf_value Compile.value pattern.base.subst_default PositiveMap.find Compile.rewrite_ruleTP ident.smart_Literal Compile.value_interp_related].
       Local Ltac do_cbv :=
         do_cbv0;
         cbv [List.map List.fold_right List.rev list_rect orb List.app].
@@ -125,16 +128,59 @@ Module Compilers.
                        | [ |- _ /\ _ ] => split; [ intros; exact I | ]
                        end
                      | progress cbn [eq_rect] in * ];
-        cbn [fst snd base.interp base.base_interp type.interp projT1 projT2 UnderLets.interp expr.interp type.related ident.gen_interp] in *.
+        cbn [fst snd base.interp base.base_interp type.interp projT1 projT2 UnderLets.interp expr.interp type.related ident.gen_interp UnderLets.interp_related] in *.
+
+      Ltac recurse_interp_related_step :=
+        let do_replace v :=
+            ((tryif is_evar v then fail else idtac);
+             let v' := open_constr:(_) in
+             let v'' := fresh in
+             cut (v = v'); [ generalize v; intros v'' ?; subst v'' | symmetry ]) in
+        match goal with
+        | _ => progress cbn [Compile.reify_expr]
+        | [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
+        | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand
+        | [ |- expr.interp_related ?ident_interp ?f ?v ]
+          => do_replace v
+        | [ |- exists (fv : ?T1 -> ?T2) (ev : ?T1),
+              _ /\ _ /\ fv ev = ?x ]
+          => lazymatch T1 with Z => idtac | (Z * Z)%type => idtac end;
+             lazymatch T2 with Z => idtac | (Z * Z)%type => idtac end;
+             first [ do_replace x
+                   | is_evar x; do 2 eexists; repeat apply conj; [ | | reflexivity ] ]
+        | _ => progress intros
+        | [ |- expr.interp_related _ _ ?ev ] => is_evar ev; eassumption
+        | [ |- expr.interp_related _ (?f @ ?x) ?ev ]
+          => is_evar ev;
+             let fh := fresh in
+             let xh := fresh in
+             set (fh := f); set (xh := x); cbn [expr.interp_related]; subst fh xh;
+             do 2 eexists; repeat apply conj; [ | | reflexivity ]
+        | [ |- expr.interp_related _ (expr.Abs ?f) _ ]
+          => let fh := fresh in set (fh := f); cbn [expr.interp_related]; subst fh
+        | [ |- expr.interp_related _ (expr.Ident ?idc) ?ev ]
+          => is_evar ev;
+             cbn [expr.interp_related]; apply ident.gen_interp_Proper; reflexivity
+        | [ |- _ = _ :> ?T ]
+          => lazymatch T with
+             | BinInt.Z => idtac
+             | (BinInt.Z * BinInt.Z)%type => idtac
+             end;
+             progress cbn [ident_interp fst snd]
+        | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else (progress subst)
+        | [ |- ?x = ?x ] => tryif has_evar x then fail else reflexivity
+        | [ |- ?ev = _ ] => is_evar ev; reflexivity
+        | [ |- _ = ?ev ] => is_evar ev; reflexivity
+        end.
 
       Local Ltac interp_good_t_step :=
         first [ reflexivity
               | match goal with
-                | [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
-                | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand
+                (*| [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
+                | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand*)
                 | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
                 end
-              | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr] in *
+              | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr bool_rect UnderLets.interp_related type.related] in *
               | progress cbv [Compile.option_bind' respectful] in *
               | progress fold (@type.interp _ base.interp)
               | progress fold (@base.interp)
@@ -155,16 +201,117 @@ Module Compilers.
                 | [ |- context[UnderLets.interp _ (list_rect _ _ _ _)] ] => rewrite UnderLets_interp_list_rect
                 | [ |- context[UnderLets.interp _ (UnderLets.splice _ _)] ] => rewrite UnderLets.interp_splice
                 | [ |- context[list_rect _ _ _ (List.map _ _)] ] => rewrite list_rect_map
-                | [ |- list_rect _ _ _ _ = List.app ?ls1 ?ls2 ]
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (List.app ?ls1 ?ls2) ]
                   =>  rewrite (eq_app_list_rect ls1 ls2)
-                | [ |- list_rect _ _ _ _ = @flat_map ?A ?B ?f ?ls ]
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@flat_map ?A ?B ?f ?ls) ]
                   =>  rewrite (@eq_flat_map_list_rect A B f ls)
-                | [ |- list_rect _ _ _ _ = @partition ?A ?f ?ls ]
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@partition ?A ?f ?ls) ]
                   =>  rewrite (@eq_partition_list_rect A f ls)
-                | [ |- list_rect _ _ _ _ = @List.map ?A ?B ?f ?ls ]
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@List.map ?A ?B ?f ?ls) ]
                   => rewrite (@eq_map_list_rect A B f ls)
-                | [ |- _ = @fold_right ?A ?B ?f ?v ?ls ]
+                | [ |- UnderLets.interp_related _ _ _ (@fold_right ?A ?B ?f ?v ?ls) ]
                   =>  rewrite (@eq_fold_right_list_rect A B f v ls)
+                | [ |- context[expr.interp_related _ (reify_list _)] ]
+                  => rewrite expr.reify_list_interp_related_iff
+                | [ H : context[expr.interp_related _ (reify_list _)] |- _ ]
+                  => rewrite expr.reify_list_interp_related_iff in H
+                | [ |- context[Forall2 _ (List.map _ _) _] ] => rewrite Forall2_map_l_iff
+                | [ |- context[Forall2 _ _ (List.map _ _)] ] => rewrite Forall2_map_r_iff
+                | [ |- context[Forall2 _ (List.repeat _ _) (List.repeat _ _)] ] => rewrite Forall2_repeat_iff
+                | [ |- context[Forall2 _ (List.rev _) (List.rev _)] ] => rewrite Forall2_rev_iff
+                | [ |- context[Forall2 _ ?x ?x] ] => rewrite Forall2_Forall; cbv [Proper]
+                | [ |- context[Forall _ (seq _ _)] ] => rewrite Forall_seq
+                | [ H : Forall2 ?R ?l1 ?l2 |- Forall2 ?R (List.firstn ?n ?l1) (List.firstn ?n ?l2) ]
+                  => apply Forall2_firstn, H
+                | [ H : Forall2 ?R ?l1 ?l2 |- Forall2 ?R (List.skipn ?n ?l1) (List.skipn ?n ?l2) ]
+                  => apply Forall2_skipn, H
+                | [ |- Forall2 ?R (List.combine _ _) (List.combine _ _) ]
+                  => eapply Forall2_combine; [ | eassumption | eassumption ]
+                | [ H : List.Forall2 _ ?l1 ?l2, H' : ?R ?v1 ?v2 |- ?R (nth_default ?v1 ?l1 ?x) (nth_default ?v2 ?l2 ?x) ]
+                  => apply Forall2_forall_iff''; split; assumption
+                | [ H : List.Forall2 _ ?x ?y |- List.length ?x = List.length ?y ]
+                  => eapply eq_length_Forall2, H
+                | [ |- exists fv xv, _ /\ _ /\ fv xv = ?f ?x ]
+                  => exists f, x; repeat apply conj; [ solve [ repeat interp_good_t_step ] | | reflexivity ]
+                | [ |- _ /\ ?x = ?x ] => split; [ | reflexivity ]
+                | [ |- UnderLets.interp_related
+                         ?ident_interp ?R
+                         (list_rect
+                            (fun _ : list (expr ?A) => UnderLets.UnderLets _ _ _ ?B)
+                            ?Pnil
+                            ?Pcons
+                            ?ls)
+                         (list_rect
+                            (fun _ : list _ => ?B')
+                            ?Pnil'
+                            ?Pcons'
+                            ?ls') ]
+                  => apply (@UnderLets.list_rect_interp_related _ _ _ ident_interp A B Pnil Pcons ls B' Pnil' Pcons' ls' R)
+                | [ |- UnderLets.interp_related _ _ (nat_rect _ _ _ _) (nat_rect _ _ _ _) ]
+                  => apply UnderLets.nat_rect_interp_related
+                | [ |- UnderLets.interp_related _ _ (nat_rect _ _ _ _ _) (nat_rect _ _ _ _ _) ]
+                  => eapply UnderLets.nat_rect_arrow_interp_related; [ .. | eassumption ]
+                | [ |- UnderLets.interp_related _ _ (UnderLets.splice _ _) _ ]
+                  => rewrite UnderLets.splice_interp_related_iff
+                | [ |- UnderLets.interp_related ?ident_interp _ (UnderLets.splice_list _ _) _ ]
+                  => apply UnderLets.splice_list_interp_related_of_ex with (RA:=expr.interp_related ident_interp); exists (fun x => x); eexists; repeat apply conj; [ | | reflexivity ]
+                | [ H : UnderLets.interp_related _ _ ?e ?v1 |- UnderLets.interp_related _ _ ?e ?f ]
+                  => let f := match (eval pattern v1 in f) with ?f _ => f end in
+                     eapply (@UnderLets.interp_related_Proper_impl_same_UnderLets _ _ _ _ _ _ _ _ _ e v1 f); [ | exact H ]; cbv beta
+                | [ H : forall x y, ?R x y -> UnderLets.interp_related _ _ (?e x) (?v1 y) |- UnderLets.interp_related _ _ (?e ?xv) ?f ]
+                  => lazymatch f with
+                     | context[v1 ?yv]
+                       => let f := match (eval pattern (v1 yv) in f) with ?f _ => f end in
+                          eapply (@UnderLets.interp_related_Proper_impl_same_UnderLets _ _ _ _ _ _ _ _ _ (e xv) (v1 yv) f); [ | eapply H; assumption ]
+                     end
+                | [ |- expr.interp_related
+                         _
+                         (#(ident.prod_rect) @ ?f @ ?e)%expr
+                         match ?e' with pair a b => @?f' a b end ]
+                  => let fh := fresh in
+                     let eh := fresh in
+                     set (fh := f); set (eh := e); cbn [expr.interp_related]; subst fh eh;
+                     exists (fun ev => match ev with pair a b => f' a b end), e';
+                     repeat apply conj;
+                     [ | assumption | reflexivity ];
+                     exists (fun fv ev => match ev with pair a b => fv a b end), f';
+                     repeat apply conj;
+                     [ cbn [type.interp type.related ident_interp]; cbv [respectful]; intros; subst; eta_expand; auto | | reflexivity ]
+                | [ |- expr.interp_related
+                         _
+                         (#(ident.bool_rect) @ ?t @ ?f @ ?b)%expr
+                         (bool_rect ?P ?t' ?f' ?b') ]
+                  => let th := fresh in
+                     let fh := fresh in
+                     let bh := fresh in
+                     set (th := t); set (fh := f); set (bh := b); cbn [expr.interp_related]; subst th fh bh;
+                     unshelve
+                       ((exists (bool_rect P t' f'), b'); repeat apply conj;
+                        [ | shelve | reflexivity ];
+                        (exists (fun fv => bool_rect P t' (fv tt)), (fun _ => f')); repeat apply conj;
+                        [ | shelve | reflexivity ];
+                        (exists (fun tv fv => bool_rect P (tv tt) (fv tt)), (fun _ => t')); repeat apply conj;
+                        [ | shelve | reflexivity ])
+                | [ |- @expr.interp_related _ _ _ _ (type.base ?t) _ _ ]
+                  => lazymatch t with
+                     | base.type.type_base base.type.Z => idtac
+                     | base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z) => idtac
+                     end;
+                     progress repeat recurse_interp_related_step
+                | [ |- exists (fv : ?T1 -> ?T2) (ev : ?T1),
+                      _ /\ _ /\ fv ev = ?x ]
+                  => lazymatch T1 with Z => idtac | (Z * Z)%type => idtac end;
+                     lazymatch T2 with Z => idtac | (Z * Z)%type => idtac end;
+                     progress repeat recurse_interp_related_step
+                | [ |- expr.interp_related _ (expr.Abs ?f) _ ]
+                  => let fh := fresh in set (fh := f); cbn [expr.interp_related]; subst fh
+                | [ H : expr.interp_related _ ?x ?x' |- expr.interp_related _ (?f @ ?x) (?f' ?x') ]
+                  => let fh := fresh in
+                     let xh := fresh in
+                     set (fh := f); set (xh := x); cbn [expr.interp_related]; subst fh xh;
+                     exists f', x'; repeat apply conj;
+                     [ | exact H | reflexivity ]
+                | [ |- List.Forall2 _ (update_nth _ _ _) (update_nth _ _ _) ] => apply Forall2_update_nth
                 | [ H : context[ZRange.normalize (ZRange.normalize _)] |- _ ]
                   => rewrite ZRange.normalize_idempotent in H
                 | [ |- context[ZRange.normalize (ZRange.normalize _)] ]
@@ -338,6 +485,7 @@ Module Compilers.
                      [ clear -H; cbv [is_bounded_by_bool] in H; cbn [lower upper] in H; Bool.split_andb; Z.ltb_to_lt; lia..
                      | ]
                 end
+              | progress cbn [expr.interp_related] in *
               | match goal with
                 | [ H : context[expr.interp _ (UnderLets.interp _ (?f _ _ _))]
                     |- expr.interp _ (UnderLets.interp _ (?f _ _ _)) = _ ]
@@ -384,13 +532,19 @@ Module Compilers.
                   => tryif constr_eq x x' then fail else replace x with x' by lia
                 | [ |- _ = _ :> BinInt.Z ] => progress autorewrite with zsimplify_fast
                 | [ |- ident.cast _ ?r _ = ident.cast _ ?r _ ] => apply f_equal; Z.div_mod_to_quot_rem; nia
+                | [ H : forall x1 x2, ?R1 x1 x2 -> ?R2 (?f1 x1) (?f2 x2) |- ?R2 (?f1 _) (?f2 _) ]
+                  => apply H
+                | [ H : forall x1 x2, ?R1 x1 x2 -> forall y1 y2, ?R2 y1 y2 -> ?R3 (?f1 x1 y1) (?f2 x2 y2) |- ?R3 (?f1 _ _) (?f2 _ _) ]
+                  => apply H
+                | [ H : forall x x', ?Rx x x' -> forall y y', _ -> forall z z', ?Rz z z' -> ?R (?f x y z) (?f' x' y' z') |- ?R (?f _ _ _) (?f' _ _ _) ]
+                  => apply H; clear H
                 end ].
 
       Lemma nbe_rewrite_rules_interp_good
         : rewrite_rules_interp_goodT nbe_rewrite_rules.
       Proof using Type.
         Time start_interp_good.
-        Time all: repeat interp_good_t_step.
+        Time all: try solve [ repeat interp_good_t_step ].
       Qed.
 
       Lemma arith_rewrite_rules_interp_good max_const
@@ -438,66 +592,99 @@ Module Compilers.
         all: repeat first [ progress cbn [Compile.value' Compile.reify] in *
                           | progress subst
                           | match goal with
-                            | [ H : context[expr.interp ?ii ?v] |- _ ]
-                              => is_var v; generalize dependent (expr.interp ii v); clear v; intro v; intros
-                            | [ |- context[expr.interp ?ii ?v] ]
-                              => is_var v; generalize dependent (expr.interp ii v); clear v; intro v; intros
+                            | [ H : expr.interp_related _ ?x ?y |- _ ]
+                              => clear H x
                             end ].
+        all: repeat match goal with
+                    | [ H : _ = _ :> BinInt.Z |- _ ] => revert H
+                    | [ |- context[?v] ]
+                      => is_var v; match type of v with BinInt.Z => idtac end;
+                           revert v
+                    | [ v : BinInt.Z |- _ ] => clear v || revert v
+                    end.
+        all: repeat match goal with
+                    | [ |- forall n : BinInt.Z, _ ] => let x := fresh "xx" in intro x
+                    | [ |- forall n : _ = _ :> BinInt.Z, _ ] => let H := fresh "H" in intro H
+                    end.
         all: repeat match goal with
                     | [ H : _ = _ :> BinInt.Z |- _ ] => revert H
                     | [ v : BinInt.Z |- _ ] => clear v || revert v
                     end.
-        (* 16 subgoals (ID 105273)
+        all: repeat match goal with
+                    | [ |- forall n : BinInt.Z, _ ] => let x := fresh "x" in intro x
+                    | [ |- forall n : _ = _ :> BinInt.Z, _ ] => let H := fresh "H" in intro H
+                    end.
+        all: repeat match goal with
+                    | [ H : _ = _ :> BinInt.Z |- _ ] => revert H
+                    | [ v : BinInt.Z |- _ ] => clear v || revert v
+                    end.
+        Set Printing Width 80.
+        (* 16 subgoals (ID 124724)
 
   cast_outside_of_range : zrange -> Z -> Z
   invert_low, invert_high : Z -> Z -> option Z
-  Hlow : forall s v v' : Z, invert_low s v = Some v' -> v = Z.land v' (2 ^ (s / 2) - 1)
+  Hlow : forall s v v' : Z,
+         invert_low s v = Some v' -> v = Z.land v' (2 ^ (s / 2) - 1)
   Hhigh : forall s v v' : Z, invert_high s v = Some v' -> v = Z.shiftr v' (s / 2)
   ============================
-  forall x x0 v1 v0 : Z,
-  x = 2 ^ Z.log2 x -> (v1 + Z.shiftl v0 x0 mod x) / x = (v1 + Z.shiftl v0 x0) / x
+  forall x x0 x1 x2 : Z,
+  x2 = 2 ^ Z.log2 x2 ->
+  (x1 + Z.shiftl x0 x mod x2) / x2 = (x1 + Z.shiftl x0 x) / x2
 
-subgoal 2 (ID 105283) is:
- forall x x0 v0 v1 : Z,
- x = 2 ^ Z.log2 x -> (v0 + Z.shiftl v1 x0 mod x) / x = (Z.shiftl v1 x0 + v0) / x
-subgoal 3 (ID 105293) is:
- forall x x0 v1 v0 : Z,
- x = 2 ^ Z.log2 x -> (v1 + Z.shiftr v0 x0 mod x) / x = (v1 + Z.shiftr v0 x0) / x
-subgoal 4 (ID 105303) is:
- forall x x0 v0 v1 : Z,
- x = 2 ^ Z.log2 x -> (v0 + Z.shiftr v1 x0 mod x) / x = (Z.shiftr v1 x0 + v0) / x
-subgoal 5 (ID 105311) is:
- forall x v1 v0 : Z, x = 2 ^ Z.log2 x -> (v1 + v0 mod x) / x = (v1 + v0) / x
-subgoal 6 (ID 105323) is:
- forall x x0 v1 v0 v4 : Z,
- x = 2 ^ Z.log2 x -> (v1 + v0 + Z.shiftl v4 x0 mod x) / x = (v1 + v0 + Z.shiftl v4 x0) / x
-subgoal 7 (ID 105335) is:
- forall x x0 v1 v4 v0 : Z,
- x = 2 ^ Z.log2 x -> (v1 + v4 + Z.shiftl v0 x0 mod x) / x = (v1 + Z.shiftl v0 x0 + v4) / x
-subgoal 8 (ID 105347) is:
- forall x x0 v1 v0 v4 : Z,
- x = 2 ^ Z.log2 x -> (v1 + v0 + Z.shiftr v4 x0 mod x) / x = (v1 + v0 + Z.shiftr v4 x0) / x
-subgoal 9 (ID 105359) is:
- forall x x0 v1 v4 v0 : Z,
- x = 2 ^ Z.log2 x -> (v1 + v4 + Z.shiftr v0 x0 mod x) / x = (v1 + Z.shiftr v0 x0 + v4) / x
-subgoal 10 (ID 105369) is:
- forall x v1 v0 v4 : Z, x = 2 ^ Z.log2 x -> (v1 + v0 + v4 mod x) / x = (v1 + v0 + v4) / x
-subgoal 11 (ID 105379) is:
- forall x x0 v1 v0 : Z,
- x = 2 ^ Z.log2 x -> (v1 - Z.shiftl v0 x0 mod x) / x = (v1 - Z.shiftl v0 x0) / x
-subgoal 12 (ID 105389) is:
- forall x x0 v1 v0 : Z,
- x = 2 ^ Z.log2 x -> (v1 - Z.shiftr v0 x0 mod x) / x = (v1 - Z.shiftr v0 x0) / x
-subgoal 13 (ID 105397) is:
- forall x v1 v0 : Z, x = 2 ^ Z.log2 x -> (v1 - v0 mod x) / x = (v1 - v0) / x
-subgoal 14 (ID 105409) is:
- forall x x0 v1 v0 v4 : Z,
- x = 2 ^ Z.log2 x -> (v0 - Z.shiftl v4 x0 mod x - v1) / x = (v0 - Z.shiftl v4 x0 - v1) / x
-subgoal 15 (ID 105421) is:
- forall x x0 v1 v0 v4 : Z,
- x = 2 ^ Z.log2 x -> (v0 - Z.shiftr v4 x0 mod x - v1) / x = (v0 - Z.shiftr v4 x0 - v1) / x
-subgoal 16 (ID 105431) is:
- forall x v1 v0 v4 : Z, x = 2 ^ Z.log2 x -> (v0 - v4 mod x - v1) / x = (v0 - v4 - v1) / x
+subgoal 2 (ID 124734) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 ->
+ (x1 + Z.shiftl x0 x mod x2) / x2 = (Z.shiftl x0 x + x1) / x2
+subgoal 3 (ID 124744) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 ->
+ (x1 + Z.shiftr x0 x mod x2) / x2 = (x1 + Z.shiftr x0 x) / x2
+subgoal 4 (ID 124754) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 ->
+ (x1 + Z.shiftr x0 x mod x2) / x2 = (Z.shiftr x0 x + x1) / x2
+subgoal 5 (ID 124762) is:
+ forall x x0 x1 : Z, x1 = 2 ^ Z.log2 x1 -> (x0 + x mod x1) / x1 = (x0 + x) / x1
+subgoal 6 (ID 124774) is:
+ forall x x0 x1 x2 x3 : Z,
+ x3 = 2 ^ Z.log2 x3 ->
+ (x2 + x1 + Z.shiftl x0 x mod x3) / x3 = (x2 + x1 + Z.shiftl x0 x) / x3
+subgoal 7 (ID 124786) is:
+ forall x x0 x1 x2 x3 : Z,
+ x3 = 2 ^ Z.log2 x3 ->
+ (x2 + x1 + Z.shiftl x0 x mod x3) / x3 = (x2 + Z.shiftl x0 x + x1) / x3
+subgoal 8 (ID 124798) is:
+ forall x x0 x1 x2 x3 : Z,
+ x3 = 2 ^ Z.log2 x3 ->
+ (x2 + x1 + Z.shiftr x0 x mod x3) / x3 = (x2 + x1 + Z.shiftr x0 x) / x3
+subgoal 9 (ID 124810) is:
+ forall x x0 x1 x2 x3 : Z,
+ x3 = 2 ^ Z.log2 x3 ->
+ (x2 + x1 + Z.shiftr x0 x mod x3) / x3 = (x2 + Z.shiftr x0 x + x1) / x3
+subgoal 10 (ID 124820) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 -> (x1 + x0 + x mod x2) / x2 = (x1 + x0 + x) / x2
+subgoal 11 (ID 124830) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 ->
+ (x1 - Z.shiftl x0 x mod x2) / x2 = (x1 - Z.shiftl x0 x) / x2
+subgoal 12 (ID 124840) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 ->
+ (x1 - Z.shiftr x0 x mod x2) / x2 = (x1 - Z.shiftr x0 x) / x2
+subgoal 13 (ID 124848) is:
+ forall x x0 x1 : Z, x1 = 2 ^ Z.log2 x1 -> (x0 - x mod x1) / x1 = (x0 - x) / x1
+subgoal 14 (ID 124860) is:
+ forall x x0 x1 x2 x3 : Z,
+ x3 = 2 ^ Z.log2 x3 ->
+ (x2 - Z.shiftl x1 x0 mod x3 - x) / x3 = (x2 - Z.shiftl x1 x0 - x) / x3
+subgoal 15 (ID 124872) is:
+ forall x x0 x1 x2 x3 : Z,
+ x3 = 2 ^ Z.log2 x3 ->
+ (x2 - Z.shiftr x1 x0 mod x3 - x) / x3 = (x2 - Z.shiftr x1 x0 - x) / x3
+subgoal 16 (ID 124882) is:
+ forall x x0 x1 x2 : Z,
+ x2 = 2 ^ Z.log2 x2 -> (x1 - x0 mod x2 - x) / x2 = (x1 - x0 - x) / x2
          *)
         1-16: exact admit.
       Qed.

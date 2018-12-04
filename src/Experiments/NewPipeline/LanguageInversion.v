@@ -599,6 +599,51 @@ Module Compilers.
       Proof. split; intro; subst; apply reflect_reify_list || apply reflect_list_Some; assumption. Qed.
     End with_var2.
 
+    Section with_interp.
+      Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
+      Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
+
+      Lemma reify_list_interp_related_iff {t ls v}
+        : expr.interp_related (@ident_interp) (reify_list (t:=t) ls) v
+          <-> List.Forall2 (expr.interp_related (@ident_interp)) ls v.
+      Proof using Type.
+        revert v; induction ls as [|l ls IHls], v as [|v vs].
+        all: repeat first [ rewrite expr.reify_list_nil
+                          | rewrite expr.reify_list_cons
+                          | progress cbn [expr.interp_related ident.gen_interp type.related] in *
+                          | progress cbv [Morphisms.respectful] in *
+                          | progress destruct_head'_ex
+                          | progress destruct_head'_and
+                          | progress subst
+                          | reflexivity
+                          | assumption
+                          | apply conj
+                          | progress intros
+                          | match goal with
+                            | [ H : List.Forall2 _ nil _ |- _ ] => inversion_clear H
+                            | [ H : List.Forall2 _ (cons _ _) _ |- _ ] => inversion_clear H
+                            | [ |- List.Forall2 _ _ _ ] => constructor
+                            | [ H : nil = cons _ _ |- _ ] => solve [ inversion H ]
+                            | [ H : cons _ _ = nil |- _ ] => solve [ inversion H ]
+                            | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
+                            | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
+                            | [ H : forall a x y, x = y -> _ |- _ ] => specialize (fun a x => H a x x eq_refl)
+                            | [ H : forall x y, _ = ?f x y, H' : context[?f _ _] |- _ ] => rewrite <- H in H'
+                            | [ H : _ |- _ ] => apply H; clear H
+                            | [ |- ex _ ] => eexists
+                            end ].
+      Qed.
+
+      Lemma reflect_list_interp_related_iff {t ls ls' v}
+            (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
+        : List.Forall2 (expr.interp_related (@ident_interp)) ls' v
+          <-> expr.interp_related (@ident_interp) ls v.
+      Proof using Type.
+        apply reflect_list_Some in Hls; subst.
+        rewrite reify_list_interp_related_iff; reflexivity.
+      Qed.
+    End with_interp.
+
     Ltac invert_subst_step_helper guard_tac :=
       cbv [defaults.type_base] in *;
       match goal with

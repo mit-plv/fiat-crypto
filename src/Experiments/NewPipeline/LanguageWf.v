@@ -565,6 +565,25 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         End inversion.
       End with_var.
 
+      Section with_interp.
+        Context {interp_base_type : base_type -> Type}
+                {interp_ident : forall t, ident t -> type.interp interp_base_type t}.
+
+        Lemma eqv_of_interp_related {t e v}
+          : expr.interp_related interp_ident e v
+            -> @type.eqv t (expr.interp interp_ident e) v.
+        Proof using Type.
+          induction e; cbn [expr.interp_related expr.interp type.related]; cbv [respectful LetIn.Let_In].
+          all: repeat first [ progress intros
+                            | assumption
+                            | solve [ eauto ]
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | progress subst
+                            | match goal with H : _ |- _ => apply H; clear H end ].
+        Qed.
+      End with_interp.
+
       Section with_var3.
         Context {var1 var2 var3 : type.type base_type -> Type}.
         Local Notation wfvP := (fun t => (var1 t * var2 t * var3 t)%type).

@@ -139,8 +139,8 @@ Module Compilers.
           Local Notation wf_with_unification_resultT := (@wf_with_unification_resultT ident pident pident_arg_types type_vars_of_pident var1 var2).
           Local Notation wf_with_unif_rewrite_ruleTP_gen := (@wf_with_unif_rewrite_ruleTP_gen ident pident pident_arg_types type_vars_of_pident var1 var2).
           Local Notation wf_deep_rewrite_ruleTP_gen := (@wf_deep_rewrite_ruleTP_gen ident var1 var2).
-          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident (@value var1)).
+          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident (@value var2)).
           Local Notation wf_app_with_unification_resultT := (@wf_app_with_unification_resultT ident pident pident_arg_types type_vars_of_pident var1 var2).
 
           (* Because [proj1] and [proj2] in the stdlib are opaque *)
