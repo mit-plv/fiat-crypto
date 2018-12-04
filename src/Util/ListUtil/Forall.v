@@ -37,7 +37,7 @@ Local Ltac t_Forall2_step :=
         | progress specialize_by_assumption
         | progress split_iff
         | apply conj
-        | progress cbn [List.map List.seq List.repeat List.rev List.firstn List.skipn] in *
+        | progress cbn [List.map List.seq List.repeat List.rev List.firstn List.skipn List.length] in *
         | solve [ eauto ]
         | match goal with
           | [ |- List.Forall2 _ _ _ ] => constructor
@@ -127,4 +127,19 @@ Lemma Forall2_skipn {A B R ls1 ls2 n}
   : @List.Forall2 A B R ls1 ls2 -> @List.Forall2 A B R (List.skipn n ls1) (List.skipn n ls2).
 Proof using Type.
   revert ls1 ls2; induction n as [|n IHn], ls1 as [|l1 ls2], ls2 as [|l2 ls2]; t_Forall2.
+Qed.
+
+Lemma eq_length_Forall2 {A B R ls1 ls2}
+  : @List.Forall2 A B R ls1 ls2 -> List.length ls1 = List.length ls2.
+Proof using Type.
+  revert ls2; induction ls1, ls2; t_Forall2.
+Qed.
+
+Lemma Forall2_combine {A B C D R1 R2 R3 ls1 ls2 ls3 ls4}
+      (HR : forall x y z w, (R1 x y : Prop) -> (R2 z w : Prop) -> (R3 (x, z) (y, w) : Prop))
+  : @List.Forall2 A B R1 ls1 ls2
+    -> @List.Forall2 C D R2 ls3 ls4
+    -> List.Forall2 R3 (List.combine ls1 ls3) (List.combine ls2 ls4).
+Proof using Type.
+  revert ls2 ls3 ls4; induction ls1, ls2, ls3, ls4; t_Forall2.
 Qed.
