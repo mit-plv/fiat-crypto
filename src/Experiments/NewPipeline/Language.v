@@ -452,6 +452,39 @@ Module Compilers.
                @interp _ _ _ interp_ident _ (f y)
          end.
 
+    Section with_interp.
+      Context {base_type : Type}
+              {ident : type base_type -> Type}
+              {interp_base_type : base_type -> Type}
+              (interp_ident : forall t, ident t -> type.interp interp_base_type t).
+
+      Fixpoint interp_related {t} (e : @expr base_type ident (type.interp interp_base_type) t) : type.interp interp_base_type t -> Prop
+        := match e in expr t return type.interp interp_base_type t -> Prop with
+           | expr.Var t v1 => fun v2 => v1 == v2
+           | expr.App s d f x
+             => fun v2
+                => exists fv xv,
+                    @interp_related _ f fv
+                    /\ @interp_related _ x xv
+                    /\ fv xv = v2
+           | expr.Ident t idc
+             => fun v2 => interp_ident _ idc == v2
+           | expr.Abs s d f1
+             => fun f2
+                => forall x1 x2,
+                    x1 == x2
+                    -> @interp_related d (f1 x1) (f2 x2)
+           | expr.LetIn s d x f (* combine the App rule with the Abs rule *)
+             => fun v2
+                => exists fv xv,
+                    @interp_related _ x xv
+                    /\ (forall x1 x2,
+                           x1 == x2
+                           -> @interp_related d (f x1) (fv x2))
+                    /\ fv xv = v2
+           end.
+    End with_interp.
+
     Definition Expr {base_type ident} t := forall var, @expr base_type ident var t.
     Definition APP {base_type ident s d} (f : Expr (s -> d)) (x : Expr s) : Expr d
       := fun var => @App base_type ident var s d (f var) (x var).

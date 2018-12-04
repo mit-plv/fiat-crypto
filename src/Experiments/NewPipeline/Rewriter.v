@@ -637,86 +637,86 @@ Module Compilers.
           := reveal_rawexpr_cps_gen None e.
 
         (** First, the uncurried form *)
-        Fixpoint unification_resultT' {t} (p : pattern t) (evm : EvarMap) : Type
+        Fixpoint unification_resultT' {var} {t} (p : pattern t) (evm : EvarMap) : Type
           := match p return Type with
-             | pattern.Wildcard t => value (pattern.type.subst_default t evm)
+             | pattern.Wildcard t => var (pattern.type.subst_default t evm)
              | pattern.Ident t idc => type_of_list (pident_arg_types t idc)
              | pattern.App s d f x
-               => @unification_resultT' _ f evm * @unification_resultT' _ x evm
+               => @unification_resultT' var _ f evm * @unification_resultT' var _ x evm
              end%type.
 
-        Fixpoint with_unification_resultT' {t} (p : pattern t) (evm : EvarMap) (K : Type) : Type
+        Fixpoint with_unification_resultT' {var} {t} (p : pattern t) (evm : EvarMap) (K : Type) : Type
           := match p return Type with
-             | pattern.Wildcard t => value (pattern.type.subst_default t evm) -> K
+             | pattern.Wildcard t => var (pattern.type.subst_default t evm) -> K
              | pattern.Ident t idc => type_of_list_cps K (pident_arg_types t idc)
              | pattern.App s d f x
-               => @with_unification_resultT' _ f evm (@with_unification_resultT' _ x evm K)
+               => @with_unification_resultT' var _ f evm (@with_unification_resultT' var _ x evm K)
              end%type.
 
-        Fixpoint app_with_unification_resultT' {t p evm K} {struct p}
-          : @with_unification_resultT' t p evm K -> @unification_resultT' t p evm -> K
+        Fixpoint app_with_unification_resultT' {var t p evm K} {struct p}
+          : @with_unification_resultT' var t p evm K -> @unification_resultT' var t p evm -> K
           := match p return with_unification_resultT' p evm K -> unification_resultT' p evm -> K with
              | pattern.Wildcard t => fun f x => f x
              | pattern.Ident t idc => app_type_of_list
              | pattern.App s d f x
                => fun F (xy : unification_resultT' f _ * unification_resultT' x _)
                   => @app_with_unification_resultT'
-                       _ x _ _
+                       _ _ x _ _
                        (@app_with_unification_resultT'
-                          _ f _ _ F (fst xy))
+                          _ _ f _ _ F (fst xy))
                        (snd xy)
              end.
 
         (** TODO: Maybe have a fancier version of this that doesn't
              actually need to insert casts, by doing a fixpoint on the
              list of elements / the evar map *)
-        Fixpoint app_transport_with_unification_resultT'_cps {t p evm1 evm2 K} {struct p}
-          : @with_unification_resultT' t p evm1 K -> @unification_resultT' t p evm2 -> forall T, (K -> option T) -> option T
+        Fixpoint app_transport_with_unification_resultT'_cps {var t p evm1 evm2 K} {struct p}
+          : @with_unification_resultT' var t p evm1 K -> @unification_resultT' var t p evm2 -> forall T, (K -> option T) -> option T
           := fun f x T k
              => match p return with_unification_resultT' p evm1 K -> unification_resultT' p evm2 -> option T with
                 | pattern.Wildcard t
                   => fun f x
-                     => (tr <- type.try_make_transport_cps base.try_make_transport_cps value _ _;
+                     => (tr <- type.try_make_transport_cps base.try_make_transport_cps var _ _;
                            (tr <- tr;
                               k (f (tr x)))%option)%cps
              | pattern.Ident t idc => fun f x => k (app_type_of_list f x)
              | pattern.App s d f x
                => fun F (xy : unification_resultT' f _ * unification_resultT' x _)
                   => @app_transport_with_unification_resultT'_cps
-                       _ f _ _ _ F (fst xy) T
+                       _ _ f _ _ _ F (fst xy) T
                        (fun F'
                         => @app_transport_with_unification_resultT'_cps
-                             _ x _ _ _ F' (snd xy) T
+                             _ _ x _ _ _ F' (snd xy) T
                              (fun x' => k x'))
              end%option f x.
 
-        Fixpoint under_with_unification_resultT' {t p evm K1 K2}
+        Fixpoint under_with_unification_resultT' {var t p evm K1 K2}
                  (F : K1 -> K2)
                  {struct p}
-          : @with_unification_resultT' t p evm K1 -> @with_unification_resultT' t p evm K2
+          : @with_unification_resultT' var t p evm K1 -> @with_unification_resultT' var t p evm K2
           := match p return with_unification_resultT' p evm K1 -> with_unification_resultT' p evm K2 with
              | pattern.Wildcard t => fun f v => F (f v)
              | pattern.Ident t idc => under_type_of_list_cps F
              | pattern.App s d f x
                => @under_with_unification_resultT'
-                    _ f evm _ _
-                    (@under_with_unification_resultT' _ x evm _ _ F)
+                    _ _ f evm _ _
+                    (@under_with_unification_resultT' _ _ x evm _ _ F)
              end.
 
         Definition ident_collect_vars := (fun t idc => fold_right PositiveSet.union PositiveSet.empty (List.map pattern.type.collect_vars (type_vars_of_pident t idc))).
 
-        Definition with_unification_resultT {t} (p : pattern t) (K : type -> Type) : Type
+        Definition with_unification_resultT {var t} (p : pattern t) (K : type -> Type) : Type
           := pattern.type.forall_vars
                (@pattern.collect_vars
                   _ ident_collect_vars
                   t p)
-               (fun evm => with_unification_resultT' p evm (K (pattern.type.subst_default t evm))).
+               (fun evm => @with_unification_resultT' var t p evm (K (pattern.type.subst_default t evm))).
 
-        Definition unification_resultT {t} (p : pattern t) : Type
-          := { evm : EvarMap & unification_resultT' p evm }.
+        Definition unification_resultT {var t} (p : pattern t) : Type
+          := { evm : EvarMap & @unification_resultT' var t p evm }.
 
-        Definition app_with_unification_resultT_cps {t p K}
-          : @with_unification_resultT t p K -> @unification_resultT t p -> forall T, ({ evm' : _ & K (pattern.type.subst_default t evm') } -> option T) -> option T
+        Definition app_with_unification_resultT_cps {var t p K}
+          : @with_unification_resultT var t p K -> @unification_resultT var t p -> forall T, ({ evm' : _ & K (pattern.type.subst_default t evm') } -> option T) -> option T
           := fun f x T k
              => (f' <- pattern.type.app_forall_vars f (projT1 x);
                    app_transport_with_unification_resultT'_cps
@@ -724,9 +724,9 @@ Module Compilers.
                      (fun fx
                       => k (existT _ _ fx)))%option.
 
-        Definition under_with_unification_resultT {t p K1 K2}
+        Definition under_with_unification_resultT {var t p K1 K2}
                  (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm))
-          : @with_unification_resultT t p K1 -> @with_unification_resultT t p K2
+          : @with_unification_resultT var t p K1 -> @with_unification_resultT var t p K2
           := pattern.type.under_forall_vars
                (fun evm => under_with_unification_resultT' (F evm)).
 
@@ -960,14 +960,14 @@ Module Compilers.
              | false, false => fun x => Some (UnderLets.Base x)
              end%cps.
 
-        Definition with_unif_rewrite_ruleTP_gen {t} (p : pattern t) (should_do_again : bool) (with_opt : bool) (under_lets : bool)
-          := with_unification_resultT p (fun t => deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets t).
+        Definition with_unif_rewrite_ruleTP_gen {var t} (p : pattern t) (should_do_again : bool) (with_opt : bool) (under_lets : bool)
+          := @with_unification_resultT var t p (fun t => deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets t).
 
         Record rewrite_rule_data {t} {p : pattern t} :=
           { rew_should_do_again : bool;
             rew_with_opt : bool;
             rew_under_lets : bool;
-            rew_replacement : with_unif_rewrite_ruleTP_gen p rew_should_do_again rew_with_opt rew_under_lets }.
+            rew_replacement : @with_unif_rewrite_ruleTP_gen value t p rew_should_do_again rew_with_opt rew_under_lets }.
 
         Definition rewrite_ruleTP
           := (fun p : anypattern => @rewrite_rule_data _ (pattern.pattern_of_anypattern p)).
@@ -1250,10 +1250,10 @@ Module Compilers.
         Coercion ptype_base : pattern.base.type >-> ptype.
         Local Notation ident_collect_vars := (@ident_collect_vars pattern.ident (@pattern.ident.type_vars)).
         Local Notation collect_vars := (@pattern.collect_vars pattern.ident (@ident_collect_vars)).
-        Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pattern.ident (@pattern.ident.arg_types)).
-        Local Notation with_unification_resultT := (@with_unification_resultT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-        Local Notation under_with_unification_resultT' := (@under_with_unification_resultT' ident var pattern.ident (@pattern.ident.arg_types)).
-        Local Notation under_with_unification_resultT := (@under_with_unification_resultT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
+        Local Notation with_unification_resultT' := (@with_unification_resultT' pattern.ident (@pattern.ident.arg_types) value).
+        Local Notation with_unification_resultT := (@with_unification_resultT pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars) value).
+        Local Notation under_with_unification_resultT' := (@under_with_unification_resultT' pattern.ident (@pattern.ident.arg_types) value).
+        Local Notation under_with_unification_resultT := (@under_with_unification_resultT pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars) value).
         Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
         Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
         Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).

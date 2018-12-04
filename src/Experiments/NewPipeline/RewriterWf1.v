@@ -749,8 +749,12 @@ Module Compilers.
         Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps ident _ e _ id).
         Local Notation unify_pattern' var := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown).
-        Local Notation app_transport_with_unification_resultT'_cps var := (@app_transport_with_unification_resultT'_cps ident var pident pident_arg_types).
-        Local Notation app_with_unification_resultT_cps var := (@app_with_unification_resultT_cps ident var pident pident_arg_types type_vars_of_pident).
+        Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps pident pident_arg_types).
+        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident).
+        Local Notation with_unification_resultT' := (@with_unification_resultT' pident pident_arg_types).
+        Local Notation with_unification_resultT := (@with_unification_resultT pident pident_arg_types type_vars_of_pident).
+        Local Notation unification_resultT' := (@unification_resultT' pident pident_arg_types).
+        Local Notation unification_resultT := (@unification_resultT pident pident_arg_types).
 
         Definition lam_type_of_list {ls K} : (type_of_list ls -> K) -> type_of_list_cps K ls
           := list_rect
@@ -1183,7 +1187,7 @@ Module Compilers.
                               | progress cbn [Option.bind with_unification_resultT' unification_resultT'] in *
                               | progress subst
                               | reflexivity
-                              | progress fold (@with_unification_resultT' ident var pident pident_arg_types)
+                              | progress fold (@with_unification_resultT' var)
                               | progress inversion_option
                               | break_innermost_match_step
                               | match goal with
@@ -1355,14 +1359,6 @@ Module Compilers.
           Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types type_vars_of_pident).
           Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
           Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-          Local Notation with_unification_resultT'1 := (@with_unification_resultT' ident var1 pident pident_arg_types).
-          Local Notation with_unification_resultT'2 := (@with_unification_resultT' ident var2 pident pident_arg_types).
-          Local Notation with_unification_resultT1 := (@with_unification_resultT ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unification_resultT2 := (@with_unification_resultT ident var2 pident pident_arg_types type_vars_of_pident).
-          Local Notation unification_resultT'1 := (@unification_resultT' ident var1 pident pident_arg_types).
-          Local Notation unification_resultT'2 := (@unification_resultT' ident var2 pident pident_arg_types).
-          Local Notation unification_resultT1 := (@unification_resultT ident var1 pident pident_arg_types).
-          Local Notation unification_resultT2 := (@unification_resultT ident var2 pident pident_arg_types).
           Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types type_vars_of_pident).
           Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types type_vars_of_pident).
           Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types type_vars_of_pident).
@@ -1572,49 +1568,49 @@ Module Compilers.
             erewrite wf_unify_types by eassumption; reflexivity.
           Qed.
 
-          Fixpoint related_unification_resultT' (R : forall t, @value var1 t -> @value var2 t -> Prop) {t p evm}
-            : @unification_resultT'1 t p evm -> @unification_resultT'2 t p evm -> Prop
-            := match p return unification_resultT'1 p evm -> unification_resultT'2 p evm -> Prop with
+          Fixpoint related_unification_resultT' {var1 var2} (R : forall t, var1 t -> var2 t -> Prop) {t p evm}
+            : @unification_resultT' var1 t p evm -> @unification_resultT' var2 t p evm -> Prop
+            := match p in pattern.pattern t return @unification_resultT' var1 t p evm -> @unification_resultT' var2 t p evm -> Prop with
                | pattern.Wildcard t => R _
                | pattern.Ident t idc => eq
                | pattern.App s d f x
-                 => fun (v1 : unification_resultT'1 f evm * unification_resultT'1 x evm)
-                        (v2 : unification_resultT'2 f evm * unification_resultT'2 x evm)
-                    => @related_unification_resultT' R _ _ _ (fst v1) (fst v2)
-                       /\ @related_unification_resultT' R  _ _ _ (snd v1) (snd v2)
+                 => fun (v1 : unification_resultT' f evm * unification_resultT' x evm)
+                        (v2 : unification_resultT' f evm * unification_resultT' x evm)
+                    => @related_unification_resultT' _ _ R _ _ _ (fst v1) (fst v2)
+                       /\ @related_unification_resultT' _ _ R _ _ _ (snd v1) (snd v2)
                end.
 
           Definition wf_unification_resultT' (G : list {t1 : type & (var1 t1 * var2 t1)%type}) {t p evm}
-            : @unification_resultT'1 t p evm -> @unification_resultT'2 t p evm -> Prop
-            := @related_unification_resultT' (fun _ => wf_value G) t p evm.
+            : @unification_resultT' value t p evm -> @unification_resultT' value t p evm -> Prop
+            := @related_unification_resultT' _ _ (fun _ => wf_value G) t p evm.
 
-          Definition related_unification_resultT (R : forall t, @value var1 t -> @value var2 t -> Prop) {t p}
-            : @unification_resultT1 t p -> @unification_resultT2 t p -> Prop
-            := related_sigT_by_eq (@related_unification_resultT' R t p).
+          Definition related_unification_resultT {var1 var2} (R : forall t, var1 t -> var2 t -> Prop) {t p}
+            : @unification_resultT _ t p -> @unification_resultT _ t p -> Prop
+            := related_sigT_by_eq (@related_unification_resultT' _ _ R t p).
 
           Definition wf_unification_resultT (G : list {t1 : type & (var1 t1 * var2 t1)%type}) {t p}
-            : @unification_resultT1 t p -> @unification_resultT2 t p -> Prop
-            := @related_unification_resultT (fun _ => wf_value G) t p.
+            : @unification_resultT (@value var1) t p -> @unification_resultT (@value var2) t p -> Prop
+            := @related_unification_resultT _ _ (fun _ => wf_value G) t p.
 
-          Fixpoint under_with_unification_resultT'_relation_hetero {t p evm K1 K2}
-                   (FH : forall t, value t -> value t -> Prop)
+          Fixpoint under_with_unification_resultT'_relation_hetero {var1 var2 t p evm K1 K2}
+                   (FH : forall t, var1 t -> var2 t -> Prop)
                    (F : K1 -> K2 -> Prop)
                    {struct p}
-            : @with_unification_resultT'1 t p evm K1 -> @with_unification_resultT'2 t p evm K2 -> Prop
-            := match p return with_unification_resultT'1 p evm K1 -> with_unification_resultT'2 p evm K2 -> Prop with
+            : @with_unification_resultT' var1 t p evm K1 -> @with_unification_resultT' var2 t p evm K2 -> Prop
+            := match p in pattern.pattern t return @with_unification_resultT' var1 t p evm K1 -> @with_unification_resultT' var2 t p evm K2 -> Prop with
                | pattern.Wildcard t => fun f1 f2 => forall v1 v2, FH _ v1 v2 -> F (f1 v1) (f2 v2)
                | pattern.Ident t idc => under_type_of_list_relation_cps F
                | pattern.App s d f x
                  => @under_with_unification_resultT'_relation_hetero
-                      _ f evm _ _
+                      _ _ _ f evm _ _
                       FH
-                      (@under_with_unification_resultT'_relation_hetero _ x evm _ _ FH F)
+                      (@under_with_unification_resultT'_relation_hetero _ _ _ x evm _ _ FH F)
                end.
 
-          Definition under_with_unification_resultT_relation_hetero {t p K1 K2}
-                     (FH : forall t, value t -> value t -> Prop)
+          Definition under_with_unification_resultT_relation_hetero {var1 var2 t p K1 K2}
+                     (FH : forall t, var1 t -> var2 t -> Prop)
                      (F : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
-            : @with_unification_resultT1 t p K1 -> @with_unification_resultT2 t p K2 -> Prop
+            : @with_unification_resultT var1 t p K1 -> @with_unification_resultT var2 t p K2 -> Prop
             := pattern.type.under_forall_vars_relation
                  (fun evm => under_with_unification_resultT'_relation_hetero FH (F evm)).
 
@@ -1622,19 +1618,19 @@ Module Compilers.
                      (G : list {t : _ & (var1 t * var2 t)%type})
                      {t} {p : pattern t} {K1 K2 : type -> Type}
                      (P : forall evm, K1 (pattern.type.subst_default t evm) -> K2 (pattern.type.subst_default t evm) -> Prop)
-            : @with_unification_resultT1 t p K1 -> @with_unification_resultT2 t p K2 -> Prop
+            : @with_unification_resultT value t p K1 -> @with_unification_resultT value t p K2 -> Prop
             := under_with_unification_resultT_relation_hetero
                  (fun t => wf_value G)
                  P.
 
-          Lemma related_app_with_unification_resultT' {t p evm K1 K2}
+          Lemma related_app_with_unification_resultT' {var1' var2' t p evm K1 K2}
                 R1 R2
                 f1 f2 v1 v2
             : @under_with_unification_resultT'_relation_hetero
-                t p evm K1 K2 R1 R2 f1 f2
-              -> @related_unification_resultT' R1 t p evm v1 v2
-              -> R2 (@app_with_unification_resultT' _ _ _ _ t p evm K1 f1 v1)
-                    (@app_with_unification_resultT' _ _ _ _ t p evm K2 f2 v2).
+                var1' var2' t p evm K1 K2 R1 R2 f1 f2
+              -> @related_unification_resultT' var1' var2' R1 t p evm v1 v2
+              -> R2 (@app_with_unification_resultT' _ _ _ t p evm K1 f1 v1)
+                    (@app_with_unification_resultT' _ _ _ t p evm K2 f2 v2).
           Proof using Type.
             revert K1 K2 R1 R2 f1 f2 v1 v2; induction p; cbn in *; intros; subst; destruct_head'_and;
               try apply related_app_type_of_list_of_under_type_of_list_relation_cps;
@@ -1642,12 +1638,12 @@ Module Compilers.
             repeat match goal with H : _ |- _ => eapply H; eauto; clear H end.
           Qed.
 
-          Lemma related_app_transport_with_unification_resultT' {t p evm1 evm2 K1 K2}
+          Lemma related_app_transport_with_unification_resultT' {var1' var2' t p evm1 evm2 K1 K2}
                 R1 R2
                 f1 f2 v1 v2
             : @under_with_unification_resultT'_relation_hetero
-                t p evm1 K1 K2 R1 R2 f1 f2
-              -> @related_unification_resultT' R1 t p evm2 v1 v2
+                var1' var2' t p evm1 K1 K2 R1 R2 f1 f2
+              -> @related_unification_resultT' var1' var2' R1 t p evm2 v1 v2
               -> option_eq
                    R2
                    (@app_transport_with_unification_resultT'_cps _ t p evm1 evm2 K1 f1 v1 _ (@Some _))
@@ -1661,14 +1657,14 @@ Module Compilers.
                               | break_innermost_match_step
                               | reflexivity
                               | progress cbn [Option.bind option_eq] in *
-                              | progress fold (@with_unification_resultT'1) (@with_unification_resultT'2)
+                              | progress fold (@with_unification_resultT')
                               | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
                               | progress cbv [eq_rect]
                               | solve [ auto ]
                               | exfalso; assumption
                               | progress inversion_option
                               | match goal with
-                                | [ H : (forall K1 K2 R1 R2 (f1 : with_unification_resultT'1 ?p1 ?evm1 K1), _)
+                                | [ H : (forall K1 K2 R1 R2 (f1 : with_unification_resultT' ?p1 ?evm1 K1), _)
                                     |- context[@app_transport_with_unification_resultT'_cps _ ?t ?p1 ?evm1 ?evm2 ?K1' ?f1' ?v1' _ _] ]
                                   => specialize (H K1' _ _ _ f1' _ v1' _ ltac:(eassumption) ltac:(eassumption))
                                 | [ H : option_eq ?R ?x ?y |- _ ]
@@ -1676,12 +1672,12 @@ Module Compilers.
                                 end ].
           Qed.
 
-          Lemma related_app_with_unification_resultT {t p K1 K2}
+          Lemma related_app_with_unification_resultT {var1' var2' t p K1 K2}
                 R1 R2
                 f1 f2 v1 v2
             : @under_with_unification_resultT_relation_hetero
-                t p K1 K2 R1 R2 f1 f2
-              -> @related_unification_resultT R1 t p v1 v2
+                var1' var2' t p K1 K2 R1 R2 f1 f2
+              -> @related_unification_resultT var1' var2' R1 t p v1 v2
               -> option_eq
                    (related_sigT_by_eq R2)
                    (@app_with_unification_resultT_cps _ t p K1 f1 v1 _ (@Some _))
@@ -1723,20 +1719,20 @@ Module Compilers.
                    (@app_with_unification_resultT_cps _ t p K2 f2 v2 _ (@Some _)).
           Proof using Type. apply related_app_with_unification_resultT. Qed.
 
-          Definition map_related_unification_resultT' {R1 R2 : forall t : type, value t -> value t -> Prop}
+          Definition map_related_unification_resultT' {var1' var2'} {R1 R2 : forall t : type, var1' t -> var2' t -> Prop}
                      (HR : forall t v1 v2, R1 t v1 v2 -> R2 t v1 v2)
                      {t p evm v1 v2}
-            : @related_unification_resultT' R1 t p evm v1 v2
-              -> @related_unification_resultT' R2 t p evm v1 v2.
+            : @related_unification_resultT' var1' var2' R1 t p evm v1 v2
+              -> @related_unification_resultT' var1' var2' R2 t p evm v1 v2.
           Proof using Type.
             induction p; cbn [related_unification_resultT']; intuition auto.
           Qed.
 
-          Definition map_related_unification_resultT {R1 R2 : forall t : type, value t -> value t -> Prop}
+          Definition map_related_unification_resultT {var1' var2'} {R1 R2 : forall t : type, var1' t -> var2' t -> Prop}
                      (HR : forall t v1 v2, R1 t v1 v2 -> R2 t v1 v2)
                      {t p v1 v2}
-            : @related_unification_resultT R1 t p v1 v2
-              -> @related_unification_resultT R2 t p v1 v2.
+            : @related_unification_resultT var1' var2' R1 t p v1 v2
+              -> @related_unification_resultT var1' var2' R2 t p v1 v2.
           Proof using Type.
             cbv [related_unification_resultT]; apply map_related_sigT_by_eq; intros *.
             apply map_related_unification_resultT'; auto.
@@ -1820,8 +1816,8 @@ Module Compilers.
                              (gy : { evm : _ & deep_rewrite_ruleTP_gen2 rew_should_do_again2 rew_with_opt2 rew_under_lets2 _ })
                          => related_sigT_by_eq
                               (fun _ => wf_deep_rewrite_ruleTP_gen G) fx gy)
-                        (app_with_unification_resultT_cps _ f x _ (@Some _))
-                        (app_with_unification_resultT_cps _ g y _ (@Some _)).
+                        (app_with_unification_resultT_cps f x _ (@Some _))
+                        (app_with_unification_resultT_cps g y _ (@Some _)).
 
           Definition wf_rewrite_rule_data
                      (G : list {t : _ & (var1 t * var2 t)%type})
@@ -1911,7 +1907,6 @@ Module Compilers.
           Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pident pident_arg_types type_vars_of_pident).
           Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pident pident_arg_types type_vars_of_pident).
           Local Notation with_unif_rewrite_ruleTP_gen := (@with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unification_resultT' := (@with_unification_resultT' ident var pident pident_arg_types).
           Local Notation normalize_deep_rewrite_rule := (@normalize_deep_rewrite_rule ident var).
 
           Local Notation deep_rewrite_ruleTP_gen := (@deep_rewrite_ruleTP_gen ident var).
@@ -1930,133 +1925,52 @@ Module Compilers.
             : var t
             := expr.interp ident_interp (reify v).
 
-          Fixpoint value'_interp_related
-                   {with_lets1 with_lets2 t}
-            : @value' var with_lets1 t
-              -> @value' var with_lets2 t
-              -> Prop
-            := match t return value' _ t -> value' _ t -> Prop with
-               | type.base t
-                 => fun v1 v2
-                    => expr.interp ident_interp (UnderLets_maybe_interp with_lets1 v1)
-                       == expr.interp ident_interp (UnderLets_maybe_interp with_lets2 v2)
-               | type.arrow s d
-                 => fun (f1 f2 : value' _ s -> value' _ d)
+          Local Notation expr_interp_related := (@expr.interp_related _ ident _ ident_interp).
+          Local Notation UnderLets_interp_related := (@UnderLets.interp_related _ ident _ ident_interp _ _ expr_interp_related).
+
+          Fixpoint value_interp_related {t with_lets} : @value' var with_lets t -> type.interp base.interp t -> Prop
+            := match t, with_lets with
+               | type.base _, true => UnderLets_interp_related
+               | type.base _, false => expr_interp_related
+               | type.arrow s d, _
+                 => fun (f1 : @value' _ _ s -> @value' _ _ d) (f2 : type.interp _ s -> type.interp _ d)
                     => forall x1 x2,
-                        @value'_interp_related _ _ s x1 x2
-                        -> @value'_interp_related _ _ d (f1 x1) (f2 x2)
+                        @value_interp_related s _ x1 x2
+                        -> @value_interp_related d _ (f1 x1) (f2 x2)
                end.
 
-          Local Infix "===" := value'_interp_related : type_scope.
-          Local Notation "e1 ==== e2" := (existT expr _ e1 = existT expr _ e2) : type_scope.
-
-          Definition value_interp_related {t} : relation (@value var t)
-            := value'_interp_related.
-
-          Definition value_interp_ok {with_lets t} : @value' var with_lets t -> Prop
-            := fun v => value'_interp_related v v.
-
-          Local Notation G_good G
-            := (forall t v1 v2, List.In (existT (fun t => (var t * var t)%type) t (v1, v2)) G -> v1 == v2)
-                 (only parsing).
-
-          Definition value_or_expr_interp_ok {with_lets t} : @value' var with_lets t -> Prop
-            := match t with
-               | type.base _
-                 => fun v => exists G, G_good G /\ UnderLets_maybe_wf with_lets G v v
-               | type.arrow _ _
-                 => value_interp_ok
+          Fixpoint rawexpr_interp_related (r1 : rawexpr) : type.interp base.interp (type_of_rawexpr r1) -> Prop
+            := match r1 return type.interp base.interp (type_of_rawexpr r1) -> Prop with
+               | rExpr _ e1
+               | rValue (type.base _) e1
+                 => expr_interp_related e1
+               | rValue t1 v1
+                 => value_interp_related v1
+               | rIdent _ t1 idc1 t'1 alt1
+                 => fun v2
+                    => expr.interp ident_interp alt1 == v2
+                       /\ existT expr t1 (expr.Ident idc1) = existT expr t'1 alt1
+               | rApp f1 x1 t1 alt1
+                 => match alt1 in expr.expr t return type.interp base.interp t -> Prop with
+                    | expr.App s d af ax
+                      => fun v2
+                         => exists fv xv (pff : type.arrow s d = type_of_rawexpr f1) (pfx : s = type_of_rawexpr x1),
+                             @expr_interp_related _ af fv
+                             /\ @expr_interp_related _ ax xv
+                             /\ @rawexpr_interp_related f1 (rew pff in fv)
+                             /\ @rawexpr_interp_related x1 (rew pfx in xv)
+                             /\ fv xv = v2
+                    | _ => fun _ => False
+                    end
                end.
 
-          Lemma value_interp_ok_of_value_or_expr_interp_ok {with_lets t v}
-            : @value_or_expr_interp_ok with_lets t v
-              -> value_interp_ok v.
-          Proof using ident_interp_Proper.
-            cbv [value_or_expr_interp_ok]; break_innermost_match; [ | | exact id ]; cbv [value_interp_ok value'_interp_related]; rewrite <- ?UnderLets.interp_to_expr.
-            all: intros [G [H1 H2] ].
-            all: eapply expr.wf_interp_Proper_gen1; try eassumption.
-            apply UnderLets.wf_to_expr; assumption.
-          Qed.
+          Definition unification_resultT'_interp_related {t p evm}
+            : @unification_resultT' (@value var) t p evm -> @unification_resultT' var t p evm -> Prop
+            := related_unification_resultT' (fun t => value_interp_related).
 
-          Lemma value'_interp_related_sym_iff {with_lets1 with_lets2 t v1 v2}
-            : @value'_interp_related with_lets1 with_lets2 t v1 v2
-              <-> @value'_interp_related with_lets2 with_lets1 t v2 v1.
-          Proof using Type.
-            split; revert with_lets1 with_lets2 v1 v2; induction t as [|s IHs d IHd];
-              cbn [value'_interp_related]; intros.
-            all: solve [ symmetry; assumption | eauto ].
-          Qed.
-
-          Lemma value'_interp_related_trans {with_lets1 with_lets2 with_lets3 t v1 v2 v3}
-            : @value'_interp_related with_lets1 with_lets2 t v1 v2
-              -> @value'_interp_related with_lets2 with_lets3 t v2 v3
-              -> @value'_interp_related with_lets1 with_lets3 t v1 v3.
-          Proof using Type.
-            intros H0 H1; revert with_lets1 with_lets2 with_lets3 v1 v2 v3 H0 H1; induction t as [|s IHs d IHd];
-              cbn [value'_interp_related]; intros.
-            all: try solve [ etransitivity; eassumption ].
-            eapply IHd; [ eapply H0; eassumption | eapply H1 ].
-            eapply IHs; [ eapply value'_interp_related_sym_iff | ]; eassumption.
-          Qed.
-
-          Global Instance value'_interp_related_Symmetric {with_lets t}
-            : Symmetric (@value'_interp_related with_lets with_lets t) | 10
-            := fun v1 v2 => proj1 value'_interp_related_sym_iff.
-          Global Instance value'_interp_related_Transitive {with_lets t}
-            : Transitive (@value'_interp_related with_lets with_lets t) | 10
-            := fun v1 v2 v3 => value'_interp_related_trans.
-
-          Lemma value_interp_related_sym_iff {t v1 v2}
-            : @value_interp_related t v1 v2
-              <-> @value_interp_related t v2 v1.
-          Proof using Type. apply value'_interp_related_sym_iff. Qed.
-
-          Lemma value_interp_related_trans {t v1 v2 v3}
-            : @value_interp_related t v1 v2
-              -> @value_interp_related t v2 v3
-              -> @value_interp_related t v1 v3.
-          Proof using Type. apply value'_interp_related_trans. Qed.
-
-          Global Instance value_interp_related_Symmetric {t}
-            : Symmetric (@value_interp_related t) | 10
-            := fun v1 v2 => proj1 value_interp_related_sym_iff.
-          Global Instance value_interp_related_Transitive {t}
-            : Transitive (@value_interp_related t) | 10
-            := fun v1 v2 v3 => value_interp_related_trans.
-
-          Lemma interp_Base_value {with_lets2 t} v1 (v2 : value' with_lets2 t)
-            : v1 === v2 -> @Base_value var t v1 === v2.
-          Proof using Type.
-            cbv [Base_value]; break_innermost_match; destruct with_lets2; cbn [value'_interp_related UnderLets.interp];
-              exact id.
-          Qed.
-
-          Fixpoint value_interp_related_reify {with_lets1 with_lets2 t e1 e2} {struct t}
-            : e1 === e2
-              -> expr.interp ident_interp (@reify var with_lets1 t e1) == expr.interp ident_interp (@reify var with_lets2 t e2)
-          with value_interp_related_reflect {with_lets1 with_lets2 t e1 e2} {struct t}
-            : expr.interp ident_interp e1 == expr.interp ident_interp e2
-              -> @reflect var with_lets1 t e1 === @reflect var with_lets2 t e2.
-          Proof using Type.
-            all: destruct t as [t|s d];
-              [ clear value_interp_related_reflect value_interp_related_reify
-              | pose proof (fun with_lets1 with_lets2 => value_interp_related_reify with_lets1 with_lets2 s) as value_interp_related_reify_s;
-                pose proof (fun with_lets1 with_lets2 => value_interp_related_reify with_lets1 with_lets2 d) as value_interp_related_reify_d;
-                pose proof (fun with_lets1 with_lets2 => value_interp_related_reflect with_lets1 with_lets2 s) as value_interp_related_reflect_s;
-                pose proof (fun with_lets1 with_lets2 => value_interp_related_reflect with_lets1 with_lets2 d) as value_interp_related_reflect_d;
-                clear value_interp_related_reify value_interp_related_reflect ].
-
-            all: repeat first [ progress cbn [reflect reify type.related value'_interp_related expr.interp] in *
-                              | progress cbv [respectful]
-                              | progress fold (@reify) (@reflect) in *
-                              | break_innermost_match_step
-                              | rewrite UnderLets.interp_to_expr
-                              | exact id
-                              | progress intros
-                              | match goal with
-                                | [ H : _ |- _ ] => apply H; clear H
-                                end ].
-          Qed.
+          Definition unification_resultT_interp_related {t p}
+            : @unification_resultT (@value var) t p -> @unification_resultT var t p -> Prop
+            := related_unification_resultT (fun t => value_interp_related).
 
           Lemma interp_reify_reflect {with_lets t} e v
             : expr.interp ident_interp e == v -> expr.interp ident_interp (@reify _ with_lets t (reflect e)) == v.
@@ -2067,202 +1981,6 @@ Module Compilers.
                 cbn [expr.interp UnderLets.to_expr]; auto; [].
             intros Hf ? ? Hx.
             apply IHd; cbn [expr.interp]; auto.
-          Qed.
-
-          Lemma interp_reflect_reify {with_lets with_lets1 with_lets2 t} x y
-            : @value'_interp_related with_lets with_lets2 t x y -> @value'_interp_related with_lets1 with_lets2 t (reflect (@reify _ with_lets t x)) y.
-          Proof using Type.
-            revert with_lets with_lets1 with_lets2 x y; induction t as [|s IHs d IHd]; intros ? ? ? ? ?;
-              cbn [type.related value'_interp_related reflect reify] in *;
-              fold (@reify var) (@reflect var); cbv [respectful]; break_innermost_match;
-                cbn [expr.interp UnderLets.to_expr UnderLets.interp]; rewrite ?UnderLets.interp_to_expr; auto; [].
-            intros Hf ? ? Hx.
-            etransitivity.
-            { eapply value_interp_related_reflect; cbn [expr.interp].
-              eapply value_interp_related_reify.
-              eapply Hf.
-              eapply value_interp_related_reflect; cbn [expr.interp].
-              eapply value_interp_related_reify; eassumption. }
-            { etransitivity; [ eapply IHd; symmetry | ]; eapply Hf; [ symmetry | eassumption ].
-              eapply IHs; symmetry; eassumption. }
-          Qed.
-
-          Lemma value_interp_related_of_ok {with_lets1 with_lets2 t v1 v2}
-            : @value'_interp_related with_lets1 with_lets2 t v1 v2
-              -> value'_interp v1 == value'_interp v2.
-          Proof using Type.
-            revert with_lets1 with_lets2 v1 v2; induction t as [|s IHs d IHd].
-            { cbn; intros; break_innermost_match; rewrite ?UnderLets.interp_to_expr; assumption. }
-            { cbn [type.related value'_interp value'_interp_related value']; cbv [respectful].
-              intros.
-              apply IHd; fold (@reify var) (@reflect var).
-              match goal with H : _ |- _ => apply H end.
-              apply value_interp_related_reflect; cbn [expr.interp]; assumption. }
-          Qed.
-
-          Local Ltac t_value_interp_related :=
-            repeat match goal with
-                   | _ => progress cbn [expr.interp]
-                   | [ |- expr.interp ?ii ?e == ?v ]
-                     => is_var v; is_evar e; refine (_ : expr.interp ii (expr.Var v) == v)
-                   | [ H : ?R ?x ?y |- ?R ?x ?x ]
-                     => etransitivity; (idtac + symmetry); eassumption
-                   | [ H : ?R ?y ?x |- ?R ?x ?x ]
-                     => etransitivity; (idtac + symmetry); eassumption
-                   | [ |- expr.interp _ (reify _) == expr.interp _ (reify _) ]
-                     => eapply value_interp_related_reify
-                   | [ |- reflect _ === reflect _ ]
-                     => eapply value_interp_related_reflect
-                   | [ |- reflect (expr.Var _) === _ ]
-                     => etransitivity; [ eapply value_interp_related_reflect | ]
-                   | [ |- _ === reflect (expr.Var _) ]
-                     => etransitivity; [ | eapply value_interp_related_reflect ]
-                   | [ |- _ === reflect ?v ]
-                     => is_evar v; symmetry; eapply interp_reflect_reify
-                   | [ |- reflect ?v === _ ]
-                     => is_evar v; eapply interp_reflect_reify
-                   | [ |- _ == expr.interp _ (reify ?v) ]
-                     => is_evar v; symmetry; eapply interp_reify_reflect
-                   | [ |- expr.interp _ (reify ?v) == _ ]
-                     => is_evar v; eapply interp_reify_reflect
-                   | [ |- expr.interp _ (reify ?x) == ?v ]
-                     => is_var x; is_evar v; eapply value_interp_related_reify
-                   | [ |- ?v == expr.interp _ (reify ?x) ]
-                     => is_var x; is_evar v; eapply value_interp_related_reify
-                   | [ |- expr.interp _ (reify ?x) == expr.interp _ ?v ]
-                     => is_var x; is_evar v; eapply value_interp_related_reify
-                   | [ |- expr.interp _ ?v == expr.interp _ (reify ?x) ]
-                     => is_var x; is_evar v; eapply value_interp_related_reify
-                   | [ H : forall x1 x2, x1 === x2 -> ?f1 x1 === ?f2 x2 |- ?f1 _ === _ ] => eapply H; clear H
-                   | [ H : (forall x1 x2, x1 === x2 -> ?f1 x1 === reflect (?f2 @ reify x2)%expr)
-                       |- ?f1 _ === reflect (?f2 @ reify _)%expr ]
-                     => eapply H; clear H
-                   | [ H : forall x y, x == y -> _ == expr.interp _ ?f2 y |- _ == expr.interp _ ?f2 _ ]
-                     => etransitivity; [ | eapply H ]; clear H
-                   | _ => (idtac + symmetry); eassumption
-                   end.
-
-          Lemma value_interp_related_reify_reflect_iff
-                {with_lets1 with_lets2 t v1 e2}
-                (v2 := reflect e2)
-            : @value_interp_ok with_lets1 t v1
-              -> expr.interp ident_interp e2 == expr.interp ident_interp e2
-              -> (@value'_interp_related with_lets1 with_lets2 t v1 v2
-                  <-> expr.interp ident_interp (reify v1) == expr.interp ident_interp e2).
-          Proof using Type.
-            subst v2; cbv [value_interp_ok] in *.
-            revert with_lets1 with_lets2 v1 e2.
-            induction t as [|s IHs d IHd]; cbn [value'_interp_related] in *.
-            { cbn; intros; break_innermost_match; rewrite ?UnderLets.interp_to_expr; reflexivity. }
-            { intros ? ? v1 e2 H1 H2.
-              cbn [type.related] in *; cbv [respectful] in *.
-              specialize (IHd true true); specialize (IHs false false).
-              cbn [reify reflect expr.interp] in *.
-              fold (@reify var) (@reflect var) in *.
-              cbn [value' expr.interp] in *.
-              specialize (fun x1 (x2 : value' false s) pf1 => IHd (v1 x1) (e2 @ reify x2)%expr (H1 _ _ pf1)); cbn [expr.interp] in *.
-              specialize (fun x1 x2 pf1 pf2 => IHd x1 x2 pf1 (H2 _ _ (value_interp_related_reify pf2))).
-              split; intros H ? ? H'; [ etransitivity; [ eapply IHd | eapply H2 ]; clear IHd | apply IHd; clear IHd ]; cbn [expr.interp] in *.
-              all: unshelve (t_value_interp_related; t_value_interp_related); trivial. }
-          Qed.
-
-          Lemma value_interp_related_iff_of_ok {t with_lets1 with_lets2 v1 v2}
-            : @value_interp_ok with_lets1 t v1
-              -> @value_interp_ok with_lets2 t v2
-              -> (@value'_interp_related with_lets1 with_lets2 t v1 v2
-                  <-> value'_interp v1 == value'_interp v2).
-          Proof using Type.
-            cbv [value_interp_ok value'_interp] in *.
-            intros H1 H2; split; intro H.
-            { eapply value_interp_related_reify_reflect_iff;
-                [ eassumption | eapply value_interp_related_reify | symmetry; eapply interp_reflect_reify ].
-              { etransitivity; (idtac + symmetry); eassumption. }
-              { eapply value'_interp_related_sym_iff; eassumption. } }
-            { eapply value_interp_related_reify_reflect_iff in H; [ | eassumption | ].
-              { eapply value'_interp_related_trans; [ eexact H | eapply interp_reflect_reify ].
-                etransitivity; (idtac + symmetry); eassumption. }
-              { eapply value_interp_related_reify.
-                etransitivity; (idtac + symmetry); eassumption. } }
-            Unshelve.
-            all: trivial.
-          Qed.
-
-          Lemma value'_interp_app {with_lets s d f x}
-            : @value_interp_ok with_lets (type.arrow s d) f
-              -> @value_interp_ok _ s x
-              -> value'_interp (f x) == value'_interp f (value'_interp x).
-          Proof using Type.
-            cbv [value_interp_ok]; cbn [value'_interp_related value'] in *.
-            intros Hf Hx.
-            transitivity (value'_interp (with_lets:=false) (t:=type.arrow s d) (fun x => f (reflect (reify x))) (value'_interp x)).
-            all: fold (@value' var).
-            { cbv [value'_interp]; cbn [reify reflect expr.interp].
-              fold (@reify var) (@reflect var).
-              eapply value_interp_related_iff_of_ok; apply Hf;
-                repeat first [ eassumption
-                             | progress cbn [expr.interp]
-                             | (idtac + symmetry); apply interp_reflect_reify
-                             | eapply value_interp_related_reflect
-                             | eapply value_interp_related_reify
-                             | etransitivity; [ eapply value_interp_related_reflect; progress cbn [expr.interp] | ] ]. }
-            { eapply (@value_interp_related_iff_of_ok (type.arrow s d));
-                fold (@type.related); cbv [value_interp_ok]; cbn [value'_interp_related];
-                  [ .. | eapply value_interp_related_iff_of_ok ]; try assumption.
-              all: intros; apply Hf.
-              all: repeat first [ (idtac + symmetry); apply interp_reflect_reify
-                                | (idtac + symmetry); assumption ]. }
-          Qed.
-
-          Lemma unfold_value'_interp_arrow {with_lets s d}
-            : @value'_interp with_lets (type.arrow s d)
-              = (fun (f : @value' _ with_lets (type.arrow s d)) (x : var s)
-                 => @value'_interp _ d (f (reflect (expr.Var x)))).
-          Proof using Type. reflexivity. Qed.
-
-          Lemma value_interp_self_related_of_ok {with_lets t v}
-            : @value_interp_ok with_lets t v
-              -> value'_interp v == value'_interp v.
-          Proof using Type.
-            intro H; apply value_interp_related_iff_of_ok; assumption.
-          Qed.
-
-          Lemma value_interp_ok_arrow {with_lets s d f}
-            : @value_interp_ok with_lets (type.arrow s d) f
-              <-> (forall x y,
-                      value_interp_ok x
-                      -> value_interp_ok y
-                      -> value'_interp x == value'_interp y
-                      -> value_interp_ok (f x)
-                         /\ value_interp_ok (f y)
-                         /\ value'_interp (f x) == value'_interp (f y)).
-          Proof using Type.
-            cbv [value_interp_ok]; cbn [value'_interp_related value'] in *.
-            split; intros H x y; [ | specialize (H x y) ].
-            all: repeat first [ progress intros
-                              | apply conj
-                              | progress destruct_head'_and
-                              | progress cbv [value_interp_ok] in *
-                              | solve [ auto ]
-                              | progress specialize_by_assumption
-                              | match goal with
-                                | [ H : (forall x1 x2, x1 === x2 -> ?f x1 === ?f x2) |- ?f _ === ?f _ ]
-                                  => apply H
-                                | [ |- _ == _ ] => rewrite <- value_interp_related_iff_of_ok
-                                | [ H : _ == _ |- _ ] => revert H; rewrite <- value_interp_related_iff_of_ok
-                                | [ H : ?x === ?y |- _ ]
-                                  => progress ((try unique assert (x === x) by (etransitivity; (idtac + symmetry); eassumption));
-                                               (try unique assert (y === y) by (etransitivity; (idtac + symmetry); eassumption)))
-                                | [ H : _ == _ -> _ |- _ ]
-                                  => specialize (fun H1 H2 H3 => H (proj1 (value_interp_related_iff_of_ok H1 H2) H3))
-                                end ].
-          Qed.
-
-          Lemma value_interp_ok_base {with_lets t x}
-            : @value_interp_ok with_lets (type.base t) x
-              <-> (value'_interp x == value'_interp x).
-          Proof using Type.
-            cbv [value'_interp value_interp_ok reify value'_interp_related].
-            break_innermost_match; rewrite ?UnderLets.interp_to_expr; reflexivity.
           Qed.
 
           Lemma interp_of_wf_reify_expr G {t}
@@ -2286,137 +2004,57 @@ Module Compilers.
                               | solve [ auto ] ].
           Qed.
 
-          Fixpoint rawexpr_interp_ok (r : rawexpr) : Prop
-            := match r with
-               | rIdent _ t idc t' alt => expr.Ident idc ==== alt
-               | rExpr t e
-               | rValue (type.base t) e
-                 => exists G,
-                    (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
-                    /\ expr.wf G e e
-               | rValue t v => value_interp_ok v
-               | rApp f x t alt
-                 => rawexpr_interp_ok f
-                    /\ rawexpr_interp_ok x
-                    /\ exists s d
-                              (pff : type_of_rawexpr f = type.arrow s d)
-                              (pfx : type_of_rawexpr x = s),
-                        (((rew pff in expr_of_rawexpr f) @ (rew pfx in expr_of_rawexpr x))%expr)
-                          ==== alt
-               end.
-
-          Lemma rawexpr_equiv_expr_ok_iff {t e r} (H : @rawexpr_equiv_expr _ t e r)
-            : rawexpr_interp_ok r
-              <-> (exists G,
-                      (forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
-                      /\ expr.wf G e e).
+          Fixpoint reify_interp_related {t with_lets} v1 v2 {struct t}
+            : @value_interp_related t with_lets v1 v2
+              -> expr_interp_related (reify v1) v2
+          with reflect_interp_related {t with_lets} e1 v2 {struct t}
+               : expr_interp_related e1 v2
+                 -> @value_interp_related t with_lets (reflect e1) v2.
           Proof using Type.
-            split; revert t e H; induction r.
-            all: unshelve
-                   (repeat
-                      first [ progress cbn [rawexpr_interp_ok rawexpr_equiv_expr List.In eq_rect] in *
-                            | progress subst
-                            | progress destruct_head'_and
-                            | progress destruct_head' iff
-                            | progress destruct_head'_ex
-                            | progress destruct_head'_sig
-                            | progress destruct_head'_False
-                            | progress specialize_by_assumption
-                            | progress inversion_sigma
-                            | progress eliminate_hprop_eq
-                            | reflexivity
-                            | progress intros
-                            | break_innermost_match_step
-                            | break_innermost_match_hyps_step
-                            | progress expr.invert_match
-                            | progress expr.inversion_wf_constr
-                            | rewrite in_app_iff in *
-                            | (exists eq_refl)
-                            | apply conj
-                            | match goal with
-                              | [ |- expr.wf _ _ _ ] => constructor
-                              | [ H : forall t e, rawexpr_equiv_expr e ?r -> _, H' : rawexpr_equiv_expr _ ?r |- _ ]
-                                => specialize (H _ _ H')
-                              | [ H : (exists G, _ /\ expr.wf G ?e1 ?e2) -> _, H' : expr.wf ?G' ?e1 ?e2 |- _ ]
-                                => specialize (fun pf1 => H (ex_intro _ G' (conj pf1 H')))
-                              | [ G1 : list ?T, G2 : list ?T |- @ex (list ?T) _ ] => exists (G1 ++ G2)%list
-                              | [ G : list ?T |- @ex (list ?T) _ ] => exists G
-                              | [ |- @ex (list ?T) _ ] => exists (@nil T)
-                              | [ H : ?T, H' : ?T |- _ ] => clear H'
-                              | [ |- ex _ ] => eexists
-                              end
-                            | solve [ eauto ]
-                            | progress destruct_head'_or
-                            | solve [ wf_unsafe_t; wf_safe_t ]
-                            | unshelve erewrite eq_expr_of_rawexpr_equiv_expr; [ .. | eassumption | ]; []
-                            | match goal with
-                              | [ H : ?x = ?y |- _ ] => progress unify x y
-                              | [ |- context[rew ?pf in _] ] => tryif is_var pf then destruct pf else generalize pf
-                              end ]).
-            repeat first [ progress subst
-                         | congruence
-                         | match goal with
-                           | [ H : rawexpr_equiv_expr _ _ |- _ = _ :> type ] => apply eq_type_of_rawexpr_equiv_expr in H
-                           end ].
+            all: destruct t as [|s d];
+              [ clear reify_interp_related reflect_interp_related
+              | pose proof (reify_interp_related s false) as reify_interp_related_s;
+                pose proof (reflect_interp_related s false) as reflect_interp_related_s;
+                pose proof (reify_interp_related d true) as reify_interp_related_d;
+                pose proof (reflect_interp_related d true) as reflect_interp_related_d;
+                clear reify_interp_related reflect_interp_related ].
+            all: repeat first [ progress cbn [reify reflect] in *
+                              | progress fold (@reify) (@reflect) in *
+                              | progress cbn [expr_interp_related value_interp_related] in *
+                              | break_innermost_match_step
+                              | rewrite <- UnderLets.to_expr_interp_related_iff
+                              | exact id
+                              | assumption
+                              | solve [ eauto ]
+                              | progress intros
+                              | match goal with H : _ |- _ => apply H; clear H end
+                              | progress repeat esplit ].
           Qed.
 
-          Lemma rawexpr_equiv_ok_iff {r1 r2} (H : rawexpr_equiv r1 r2)
-            : rawexpr_interp_ok r1 <-> rawexpr_interp_ok r2.
+          Lemma expr_of_rawexpr_interp_related r v
+            : rawexpr_interp_related r v
+              -> expr_interp_related (expr_of_rawexpr r) v.
           Proof using Type.
-            split; revert r1 r2 H; induction r1.
-            all: repeat first [ progress cbn [rawexpr_interp_ok rawexpr_equiv eq_rect projT1 projT2] in *
+            revert v; induction r; cbn [expr_of_rawexpr expr_interp_related rawexpr_interp_related]; intros.
+            all: repeat first [ progress destruct_head'_and
+                              | progress destruct_head'_ex
                               | progress subst
                               | progress inversion_sigma
-                              | progress destruct_head'_ex
-                              | progress destruct_head'_and
-                              | progress destruct_head' iff
-                              | progress destruct_head'_sig
-                              | progress destruct_head'_False
-                              | progress eliminate_hprop_eq
-                              | progress specialize_by_assumption
-                              | reflexivity
-                              | eassumption
-                              | progress intros
-                              | break_innermost_match_hyps_step
-                              | erewrite <- rawexpr_equiv_expr_ok_iff by eassumption
+                              | progress cbn [eq_rect type_of_rawexpr expr.interp expr_interp_related type_of_rawexpr] in *
+                              | assumption
+                              | exfalso; assumption
                               | apply conj
-                              | (exists eq_refl)
+                              | break_innermost_match_hyps_step
                               | solve [ eauto ]
-                              | match goal with
-                                | [ H : rawexpr_equiv_expr _ _ |- _ ] => apply rawexpr_equiv_expr_ok_iff in H
-                                | [ H : (exists G, _ /\ expr.wf G ?e1 ?e2) -> _, H' : expr.wf ?G' ?e1 ?e2 |- _ ]
-                                  => specialize (fun pf1 => H (ex_intro _ G' (conj pf1 H')))
-                                | [ H : type.arrow _ _ = type.arrow _ _ |- _ ] => progress type.inversion_type
-                                | [ H : rawexpr_equiv _ _ |- _ ==== _ ]
-                                  => generalize (eq_type_of_rawexpr_equiv H) (eq_expr_of_rawexpr_equiv H); clear H
-                                | [ |- context[rew ?pf in _] ] => is_evar pf; generalize pf
-                                end ].
-            all: match goal with |- exists s d pff pfx, _ ==== _ => idtac end.
-            all: repeat first [ progress intros
-                              | progress subst
-                              | progress cbn [eq_rect] in *
-                              | (exists eq_refl)
-                              | reflexivity
-                              | match goal with
-                                | [ H : rawexpr_equiv ?r1 ?r2 |- _ ]
-                                  => generalize (eq_type_of_rawexpr_equiv H) (eq_expr_of_rawexpr_equiv H); clear H
-                                | [ |- context[expr_of_rawexpr ?r] ] => generalize dependent (expr_of_rawexpr r)
-                                | [ H : type_of_rawexpr ?r = _ |- _ ] => generalize dependent (type_of_rawexpr r)
-                                | [ H : _ = type_of_rawexpr ?r |- _ ] => generalize dependent (type_of_rawexpr r)
-                                | [ |- ex _ ] => eexists
-                                end ].
+                              | apply reify_interp_related ].
           Qed.
 
-          Lemma reveal_rawexpr_ok_iff {r}
-            : rawexpr_interp_ok (reveal_rawexpr r) <-> rawexpr_interp_ok r.
-          Proof using Type. apply rawexpr_equiv_ok_iff, reveal_rawexpr_equiv. Qed.
-
-          Fixpoint pattern_default_interp' {K t} (p : pattern t) evm {struct p} : (expr (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' t p evm K
-            := match p in pattern.pattern t return (expr (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' t p evm K with
-               | pattern.Wildcard t => fun k v => k (reify v)
+          Fixpoint pattern_default_interp' {K t} (p : pattern t) evm {struct p} : (var (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' var t p evm K
+            := match p in pattern.pattern t return (var (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' var t p evm K with
+               | pattern.Wildcard t => fun k v => k v
                | pattern.Ident t idc
                  => fun k
-                    => lam_type_of_list (fun args => k (expr.Ident (pident_to_typed _ idc _ args)))
+                    => lam_type_of_list (fun args => k (ident_interp _(pident_to_typed _ idc _ args)))
                | pattern.App s d f x
                  => fun k
                     => @pattern_default_interp'
@@ -2425,10 +2063,12 @@ Module Compilers.
                           => @pattern_default_interp'
                                _ _ x evm
                                (fun ex
-                                => k (expr.App ef ex)))
+                                => k (ef ex)))
                end.
 
-          Definition pattern_default_interp {t} (p : pattern t) : @with_unif_rewrite_ruleTP_gen t p false false false
+          Definition pattern_default_interp {t} (p : pattern t)
+            : @with_unification_resultT var t p var
+            (*: @with_unif_rewrite_ruleTP_gen var t p false false false*)
             := pattern.type.lam_forall_vars
                  (fun evm
                   => pattern_default_interp' p evm id).
@@ -2436,27 +2076,28 @@ Module Compilers.
           Definition deep_rewrite_ruleTP_gen_good_relation
                      {should_do_again with_opt under_lets : bool} {t}
                      (v1 : @deep_rewrite_ruleTP_gen should_do_again with_opt under_lets t)
-                     (v2 : expr t)
+                     (v2 : var t)
             : Prop
-            := (let v1 := normalize_deep_rewrite_rule v1 in
-                match v1 with
-                | None => True
-                | Some v1 => let v1 := UnderLets.interp ident_interp v1 in
-                             (if should_do_again
-                                 return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> Prop
-                              then
-                                (fun v1
-                                 => expr.interp ident_interp (reify_expr v1) == expr.interp ident_interp v2)
-                              else
-                                (fun v1 => expr.interp ident_interp v1 == expr.interp ident_interp v2))
-                               v1
-                end).
+            := let v1 := normalize_deep_rewrite_rule v1 in
+               match v1 with
+               | None => True
+               | Some v1 => UnderLets.interp_related
+                              ident_interp
+                              (fun e
+                               => expr_interp_related
+                                    ((if should_do_again
+                                         return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> _
+                                      then reify_expr
+                                      else fun v1 => v1) e))
+                              v1
+                              v2
+               end.
 
           Definition rewrite_rule_data_interp_goodT
                      {t} {p : pattern t} (r : @rewrite_rule_data t p)
             : Prop
             := forall x y,
-              related_unification_resultT (fun t v1 v2 => value_interp_ok v1 /\ value_interp_ok v2 /\ value'_interp v1 == value'_interp v2) x y
+              related_unification_resultT (fun t => value_interp_related) x y
               -> option_eq
                    (fun fx gy
                     => related_sigT_by_eq
@@ -2464,8 +2105,8 @@ Module Compilers.
                           => @deep_rewrite_ruleTP_gen_good_relation
                                (rew_should_do_again _ _ r) (rew_with_opt _ _ r) (rew_under_lets _ _ r) (pattern.type.subst_default t evm))
                          fx gy)
-                   (app_with_unification_resultT_cps _ (rew_replacement _ _ r) x _ (@Some _))
-                   (app_with_unification_resultT_cps _ (pattern_default_interp p) y _ (@Some _)).
+                   (app_with_unification_resultT_cps (rew_replacement _ _ r) x _ (@Some _))
+                   (app_with_unification_resultT_cps (pattern_default_interp p) y _ (@Some _)).
 
           Definition rewrite_rules_interp_goodT
                      (rews : rewrite_rulesT)
@@ -2497,17 +2138,13 @@ Module Compilers.
             intro H.
             repeat (let x := fresh "x" in intro x; specialize (H x)).
             intros X Y HXY.
-            pose proof (related_app_with_unification_resultT _ _ _ _ _ _ ltac:(eassumption) ltac:(eapply map_related_unification_resultT; [ | eassumption ]; intros; cbv beta in *; destruct_head'_and; eapply value_interp_related_iff_of_ok; eassumption)) as H'.
-            cps_id'_with_option app_with_unification_resultT_cps_id.
-            cbv [deep_rewrite_ruleTP_gen] in *.
-            let H1 := fresh in
-            let H2 := fresh in
-            lazymatch type of H' with
-            | option_eq ?R ?x ?y
-              => destruct x eqn:H1, y eqn:H2; cbv [option_eq] in H'
+            pose proof (related_app_with_unification_resultT _ _ _ _ _ _ ltac:(eassumption) HXY) as H'.
+            progress cbv [deep_rewrite_ruleTP_gen] in *.
+            match goal with
+            | [ H : option_eq ?R ?x ?y |- option_eq ?R' ?x' ?y' ]
+              => change (option_eq R' x y); destruct x eqn:?, y eqn:?; cbv [option_eq] in H |- *
             end.
-            all: repeat first [ progress cbn [option_eq]
-                              | reflexivity
+            all: repeat first [ reflexivity
                               | progress inversion_option
                               | exfalso; assumption
                               | assumption ].
