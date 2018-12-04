@@ -305,7 +305,7 @@ Module Compilers.
                            | [ H : context[List.nth_error (List.rev _) _] |- _ ] => rewrite nth_error_rev in H
                            | [ |- context[List.nth_error (List.rev _) _] ] => rewrite nth_error_rev
                            | [ H : List.nth_error (Lists.List.repeat _ _) _ = Some _ |- _ ] => apply nth_error_repeat in H
-                           | [ H : List.nth_error (repeat _ _) _ = Some _ |- _ ] => apply nth_error_repeat in H
+                           | [ H : List.nth_error (List.repeat _ _) _ = Some _ |- _ ] => apply nth_error_repeat in H
                            | [ H : length ?l1 = length ?l2 |- context[length ?l1] ] => rewrite H
                            | [ H : length ?l1 = length ?l2, H' : context[length ?l1] |- _ ] => rewrite H in H'
                            | [ |- context[List.flat_map _ _] ] => rewrite List.flat_map_concat_map, concat_fold_right_app
