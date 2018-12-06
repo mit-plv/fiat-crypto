@@ -2189,3 +2189,19 @@ Proof. induction k; cbn; f_equal; assumption. Qed.
 Lemma map_const {A B} (v : B) (ls : list A)
   : List.map (fun _ => v) ls = List.repeat v (List.length ls).
 Proof. induction ls; cbn; f_equal; assumption. Qed.
+
+Lemma Forall2_update_nth {A B f g n R ls1 ls2}
+  : @List.Forall2 A B R ls1 ls2
+    -> (forall v1, nth_error ls1 n = Some v1 -> forall v2, nth_error ls2 n = Some v2 -> R v1 v2 -> R (f v1) (g v2))
+    -> @List.Forall2 A B R (update_nth n f ls1) (update_nth n g ls2).
+Proof using Type.
+  intro H; revert n; induction H, n; cbn [nth_error update_nth].
+  all: repeat first [ progress intros
+                    | progress specialize_by_assumption
+                    | assumption
+                    | match goal with
+                      | [ |- List.Forall2 _ _ _ ] => constructor
+                      | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                      | [ IH : forall n : nat, _, H : forall v1, nth_error ?l ?n = Some v1 -> _ |- _ ] => specialize (IH n H)
+                      end ].
+Qed.
