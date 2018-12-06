@@ -2049,6 +2049,23 @@ Module Compilers.
                               | apply reify_interp_related ].
           Qed.
 
+          Lemma value_of_rawexpr_interp_related {e v}
+            : rawexpr_interp_related e v -> value_interp_related (value_of_rawexpr e) v.
+          Proof using Type.
+            destruct e; cbn [rawexpr_interp_related value_of_rawexpr]; break_innermost_match.
+            all: repeat first [ progress intros
+                              | exfalso; assumption
+                              | progress inversion_sigma
+                              | progress subst
+                              | progress cbn [eq_rect expr.interp type_of_rawexpr] in *
+                              | progress destruct_head'_ex
+                              | progress destruct_head'_and
+                              | assumption
+                              | apply reflect_interp_related
+                              | progress cbn [expr_interp_related]
+                              | solve [ eauto ] ].
+          Qed.
+
           Fixpoint pattern_default_interp' {K t} (p : pattern t) evm {struct p} : (var (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' var t p evm K
             := match p in pattern.pattern t return (var (pattern.type.subst_default t evm) -> K) -> @with_unification_resultT' var t p evm K with
                | pattern.Wildcard t => fun k v => k v
