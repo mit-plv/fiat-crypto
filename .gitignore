@@ -119,6 +119,9 @@ src/Experiments/NewPipeline/ExtractionHaskell/*.o
 src/Experiments/NewPipeline/ExtractionOCaml/saturated_solinas
 src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
 src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery
+src/Experiments/NewPipeline/ExtractionOCaml/saturated_solinas.exe
+src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas.exe
+src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery.exe
 src/Experiments/NewPipeline/ExtractionOCaml/*.cmi
 src/Experiments/NewPipeline/ExtractionOCaml/*.cmx
 src/Experiments/NewPipeline/ExtractionOCaml/*.ml
