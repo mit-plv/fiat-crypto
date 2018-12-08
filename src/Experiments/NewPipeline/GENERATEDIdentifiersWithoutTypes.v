@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.FSets.FMapPositive.
+Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Option.
@@ -45,6 +46,14 @@ Module Compilers.
            | type.list A => Compilers.base.type.list (subst_default A evar_map)
            end.
 
+      Fixpoint collect_vars (t : type) : PositiveSet.t
+        := match t with
+           | type.var p => PositiveSet.add p PositiveSet.empty
+           | type.type_base t => PositiveSet.empty
+           | type.prod A B => PositiveSet.union (collect_vars A) (collect_vars B)
+           | type.list A => collect_vars A
+           end.
+
       Module Notations.
         Global Coercion type.type_base : Compilers.base.type.base >-> type.type.
         Bind Scope pbtype_scope with type.type.
@@ -84,6 +93,12 @@ Module Compilers.
         := match ptype with
            | type.base t => type.base (base.subst_default t evar_map)
            | type.arrow A B => type.arrow (subst_default A evar_map) (subst_default B evar_map)
+           end.
+
+      Fixpoint collect_vars (t : type) : PositiveSet.t
+        := match t with
+           | type.base t => base.collect_vars t
+           | type.arrow s d => PositiveSet.union (collect_vars s) (collect_vars d)
            end.
     End type.
 
@@ -816,6 +831,7 @@ rettypes = [i.replace(prefix + 'ident.ident', 'ident').replace(prefix, '').repla
 
 retcode = r"""Require Import Coq.ZArith.ZArith.
 Require Import Coq.FSets.FMapPositive.
+Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Option.
@@ -861,6 +877,14 @@ Module Compilers.
            | type.list A => Compilers.base.type.list (subst_default A evar_map)
            end.
 
+      Fixpoint collect_vars (t : type) : PositiveSet.t
+        := match t with
+           | type.var p => PositiveSet.add p PositiveSet.empty
+           | type.type_base t => PositiveSet.empty
+           | type.prod A B => PositiveSet.union (collect_vars A) (collect_vars B)
+           | type.list A => collect_vars A
+           end.
+
       Module Notations.
         Global Coercion type.type_base : Compilers.base.type.base >-> type.type.
         Bind Scope pbtype_scope with type.type.
@@ -900,6 +924,12 @@ Module Compilers.
         := match ptype with
            | type.base t => type.base (base.subst_default t evar_map)
            | type.arrow A B => type.arrow (subst_default A evar_map) (subst_default B evar_map)
+           end.
+
+      Fixpoint collect_vars (t : type) : PositiveSet.t
+        := match t with
+           | type.base t => base.collect_vars t
+           | type.arrow s d => PositiveSet.union (collect_vars s) (collect_vars d)
            end.
     End type.
 

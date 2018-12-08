@@ -1,7 +1,11 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.MSets.MSetPositive.
+Require Import Coq.FSets.FMapPositive.
+Require Import Crypto.Util.MSetPositive.Facts.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.HProp.
@@ -194,6 +198,33 @@ Module Compilers.
                               => generalize dependent (base.subst_default (base.relax t) evm)
                             end
                           | progress Compilers.type.inversion_type ].
+      Qed.
+
+      Local Ltac solve_ex_or_eq :=
+        lazymatch goal with
+        | [ |- ex _ ] => eexists; solve_ex_or_eq
+        | [ |- _ /\ _ ] => split; solve_ex_or_eq
+        | [ |- _ \/ _ ] => (left + right); solve_ex_or_eq
+        | [ |- _ = _ ] => reflexivity || eassumption
+        end.
+      Lemma type_vars_enough
+        : forall t idc k,
+          PositiveSet.mem k (pattern.type.collect_vars t) = true
+          -> exists v, List.In v (@pattern.ident.type_vars t idc) /\ PositiveSet.mem k (pattern.type.collect_vars v) = true.
+      Proof using Type.
+        destruct idc; cbn [type.collect_vars ident.type_vars List.In base.collect_vars PositiveSet.mem PositiveSet.empty PositiveSet.union] in *.
+        all: repeat first [ match goal with
+                            | [ H : true = false |- _ ] => exfalso; apply Bool.diff_true_false, H
+                            | [ H : false = true |- _ ] => exfalso; apply Bool.diff_false_true, H
+                            | [ H : context[PositiveSet.mem _ (PositiveSet.union _ _)] |- _ ]
+                              => rewrite PositiveSetFacts.union_b in H
+                            | [ H : context[orb _ _ = true] |- _ ]
+                              => rewrite Bool.orb_true_iff in H
+                            end
+                          | progress cbn [PositiveSet.mem PositiveSet.empty] in *
+                          | progress intros
+                          | progress destruct_head'_or
+                          | solve_ex_or_eq ].
       Qed.
     End ident.
   End pattern.

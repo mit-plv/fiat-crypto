@@ -385,6 +385,56 @@ Module Compilers.
         Ltac unify_extracted_cps_id :=
           cps_id_with_option (@unify_extracted_cps_id _ _ _ _).
 
+        Local Ltac t_subst_eq_iff :=
+          repeat first [ progress apply conj
+                       | progress cbv [option_map Option.bind] in *
+                       | progress intros
+                       | progress inversion_option
+                       | progress subst
+                       | progress destruct_head'_and
+                       | progress destruct_head'_or
+                       | progress destruct_head' iff
+                       | match goal with
+                         | [ |- context[PositiveSet.mem _ (PositiveSet.union _ _)] ]
+                           => setoid_rewrite PositiveSetFacts.union_b
+                         | [ |- context[orb _ _ = true] ]
+                           => setoid_rewrite Bool.orb_true_iff
+                         | [ H : context[PositiveSet.mem _ (PositiveSet.union _ _)] |- _ ]
+                           => setoid_rewrite PositiveSetFacts.union_b in H
+                         | [ H : context[orb _ _ = true] |- _ ]
+                           => setoid_rewrite Bool.orb_true_iff in H
+                         | [ H : type.base _ = type.base _ |- _ ] => inversion H; clear H
+                         | [ H : type.arrow _ _ = type.arrow _ _ |- _ ] => inversion H; clear H
+                         | [ H : ?x = ?x |- _ ] => clear H
+                         | [ H : (Some _ = None /\ _) \/ _ -> _ |- _ ]
+                           => specialize (fun pf => H (or_intror pf))
+                         | [ H : (_ /\ Some _ = None) \/ _ -> _ |- _ ]
+                           => specialize (fun pf => H (or_intror pf))
+                         | [ |- (Some _ = None /\ _) \/ _ ] => right
+                         end
+                       | progress specialize_by (exact eq_refl)
+                       | progress specialize_by_assumption
+                       | progress split_contravariant_or
+                       | solve [ eauto ]
+                       | break_innermost_match_hyps_step
+                       | break_innermost_match_step ].
+
+        Lemma subst_eq_iff {t evm1 evm2}
+          : pattern.type.subst t evm1 = pattern.type.subst t evm2
+            <-> ((pattern.type.subst t evm1 = None
+                  /\ pattern.type.subst t evm2 = None)
+                 \/ (forall t', PositiveSet.mem t' (pattern.type.collect_vars t) = true -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)).
+        Proof using Type.
+          induction t as [t|s IHs d IHd]; cbn [pattern.type.collect_vars pattern.type.subst];
+            [ pose proof (@pattern.base.subst_eq_iff t evm1 evm2) | ].
+          all: t_subst_eq_iff.
+        Qed.
+
+        Lemma subst_eq_if_mem {t evm1 evm2}
+          : (forall t', PositiveSet.mem t' (pattern.type.collect_vars t) = true -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)
+            -> pattern.type.subst t evm1 = pattern.type.subst t evm2.
+        Proof using Type. rewrite subst_eq_iff; eauto. Qed.
+
         Lemma app_forall_vars_under_forall_vars_relation
               {p k1 k2 F v1 v2 evm}
           : @pattern.type.under_forall_vars_relation p k1 k2 F v1 v2

@@ -129,14 +129,6 @@ Module Compilers.
                    | _ => k None
                    end
            end%cps.
-
-      Fixpoint collect_vars (t : type) : PositiveSet.t
-        := match t with
-           | type.var p => PositiveSet.add p PositiveSet.empty
-           | type.type_base t => PositiveSet.empty
-           | type.prod A B => PositiveSet.union (collect_vars A) (collect_vars B)
-           | type.list A => collect_vars A
-           end.
     End base.
 
     Module type.
@@ -214,12 +206,6 @@ Module Compilers.
            end%cps.
 
       Notation unify_extracted ptype etype := (unify_extracted_cps ptype etype _ id).
-
-      Fixpoint collect_vars (t : type) : PositiveSet.t
-        := match t with
-           | type.base t => base.collect_vars t
-           | type.arrow s d => PositiveSet.union (collect_vars s) (collect_vars d)
-           end.
 
       Local Notation forall_vars_body K LS EVM0
         := (fold_right
