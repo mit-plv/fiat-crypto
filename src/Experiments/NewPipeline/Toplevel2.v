@@ -3592,7 +3592,6 @@ Module Barrett256.
              | _ => econstructor
              end. }
     { cbn. cbv [muLow M].
-      About Fancy.of_prefancy_scalar.
       Ltac sub :=
         repeat match goal with
                | _ => progress intros
@@ -3604,53 +3603,15 @@ Module Barrett256.
                | |- Fancy.of_prefancy_scalar _ _ _ _ = _ => cbn; solve [eauto]
                end.
       
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
+      repeat (econstructor; [ solve [sub] | intros ]).
+      (* For the too-tight RSHI cast, we have to loosen the bounds *)
       eapply Fancy.valid_LetInZ_loosen; try solve [sub];
         [ cbn; omega | | intros; apply loosen_rshi_subgoal; solve [eauto] ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor.
-      { sub. cbn. admit.
-        (* TODO : This needs to be ADD, not ADDC 0! Fix in fancy rewrite rules! *) }
-      intros.
-      econstructor; [ solve [sub] | intros ].
-      econstructor.
-      { sub. cbn. admit.
-      (* TODO : This needs to be ADD, not ADDC 0! Fix in fancy rewrite rules! *) }
-      intros.
+      repeat (econstructor; [ solve [sub] | intros ]).
       econstructor.
       { sub. admit.
       (* TODO: this is the too-tight RSHI cast *) }
-      econstructor.
-      { sub. cbn. admit.
-        (* TODO : This needs to be ADD, not ADDC 0! Fix in fancy rewrite rules! *) }
-      intros.
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor.
-      { sub. cbn. admit.
-        (* TODO : This needs to be ADD, not ADDC 0! Fix in fancy rewrite rules! *) }
-      intros.
-      econstructor; [ solve [sub] | intros ].
-      econstructor.
-      { sub. cbn. admit.
-        (* TODO : This needs to be ADD, not ADDC 0! Fix in fancy rewrite rules! *) }
-      intros.
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
-      econstructor; [ solve [sub] | intros ].
+      repeat (econstructor; [ solve [sub] | intros ]).
       econstructor. sub. }
     { cbn - [barrett_red256].
       cbv [id].
