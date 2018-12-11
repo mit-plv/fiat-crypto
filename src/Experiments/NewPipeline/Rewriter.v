@@ -250,6 +250,52 @@ Module Compilers.
              (List.rev (PositiveSet.elements p))
              (PositiveMap.empty _).
 
+      Fixpoint lam_forall_vars_gen {k : EvarMap -> Type}
+               (f : forall evm, k evm)
+               (ls : list PositiveMap.key)
+        : forall evm0, forall_vars_body k ls evm0
+        := match ls return forall evm0, forall_vars_body k ls evm0 with
+           | nil => f
+           | cons x xs => fun evm t => @lam_forall_vars_gen k f xs _
+           end.
+
+      Definition lam_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
+                 (f : forall evm, k evm)
+        : forall_vars p k
+        := @lam_forall_vars_gen k f _ _.
+
+      Fixpoint app_forall_vars_gen {k : EvarMap -> Type}
+                 (evm : EvarMap)
+                 (ls : list PositiveMap.key)
+        : forall evm0, forall_vars_body k ls evm0
+                       -> option (k (fold_right (fun i k evm'
+                                                 => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
+                                                (fun evm => evm)
+                                                ls
+                                                evm0))
+        := match ls return forall evm0, forall_vars_body k ls evm0
+                                        -> option (k (fold_right (fun i k evm'
+                                                                  => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
+                                                                 (fun evm => evm)
+                                                                 ls
+                                                                 evm0)) with
+           | nil => fun evm0 val => Some val
+           | cons x xs
+             => match PositiveMap.find x evm as xt
+                      return (forall evm0,
+                                 (forall t, fold_right _ k xs (PositiveMap.add x t evm0))
+                                 -> option (k (fold_right
+                                                 _ _ xs
+                                                 match xt with
+                                                 | Some v => PositiveMap.add x v evm0
+                                                 | None => evm0
+                                                 end)))
+                with
+                | Some v => fun evm0 val => @app_forall_vars_gen k evm xs _ (val v)
+                | None => fun evm0 val => None
+                end
+           end.
+
       Definition app_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
                  (f : forall_vars p k)
                  (evm : EvarMap)
@@ -258,42 +304,11 @@ Module Compilers.
                                 (fun evm => evm)
                                 (List.rev (PositiveSet.elements p))
                                 (PositiveMap.empty _)))
-        := list_rect
-             (fun ls
-              => forall evm0, forall_vars_body k ls evm0
-                  -> option (k (fold_right (fun i k evm'
-                                            => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
-                                           (fun evm => evm)
-                                           ls
-                                           evm0)))
-             (fun evm0 val => Some val)
-             (fun x xs rec
-              => match PositiveMap.find x evm as xt
-                       return (forall evm0,
-                                  (forall t, fold_right _ k xs (PositiveMap.add x t evm0))
-                                  -> option (k (fold_right
-                                                  _ _ xs
-                                                  match xt with
-                                                  | Some v => PositiveMap.add x v evm0
-                                                  | None => evm0
-                                                  end)))
-                 with
-                 | Some v => fun evm0 val => rec _ (val v)
-                 | None => fun evm0 val => None
-                 end)
+        := @app_forall_vars_gen
+             k evm
              (List.rev (PositiveSet.elements p))
              (PositiveMap.empty _)
              f.
-
-      Definition lam_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
-                 (f : forall evm, k evm)
-        : forall_vars p k
-        := list_rect
-             (fun ls => forall evm0, forall_vars_body k ls evm0)
-             f
-             (fun x xs rec evm t => rec _)
-             _
-             _.
     End type.
 
     Inductive pattern {ident : type -> Type} : type -> Type :=

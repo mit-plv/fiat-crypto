@@ -305,6 +305,29 @@ Module Compilers.
 
         Ltac unify_extracted_cps_id :=
           cps_id_with_option (@unify_extracted_cps_id _ _ _ _).
+
+        Lemma mem_collect_vars_subst_Some_find {x t evm t'}
+              (Hmem : PositiveSet.mem x (pattern.base.collect_vars t) = true)
+              (H : pattern.base.subst t evm = Some t')
+          : PositiveMap.find x evm <> None.
+        Proof using Type.
+          revert t' H; induction t; intros.
+          all: repeat first [ progress cbn [pattern.base.collect_vars pattern.base.subst] in *
+                            | progress cbv [PositiveSetFacts.eqb Option.bind option_map] in *
+                            | progress subst
+                            | progress inversion_option
+                            | progress specialize_by_assumption
+                            | rewrite PositiveSetFacts.add_b in *
+                            | rewrite PositiveSetFacts.empty_b in *
+                            | rewrite PositiveSetFacts.union_b in *
+                            | rewrite Bool.orb_true_iff in *
+                            | congruence
+                            | break_innermost_match_hyps_step
+                            | progress destruct_head'_or
+                            | match goal with
+                              | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                              end ].
+        Qed.
       End base.
 
       Module type.
@@ -560,7 +583,7 @@ Module Compilers.
               rewrite <- H''.
               clear -H_NoDup.
               match goal with
-              | [ |- context[list_rect _ _ _ _ _ (?f ?t)] ]
+              | [ |- context[pattern.type.app_forall_vars_gen _ _ _ (?f ?t)] ]
                 => generalize (f t); clear f
               end.
               intro f.
@@ -571,7 +594,7 @@ Module Compilers.
                      generalize dependent (PositiveMap.add x v evm); clear evm
               end.
               revert dependent evm.
-              induction xs as [|x' xs IHxs]; cbn [list_rect fold_right] in *.
+              induction xs as [|x' xs IHxs]; cbn [pattern.type.app_forall_vars_gen fold_right] in *.
               { intros; eliminate_hprop_eq; reflexivity. }
               { repeat first [ progress subst
                              | progress destruct_head'_and
@@ -613,7 +636,7 @@ Module Compilers.
           clear p.
           intros ls m.
           revert k1 F f m.
-          induction ls as [|l ls IHls]; cbn [list_rect fold_right fold_left List.length] in *; intros.
+          induction ls as [|l ls IHls]; cbn [pattern.type.lam_forall_vars_gen list_rect fold_right fold_left List.length] in *; intros.
           { split; intro H; [ intros [|] | specialize (H nil eq_refl) ]; cbn [List.length List.combine fold_right] in *; intros; try discriminate; assumption. }
           { setoid_rewrite IHls; clear IHls.
             split; intro H; [ intros [|l' ls'] Hls'; [ | specialize (H l' ls') ]
@@ -629,11 +652,36 @@ Module Compilers.
           revert v; cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars].
           generalize (rev (PositiveSet.elements p)); clear p; intro ls.
           generalize (PositiveMap.empty base.type).
-          induction ls as [|x xs IHxs]; cbn [list_rect fold_right]; [ congruence | ].
+          induction ls as [|x xs IHxs]; cbn [pattern.type.app_forall_vars_gen pattern.type.lam_forall_vars_gen fold_right]; [ congruence | ].
           intros t v H; eapply IHxs; clear IHxs.
           rewrite <- H.
           break_innermost_match; [ | now discriminate ].
           reflexivity.
+        Qed.
+
+        Lemma mem_collect_vars_subst_Some_find {x t evm t'}
+              (Hmem : PositiveSet.mem x (pattern.type.collect_vars t) = true)
+              (H : pattern.type.subst t evm = Some t')
+          : PositiveMap.find x evm <> None.
+        Proof using Type.
+          (* Coq's dependency tracking is broken and erroneously claims that [base.mem_collect_vars_subst_Some_find] depends on [type_base] if we wait too long to use it *)
+          pose proof (@base.mem_collect_vars_subst_Some_find).
+          revert t' H; induction t as [|s IHs d IHd]; intros.
+          all: repeat first [ progress cbn [pattern.type.collect_vars pattern.type.subst] in *
+                            | progress cbv [option_map Option.bind] in *
+                            | rewrite PositiveSetFacts.union_b in *
+                            | rewrite Bool.orb_true_iff in *
+                            | progress specialize_by_assumption
+                            | progress inversion_option
+                            | progress subst
+                            | break_innermost_match_hyps_step
+                            | progress destruct_head'_or
+                            | eassumption
+                            | reflexivity
+                            | solve [ eauto ]
+                            | match goal with
+                              | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                              end ].
         Qed.
       End type.
     End pattern.
@@ -2139,6 +2187,39 @@ Module Compilers.
             := pattern.type.lam_forall_vars
                  (fun evm
                   => pattern_default_interp' p evm id).
+
+          Lemma app_lam_forall_vars_not_None_iff {k f p} {args}
+            : (@pattern.type.app_forall_vars p k (pattern.type.lam_forall_vars f) args <> None)
+              <-> (forall x, PositiveSet.mem x p = true -> PositiveMap.find x args <> None).
+          Proof.
+            setoid_rewrite <- PositiveSetFacts.In_elements_mem_iff; setoid_rewrite List.in_rev.
+            cbv [pattern.type.app_forall_vars pattern.type.lam_forall_vars].
+            generalize (PositiveMap.empty base.type).
+            induction (List.rev (PositiveSet.elements p)) as [|x xs IHxs];
+              cbn [pattern.type.app_forall_vars_gen pattern.type.lam_forall_vars_gen List.In].
+            { intuition congruence. }
+            { repeat first [ progress cbn [List.In] in *
+                           | progress specialize_by_assumption
+                           | progress split_contravariant_or
+                           | progress destruct_head'_ex
+                           | progress inversion_option
+                           | progress subst
+                           | progress intros
+                           | progress destruct_head'_or
+                           | solve [ eauto ]
+                           | match goal with
+                             | [ H : forall x, _ = x -> _ |- _ ] => specialize (H _ eq_refl)
+                             | [ H : ?x <> None |- _ ]
+                               => assert (exists v, x = Some v) by (destruct x; [ eexists; reflexivity | congruence ]); clear H
+                             | [ |- ?x <> None <-> ?RHS ]
+                               => let v := match x with context[match ?v with None => _ | _ => _ end] => v end in
+                                  let f := match (eval pattern v in x) with ?f _ => f end in
+                                  change (f v <> None <-> RHS); destruct v eqn:?
+                             | [ H : forall t, _ <-> _ |- _ ] => setoid_rewrite H; clear H
+                             end
+                           | apply conj
+                           | congruence ]. }
+          Qed.
 
           Definition deep_rewrite_ruleTP_gen_good_relation
                      {should_do_again with_opt under_lets : bool} {t}
