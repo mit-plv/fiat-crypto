@@ -31,4 +31,19 @@ Module PositiveSetFacts.
     rewrite !elements_spec1.
     apply Hp.
   Qed.
+
+  Lemma In_elements_mem_iff {x p}
+    : List.In x (elements p) <-> PositiveSet.mem x p = true.
+  Proof using Type.
+    rewrite elements_b, existsb_exists; cbv [eqb].
+    repeat first [ apply conj
+                 | progress intros
+                 | progress destruct_head'_ex
+                 | progress destruct_head'_and
+                 | eexists
+                 | eassumption
+                 | break_innermost_match_step
+                 | break_innermost_match_hyps_step
+                 | congruence ].
+  Qed.
 End PositiveSetFacts.
