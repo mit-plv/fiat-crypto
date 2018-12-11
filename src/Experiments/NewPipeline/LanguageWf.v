@@ -47,6 +47,19 @@ Module Compilers.
       Context {base_type} {interp_base_type : base_type -> Type}.
       Local Notation eqv := (@type.related base_type interp_base_type (fun _ => eq)).
 
+      Lemma eqv_iff_eq_of_funext
+            (funext : forall A B (f g : type.interp interp_base_type A -> type.interp interp_base_type B),
+                (forall x, f x = g x)
+                -> f = g)
+            {t f g}
+        : @eqv t f g <-> f = g.
+      Proof using Type.
+        induction t as [|s IHs d IHd]; cbn [type.related]; cbv [respectful]; [ reflexivity | ].
+        split; intro H.
+        { apply funext; intro; apply IHd, H, IHs; reflexivity. }
+        { intros; apply IHd; subst; f_equal; apply IHs; assumption. }
+      Qed.
+
       Local Instance related_Symmetric {t} {R : forall t, relation (interp_base_type t)}
              {R_sym : forall t, Symmetric (R t)}
         : Symmetric (@type.related base_type interp_base_type R t) | 100.
