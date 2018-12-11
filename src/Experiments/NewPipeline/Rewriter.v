@@ -2008,8 +2008,28 @@ Module Compilers.
         := @assemble_identifier_rewriters arith_with_casts_dtree arith_with_casts_all_rewrite_rules do_again t idc.
 
       Section fancy.
-        Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z).
+        Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
+                (value_range flag_range : zrange).
         Definition fancy_rewrite_rules : rewrite_rulesT
+          := [].
+
+        Local Notation pcst v := (#pattern.ident.Z_cast @ v)%pattern.
+        Local Notation pcst2 v := (#pattern.ident.Z_cast2 @ v)%pattern.
+
+        Local Coercion ZRange.constant : Z >-> zrange. (* for ease of use with sanity-checking bounds *)
+        Let bounds1_good (f : zrange -> zrange) (output x_bs : zrange)
+          := is_tighter_than_bool (f (ZRange.normalize x_bs)) (ZRange.normalize output).
+        Let bounds2_good (f : zrange -> zrange -> zrange) (output x_bs y_bs : zrange)
+          := is_tighter_than_bool (f (ZRange.normalize x_bs) (ZRange.normalize y_bs)) (ZRange.normalize output).
+        Let range_in_bitwidth r s
+          := is_tighter_than_bool (ZRange.normalize r) r[0~>s-1]%zrange.
+        Local Notation shiftl_good := (bounds2_good ZRange.shiftl).
+        Local Notation shiftr_good := (bounds2_good ZRange.shiftr).
+        Local Notation land_good := (bounds2_good ZRange.land).
+        Local Notation mul_good := (bounds2_good ZRange.mul).
+        Local Notation cc_m_good output s := (bounds1_good (ZRange.cc_m s) output).
+
+        Definition fancy_with_casts_rewrite_rules : rewrite_rulesT
           := [
               (*
 (Z.add_get_carry_concrete 2^256) @@ (?x, ?y << 128) --> (add 128) @@ (x, y)
@@ -2019,20 +2039,42 @@ Module Compilers.
 (Z.add_get_carry_concrete 2^256) @@ (?x, ?y)        --> (add 0) @@ (y, x)
 *)
               make_rewriteo
-                (#pattern.ident.Z_add_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                (fun s x y offset => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??' @ (pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ))))
+                (fun '((r1, r2)%core) s rx x rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) offset) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ) @ ??)
-                  (fun s y offset x => #(ident.fancy_add (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ #?ℤ @ (pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ))))
+                  (fun '((r1, r2)%core) s xx rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) offset) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+
               ; make_rewriteo
-                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun s x y offset => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ (pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)) @ ??'))
+                  (fun '((r1, r2)%core) s rshiftl ry y offset rx x => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) offset) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ) @ ??)
-                  (fun s y offset x => #(ident.fancy_add (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ (pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)) @ #?ℤ))
+                  (fun '((r1, r2)%core) s rshiftl ry y offset xx => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) offset) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+
               ; make_rewriteo
-                  (#pattern.ident.Z_add_get_carry @ #?ℤ @ ?? @ ??)
-                  (fun s x y => #(ident.fancy_add (Z.log2 s) 0) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??' @ (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))))
+                  (fun '((r1, r2)%core) s rx x rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) (-offset)) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ #?ℤ @ (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))))
+                  (fun '((r1, r2)%core) s xx rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) (-offset)) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) @ ??'))
+                  (fun '((r1, r2)%core) s rshiftr ry y offset rx x => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) (-offset)) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) @ #?ℤ))
+                  (fun '((r1, r2)%core) s rshiftr ry y offset xx => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) (-offset)) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??' @ ??'))
+                  (fun '((r1, r2)%core) s rx x ry y => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) 0) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ ??' @ #?ℤ))
+                  (fun '((r1, r2)%core) s rx x yy => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) 0) @ (cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_get_carry @ #?ℤ @ #?ℤ @ ??'))
+                  (fun '((r1, r2)%core) s xx ry y => cst2 (r1, r2)%core (#(ident.fancy_add (Z.log2 s) 0) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
 (*
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (addc 128) @@ (c, x, y)
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x << 128, ?y) --> (addc 128) @@ (c, y, x)
@@ -2041,69 +2083,217 @@ Module Compilers.
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y)        --> (addc 0) @@ (c, y, x)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                  (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rc c rx x rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (cst rc c, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ) @ ??)
-                  (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) offset) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s cc rx x rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (##cc, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun s c x y offset => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rc c xx rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (cst rc c, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ) @ ??)
-                  (fun s c y offset x => #(ident.fancy_addc (Z.log2 s) (-offset)) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s cc xx rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (##cc, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+
               ; make_rewriteo
-                  (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ?? @ ?? @ ??)
-                  (fun s c x y => #(ident.fancy_addc (Z.log2 s) 0) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ) @ ??'))
+                  (fun '((r1, r2)%core) s rc c rshiftl ry y offset rx x => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (cst rc c, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ) @ ??'))
+                  (fun '((r1, r2)%core) s cc rshiftl ry y offset rx x => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (##cc, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ) @ #?ℤ))
+                  (fun '((r1, r2)%core) s rc c rshiftl ry y offset xx => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (cst rc c, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ) @ #?ℤ))
+                  (fun '((r1, r2)%core) s cc rshiftl ry y offset xx => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) offset) @ (##cc, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rc c rx x rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (cst rc c, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s cc rx x rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (##cc, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rc c xx rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (cst rc c, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s cc xx rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (##cc, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) @ ??'))
+                  (fun '((r1, r2)%core) s rc c rshiftr ry y offset rx x => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (cst rc c, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) @ ??'))
+                  (fun '((r1, r2)%core) s cc rshiftr ry y offset rx x => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (##cc, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) @ #?ℤ))
+                  (fun '((r1, r2)%core) s rc c rshiftr ry y offset xx => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (cst rc c, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) @ #?ℤ))
+                  (fun '((r1, r2)%core) s cc rshiftr ry y offset xx => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) (-offset)) @ (##cc, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ ??' @ ??'))
+                  (fun '((r1, r2)%core) s rc c rx x ry y => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (cst rc c, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??' @ ??'))
+                  (fun '((r1, r2)%core) s cc rx x ry y => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (##cc, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ #?ℤ @ ??'))
+                  (fun '((r1, r2)%core) s rc c xx ry y => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (cst rc c, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ ??' @ #?ℤ))
+                  (fun '((r1, r2)%core) s rc c rx x yy => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (cst rc c, cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ #?ℤ @ ??'))
+                  (fun '((r1, r2)%core) s cc xx ry y => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (##cc, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ #?ℤ @ ??' @ #?ℤ))
+                  (fun '((r1, r2)%core) s cc rx x yy => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (##cc, cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_add_with_get_carry @ #?ℤ @ ??' @ #?ℤ @ #?ℤ))
+                  (fun '((r1, r2)%core) s rc c xx yy => cst2 (r1, r2)%core (#(ident.fancy_addc (Z.log2 s) 0) @ (cst rc c, ##xx, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
 (*
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y << 128) --> (sub 128) @@ (x, y)
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y >> 128) --> (sub (- 128)) @@ (x, y)
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y)        --> (sub 0) @@ (y, x)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                  (fun s x y offset => #(ident.fancy_sub (Z.log2 s) offset) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rx x rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) offset) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun s x y offset => #(ident.fancy_sub (Z.log2 s) (-offset)) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s xx rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) offset) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ?? @ ??)
-                  (fun s x y => #(ident.fancy_sub (Z.log2 s) 0) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rx x rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) (-offset)) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s xx rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) (-offset)) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??' @ ??'))
+                  (fun '((r1, r2)%core) s rx x ry y => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) 0) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ #?ℤ @ ??'))
+                  (fun '((r1, r2)%core) s xx ry y => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) 0) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_get_borrow @ #?ℤ @ ??' @ #?ℤ))
+                  (fun '((r1, r2)%core) s rx x yy => cst2 (r1, r2)%core (#(ident.fancy_sub (Z.log2 s) 0) @ (cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
 (*
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (subb 128) @@ (c, x, y)
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y >> 128) --> (subb (- 128)) @@ (c, x, y)
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y)        --> (subb 0) @@ (c, y, x)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftl @ ?? @ #?ℤ))
-                  (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) offset) @ (b, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rb b rx x rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) offset) @ (cst rb b, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ?? @ ?? @ (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun s b x y offset => #(ident.fancy_subb (Z.log2 s) (-offset)) @ (b, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s bb rx x rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) offset) @ (##bb, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
               ; make_rewriteo
-                  (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ?? @ ?? @ ??)
-                  (fun s b x y => #(ident.fancy_subb (Z.log2 s) 0) @ (b, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rb b xx rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) offset) @ (cst rb b, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftl @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s bb xx rshiftl ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) offset) @ (##bb, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftl_good rshiftl ry offset && range_in_bitwidth rshiftl s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rb b rx x rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) (-offset)) @ (cst rb b, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ ??' @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s bb rx x rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) (-offset)) @ (##bb, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s rb b xx rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) (-offset)) @ (cst rb b, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ #?ℤ @ pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ)))
+                  (fun '((r1, r2)%core) s bb xx rshiftr ry y offset => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) (-offset)) @ (##bb, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && shiftr_good rshiftr ry offset && range_in_bitwidth rshiftr s)
+
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ ??' @ ??'))
+                  (fun '((r1, r2)%core) s rb b rx x ry y => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (cst rb b, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ ??' @ ??'))
+                  (fun '((r1, r2)%core) s bb rx x ry y => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (##bb, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ #?ℤ @ ??'))
+                  (fun '((r1, r2)%core) s rb b xx ry y => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (cst rb b, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ ??' @ #?ℤ))
+                  (fun '((r1, r2)%core) s rb b rx x yy => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (cst rb b, cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ #?ℤ @ ??'))
+                  (fun '((r1, r2)%core) s bb xx ry y => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (##bb, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && range_in_bitwidth ry s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ #?ℤ @ ??' @ #?ℤ))
+                  (fun '((r1, r2)%core) s bb rx x yy => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (##bb, cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
+              ; make_rewriteo
+                  (pcst2 (#pattern.ident.Z_sub_with_get_borrow @ #?ℤ @ ??' @ #?ℤ @ #?ℤ))
+                  (fun '((r1, r2)%core) s rb b xx yy => cst2 (r1, r2)%core (#(ident.fancy_subb (Z.log2 s) 0) @ (cst rb b, ##xx, ##yy))  when  (s =? 2^Z.log2 s) && range_in_bitwidth yy s)
+
               (*(Z.rshi_concrete 2^256 ?n) @@ (?c, ?x, ?y) --> (rshi n) @@ (x, y)*)
               ; make_rewriteo
-                  (#pattern.ident.Z_rshi @ #?ℤ @ ?? @ ?? @ #?ℤ)
-                  (fun s x y n => #(ident.fancy_rshi (Z.log2 s) n) @ (x, y)  when  s =? 2^Z.log2 s)
+                  (pcst (#pattern.ident.Z_rshi @ #?ℤ @ ??' @ ??' @ #?ℤ))
+                  (fun r s rx x ry y n => cst r (#(ident.fancy_rshi (Z.log2 s) n) @ (cst rx x, cst ry y))  when  (s =? 2^Z.log2 s))
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_rshi @ #?ℤ @ #?ℤ @ ??' @ #?ℤ))
+                  (fun r s xx ry y n => cst r (#(ident.fancy_rshi (Z.log2 s) n) @ (##xx, cst ry y))  when  (s =? 2^Z.log2 s))
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_rshi @ #?ℤ @ ??' @ #?ℤ @ #?ℤ))
+                  (fun r s rx x yy n => cst r (#(ident.fancy_rshi (Z.log2 s) n) @ (cst rx x, ##yy))  when  (s =? 2^Z.log2 s))
 (*
 Z.zselect @@ (Z.cc_m_concrete 2^256 ?c, ?x, ?y) --> selm @@ (c, x, y)
 Z.zselect @@ (?c &' 1, ?x, ?y)                  --> sell @@ (c, x, y)
 Z.zselect @@ (?c, ?x, ?y)                       --> selc @@ (c, x, y)
  *)
               ; make_rewriteo
-                  (#pattern.ident.Z_zselect @ (#pattern.ident.Z_cc_m @ #?ℤ @ ??) @ ?? @ ??)
-                  (fun s c x y => #(ident.fancy_selm (Z.log2 s)) @ (c, x, y)  when  s =? 2^Z.log2 s)
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_cc_m @ #?ℤ @ ??') @ ??' @ ??'))
+                  (fun r rccm s rc c rx x ry y => cst r (#(ident.fancy_selm (Z.log2 s)) @ (cst rc c, cst rx x, cst ry y))  when  (s =? 2^Z.log2 s) && cc_m_good rccm s rc)
               ; make_rewriteo
-                  (#pattern.ident.Z_zselect @ (#pattern.ident.Z_land @ #?ℤ @ ??) @ ?? @ ??)
-                  (fun mask c x y => #ident.fancy_sell @ (c, x, y)  when  mask =? 1)
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_cc_m @ #?ℤ @ ??') @ #?ℤ @ ??'))
+                  (fun r rccm s rc c xx ry y => cst r (#(ident.fancy_selm (Z.log2 s)) @ (cst rc c, ##xx, cst ry y))  when  (s =? 2^Z.log2 s) && cc_m_good rccm s rc)
               ; make_rewriteo
-                  (#pattern.ident.Z_zselect @ (#pattern.ident.Z_land @ ?? @ #?ℤ) @ ?? @ ??)
-                  (fun c mask x y => #ident.fancy_sell @ (c, x, y)  when  mask =? 1)
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_cc_m @ #?ℤ @ ??') @ ??' @ #?ℤ))
+                  (fun r rccm s rc c rx x yy => cst r (#(ident.fancy_selm (Z.log2 s)) @ (cst rc c, cst rx x, ##yy))  when  (s =? 2^Z.log2 s) && cc_m_good rccm s rc)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_cc_m @ #?ℤ @ ??') @ #?ℤ @ #?ℤ))
+                  (fun r rccm s rc c xx yy => cst r (#(ident.fancy_selm (Z.log2 s)) @ (cst rc c, ##xx, ##yy))  when  (s =? 2^Z.log2 s) && cc_m_good rccm s rc)
+
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ #?ℤ @ ??') @ ??' @ ??'))
+                  (fun r rland mask rc c rx x ry y => cst r (#ident.fancy_sell @ (cst rc c, cst rx x, cst ry y))  when  (mask =? 1) && land_good rland mask rc)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ #?ℤ @ ??') @ #?ℤ @ ??'))
+                  (fun r rland mask rc c xx ry y => cst r (#ident.fancy_sell @ (cst rc c, ##xx, cst ry y))  when  (mask =? 1) && land_good rland mask rc)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ #?ℤ @ ??') @ ??' @ #?ℤ))
+                  (fun r rland mask rc c rx x yy => cst r (#ident.fancy_sell @ (cst rc c, cst rx x, ##yy))  when  (mask =? 1) && land_good rland mask rc)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ #?ℤ @ ??') @ #?ℤ @ #?ℤ))
+                  (fun r rland mask rc c xx yy => cst r (#ident.fancy_sell @ (cst rc c, ##xx, ##yy))  when  (mask =? 1) && land_good rland mask rc)
+
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) @ ??' @ ??'))
+                  (fun r rland rc c mask rx x ry y => cst r (#ident.fancy_sell @ (cst rc c, cst rx x, cst ry y))  when  (mask =? 1) && land_good rland rc mask)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) @ #?ℤ @ ??'))
+                  (fun r rland rc c mask xx ry y => cst r (#ident.fancy_sell @ (cst rc c, ##xx, cst ry y))  when  (mask =? 1) && land_good rland rc mask)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) @ ??' @ #?ℤ))
+                  (fun r rland rc c mask rx x yy => cst r (#ident.fancy_sell @ (cst rc c, cst rx x, ##yy))  when  (mask =? 1) && land_good rland rc mask)
+              ; make_rewriteo
+                  (pcst (#pattern.ident.Z_zselect @ pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) @ #?ℤ @ #?ℤ))
+                  (fun r rland rc c mask xx yy => cst r (#ident.fancy_sell @ (cst rc c, ##xx, ##yy))  when  (mask =? 1) && land_good rland rc mask)
+
               ; make_rewrite
-                  (#pattern.ident.Z_zselect @ ?? @ ?? @ ??)
-                  (fun c x y => #ident.fancy_selc @ (c, x, y))
+                  (pcst (#pattern.ident.Z_zselect @ ?? @ ?? @ ??))
+                  (fun r c x y => cst r (#ident.fancy_selc @ (c, x, y)))
+
 (*Z.add_modulo @@ (?x, ?y, ?m) --> addm @@ (x, y, m)*)
               ; make_rewrite
                   (#pattern.ident.Z_add_modulo @ ?? @ ?? @ ??)
@@ -2116,73 +2306,79 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
  *)
               (* literal on left *)
               ; make_rewriteo
-                  (#?ℤ * (#pattern.ident.Z_land @ ?? @ #?ℤ))
-                  (fun x y mask => let s := (2*Z.log2_up mask)%Z in x <- invert_low s x; #(ident.fancy_mulll s) @ (##x, y)  when  (mask =? 2^(s/2)-1))
+                  (#?ℤ *' pcst (#pattern.ident.Z_land @ ??' @ #?ℤ))
+                  (fun r x rland ry y mask => let s := (2*Z.log2_up mask)%Z in x <- invert_low s x; cst r (#(ident.fancy_mulll s) @ (##x, cst ry y))  when  (mask =? 2^(s/2)-1) && land_good rland ry mask)
               ; make_rewriteo
-                  (#?ℤ * (#pattern.ident.Z_land @ #?ℤ @ ??))
-                  (fun x mask y => let s := (2*Z.log2_up mask)%Z in x <- invert_low s x; #(ident.fancy_mulll s) @ (##x, y)  when  (mask =? 2^(s/2)-1))
+                  (#?ℤ *' pcst (#pattern.ident.Z_land @ #?ℤ @ ??'))
+                  (fun r x rland mask ry y => let s := (2*Z.log2_up mask)%Z in x <- invert_low s x; cst r (#(ident.fancy_mulll s) @ (##x, cst ry y))  when  (mask =? 2^(s/2)-1) && land_good rland mask ry)
               ; make_rewriteo
-                  (#?ℤ * (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun x y offset => let s := (2*offset)%Z in x <- invert_low s x; #(ident.fancy_mullh s) @ (##x, y))
+                  (#?ℤ *' pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))
+                  (fun r x rshiftr ry y offset => let s := (2*offset)%Z in x <- invert_low s x; cst r (#(ident.fancy_mullh s) @ (##x, cst ry y))  when  shiftr_good rshiftr ry offset)
               ; make_rewriteo
-                  (#?ℤ * (#pattern.ident.Z_land @ #?ℤ @ ??))
-                  (fun x mask y => let s := (2*Z.log2_up mask)%Z in x <- invert_high s x; #(ident.fancy_mulhl s) @ (##x, y)  when  mask =? 2^(s/2)-1)
+                  (#?ℤ *' pcst (#pattern.ident.Z_land @ #?ℤ @ ??'))
+                  (fun r x rland mask ry y => let s := (2*Z.log2_up mask)%Z in x <- invert_high s x; cst r (#(ident.fancy_mulhl s) @ (##x, cst ry y))  when  (mask =? 2^(s/2)-1) && land_good rland mask ry)
               ; make_rewriteo
-                  (#?ℤ * (#pattern.ident.Z_land @ ?? @ #?ℤ))
-                  (fun x y mask => let s := (2*Z.log2_up mask)%Z in x <- invert_high s x; #(ident.fancy_mulhl s) @ (##x, y)  when  mask =? 2^(s/2)-1)
+                  (#?ℤ *' pcst (#pattern.ident.Z_land @ ??' @ #?ℤ))
+                  (fun r x rland ry y mask => let s := (2*Z.log2_up mask)%Z in x <- invert_high s x; cst r (#(ident.fancy_mulhl s) @ (##x, cst ry y))  when  (mask =? 2^(s/2)-1) && land_good rland ry mask)
               ; make_rewriteo
-                  (#?ℤ * (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun x y offset => let s := (2*offset)%Z in x <- invert_high s x; #(ident.fancy_mulhh s) @ (##x, y))
+                  (#?ℤ *' pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))
+                  (fun r x rshiftr ry y offset => let s := (2*offset)%Z in x <- invert_high s x; cst r (#(ident.fancy_mulhh s) @ (##x, cst ry y))  when  shiftr_good rshiftr ry offset)
               (* literal on right *)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ #?ℤ @ ??) * #?ℤ)
-                  (fun mask x y => let s := (2*Z.log2_up mask)%Z in y <- invert_low s y; #(ident.fancy_mulll s) @ (x, ##y)  when  (mask =? 2^(s/2)-1))
+                  (pcst (#pattern.ident.Z_land @ #?ℤ @ ??') *' #?ℤ)
+                  (fun r rland mask rx x y => let s := (2*Z.log2_up mask)%Z in y <- invert_low s y; cst r (#(ident.fancy_mulll s) @ (cst rx x, ##y))  when  (mask =? 2^(s/2)-1) && land_good rland mask rx)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ ?? @ #?ℤ) * #?ℤ)
-                  (fun x mask y => let s := (2*Z.log2_up mask)%Z in y <- invert_low s y; #(ident.fancy_mulll s) @ (x, ##y)  when  (mask =? 2^(s/2)-1))
+                  (pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) *' #?ℤ)
+                  (fun r rland rx x mask y => let s := (2*Z.log2_up mask)%Z in y <- invert_low s y; cst r (#(ident.fancy_mulll s) @ (cst rx x, ##y))  when  (mask =? 2^(s/2)-1) && land_good rland rx mask)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ #?ℤ @ ??) * #?ℤ)
-                  (fun mask x y => let s := (2*Z.log2_up mask)%Z in y <- invert_high s y; #(ident.fancy_mullh s) @ (x, ##y)  when  mask =? 2^(s/2)-1)
+                  (pcst (#pattern.ident.Z_land @ #?ℤ @ ??') *' #?ℤ)
+                  (fun r rland mask rx x y => let s := (2*Z.log2_up mask)%Z in y <- invert_high s y; cst r (#(ident.fancy_mullh s) @ (cst rx x, ##y))  when  (mask =? 2^(s/2)-1) && land_good rland mask rx)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ ?? @ #?ℤ) * #?ℤ)
-                  (fun x mask y => let s := (2*Z.log2_up mask)%Z in y <- invert_high s y; #(ident.fancy_mullh s) @ (x, ##y)  when  mask =? 2^(s/2)-1)
+                  (pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) *' #?ℤ)
+                  (fun r rland rx x mask y => let s := (2*Z.log2_up mask)%Z in y <- invert_high s y; cst r (#(ident.fancy_mullh s) @ (cst rx x, ##y))  when  (mask =? 2^(s/2)-1) && land_good rland rx mask)
               ; make_rewriteo
-                  ((#pattern.ident.Z_shiftr @ ?? @ #?ℤ) * #?ℤ)
-                  (fun x offset y => let s := (2*offset)%Z in y <- invert_low s y; #(ident.fancy_mulhl s) @ (x, ##y))
+                  (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) *' #?ℤ)
+                  (fun r rshiftr rx x offset y => let s := (2*offset)%Z in y <- invert_low s y; cst r (#(ident.fancy_mulhl s) @ (cst rx x, ##y))  when  shiftr_good rshiftr rx offset)
               ; make_rewriteo
-                  ((#pattern.ident.Z_shiftr @ ?? @ #?ℤ) * #?ℤ)
-                  (fun x offset y => let s := (2*offset)%Z in y <- invert_high s y; #(ident.fancy_mulhh s) @ (x, ##y))
+                  (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) *' #?ℤ)
+                  (fun r rshiftr rx x offset y => let s := (2*offset)%Z in y <- invert_high s y; cst r (#(ident.fancy_mulhh s) @ (cst rx x, ##y))  when  shiftr_good rshiftr rx offset)
               (* no literal *)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ #?ℤ @ ??) * (#pattern.ident.Z_land @ #?ℤ @ ??))
-                  (fun mask1 x mask2 y => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
+                  (pcst (#pattern.ident.Z_land @ #?ℤ @ ??') *' pcst (#pattern.ident.Z_land @ #?ℤ @ ??'))
+                  (fun r rland1 mask1 rx x rland2 mask2 ry y => let s := (2*Z.log2_up mask1)%Z in cst r (#(ident.fancy_mulll s) @ (cst rx x, cst ry y))  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1) && land_good rland1 mask1 rx && land_good rland2 mask2 ry)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ ?? @ #?ℤ) * (#pattern.ident.Z_land @ #?ℤ @ ??))
-                  (fun x mask1 mask2 y => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
+                  (pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) *' pcst (#pattern.ident.Z_land @ #?ℤ @ ??'))
+                  (fun r rland1 rx x mask1 rland2 mask2 ry y => let s := (2*Z.log2_up mask1)%Z in cst r (#(ident.fancy_mulll s) @ (cst rx x, cst ry y))  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1) && land_good rland1 rx mask1 && land_good rland2 mask2 ry)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ #?ℤ @ ??) * (#pattern.ident.Z_land @ ?? @ #?ℤ))
-                  (fun mask1 x y mask2 => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
+                  (pcst (#pattern.ident.Z_land @ #?ℤ @ ??') *' pcst (#pattern.ident.Z_land @ ??' @ #?ℤ))
+                  (fun r rland1 mask1 rx x rland2 ry y mask2 => let s := (2*Z.log2_up mask1)%Z in cst r (#(ident.fancy_mulll s) @ (cst rx x, cst ry y))  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1) && land_good rland1 mask1 rx && land_good rland2 ry mask2)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ ?? @ #?ℤ) * (#pattern.ident.Z_land @ ?? @ #?ℤ))
-                  (fun x mask1 y mask2 => let s := (2*Z.log2_up mask1)%Z in #(ident.fancy_mulll s) @ (x, y)  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1))
+                  (pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) *' pcst (#pattern.ident.Z_land @ ??' @ #?ℤ))
+                  (fun r rland1 rx x mask1 rland2 ry y mask2 => let s := (2*Z.log2_up mask1)%Z in cst r (#(ident.fancy_mulll s) @ (cst rx x, cst ry y))  when  (mask1 =? 2^(s/2)-1) && (mask2 =? 2^(s/2)-1) && land_good rland1 rx mask1 && land_good rland2 ry mask2)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ #?ℤ @ ??) * (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun mask x y offset => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
+                  (pcst (#pattern.ident.Z_land @ #?ℤ @ ??') *' pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))
+                  (fun r rland1 mask rx x rshiftr2 ry y offset => let s := (2*offset)%Z in cst r (#(ident.fancy_mullh s) @ (cst rx x, cst ry y))  when  (mask =? 2^(s/2)-1) && land_good rland1 mask rx && shiftr_good rshiftr2 ry offset)
               ; make_rewriteo
-                  ((#pattern.ident.Z_land @ ?? @ #?ℤ) * (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun x mask y offset => let s := (2*offset)%Z in #(ident.fancy_mullh s) @ (x, y)  when  mask =? 2^(s/2)-1)
+                  (pcst (#pattern.ident.Z_land @ ??' @ #?ℤ) *' pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))
+                  (fun r rland1 rx x mask rshiftr2 ry y offset => let s := (2*offset)%Z in cst r (#(ident.fancy_mullh s) @ (cst rx x, cst ry y))  when  (mask =? 2^(s/2)-1) && land_good rland1 rx mask && shiftr_good rshiftr2 ry offset)
               ; make_rewriteo
-                  ((#pattern.ident.Z_shiftr @ ?? @ #?ℤ) * (#pattern.ident.Z_land @ #?ℤ @ ??))
-                  (fun x offset mask y => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
+                  (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) *' pcst (#pattern.ident.Z_land @ #?ℤ @ ??'))
+                  (fun r rshiftr1 rx x offset rland2 mask ry y => let s := (2*offset)%Z in cst r (#(ident.fancy_mulhl s) @ (cst rx x, cst ry y))  when  (mask =? 2^(s/2)-1) && shiftr_good rshiftr1 rx offset && land_good rland2 mask ry)
               ; make_rewriteo
-                  ((#pattern.ident.Z_shiftr @ ?? @ #?ℤ) * (#pattern.ident.Z_land @ ?? @ #?ℤ))
-                  (fun x offset y mask => let s := (2*offset)%Z in #(ident.fancy_mulhl s) @ (x, y)  when  mask =? 2^(s/2)-1)
+                  (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) *' pcst (#pattern.ident.Z_land @ ??' @ #?ℤ))
+                  (fun r rshiftr1 rx x offset rland2 ry y mask => let s := (2*offset)%Z in cst r (#(ident.fancy_mulhl s) @ (cst rx x, cst ry y))  when  (mask =? 2^(s/2)-1) && shiftr_good rshiftr1 rx offset && land_good rland2 ry mask)
               ; make_rewriteo
-                  ((#pattern.ident.Z_shiftr @ ?? @ #?ℤ) * (#pattern.ident.Z_shiftr @ ?? @ #?ℤ))
-                  (fun x offset1 y offset2 => let s := (2*offset1)%Z in #(ident.fancy_mulhh s) @ (x, y)  when  offset1 =? offset2)
+                  (pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ) *' pcst (#pattern.ident.Z_shiftr @ ??' @ #?ℤ))
+                  (fun r rshiftr1 rx x offset1 rshiftr2 ry y offset2 => let s := (2*offset1)%Z in cst r (#(ident.fancy_mulhh s) @ (cst rx x, cst ry y))  when  (offset1 =? offset2) && shiftr_good rshiftr1 rx offset1 && shiftr_good rshiftr2 ry offset2)
+
+
+
+                  (** Dummy rule to make sure we use the two value ranges; this can be removed *)
+              ; make_rewriteo
+                  (??')
+                  (fun rx x => cst rx x  when  is_tighter_than_bool rx value_range || is_tighter_than_bool rx flag_range)
+
             ].
-        Definition fancy_with_casts_rewrite_rules : rewrite_rulesT
-          := [].
 
         Definition fancy_dtree'
           := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_rewrite_rules.
@@ -2348,7 +2544,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
               {t} (idc : ident t).
 
       Time Definition fancy_rewrite_head
-        := make_rewrite_head (@fancy_rewrite_head0 var invert_low invert_high do_again t idc) (@fancy_pr2_rewrite_rules).
+        := make_rewrite_head (@fancy_rewrite_head0 var do_again t idc) (@fancy_pr2_rewrite_rules).
       (* Tactic call ran for 0.19 secs (0.187u,0.s) (success)
          Tactic call ran for 10.297 secs (10.3u,0.s) (success)
          Tactic call ran for 1.746 secs (1.747u,0.s) (success)
@@ -2361,12 +2557,17 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
     End red_fancy.
     Section red_fancy_with_casts.
       Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
+              (value_range flag_range : zrange)
               {var : type.type base.type -> Type}
               (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
                                                 -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
               {t} (idc : ident t).
       Time Definition fancy_with_casts_rewrite_head
-        := make_rewrite_head (@fancy_with_casts_rewrite_head0 var (*invert_low invert_high*) do_again t idc) (@fancy_with_casts_pr2_rewrite_rules).
+        := make_rewrite_head (@fancy_with_casts_rewrite_head0 var invert_low invert_high value_range flag_range do_again t idc) (@fancy_with_casts_pr2_rewrite_rules).
+      (* Tactic call ran for 4.142 secs (4.143u,0.s) (success)
+         Tactic call ran for 80.563 secs (80.56u,0.s) (success)
+         Tactic call ran for 0.154 secs (0.156u,0.s) (success)
+         Finished transaction in 85.431 secs (85.427u,0.s) (successful) *)
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2435,11 +2636,12 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
     Definition RewriteToFancy
                (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var _ => @fancy_rewrite_head invert_low invert_high var) fancy_default_fuel t e.
+      := @Compile.Rewrite (fun var _ => @fancy_rewrite_head var) fancy_default_fuel t e.
     Definition RewriteToFancyWithCasts
                (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
+               (value_range flag_range : zrange)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var _ => @fancy_with_casts_rewrite_head (*invert_low invert_high*) var) fancy_with_casts_default_fuel t e.
+      := @Compile.Rewrite (fun var _ => @fancy_with_casts_rewrite_head invert_low invert_high value_range flag_range var) fancy_with_casts_default_fuel t e.
   End RewriteRules.
 
   Import defaults.
