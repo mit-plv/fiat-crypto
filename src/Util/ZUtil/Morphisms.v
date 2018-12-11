@@ -178,6 +178,12 @@ Module Z.
   Lemma div_Zneg_Zneg_le_Proper_l p : Proper (Basics.flip Pos.le ==> Z.le) (fun x => Z.div (Zneg p) (Zneg x)).
   Proof. div_Proper_t. Qed.
   Hint Resolve div_Zneg_Zneg_le_Proper_l : zarith.
+  Lemma div_Z0_Zpos_le_Proper_l : Proper (Basics.flip Pos.le ==> Z.le) (fun x => Z.div Z0 (Zpos x)).
+  Proof. div_Proper_t. Qed.
+  Hint Resolve div_Z0_Zpos_le_Proper_l : zarith.
+  Lemma div_Z0_Zneg_le_Proper_l : Proper (Pos.le ==> Z.le) (fun x => Z.div Z0 (Zneg x)).
+  Proof. div_Proper_t. Qed.
+  Hint Resolve div_Z0_Zneg_le_Proper_l : zarith.
   Lemma div_Zpos_Zpos_le_Proper_r x : Proper (Pos.le ==> Z.le) (fun p => Z.div (Zpos p) (Zpos x)).
   Proof. div_Proper_t. Qed.
   Hint Resolve div_Zpos_Zpos_le_Proper_r : zarith.
@@ -190,6 +196,12 @@ Module Z.
   Lemma div_Zneg_Zneg_le_Proper_r x : Proper (Pos.le ==> Z.le) (fun p => Z.div (Zneg p) (Zneg x)).
   Proof. div_Proper_t. Qed.
   Hint Resolve div_Zneg_Zneg_le_Proper_r : zarith.
+  Lemma div_Zpos_Z0_le_Proper_r : Proper (Pos.le ==> Z.le) (fun p => Z.div (Zpos p) Z0).
+  Proof. do 3 intro; cbv; congruence. Qed.
+  Hint Resolve div_Zpos_Z0_le_Proper_r : zarith.
+  Lemma div_Zneg_Z0_le_Proper_r : Proper (Basics.flip Pos.le ==> Z.le) (fun p => Z.div (Zneg p) Z0).
+  Proof. do 3 intro; cbv; congruence. Qed.
+  Hint Resolve div_Zneg_Z0_le_Proper_r : zarith.
   Local Ltac shift_t :=
     repeat first [ progress intros
                  | progress cbv [Proper respectful Basics.flip] in *
@@ -244,6 +256,12 @@ Module Z.
   Lemma shiftr_Zneg_Zneg_le_Proper_l p : Proper (Basics.flip Pos.le ==> Z.le) (fun x => Z.shiftr (Zneg p) (Zneg x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftr_Zneg_Zneg_le_Proper_l : zarith.
+  Lemma shiftr_Z0_Zpos_le_Proper_l : Proper (Basics.flip Pos.le ==> Z.le) (fun x => Z.shiftr Z0 (Zpos x)).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftr_Z0_Zpos_le_Proper_l : zarith.
+  Lemma shiftr_Z0_Zneg_le_Proper_l : Proper (Pos.le ==> Z.le) (fun x => Z.shiftr Z0 (Zneg x)).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftr_Z0_Zneg_le_Proper_l : zarith.
   Lemma shiftr_Zpos_Zpos_le_Proper_r x : Proper (Pos.le ==> Z.le) (fun p => Z.shiftr (Zpos p) (Zpos x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftr_Zpos_Zpos_le_Proper_r : zarith.
@@ -256,6 +274,12 @@ Module Z.
   Lemma shiftr_Zneg_Zneg_le_Proper_r x : Proper (Basics.flip Pos.le ==> Z.le) (fun p => Z.shiftr (Zneg p) (Zneg x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftr_Zneg_Zneg_le_Proper_r : zarith.
+  Lemma shiftr_Zpos_Z0_le_Proper_r : Proper (Pos.le ==> Z.le) (fun p => Z.shiftr (Zpos p) Z0).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftr_Zpos_Z0_le_Proper_r : zarith.
+  Lemma shiftr_Zneg_Z0_le_Proper_r : Proper (Basics.flip Pos.le ==> Z.le) (fun p => Z.shiftr (Zneg p) Z0).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftr_Zneg_Z0_le_Proper_r : zarith.
   Lemma shiftl_Zpos_Zpos_le_Proper_l p : Proper (Pos.le ==> Z.le) (fun x => Z.shiftl (Zpos p) (Zpos x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftl_Zpos_Zpos_le_Proper_l : zarith.
@@ -268,6 +292,12 @@ Module Z.
   Lemma shiftl_Zneg_Zneg_le_Proper_l p : Proper (Pos.le ==> Z.le) (fun x => Z.shiftl (Zneg p) (Zneg x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftl_Zneg_Zneg_le_Proper_l : zarith.
+  Lemma shiftl_Z0_Zpos_le_Proper_l : Proper (Pos.le ==> Z.le) (fun x => Z.shiftl Z0 (Zpos x)).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftl_Z0_Zpos_le_Proper_l : zarith.
+  Lemma shiftl_Z0_Zneg_le_Proper_l : Proper (Basics.flip Pos.le ==> Z.le) (fun x => Z.shiftl Z0 (Zneg x)).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftl_Z0_Zneg_le_Proper_l : zarith.
   Lemma shiftl_Zpos_Zpos_le_Proper_r x : Proper (Pos.le ==> Z.le) (fun p => Z.shiftl (Zpos p) (Zpos x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftl_Zpos_Zpos_le_Proper_r : zarith.
@@ -280,6 +310,12 @@ Module Z.
   Lemma shiftl_Zneg_Zneg_le_Proper_r x : Proper (Basics.flip Pos.le ==> Z.le) (fun p => Z.shiftl (Zneg p) (Zneg x)).
   Proof. shift_Proper_t'. Qed.
   Hint Resolve shiftl_Zneg_Zneg_le_Proper_r : zarith.
+  Lemma shiftl_Zpos_Z0_le_Proper_r : Proper (Pos.le ==> Z.le) (fun p => Z.shiftl (Zpos p) Z0).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftl_Zpos_Z0_le_Proper_r : zarith.
+  Lemma shiftl_Zneg_Z0_le_Proper_r : Proper (Basics.flip Pos.le ==> Z.le) (fun p => Z.shiftl (Zneg p) Z0).
+  Proof. shift_Proper_t'. Qed.
+  Hint Resolve shiftl_Zneg_Z0_le_Proper_r : zarith.
 
   Hint Resolve Z.land_round_Proper_pos_r : zarith.
   Hint Resolve Z.land_round_Proper_pos_l : zarith.

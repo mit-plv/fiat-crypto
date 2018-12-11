@@ -177,4 +177,9 @@ Module ZRange.
     rewrite <- is_bounded_by_bool_opp at 1.
     rewrite normalize_opp, opp_involutive; reflexivity.
   Qed.
+
+  Lemma is_tighter_than_bool_constant r v
+    : is_tighter_than_bool (ZRange.constant v) r
+      = is_bounded_by_bool v r.
+  Proof. reflexivity. Qed.
 End ZRange.
