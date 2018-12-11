@@ -63,7 +63,6 @@ Module Compilers.
                 {raw_pident : Type}
                 (strip_types : forall t, pident t -> raw_pident)
                 (raw_pident_beq : raw_pident -> raw_pident -> bool)
-                (type_vars_of_pident : forall t, pident t -> list (type.type pattern.base.type))
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
@@ -116,18 +115,18 @@ Module Compilers.
           Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident var1 var2).
           Local Notation reify_and_let_binds_cps1 := (@reify_and_let_binds_cps ident var1 reify_and_let_binds_base_cps1).
           Local Notation reify_and_let_binds_cps2 := (@reify_and_let_binds_cps ident var2 reify_and_let_binds_base_cps2).
-          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types type_vars_of_pident).
-          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident pident_arg_types).
+          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types).
+          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
           Local Notation with_unification_resultT'1 := (@with_unification_resultT' ident var1 pident pident_arg_types).
           Local Notation with_unification_resultT'2 := (@with_unification_resultT' ident var2 pident pident_arg_types).
-          Local Notation with_unification_resultT1 := (@with_unification_resultT ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unification_resultT2 := (@with_unification_resultT ident var2 pident pident_arg_types type_vars_of_pident).
-          Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation with_unification_resultT1 := (@with_unification_resultT ident var1 pident pident_arg_types).
+          Local Notation with_unification_resultT2 := (@with_unification_resultT ident var2 pident pident_arg_types).
+          Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types).
+          Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen ident var2 pident pident_arg_types).
           Local Notation wf_rawexpr := (@wf_rawexpr ident var1 var2).
           (** TODO: Move Me up *)
           Local Notation unify_pattern'1 := (@unify_pattern' ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
@@ -136,12 +135,12 @@ Module Compilers.
           Local Notation unify_pattern2 := (@unify_pattern ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
           Local Notation wf_unification_resultT' := (@wf_unification_resultT' ident pident pident_arg_types var1 var2).
           Local Notation wf_unification_resultT := (@wf_unification_resultT ident pident pident_arg_types var1 var2).
-          Local Notation wf_with_unification_resultT := (@wf_with_unification_resultT ident pident pident_arg_types type_vars_of_pident var1 var2).
-          Local Notation wf_with_unif_rewrite_ruleTP_gen := (@wf_with_unif_rewrite_ruleTP_gen ident pident pident_arg_types type_vars_of_pident var1 var2).
+          Local Notation wf_with_unification_resultT := (@wf_with_unification_resultT ident pident pident_arg_types var1 var2).
+          Local Notation wf_with_unif_rewrite_ruleTP_gen := (@wf_with_unif_rewrite_ruleTP_gen ident pident pident_arg_types var1 var2).
           Local Notation wf_deep_rewrite_ruleTP_gen := (@wf_deep_rewrite_ruleTP_gen ident var1 var2).
-          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident (@value var1)).
-          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident (@value var2)).
-          Local Notation wf_app_with_unification_resultT := (@wf_app_with_unification_resultT ident pident pident_arg_types type_vars_of_pident var1 var2).
+          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps pident pident_arg_types (@value var1)).
+          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps pident pident_arg_types (@value var2)).
+          Local Notation wf_app_with_unification_resultT := (@wf_app_with_unification_resultT ident pident pident_arg_types var1 var2).
 
           (* Because [proj1] and [proj2] in the stdlib are opaque *)
           Local Notation proj1 x := (let (a, b) := x in a).
@@ -541,8 +540,8 @@ Module Compilers.
               = UnderLets.Base (rew [A] p in v).
           Proof. case p; reflexivity. Defined.
 
-          Local Notation rewrite_rules_goodT := (@rewrite_rules_goodT ident pident pident_arg_types type_vars_of_pident var1 var2).
-          Local Notation wf_rewrite_rule_data := (@wf_rewrite_rule_data ident pident pident_arg_types type_vars_of_pident var1 var2).
+          Local Notation rewrite_rules_goodT := (@rewrite_rules_goodT ident pident pident_arg_types var1 var2).
+          Local Notation wf_rewrite_rule_data := (@wf_rewrite_rule_data ident pident pident_arg_types var1 var2).
           Local Notation wf_reflect := (@wf_reflect ident var1 var2).
           Local Notation wf_reify := (@wf_reify ident var1 var2).
 
@@ -750,8 +749,8 @@ Module Compilers.
                         -> expr.wf G' e1 e2
                         -> UnderLets.wf (fun G' => expr.wf G') G (@do_again1 t e1) (@do_again2 t e2)).
 
-            Local Notation assemble_identifier_rewriters' var := (@assemble_identifier_rewriters' ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
-            Local Notation assemble_identifier_rewriters var := (@assemble_identifier_rewriters ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
+            Local Notation assemble_identifier_rewriters' var := (@assemble_identifier_rewriters' ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
+            Local Notation assemble_identifier_rewriters var := (@assemble_identifier_rewriters ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
 
             Lemma wf_assemble_identifier_rewriters' G t re1 e1 re2 e2
                   K1 K2

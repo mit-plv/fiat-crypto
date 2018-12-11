@@ -408,8 +408,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             pattern.type.unify_extracted_cps
               (((((unit -> '1%pbtype) ->
                   (ℕ -> '1%pbtype -> '1%pbtype) -> ℕ -> '1%pbtype) ->
-                 unit -> '1%pbtype) -> ℕ -> '1%pbtype -> '1%pbtype) -> 
-               ℕ)%ptype
+                 unit -> '1%pbtype) -> ℕ -> '1%pbtype -> '1%pbtype) -> ℕ)%ptype
               (((((unit -> P) -> (ℕ -> P -> P) -> ℕ -> P) -> unit -> P) ->
                 ℕ -> P -> P) -> (projT1 args))%ptype option
               (fun x2 : option => x2)
@@ -466,11 +465,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (((((('1%pbtype -> '2%pbtype) ->
                   (ℕ -> ('1%pbtype -> '2%pbtype) -> '1%pbtype -> '2%pbtype) ->
                   ℕ -> '1%pbtype -> '2%pbtype) -> '1%pbtype -> '2%pbtype) ->
-                ℕ -> ('1%pbtype -> '2%pbtype) -> '1%pbtype -> '2%pbtype) -> 
-               ℕ) -> '1%pbtype)%ptype
+                ℕ -> ('1%pbtype -> '2%pbtype) -> '1%pbtype -> '2%pbtype) -> ℕ) ->
+              '1%pbtype)%ptype
              ((((((P -> Q) -> (ℕ -> (P -> Q) -> P -> Q) -> ℕ -> P -> Q) ->
-                 P -> Q) -> ℕ -> (P -> Q) -> P -> Q) -> (projT1 args)) -> 
-              P)%ptype option (fun x3 : option => x3)
+                 P -> Q) -> ℕ -> (P -> Q) -> P -> Q) -> (projT1 args)) -> P)%ptype
+             option (fun x3 : option => x3)
          with
          | Some
            (_, _, (_, (_, _, (_, _)), (_, (_, _))), (_, _),
@@ -479,8 +478,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               type.type_beq base.type base.type.type_beq
                 ((((((b -> b16) ->
                      (ℕ -> (b -> b16) -> b -> b16) -> ℕ -> b -> b16) ->
-                    b -> b16) -> ℕ -> (b -> b16) -> b -> b16) -> ℕ) -> 
-                 b)%ptype
+                    b -> b16) -> ℕ -> (b -> b16) -> b -> b16) -> ℕ) -> b)%ptype
                 ((((((P -> Q) -> (ℕ -> (P -> Q) -> P -> Q) -> ℕ -> P -> Q) ->
                     P -> Q) -> ℕ -> (P -> Q) -> P -> Q) -> (projT1 args)) ->
                  P)%ptype

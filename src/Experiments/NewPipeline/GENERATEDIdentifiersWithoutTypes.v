@@ -1120,13 +1120,13 @@ def to_type_var(name, ty):
            'type': name,
            'type.type base.type': name})[ty]
 
-retcode += addnewline((r"""%sDefinition type_vars {t} (idc : ident t) : list type
-  := match idc with
-     | %s
-     end%%type.
-""" % (indent1,
-       '\n     | '.join('@' + pctor + ' => [' + '; '.join(to_type_var(n, t) for n, t in named_ttype) + ']'
-                        for pctor, named_ttype in zip(pctors_with_args, named_ttypes)))).replace('\n', '\n' + indent1))
+#retcode += addnewline((r"""%sDefinition type_vars {t} (idc : ident t) : list type
+#  := match idc with
+#     | %s
+#     end%%type.
+#""" % (indent1,
+#       '\n     | '.join('@' + pctor + ' => [' + '; '.join(to_type_var(n, t) for n, t in named_ttype) + ']'
+#                        for pctor, named_ttype in zip(pctors_with_args, named_ttypes)))).replace('\n', '\n' + indent1))
 
 retcode += addnewline((r"""%sDefinition to_typed {t} (idc : ident t) (evm : EvarMap) : type_of_list (arg_types idc) -> %sident.ident (pattern.type.subst_default t evm)
   := match idc in ident t return type_of_list (arg_types idc) -> %sident.ident (pattern.type.subst_default t evm) with
@@ -2160,87 +2160,6 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @fancy_rshi => [Z : Type; Z : Type]
            | @fancy_selc => []
            | @fancy_selm => [Z : Type]
-           | @fancy_sell => []
-           | @fancy_addm => []
-           end%type.
-
-      Definition type_vars {t} (idc : ident t) : list type
-        := match idc with
-           | @Literal t => [type.base (base.type.type_base t)]
-           | @Nat_succ => []
-           | @Nat_pred => []
-           | @Nat_max => []
-           | @Nat_mul => []
-           | @Nat_add => []
-           | @Nat_sub => []
-           | @nil t => [type.base t]
-           | @cons t => [type.base t]
-           | @pair A B => [type.base A; type.base B]
-           | @fst A B => [type.base A; type.base B]
-           | @snd A B => [type.base A; type.base B]
-           | @prod_rect A B T => [type.base A; type.base B; type.base T]
-           | @bool_rect T => [type.base T]
-           | @nat_rect P => [type.base P]
-           | @nat_rect_arrow P Q => [type.base P; type.base Q]
-           | @list_rect A P => [type.base A; type.base P]
-           | @list_case A P => [type.base A; type.base P]
-           | @List_length T => [type.base T]
-           | @List_seq => []
-           | @List_firstn A => [type.base A]
-           | @List_skipn A => [type.base A]
-           | @List_repeat A => [type.base A]
-           | @List_combine A B => [type.base A; type.base B]
-           | @List_map A B => [type.base A; type.base B]
-           | @List_app A => [type.base A]
-           | @List_rev A => [type.base A]
-           | @List_flat_map A B => [type.base A; type.base B]
-           | @List_partition A => [type.base A]
-           | @List_fold_right A B => [type.base A; type.base B]
-           | @List_update_nth T => [type.base T]
-           | @List_nth_default T => [type.base T]
-           | @Z_add => []
-           | @Z_mul => []
-           | @Z_pow => []
-           | @Z_sub => []
-           | @Z_opp => []
-           | @Z_div => []
-           | @Z_modulo => []
-           | @Z_log2 => []
-           | @Z_log2_up => []
-           | @Z_eqb => []
-           | @Z_leb => []
-           | @Z_geb => []
-           | @Z_of_nat => []
-           | @Z_to_nat => []
-           | @Z_shiftr => []
-           | @Z_shiftl => []
-           | @Z_land => []
-           | @Z_lor => []
-           | @Z_bneg => []
-           | @Z_lnot_modulo => []
-           | @Z_mul_split => []
-           | @Z_add_get_carry => []
-           | @Z_add_with_carry => []
-           | @Z_add_with_get_carry => []
-           | @Z_sub_get_borrow => []
-           | @Z_sub_with_get_borrow => []
-           | @Z_zselect => []
-           | @Z_add_modulo => []
-           | @Z_rshi => []
-           | @Z_cc_m => []
-           | @Z_cast => []
-           | @Z_cast2 => []
-           | @fancy_add => []
-           | @fancy_addc => []
-           | @fancy_sub => []
-           | @fancy_subb => []
-           | @fancy_mulll => []
-           | @fancy_mullh => []
-           | @fancy_mulhl => []
-           | @fancy_mulhh => []
-           | @fancy_rshi => []
-           | @fancy_selc => []
-           | @fancy_selm => []
            | @fancy_sell => []
            | @fancy_addm => []
            end%type.

@@ -801,7 +801,6 @@ Module Compilers.
                 {raw_pident : Type}
                 (strip_types : forall t, pident t -> raw_pident)
                 (raw_pident_beq : raw_pident -> raw_pident -> bool)
-                (type_vars_of_pident : forall t, pident t -> list (type.type pattern.base.type))
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
@@ -848,9 +847,9 @@ Module Compilers.
         Local Notation unify_pattern' var := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation unify_pattern var := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown).
         Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps pident pident_arg_types).
-        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps pident pident_arg_types type_vars_of_pident).
+        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps pident pident_arg_types).
         Local Notation with_unification_resultT' := (@with_unification_resultT' pident pident_arg_types).
-        Local Notation with_unification_resultT := (@with_unification_resultT pident pident_arg_types type_vars_of_pident).
+        Local Notation with_unification_resultT := (@with_unification_resultT pident pident_arg_types).
         Local Notation unification_resultT' := (@unification_resultT' pident pident_arg_types).
         Local Notation unification_resultT := (@unification_resultT pident pident_arg_types).
 
@@ -1453,14 +1452,14 @@ Module Compilers.
           Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident var1 var2).
           Local Notation reify_and_let_binds_cps1 := (@reify_and_let_binds_cps ident var1 reify_and_let_binds_base_cps1).
           Local Notation reify_and_let_binds_cps2 := (@reify_and_let_binds_cps ident var2 reify_and_let_binds_base_cps2).
-          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types type_vars_of_pident).
-          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident type_vars_of_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-          Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen ident var2 pident pident_arg_types type_vars_of_pident).
+          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident pident_arg_types).
+          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types).
+          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types).
+          Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen ident var2 pident pident_arg_types).
           Local Notation deep_rewrite_ruleTP_gen1 := (@deep_rewrite_ruleTP_gen ident var1).
           Local Notation deep_rewrite_ruleTP_gen2 := (@deep_rewrite_ruleTP_gen ident var2).
           Local Notation preunify_types1 := (@preunify_types ident var1 pident).
@@ -1923,7 +1922,7 @@ Module Compilers.
                      (r1 : @rewrite_rule_data1 t p)
                      (r2 : @rewrite_rule_data2 t p)
             : Prop
-            := wf_with_unif_rewrite_ruleTP_gen G (rew_replacement _ _ r1) (rew_replacement _ _ r2).
+            := wf_with_unif_rewrite_ruleTP_gen G (rew_replacement r1) (rew_replacement r2).
 
           Definition rewrite_rules_goodT
                      (rew1 : rewrite_rulesT1) (rew2 : rewrite_rulesT2)
@@ -1956,7 +1955,7 @@ Module Compilers.
                      (r1 : @rewrite_rule_data1 t p)
                      (r2 : @rewrite_rule_data2 t p)
             : Prop
-            := wf_with_unif_rewrite_ruleTP_gen_curried G (rew_replacement _ _ r1) (rew_replacement _ _ r2).
+            := wf_with_unif_rewrite_ruleTP_gen_curried G (rew_replacement r1) (rew_replacement r2).
 
           Definition rewrite_rules_goodT_curried
                      (rew1 : rewrite_rulesT1) (rew2 : rewrite_rulesT2)
@@ -2002,9 +2001,9 @@ Module Compilers.
                   {ident_interp_Proper : forall t, Proper (eq ==> type.eqv) (ident_interp t)}.
           Local Notation var := (type.interp base.interp) (only parsing).
           Local Notation expr := (@expr.expr base.type ident var).
-          Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pident pident_arg_types type_vars_of_pident).
-          Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pident pident_arg_types type_vars_of_pident).
-          Local Notation with_unif_rewrite_ruleTP_gen := (@with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types type_vars_of_pident).
+          Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pident pident_arg_types).
+          Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen := (@with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types).
           Local Notation normalize_deep_rewrite_rule := (@normalize_deep_rewrite_rule ident var).
 
           Local Notation deep_rewrite_ruleTP_gen := (@deep_rewrite_ruleTP_gen ident var).
@@ -2251,9 +2250,9 @@ Module Compilers.
                     => related_sigT_by_eq
                          (fun evm
                           => @deep_rewrite_ruleTP_gen_good_relation
-                               (rew_should_do_again _ _ r) (rew_with_opt _ _ r) (rew_under_lets _ _ r) (pattern.type.subst_default t evm))
+                               (rew_should_do_again r) (rew_with_opt r) (rew_under_lets r) (pattern.type.subst_default t evm))
                          fx gy)
-                   (app_with_unification_resultT_cps (rew_replacement _ _ r) x _ (@Some _))
+                   (app_with_unification_resultT_cps (rew_replacement r) x _ (@Some _))
                    (app_with_unification_resultT_cps (pattern_default_interp p) y _ (@Some _)).
 
           Definition rewrite_rules_interp_goodT
@@ -2269,7 +2268,7 @@ Module Compilers.
             := under_with_unification_resultT_relation_hetero
                  (fun _ => value_interp_related)
                  (fun evm => deep_rewrite_ruleTP_gen_good_relation)
-                 (rew_replacement _ _ r)
+                 (rew_replacement r)
                  (pattern_default_interp p).
 
           Definition rewrite_rules_interp_goodT_curried

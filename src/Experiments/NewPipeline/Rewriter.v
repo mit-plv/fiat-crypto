@@ -338,12 +338,12 @@ Module Compilers.
          | App s d f x => Raw.App (@to_raw _ _ to_raw_ident _ f) (@to_raw _ _ to_raw_ident _ x)
          end.
 
-    Fixpoint collect_vars {ident} {ident_collect_vars : forall t, ident t -> PositiveSet.t}
+    Fixpoint collect_vars {ident}
              {t} (p : @pattern ident t) : PositiveSet.t
       := match p with
          | Wildcard t => type.collect_vars t
-         | Ident t idc => ident_collect_vars t idc
-         | App s d f x => PositiveSet.union (@collect_vars _ ident_collect_vars _ x) (@collect_vars _ ident_collect_vars _ f)
+         | Ident t idc => type.collect_vars t
+         | App s d f x => PositiveSet.union (@collect_vars _ _ x) (@collect_vars _ _ f)
          end.
 
     Notation ident := ident.ident.
@@ -471,7 +471,6 @@ Module Compilers.
                 {raw_pident : Type}
                 (strip_types : forall t, pident t -> raw_pident)
                 (raw_pident_beq : raw_pident -> raw_pident -> bool)
-                (type_vars_of_pident : forall t, pident t -> list (type.type pattern.base.type))
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
@@ -704,13 +703,9 @@ Module Compilers.
                     (@under_with_unification_resultT' _ _ x evm _ _ F)
              end.
 
-        Definition ident_collect_vars := (fun t idc => fold_right PositiveSet.union PositiveSet.empty (List.map pattern.type.collect_vars (type_vars_of_pident t idc))).
-
         Definition with_unification_resultT {var t} (p : pattern t) (K : type -> Type) : Type
           := pattern.type.forall_vars
-               (@pattern.collect_vars
-                  _ ident_collect_vars
-                  t p)
+               (@pattern.collect_vars _ t p)
                (fun evm => @with_unification_resultT' var t p evm (K (pattern.type.subst_default t evm))).
 
         Definition unification_resultT {var t} (p : pattern t) : Type
@@ -1182,6 +1177,10 @@ Module Compilers.
             := eta_ident_cps _ _ idc (fun t' idc' => assemble_identifier_rewriters' t' (rIdent true idc' #idc') (fun _ => id)).
         End with_do_again.
       End with_var.
+      Global Arguments rew_should_do_again {_ _ _ _ _ _} _.
+      Global Arguments rew_with_opt        {_ _ _ _ _ _} _.
+      Global Arguments rew_under_lets      {_ _ _ _ _ _} _.
+      Global Arguments rew_replacement     {_ _ _ _ _ _} _.
 
       Section full.
         Context {var : type.type base.type -> Type}.
@@ -1249,15 +1248,14 @@ Module Compilers.
         Coercion ptype_base' : base.type.base >-> ptype.
         Coercion type_base : base.type >-> type.
         Coercion ptype_base : pattern.base.type >-> ptype.
-        Local Notation ident_collect_vars := (@ident_collect_vars pattern.ident (@pattern.ident.type_vars)).
-        Local Notation collect_vars := (@pattern.collect_vars pattern.ident (@ident_collect_vars)).
+        Local Notation collect_vars := (@pattern.collect_vars pattern.ident).
         Local Notation with_unification_resultT' := (@with_unification_resultT' pattern.ident (@pattern.ident.arg_types) value).
-        Local Notation with_unification_resultT := (@with_unification_resultT pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars) value).
+        Local Notation with_unification_resultT := (@with_unification_resultT pattern.ident (@pattern.ident.arg_types) value).
         Local Notation under_with_unification_resultT' := (@under_with_unification_resultT' pattern.ident (@pattern.ident.arg_types) value).
-        Local Notation under_with_unification_resultT := (@under_with_unification_resultT pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars) value).
-        Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-        Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-        Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
+        Local Notation under_with_unification_resultT := (@under_with_unification_resultT pattern.ident (@pattern.ident.arg_types) value).
+        Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types)).
+        Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types)).
+        Local Notation rewrite_rule_data := (@rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types)).
 
         Definition make_base_Literal_pattern (t : base.type.base) : pattern t
           := Eval cbv [pattern.ident.of_typed_ident] in
@@ -1493,14 +1491,14 @@ Module Compilers.
       Coercion ptype_base' : base.type.base >-> ptype.
       Coercion type_base : base.type >-> type.
       Coercion ptype_base : pattern.base.type >-> ptype.
-      Local Notation Build_rewrite_rule_data := (@Build_rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
+      Local Notation Build_rewrite_rule_data := (@Build_rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types)).
       Local Notation Build_anypattern := (@pattern.Build_anypattern pattern.ident).
-      Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-      Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
-      Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_vars)).
+      Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types)).
+      Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types)).
+      Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pattern.ident (@pattern.ident.arg_types)).
       Definition pident_unify_unknown := @pattern.ident.unify.
       Definition invert_bind_args_unknown := @pattern.Raw.ident.invert_bind_args.
-      Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var (@pattern.ident.eta_ident_cps) (@pattern.ident) (@pattern.ident.arg_types) (@pattern.ident.unify) pident_unify_unknown pattern.Raw.ident (@pattern.ident.type_vars) (@pattern.Raw.ident.full_types) (@pattern.Raw.ident.invert_bind_args) invert_bind_args_unknown (@pattern.Raw.ident.type_of) (@pattern.Raw.ident.to_typed) pattern.Raw.ident.is_simple).
+      Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var (@pattern.ident.eta_ident_cps) (@pattern.ident) (@pattern.ident.arg_types) (@pattern.ident.unify) pident_unify_unknown pattern.Raw.ident (@pattern.Raw.ident.full_types) (@pattern.Raw.ident.invert_bind_args) invert_bind_args_unknown (@pattern.Raw.ident.type_of) (@pattern.Raw.ident.to_typed) pattern.Raw.ident.is_simple).
 
       Delimit Scope rewrite_scope with rewrite.
       Delimit Scope rewrite_opt_scope with rewrite_opt.
@@ -1959,11 +1957,11 @@ Module Compilers.
            ].
 
       Definition nbe_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 nbe_rewrite_rules.
+        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 nbe_rewrite_rules.
       Definition arith_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 (arith_rewrite_rules 0%Z (* dummy val *)).
+        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 (arith_rewrite_rules 0%Z (* dummy val *)).
       Definition arith_with_casts_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 arith_with_casts_rewrite_rules.
+        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 arith_with_casts_rewrite_rules.
       Definition nbe_dtree : decision_tree
         := Eval compute in invert_Some nbe_dtree'.
       Definition arith_dtree : decision_tree
@@ -2186,11 +2184,11 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
           := [].
 
         Definition fancy_dtree'
-          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 fancy_rewrite_rules.
+          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_rewrite_rules.
         Definition fancy_dtree : decision_tree
           := Eval compute in invert_Some fancy_dtree'.
         Definition fancy_with_casts_dtree'
-          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq (@pattern.ident.type_vars) 100 fancy_with_casts_rewrite_rules.
+          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_with_casts_rewrite_rules.
         Definition fancy_with_casts_dtree : decision_tree
           := Eval compute in invert_Some fancy_with_casts_dtree'.
         Definition fancy_default_fuel := Eval compute in List.length fancy_rewrite_rules.

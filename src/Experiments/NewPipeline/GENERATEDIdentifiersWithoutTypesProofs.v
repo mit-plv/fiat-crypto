@@ -149,10 +149,12 @@ Module Compilers.
         : @eta_ident_cps T t idc f = f t idc.
       Proof. cbv [eta_ident_cps]; break_innermost_match; reflexivity. Qed.
 
+(*
       Lemma is_simple_strip_types_iff_type_vars_nil {t} idc
         : Raw.ident.is_simple (@strip_types t idc) = true
           <-> type_vars idc = List.nil.
       Proof. destruct idc; cbn; intuition congruence. Qed.
+*)
 
       Lemma unify_to_typed {t t' pidc idc}
         : forall v,
@@ -200,6 +202,7 @@ Module Compilers.
                           | progress Compilers.type.inversion_type ].
       Qed.
 
+      (*
       Local Ltac solve_ex_or_eq :=
         lazymatch goal with
         | [ |- ex _ ] => eexists; solve_ex_or_eq
@@ -226,6 +229,7 @@ Module Compilers.
                           | progress destruct_head'_or
                           | solve_ex_or_eq ].
       Qed.
+       *)
     End ident.
   End pattern.
 End Compilers.
