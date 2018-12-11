@@ -673,7 +673,7 @@ Module Pipeline.
        | Error msg => msg
        end.
 
-  Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z }.
+  Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z ; value_range : zrange ; flag_range : zrange }.
 
   Definition RewriteAndEliminateDeadAndInline {t}
              (DoRewrite : Expr t -> Expr t)
@@ -724,7 +724,8 @@ Module Pipeline.
       | inl E
         => let E := RewriteAndEliminateDeadAndInline RewriteRules.RewriteArithWithCasts with_dead_code_elimination with_subst01 E in
            let E := match translate_to_fancy with
-                    | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancyWithCasts invert_low invert_high E
+                    | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
+                      => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range E
                     | None => E
                     end in
            Success E
@@ -3790,7 +3791,9 @@ Module BarrettReduction.
     Context (M : Z)
             (machine_wordsize : Z).
 
-    Let bound := Some r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
+    Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
+    Let flag_range := r[0 ~> 1]%zrange.
+    Let bound := Some value_range.
     Let mu := (2 ^ (2 * machine_wordsize)) / M.
     Let muLow := mu mod (2 ^ machine_wordsize).
     Let consts_list := [M; muLow].
@@ -3833,7 +3836,9 @@ Module BarrettReduction.
 
     Let fancy_args
       := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                  Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list |}).
+                  Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                  Pipeline.value_range := value_range;
+                  Pipeline.flag_range := flag_range |}).
 
     Lemma fancy_args_good
       : match fancy_args with
@@ -3990,7 +3995,9 @@ Module MontgomeryReduction.
     Context (N R N' : Z)
             (machine_wordsize : Z).
 
-    Let bound := Some r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
+    Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
+    Let flag_range := r[0 ~> 1]%zrange.
+    Let bound := Some value_range.
     Let consts_list := [N; N'].
 
     Definition relax_zrange_of_machine_wordsize
@@ -4005,7 +4012,9 @@ Module MontgomeryReduction.
 
     Let fancy_args
       := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                  Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list |}).
+                  Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                  Pipeline.value_range := value_range;
+                  Pipeline.flag_range := flag_range |}).
 
     Lemma fancy_args_good
       : match fancy_args with

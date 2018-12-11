@@ -23,9 +23,11 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
+Require Import Crypto.Util.ZRange.OperationsBounds.
 Require Import Crypto.Util.Tactics.NormalizeCommutativeIdentifier.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -99,6 +101,18 @@ Module Compilers.
         rewrite UnderLets.interp_splice, IHxs; reflexivity.
       Qed.
 
+      Local Lemma unfold_is_bounded_by_bool v r
+        : is_bounded_by_bool v r = true -> lower r <= v <= upper r.
+      Proof using Type.
+        cbv [is_bounded_by_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
+      Qed.
+
+      Local Lemma unfold_is_tighter_than_bool r1 r2
+        : is_tighter_than_bool r1 r2 = true -> lower r2 <= lower r1 /\ upper r1 <= upper r2.
+      Proof using Type.
+        cbv [is_tighter_than_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
+      Qed.
+
       Local Notation rewrite_rules_interp_goodT := (@Compile.rewrite_rules_interp_goodT ident pattern.ident (@pattern.ident.arg_types) (@pattern.ident.to_typed) (@ident_interp)).
 
       Local Ltac do_cbv0 :=
@@ -117,8 +131,7 @@ Module Compilers.
           => let Q' := fresh in
              pose Q as Q';
              change (forall x p, In (@existT A P x p) ls -> Q' x p);
-             apply (@forall_In_existT A P Q' ls); cbn [projT1 projT2]; cbv [id];
-             subst Q'; cbn [projT1 projT2]
+             apply (@forall_In_existT A P Q' ls); subst Q'; cbv [projT1 projT2 id]
         end;
         do_cbv0;
         repeat first [ progress intros
@@ -173,12 +186,16 @@ Module Compilers.
         | [ |- _ = ?ev ] => is_evar ev; reflexivity
         end.
 
-      Local Ltac interp_good_t_step :=
-        first [ reflexivity
-              | match goal with
+      Local Ltac interp_good_t_step_related :=
+        first [ lazymatch goal with
+                | [ |- ?x = ?x ] => reflexivity
+                | [ |- True ] => exact I
+                | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
+                | [ |- ?G ] => has_evar G; reflexivity
+                | [ |- context[expr.interp_related _ _ _] ] => reflexivity
+                | [ |- context[_ == _] ] => reflexivity
                 (*| [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
                 | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand*)
-                | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
                 end
               | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr bool_rect UnderLets.interp_related type.related] in *
               | progress cbv [Compile.option_bind' respectful] in *
@@ -232,7 +249,7 @@ Module Compilers.
                 | [ H : List.Forall2 _ ?x ?y |- List.length ?x = List.length ?y ]
                   => eapply eq_length_Forall2, H
                 | [ |- exists fv xv, _ /\ _ /\ fv xv = ?f ?x ]
-                  => exists f, x; repeat apply conj; [ solve [ repeat interp_good_t_step ] | | reflexivity ]
+                  => exists f, x; repeat apply conj; [ solve [ repeat interp_good_t_step_related ] | | reflexivity ]
                 | [ |- _ /\ ?x = ?x ] => split; [ | reflexivity ]
                 | [ |- UnderLets.interp_related
                          ?ident_interp ?R
@@ -312,31 +329,6 @@ Module Compilers.
                      exists f', x'; repeat apply conj;
                      [ | exact H | reflexivity ]
                 | [ |- List.Forall2 _ (update_nth _ _ _) (update_nth _ _ _) ] => apply Forall2_update_nth
-                | [ H : context[ZRange.normalize (ZRange.normalize _)] |- _ ]
-                  => rewrite ZRange.normalize_idempotent in H
-                | [ |- context[ZRange.normalize (ZRange.normalize _)] ]
-                  => rewrite ZRange.normalize_idempotent
-                | [ |- context[ident.cast (ZRange.normalize ?r)] ]
-                  => rewrite ident.cast_normalize
-                | [ H : context[ident.cast (ZRange.normalize ?r)] |- _ ]
-                  => rewrite ident.cast_normalize in H
-                | [ H : ?T, H' : ?T |- _ ] => clear H'
-                | [ H : context[is_bounded_by_bool _ (ZRange.normalize (-_))] |- _ ]
-                  => rewrite ZRange.is_bounded_by_bool_move_opp_normalize in H
-                | [ |- context[is_bounded_by_bool _ (ZRange.normalize (-_))] ]
-                  => rewrite ZRange.is_bounded_by_bool_move_opp_normalize
-                | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast _ ?r ?v] ]
-                  => rewrite (@ident.cast_in_normalized_bounds _ r v) by exact H
-                | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast _ (-?r) (-?v)] ]
-                  => rewrite (@ident.cast_in_normalized_bounds _ (-r) (-v));
-                     [ | clear -H ]
-                | [ |- context[ident.cast _ ?r (-ident.cast _ (-?r) ?v)] ]
-                  => rewrite (ident.cast_in_normalized_bounds r (-ident.cast _ (-r) v))
-                    by (rewrite <- ZRange.is_bounded_by_bool_move_opp_normalize; apply ident.cast_always_bounded)
-                | [ |- context[ident.cast _ ?r (ident.cast _ ?r _)] ]
-                  => rewrite (@ident.cast_idempotent _ _ r)
-                | [ H : is_bounded_by_bool _ ?r = true |- _]
-                  => is_var r; unique pose proof (ZRange.is_bounded_by_normalize _ _ H)
                 | [ H : zrange * zrange |- _ ] => destruct H
                 end
               | progress intros
@@ -344,7 +336,6 @@ Module Compilers.
               | assumption
               | progress inversion_option
               | progress destruct_head'_and
-              | progress Z.ltb_to_lt
               | progress split_andb
               | match goal with
                 | [ |- Lists.List.repeat _ _ = Lists.List.repeat _ _ ] => apply f_equal2
@@ -357,7 +348,7 @@ Module Compilers.
                 | [ |- list_rect _ ?Pnil ?Pcons ?ls = list_rect _ ?Pnil ?Pcons' ?ls ]
                   => apply list_rect_Proper; [ reflexivity | repeat intro | reflexivity ]
                 | [ |- bool_rect _ ?x ?y ?b = bool_rect _ ?x ?y ?b' ]
-                  => apply f_equal3; [ reflexivity | reflexivity | solve [ repeat interp_good_t_step ] ]
+                  => apply f_equal3; [ reflexivity | reflexivity | solve [ repeat interp_good_t_step_related ] ]
                 | [ H : expr.wf _ ?v1 ?v2 |- expr.interp _ ?v1 = expr.interp _ ?v2 ]
                   => apply (expr.wf_interp_Proper _ _ _ H ltac:(assumption))
                 | [ |- ?R (?f (?g (if ?b then ?x else ?y))) (bool_rect ?A ?B ?C ?D) ]
@@ -460,6 +451,71 @@ Module Compilers.
               | break_innermost_match_step
               | break_innermost_match_hyps_step
               | progress destruct_head'_or
+              | progress cbn [expr.interp_related] in *
+              | match goal with
+                | [ H : context[expr.interp _ (UnderLets.interp _ (?f _ _ _))]
+                    |- expr.interp _ (UnderLets.interp _ (?f _ _ _)) = _ ]
+                  => apply H
+                | [ H : forall x1 x2, ?R1 x1 x2 -> ?R2 (?f1 x1) (?f2 x2) |- ?R2 (?f1 _) (?f2 _) ]
+                  => apply H
+                | [ H : forall x1 x2, ?R1 x1 x2 -> forall y1 y2, ?R2 y1 y2 -> ?R3 (?f1 x1 y1) (?f2 x2 y2) |- ?R3 (?f1 _ _) (?f2 _ _) ]
+                  => apply H
+                | [ H : forall x x', ?Rx x x' -> forall y y', _ -> forall z z', ?Rz z z' -> ?R (?f x y z) (?f' x' y' z') |- ?R (?f _ _ _) (?f' _ _ _) ]
+                  => apply H; clear H
+                end
+              | progress cbv [Option.bind] in *
+              | match goal with
+                | [ H : expr.interp_related _ ?e ?v |- _ ] => is_var e; clear H e
+                end ].
+
+      Local Ltac interp_good_t_step_arith :=
+        first [ lazymatch goal with
+                | [ |- ?x = ?x ] => reflexivity
+                | [ |- True ] => exact I
+                | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
+                end
+              | match goal with
+                | [ H : context[ZRange.normalize (ZRange.normalize _)] |- _ ]
+                  => rewrite ZRange.normalize_idempotent in H
+                | [ |- context[ZRange.normalize (ZRange.normalize _)] ]
+                  => rewrite ZRange.normalize_idempotent
+                | [ |- context[ident.cast (ZRange.normalize ?r)] ]
+                  => rewrite ident.cast_normalize
+                | [ H : context[ident.cast (ZRange.normalize ?r)] |- _ ]
+                  => rewrite ident.cast_normalize in H
+                | [ H : ?T, H' : ?T |- _ ] => clear H'
+                | [ H : context[is_bounded_by_bool _ (ZRange.normalize (-_))] |- _ ]
+                  => rewrite ZRange.is_bounded_by_bool_move_opp_normalize in H
+                | [ |- context[is_bounded_by_bool _ (ZRange.normalize (-_))] ]
+                  => rewrite ZRange.is_bounded_by_bool_move_opp_normalize
+                | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast _ ?r ?v] ]
+                  => rewrite (@ident.cast_in_normalized_bounds _ r v) by exact H
+                | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast _ (-?r) (-?v)] ]
+                  => rewrite (@ident.cast_in_normalized_bounds _ (-r) (-v));
+                     [ | clear -H ]
+                | [ |- context[ident.cast _ ?r (-ident.cast _ (-?r) ?v)] ]
+                  => rewrite (ident.cast_in_normalized_bounds r (-ident.cast _ (-r) v))
+                    by (rewrite <- ZRange.is_bounded_by_bool_move_opp_normalize; apply ident.cast_always_bounded)
+                | [ |- context[ident.cast _ ?r (ident.cast _ ?r _)] ]
+                  => rewrite (@ident.cast_idempotent _ _ r)
+                | [ H : is_bounded_by_bool _ ?r = true |- _]
+                  => is_var r; unique pose proof (ZRange.is_bounded_by_normalize _ _ H)
+
+                end
+              | progress intros
+              | progress subst
+              | assumption
+              | progress destruct_head'_and
+              | progress Z.ltb_to_lt
+              | progress split_andb
+              | match goal with
+                | [ |- ?a mod ?b = ?a' mod ?b ] => apply f_equal2; lia
+                | [ |- ?a / ?b = ?a' / ?b ] => apply f_equal2; lia
+                | [ |- Z.opp _ = Z.opp _ ] => apply f_equal
+                end
+              | break_innermost_match_step
+              | break_innermost_match_hyps_step
+              | progress destruct_head'_or
               | match goal with
                 | [ |- context[-ident.cast _ (-?r) (-?v)] ] => rewrite (ident.cast_opp' r v)
                 | [ |- context[ident.cast ?coor ?r ?v] ]
@@ -485,11 +541,7 @@ Module Compilers.
                      [ clear -H; cbv [is_bounded_by_bool] in H; cbn [lower upper] in H; Bool.split_andb; Z.ltb_to_lt; lia..
                      | ]
                 end
-              | progress cbn [expr.interp_related] in *
               | match goal with
-                | [ H : context[expr.interp _ (UnderLets.interp _ (?f _ _ _))]
-                    |- expr.interp _ (UnderLets.interp _ (?f _ _ _)) = _ ]
-                  => apply H
                 | [ |- context[Z.shiftl] ] => rewrite Z.shiftl_mul_pow2 by auto with zarith
                 | [ |- context[Z.shiftr] ] => rewrite Z.shiftr_div_pow2 by auto with zarith
                 | [ |- context[Z.shiftl _ (-_)] ] => rewrite Z.shiftl_opp_r
@@ -503,19 +555,25 @@ Module Compilers.
                 | [ H : ?x = 2^Z.log2 ?x, H' : context[2^Z.log2 ?x] |- _ = _ :> BinInt.Z ]
                   => rewrite <- H in H'
                 | [ |- _ = _ :> BinInt.Z ] => progress autorewrite with zsimplify_const
-                | [ |- ?f (?g (nat_rect _ _ _ ?n ?v)) = nat_rect _ _ _ ?n _ ]
-                  => revert v; is_var n; induction n; intro v; cbn [nat_rect]
                 | [ H : 0 <= ?x, H' : ?x <= ?r - 1 |- context[?x mod ?r] ]
                   => rewrite (Z.mod_small x r) by (clear -H H'; lia)
                 | [ H : 0 <= ?x, H' : ?x <= ?y - 1 |- context[?x / ?y] ]
                   => rewrite (Z.div_small x y) by (clear -H H'; lia)
+                | [ H : ?x = 2^Z.log2 ?x |- _ ]
+                  => unique assert (0 <= x) by (rewrite H; auto with zarith)
                 | [ |- _ mod ?x = _ mod ?x ]
+                  => progress (push_Zmod; pull_Zmod)
+                | [ |- ?f (_ mod ?x) = ?f (_ mod ?x) ]
                   => progress (push_Zmod; pull_Zmod)
                 | [ |- _ mod ?x = _ mod ?x ]
                   => apply f_equal2; (lia + nia)
                 | [ |- context[-?x + ?y] ] => rewrite !Z.add_opp_l
                 | [ |- context[?n + - ?m] ] => rewrite !Z.add_opp_r
                 | [ |- context[?n - - ?m] ] => rewrite !Z.sub_opp_r
+                | [ |- context[Zpos ?p * ?x / Zpos ?p] ]
+                  => rewrite (@Z.div_mul' x (Zpos p)) in * by (clear; lia)
+                | [ H : context[Zpos ?p * ?x / Zpos ?p] |- _ ]
+                  => rewrite (@Z.div_mul' x (Zpos p)) in * by (clear; lia)
                 | [ |- ?f (?a mod ?r) = ?f (?b mod ?r) ] => apply f_equal; apply f_equal2; lia
                 | [ |- context[-?a - ?b + ?c] ] => replace (-a - b + c) with (c - a - b) by (clear; lia)
                 | [ |- context[?x - ?y + ?z] ]
@@ -528,175 +586,180 @@ Module Compilers.
                      | [ |- context[x - z - y] ]
                        => progress replace (x - z - y) with (x - y - z) by (clear; lia)
                      end
+                | [ |- context[?x + ?y] ]
+                  => lazymatch goal with
+                     | [ |- context[y + x] ]
+                       => progress replace (y + x) with (x + y) by (clear; lia)
+                     end
+                | [ |- context[?x + ?y + ?z] ]
+                  => lazymatch goal with
+                     | [ |- context[x + z + y] ]
+                       => progress replace (x + z + y) with (x + y + z) by (clear; lia)
+                     | [ |- context[z + x + y] ]
+                       => progress replace (z + x + y) with (x + y + z) by (clear; lia)
+                     | [ |- context[z + y + x] ]
+                       => progress replace (z + y + x) with (x + y + z) by (clear; lia)
+                     | [ |- context[y + x + z] ]
+                       => progress replace (y + x + z) with (x + y + z) by (clear; lia)
+                     | [ |- context[y + z + x] ]
+                       => progress replace (y + z + x) with (x + y + z) by (clear; lia)
+                     end
                 | [ |- - ident.cast _ (-?r) (- (?x / ?y)) = ident.cast _ ?r (?x' / ?y) ]
                   => tryif constr_eq x x' then fail else replace x with x' by lia
                 | [ |- _ = _ :> BinInt.Z ] => progress autorewrite with zsimplify_fast
-                | [ |- ident.cast _ ?r _ = ident.cast _ ?r _ ] => apply f_equal; Z.div_mod_to_quot_rem; nia
-                | [ H : forall x1 x2, ?R1 x1 x2 -> ?R2 (?f1 x1) (?f2 x2) |- ?R2 (?f1 _) (?f2 _) ]
-                  => apply H
-                | [ H : forall x1 x2, ?R1 x1 x2 -> forall y1 y2, ?R2 y1 y2 -> ?R3 (?f1 x1 y1) (?f2 x2 y2) |- ?R3 (?f1 _ _) (?f2 _ _) ]
-                  => apply H
-                | [ H : forall x x', ?Rx x x' -> forall y y', _ -> forall z z', ?Rz z z' -> ?R (?f x y z) (?f' x' y' z') |- ?R (?f _ _ _) (?f' _ _ _) ]
-                  => apply H; clear H
                 end ].
+
+      Local Ltac remove_casts :=
+        repeat match goal with
+               | [ |- context[ident.cast _ ?r (ident.cast _ ?r _)] ]
+                 => rewrite ident.cast_idempotent
+               | [ H : context[ident.cast _ ?r (ident.cast _ ?r _)] |- _ ]
+                 => rewrite ident.cast_idempotent in H
+               | [ |- context[ident.cast ?coor ?r ?v] ]
+                 => is_var v;
+                    pose proof (@ident.cast_always_bounded coor r v);
+                    generalize dependent (ident.cast coor r v);
+                    clear v; intro v; intros
+               | [ H : context[ident.cast ?coor ?r ?v] |- _ ]
+                 => is_var v;
+                    pose proof (@ident.cast_always_bounded coor r v);
+                    generalize dependent (ident.cast coor r v);
+                    clear v; intro v; intros
+               | [ H : context[ZRange.constant ?v] |- _ ] => unique pose proof (ZRange.is_bounded_by_bool_normalize_constant v)
+               | [ H : is_tighter_than_bool (?ZRf ?r1 ?r2) (ZRange.normalize ?rs) = true,
+                       H1 : is_bounded_by_bool ?v1 ?r1 = true,
+                            H2 : is_bounded_by_bool ?v2 ?r2 = true
+                   |- _ ]
+                 => let cst := multimatch goal with
+                               | [ |- context[ident.cast ?coor rs (?Zf v1 v2)] ] => constr:(ident.cast coor rs (Zf v1 v2))
+                               | [ H : context[ident.cast ?coor rs (?Zf v1 v2)] |- _ ] => constr:(ident.cast coor rs (Zf v1 v2))
+                               end in
+                    lazymatch cst with
+                    | ident.cast ?coor rs (?Zf v1 v2)
+                      => let lem := lazymatch constr:((ZRf, Zf)%core) with
+                                    | (ZRange.shiftl, Z.shiftl)%core => constr:(@ZRange.is_bounded_by_bool_shiftl v1 r1 v2 r2 H1 H2)
+                                    | (ZRange.shiftr, Z.shiftr)%core => constr:(@ZRange.is_bounded_by_bool_shiftr v1 r1 v2 r2 H1 H2)
+                                    | (ZRange.land, Z.land)%core => constr:(@ZRange.is_bounded_by_bool_land v1 r1 v2 r2 H1 H2)
+                                    end in
+                         try unique pose proof (@ZRange.is_bounded_by_of_is_tighter_than _ _ H _ lem);
+                         clear H;
+                         rewrite (@ident.cast_in_normalized_bounds coor rs (Zf v1 v2)) in * by assumption
+                    end
+               | [ H : is_tighter_than_bool (?ZRf ?r1) (ZRange.normalize ?rs) = true,
+                       H1 : is_bounded_by_bool ?v1 ?r1 = true
+                   |- _ ]
+                 => let cst := multimatch goal with
+                               | [ |- context[ident.cast ?coor rs (?Zf v1)] ] => constr:(ident.cast coor rs (Zf v1))
+                               | [ H : context[ident.cast ?coor rs (?Zf v1)] |- _ ] => constr:(ident.cast coor rs (Zf v1))
+                               end in
+                    lazymatch cst with
+                    | ident.cast ?coor rs (?Zf v1)
+                      => let lem := lazymatch constr:((ZRf, Zf)%core) with
+                                    | (ZRange.cc_m ?s, Z.cc_m ?s)%core => constr:(@ZRange.is_bounded_by_bool_cc_m s v1 r1 H1)
+                                    end in
+                         try unique pose proof (@ZRange.is_bounded_by_of_is_tighter_than _ _ H _ lem);
+                         clear H;
+                         rewrite (@ident.cast_in_normalized_bounds coor rs (Zf v1)) in * by assumption
+                    end
+               | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) |- context[ident.cast ?coor ?r ?v] ]
+                 => rewrite (@ident.cast_in_normalized_bounds coor r v) in * by assumption
+               | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r), H' : context[ident.cast ?coor ?r ?v] |- _ ]
+                 => rewrite (@ident.cast_in_normalized_bounds coor r v) in * by assumption
+               | [ H : is_bounded_by_bool ?v ?r = true,
+                       H' : is_tighter_than_bool ?r r[0~>?x-1]%zrange = true,
+                            H'' : Z.eqb ?x ?m = true
+                   |- context[?v mod ?m] ]
+                 => unique assert (is_bounded_by_bool v r[0~>x-1] = true)
+                   by (eapply ZRange.is_bounded_by_of_is_tighter_than; eassumption)
+               end.
+
+      Local Ltac unfold_cast_lemmas :=
+        repeat match goal with
+               | [ H : context[ZRange.normalize (ZRange.constant _)] |- _ ]
+                 => rewrite ZRange.normalize_constant in H
+               | [ H : is_bounded_by_bool _ (ZRange.normalize ?r) = true |- _ ]
+                 => is_var r; generalize dependent (ZRange.normalize r); clear r; intro r; intros
+               | [ H : is_bounded_by_bool ?x (ZRange.constant ?x) = true |- _ ]
+                 => clear H
+               | [ H : is_bounded_by_bool ?x ?r = true |- _ ]
+                 => is_var r; apply unfold_is_bounded_by_bool in H
+               | [ H : is_bounded_by_bool ?x r[_~>_] = true |- _ ]
+                 => apply unfold_is_bounded_by_bool in H
+               | [ H : is_tighter_than_bool r[_~>_] r[_~>_] = true |- _ ]
+                 => apply unfold_is_tighter_than_bool in H
+               | _ => progress cbn [lower upper] in *
+               | [ H : context[lower ?r] |- _ ]
+                 => is_var r; let l := fresh "l" in let u := fresh "u" in destruct r as [l u]
+               | [ H : context[upper ?r] |- _ ]
+                 => is_var r; let l := fresh "l" in let u := fresh "u" in destruct r as [l u]
+               | _ => progress Z.ltb_to_lt
+               end.
+
+      Local Ltac systematically_handle_casts :=
+        remove_casts; unfold_cast_lemmas.
+
+      Local Ltac fin_with_nia :=
+        lazymatch goal with
+        | [ |- ident.cast _ ?r _ = ident.cast _ ?r _ ] => apply f_equal; Z.div_mod_to_quot_rem; nia
+        | _ => reflexivity || (Z.div_mod_to_quot_rem; (lia + nia))
+        end.
 
       Lemma nbe_rewrite_rules_interp_good
         : rewrite_rules_interp_goodT nbe_rewrite_rules.
       Proof using Type.
         Time start_interp_good.
-        Time all: try solve [ repeat interp_good_t_step ].
+        Time all: try solve [ repeat interp_good_t_step_related ].
       Qed.
 
       Lemma arith_rewrite_rules_interp_good max_const
         : rewrite_rules_interp_goodT (arith_rewrite_rules max_const).
       Proof using Type.
         Time start_interp_good.
-        Time all: try solve [ repeat interp_good_t_step; (lia + nia) ].
+        Time all: try solve [ repeat interp_good_t_step_related; repeat interp_good_t_step_arith; fin_with_nia ].
       Qed.
 
       Lemma arith_with_casts_rewrite_rules_interp_good
         : rewrite_rules_interp_goodT arith_with_casts_rewrite_rules.
       Proof using Type.
         Time start_interp_good.
-        Time all: try solve [ repeat interp_good_t_step; Z.div_mod_to_quot_rem; (lia + nia) ].
+        Time all: try solve [ repeat interp_good_t_step_related; repeat interp_good_t_step_arith; fin_with_nia ].
       Qed.
 
       Local Ltac fancy_local_t :=
-        repeat first [ match goal with
-                       | [ H : forall s v v', ?invert_low s v = Some v' -> v = _,
-                             H' : ?invert_low _ _ = Some _ |- _ ] => apply H in H'
-                       end
-                     | progress autorewrite with zsimplify in * ].
-
-      Axiom proof_admitted : False.
-      Local Notation admit := (match proof_admitted with end).
+        repeat match goal with
+               | [ H : forall s v v', ?invert_low s v = Some v' -> v = _,
+                     H' : ?invert_low _ _ = Some _ |- _ ] => apply H in H'
+               | [ H : forall s v v', ?invert_low s v = Some v' -> v = _ |- _ ]
+                 => clear invert_low H
+               end.
+      Local Ltac more_fancy_arith_t := repeat autorewrite with zsimplify in *.
 
       Lemma fancy_rewrite_rules_interp_good
             (invert_low invert_high : Z -> Z -> option Z)
+            (value_range flag_range : zrange)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
-        : rewrite_rules_interp_goodT (fancy_rewrite_rules invert_low invert_high).
+        : rewrite_rules_interp_goodT fancy_rewrite_rules.
       Proof using Type.
         Time start_interp_good.
-        Time all: try solve [
-                        repeat interp_good_t_step;
-                          cbv [Option.bind] in *;
-                          repeat interp_good_t_step;
-                          fancy_local_t;
-                          repeat interp_good_t_step ].
-        Time all: repeat interp_good_t_step.
-        Time all: cbv [Option.bind] in *.
-        Time all: repeat interp_good_t_step.
-        Time all: fancy_local_t.
-        Time all: repeat interp_good_t_step.
-        all: repeat first [ progress cbn [Compile.value' Compile.reify] in *
-                          | progress subst
-                          | match goal with
-                            | [ H : expr.interp_related _ ?x ?y |- _ ]
-                              => clear H x
-                            end ].
-        all: repeat match goal with
-                    | [ H : _ = _ :> BinInt.Z |- _ ] => revert H
-                    | [ |- context[?v] ]
-                      => is_var v; match type of v with BinInt.Z => idtac end;
-                           revert v
-                    | [ v : BinInt.Z |- _ ] => clear v || revert v
-                    end.
-        all: repeat match goal with
-                    | [ |- forall n : BinInt.Z, _ ] => let x := fresh "xx" in intro x
-                    | [ |- forall n : _ = _ :> BinInt.Z, _ ] => let H := fresh "H" in intro H
-                    end.
-        all: repeat match goal with
-                    | [ H : _ = _ :> BinInt.Z |- _ ] => revert H
-                    | [ v : BinInt.Z |- _ ] => clear v || revert v
-                    end.
-        all: repeat match goal with
-                    | [ |- forall n : BinInt.Z, _ ] => let x := fresh "x" in intro x
-                    | [ |- forall n : _ = _ :> BinInt.Z, _ ] => let H := fresh "H" in intro H
-                    end.
-        all: repeat match goal with
-                    | [ H : _ = _ :> BinInt.Z |- _ ] => revert H
-                    | [ v : BinInt.Z |- _ ] => clear v || revert v
-                    end.
-        Set Printing Width 80.
-        (* 16 subgoals (ID 124724)
-
-  cast_outside_of_range : zrange -> Z -> Z
-  invert_low, invert_high : Z -> Z -> option Z
-  Hlow : forall s v v' : Z,
-         invert_low s v = Some v' -> v = Z.land v' (2 ^ (s / 2) - 1)
-  Hhigh : forall s v v' : Z, invert_high s v = Some v' -> v = Z.shiftr v' (s / 2)
-  ============================
-  forall x x0 x1 x2 : Z,
-  x2 = 2 ^ Z.log2 x2 ->
-  (x1 + Z.shiftl x0 x mod x2) / x2 = (x1 + Z.shiftl x0 x) / x2
-
-subgoal 2 (ID 124734) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 ->
- (x1 + Z.shiftl x0 x mod x2) / x2 = (Z.shiftl x0 x + x1) / x2
-subgoal 3 (ID 124744) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 ->
- (x1 + Z.shiftr x0 x mod x2) / x2 = (x1 + Z.shiftr x0 x) / x2
-subgoal 4 (ID 124754) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 ->
- (x1 + Z.shiftr x0 x mod x2) / x2 = (Z.shiftr x0 x + x1) / x2
-subgoal 5 (ID 124762) is:
- forall x x0 x1 : Z, x1 = 2 ^ Z.log2 x1 -> (x0 + x mod x1) / x1 = (x0 + x) / x1
-subgoal 6 (ID 124774) is:
- forall x x0 x1 x2 x3 : Z,
- x3 = 2 ^ Z.log2 x3 ->
- (x2 + x1 + Z.shiftl x0 x mod x3) / x3 = (x2 + x1 + Z.shiftl x0 x) / x3
-subgoal 7 (ID 124786) is:
- forall x x0 x1 x2 x3 : Z,
- x3 = 2 ^ Z.log2 x3 ->
- (x2 + x1 + Z.shiftl x0 x mod x3) / x3 = (x2 + Z.shiftl x0 x + x1) / x3
-subgoal 8 (ID 124798) is:
- forall x x0 x1 x2 x3 : Z,
- x3 = 2 ^ Z.log2 x3 ->
- (x2 + x1 + Z.shiftr x0 x mod x3) / x3 = (x2 + x1 + Z.shiftr x0 x) / x3
-subgoal 9 (ID 124810) is:
- forall x x0 x1 x2 x3 : Z,
- x3 = 2 ^ Z.log2 x3 ->
- (x2 + x1 + Z.shiftr x0 x mod x3) / x3 = (x2 + Z.shiftr x0 x + x1) / x3
-subgoal 10 (ID 124820) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 -> (x1 + x0 + x mod x2) / x2 = (x1 + x0 + x) / x2
-subgoal 11 (ID 124830) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 ->
- (x1 - Z.shiftl x0 x mod x2) / x2 = (x1 - Z.shiftl x0 x) / x2
-subgoal 12 (ID 124840) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 ->
- (x1 - Z.shiftr x0 x mod x2) / x2 = (x1 - Z.shiftr x0 x) / x2
-subgoal 13 (ID 124848) is:
- forall x x0 x1 : Z, x1 = 2 ^ Z.log2 x1 -> (x0 - x mod x1) / x1 = (x0 - x) / x1
-subgoal 14 (ID 124860) is:
- forall x x0 x1 x2 x3 : Z,
- x3 = 2 ^ Z.log2 x3 ->
- (x2 - Z.shiftl x1 x0 mod x3 - x) / x3 = (x2 - Z.shiftl x1 x0 - x) / x3
-subgoal 15 (ID 124872) is:
- forall x x0 x1 x2 x3 : Z,
- x3 = 2 ^ Z.log2 x3 ->
- (x2 - Z.shiftr x1 x0 mod x3 - x) / x3 = (x2 - Z.shiftr x1 x0 - x) / x3
-subgoal 16 (ID 124882) is:
- forall x x0 x1 x2 : Z,
- x2 = 2 ^ Z.log2 x2 -> (x1 - x0 mod x2 - x) / x2 = (x1 - x0 - x) / x2
-         *)
-        1-16: exact admit.
+        Time all: try solve [ repeat interp_good_t_step_related ].
       Qed.
 
       Lemma fancy_with_casts_rewrite_rules_interp_good
             (invert_low invert_high : Z -> Z -> option Z)
+            (value_range flag_range : zrange)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
-        : rewrite_rules_interp_goodT (fancy_with_casts_rewrite_rules (*invert_low invert_high*)).
+        : rewrite_rules_interp_goodT (fancy_with_casts_rewrite_rules invert_low invert_high value_range flag_range).
       Proof using Type.
-        Time start_interp_good.
-        Time all: repeat interp_good_t_step.
+        Time start_interp_good. (* Finished transaction in 1.206 secs (1.207u,0.s) (successful) *)
+        Set Ltac Profiling.
+        Reset Ltac Profile.
+        Time all: repeat interp_good_t_step_related. (* Finished transaction in 13.259 secs (13.128u,0.132s) (successful) *)
+        Reset Ltac Profile.
+        Time all: fancy_local_t. (* Finished transaction in 0.051 secs (0.052u,0.s) (successful) *)
+        Time all: systematically_handle_casts. (* Finished transaction in 2.004 secs (1.952u,0.052s) (successful) *)
+        Time all: try solve [ repeat interp_good_t_step_arith ]. (* Finished transaction in 26.754 secs (26.455u,0.299s) (successful) *)
       Qed.
     End with_cast.
   End RewriteRules.

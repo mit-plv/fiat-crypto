@@ -46,17 +46,17 @@ Module Compilers.
     Lemma nbe_rewrite_head_eq : @nbe_rewrite_head = @nbe_rewrite_head0.
     Proof. reflexivity. Qed.
 
-    Lemma fancy_rewrite_head_eq invert_low invert_high
-      : (fun var do_again => @fancy_rewrite_head invert_low invert_high var)
-        = (fun var => @fancy_rewrite_head0 var invert_low invert_high).
+    Lemma fancy_rewrite_head_eq
+      : (fun var do_again => @fancy_rewrite_head var)
+        = @fancy_rewrite_head0.
     Proof. reflexivity. Qed.
 
     Lemma arith_rewrite_head_eq max_const_val : @arith_rewrite_head max_const_val = (fun var => @arith_rewrite_head0 var max_const_val).
     Proof. reflexivity. Qed.
 
-    Lemma fancy_with_casts_rewrite_head_eq (*invert_low invert_high*)
-      : (fun var do_again => @fancy_with_casts_rewrite_head (*invert_low invert_high*) var)
-        = (fun var => @fancy_with_casts_rewrite_head0 var (*invert_low invert_high*)).
+    Lemma fancy_with_casts_rewrite_head_eq invert_low invert_high value_range flag_range
+      : (fun var do_again => @fancy_with_casts_rewrite_head invert_low invert_high value_range flag_range var)
+        = (fun var => @fancy_with_casts_rewrite_head0 var invert_low invert_high value_range flag_range).
     Proof. reflexivity. Qed.
 
     Lemma arith_with_casts_rewrite_head_eq : @arith_with_casts_rewrite_head = @arith_with_casts_rewrite_head0.
@@ -362,7 +362,7 @@ Module Compilers.
             (invert_low invert_high : Z -> Z -> option Z)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
-        : rewrite_rules_goodT (fancy_rewrite_rules invert_low invert_high) (fancy_rewrite_rules invert_low invert_high).
+        : rewrite_rules_goodT fancy_rewrite_rules fancy_rewrite_rules.
       Proof using Type.
         Time start_good.
         Time all: repeat good_t_step.
@@ -372,9 +372,10 @@ Module Compilers.
 
       Lemma fancy_with_casts_rewrite_rules_good
             (invert_low invert_high : Z -> Z -> option Z)
+            (value_range flag_range : ZRange.zrange)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
-        : rewrite_rules_goodT (fancy_with_casts_rewrite_rules (*invert_low invert_high*)) (fancy_with_casts_rewrite_rules (*invert_low invert_high*)).
+        : rewrite_rules_goodT (fancy_with_casts_rewrite_rules invert_low invert_high value_range flag_range) (fancy_with_casts_rewrite_rules invert_low invert_high value_range flag_range).
       Proof using Type.
         Time start_good.
         Time all: repeat good_t_step.
