@@ -182,4 +182,8 @@ Module ZRange.
     : is_tighter_than_bool (ZRange.constant v) r
       = is_bounded_by_bool v r.
   Proof. reflexivity. Qed.
+
+  Lemma is_bounded_by_bool_constant v
+    : is_bounded_by_bool v (ZRange.constant v) = true.
+  Proof. repeat t2_step. Qed.
 End ZRange.
