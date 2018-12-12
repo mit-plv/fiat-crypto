@@ -189,4 +189,8 @@ Module ZRange.
   Lemma is_bounded_by_bool_constant v
     : is_bounded_by_bool v (ZRange.constant v) = true.
   Proof. repeat t2_step. Qed.
+
+  Lemma is_bounded_by_bool_normalize_constant v
+    : is_bounded_by_bool v (ZRange.normalize (ZRange.constant v)) = true.
+  Proof. repeat t2_step. Qed.
 End ZRange.
