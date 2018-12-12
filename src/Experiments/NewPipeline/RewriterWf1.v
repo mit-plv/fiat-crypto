@@ -1308,6 +1308,36 @@ Module Compilers.
                          | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id ].
           Qed.
 
+          Local Notation mk_new_evm0 evm ls
+            := (fold_right
+                  (fun i k evm'
+                   => k match PositiveMap.find i evm with
+                        | Some v => PositiveMap.add i v evm'
+                        | None => evm'
+                        end) (fun evm' => evm')
+                  (List.rev ls)) (only parsing).
+
+          Local Notation mk_new_evm evm ps
+            := (mk_new_evm0
+                  evm
+                  (PositiveSet.elements ps)) (only parsing).
+
+
+          Lemma projT1_app_with_unification_resultT {t p K f v res}
+            : @app_with_unification_resultT_cps var t p K f v _ (@Some _) = Some res
+              -> projT1 res = mk_new_evm (projT1 v) (pattern.collect_vars p) (PositiveMap.empty _).
+          Proof using Type.
+            cbv [app_with_unification_resultT_cps].
+            repeat first [ progress inversion_option
+                         | progress subst
+                         | progress cbn [projT1] in *
+                         | progress intros
+                         | reflexivity
+                         | progress cbv [Option.bind] in *
+                         | progress cps_id'_with_option app_transport_with_unification_resultT'_cps_id
+                         | break_match_hyps_step ltac:(fun _ => idtac) ].
+          Qed.
+
           Lemma reveal_rawexpr_cps_gen_id assume_known e T k
             : @reveal_rawexpr_cps_gen ident var assume_known e T k = k (reveal_rawexpr_gen assume_known e).
           Proof.
