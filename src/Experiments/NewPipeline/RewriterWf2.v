@@ -206,7 +206,8 @@ Module Compilers.
                                 | [ H : option_eq ?R ?x ?y |- _ ]
                                   => destruct x eqn:?, y eqn:?; cbv [option_eq] in H
                                 | [ |- wf_unification_resultT' _ (_, _) (_, _) ] => split; assumption
-                                end ].
+                                end
+                              | progress cbv [Option.bind] in * ].
           Qed.
 
           Lemma wf_unify_pattern
