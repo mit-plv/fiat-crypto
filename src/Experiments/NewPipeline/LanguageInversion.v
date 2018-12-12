@@ -603,14 +603,14 @@ Module Compilers.
       Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
       Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
 
-      Lemma reify_list_interp_related_iff {t ls v}
-        : expr.interp_related (@ident_interp) (reify_list (t:=t) ls) v
-          <-> List.Forall2 (expr.interp_related (@ident_interp)) ls v.
+      Lemma reify_list_interp_related_gen_iff {var R t ls v}
+        : expr.interp_related_gen (var:=var) (@ident_interp) R (reify_list (t:=t) ls) v
+          <-> List.Forall2 (expr.interp_related_gen (@ident_interp) R) ls v.
       Proof using Type.
         revert v; induction ls as [|l ls IHls], v as [|v vs].
         all: repeat first [ rewrite expr.reify_list_nil
                           | rewrite expr.reify_list_cons
-                          | progress cbn [expr.interp_related ident.gen_interp type.related] in *
+                          | progress cbn [expr.interp_related_gen ident.gen_interp type.related] in *
                           | progress cbv [Morphisms.respectful] in *
                           | progress destruct_head'_ex
                           | progress destruct_head'_and
@@ -634,14 +634,25 @@ Module Compilers.
                             end ].
       Qed.
 
+      Lemma reify_list_interp_related_iff {t ls v}
+        : expr.interp_related (@ident_interp) (reify_list (t:=t) ls) v
+          <-> List.Forall2 (expr.interp_related (@ident_interp)) ls v.
+      Proof using Type. apply reify_list_interp_related_gen_iff. Qed.
+
+      Lemma reflect_list_interp_related_gen_iff {var R t ls ls' v}
+            (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
+        : List.Forall2 (expr.interp_related_gen (var:=var) (@ident_interp) R) ls' v
+          <-> expr.interp_related_gen (@ident_interp) R ls v.
+      Proof using Type.
+        apply reflect_list_Some in Hls; subst.
+        rewrite reify_list_interp_related_gen_iff; reflexivity.
+      Qed.
+
       Lemma reflect_list_interp_related_iff {t ls ls' v}
             (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
         : List.Forall2 (expr.interp_related (@ident_interp)) ls' v
           <-> expr.interp_related (@ident_interp) ls v.
-      Proof using Type.
-        apply reflect_list_Some in Hls; subst.
-        rewrite reify_list_interp_related_iff; reflexivity.
-      Qed.
+      Proof using Type. now apply reflect_list_interp_related_gen_iff. Qed.
     End with_interp.
 
     Ltac invert_subst_step_helper guard_tac :=

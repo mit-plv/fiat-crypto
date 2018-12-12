@@ -586,7 +586,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           : expr.interp_related interp_ident e v
             -> @type.eqv t (expr.interp interp_ident e) v.
         Proof using Type.
-          induction e; cbn [expr.interp_related expr.interp type.related]; cbv [respectful LetIn.Let_In].
+          cbv [expr.interp_related]; induction e; cbn [expr.interp_related_gen expr.interp type.related]; cbv [respectful LetIn.Let_In].
           all: repeat first [ progress intros
                             | assumption
                             | solve [ eauto ]

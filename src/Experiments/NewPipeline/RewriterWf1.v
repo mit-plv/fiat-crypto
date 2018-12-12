@@ -2196,8 +2196,15 @@ Module Compilers.
                 clear reify_interp_related reflect_interp_related ].
             all: repeat first [ progress cbn [reify reflect] in *
                               | progress fold (@reify) (@reflect) in *
-                              | progress cbn [expr_interp_related value_interp_related] in *
+                              | progress cbv [expr.interp_related] in *
+                              | progress cbn [expr.interp_related_gen value_interp_related] in *
                               | break_innermost_match_step
+                              | match goal with
+                                | [ |- context G[expr.interp_related_gen ?ii (@type.eqv) (UnderLets.to_expr ?v)] ]
+                                  => let G' := context G[expr_interp_related (UnderLets.to_expr v)] in
+                                     change G';
+                                     rewrite <- UnderLets.to_expr_interp_related_iff
+                                end
                               | rewrite <- UnderLets.to_expr_interp_related_iff
                               | exact id
                               | assumption
@@ -2211,12 +2218,12 @@ Module Compilers.
             : rawexpr_interp_related r v
               -> expr_interp_related (expr_of_rawexpr r) v.
           Proof using Type.
-            revert v; induction r; cbn [expr_of_rawexpr expr_interp_related rawexpr_interp_related]; intros.
+            cbv [expr.interp_related]; revert v; induction r; cbn [expr_of_rawexpr expr.interp_related_gen rawexpr_interp_related]; intros.
             all: repeat first [ progress destruct_head'_and
                               | progress destruct_head'_ex
                               | progress subst
                               | progress inversion_sigma
-                              | progress cbn [eq_rect type_of_rawexpr expr.interp expr_interp_related type_of_rawexpr] in *
+                              | progress cbn [eq_rect type_of_rawexpr expr.interp expr.interp_related_gen type_of_rawexpr] in *
                               | assumption
                               | exfalso; assumption
                               | apply conj
@@ -2238,7 +2245,8 @@ Module Compilers.
                               | progress destruct_head'_and
                               | assumption
                               | apply reflect_interp_related
-                              | progress cbn [expr_interp_related]
+                              | progress cbn [expr.interp_related_gen]
+                              | progress cbv [expr.interp_related]
                               | solve [ eauto ] ].
           Qed.
 
@@ -2249,7 +2257,8 @@ Module Compilers.
           Proof using Type.
             revert t e H v; induction re.
             all: repeat first [ progress intros
-                              | progress cbn [rawexpr_equiv_expr eq_rect rawexpr_interp_related type_of_rawexpr expr_interp_related] in *
+                              | progress cbn [rawexpr_equiv_expr eq_rect rawexpr_interp_related type_of_rawexpr expr.interp_related_gen] in *
+                              | progress cbv [expr.interp_related] in *
                               | progress subst
                               | progress destruct_head'_and
                               | progress destruct_head'_ex
@@ -2302,7 +2311,8 @@ Module Compilers.
               -> rawexpr_interp_related re2 (rew [type.interp base.interp] eq_type_of_rawexpr_equiv H in v).
           Proof using Type.
             revert re2 H; induction re1, re2; intros H H'.
-            all: repeat first [ progress cbn [rawexpr_equiv rawexpr_interp_related eq_rect type_of_rawexpr projT1 projT2 rawexpr_equiv_expr expr_interp_related] in *
+            all: repeat first [ progress cbn [rawexpr_equiv rawexpr_interp_related eq_rect type_of_rawexpr projT1 projT2 rawexpr_equiv_expr expr.interp_related_gen] in *
+                              | progress cbv [expr.interp_related] in *
                               | eassumption
                               | reflexivity
                               | progress intros
@@ -2419,12 +2429,10 @@ Module Compilers.
                | None => True
                | Some v1 => UnderLets.interp_related
                               ident_interp
-                              (fun e
-                               => expr_interp_related
-                                    ((if should_do_again
-                                         return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> _
-                                      then reify_expr
-                                      else fun v1 => v1) e))
+                              (if should_do_again
+                                  return (@expr.expr base.type ident (if should_do_again then @value var else var) t) -> _
+                               then expr.interp_related_gen ident_interp (fun t => value_interp_related)
+                               else expr_interp_related)
                               v1
                               v2
                end.

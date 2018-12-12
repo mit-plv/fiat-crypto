@@ -150,10 +150,11 @@ Module Compilers.
              let v'' := fresh in
              cut (v = v'); [ generalize v; intros v'' ?; subst v'' | symmetry ]) in
         match goal with
+        | _ => progress cbv [expr.interp_related] in *
         | _ => progress cbn [Compile.reify_expr]
         | [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
         | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand
-        | [ |- expr.interp_related ?ident_interp ?f ?v ]
+        | [ |- expr.interp_related_gen ?ident_interp ?R ?f ?v ]
           => do_replace v
         | [ |- exists (fv : ?T1 -> ?T2) (ev : ?T1),
               _ /\ _ /\ fv ev = ?x ]
@@ -162,18 +163,18 @@ Module Compilers.
              first [ do_replace x
                    | is_evar x; do 2 eexists; repeat apply conj; [ | | reflexivity ] ]
         | _ => progress intros
-        | [ |- expr.interp_related _ _ ?ev ] => is_evar ev; eassumption
-        | [ |- expr.interp_related _ (?f @ ?x) ?ev ]
+        | [ |- expr.interp_related_gen _ _ _ ?ev ] => is_evar ev; eassumption
+        | [ |- expr.interp_related_gen _ _ (?f @ ?x) ?ev ]
           => is_evar ev;
              let fh := fresh in
              let xh := fresh in
-             set (fh := f); set (xh := x); cbn [expr.interp_related]; subst fh xh;
+             set (fh := f); set (xh := x); cbn [expr.interp_related_gen]; subst fh xh;
              do 2 eexists; repeat apply conj; [ | | reflexivity ]
-        | [ |- expr.interp_related _ (expr.Abs ?f) _ ]
-          => let fh := fresh in set (fh := f); cbn [expr.interp_related]; subst fh
-        | [ |- expr.interp_related _ (expr.Ident ?idc) ?ev ]
+        | [ |- expr.interp_related_gen _ _ (expr.Abs ?f) _ ]
+          => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh
+        | [ |- expr.interp_related_gen _ _ (expr.Ident ?idc) ?ev ]
           => is_evar ev;
-             cbn [expr.interp_related]; apply ident.gen_interp_Proper; reflexivity
+             cbn [expr.interp_related_gen]; apply ident.gen_interp_Proper; reflexivity
         | [ |- _ = _ :> ?T ]
           => lazymatch T with
              | BinInt.Z => idtac
@@ -192,13 +193,13 @@ Module Compilers.
                 | [ |- True ] => exact I
                 | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
                 | [ |- ?G ] => has_evar G; reflexivity
-                | [ |- context[expr.interp_related _ _ _] ] => reflexivity
+                | [ |- context[expr.interp_related_gen _ _ _ _] ] => reflexivity
                 | [ |- context[_ == _] ] => reflexivity
                 (*| [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
                 | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand*)
                 end
               | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr bool_rect UnderLets.interp_related type.related] in *
-              | progress cbv [Compile.option_bind' respectful] in *
+              | progress cbv [Compile.option_bind' respectful expr.interp_related] in *
               | progress fold (@type.interp _ base.interp)
               | progress fold (@base.interp)
               | match goal with
@@ -228,10 +229,10 @@ Module Compilers.
                   => rewrite (@eq_map_list_rect A B f ls)
                 | [ |- UnderLets.interp_related _ _ _ (@fold_right ?A ?B ?f ?v ?ls) ]
                   =>  rewrite (@eq_fold_right_list_rect A B f v ls)
-                | [ |- context[expr.interp_related _ (reify_list _)] ]
-                  => rewrite expr.reify_list_interp_related_iff
-                | [ H : context[expr.interp_related _ (reify_list _)] |- _ ]
-                  => rewrite expr.reify_list_interp_related_iff in H
+                | [ |- context[expr.interp_related_gen _ _ (reify_list _)] ]
+                  => rewrite expr.reify_list_interp_related_gen_iff
+                | [ H : context[expr.interp_related_gen _ _ (reify_list _)] |- _ ]
+                  => rewrite expr.reify_list_interp_related_gen_iff in H
                 | [ |- context[Forall2 _ (List.map _ _) _] ] => rewrite Forall2_map_l_iff
                 | [ |- context[Forall2 _ _ (List.map _ _)] ] => rewrite Forall2_map_r_iff
                 | [ |- context[Forall2 _ (List.repeat _ _) (List.repeat _ _)] ] => rewrite Forall2_repeat_iff
@@ -281,27 +282,27 @@ Module Compilers.
                        => let f := match (eval pattern (v1 yv) in f) with ?f _ => f end in
                           eapply (@UnderLets.interp_related_Proper_impl_same_UnderLets _ _ _ _ _ _ _ _ _ (e xv) (v1 yv) f); [ | eapply H; assumption ]
                      end
-                | [ |- expr.interp_related
-                         _
+                | [ |- expr.interp_related_gen
+                         _ _
                          (#(ident.prod_rect) @ ?f @ ?e)%expr
                          match ?e' with pair a b => @?f' a b end ]
                   => let fh := fresh in
                      let eh := fresh in
-                     set (fh := f); set (eh := e); cbn [expr.interp_related]; subst fh eh;
+                     set (fh := f); set (eh := e); cbn [expr.interp_related_gen]; subst fh eh;
                      exists (fun ev => match ev with pair a b => f' a b end), e';
                      repeat apply conj;
                      [ | assumption | reflexivity ];
                      exists (fun fv ev => match ev with pair a b => fv a b end), f';
                      repeat apply conj;
                      [ cbn [type.interp type.related ident_interp]; cbv [respectful]; intros; subst; eta_expand; auto | | reflexivity ]
-                | [ |- expr.interp_related
-                         _
+                | [ |- expr.interp_related_gen
+                         _ _
                          (#(ident.bool_rect) @ ?t @ ?f @ ?b)%expr
                          (bool_rect ?P ?t' ?f' ?b') ]
                   => let th := fresh in
                      let fh := fresh in
                      let bh := fresh in
-                     set (th := t); set (fh := f); set (bh := b); cbn [expr.interp_related]; subst th fh bh;
+                     set (th := t); set (fh := f); set (bh := b); cbn [expr.interp_related_gen]; subst th fh bh;
                      unshelve
                        ((exists (bool_rect P t' f'), b'); repeat apply conj;
                         [ | shelve | reflexivity ];
@@ -309,7 +310,7 @@ Module Compilers.
                         [ | shelve | reflexivity ];
                         (exists (fun tv fv => bool_rect P (tv tt) (fv tt)), (fun _ => t')); repeat apply conj;
                         [ | shelve | reflexivity ])
-                | [ |- @expr.interp_related _ _ _ _ (type.base ?t) _ _ ]
+                | [ |- @expr.interp_related_gen _ _ _ _ _ _ (type.base ?t) _ _ ]
                   => lazymatch t with
                      | base.type.type_base base.type.Z => idtac
                      | base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z) => idtac
@@ -320,12 +321,12 @@ Module Compilers.
                   => lazymatch T1 with Z => idtac | (Z * Z)%type => idtac end;
                      lazymatch T2 with Z => idtac | (Z * Z)%type => idtac end;
                      progress repeat recurse_interp_related_step
-                | [ |- expr.interp_related _ (expr.Abs ?f) _ ]
-                  => let fh := fresh in set (fh := f); cbn [expr.interp_related]; subst fh
-                | [ H : expr.interp_related _ ?x ?x' |- expr.interp_related _ (?f @ ?x) (?f' ?x') ]
+                | [ |- expr.interp_related_gen _ _ (expr.Abs ?f) _ ]
+                  => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh
+                | [ H : expr.interp_related_gen _ _ ?x ?x' |- expr.interp_related_gen _ _ (?f @ ?x) (?f' ?x') ]
                   => let fh := fresh in
                      let xh := fresh in
-                     set (fh := f); set (xh := x); cbn [expr.interp_related]; subst fh xh;
+                     set (fh := f); set (xh := x); cbn [expr.interp_related_gen]; subst fh xh;
                      exists f', x'; repeat apply conj;
                      [ | exact H | reflexivity ]
                 | [ |- List.Forall2 _ (update_nth _ _ _) (update_nth _ _ _) ] => apply Forall2_update_nth
@@ -451,7 +452,7 @@ Module Compilers.
               | break_innermost_match_step
               | break_innermost_match_hyps_step
               | progress destruct_head'_or
-              | progress cbn [expr.interp_related] in *
+              | progress cbn [expr.interp_related_gen] in *
               | match goal with
                 | [ H : context[expr.interp _ (UnderLets.interp _ (?f _ _ _))]
                     |- expr.interp _ (UnderLets.interp _ (?f _ _ _)) = _ ]
@@ -465,7 +466,7 @@ Module Compilers.
                 end
               | progress cbv [Option.bind] in *
               | match goal with
-                | [ H : expr.interp_related _ ?e ?v |- _ ] => is_var e; clear H e
+                | [ H : expr.interp_related_gen _ _ ?e ?v |- _ ] => is_var e; clear H e
                 end ].
 
       Local Ltac interp_good_t_step_arith :=
@@ -541,6 +542,7 @@ Module Compilers.
                      [ clear -H; cbv [is_bounded_by_bool] in H; cbn [lower upper] in H; Bool.split_andb; Z.ltb_to_lt; lia..
                      | ]
                 end
+              | progress cbn [expr.interp_related_gen] in *
               | match goal with
                 | [ |- context[Z.shiftl] ] => rewrite Z.shiftl_mul_pow2 by auto with zarith
                 | [ |- context[Z.shiftr] ] => rewrite Z.shiftr_div_pow2 by auto with zarith

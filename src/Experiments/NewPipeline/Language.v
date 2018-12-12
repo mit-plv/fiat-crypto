@@ -458,31 +458,38 @@ Module Compilers.
               {interp_base_type : base_type -> Type}
               (interp_ident : forall t, ident t -> type.interp interp_base_type t).
 
-      Fixpoint interp_related {t} (e : @expr base_type ident (type.interp interp_base_type) t) : type.interp interp_base_type t -> Prop
+      Fixpoint interp_related_gen
+               {var : type base_type -> Type}
+               (R : forall t, var t -> type.interp interp_base_type t -> Prop)
+               {t} (e : @expr base_type ident var t)
+        : type.interp interp_base_type t -> Prop
         := match e in expr t return type.interp interp_base_type t -> Prop with
-           | expr.Var t v1 => fun v2 => v1 == v2
+           | expr.Var t v1 => R t v1
            | expr.App s d f x
              => fun v2
                 => exists fv xv,
-                    @interp_related _ f fv
-                    /\ @interp_related _ x xv
+                    @interp_related_gen var R _ f fv
+                    /\ @interp_related_gen var R _ x xv
                     /\ fv xv = v2
            | expr.Ident t idc
              => fun v2 => interp_ident _ idc == v2
            | expr.Abs s d f1
              => fun f2
                 => forall x1 x2,
-                    x1 == x2
-                    -> @interp_related d (f1 x1) (f2 x2)
+                    R _ x1 x2
+                    -> @interp_related_gen var R d (f1 x1) (f2 x2)
            | expr.LetIn s d x f (* combine the App rule with the Abs rule *)
              => fun v2
                 => exists fv xv,
-                    @interp_related _ x xv
+                    @interp_related_gen var R _ x xv
                     /\ (forall x1 x2,
-                           x1 == x2
-                           -> @interp_related d (f x1) (fv x2))
+                           R _ x1 x2
+                           -> @interp_related_gen var R d (f x1) (fv x2))
                     /\ fv xv = v2
            end.
+
+      Definition interp_related {t} (e : @expr base_type ident (type.interp interp_base_type) t) : type.interp interp_base_type t -> Prop
+        := @interp_related_gen (type.interp interp_base_type) (@type.eqv) t e.
     End with_interp.
 
     Definition Expr {base_type ident} t := forall var, @expr base_type ident var t.
