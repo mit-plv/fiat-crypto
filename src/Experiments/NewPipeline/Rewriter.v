@@ -780,8 +780,9 @@ Module Compilers.
           := match p, e return forall T, (unification_resultT' p evm -> option T) -> option T with
              | pattern.Wildcard t', _
                => fun T k
-                  => (tro <- type.try_make_transport_cps (@base.try_make_transport_cps) value _ _;
+                  => (tro <- type.try_make_transport_cps (@base.try_make_transport_cps) value (type_of_rawexpr e) (pattern.type.subst_default t' evm);
                         (tr <- tro;
+                           _ <- pattern.type.subst t' evm; (* ensure that we did not fall into the default case *)
                            (k (tr (value_of_rawexpr e))))%option)%cps
              | pattern.Ident t pidc, rIdent known _ idc _ _
                => fun T k
