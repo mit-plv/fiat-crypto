@@ -182,7 +182,7 @@ Module Compilers.
                  => k match PositiveMap.find i evm with
                       | Some v => PositiveMap.add i v evm'
                       | None => evm'
-                      end) (fun evm => evm)
+                      end) (fun evm' => evm')
                 (List.rev ls)) (only parsing).
 
         Local Notation mk_new_evm evm ps
@@ -437,10 +437,12 @@ Module Compilers.
                          end
                        | progress specialize_by (exact eq_refl)
                        | progress specialize_by_assumption
+                       | progress specialize_by congruence
                        | progress split_contravariant_or
                        | solve [ eauto ]
                        | break_innermost_match_hyps_step
-                       | break_innermost_match_step ].
+                       | break_innermost_match_step
+                       | progress cbn [pattern.type.subst pattern.type.collect_vars] in * ].
 
         Lemma subst_eq_iff {t evm1 evm2}
           : pattern.type.subst t evm1 = pattern.type.subst t evm2
@@ -457,6 +459,53 @@ Module Compilers.
           : (forall t', PositiveSet.mem t' (pattern.type.collect_vars t) = true -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)
             -> pattern.type.subst t evm1 = pattern.type.subst t evm2.
         Proof using Type. rewrite subst_eq_iff; eauto. Qed.
+
+        Lemma subst_eq_Some_if_mem {t evm1 evm2}
+          : pattern.type.subst t evm1 <> None
+            -> (forall t', PositiveSet.mem t' (pattern.type.collect_vars t) = true -> PositiveMap.find t' evm1 <> None -> PositiveMap.find t' evm1 = PositiveMap.find t' evm2)
+            -> pattern.type.subst t evm1 = pattern.type.subst t evm2.
+        Proof using Type.
+          induction t;
+            repeat first [ progress t_subst_eq_iff
+                         | match goal with
+                           | [ H : pattern.base.subst ?t ?evm1 = Some _, H' : pattern.base.subst ?t ?evm2 = _ |- _ ]
+                             => let H'' := fresh in
+                                pose proof (@base.subst_eq_Some_if_mem t evm1 evm2) as H'';
+                                rewrite H, H' in H''; clear H H'
+                           end ].
+        Qed.
+
+        Local Instance subst_Proper
+          : Proper (eq ==> @PositiveMap.Equal _ ==> eq) pattern.type.subst.
+        Proof using Type.
+          intros t t' ? ? ? ?; subst t'; cbv [Proper respectful PositiveMap.Equal] in *.
+          apply subst_eq_if_mem; auto.
+        Qed.
+
+        Local Notation mk_new_evm0 evm ls
+          := (fold_right
+                (fun i k evm'
+                 => k match PositiveMap.find i evm with
+                      | Some v => PositiveMap.add i v evm'
+                      | None => evm'
+                      end) (fun evm' => evm')
+                (List.rev ls)) (only parsing).
+
+        Local Notation mk_new_evm evm ps
+          := (mk_new_evm0
+                evm
+                (PositiveSet.elements ps)) (only parsing).
+
+        Lemma eq_subst_types_pattern_collect_vars pt t evm evm0
+              (evm' := mk_new_evm evm (pattern.type.collect_vars pt) evm0)
+              (Hty : pattern.type.subst pt evm = Some t)
+          : pattern.type.subst pt evm' = Some t.
+        Proof using Type.
+          rewrite <- Hty; symmetry; apply subst_eq_Some_if_mem; subst evm'; intros; try congruence; [].
+          rewrite base.fold_right_evar_map_find_In; rewrite_hyp !*.
+          destruct (PositiveMap.find t' evm) eqn:H'; [ reflexivity | ].
+          congruence.
+        Qed.
 
         Lemma app_forall_vars_under_forall_vars_relation
               {p k1 k2 F v1 v2 evm}
