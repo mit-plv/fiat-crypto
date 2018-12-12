@@ -7,6 +7,7 @@ Require Import Crypto.Util.ZRange.CornersMonotoneBounds.
 Require Import Crypto.Util.ZRange.LandLorBounds.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Morphisms.
+Require Import Crypto.Util.ZUtil.CC.
 Require Import Crypto.Util.Notations.
 
 Module ZRange.
@@ -77,6 +78,12 @@ Module ZRange.
         (Hboundedx : is_bounded_by_bool x x_bs = true)
         (Hboundedy : is_bounded_by_bool y y_bs = true)
   : is_bounded_by_bool (Z.shiftl x y) (ZRange.shiftl x_bs y_bs) = true.
+  Proof. t. Qed.
+
+  Lemma is_bounded_by_bool_cc_m
+        s x x_bs
+        (Hboundedx : is_bounded_by_bool x x_bs = true)
+  : is_bounded_by_bool (Z.cc_m s x) (ZRange.cc_m s x_bs) = true.
   Proof. t. Qed.
 
   Lemma is_bounded_by_bool_land

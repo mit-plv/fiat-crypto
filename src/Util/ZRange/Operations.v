@@ -188,6 +188,7 @@ Module ZRange.
   Notation shiftl := (ZRange.four_corners_and_zero Z.shiftl).
   Notation land := land_bounds.
   Notation lor := lor_bounds.
+  Notation cc_m s := (ZRange.two_corners (Z.cc_m s)).
 
   Module Export ZRangeNotations.
     Notation "- x" := (opp x) : zrange_scope.
