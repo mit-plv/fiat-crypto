@@ -170,6 +170,9 @@ Module ZRange.
     cbv [opp upper lower]; destruct r; rewrite !Z.opp_involutive; reflexivity.
   Qed.
 
+  Lemma normalize_constant v : normalize (constant v) = constant v.
+  Proof. repeat t2_step. Qed.
+
   Lemma is_bounded_by_bool_move_opp_normalize r v
     : is_bounded_by_bool v (ZRange.normalize (-r))
       = is_bounded_by_bool (-v) (ZRange.normalize r).
