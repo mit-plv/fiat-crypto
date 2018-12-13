@@ -580,7 +580,8 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
       Section with_interp.
         Context {interp_base_type : base_type -> Type}
-                {interp_ident : forall t, ident t -> type.interp interp_base_type t}.
+                {interp_ident : forall t, ident t -> type.interp interp_base_type t}
+                {interp_ident_Proper : forall t, Proper (eq ==> type.eqv) (interp_ident t)}.
 
         Lemma eqv_of_interp_related {t e v}
           : expr.interp_related interp_ident e v
@@ -594,6 +595,31 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                             | progress destruct_head'_and
                             | progress subst
                             | match goal with H : _ |- _ => apply H; clear H end ].
+        Qed.
+
+        Lemma interp_related_gen_of_wf {var R G t e1 e2}
+              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> (R t v1 v2 : Prop))
+              (Hwf : wf G e1 e2)
+          : @expr.interp_related_gen _ _ _ interp_ident var R t e1 (expr.interp interp_ident e2).
+        Proof using interp_ident_Proper.
+          induction Hwf.
+          all: repeat first [ progress cbn [expr.interp_related_gen expr.interp List.In eq_rect] in *
+                            | progress cbv [LetIn.Let_In] in *
+                            | reflexivity
+                            | solve [ eauto ]
+                            | progress intros
+                            | progress destruct_head'_or
+                            | progress inversion_sigma
+                            | progress inversion_prod
+                            | progress specialize_by_assumption
+                            | progress subst
+                            | apply interp_ident_Proper
+                            | match goal with
+                              | [ |- exists fv xv, _ /\ _ /\ _ ]
+                                => eexists (expr.interp interp_ident (expr.Abs _)), _;
+                                   cbn [expr.interp]; repeat apply conj; [ eassumption | | reflexivity ]
+                              | [ H : _ |- _ ] => apply H; clear H
+                              end ].
         Qed.
       End with_interp.
 
