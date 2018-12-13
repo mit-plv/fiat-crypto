@@ -1618,9 +1618,54 @@ Module Fancy.
 
 
         Context (reg : Type) (error_reg : reg) (reg_eqb : reg -> reg -> bool).
+        Context (reg_eqb_refl : forall r, reg_eqb r r = true).
 
-        Lemma allocate_correct cc ctx e reg_list name_to_reg :
-          interp reg_eqb wordmax cc_spec (allocate reg name name_eqb error_reg e reg_list name_to_reg) cc ctx = interp name_eqb wordmax cc_spec e cc (fun n : name => ctx (name_to_reg n)).
+        Lemma interp_ctx_ext e :
+          forall cc ctx ctx',
+            (forall n, ctx n = ctx' n) ->
+            interp name_eqb wordmax cc_spec e cc ctx = interp name_eqb wordmax cc_spec e cc ctx'.
+        Proof.
+          induction e; intros; [ cbn; solve [auto] | ].
+          cbn. erewrite Tuple.map_ext by eassumption.
+          apply IHe; [ ]. intros; break_innermost_match; eauto.
+        Qed.
+
+        Fixpoint reg_depth {t} (e : @expr t) : nat :=
+          match e with
+          | Ret _ => 0
+          | Instr i rd args cont => S (reg_depth cont)
+          end.
+        Check interp.
+
+        Lemma allocate_correct e :
+          forall cc ctx reg_list name_to_reg,
+            (reg_depth e <= length reg_list)%nat ->
+            interp reg_eqb wordmax cc_spec (allocate reg name name_eqb error_reg e reg_list name_to_reg) cc ctx
+            = interp name_eqb wordmax cc_spec e cc (fun n : name => ctx (name_to_reg n)).
+        Proof.
+          induction e; cbn [allocate]; intros; [ reflexivity | ].
+          destruct reg_list; intros; cbn [reg_depth] in *; distr_length; [ ].
+          cbn. rewrite IHe; try omega.
+
+
+          rewrite Tuple.map_map.
+          apply interp_ctx_ext; [ ]. intros.
+          break_innermost_match; try reflexivity.
+          rewrite reg_eqb_refl in *. congruence.
+          (* 
+             TODO
+             name_to_reg is more or less the context -- names that have already been assigned to registers
+             rd : name (destination name)
+             n : name (input to ctx)
+             r : reg (register in which rd now goes)
+
+             if n != rd then name_to_reg n != r?
+
+             rd has been assigned to the name r.
+             It might be that r has a previous assignment (exists n, name_to_reg n = r and n != rd).
+             However, we can count on that n never being called, if the reg_list is okay.
+           *)
+          
         Admitted.
     End with_name.
 
@@ -1801,6 +1846,52 @@ Module Fancy.
                           [ rewrite H | apply in_app_or in H; destruct H ]
         end; eauto. }
     Qed.
+
+    Section expression_equivalence.
+      Context {name1 name2}
+              (name1_eqb : name1 -> name1 -> bool)
+              (name2_eqb : name2 -> name2 -> bool)
+              (name1_eqb_eq : forall n m, name1_eqb n m = true -> n = m)
+              (name1_eqb_neq : forall n m, name1_eqb n m = false -> n <> m)
+              (name2_eqb_eq : forall n m, name2_eqb n m = true -> n = m)
+              (name2_eqb_neq : forall n m, name2_eqb n m = false -> n <> m).
+
+      (* name1 should only map to a single name2; several name1s might map to the same name2 *)
+      Inductive in_step : (name1 -> name2) -> expr -> expr -> Prop :=
+      | in_step_ret :
+          forall M n1 n2, M n1 = n2 -> in_step M (Ret n1) (Ret n2)
+      | in_step_instr :
+          forall i M rd1 rd2 args1 args2 e1 e2,
+            in_step M e1 e2 ->
+            Tuple.map M args1 = args2 -> (* args correspond with old assignments *)
+            M rd1 = rd2 -> (* destination register corresponds with new assignment *)
+            in_step M (Instr i rd1 args1 e1) (Instr i rd2 args2 e2)
+      .
+
+      Lemma interp_eq M e1 e2 (HM : forall n n', M n = M n' -> n = n') :
+        in_step M e1 e2 ->
+        forall cc ctx1 ctx2,
+          (forall n1, ctx1 n1 = ctx2 (M n1)) ->
+          interp name1_eqb wordmax cc_spec e1 cc ctx1 =
+          interp name2_eqb wordmax cc_spec e2 cc ctx2.
+      Proof.
+        induction 1; intros; cbn [interp]; [ congruence | ].
+        replace (Tuple.map ctx1 args1) with (Tuple.map ctx2 args2)
+          by (subst args2; rewrite Tuple.map_map; apply Tuple.map_ext_In; intros;
+              match goal with | H : context [ctx1 _ = ctx2 _] |- _ => rewrite H end;
+              f_equal; eauto using eq_sym).
+        apply IHin_step; intros; eauto.
+        break_innermost_match;
+          repeat match goal with
+                 | _ => progress subst
+                 | H : _ = true  |- _ => apply name1_eqb_eq in H
+                 | H : _ = false |- _ => apply name1_eqb_neq in H
+                 | H : _ = true  |- _ => apply name2_eqb_eq in H
+                 | H : _ = false |- _ => apply name2_eqb_neq in H
+                 | H : M _ = M _ |- _ => apply HM in H
+                 end; congruence.
+      Qed.
+    End expression_equivalence.
   End Proofs.
 End Fancy.
 
@@ -2447,7 +2538,8 @@ Module Barrett256.
     end.
 
   Local Opaque PreFancy.interp_cast_mod.
-
+   *)
+  
   Lemma prod_barrett_red256_correct :
     forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
            (start_context : register -> Z)   (* starting register values *)
@@ -2468,13 +2560,52 @@ Module Barrett256.
     replace (2^machine_wordsize) with r in * by reflexivity.
     cbv [M muLow] in *.
 
-    rewrite <-barrett_red256_correct_full by auto.
+    erewrite <-barrett_red256_fancy_correct with (error:=100000%positive) by eauto.
     rewrite <-barrett_red256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
       by (auto; cbn; auto with omega).
     cbv [ProdEquiv.interp256].
     let r := (eval compute in (2 ^ 256)) in
     replace (2^256) with r in * by reflexivity.
-    cbv [barrett_red256_alloc barrett_red256 expr.Interp].
+
+    cbn - [Fancy.interp Pos.eqb].
+    cbv [Fancy.make_cc].
+    match goal with |- _ = Fancy.interp _ _ _ _ ?cc _ =>
+                    let x := fresh in
+                    set cc as x; cbv [Pos.eqb] in x; subst x
+    end.
+    assert (Fancy.CC.cc_m cc_start_state = Fancy.cc_spec Fancy.CC.M (start_context xHigh)) as M_equal.
+    { match goal with H : Fancy.CC.cc_m _ = _ |- _ => rewrite H end.
+      cbv [Fancy.cc_spec]. rewrite Z.cc_m_eq, Z.testbit_eqb by omega.
+      rewrite Z.mod_small by (split; [ solve [Z.zero_bounds] | apply Z.div_lt_upper_bound; cbn; omega ]).
+      reflexivity. }
+    rewrite <-M_equal.
+
+    (* strategy to fix flags :
+       1) replace state on both sides with a state reflecting dead flags updated to 0; prove that each side ignores those flags and interps remain equal
+       2) prove that the M flags are the same and rewrite; now same flags are on both sides
+     *)
+
+    let dead_flags := constr:([Fancy.CC.C; Fancy.CC.L; Fancy.CC.Z]) in
+    match goal with
+    | H : Fancy.CC.cc_m _ = _
+      |- _ = Fancy.interp _ _ _ _ ?cc _ =>
+      let x := fresh in
+      let Hx := fresh in
+      remember (Fancy.CC.update dead_flags 0 Fancy.cc_spec cc) as x eqn:Hx;
+        cbv [Fancy.CC.update] in Hx; cbn in Hx;
+          match goal with
+            |- ?lhs = ?rhs =>
+            match (eval pattern cc in rhs) with
+              ?f _ => transitivity (f x); subst x
+            end
+          end
+    end.
+
+    2 : {
+      (* here's where we need to prove the interps are equal even if I change the dead flags *)
+    
+    
+    cbv [barrett_red256_alloc barrett_red256_fancy].
 
     step start_context.
     { match goal with H : Fancy.CC.cc_m _ = _ |- _ => rewrite H end.
