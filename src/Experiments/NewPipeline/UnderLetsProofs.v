@@ -893,6 +893,122 @@ Module Compilers.
             all: eapply interp_to_expr_reify_and_let_binds_base_cps with (k1:=Base) (k2:=(fun x => x)); eauto; wf_safe_t. }
         Qed.
 
+        Ltac recurse_interp_related_step :=
+          let do_replace v :=
+              ((tryif is_evar v then fail else idtac);
+               let v' := open_constr:(_) in
+               let v'' := fresh in
+               cut (v = v'); [ generalize v; intros v'' ?; subst v'' | symmetry ]) in
+          match goal with
+          | _ => progress cbv [expr.interp_related] in *
+          | _ => progress cbn [type.interp]
+          | [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
+          | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand
+          | [ |- expr.interp_related_gen ?ident_interp ?R ?f ?v ]
+            => do_replace v
+          | [ |- exists (fv : ?T1 -> ?T2) (ev : ?T1),
+                _ /\ _ /\ fv ev = ?x ]
+            => first [ do_replace x
+                     | is_evar x; do 2 eexists; repeat apply conj; [ | | reflexivity ] ]
+          | _ => progress intros
+          | [ |- expr.interp_related_gen _ _ _ ?ev ] => is_evar ev; eassumption
+          | [ |- expr.interp_related_gen _ _ (?f @ ?x) ?ev ]
+            => is_evar ev;
+               let fh := fresh in
+               let xh := fresh in
+               set (fh := f); set (xh := x); cbn [expr.interp_related_gen]; subst fh xh;
+               do 2 eexists; repeat apply conj; [ | | reflexivity ]
+          | [ |- expr.interp_related_gen _ _ (expr.Abs ?f) _ ]
+            => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh
+          | [ |- expr.interp_related_gen _ _ (expr.Ident ?idc) ?ev ]
+            => is_evar ev;
+               cbn [expr.interp_related_gen]; apply ident.gen_interp_Proper; reflexivity
+          | [ H : ?x == _ |- ?x == _ ] => exact H
+          | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else (progress subst)
+          | [ |- ?x = ?x ] => tryif has_evar x then fail else reflexivity
+          | [ |- ?ev = _ ] => is_evar ev; reflexivity
+          | [ |- _ = ?ev ] => is_evar ev; reflexivity
+          end.
+
+        Local Ltac do_interp_related :=
+          repeat first [ progress cbv beta
+                       | progress recurse_interp_related_step
+                       | eassumption
+                       | do 2 eexists; repeat apply conj; intros
+                       | match goal with
+                         | [ H : _ |- _ ] => apply H; clear H; solve [ do_interp_related ]
+                         end ].
+
+        Lemma reify_and_let_binds_base_interp_related_of_ex {t e T k T' R} {v : T'}
+          : (exists kv xv,
+                expr.interp_related (@ident_interp) e xv
+                /\ (forall x1 x2,
+                       expr.interp_related (@ident_interp) x1 x2
+                       -> interp_related (@ident_interp) R (k x1) (kv x2))
+                /\ kv xv = v)
+            -> interp_related (@ident_interp) R (@reify_and_let_binds_base_cps _ t e T k) v.
+        Proof using Type.
+          cbv [expr.interp_related]; revert T T' k R v; induction t.
+          all: repeat first [ progress cbn [expr.interp_related_gen interp_related reify_and_let_binds_base_cps fst snd] in *
+                            | progress cbv [expr.interp_related] in *
+                            | progress intros
+                            | assumption
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | break_innermost_match_step
+                            | progress expr.invert_subst
+                            | solve [ eauto ]
+                            | solve [ do_interp_related ]
+                            | match goal with
+                              | [ H : expr.interp_related_gen _ _ (reify_list _) _ |- _ ] => setoid_rewrite expr.reify_list_interp_related_iff in H
+                              end ].
+          all: match goal with
+               | [ H : SubstVarLike.is_var_fst_snd_pair_opp_cast _ = _ |- _ ] => clear H
+               end.
+          all: lazymatch goal with
+               | [ H : List.Forall2 _ ?ls1 ?ls2
+                   |- interp_related _ _
+                                     (list_rect ?Pv ?Nv ?Cv ?ls1 ?k)
+                                     (?f ?ls2) ]
+                 => let P := fresh "P" in
+                    let N := fresh "N" in
+                    let C := fresh "C" in
+                    is_var k; is_var f; is_var ls1; is_var ls2;
+                      set (P:=Pv); set (N:=Nv); set (C:=Cv);
+                        revert dependent f; intro f; revert dependent k; intro k; revert f k;
+                          induction H; cbn [list_rect]; intros
+               end.
+          all: repeat match goal with
+                      | [ F := ?f |- _ ]
+                        => match goal with
+                           | [ |- context G[F ?x] ]
+                             => let G' := context G[f x] in
+                                change G'; cbv beta
+                           end
+                      | [ H : forall x1 x2, ?R x1 x2 -> ?R' (?f1 x1) (?f2 x2) |- ?R' (?f1 _) (?f2 _) ]
+                        => apply H; clear H
+                      | [ |- expr.interp_related_gen _ _ _ nil ] => reflexivity
+                      | [ H : _ |- interp_related _ _ (reify_and_let_binds_base_cps _ _ _) _ ] => apply H
+                      | [ |- exists kv xv, _ /\ _ /\ kv xv = ?f (?x :: ?xs) ]
+                        => exists (fun x' => f (x' :: xs)), x; repeat apply conj; [ | | reflexivity ]
+                      | _ => assumption
+                      | _ => progress intros
+                      | [ IH : (forall k k', _ -> ?R (list_rect ?P ?N ?C ?ls1 k') (k ?ls2))
+                          |- ?R (list_rect ?P ?N ?C ?ls1 ?k'v) ?RHS ]
+                        => let kv := match (eval pattern ls2 in RHS) with ?kv _ => kv end in
+                           apply (IH kv k'v); clear IH
+                      | _ => solve [ do_interp_related ]
+                      end.
+        Qed.
+
+        Lemma reify_and_let_binds_base_interp_related {t e v}
+          : expr.interp_related (@ident_interp) e v
+            -> interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (@reify_and_let_binds_base_cps _ t e _ Base) v.
+        Proof using Type.
+          intro; eapply reify_and_let_binds_base_interp_related_of_ex.
+          eexists id, _; eauto.
+        Qed.
+
         Lemma Interp_LetBindReturn {t} (e : expr.Expr t) (Hwf : expr.Wf e) : Interp (LetBindReturn e) == Interp e.
         Proof.
           apply interp_let_bind_return with (G:=nil); cbn [List.In]; eauto; tauto.
