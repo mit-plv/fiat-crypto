@@ -964,6 +964,37 @@ Module Compilers.
                  => False
                end.
 
+          Fixpoint rawexpr_types_ok (r : @rawexpr var) (t : type) : Prop
+            := match r with
+               | rExpr t' _
+               | rValue t' _
+                 => t' = t
+               | rIdent _ t1 _ t2 _
+                 => t1 = t /\ t2 = t
+               | rApp f x t' alt
+                 => t' = t
+                    /\ match alt with
+                       | expr.App s d _ _
+                         => rawexpr_types_ok f (type.arrow s d)
+                            /\ rawexpr_types_ok x s
+                       | _ => False
+                       end
+               end.
+
+          Lemma eq_type_of_rawexpr_of_rawexpr_types_ok {re t}
+            : rawexpr_types_ok re t
+              -> t = type_of_rawexpr re.
+          Proof using Type.
+            destruct re; cbn; break_innermost_match; intuition.
+          Qed.
+
+          Lemma rawexpr_types_ok_for_type_of_rawexpr {re t}
+            : rawexpr_types_ok re t
+              -> rawexpr_types_ok re (type_of_rawexpr re).
+          Proof using Type.
+            intro H; pose proof H; apply eq_type_of_rawexpr_of_rawexpr_types_ok in H; subst; assumption.
+          Qed.
+
           Global Instance rawexpr_equiv_Reflexive : Reflexive rawexpr_equiv.
           Proof using Type.
             intro x; induction x; cbn; repeat apply conj; break_innermost_match; try reflexivity; auto.
@@ -989,6 +1020,61 @@ Module Compilers.
             : @rawexpr_equiv_expr t e r <-> rawexpr_equiv (rExpr e) r /\ rawexpr_equiv r (rExpr e).
           Proof using Type.
             split; [ intro H | intros [H0 H1] ]; cbn; try apply conj; (idtac + symmetry); assumption.
+          Qed.
+
+          Lemma rawexpr_types_ok_of_rawexpr_equiv_expr {t e re}
+            : @rawexpr_equiv_expr t e re
+              -> rawexpr_types_ok re t.
+          Proof using Type.
+            revert t e; induction re.
+            all: repeat first [ progress cbn [rawexpr_equiv_expr rawexpr_types_ok eq_rect] in *
+                              | progress intros
+                              | progress destruct_head'_and
+                              | progress inversion_sigma
+                              | progress subst
+                              | apply conj
+                              | reflexivity
+                              | exfalso; assumption
+                              | break_innermost_match_step
+                              | break_innermost_match_hyps_step
+                              | solve [ eauto ] ].
+          Qed.
+
+          Lemma rawexpr_types_ok_iff_of_rawexpr_equiv {re1 re2 t}
+            : rawexpr_equiv re1 re2
+              -> rawexpr_types_ok re1 t <-> rawexpr_types_ok re2 t.
+          Proof using Type.
+            revert re2 t; induction re1, re2.
+            all: repeat first [ progress cbn [rawexpr_equiv rawexpr_types_ok eq_rect] in *
+                              | progress intros
+                              | progress destruct_head'_and
+                              | progress inversion_sigma
+                              | progress subst
+                              | apply conj
+                              | reflexivity
+                              | exfalso; assumption
+                              | match goal with
+                                | [ H : rawexpr_equiv_expr _ _ |- _ ] => apply rawexpr_types_ok_of_rawexpr_equiv_expr in H
+                                end
+                              | break_innermost_match_step
+                              | break_innermost_match_hyps_step
+                              | progress split_iff
+                              | solve [ eauto ] ].
+          Qed.
+
+          Lemma rawexpr_types_ok_of_reveal_rawexpr {re t}
+            : rawexpr_types_ok (reveal_rawexpr re) t <-> rawexpr_types_ok re t.
+          Proof using Type.
+            cbv [reveal_rawexpr]; revert t; induction re.
+            all: repeat first [ progress intros
+                              | progress cbn [reveal_rawexpr_cps_gen rawexpr_types_ok value'] in *
+                              | progress cbv [id value] in *
+                              | progress destruct_head'_and
+                              | progress subst
+                              | reflexivity
+                              | break_innermost_match_step
+                              | apply conj
+                              | expr.invert_match_step ].
           Qed.
 
           Local Ltac invert_t_step :=
