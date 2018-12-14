@@ -262,6 +262,7 @@ src/Experiments/NewPipeline/LanguageWf.v
 src/Experiments/NewPipeline/MiscCompilerPasses.v
 src/Experiments/NewPipeline/MiscCompilerPassesProofs.v
 src/Experiments/NewPipeline/Rewriter.v
+src/Experiments/NewPipeline/RewriterInterpProofs1.v
 src/Experiments/NewPipeline/RewriterProofs.v
 src/Experiments/NewPipeline/RewriterRulesGood.v
 src/Experiments/NewPipeline/RewriterRulesInterpGood.v
