@@ -960,7 +960,7 @@ Module Compilers.
                             | solve [ eauto ]
                             | solve [ do_interp_related ]
                             | match goal with
-                              | [ H : expr.interp_related_gen _ _ (reify_list _) _ |- _ ] => setoid_rewrite expr.reify_list_interp_related_iff in H
+                              | [ H : expr.interp_related_gen ?ii _ (reify_list ?ls1) ?ls2 |- _ ] => change (expr.interp_related ii (reify_list ls1) ls2) in H; rewrite expr.reify_list_interp_related_iff in H
                               end ].
           all: match goal with
                | [ H : SubstVarLike.is_var_fst_snd_pair_opp_cast _ = _ |- _ ] => clear H
