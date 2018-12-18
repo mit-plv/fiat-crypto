@@ -279,6 +279,16 @@ Module Compilers.
           congruence.
         Qed.
 
+        Lemma eq_subst_types_pattern_collect_vars_empty_iff pt evm (evm0:=PositiveMap.empty _)
+              (evm' := mk_new_evm evm (pattern.base.collect_vars pt) evm0)
+          : pattern.base.subst pt evm = pattern.base.subst pt evm'.
+        Proof using Type.
+          apply subst_eq_if_mem; subst evm' evm0; intro.
+          rewrite fold_right_evar_map_find_In, PositiveMap.gempty.
+          intro H; rewrite H.
+          break_innermost_match; reflexivity.
+        Qed.
+
         Lemma add_var_types_cps_id {t v evm T k}
         : @pattern.base.add_var_types_cps t v evm T k = k (@pattern.base.add_var_types_cps t v evm _ id).
         Proof using Type.
@@ -505,6 +515,16 @@ Module Compilers.
           rewrite base.fold_right_evar_map_find_In; rewrite_hyp !*.
           destruct (PositiveMap.find t' evm) eqn:H'; [ reflexivity | ].
           congruence.
+        Qed.
+
+        Lemma eq_subst_types_pattern_collect_vars_empty_iff pt evm (evm0:=PositiveMap.empty _)
+              (evm' := mk_new_evm evm (pattern.type.collect_vars pt) evm0)
+          : pattern.type.subst pt evm = pattern.type.subst pt evm'.
+        Proof using Type.
+          apply subst_eq_if_mem; subst evm' evm0; intro.
+          rewrite base.fold_right_evar_map_find_In, PositiveMap.gempty.
+          intro H; rewrite H.
+          break_innermost_match; reflexivity.
         Qed.
 
         Lemma app_forall_vars_under_forall_vars_relation
