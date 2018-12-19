@@ -550,6 +550,18 @@ Module Positional. Section Positional.
   Lemma zeros_ext_map {A} n (p : list A) : length p = n -> zeros n = map (fun _ => 0) p.
   Proof using Type. cbv [zeros]; intro; subst; induction p; cbn; congruence. Qed.
 
+  Lemma eval_mul_each (n:nat) (a:Z) (p:list Z)
+        (Hn : length p = n)
+    : eval n (List.map (fun x => a*x) p) = a*eval n p.
+  Proof using Type.
+    clear -Hn.
+    transitivity (Associational.eval (map (fun t => (1 * fst t, a * snd t)) (to_associational n p))).
+    { cbv [eval to_associational]; rewrite !combine_map_r.
+      f_equal; apply map_ext; intros; f_equal; nsatz. }
+    { rewrite Associational.eval_map_mul, eval_to_associational; nsatz. }
+  Qed.
+  Hint Rewrite eval_mul_each : push_eval.
+
   Definition place (t:Z*Z) (i:nat) : nat * Z :=
     nat_rect
       (fun _ => unit -> (nat * Z)%type)
@@ -2856,6 +2868,12 @@ Module UniformWeight.
     ring.
   Qed.
 
+  Lemma uweight_1 lgr : uweight lgr 1 = 2^lgr.
+  Proof using Type.
+    cbv [uweight weight].
+    f_equal; autorewrite with zsimplify_const; lia.
+  Qed.
+
   (* Because the weight is uniform, we can start partitioning from
   any index and end up with the same result. *)
   Lemma uweight_recursive_partition_change_start lgr (Hr : 0 <= lgr) n :
@@ -2878,7 +2896,38 @@ Module UniformWeight.
   Proof.
     rewrite Partition.recursive_partition_equiv by auto using uwprops.
     auto using uweight_recursive_partition_change_start with omega.
- Qed.
+  Qed.
+
+  Lemma uweight_partition_unique lgr (Hr : 0 < lgr) n ls :
+    length ls = n -> (forall x, List.In x ls -> 0 <= x <= 2^lgr - 1) ->
+    ls = Partition.partition (uweight lgr) n (Positional.eval (uweight lgr) n ls).
+  Proof using Type.
+    intro; subst n.
+    rewrite uweight_recursive_partition_equiv with (i:=0%nat) by assumption.
+    induction ls as [|x xs IHxs]; [ reflexivity | ].
+    repeat first [ progress cbn [List.length Partition.recursive_partition List.In] in *
+                 | progress intros
+                 | assumption
+                 | rewrite Positional.eval_cons by reflexivity
+                 | rewrite weight_0 by now apply uwprops
+                 | rewrite uweight_1
+                 | progress specialize_by_assumption
+                 | progress split_contravariant_or
+                 | rewrite uweight_recursive_partition_change_start with (i:=1%nat) (j:=0%nat) by lia
+                 | rewrite uweight_eval_shift by lia
+                 | rewrite Z.div_1_r
+                 | progress Z.rewrite_mod_small
+                 | rewrite Z.div_add' by auto with arith lia
+                 | rewrite Z.div_small by lia
+                 | match goal with
+                   | [ H : forall x, _ = x -> _ |- _ ] => specialize (H _ eq_refl)
+                   | [ |- context[(_ + ?x * _) mod ?x] ]
+                     => let k := fresh in
+                        set (k := x); push_Zmod; pull_Zmod; subst k;
+                        progress autorewrite with zsimplify_const
+                   | [ |- ?x :: _ = ?x :: _ ] => apply f_equal
+                   end ].
+  Qed.
 End UniformWeight.
 
 Module WordByWordMontgomery.
@@ -3044,14 +3093,6 @@ Module WordByWordMontgomery.
         all: nia. }
     Qed.
 
-    (* TODO : relocate? *)
-    Lemma weight_1 : weight 1 = r.
-    Proof.
-      clear - lgr_big. subst r.
-      rewrite UniformWeight.uweight_eq_alt by omega.
-      cbn; ring.
-    Qed.
-
     Local Ltac push_step :=
       first [ progress eta_expand
             | rewrite Rows.mul_partitions
@@ -3064,7 +3105,7 @@ Module WordByWordMontgomery.
               | [ H : small ?v |- context[length ?v] ] => erewrite length_small by eassumption
               end
             | rewrite Positional.eval_cons by distr_length
-            | progress rewrite ?weight_0, ?weight_1 by auto;
+            | progress rewrite ?weight_0, ?UniformWeight.uweight_1 by auto;
               autorewrite with zsimplify_fast
             | rewrite (weight_0 wprops)
             | rewrite <- Z.div_mod'' by auto with omega
