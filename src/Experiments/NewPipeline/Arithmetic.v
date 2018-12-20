@@ -1352,7 +1352,7 @@ Module Partition.
 
     Lemma recursive_partition_equiv' n : forall x j,
         map (fun i => x mod weight (S i) / weight i) (seq j n) = recursive_partition n j (x / weight j).
-    Proof.
+    Proof using wprops.
       induction n; [reflexivity|].
       intros; cbn. rewrite IHn.
       pose proof (@weight_positive _ wprops j).
@@ -1368,7 +1368,7 @@ Module Partition.
 
     Lemma recursive_partition_equiv n x :
       partition n x = recursive_partition n 0%nat x.
-    Proof.
+    Proof using wprops.
       cbv [partition]. rewrite recursive_partition_equiv'.
       rewrite weight_0 by auto; autorewrite with zsimplify_fast.
       reflexivity.
@@ -1376,7 +1376,7 @@ Module Partition.
 
     Lemma length_recursive_partition n : forall i x,
       length (recursive_partition n i x) = n.
-    Proof.
+    Proof using Type.
       induction n; cbn [recursive_partition]; [reflexivity | ].
       intros; distr_length; auto.
     Qed.
@@ -1384,7 +1384,7 @@ Module Partition.
     Lemma drop_high_to_length_partition n m x :
       (n <= m)%nat ->
       Positional.drop_high_to_length n (partition m x) = partition n x.
-    Proof.
+    Proof using Type.
       cbv [Positional.drop_high_to_length partition]; intros.
       autorewrite with push_firstn.
       rewrite Nat.min_l by omega.
@@ -1515,7 +1515,7 @@ Module Columns.
           length inp = n ->
           flatten inp = (partition weight n (eval n inp),
                          eval n inp / (weight n)).
-      Proof.
+      Proof using wprops.
         induction inp using rev_ind; intros;
           destruct n; distr_length; [ reflexivity | ].
         rewrite flatten_snoc.
@@ -2225,7 +2225,7 @@ Module Rows.
         length q = n ->
         0 <= Positional.eval weight n q < weight n ->
         conditional_sub n p q = partition weight n (if Positional.eval weight n q <=? Positional.eval weight n p then Positional.eval weight n p - Positional.eval weight n q else Positional.eval weight n p).
-      Proof.
+      Proof using wprops.
         cbv [conditional_sub]; intros.
         rewrite (surjective_pairing (sub _ _ _)).
         assert (length p = n) by (rewrite Hp; distr_length).
@@ -2280,7 +2280,7 @@ Module Rows.
       Lemma adjust_s_invariant fuel s (s_nz:s<>0) :
         fst (adjust_s fuel s) mod s = 0
         /\ fst (adjust_s fuel s) <> 0.
-      Proof.
+      Proof using wprops.
         cbv [adjust_s]; rewrite fold_right_map; generalize (List.rev (seq 0 fuel)); intro ls; induction ls as [|l ls IHls];
           cbn.
         { rewrite Z.mod_same by assumption; auto. }
@@ -2901,7 +2901,7 @@ Module UniformWeight.
     length xs = n ->
     Positional.eval (fun i => uweight lgr (S i)) n xs =
     (uweight lgr 1) * Positional.eval (uweight lgr) n xs.
-  Proof.
+  Proof using Type.
     induction xs using rev_ind; destruct n; distr_length;
       intros; [cbn; ring | ].
     rewrite !Positional.eval_snoc with (n:=n) by distr_length.
@@ -2911,14 +2911,14 @@ Module UniformWeight.
     ring.
   Qed.
   Lemma uweight_S lgr (Hr : 0 <= lgr) n : uweight lgr (S n) = 2 ^ lgr * uweight lgr n.
-  Proof.
+  Proof using Type.
     rewrite !uweight_eq_alt by auto.
     autorewrite with push_Zof_nat.
     rewrite Z.pow_succ_r by auto using Nat2Z.is_nonneg.
     reflexivity.
   Qed.
   Lemma uweight_double_le lgr (Hr : 0 < lgr) n : uweight lgr n + uweight lgr n <= uweight lgr (S n).
-  Proof.
+  Proof using Type.
     rewrite uweight_S, uweight_eq_alt by omega.
     rewrite Z.add_diag.
     apply Z.mul_le_mono_nonneg_r.
@@ -2939,7 +2939,7 @@ Module UniformWeight.
     forall i j x,
       Partition.recursive_partition (uweight lgr) n i x
       = Partition.recursive_partition (uweight lgr) n j x.
-  Proof.
+  Proof using Type.
     induction n; intros; [reflexivity | ].
     cbn [Partition.recursive_partition].
     rewrite !uweight_eq_alt by omega.
@@ -2952,7 +2952,7 @@ Module UniformWeight.
   Lemma uweight_recursive_partition_equiv lgr (Hr : 0 < lgr) n i x:
     Partition.partition (uweight lgr) n x =
     Partition.recursive_partition (uweight lgr) n i x.
-  Proof.
+  Proof using Type.
     rewrite Partition.recursive_partition_equiv by auto using uwprops.
     auto using uweight_recursive_partition_change_start with omega.
   Qed.
@@ -3223,20 +3223,20 @@ Module WordByWordMontgomery.
              end.
 
     Lemma eval_div : forall n v, small v -> eval (fst (@divmod n v)) = eval v / r.
-    Proof.
+    Proof using lgr_big.
       pose proof r_big as r_big.
       clear - r_big lgr_big; intros; autounfold with loc.
       push_recursive_partition; cbn [Rows.divmod fst tl].
       autorewrite with zsimplify; reflexivity.
     Qed.
     Lemma eval_mod : forall n v, small v -> snd (@divmod n v) = eval v mod r.
-    Proof.
+    Proof using lgr_big.
       clear - lgr_big; intros; autounfold with loc.
       push_recursive_partition; cbn [Rows.divmod snd hd].
       autorewrite with zsimplify; reflexivity.
     Qed.
     Lemma small_div : forall n v, small v -> small (fst (@divmod n v)).
-    Proof.
+    Proof using lgr_big.
       pose proof r_big as r_big.
       clear - r_big lgr_big. intros; autounfold with loc.
       push_recursive_partition. cbn [Rows.divmod fst tl].
