@@ -55,7 +55,7 @@ Require Crypto.Experiments.NewPipeline.AbstractInterpretationProofs.
 Require Crypto.Experiments.NewPipeline.Rewriter.
 Require Crypto.Experiments.NewPipeline.MiscCompilerPasses.
 Require Crypto.Experiments.NewPipeline.CStringification.
-Require Export Crypto.Experiments.NewPipeline.Toplevel1.
+Require Export Crypto.Experiments.NewPipeline.PushButtonSynthesis.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -86,6 +86,8 @@ Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
 
 Import UnsaturatedSolinas.
 
+(* TODO: Figure out what examples should go here *)
+(*
 Module X25519_64.
   Definition n := 5%nat.
   Definition s := 2^255.
@@ -370,6 +372,154 @@ mulmod = fun var : type -> Type => λ x x0 : var (type.base (base.type.list (bas
 *)
 
 End P192_64.
+ *)
+
+(** TODO: Figure out if this belongs here *)
+Module PrintingNotations.
+  Export ident.
+  (*Global Set Printing Width 100000.*)
+  Open Scope zrange_scope.
+  Notation "'uint256'"
+    := (r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935]%zrange) : zrange_scope.
+  Notation "'uint128'"
+    := (r[0 ~> 340282366920938463463374607431768211455]%zrange) : zrange_scope.
+  Notation "'uint64'"
+    := (r[0 ~> 18446744073709551615]) : zrange_scope.
+  Notation "'uint32'"
+    := (r[0 ~> 4294967295]) : zrange_scope.
+  Notation "'bool'"
+    := (r[0 ~> 1]%zrange) : zrange_scope.
+  Notation "( range )( ls [[ n ]] )"
+    := ((#(ident.Z_cast range) @ (ls [[ n ]]))%expr)
+         (format "( range )( ls [[ n ]] )") : expr_scope.
+  (*Notation "( range )( v )" := (ident.Z_cast range @@ v)%expr : expr_scope.*)
+  Notation "x *₂₅₆ y"
+    := (#(ident.Z_cast uint256) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
+  Notation "x *₁₂₈ y"
+    := (#(ident.Z_cast uint128) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
+  Notation "x *₆₄ y"
+    := (#(ident.Z_cast uint64) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
+  Notation "x *₃₂ y"
+    := (#(ident.Z_cast uint32) @ (#ident.Z_mul @ x @ y))%expr (at level 40) : expr_scope.
+  Notation "x +₂₅₆ y"
+    := (#(ident.Z_cast uint256) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "x +₁₂₈ y"
+    := (#(ident.Z_cast uint128) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "x +₆₄ y"
+    := (#(ident.Z_cast uint64) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "x +₃₂ y"
+    := (#(ident.Z_cast uint32) @ (#ident.Z_add @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "x -₁₂₈ y"
+    := (#(ident.Z_cast uint128) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "x -₆₄ y"
+    := (#(ident.Z_cast uint64) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "x -₃₂ y"
+    := (#(ident.Z_cast uint32) @ (#ident.Z_sub @ x @ y))%expr (at level 50) : expr_scope.
+  Notation "( out_t )( v >> count )"
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_shiftr @ v @ count))%expr)
+         (format "( out_t )( v  >>  count )") : expr_scope.
+  Notation "( out_t )( v << count )"
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_shiftl @ v @ count))%expr)
+         (format "( out_t )( v  <<  count )") : expr_scope.
+  Notation "( range )( v )"
+    := ((#(ident.Z_cast range) @ $v)%expr)
+         (format "( range )( v )") : expr_scope.
+  Notation "( mask & ( out_t )( v ) )"
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_land @ #(ident.Literal (t:=base.type.Z) mask) @ v))%expr)
+         (format "( mask  &  ( out_t )( v ) )")
+       : expr_scope.
+  Notation "( ( out_t )( v ) & mask )"
+    := ((#(ident.Z_cast out_t) @ (#ident.Z_land @ v @ #(ident.Literal (t:=base.type.Z) mask)))%expr)
+         (format "( ( out_t )( v )  &  mask )")
+       : expr_scope.
+
+  Notation "x" := (#(ident.Z_cast _) @ $x)%expr (only printing, at level 9) : expr_scope.
+  Notation "x" := (#(ident.Z_cast2 _) @ $x)%expr (only printing, at level 9) : expr_scope.
+  Notation "v ₁" := (#ident.fst @ $v)%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (#ident.snd @ $v)%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "v ₁" := (#(ident.Z_cast _) @ (#ident.fst @ $v))%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (#(ident.Z_cast _) @ (#ident.snd @ $v))%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "v ₁" := (#(ident.Z_cast _) @ (#ident.fst @ (#(ident.Z_cast2 _) @ $v)))%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (#(ident.Z_cast _) @ (#ident.snd @ (#(ident.Z_cast2 _) @ $v)))%expr (at level 10, format "v ₂") : expr_scope.
+  Notation "x" := (#(ident.Literal x%Z))%expr (only printing) : expr_scope.
+
+  (*Notation "ls [[ n ]]" := (List.nth_default_concrete _ n @@ ls)%expr : expr_scope.
+  Notation "( range )( v )" := (ident.Z_cast range @@ v)%expr : expr_scope.
+  Notation "x *₁₂₈ y"
+    := (ident.Z_cast uint128 @@ (ident.Z.mul (x, y)))%expr (at level 40) : expr_scope.
+  Notation "( out_t )( v >> count )"
+    := (ident.Z_cast out_t (ident.Z.shiftr count @@ v)%expr)
+         (format "( out_t )( v  >>  count )") : expr_scope.
+  Notation "( out_t )( v >> count )"
+    := (ident.Z_cast out_t (ident.Z.shiftr count @@ v)%expr)
+         (format "( out_t )( v  >>  count )") : expr_scope.
+  Notation "v ₁" := (ident.fst @@ v)%expr (at level 10, format "v ₁") : expr_scope.
+  Notation "v ₂" := (ident.snd @@ v)%expr (at level 10, format "v ₂") : expr_scope.*)
+  (*
+  Notation "'ℤ'"
+    := BoundsAnalysis.type.Z : zrange_scope.
+  Notation "ls [[ n ]]" := (List.nth n @@ ls)%nexpr : nexpr_scope.
+  Notation "x *₆₄₋₆₄₋₁₂₈ y"
+    := (mul uint64 uint64 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₆₄₋₆₄₋₆₄ y"
+    := (mul uint64 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₃₂₋₃₂ y"
+    := (mul uint32 uint32 uint32 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₁₂₈₋₁₂₈ y"
+    := (mul uint32 uint128 uint128 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₆₄₋₆₄ y"
+    := (mul uint32 uint64 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x *₃₂₋₃₂₋₆₄ y"
+    := (mul uint32 uint32 uint64 @@ (x, y))%nexpr (at level 40) : nexpr_scope.
+  Notation "x +₁₂₈ y"
+    := (add uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₆₄₋₁₂₈₋₁₂₈ y"
+    := (add uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₃₂₋₆₄₋₆₄ y"
+    := (add uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₆₄ y"
+    := (add uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x +₃₂ y"
+    := (add uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x -₁₂₈ y"
+    := (sub uint128 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x -₆₄₋₁₂₈₋₁₂₈ y"
+    := (sub uint64 uint128 uint128 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x -₃₂₋₆₄₋₆₄ y"
+    := (sub uint32 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x -₆₄ y"
+    := (sub uint64 uint64 uint64 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x -₃₂ y"
+    := (sub uint32 uint32 uint32 @@ (x, y))%nexpr (at level 50) : nexpr_scope.
+  Notation "x" := ({| BoundsAnalysis.type.value := x |}) (only printing) : nexpr_scope.
+  Notation "( out_t )( v >> count )"
+    := ((shiftr _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  >>  count )")
+       : nexpr_scope.
+  Notation "( out_t )( v << count )"
+    := ((shiftl _ out_t count @@ v)%nexpr)
+         (format "( out_t )( v  <<  count )")
+       : nexpr_scope.
+  Notation "( ( out_t ) v & mask )"
+    := ((land _ out_t mask @@ v)%nexpr)
+         (format "( ( out_t ) v  &  mask )")
+       : nexpr_scope.
+*)
+  (* TODO: come up with a better notation for arithmetic with carries
+  that still distinguishes it from arithmetic without carries? *)
+  Local Notation "'TwoPow256'" := 115792089237316195423570985008687907853269984665640564039457584007913129639936 (only parsing).
+  Notation "'ADD_256' ( x ,  y )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y))%expr : expr_scope.
+  Notation "'ADD_128' ( x ,  y )" := (#(ident.Z_cast2 (uint128, bool)%core) @ (#ident.Z_add_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y))%expr : expr_scope.
+  Notation "'ADDC_256' ( x ,  y ,  z )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y @ z))%expr : expr_scope.
+  Notation "'ADDC_128' ( x ,  y ,  z )" := (#(ident.Z_cast2 (uint128, bool)%core) @ (#ident.Z_add_with_get_carry @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y @ z))%expr : expr_scope.
+  Notation "'SUB_256' ( x ,  y )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_sub_get_borrow @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y))%expr : expr_scope.
+  Notation "'SUBB_256' ( x ,  y , z )" := (#(ident.Z_cast2 (uint256, bool)%core) @ (#ident.Z_sub_with_get_borrow @ #(ident.Literal (t:=base.type.Z) TwoPow256) @ x @ y @ z))%expr : expr_scope.
+  Notation "'ADDM' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (#ident.Z_add_modulo @ x @ y @ z))%expr : expr_scope.
+  Notation "'RSHI' ( x ,  y ,  z )" := (#(ident.Z_cast _) @ (#ident.Z_rshi @ _ @ x @ y @ z))%expr : expr_scope.
+  Notation "'SELC' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (ident.Z_zselect @ x @ y @ z))%expr : expr_scope.
+  Notation "'SELM' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (ident.Z_zselect @ (#(Z_cast bool) @ (#Z_cc_m @ _) @ x) @ y @ z))%expr : expr_scope.
+  Notation "'SELL' ( x ,  y ,  z )" := (#(ident.Z_cast uint256) @ (#ident.Z_zselect @ (#(Z_cast bool) @ (#Z_land @ #(ident.Literal (t:=base.type.Z 1)) @ x)) @ y @ z))%expr : expr_scope.
+End PrintingNotations.
 
 Module PreFancy.
   Section with_wordmax.
@@ -2404,7 +2554,7 @@ Module Barrett256.
   Derive barrett_red256
          SuchThat (BarrettReduction.rbarrett_red_correctT M machine_wordsize barrett_red256)
          As barrett_red256_correct.
-  Proof. Time solve_rbarrett_red machine_wordsize. Time Qed.
+  Proof. Time solve_rbarrett_red_nocache machine_wordsize. Time Qed.
 
   Definition muLow := Eval lazy in (2 ^ (2 * machine_wordsize) / M) mod (2^machine_wordsize).
   (*
@@ -2871,7 +3021,7 @@ Module Montgomery256.
   Derive montred256
          SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256)
          As montred256_correct.
-  Proof. Time solve_rmontred machine_wordsize. Time Qed.
+  Proof. Time solve_rmontred_nocache machine_wordsize. Time Qed.
 
   (*
   Definition montred256_prefancy' := PreFancy.of_Expr machine_wordsize [N;N'] montred256.

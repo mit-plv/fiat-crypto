@@ -8,8 +8,9 @@ Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.Experiments.NewPipeline.Toplevel1.
+Require Import Crypto.Experiments.NewPipeline.PushButtonSynthesis.
 Require Import Crypto.Experiments.NewPipeline.CStringification.
+Require Import Crypto.Experiments.NewPipeline.BoundsPipeline.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
 
 Import CStringification.Compilers.

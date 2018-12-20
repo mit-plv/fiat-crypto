@@ -1,8 +1,6 @@
 The ordering of files (eliding `*Proofs.v` files) is:
 
 ```
-                    Arithmetic.v
-                         ↑
                      Language.v ←──────────────────────────────────────────────────┐
                      ↗           ↖                                                 │
                   ↗                  ↖                                             │
@@ -12,6 +10,9 @@ AbstractInterpretation.v    Rewriter.v                                          
          ↑                  ↑ ┌────────────────────────────────────────────────────┘
 CStringification.v          │ │
    ↑    ┌───────────────────┴─┘
+BoundsPipeline.v                              Arithmetic.v
+      ↑                                           ↑
+      │  ┌────────────────────────────────────────┘
 Toplevel1.v ←── Toplevel2.v ←───────────┐
    ↑                                    │
 CLI.v                         SlowPrimeSynthesisExamples.v
@@ -75,6 +76,16 @@ The files contain:
   + ToString.LinesToString
 
 - CompilersTestCases.v: Various test cases to ensure everything is working
+
+- BoundsPipeline.v: Assembly the various compiler passes together into
+  a composed pipeline.  It is the final interface for the compiler.
+
+- COperationSpecifications.v: The specifications for the various
+  operations to be synthesized.
+
+- PushButtonSynthesis/ReificationCache.v: Defines the cache that holds
+  reified versions of operations, as well as the tactics that reify
+  and apply things from the cache.
 
 - Toplevel1.v: Ring Goal (which SHOULD NOT depend on compilers) + pipeline + a couple of examples
   pipeline + most of the stuff that uses compilers + arithmetic.  This is the file that CLI.v depends on.
