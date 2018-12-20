@@ -486,9 +486,9 @@ Module Weight.
             (weight_0 : weight 0%nat = 1)
             (weight_positive : forall i, 0 < weight i)
             (weight_multiples : forall i, weight (S i) mod weight i = 0)
-                                                                              (weight_divides : forall i : nat, 0 < weight (S i) / weight i).
+            (weight_divides : forall i : nat, 0 < weight (S i) / weight i).
 
-    Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
+    Local Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
 
     Lemma weight_multiples_full' j : forall i, weight (i+j) mod weight i = 0.
     Proof using weight_positive weight_multiples.
@@ -939,8 +939,10 @@ Module Positional.
       length (zselect mask cond p) = length p.
     Proof using Type. clear dependent weight. cbv [zselect Let_In]; break_match; intros; distr_length. Qed.
 
-    (* We need an explicit equality proof here, because sometimes it
-    matters that we retain the same bounds when selecting. *)
+    (** We need an explicit equality proof here, because sometimes it
+        matters that we retain the same bounds when selecting.  The
+        alternative (weaker) lemma is [eval_select], where we only
+        talk about equality under [eval]. *)
     Lemma select_eq cond n : forall p q,
         length p = n -> length q = n ->
         select cond p q = if dec (cond = 0) then p else q.
@@ -2989,7 +2991,7 @@ End UniformWeight.
 
 Module WordByWordMontgomery.
   Import Partition.
-  Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
+  Local Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
   Section with_args.
     Context (lgr : Z)
             (m : Z).
