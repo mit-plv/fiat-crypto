@@ -1012,6 +1012,9 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Lemma Wf_Reify_as {t} v : expr.Wf (@GallinaReify.base.Reify_as t v).
       Proof. repeat intro; apply wf_reify. Qed.
 
+      Lemma Wf_reify {t} v : expr.Wf (fun var => @GallinaReify.base.reify var t v).
+      Proof. repeat intro; apply wf_reify. Qed.
+
       Section interp.
         Import defaults.
         Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
@@ -1061,7 +1064,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
   End expr.
 
   Hint Constructors expr.wf : wf.
-  Hint Resolve @expr.Wf_APP expr.Wf_Reify : wf.
+  Hint Resolve @expr.Wf_APP expr.Wf_Reify expr.Wf_reify : wf.
   Hint Rewrite @expr.Interp_Reify @expr.interp_reify @expr.interp_reify_list @expr.Interp_reify @expr.Interp_APP : interp.
 
   Notation Wf := expr.Wf.
