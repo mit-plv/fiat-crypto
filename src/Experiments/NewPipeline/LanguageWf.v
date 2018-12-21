@@ -658,7 +658,14 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
       Definition Wf3 {t} (e : @expr.Expr base_type ident t) : Prop
         := forall var1 var2 var3, @wf3 var1 var2 var3 nil t (e var1) (e var2) (e var3).
+
+      Local Hint Constructors wf : wf.
+      Lemma Wf_APP {s d f x} : @Wf (s -> d) f -> @Wf s x -> @Wf d (expr.APP f x).
+      Proof using Type. cbv [Wf expr.APP]; auto with wf. Qed.
     End with_ty.
+    Global Hint Constructors wf : wf.
+    Global Hint Resolve @Wf_APP : wf.
+    Hint Rewrite @expr.Interp_APP : interp.
 
     Ltac is_expr_constructor arg :=
       lazymatch arg with
@@ -1042,6 +1049,9 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
         Lemma Interp_Reify_as {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (GallinaReify.base.Reify_as t v) = v.
         Proof. apply interp_reify. Qed.
+
+        Lemma Interp_reify {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (fun var => GallinaReify.base.reify (t:=t) v) = v.
+        Proof. apply interp_reify. Qed.
       End interp.
     End invert.
 
@@ -1050,8 +1060,9 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
     Notation Interp_Reify := Interp_Reify_as.
   End expr.
 
-  Hint Resolve expr.Wf_Reify : wf.
-  Hint Rewrite @expr.Interp_Reify @expr.interp_reify @expr.interp_reify_list : interp.
+  Hint Constructors expr.wf : wf.
+  Hint Resolve @expr.Wf_APP expr.Wf_Reify : wf.
+  Hint Rewrite @expr.Interp_Reify @expr.interp_reify @expr.interp_reify_list @expr.Interp_reify @expr.Interp_APP : interp.
 
   Notation Wf := expr.Wf.
 
