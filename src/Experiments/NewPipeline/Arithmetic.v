@@ -2822,7 +2822,7 @@ Section freeze_mod_ops.
     split; apply eval_to_bytes || apply to_bytes_partitions; assumption.
   Qed.
 
-  Lemma eval_freeze_to_bytesmod
+  Lemma eval_freeze_to_bytesmod_and_partitions
     : forall (f : list Z)
         (Hf : length f = n)
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
@@ -2838,6 +2838,24 @@ Section freeze_mod_ops.
     Z.div_mod_to_quot_rem; nia.
   Qed.
 
+  Lemma eval_freeze_to_bytesmod
+    : forall (f : list Z)
+        (Hf : length f = n)
+        (Hf_bounded : 0 <= eval weight n f < 2 * m),
+      (eval bytes_weight bytes_n (freeze_to_bytesmod f)) = (eval weight n f) mod m.
+  Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
+    intros; now apply eval_freeze_to_bytesmod_and_partitions.
+  Qed.
+
+  Lemma freeze_to_bytesmod_partitions
+    : forall (f : list Z)
+        (Hf : length f = n)
+        (Hf_bounded : 0 <= eval weight n f < 2 * m),
+      freeze_to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f mod m).
+  Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
+    intros; now apply eval_freeze_to_bytesmod_and_partitions.
+  Qed.
+
   Lemma eval_from_bytesmod
     : forall (f : list Z)
              (Hf : length f = bytes_n),
@@ -2848,6 +2866,7 @@ Section freeze_mod_ops.
     reflexivity.
   Qed.
 End freeze_mod_ops.
+Hint Rewrite eval_freeze_to_bytesmod : push_eval.
 
 Section primitives.
   Definition mulx (bitwidth : Z) := Eval cbv [Z.mul_split_at_bitwidth] in Z.mul_split_at_bitwidth bitwidth.

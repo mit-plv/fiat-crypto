@@ -1885,7 +1885,7 @@ Module Import UnsaturatedSolinas.
           { apply Hto_bytesv; solve [ assumption | repeat split ]. }
           { cbn [type.for_each_lhs_of_arrow type_base type.andb_bool_for_each_lhs_of_arrow ZRange.type.option.is_bounded_by fst snd] in *.
             rewrite Bool.andb_true_iff in *; split_and'.
-            etransitivity; [ apply eval_freeze_to_bytesmod | f_equal; (eassumption || (symmetry; eassumption)) ];
+            etransitivity; [ apply eval_freeze_to_bytesmod_and_partitions | f_equal; (eassumption || (symmetry; eassumption)) ];
               auto; try omega.
             { erewrite Ring.length_is_bounded_by by eassumption; assumption. }
             { lazymatch goal with
