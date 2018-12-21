@@ -19,6 +19,7 @@ Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.EvarExists.
 Require Export Crypto.Util.Tactics.Forward.
 Require Export Crypto.Util.Tactics.GetGoal.
+Require Export Crypto.Util.Tactics.HasBody.
 Require Export Crypto.Util.Tactics.Head.
 Require Export Crypto.Util.Tactics.MoveLetIn.
 Require Export Crypto.Util.Tactics.NormalizeCommutativeIdentifier.
