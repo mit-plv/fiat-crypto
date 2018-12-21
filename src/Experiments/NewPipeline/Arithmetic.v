@@ -2875,6 +2875,29 @@ Section primitives.
   Definition cmovznz (bitwidth : Z) (cond : Z) (z nz : Z)
     := dlet t := (0 - Z.bneg (Z.bneg cond)) mod 2^bitwidth in Z.lor (Z.land t nz) (Z.land (Z.lnot_modulo t (2^bitwidth)) z).
 
+  Lemma mulx_correct (bitwidth : Z)
+        (x y : Z)
+    : mulx bitwidth x y = ((x * y) mod 2^bitwidth, (x * y) / 2^bitwidth).
+  Proof using Type.
+    change mulx with Z.mul_split_at_bitwidth.
+    rewrite <- Z.mul_split_at_bitwidth_div, <- Z.mul_split_at_bitwidth_mod; eta_expand.
+    eta_expand; reflexivity.
+  Qed.
+
+  Lemma addcarryx_correct (bitwidth : Z)
+        (c x y : Z)
+    : addcarryx bitwidth c x y = ((c + x + y) mod 2^bitwidth, (c + x + y) / 2^bitwidth).
+  Proof using Type.
+    cbv [addcarryx Let_In]; reflexivity.
+  Qed.
+
+  Lemma subborrowx_correct (bitwidth : Z)
+        (b x y : Z)
+    : subborrowx bitwidth b x y = ((-b + x + -y) mod 2^bitwidth, -((-b + x + -y) / 2^bitwidth)).
+  Proof using Type.
+    cbv [subborrowx Let_In]; reflexivity.
+  Qed.
+
   Lemma cmovznz_correct bitwidth cond z nz
     : 0 <= z < 2^bitwidth
       -> 0 <= nz < 2^bitwidth
