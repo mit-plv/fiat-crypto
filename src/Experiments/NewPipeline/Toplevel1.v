@@ -313,19 +313,19 @@ Module MontgomeryStyleRing.
     Context (m_eq : Z.pos m = s - Associational.eval c)
             (sc_pos : 0 < s - Associational.eval c)
             (valid : list Z -> Prop)
-            (from_montgomery_mod : list Z -> list Z)
-            (Hfrom_montgomery_mod
-             : forall v, valid v -> valid (from_montgomery_mod v))
+            (from_montgomerymod : list Z -> list Z)
+            (Hfrom_montgomerymod
+             : forall v, valid v -> valid (from_montgomerymod v))
             (Interp_rfrom_montgomeryv : list Z -> list Z)
             (HInterp_rfrom_montgomeryv : forall arg1 arg2,
                 is_eq1 arg1 arg2
                 -> is_bounded_by1 bounds arg1 = true
                 -> is_bounded_by bounds (Interp_rfrom_montgomeryv (fst arg1)) = true
-                   /\ Interp_rfrom_montgomeryv (fst arg1) = from_montgomery_mod (fst arg2))
+                   /\ Interp_rfrom_montgomeryv (fst arg1) = from_montgomerymod (fst arg2))
             (mulmod : list Z -> list Z -> list Z)
             (Hmulmod
-             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (mulmod a b)) mod (s - Associational.eval c)
-                                                        = (eval (from_montgomery_mod a) * eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (mulmod a b)) mod (s - Associational.eval c)
+                                                        = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a) b (_ : valid b), valid (mulmod a b)))
             (Interp_rmulv : list Z -> list Z -> list Z)
             (HInterp_rmulv : forall arg1 arg2,
@@ -335,8 +335,8 @@ Module MontgomeryStyleRing.
                    /\ Interp_rmulv (fst arg1) (fst (snd arg1)) = mulmod (fst arg2) (fst (snd arg2)))
             (addmod : list Z -> list Z -> list Z)
             (Haddmod
-             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (addmod a b)) mod (s - Associational.eval c)
-                                                        = (eval (from_montgomery_mod a) + eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (addmod a b)) mod (s - Associational.eval c)
+                                                        = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a) b (_ : valid b), valid (addmod a b)))
             (Interp_raddv : list Z -> list Z -> list Z)
             (HInterp_raddv : forall arg1 arg2,
@@ -346,8 +346,8 @@ Module MontgomeryStyleRing.
                    /\ Interp_raddv (fst arg1) (fst (snd arg1)) = addmod (fst arg2) (fst (snd arg2)))
             (submod : list Z -> list Z -> list Z)
             (Hsubmod
-             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (submod a b)) mod (s - Associational.eval c)
-                                                        = (eval (from_montgomery_mod a) - eval (from_montgomery_mod b)) mod (s - Associational.eval c))
+             : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (submod a b)) mod (s - Associational.eval c)
+                                                        = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a) b (_ : valid b), valid (submod a b)))
             (Interp_rsubv : list Z -> list Z -> list Z)
             (HInterp_rsubv : forall arg1 arg2,
@@ -357,8 +357,8 @@ Module MontgomeryStyleRing.
                    /\ Interp_rsubv (fst arg1) (fst (snd arg1)) = submod (fst arg2) (fst (snd arg2)))
             (oppmod : list Z -> list Z)
             (Hoppmod
-             : (forall a (_ : valid a), eval (from_montgomery_mod (oppmod a)) mod (s - Associational.eval c)
-                                        = (-eval (from_montgomery_mod a)) mod (s - Associational.eval c))
+             : (forall a (_ : valid a), eval (from_montgomerymod (oppmod a)) mod (s - Associational.eval c)
+                                        = (-eval (from_montgomerymod a)) mod (s - Associational.eval c))
                /\ (forall a (_ : valid a), valid (oppmod a)))
             (Interp_roppv : list Z -> list Z)
             (HInterp_roppv : forall arg1 arg2,
@@ -368,7 +368,7 @@ Module MontgomeryStyleRing.
                    /\ Interp_roppv (fst arg1) = oppmod (fst arg2))
             (zeromod : list Z)
             (Hzeromod
-             : (eval (from_montgomery_mod zeromod)) mod (s - Associational.eval c)
+             : (eval (from_montgomerymod zeromod)) mod (s - Associational.eval c)
                = 0 mod (s - Associational.eval c)
                /\ valid zeromod)
             (Interp_rzerov : list Z)
@@ -376,7 +376,7 @@ Module MontgomeryStyleRing.
                               /\ Interp_rzerov = zeromod)
             (onemod : list Z)
             (Honemod
-             : (eval (from_montgomery_mod onemod)) mod (s - Associational.eval c)
+             : (eval (from_montgomerymod onemod)) mod (s - Associational.eval c)
                = 1 mod (s - Associational.eval c)
                /\ valid onemod)
             (Interp_ronev : list Z)
@@ -384,7 +384,7 @@ Module MontgomeryStyleRing.
                              /\ Interp_ronev = onemod)
             (encodemod : Z -> list Z)
             (Hencodemod
-             : (forall v, 0 <= v < s - Associational.eval c -> eval (from_montgomery_mod (encodemod v)) mod (s - Associational.eval c) = v mod (s - Associational.eval c))
+             : (forall v, 0 <= v < s - Associational.eval c -> eval (from_montgomerymod (encodemod v)) mod (s - Associational.eval c) = v mod (s - Associational.eval c))
                /\ (forall v, 0 <= v < s - Associational.eval c -> valid (encodemod v)))
             (Interp_rencodev : Z -> list Z)
             (HInterp_rencodev : forall arg1 arg2,
@@ -2426,9 +2426,9 @@ Module WordByWordMontgomery.
                            (m : Z)
                            (m' : Z)
                            (f : list Z),
-                       Interp (t:=reify_type_of from_montgomery_mod)
+                       Interp (t:=reify_type_of from_montgomerymod)
                               from_montgomery_gen bitwidth n m m' f
-                       = from_montgomery_mod bitwidth n m m' f)
+                       = from_montgomerymod bitwidth n m m' f)
                    /\ Wf from_montgomery_gen)
          As from_montgomery_gen_correct.
   Proof.
@@ -2436,14 +2436,14 @@ Module WordByWordMontgomery.
     (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
     (*
     split.
-    { intros; etransitivity; [ | cbv [from_montgomery_mod]; apply mul_gen_correct ].
+    { intros; etransitivity; [ | cbv [from_montgomerymod]; apply mul_gen_correct ].
       subst from_montgomery_gen.
       instantiate (1:=ltac:(let r := Reify (fun F (bitwidth:Z) (n:nat) (m m' : Z) (f : list Z) => (F bitwidth n m m' f (onemod bitwidth n)):list Z) in refine (r @ mul_gen)%Expr)).
       reflexivity. }
     { prove_Wf (). }
      *)
   Qed.
-  Hint Extern 1 (_ = from_montgomery_mod _ _ _ _ _) => simple apply (proj1 from_montgomery_gen_correct) : reify_gen_cache.
+  Hint Extern 1 (_ = from_montgomerymod _ _ _ _ _) => simple apply (proj1 from_montgomery_gen_correct) : reify_gen_cache.
   Hint Immediate (proj2 from_montgomery_gen_correct) : wf_gen_cache.
 
   Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
@@ -2737,7 +2737,7 @@ Module WordByWordMontgomery.
       := BoundsPipeline_correct
            (Some bounds, tt)
            (Some bounds)
-           (from_montgomery_mod machine_wordsize n m m').
+           (from_montgomerymod machine_wordsize n m m').
 
     Definition srnonzero prefix
       := BoundsPipelineToStrings
@@ -2957,7 +2957,7 @@ Module WordByWordMontgomery.
                                                      = type.app_curried (t:=from_bytesT) (from_bytesmod machine_wordsize 1 n) f))
                   /\ (Positional.eval (weight machine_wordsize 1) n (type.app_curried (t:=from_bytesT) (from_bytesmod machine_wordsize 1 n) f)) = (Positional.eval (weight 8 1) n_bytes (fst f))))
            /\ (forall f
-                 (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=(base.type.list base.type.Z -> base.type.Z)%etype) (@ZRange.type.option.is_bounded_by) (Some bounds, tt) f = true) (Hfvalid : valid machine_wordsize n m (fst f)), (Interp rnonzerov (fst f) = 0) <-> ((@eval machine_wordsize n (from_montgomery_mod machine_wordsize n m m' (fst f))) mod m = 0)).
+                 (Hf : type.andb_bool_for_each_lhs_of_arrow (t:=(base.type.list base.type.Z -> base.type.Z)%etype) (@ZRange.type.option.is_bounded_by) (Some bounds, tt) f = true) (Hfvalid : valid machine_wordsize n m (fst f)), (Interp rnonzerov (fst f) = 0) <-> ((@eval machine_wordsize n (from_montgomerymod machine_wordsize n m m' (fst f))) mod m = 0)).
 
       (** XXX TODO: MOVE ME *)
       Lemma is_bounded_by_repeat_In_iff {rg n'} {ls : list Z}
@@ -2992,7 +2992,7 @@ Module WordByWordMontgomery.
       Qed.
 
       (** XXX TODO MOVE ME *)
-      Local Opaque valid addmod submod oppmod encodemod mulmod from_montgomery_mod nonzeromod.
+      Local Opaque valid addmod submod oppmod encodemod mulmod from_montgomerymod nonzeromod.
       Theorem Good : GoodT.
       Proof.
         pose proof use_curve_good; destruct_head'_and; destruct_head_hnf' ex.
@@ -3013,7 +3013,7 @@ Module WordByWordMontgomery.
                          | eapply submod_correct
                          | eapply oppmod_correct
                          | eapply encodemod_correct
-                         | eapply from_montgomery_mod_correct
+                         | eapply from_montgomerymod_correct
                          | eapply nonzeromod_correct
                          | intros; apply conj
                          | omega ]. }

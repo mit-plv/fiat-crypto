@@ -4080,36 +4080,36 @@ Module WordByWordMontgomery.
         t_fin.
     Qed.
 
-    Definition from_montgomery_mod (v : list Z) : list Z
+    Definition from_montgomerymod (v : list Z) : list Z
       := mulmod v onemod.
 
-    Lemma from_montgomery_mod_correct (v : list Z)
-      : valid v -> eval (from_montgomery_mod v) mod m = (eval v * r'^n) mod m
-                  /\ valid (from_montgomery_mod v).
+    Lemma from_montgomerymod_correct (v : list Z)
+      : valid v -> eval (from_montgomerymod v) mod m = (eval v * r'^n) mod m
+                  /\ valid (from_montgomerymod v).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
-      intro Hv; cbv [from_montgomery_mod valid] in *; destruct_head'_and.
+      intro Hv; cbv [from_montgomerymod valid] in *; destruct_head'_and.
       replace (eval v * r'^n) with (eval v * eval onemod * r'^n) by (rewrite (proj1 onemod_correct); lia).
       repeat apply conj; apply mulmod_correct0; auto; try apply onemod_correct; rewrite (proj1 onemod_correct); omega.
     Qed.
 
-    Lemma eval_from_montgomery_mod (v : list Z) : valid v -> eval (from_montgomery_mod v) mod m = (eval v * r'^n) mod m.
+    Lemma eval_from_montgomerymod (v : list Z) : valid v -> eval (from_montgomerymod v) mod m = (eval v * r'^n) mod m.
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
-      intros; apply from_montgomery_mod_correct; assumption.
+      intros; apply from_montgomerymod_correct; assumption.
     Qed.
-    Lemma valid_from_montgomery_mod (v : list Z)
-      : valid v -> valid (from_montgomery_mod v).
+    Lemma valid_from_montgomerymod (v : list Z)
+      : valid v -> valid (from_montgomerymod v).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
-      intros; apply from_montgomery_mod_correct; assumption.
+      intros; apply from_montgomerymod_correct; assumption.
     Qed.
 
     Lemma mulmod_correct
-      : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (mulmod a b)) mod m
-                                            = (eval (from_montgomery_mod a) * eval (from_montgomery_mod b)) mod m)
+      : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (mulmod a b)) mod m
+                                            = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod m)
         /\ (forall a (_ : valid a) b (_ : valid b), valid (mulmod a b)).
     Proof using r'_correct r' n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
-        push_Zmod; rewrite ?eval_from_montgomery_mod; pull_Zmod; repeat apply conj;
+        push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           try apply mulmod_correct0; cbv [valid] in *; destruct_head'_and; auto; [].
       rewrite !Z.mul_assoc.
       apply Z.mul_mod_Proper; [ | reflexivity ].
@@ -4117,8 +4117,8 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma squaremod_correct
-      : (forall a (_ : valid a), eval (from_montgomery_mod (squaremod a)) mod m
-                                            = (eval (from_montgomery_mod a) * eval (from_montgomery_mod a)) mod m)
+      : (forall a (_ : valid a), eval (from_montgomerymod (squaremod a)) mod m
+                                            = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m)
         /\ (forall a (_ : valid a), valid (squaremod a)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       split; intros; cbv [squaremod]; apply mulmod_correct; assumption.
@@ -4136,12 +4136,12 @@ Module WordByWordMontgomery.
       rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia);
       try apply Z.mod_pos_bound; subst r; try lia; try reflexivity.
     Lemma encodemod_correct
-      : (forall v, 0 <= v < m -> eval (from_montgomery_mod (encodemod v)) mod m = v mod m)
+      : (forall v, 0 <= v < m -> eval (from_montgomerymod (encodemod v)) mod m = v mod m)
         /\ (forall v, 0 <= v < m -> valid (encodemod v)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       split; intros v ?; cbv [encodemod R2mod]; [ rewrite (proj1 mulmod_correct) | apply mulmod_correct ];
         [ | now t_valid v.. ].
-      push_Zmod; rewrite !eval_from_montgomery_mod; [ | now t_valid v.. ].
+      push_Zmod; rewrite !eval_from_montgomerymod; [ | now t_valid v.. ].
       cbv [eval]; autorewrite with push_eval; auto.
       rewrite ?UniformWeight.uweight_eq_alt by omega.
       rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia).
@@ -4155,12 +4155,12 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma addmod_correct
-      : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (addmod a b)) mod m
-                                            = (eval (from_montgomery_mod a) + eval (from_montgomery_mod b)) mod m)
+      : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (addmod a b)) mod m
+                                            = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m)
         /\ (forall a (_ : valid a) b (_ : valid b), valid (addmod a b)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
-        push_Zmod; rewrite ?eval_from_montgomery_mod; pull_Zmod; repeat apply conj;
+        push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           cbv [valid addmod] in *; destruct_head'_and; auto;
             try rewrite m_enc_correct_montgomery;
             try (eapply small_add || eapply add_bound);
@@ -4171,12 +4171,12 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma submod_correct
-      : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomery_mod (submod a b)) mod m
-                                            = (eval (from_montgomery_mod a) - eval (from_montgomery_mod b)) mod m)
+      : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (submod a b)) mod m
+                                            = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod m)
         /\ (forall a (_ : valid a) b (_ : valid b), valid (submod a b)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
-        push_Zmod; rewrite ?eval_from_montgomery_mod; pull_Zmod; repeat apply conj;
+        push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           cbv [valid submod] in *; destruct_head'_and; auto;
             try rewrite m_enc_correct_montgomery;
             try (eapply small_sub || eapply sub_bound);
@@ -4187,12 +4187,12 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma oppmod_correct
-      : (forall a (_ : valid a), eval (from_montgomery_mod (oppmod a)) mod m
-                            = (-eval (from_montgomery_mod a)) mod m)
+      : (forall a (_ : valid a), eval (from_montgomerymod (oppmod a)) mod m
+                            = (-eval (from_montgomerymod a)) mod m)
         /\ (forall a (_ : valid a), valid (oppmod a)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
-        push_Zmod; rewrite ?eval_from_montgomery_mod; pull_Zmod; repeat apply conj;
+        push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           cbv [valid oppmod] in *; destruct_head'_and; auto;
             try rewrite m_enc_correct_montgomery;
             try (eapply small_opp || eapply opp_bound);
@@ -4203,9 +4203,9 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma nonzeromod_correct
-      : (forall a (_ : valid a), (nonzeromod a = 0) <-> ((eval (from_montgomery_mod a)) mod m = 0)).
+      : (forall a (_ : valid a), (nonzeromod a = 0) <-> ((eval (from_montgomerymod a)) mod m = 0)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
-      intros a Ha; rewrite eval_from_montgomery_mod by assumption.
+      intros a Ha; rewrite eval_from_montgomerymod by assumption.
       cbv [nonzeromod valid] in *; destruct_head'_and.
       rewrite eval_nonzero; try eassumption; [ | subst r; apply conj; try eassumption; omega.. ].
       split; intro H'; [ rewrite H'; autorewrite with zsimplify_const; reflexivity | ].
