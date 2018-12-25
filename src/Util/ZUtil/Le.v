@@ -55,4 +55,10 @@ Module Z.
 
   Lemma sub_pos_bound a b X : 0 <= a < X -> 0 <= b < X -> -X < a - b < X.
   Proof. lia. Qed.
+
+  Lemma le_sub_1_iff x y : x <= y - 1 <-> x < y.
+  Proof. lia. Qed.
+
+  Lemma le_add_1_iff x y : x + 1 <= y <-> x < y.
+  Proof. lia. Qed.
 End Z.

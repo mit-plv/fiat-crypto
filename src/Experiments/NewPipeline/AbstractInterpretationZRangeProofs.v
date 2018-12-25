@@ -22,6 +22,7 @@ Require Import Crypto.Util.ZUtil.CC.
 Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Rshi.
 Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
@@ -359,18 +360,12 @@ Module Compilers.
                              => apply H; clear H
                            end ].
 
-          Local Lemma le_sub_1_eq x y : ((x <= y - 1) <-> (x < y))%Z.
-          Proof. lia. Qed.
-
-          Local Lemma le_add_1_eq x y : ((x + 1 <= y) <-> (x < y))%Z.
-          Proof. lia. Qed.
-
           Local Lemma mul_by_halves_bounds x y n :
             (0 <= x < 2^ (n / 2))%Z ->
             (0 <= y < 2^ (n / 2))%Z ->
             (0 <= x * y <= 2 ^ n - 1)%Z.
           Proof.
-            intros. rewrite le_sub_1_eq.
+            intros. rewrite Z.le_sub_1_iff.
             assert (2 ^ (n / 2) * 2 ^ (n / 2) <= 2 ^ n)%Z.
             { rewrite <-Z.pow_twice_r.
               apply Z.pow_le_mono_r; auto with zarith; [ ].
@@ -412,7 +407,7 @@ Module Compilers.
                  Z.div_mod_to_quot_rem; nia. }
              { Z.ltb_to_lt.
                rewrite Z.rshi_correct_full by omega.
-               break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply le_sub_1_eq; auto with zarith. }
+               break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply Z.le_sub_1_iff; auto with zarith. }
           Qed.
 
           Lemma interp_related {t} (idc : ident t) : interp_is_related idc.
@@ -447,8 +442,8 @@ Module Compilers.
                               | solve [ auto using ZRange.is_bounded_by_bool_Proper_if_sumbool_union, Z.mod_pos_bound, Z.mod_neg_bound with zarith ]
                               | rewrite ZRange.is_bounded_by_bool_opp
                               | progress autorewrite with zsimplify_const
-                              | rewrite le_sub_1_eq
-                              | rewrite le_add_1_eq
+                              | rewrite Z.le_sub_1_iff
+                              | rewrite Z.le_add_1_iff
                               | match goal with
                                 | [ H : ?x = ?x |- _ ] => clear H
                                 | [ |- andb (is_bounded_by_bool (_ mod ?m) (fst (Operations.ZRange.split_bounds _ ?m)))
@@ -509,7 +504,7 @@ Module Compilers.
                              end
                            | intros; mul_by_halves_t ].
             { intros.
-              rewrite le_sub_1_eq.
+              rewrite Z.le_sub_1_iff.
               break_innermost_match; Z.ltb_to_lt;
                 auto with zarith. }
           Qed.
