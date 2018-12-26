@@ -4070,6 +4070,9 @@ Module WordByWordMontgomery.
       cbv [valid small onemod eval]; autorewrite with push_eval; t_fin.
     Qed.
 
+    Lemma eval_onemod : eval onemod = 1.
+    Proof. apply onemod_correct. Qed.
+
     Definition R2mod : list Z := partition weight n ((r^n * r^n) mod m).
 
     Definition R2mod_correct : eval R2mod mod m = (r^n*r^n) mod m /\ valid R2mod.
@@ -4116,6 +4119,12 @@ Module WordByWordMontgomery.
       cbv [Z.equiv_modulo]; etransitivity; [ apply mulmod_correct0 | apply f_equal2; lia ]; auto.
     Qed.
 
+    Lemma eval_mulmod
+      : (forall a (_ : valid a) b (_ : valid b),
+            eval (from_montgomerymod (mulmod a b)) mod m
+            = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod m).
+    Proof. apply mulmod_correct. Qed.
+
     Lemma squaremod_correct
       : (forall a (_ : valid a), eval (from_montgomerymod (squaremod a)) mod m
                                             = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m)
@@ -4123,6 +4132,12 @@ Module WordByWordMontgomery.
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       split; intros; cbv [squaremod]; apply mulmod_correct; assumption.
     Qed.
+
+    Lemma eval_squaremod
+      : (forall a (_ : valid a),
+            eval (from_montgomerymod (squaremod a)) mod m
+            = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m).
+    Proof. apply squaremod_correct. Qed.
 
     Definition encodemod (v : Z) : list Z
       := mulmod (partition weight n v) R2mod.
@@ -4154,6 +4169,11 @@ Module WordByWordMontgomery.
       reflexivity.
     Qed.
 
+    Lemma eval_encodemod
+      : (forall v, 0 <= v < m
+                   -> eval (from_montgomerymod (encodemod v)) mod m = v mod m).
+    Proof. apply encodemod_correct. Qed.
+
     Lemma addmod_correct
       : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (addmod a b)) mod m
                                             = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m)
@@ -4169,6 +4189,12 @@ Module WordByWordMontgomery.
       push_Zmod; erewrite eval_add by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with omega); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
       break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
     Qed.
+
+    Lemma eval_addmod
+      : (forall a (_ : valid a) b (_ : valid b),
+            eval (from_montgomerymod (addmod a b)) mod m
+            = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m).
+    Proof. apply addmod_correct. Qed.
 
     Lemma submod_correct
       : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (submod a b)) mod m
@@ -4186,6 +4212,12 @@ Module WordByWordMontgomery.
       break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
     Qed.
 
+    Lemma eval_submod
+      : (forall a (_ : valid a) b (_ : valid b),
+            eval (from_montgomerymod (submod a b)) mod m
+            = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod m).
+    Proof. apply submod_correct. Qed.
+
     Lemma oppmod_correct
       : (forall a (_ : valid a), eval (from_montgomerymod (oppmod a)) mod m
                             = (-eval (from_montgomerymod a)) mod m)
@@ -4201,6 +4233,12 @@ Module WordByWordMontgomery.
       push_Zmod; erewrite eval_opp by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with omega); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
       break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
     Qed.
+
+    Lemma eval_oppmod
+      : (forall a (_ : valid a),
+            eval (from_montgomerymod (oppmod a)) mod m
+            = (-eval (from_montgomerymod a)) mod m).
+    Proof. apply oppmod_correct. Qed.
 
     Lemma nonzeromod_correct
       : (forall a (_ : valid a), (nonzeromod a = 0) <-> ((eval (from_montgomerymod a)) mod m = 0)).
@@ -4237,5 +4275,22 @@ Module WordByWordMontgomery.
                         | reflexivity
                         | progress Z.rewrite_mod_small ].
     Qed.
+
+    Lemma eval_to_bytesmod
+      : (forall a (_ : valid a),
+            Positional.eval (UniformWeight.uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
+            = eval a mod m).
+    Proof. apply to_bytesmod_correct. Qed.
   End modops.
+  Hint Rewrite
+       eval_onemod
+       eval_from_montgomerymod
+       eval_mulmod
+       eval_squaremod
+       eval_encodemod
+       eval_addmod
+       eval_submod
+       eval_oppmod
+       eval_to_bytesmod
+    : push_eval.
 End WordByWordMontgomery.
