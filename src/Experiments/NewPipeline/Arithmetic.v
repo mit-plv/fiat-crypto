@@ -4282,15 +4282,4 @@ Module WordByWordMontgomery.
             = eval a mod m).
     Proof. apply to_bytesmod_correct. Qed.
   End modops.
-  Hint Rewrite
-       eval_onemod
-       eval_from_montgomerymod
-       eval_mulmod
-       eval_squaremod
-       eval_encodemod
-       eval_addmod
-       eval_submod
-       eval_oppmod
-       eval_to_bytesmod
-    : push_eval.
 End WordByWordMontgomery.
