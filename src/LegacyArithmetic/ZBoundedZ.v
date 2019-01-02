@@ -58,11 +58,11 @@ Global Instance ZZLikeProperties {small_bound_exp smaller_bound_exp modulus}
        {Hs_ss : cls_is_true (smaller_bound_exp <=? small_bound_exp)}
        {Hmod0 : cls_is_true (0 <=? modulus)}
        {Hmod1 : cls_is_true (modulus <? 2^small_bound_exp)}
-  : ZLikeProperties (@ZZLikeOps small_bound_exp smaller_bound_exp modulus)
-  := { large_valid x := 0 <= x < 2^(2*small_bound_exp);
-       medium_valid x := 0 <= x < 2^(small_bound_exp + smaller_bound_exp);
-       small_valid x := 0 <= x < 2^small_bound_exp }.
+  : ZLikeProperties (@ZZLikeOps small_bound_exp smaller_bound_exp modulus).
 Proof.
+refine {| large_valid x := 0 <= x < 2^(2*small_bound_exp);
+          medium_valid x := 0 <= x < 2^(small_bound_exp + smaller_bound_exp);
+          small_valid x := 0 <= x < 2^small_bound_exp |}.
   { abstract t. }
   { abstract t. }
   { abstract t. }
