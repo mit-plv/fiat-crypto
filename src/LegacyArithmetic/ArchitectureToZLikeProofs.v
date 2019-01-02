@@ -84,11 +84,11 @@ Section fancy_machine_p256_montgomery_foundation.
          (smaller_bound_exp : Z)
          (smaller_bound_smaller : 0 <= smaller_bound_exp <= n)
          (n_pos : 0 < n)
-    : ZLikeProperties (ZLikeOps_of_ArchitectureBoundedOps_Factored ops modulus smaller_bound_exp ldi_modulus ldi_0)
-    := { large_valid v := True;
-         medium_valid v := 0 <= decode_large v < 2^n * 2^smaller_bound_exp;
-         small_valid v := True }.
+    : ZLikeProperties (ZLikeOps_of_ArchitectureBoundedOps_Factored ops modulus smaller_bound_exp ldi_modulus ldi_0).
   Proof.
+  refine {| large_valid v := True;
+            medium_valid v := 0 <= decode_large v < 2^n * 2^smaller_bound_exp;
+            small_valid v := True |}.
     (* In 8.5: *)
     (* par:t. *)
     { abstract t. }
