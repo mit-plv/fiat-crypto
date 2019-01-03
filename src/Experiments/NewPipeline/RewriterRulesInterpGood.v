@@ -24,6 +24,7 @@ Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
@@ -576,6 +577,10 @@ Module Compilers.
                   |- context [ (?x * ?y) mod ?b ] =>
                   rewrite (PullPush.Z.mul_mod_l x y b);
                   rewrite (Z.mod_small (x mod b * y) b) by omega
+                | [ |- context[_ - ?x + ?x] ] => rewrite !Z.sub_add
+                | [ |- context[_ mod (2^_) * 2^_] ] => rewrite <- !Z.mul_mod_distr_r_full
+                | [ |- context[Z.land _ (Z.ones _)] ] => rewrite !Z.land_ones by lia
+                | [ |- context[2^?a * 2^?b] ] => rewrite <- !Z.pow_add_r by lia
                 | [ |- context[-?x + ?y] ] => rewrite !Z.add_opp_l
                 | [ |- context[?n + - ?m] ] => rewrite !Z.add_opp_r
                 | [ |- context[?n - - ?m] ] => rewrite !Z.sub_opp_r
@@ -767,9 +772,7 @@ Module Compilers.
         Reset Ltac Profile.
         Time all: fancy_local_t. (* Finished transaction in 0.051 secs (0.052u,0.s) (successful) *)
         Time all: systematically_handle_casts. (* Finished transaction in 2.004 secs (1.952u,0.052s) (successful) *)
-        Time all: try solve [ repeat interp_good_t_step_arith ]. (* Finished transaction in 26.754 secs (26.455u,0.299s) (successful) *)
-
-        all:admit. (* TODO(jgross) : prove these *)
+        Time all: try solve [ repeat interp_good_t_step_arith ]. (* Finished transaction in 44.411 secs (44.004u,0.411s) (successful) *)
       Admitted.
     End with_cast.
   End RewriteRules.
