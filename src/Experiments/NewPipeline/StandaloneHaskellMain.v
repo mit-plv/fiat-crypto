@@ -6,7 +6,7 @@ Require Import Coq.Strings.String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.HexString.
-Require Import Crypto.Experiments.NewPipeline.Toplevel1.
+Require Import Crypto.Experiments.NewPipeline.PushButtonSynthesis.
 Require Import Crypto.Experiments.NewPipeline.CLI.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope string_scope.

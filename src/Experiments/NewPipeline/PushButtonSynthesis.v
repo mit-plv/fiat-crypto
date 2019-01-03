@@ -223,7 +223,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
 
     Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
     Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_saturated_bounds_list : distr_length.
+    Hint Rewrite length_saturated_bounds_list : distr_length.
 
     Definition selectznz
       := Pipeline.BoundsPipeline
@@ -297,7 +297,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Local Ltac solve_extra_bounds_side_conditions :=
       cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
-    Local Hint Rewrite
+    Hint Rewrite
           eval_select
           Arithmetic.mulx_correct
           Arithmetic.addcarryx_correct
@@ -615,22 +615,22 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
 
     Lemma length_prime_upperbound_list : List.length prime_upperbound_list = n.
     Proof using Type. cbv [prime_upperbound_list]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_prime_upperbound_list : distr_length.
+    Hint Rewrite length_prime_upperbound_list : distr_length.
     Lemma length_tight_upperbounds : List.length tight_upperbounds = n.
     Proof using Type. cbv [tight_upperbounds]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_tight_upperbounds : distr_length.
+    Hint Rewrite length_tight_upperbounds : distr_length.
     Lemma length_tight_bounds : List.length tight_bounds = n.
     Proof using Type. cbv [tight_bounds]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_tight_bounds : distr_length.
+    Hint Rewrite length_tight_bounds : distr_length.
     Lemma length_loose_bounds : List.length loose_bounds = n.
     Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_loose_bounds : distr_length.
+    Hint Rewrite length_loose_bounds : distr_length.
     Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = bytes_n (Qnum limbwidth) (Qden limbwidth) n.
     Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
+    Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
     Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
     Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
-    Local Hint Rewrite length_saturated_bounds_list : distr_length.
+    Hint Rewrite length_saturated_bounds_list : distr_length.
 
     (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -906,7 +906,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Local Ltac solve_extra_bounds_side_conditions :=
       cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
-    Local Hint Rewrite
+    Hint Rewrite
           eval_carry_mulmod
           eval_carry_squaremod
           eval_carry_scmulmod
@@ -1222,7 +1222,7 @@ Module SaturatedSolinas.
     Local Ltac solve_extra_bounds_side_conditions :=
       cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
-    Local Hint Rewrite
+    Hint Rewrite
           (fun pf => @Rows.eval_mulmod (weight machine_wordsize 1) (@wprops _ _ pf))
           using solve [ auto with zarith | congruence | solve_extra_bounds_side_conditions ] : push_eval.
     Hint Unfold mulmod : push_eval.
@@ -1933,7 +1933,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
             | now apply weight_bounded_of_bytes_valid
             | eapply length_of_valid; eassumption ].
 
-    Local Hint Rewrite
+    Hint Rewrite
           (@eval_mulmod machine_wordsize n m r' m')
           (@eval_squaremod machine_wordsize n m r' m')
           (@eval_addmod machine_wordsize n m r' m')
@@ -2925,7 +2925,7 @@ Module MontgomeryReduction.
       rewrite Z.pow_mul_r, R_two_pow by omega; reflexivity.
     Qed.
 
-    Local Declare Equivalent Keys weight w.
+    Declare Equivalent Keys weight w.
     Local Ltac change_weight := rewrite !Hw, ?Z.pow_0_r, ?Z.pow_1_r, ?Z.pow_2_r, ?Z.pow_1_l in *.
     Local Ltac solve_range :=
       repeat match goal with
