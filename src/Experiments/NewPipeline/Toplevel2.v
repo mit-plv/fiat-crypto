@@ -703,6 +703,7 @@ Module Fancy.
               | ident.snd A B => fun v => snd v
               | ident.Z_cast r => fun v => v
               | ident.Z_cast2 (r1, r2) => fun v => v
+              | ident.Z_land => fun x y => x
               | _ => make_error
               end
          | expr.Abs s d f => make_error
@@ -815,6 +816,7 @@ Module Fancy.
       Local Notation wordmax := (2^256).
       Local Notation interp := (interp name_eqb wordmax cc_spec).
       Local Notation uint256 := r[0~>wordmax-1]%zrange.
+      Local Notation uint128 := r[0~>(2 ^ (Z.log2 wordmax / 2) - 1)]%zrange.
       Definition cast_oor (r : zrange) (v : Z) := v mod (upper r + 1).
       Local Notation "'existZ' x" := (existT _ (type.base (base.type.type_base tZ)) x) (at level 200).
       Local Notation "'existZZ' x" := (existT _ (type.base (base.type.type_base tZ * base.type.type_base tZ)%etype) x) (at level 200).
@@ -1620,52 +1622,31 @@ Module Fancy.
         Context (reg : Type) (error_reg : reg) (reg_eqb : reg -> reg -> bool).
         Context (reg_eqb_refl : forall r, reg_eqb r r = true).
 
-        Lemma interp_ctx_ext e :
-          forall cc ctx ctx',
-            (forall n, ctx n = ctx' n) ->
-            interp name_eqb wordmax cc_spec e cc ctx = interp name_eqb wordmax cc_spec e cc ctx'.
-        Proof.
-          induction e; intros; [ cbn; solve [auto] | ].
-          cbn. erewrite Tuple.map_ext by eassumption.
-          apply IHe; [ ]. intros; break_innermost_match; eauto.
-        Qed.
-
-        Fixpoint reg_depth {t} (e : @expr t) : nat :=
-          match e with
-          | Ret _ => 0
-          | Instr i rd args cont => S (reg_depth cont)
-          end.
-        Check interp.
+        Inductive error_free : @expr reg -> Prop :=
+        | error_free_Ret : forall r, r <> error_reg -> error_free (Ret r)
+        | error_free_Instr : forall i rd args cont,
+            error_free cont ->
+            error_free (Instr i rd args cont)
+        .
 
         Lemma allocate_correct e :
           forall cc ctx reg_list name_to_reg,
-            (reg_depth e <= length reg_list)%nat ->
+            error_free (allocate reg name name_eqb error_reg e reg_list name_to_reg) ->
             interp reg_eqb wordmax cc_spec (allocate reg name name_eqb error_reg e reg_list name_to_reg) cc ctx
             = interp name_eqb wordmax cc_spec e cc (fun n : name => ctx (name_to_reg n)).
         Proof.
-          induction e; cbn [allocate]; intros; [ reflexivity | ].
-          destruct reg_list; intros; cbn [reg_depth] in *; distr_length; [ ].
-          cbn. rewrite IHe; try omega.
-
-
+          induction e; destruct reg_list; inversion 1; intros;
+            try reflexivity; try congruence; [ ].
+          cbn. rewrite IHe by auto.
           rewrite Tuple.map_map.
-          apply interp_ctx_ext; [ ]. intros.
-          break_innermost_match; try reflexivity.
-          rewrite reg_eqb_refl in *. congruence.
-          (* 
-             TODO
-             name_to_reg is more or less the context -- names that have already been assigned to registers
-             rd : name (destination name)
-             n : name (input to ctx)
-             r : reg (register in which rd now goes)
-
-             if n != rd then name_to_reg n != r?
-
-             rd has been assigned to the name r.
-             It might be that r has a previous assignment (exists n, name_to_reg n = r and n != rd).
-             However, we can count on that n never being called, if the reg_list is okay.
-           *)
-          
+          (*
+           Need to prove that contexts are equivalent and swapping contexts is OK 
+          *)
+        (* 
+             TODO : either prove this lemma or devise a good way to
+             prove case-by-case that the output of allocate is
+             equivalent to the input.
+         *)
         Admitted.
     End with_name.
 
@@ -2329,6 +2310,9 @@ Module Barrett256.
     cbn; omega.
   Qed.
 
+  (* This expression should have NO ands in it -- search for "&'" should return nothing *)
+  Print barrett_red256.
+
   (* TODO: don't rely on the C, M, and L flags *)
   Lemma barrett_red256_fancy_correct :
     forall xLow xHigh error,
@@ -2392,6 +2376,9 @@ Module Barrett256.
                end.
 
       repeat (econstructor; [ solve [sub] | intros ]).
+      econstructor.
+      { sub. Print Fancy.valid_scalar.
+      [ solve [sub] | intros ].
       (* For the too-tight RSHI cast, we have to loosen the bounds *)
       eapply Fancy.valid_LetInZ_loosen; try solve [sub];
         [ cbn; omega | | intros; apply loosen_rshi_subgoal; solve [eauto] ].
@@ -2478,68 +2465,6 @@ Module Barrett256.
 
   Admitted.
 
-  (*
-  Import Fancy_PreFancy_Equiv.
-
-  Definition interp_equivZZ_256 {s} :=
-    @interp_equivZZ s 256 ltac:(cbv; congruence) 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(reflexivity).
-  Definition interp_equivZ_256 {s} :=
-    @interp_equivZ s 256 115792089237316195423570985008687907853269984665640564039457584007913129639935 ltac:(lia) ltac:(reflexivity).
-
-  Local Ltac simplify_op_equiv start_ctx :=
-    cbn - [Fancy.spec (*PreFancy.interp_ident*) ident.gen_interp Fancy.cc_spec Z.shiftl];
-    repeat match goal with H : start_ctx _ = _ |- _ => rewrite H end;
-    cbv - [
-      Z.rshi Z.cc_m Fancy.CC.cc_m
-        Z.add_with_get_carry_full Z.add_get_carry_full
-        Z.sub_get_borrow_full Z.sub_with_get_borrow_full
-        Z.le Z.lt Z.ltb Z.leb Z.geb Z.eqb Z.land Z.shiftr Z.shiftl
-        Z.add Z.mul Z.div Z.sub Z.modulo Z.testbit Z.pow Z.ones
-        fst snd]; cbn [fst snd];
-    try (replace (2 ^ (256 / 2) - 1) with (Z.ones 128) by reflexivity; rewrite !Z.land_ones by omega);
-    autorewrite with to_div_mod; rewrite ?Z.mod_mod, <-?Z.testbit_spec' by omega;
-    let r := (eval compute in (2 ^ 256)) in
-    replace (2^256) with r in * by reflexivity;
-    repeat match goal with
-           | H : 0 <= ?x < ?m |- context [?x mod ?m] => rewrite (Z.mod_small x m) by apply H
-           | |- context [?x <? 0] => rewrite (proj2 (Z.ltb_ge x 0)) by (break_match; Z.zero_bounds)
-           | _ => rewrite Z.mod_small with (b:=2) by (break_match; omega)
-           | |- context [ (if Z.testbit ?a ?n then 1 else 0) + ?b + ?c] =>
-             replace ((if Z.testbit a n then 1 else 0) + b + c) with (b + c + (if Z.testbit a n then 1 else 0)) by ring
-           end.
-
-  Local Ltac solve_nonneg ctx :=
-    match goal with x := (Fancy.spec _ _ _) |- _ => subst x end;
-    simplify_op_equiv ctx; Z.zero_bounds.
-
-  Local Ltac generalize_result :=
-    let v := fresh "v" in intro v; generalize v; clear v; intro v.
-
-  Local Ltac generalize_result_nonneg ctx :=
-    let v := fresh "v" in
-    let v_nonneg := fresh "v_nonneg" in
-    intro v; assert (0 <= v) as v_nonneg; [solve_nonneg ctx |generalize v v_nonneg; clear v v_nonneg; intros v v_nonneg].
-
-  Local Ltac step_abs :=
-    match goal with
-    | [ |- context G[expr.interp ?ident_interp (expr.Abs ?f) ?x] ]
-      => let G' := context G[expr.interp ident_interp (f x)] in
-         change G'; cbv beta
-    end.
-  Local Ltac step ctx :=
-    repeat step_abs;
-    match goal with
-    | |- Fancy.interp _ _ _ (Fancy.Instr (Fancy.ADD _) _ _ (Fancy.Instr (Fancy.ADDC _) _ _ _)) _ _ = _ =>
-      apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result_nonneg ctx]
-    | [ |- _ = expr.interp _ (PreFancy.LetInAppIdentZ _ _ _ _ _ _) ]
-      => apply interp_equivZ_256; [simplify_op_equiv ctx | generalize_result]
-    | [ |- _ = expr.interp _ (PreFancy.LetInAppIdentZZ _ _ _ _ _ _) ]
-      => apply interp_equivZZ_256; [ simplify_op_equiv ctx | simplify_op_equiv ctx | generalize_result]
-    end.
-
-  Local Opaque PreFancy.interp_cast_mod.
-   *)
-  
   Lemma prod_barrett_red256_correct :
     forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
            (start_context : register -> Z)   (* starting register values *)
