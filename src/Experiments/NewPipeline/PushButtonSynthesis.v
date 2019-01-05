@@ -1858,38 +1858,56 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
       cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool lower upper].
       rewrite H; autorewrite with distr_length.
       intros [v1 v0]; cbn [fst snd].
-      rewrite !Partition.recursive_partition_equiv by now apply UniformWeight.uwprops.
       rename x into x'.
       generalize dependent (eval (n:=n') lgr x').
       cbv [m].
-      intro x; intros ???; subst x'.
-      assert (H' : 0 <= x < s) by lia.
-      revert H'; generalize x; clear dependent x.
+      intro x; intros ??? H; subst x'.
+      eapply In_nth_error in H; destruct H as [i H].
+      rewrite nth_error_combine in H.
+      break_match_hyps; try discriminate; []; Option.inversion_option; Prod.inversion_prod; subst.
+      cbv [Partition.partition] in *.
+      apply nth_error_map in Heqo; apply nth_error_map in Heqo0; destruct Heqo as (?&?&?), Heqo0 as (?&?&?).
+      rewrite nth_error_seq in *.
+      break_match_hyps; try discriminate; Option.inversion_option; Prod.inversion_prod; subst.
+      rewrite ?Nat.add_0_l.
+      assert (0 <= x < s) by lia.
       replace s with (2^Z.log2 s) by easy.
-      clear Hs.
       assert (1 < s) by lia.
       assert (0 < Z.log2 s) by now apply Z.log2_pos.
-      assert (H' : 1 < 2^Z.log2 s) by auto with zarith; revert H'.
-      generalize (Z.log2 s); intro lgs.
-      revert lgs.
-      induction n' as [|n' IHn']; [ cbn; tauto | ].
-      cbn [Partition.recursive_partition List.combine List.In] in *.
-      rewrite UniformWeight.uweight_1, weight_0, Z.div_1_r by ((now apply UniformWeight.uwprops) || lia).
-      intros lgs ?.
-      assert (0 < 2^lgr) by auto with zarith.
-      assert (1 < 2^lgr) by auto with zarith.
-      intros; destruct_head'_or; [ rewrite Bool.andb_true_iff, !Z.leb_le | ];
-        inversion_prod; subst *.
-      { push_Zmod; pull_Zmod; autorewrite with zsimplify_const.
-        (*rewrite Z_mod_nz_opp_full by (Z.rewrite_mod_small; lia).
-        Z.rewrite_mod_small.
-        rewrite Z.le_sub_1_iff; auto with zarith. }
-      { rewrite <- Z.add_opp_r, !Z.div_add_l', !Z_div_nz_opp_full, !Z.div_1_l, !Z.sub_0_l, !Z.add_opp_r in * by (Z.rewrite_mod_small; lia).
-        rewrite !UniformWeight.uweight_recursive_partition_change_start with (i:=1%nat) (j:=0%nat) in * by lia.
-        eapply IHn'; [ | eassumption ].
-        Z.generalize_div_eucl x (2^lgr); intros; subst *.
-        nia. }*)
-    Admitted.
+      assert (1 < 2^Z.log2 s) by auto with zarith.
+      generalize dependent (Z.log2 s); intro lgs; intros.
+
+      edestruct (UniformWeight.uwprops lgr); try lia.
+      assert (forall i : nat, 0 <= UniformWeight.uweight lgr i) by (intro z; specialize (weight_positive z); lia).
+      apply Bool.andb_true_intro; split; apply OrdersEx.Z_as_OT.leb_le;
+        [apply Z.div_nonneg | apply Z.div_le_mono_nonneg]; trivial.
+      apply Z.mod_pos_bound; trivial.
+
+      cbv [UniformWeight.uweight].
+      cbv [weight].
+      rewrite Z.div_1_r.
+      rewrite Z.opp_involutive.
+      rewrite <-2Z.land_ones by nia.
+      rewrite Z.sub_1_r, <-Z.ones_equiv.
+      rewrite Z.land_ones_ones.
+      destruct ((lgs <? 0) || (lgr * Z.of_nat (S i) <? 0)) eqn:?.
+      { rewrite Z.land_ones, Z.ones_equiv, <-Z.sub_1_r by nia.
+        pose proof Z.le_max_r lgs (lgr*Z.of_nat (S i)).
+        etransitivity.
+        2:rewrite <- Z.sub_le_mono_r.
+        2:eapply Z.pow_le_mono_r; try lia; eassumption.
+        eapply Z.le_sub_1_iff, Z.mod_pos_bound, Z.pow_pos_nonneg; nia. }
+      rewrite (Z.ones_equiv (Z.min _ _)), <-Z.sub_1_r.
+      enough (Z.land x (Z.ones (lgr * Z.of_nat (S i))) < 2 ^ Z.min lgs (lgr * Z.of_nat (S i))) by lia.
+      eapply Testbit.Z.testbit_false_bound. nia.
+      intros j ?; assert (Z.min lgs (lgr * Z.of_nat (S i)) <= j) by lia.
+      rewrite Hs in *. revert H; intros.
+      rewrite <-(Z.mod_small x (2^lgs)) by lia.
+      rewrite OrdersEx.Z_as_OT.land_spec.
+      destruct (Zmin_irreducible lgs (lgr * Z.of_nat (S i))) as [HH|HH]; rewrite HH in *; clear HH.
+      { rewrite Z.mod_pow2_bits_high; trivial; lia. }
+      { rewrite OrdersEx.Z_as_DT.ones_spec_high, Bool.andb_false_r; trivial; nia. }
+    Qed.
 
     Lemma length_of_valid lgr n' x
           (H : WordByWordMontgomery.valid lgr n' m x)
