@@ -1,20 +1,20 @@
 The ordering of files (eliding `*Proofs.v` files) is:
 
 ```
-                     Language.v ←──────────────────────────────────────────────────┐
-                     ↗           ↖                                                 │
-                  ↗                  ↖                                             │
-                 UnderLets.v          GENERATEDIdentifiersWithoutTypes.v     MiscCompilerPasses.v
-                    ↑       ↖        ↗                                             ↑
-AbstractInterpretation.v    Rewriter.v                                             │
-         ↑                  ↑ ┌────────────────────────────────────────────────────┘
-CStringification.v          │ │
-   ↑    ┌───────────────────┴─┘
-BoundsPipeline.v                              Arithmetic.v
-      ↑                                           ↑
-      │  ┌────────────────────────────────────────┘
-Toplevel1.v ←── Toplevel2.v ←───────────┐
-   ↑                                    │
+                     Language.v ←──────────────────────────────────────────────────┬───────────────────────────────┐
+                     ↗           ↖                                                 │                               │
+                  ↗                  ↖                                             │                               │
+                 UnderLets.v          GENERATEDIdentifiersWithoutTypes.v     MiscCompilerPasses.v  PushButtonSynthesis/ReificationCache.v
+                    ↑       ↖        ↗                                             ↑                               ↑
+AbstractInterpretation.v    Rewriter.v                                             │                               │
+         ↑                  ↑ ┌────────────────────────────────────────────────────┘                               │
+CStringification.v          │ │               Arithmetic.v                                                         │
+   ↑    ┌───────────────────┴─┘                   ↑                                                                │
+BoundsPipeline.v                        COperationSpecifications.v                                                 │
+      ↑                                           ↑                                                                │
+      │  ┌────────────────────────────────────────┴────────────────────────────────────────────────────────────────┘
+PushButtonSynthesis.v ←── Toplevel2.v ←───────────┐
+   ↑                                              │
 CLI.v                         SlowPrimeSynthesisExamples.v
 ↑  ↑
 │  └────────────────────────────┐
@@ -77,8 +77,10 @@ The files contain:
 
 - CompilersTestCases.v: Various test cases to ensure everything is working
 
-- BoundsPipeline.v: Assembly the various compiler passes together into
+- BoundsPipeline.v: Assemble the various compiler passes together into
   a composed pipeline.  It is the final interface for the compiler.
+  Also contains some tactics for applying the BoundsPipeline
+  correctness lemma.
 
 - COperationSpecifications.v: The specifications for the various
   operations to be synthesized.
@@ -87,8 +89,12 @@ The files contain:
   reified versions of operations, as well as the tactics that reify
   and apply things from the cache.
 
-- Toplevel1.v: Ring Goal (which SHOULD NOT depend on compilers) + pipeline + a couple of examples
-  pipeline + most of the stuff that uses compilers + arithmetic.  This is the file that CLI.v depends on.
+- PushButtonSynthesis.v: Reifies the various operations from
+  Arithmetic.v, definies the compositions of the BoundsPipeline with
+  these operations, proves that their interpretations satisfies the
+  specs from COperationSpecifications.v, assembles the reified
+  post-bounds operations into synthesis targets.  This is the file
+  that CLI.v depends on.
 
 - Toplevel2.v: Some not-quite-finished-but-kind-of-slow pipeline stuff
   + all the stuff that uses compilers + arithmetic, together with more
@@ -106,3 +112,86 @@ The files contain:
 
 - StandaloneHaskellMain.v, StandaloneOCamlMain.v, ExtractionHaskell.v,
   ExtractionOCaml.v: Extraction of pipeline to various languages
+
+
+Proofs files:
+For Language.v, there is a semi-arbitrary split between two files
+`LanguageInversion` and `LanguageWf`.
+- LanguageInversion.v:
+  + classifies equality of type codes and exprs
+  + type codes have decidable equality
+  + correctness of the various type-transport definitions
+  + correctness lemmas for the various `expr.invert_*` definitions
+  + correctness lemmas for the various `reify_*` definitions in Language.v
+  + inversion_type, which inverts equality of type codes
+  + type_beq_to_eq, which converts boolean equality of types to
+    Leibniz equality
+  + rewrite_type_transport_correct, which rewrites with the
+    correctness lemmas of the various type-transport definitions
+  + `type.invert_one e` which does case analysis on any inductive type
+     indexed over type codes, in a way that preserves information
+     about the type of `e`, and generally works even when the goal is
+     dependently typed over `e` and/or its type
+  + ident.invert, which does case-anaylsis on idents whose type has
+    structure (i.e., is not a var)
+  + ident.invert_match, which does case-analysis on idents appearing as
+    the discriminee of a `match` in the goal or in any hypothesis
+  + expr.invert, which does case-anaylsis on exprs whose type has
+    structure (i.e., is not a var)
+  + expr.invert_match, which does case-analysis on exprs appearing as
+    the discriminee of a `match` in the goal or in any hypothesis
+  + expr.invert_subst, which does case-analysis on exprs which show up
+    in hypotheses of the form `expr.invert_* _ = Some _`
+  + expr.inversion_expr, which inverts equalities of exprs
+
+- LanguageWf.v: Depends on LanguageInversion.v
+  Defines:
+  + expr.wf, expr.Wf, expr.wf3, expr.Wf3
+  + GeneralizeVar.Flat.wf
+  + expr.inversion_wf (and variants), which invert `wf` hypotheses
+  + expr.wf_t (and variants wf_unsafe_t and wf_safe_t) which make
+     progress on `wf` goals; `wf_safe_t` should never turn a provable
+     goal into an unprovable one, while `wf_unsafe_t` might.
+  + expr.interp_t (and variants), which should make progress on
+    equivalence-of-interp hypotheses and goals, but is not used much
+    (mainly because I forgot I had defined it)
+  + prove_Wf, which proves wf goals on concrete syntax trees in a more
+    optimized way than `repeat constructor`
+  Proves:
+  + funext → (type.eqv ↔ Logic.eq) (`eqv_iff_eq_of_funext`)
+  + type.related and type.eqv are PERs
+  + Proper instances for type.app_curried, type.and_for_each_lhs_of_arrow
+  + type.is_not_higher_order → Reflexive (type.and_for_each_lhs_of_arrow type.eqv)
+  + iff between type.related{,_hetero} and related of type.app_curried
+  + various properties of type.and{,b_bool}for_each_lhs_of_arrow
+  + various properties of type.eqv and ident.{gen_,}interp
+  + various properties of ident.cast
+  + various properties of expr.wf (particularly of things defined in Language.v)
+  + interp and wf proofs for the passes to/from Flat
+
+- UnderLetsProofs.v: wf and interp lemmas for the various passes defined in UnderLets.v
+- MiscCompilerPassesProofs.v: wf and interp lemmas for the various passes defined in MiscCompilerPasses.v
+- GENERATEDIdentifiersWithoutTypesProofs.v: various lemmas about the definitions in GENERATEDIdentifiersWithoutTypes.v
+- AbstractInterpretationZRangeProofs.v: Proves correctness lemmas of the per-operation zrange-bounds-analysis functions
+- AbstractInterpretationWf.v: wf lemmas for the AbstractInterpretation pass
+- AbstractInterpretationProofs.v: interp lemmas for the
+  AbstractInterpretation pass, and also correctness lemmas that
+  combine Wf and interp
+- RewriterWf1.v: a semi-arbitrary collection of proofs and definitions
+  that are mostly shared between the wf proofs and the interp proofs.
+  Importantly, this file defines everything needed to state and prove
+  that specific rewrite rules are correct.
+- RewriterRulesGood.v: Proves that all specific rewriter rules are
+  good enough for wf proofs (as specified in RewriterWf1.v)
+- RewriterRulesInterpGood.v: Proves that all specific rewriter rules
+  are good enough for interp proofs (as specified in RewriterWf1.v)
+- RewriterWf2.v: Proves wf of the generic rewriter pass, taking in
+  specific-rewriter-rule-correctness as a hypothesis
+- RewriterInterpProofs1.v: Proves interp-correctness of the generic
+  rewriter pass, taking in specific-rewriter-rule-correctness as a
+  hypothesis
+- RewriterProofs.v: assembles the proofs from RewriterRulesGood.v,
+  RewriterRulesInterpGood.v, RewriterWf2.v, and
+  RewriterInterpProofs1.v into correctness lemmas for the overall
+  rewriter pass, specialized and pre-evaluated for specific rewrite
+  rules
