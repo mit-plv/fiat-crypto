@@ -25,7 +25,6 @@ Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Tactics.GetGoal.
-Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.ZUtil.Rshi.
 Require Import Crypto.Util.Option.
@@ -40,8 +39,6 @@ Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.Operations.
