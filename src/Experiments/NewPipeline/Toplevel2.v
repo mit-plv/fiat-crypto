@@ -1790,9 +1790,9 @@ Module Fancy.
           cbn. rewrite IHe by auto.
           rewrite Tuple.map_map.
           (*
-           Need to prove that contexts are equivalent and swapping contexts is OK 
+           Need to prove that contexts are equivalent and swapping contexts is OK
           *)
-        (* 
+        (*
              TODO : either prove this lemma or devise a good way to
              prove case-by-case that the output of allocate is
              equivalent to the input.
@@ -2679,10 +2679,10 @@ Module Barrett256.
           end
     end.
 
-    2 : {
+    Focus 2. {
       (* here's where we need to prove the interps are equal even if I change the dead flags *)
-    
-    
+
+
     cbv [barrett_red256_alloc barrett_red256_fancy].
 
     (*
