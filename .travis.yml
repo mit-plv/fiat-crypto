@@ -33,16 +33,6 @@ before_script:
 matrix:
   fast_finish: true
 
-stages:
-  - some-early util
-  - printlite lite
-  - pre-standalone
-  - new-pipeline
-  - no-curves-proofs-non-specific
-  - curves-proofs
-  - selected-specific selected-specific-display
-  - selected-test selected-bench
-
 jobs:
   include:
     - stage: some-early util
