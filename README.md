@@ -1,4 +1,4 @@
-naFiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primitives
+Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primitives
 =====
 
 Building
