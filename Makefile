@@ -26,7 +26,6 @@ INSTALLDEFAULTROOT := Crypto
 	util c-files \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
-	curves-proofs no-curves-proofs \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
 	test-c-files
 
@@ -85,13 +84,6 @@ endif
 ifneq ($(filter util,$(MAKECMDGOALS)),)
 UTIL_VOFILES := $(call vo_closure,$(UTIL_PRE_VOFILES))
 endif
-ifneq ($(filter no-curves-proofs,$(MAKECMDGOALS)),)
-NO_CURVES_PROOFS_ALL_UNMADE_VOFILES := $(foreach vo,$(NO_CURVES_PROOFS_UNMADE_VOFILES),$(call vo_reverse_closure,$(VOFILES),$(vo)))
-NO_CURVES_PROOFS_VOFILES := $(filter-out $(NO_CURVES_PROOFS_ALL_UNMADE_VOFILES),$(REGULAR_VOFILES))
-endif
-ifneq ($(filter curves-proofs,$(MAKECMDGOALS)),)
-CURVES_PROOFS_VOFILES := $(call vo_closure,$(CURVES_PROOFS_PRE_VOFILES))
-endif
 ifneq ($(filter pre-standalone,$(MAKECMDGOALS)),)
 PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
 endif
@@ -105,8 +97,6 @@ lite: $(LITE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
 only-heavy: $(HEAVY_VOFILES)
 util: $(UTIL_VOFILES)
-curves-proofs: $(CURVES_PROOFS_VOFILES)
-no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES)
 pre-standalone: $(PRE_STANDALONE_VOFILES)
 some-early: $(SOME_EARLY_VOFILES)
 
