@@ -58,10 +58,6 @@ NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
-CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/Weierstrass/Jacobian.vo src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
-NO_CURVES_PROOFS_UNMADE_VOFILES := \
-	src/Curves/Weierstrass/AffineProofs.vo \
-	src/Curves/Weierstrass/Jacobian.vo
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
