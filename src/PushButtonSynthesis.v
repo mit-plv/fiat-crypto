@@ -1492,7 +1492,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
             (machine_wordsize : Z).
 
     Let s := 2^Z.log2_up m.
-    Let c := [(1, s - m)].
+    Let c := s - m.
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let r := 2^machine_wordsize.
     Let r' := match Z.modinv r m with
@@ -1518,9 +1518,6 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
     Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
 
-    Definition m_enc : list Z
-      := encode (UniformWeight.uweight machine_wordsize) n s c m.
-
     Definition possible_values_of_machine_wordsize
       := [1; machine_wordsize; 2 * machine_wordsize]%Z.
 
@@ -1540,7 +1537,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
            (fun '(b, e) k => if b:bool then Error e else k)
            res
            [(negb (1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize);
-              ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 (Associational.eval c));
+              ((negb (0 <? c)%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 c));
               ((negb (1 <? m))%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m);
               ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
               ((r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m);
@@ -1570,16 +1567,16 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
 
     Lemma use_curve_good
       : Z.pos (Z.to_pos m) = m
-        /\ m = s - Associational.eval c
+        /\ m = s - c
         /\ Z.pos (Z.to_pos m) <> 0
-        /\ s - Associational.eval c <> 0
+        /\ s - c <> 0
         /\ 0 < s
         /\ s <> 0
         /\ 0 < machine_wordsize
         /\ n <> 0%nat
         /\ List.length bounds = n
         /\ 0 < 1 <= machine_wordsize
-        /\ 0 < Associational.eval c < s
+        /\ 0 < c < s
         /\ (r * r') mod m = 1
         /\ (m * m') mod r = (-1) mod r
         /\ 0 < machine_wordsize
@@ -1592,7 +1589,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Proof.
       clear -curve_good.
       cbv [check_args fold_right] in curve_good.
-      cbv [bounds prime_bound m_enc prime_bounds saturated_bounds] in *.
+      cbv [bounds prime_bound prime_bounds saturated_bounds] in *.
       break_innermost_match_hyps; try discriminate.
       rewrite negb_false_iff in *.
       Z.ltb_to_lt.
@@ -1863,7 +1860,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
       intros [v1 v0]; cbn [fst snd].
       rename x into x'.
       generalize dependent (eval (n:=n') lgr x').
-      replace m with (s - Associational.eval c) in * by easy.
+      replace m with (s - c) in * by easy.
       intro x; intros ??? H; subst x'.
       eapply In_nth_error in H; destruct H as [i H].
       rewrite nth_error_combine in H.
