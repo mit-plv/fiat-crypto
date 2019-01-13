@@ -1488,12 +1488,12 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Local Opaque expr.Interp.
 
   Section __.
-    Context (s : Z)
-            (c : list (Z * Z))
+    Context (m : Z)
             (machine_wordsize : Z).
 
+    Let s := 2^Z.log2_up m.
+    Let c := [(1, s - m)].
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-    Let m := s - Associational.eval c.
     Let r := 2^machine_wordsize.
     Let r' := match Z.modinv r m with
               | Some r' => r'
@@ -1510,7 +1510,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
       := Partition.partition (weight 8 1) n_bytes (s-1).
     Let upperbounds : list Z := prime_upperbound_list.
     Definition prime_bound : ZRange.type.option.interp (base.type.Z)
-      := Some r[0~>(s - Associational.eval c - 1)]%zrange.
+      := Some r[0~>m-1]%zrange.
     Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
       := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
     Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
@@ -1519,7 +1519,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
 
     Definition m_enc : list Z
-      := encode (UniformWeight.uweight machine_wordsize) n s c (s-Associational.eval c).
+      := encode (UniformWeight.uweight machine_wordsize) n s c m.
 
     Definition possible_values_of_machine_wordsize
       := [1; machine_wordsize; 2 * machine_wordsize]%Z.
@@ -1540,19 +1540,17 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
            (fun '(b, e) k => if b:bool then Error e else k)
            res
            [(negb (1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize);
-              ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0" 0 (Associational.eval c));
-              ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
-              ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
+              ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 (Associational.eval c));
+              ((negb (1 <? m))%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m);
               ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
               ((r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m);
               (negb ((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1);
               (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
               (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
-              (negb (1 <? s - Associational.eval c), Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 1" 1 (s - Associational.eval c));
-              (negb (s =? 2^Z.log2 s), Pipeline.Values_not_provably_equalZ "s ≠ 2^log2(s) (needed for from_bytes)" s (2^Z.log2 s));
               (negb (s <=? UniformWeight.uweight machine_wordsize n), Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (UniformWeight.uweight machine_wordsize n));
               (negb (UniformWeight.uweight machine_wordsize n =? UniformWeight.uweight 8 n_bytes), Pipeline.Values_not_provably_equalZ "weight n ≠ bytes_weight n_bytes (needed for from_bytes)" (UniformWeight.uweight machine_wordsize n) (UniformWeight.uweight 8 n_bytes))].
 
+    Local Arguments Z.mul !_ !_.
     Local Ltac use_curve_good_t :=
       repeat first [ assumption
                    | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
@@ -1565,14 +1563,17 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
                    | progress cbv [Qle] in *
                    | progress cbn -[reify_list] in *
                    | progress intros
-                   | solve [ auto ] ].
+                   | solve [ auto with zarith ]
+                   | rewrite Z.log2_pow2 by use_curve_good_t ].
 
     Context (curve_good : check_args (Success tt) = Success tt).
 
     Lemma use_curve_good
-      : Z.pos (Z.to_pos m) = s - Associational.eval c
+      : Z.pos (Z.to_pos m) = m
+        /\ m = s - Associational.eval c
         /\ Z.pos (Z.to_pos m) <> 0
         /\ s - Associational.eval c <> 0
+        /\ 0 < s
         /\ s <> 0
         /\ 0 < machine_wordsize
         /\ n <> 0%nat
@@ -1605,7 +1606,9 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
              | [ H : list_beq _ _ _ _ = true |- _ ] => apply internal_list_dec_bl in H; [ | intros; Z.ltb_to_lt; omega.. ]
              end.
       repeat apply conj.
-      { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
+      { destruct m eqn:?; cbn; lia. }
+      { use_curve_good_t. }
+      { use_curve_good_t. }
       { use_curve_good_t. }
       { use_curve_good_t. }
       { use_curve_good_t. }
@@ -1860,7 +1863,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
       intros [v1 v0]; cbn [fst snd].
       rename x into x'.
       generalize dependent (eval (n:=n') lgr x').
-      cbv [m].
+      replace m with (s - Associational.eval c) in * by easy.
       intro x; intros ??? H; subst x'.
       eapply In_nth_error in H; destruct H as [i H].
       rewrite nth_error_combine in H.
@@ -1942,11 +1945,11 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
       cbv [bytes_valid] in H.
       destruct H as [_ H].
       pose proof use_curve_good.
-      cbv [m UniformWeight.uweight] in *; destruct_head'_and; lia.
+      cbv [UniformWeight.uweight] in *; destruct_head'_and; lia.
     Qed.
 
     Local Ltac solve_extra_bounds_side_conditions :=
-      solve [ cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; cbv [m] in *; lia
+      solve [ cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia
             | cbv [valid small eval UniformWeight.uweight n_bytes] in *; destruct_head'_and; auto
             | now apply weight_bounded_of_bytes_valid
             | eapply length_of_valid; eassumption ].

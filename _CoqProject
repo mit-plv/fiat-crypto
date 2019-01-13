@@ -188,6 +188,7 @@ src/Util/Strings/Decimal.v
 src/Util/Strings/Equality.v
 src/Util/Strings/HexString.v
 src/Util/Strings/OctalString.v
+src/Util/Strings/ParseArithmetic.v
 src/Util/Strings/Show.v
 src/Util/Strings/String.v
 src/Util/Tactics/BreakMatch.v
