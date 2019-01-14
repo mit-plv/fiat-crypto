@@ -85,7 +85,7 @@ PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
 endif
 
 UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c p521_64.c p521_32.c # p224_solinas_64.c
-WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c p484_64.c p484_32.c
+WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c p484_64.c # p484_32.c
 ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
