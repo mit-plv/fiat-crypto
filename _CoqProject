@@ -191,6 +191,7 @@ src/Util/Strings/OctalString.v
 src/Util/Strings/ParseArithmetic.v
 src/Util/Strings/Show.v
 src/Util/Strings/String.v
+src/Util/Strings/String_as_OT.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
