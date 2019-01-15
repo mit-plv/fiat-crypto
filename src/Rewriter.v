@@ -1790,6 +1790,8 @@ Module Compilers.
         := [make_rewrite (#(@pattern.ident.fst '1 '2) @ (??, ??)) (fun _ _ x y => x)
             ; make_rewrite (#(@pattern.ident.snd '1 '2) @ (??, ??)) (fun _ x _ y => y)
 
+            ; make_rewriteo (??') (fun r v => ##(lower r)  when  lower r =? upper r)
+
             ; make_rewriteo
                 (#?ℤ   - (-'??'))
                 (fun z rnv rv v => cst rv v  when  (z =? 0) && (ZRange.normalize rv <=? -ZRange.normalize rnv)%zrange)

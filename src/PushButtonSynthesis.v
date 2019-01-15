@@ -212,11 +212,13 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Definition saturated_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
       := Some saturated_bounds_list.
 
+    (* We include [0], so that even after bounds relaxation, we can
+       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; machine_wordsize; 2 * machine_wordsize]%Z.
 
     Definition possible_values_of_machine_wordsize_with_bytes
-      := [1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; 1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
 
     Let possible_values := possible_values_of_machine_wordsize.
     Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
@@ -600,11 +602,13 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Definition m_enc : list Z
       := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m.
 
+    (* We include [0], so that even after bounds relaxation, we can
+       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; machine_wordsize; 2 * machine_wordsize]%Z.
 
     Definition possible_values_of_machine_wordsize_with_bytes
-      := [1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; 1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
 
     Let possible_values := possible_values_of_machine_wordsize.
     Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
@@ -1131,8 +1135,10 @@ Module SaturatedSolinas.
             (c : list (Z * Z))
             (machine_wordsize : Z).
 
+    (* We include [0], so that even after bounds relaxation, we can
+       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [1; machine_wordsize]%Z.
+      := [0; 1; machine_wordsize]%Z.
 
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m := s - Associational.eval c.
@@ -1518,11 +1524,13 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
     Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
 
+    (* We include [0], so that even after bounds relaxation, we can
+       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [1; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; 1; machine_wordsize; 2 * machine_wordsize]%Z.
 
     Definition possible_values_of_machine_wordsize_with_bytes
-      := [1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; 1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
 
     Let possible_values := possible_values_of_machine_wordsize.
     Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
@@ -2825,8 +2833,10 @@ Module BarrettReduction.
     Let muLow := mu mod (2 ^ machine_wordsize).
     Let consts_list := [M; muLow].
 
+    (* We include [0], so that even after bounds relaxation, we can
+       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; 1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
     Let possible_values := possible_values_of_machine_wordsize.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
@@ -3026,8 +3036,10 @@ Module MontgomeryReduction.
     Let bound := Some value_range.
     Let consts_list := [N; N'].
 
+    (* We include [0], so that even after bounds relaxation, we can
+       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [0; 1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
     Local Arguments possible_values_of_machine_wordsize / .
 
     Let possible_values := possible_values_of_machine_wordsize.

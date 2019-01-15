@@ -502,7 +502,11 @@ Module Compilers.
                   => rewrite (@ident.cast_idempotent _ _ r)
                 | [ H : is_bounded_by_bool _ ?r = true |- _]
                   => is_var r; unique pose proof (ZRange.is_bounded_by_normalize _ _ H)
-
+                | [ H : lower ?x = upper ?x |- _ ] => is_var x; destruct x; cbn [upper lower] in *
+                | [ H : is_bounded_by_bool ?x (ZRange.normalize r[?y~>?y]) = true |- _ ]
+                  => apply ZRange.is_bounded_by_bool_normalize_constant_iff in H
+                | [ H : is_bounded_by_bool ?x r[?y~>?y] = true |- _ ]
+                  => apply ZRange.is_bounded_by_bool_constant_iff in H
                 end
               | progress intros
               | progress subst
