@@ -279,3 +279,42 @@ Module Montgomery256.
     reflexivity.
   Qed.
 End Montgomery256.
+
+Import Registers.
+
+(* Notations to make code more readable *)
+Local Notation "i rd x y ; cont" := (Instr i rd (x, y) cont) (at level 40, cont at level 200, format "i  rd  x  y ; '//' cont").
+Local Notation "i rd x y z ; cont" := (Instr i rd (x, y, z) cont) (at level 40, cont at level 200, format "i  rd  x  y  z ; '//' cont").
+
+(* Montgomery reference code : *)
+Eval cbv beta iota delta [Prod.MontRed256 Prod.Mul256 Prod.Mul256x256] in Prod.MontRed256.
+(*
+     = fun lo hi y t1 t2 scratch RegPInv : register =>
+       MUL128LL y lo RegPInv;
+       MUL128UL t1 lo RegPInv;
+       ADD 128 y y t1;
+       MUL128LU t1 lo RegPInv;
+       ADD 128 y y t1;
+       MUL128LL t1 y RegMod;
+       MUL128UU t2 y RegMod;
+       MUL128UL scratch y RegMod;
+       ADD 128 t1 t1 scratch;
+       ADDC (-128) t2 t2 scratch;
+       MUL128LU scratch y RegMod;
+       ADD 128 t1 t1 scratch;
+       ADDC (-128) t2 t2 scratch;
+       ADD 0 lo lo t1;
+       ADDC 0 hi hi t2;
+       SELC y RegMod RegZero;
+       SUB 0 lo hi y;
+       ADDM lo lo RegZero RegMod;
+       Ret lo
+ *)
+
+(* Uncomment to see proof statement and remaining admitted statements,
+or search for "prod_montred256_correct" to see comments on the proof
+preconditions. *)
+(*
+Check Montgomery256.prod_montred256_correct.
+Print Assumptions Montgomery256.prod_montred256_correct.
+*)

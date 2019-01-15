@@ -305,3 +305,99 @@ Module Barrett256.
     reflexivity.
   Qed.
 End Barrett256.
+
+Import Registers.
+
+(* Notations to make code more readable *)
+Local Notation "i rd x y ; cont" := (Instr i rd (x, y) cont) (at level 40, cont at level 200, format "i  rd  x  y ; '//' cont").
+Local Notation "i rd x y z ; cont" := (Instr i rd (x, y, z) cont) (at level 40, cont at level 200, format "i  rd  x  y  z ; '//' cont").
+
+(* Barrett reference code: *)
+Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
+(*
+     = fun x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : register =>
+       let q1Bottom256 := scratchp1 in
+       let muSelect := scratchp2 in
+       let q2 := scratchp3 in
+       let q2High := scratchp4 in
+       let q2High2 := scratchp5 in
+       let q3 := scratchp1 in
+       let r2 := scratchp2 in
+       let r2High := scratchp3 in
+       let maybeM := scratchp1 in
+       SELM muSelect RegMuLow RegZero;
+       RSHI 255 q1Bottom256 xHigh x;
+       MUL128LL q2 q1Bottom256 RegMuLow;
+       MUL128UU q2High q1Bottom256 RegMuLow;
+       MUL128UL scratchp5 q1Bottom256 RegMuLow;
+       ADD 128 q2 q2 scratchp5;
+       ADDC (-128) q2High q2High scratchp5;
+       MUL128LU scratchp5 q1Bottom256 RegMuLow;
+       ADD 128 q2 q2 scratchp5;
+       ADDC (-128) q2High q2High scratchp5;
+       RSHI 255 q2High2 RegZero xHigh;
+       ADD 0 q2High q2High q1Bottom256;
+       ADDC 0 q2High2 q2High2 RegZero;
+       ADD 0 q2High q2High muSelect;
+       ADDC 0 q2High2 q2High2 RegZero;
+       RSHI 1 q3 q2High2 q2High;
+       MUL128LL r2 RegMod q3;
+       MUL128UU r2High RegMod q3;
+       MUL128UL scratchp4 RegMod q3;
+       ADD 128 r2 r2 scratchp4;
+       ADDC (-128) r2High r2High scratchp4;
+       MUL128LU scratchp4 RegMod q3;
+       ADD 128 r2 r2 scratchp4;
+       ADDC (-128) r2High r2High scratchp4;
+       SUB 0 muSelect x r2;
+       SUBC 0 xHigh xHigh r2High;
+       SELL maybeM RegMod RegZero;
+       SUB 0 q3 muSelect maybeM;
+       ADDM x q3 RegZero RegMod;
+       Ret x
+ *)
+
+(* Barrett generated code (equivalence with reference admitted) *)
+Eval cbv beta iota delta [Barrett256.barrett_red256_alloc] in Barrett256.barrett_red256_alloc.
+(*
+     = fun (xLow xHigh RegMuLow : register) (_ : positive) (_ : register) =>
+       SELM r2 RegMuLow RegZero;
+       RSHI 255 r3 RegZero xHigh;
+       RSHI 255 r4 xHigh xLow;
+       MUL128UU r5 RegMuLow r4;
+       MUL128UL r6 r4 RegMuLow;
+       MUL128LU r7 r4 RegMuLow;
+       MUL128LL r8 RegMuLow r4;
+       ADD 128 r9 r8 r7;
+       ADDC (-128) r10 r5 r7;
+       ADD 128 r5 r9 r6;
+       ADDC (-128) r11 r10 r6;
+       ADD 0 r6 r4 r11;
+       ADDC 0 r12 RegZero r3;
+       ADD 0 r13 r2 r6;
+       ADDC 0 r14 RegZero r12;
+       RSHI 1 r15 r14 r13;
+       MUL128UU r16 RegMod r15;
+       MUL128LU r17 r15 RegMod;
+       MUL128UL r18 r15 RegMod;
+       MUL128LL r19 RegMod r15;
+       ADD 128 r20 r19 r18;
+       ADDC (-128) r21 r16 r18;
+       ADD 128 r22 r20 r17;
+       ADDC (-128) r23 r21 r17;
+       SUB 0 r24 xLow r22;
+       SUBC 0 r25 xHigh r23;
+       SELL r26 RegMod RegZero;
+       SUB 0 r27 r24 r26;
+       ADDM r28 r27 RegZero RegMod;
+       Ret r28
+ *)
+(* Note that the reference code and production code are the same except for a misplaced RSHI instruction; the current proof assumes that this RSHI commutes. *)
+
+(* Uncomment to see proof statement and remaining admitted statements. *)
+(*
+Check Barrett256.prod_barrett_red256_correct.
+Print Assumptions Barrett256.prod_barrett_red256_correct.
+(* The equivalence with generated code is admitted as barrett_red256_alloc_equivalent. *)
+*)
+*)
