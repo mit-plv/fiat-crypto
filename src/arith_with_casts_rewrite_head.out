@@ -888,467 +888,426 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | Z_cc_m => fun x x0 : expr ℤ => Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat
 | Z_cast range =>
     fun x : expr ℤ =>
+    (((match
+         pattern.type.unify_extracted_cps ℤ ℤ option (fun x0 : option => x0)
+       with
+       | Some _ =>
+           if type.type_beq base.type base.type.type_beq ℤ ℤ
+           then
+            fv <- (x0 <- (if lower range =? upper range
+                          then Some (##(lower range))%expr
+                          else None);
+                   Some (Base x0));
+            Some (fv0 <-- fv;
+                  Base fv0)%under_lets
+           else None
+       | None => None
+       end;;
+       match x with
+       | @expr.Ident _ _ _ t idc =>
+           args <- invert_bind_args idc Raw.ident.Literal;
+           match
+             pattern.type.unify_extracted_cps ℤ (projT1 args) option
+               (fun x0 : option => x0)
+           with
+           | Some _ =>
+               if type.type_beq base.type base.type.type_beq ℤ (projT1 args)
+               then
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x0 <- (if
+                               is_bounded_by_bool (let (x0, _) := xv in x0)
+                                 range
+                              then Some (##(let (x0, _) := xv in x0))%expr
+                              else None);
+                       Some (Base x0));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
+               else None
+           | None => None
+           end
+       | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x0 =>
+           args <- invert_bind_args idc Raw.ident.Z_cast;
+           match
+             pattern.type.unify_extracted_cps ℤ s option
+               (fun x1 : option => x1)
+           with
+           | Some _ =>
+               if type.type_beq base.type base.type.type_beq ℤ s
+               then
+                v <- type.try_make_transport_cps s ℤ;
+                fv <- (x1 <- (if
+                               (ZRange.normalize args <=?
+                                ZRange.normalize range)%zrange
+                              then
+                               Some
+                                 (#(Z_cast args)%expr @
+                                  v (Compile.reflect x0))%expr_pat
+                              else None);
+                       Some (Base x1));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
+               else None
+           | None => None
+           end
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _
+          (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t idc) x2) x1) x0 =>
+           _ <- invert_bind_args idc Raw.ident.Z_add_with_carry;
+           match
+             pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+               ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
+           with
+           | Some (_, _, _)%zrange =>
+               if
+                type.type_beq base.type base.type.type_beq
+                  ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
+               then
+                v <- type.try_make_transport_cps s1 ℤ;
+                v0 <- type.try_make_transport_cps s0 ℤ;
+                v1 <- type.try_make_transport_cps s ℤ;
+                Some
+                  (UnderLet
+                     (#(Z_cast range)%expr @
+                      (#(Z_add_with_carry)%expr @ v (Compile.reflect x2) @
+                       v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
+                     (fun v2 : var ℤ =>
+                      Base (#(Z_cast range)%expr @ ($v2)%expr)%expr_pat))
+               else None
+           | None => None
+           end
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ ($_)%expr _) _) _ |
+         @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _
+          (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _) _) _ | @expr.App _
+         _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ (_ @ _)%expr_pat _) _)
+         _ | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _
+          (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
+       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(_)%expr_pat _) _ |
+         @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
+         _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
+         @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => None
+       | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+         (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
+         (@expr.LetIn _ _ _ _ _ _ _) _ => None
+       | _ => None
+       end);;
+      None);;;
+     Base (#(Z_cast range)%expr @ x)%expr_pat)%option
+| Z_cast2 range =>
+    fun x : expr (ℤ * ℤ)%etype =>
     (match x with
-     | @expr.Ident _ _ _ t idc =>
-         args <- invert_bind_args idc Raw.ident.Literal;
+     | @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x1) x0 =>
+         args <- invert_bind_args idc Raw.ident.pair;
          match
-           pattern.type.unify_extracted_cps ℤ (projT1 args) option
-             (fun x0 : option => x0)
+           pattern.type.unify_extracted_cps
+             (((ℤ -> ℤ -> (ℤ * ℤ)%pbtype) -> ℤ) -> ℤ)%ptype
+             ((((let (x2, _) := args in x2) ->
+                (let (_, y) := args in y) ->
+                ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
+               s0) -> s)%ptype option (fun x2 : option => x2)
          with
-         | Some _ =>
-             if type.type_beq base.type base.type.type_beq ℤ (projT1 args)
+         | Some (_, (_, (_, _)), _, _)%zrange =>
+             if
+              type.type_beq base.type base.type.type_beq
+                (((ℤ -> ℤ -> (ℤ * ℤ)%etype) -> ℤ) -> ℤ)%ptype
+                ((((let (x2, _) := args in x2) ->
+                   (let (_, y) := args in y) ->
+                   ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
+                  s0) -> s)%ptype
              then
-              xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-              fv <- (x0 <- (if
-                             is_bounded_by_bool (let (x0, _) := xv in x0)
-                               range
-                            then Some (##(let (x0, _) := xv in x0))%expr
-                            else None);
-                     Some (Base x0));
-              Some (fv0 <-- fv;
-                    Base fv0)%under_lets
-             else None
-         | None => None
-         end
-     | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x0 =>
-         args <- invert_bind_args idc Raw.ident.Z_cast;
-         match
-           pattern.type.unify_extracted_cps ℤ s option
-             (fun x1 : option => x1)
-         with
-         | Some _ =>
-             if type.type_beq base.type base.type.type_beq ℤ s
-             then
-              v <- type.try_make_transport_cps s ℤ;
-              fv <- (x1 <- (if
-                             (ZRange.normalize args <=?
-                              ZRange.normalize range)%zrange
-                            then
-                             Some
-                               (#(Z_cast args)%expr @ v (Compile.reflect x0))%expr_pat
-                            else None);
-                     Some (Base x1));
-              Some (fv0 <-- fv;
-                    Base fv0)%under_lets
+              _ <- ident.unify pattern.ident.pair pair;
+              v <- type.try_make_transport_cps s0 ℤ;
+              v0 <- type.try_make_transport_cps s ℤ;
+              Some
+                (fv0 <-- do_again (ℤ * ℤ)
+                           (#(Z_cast (Datatypes.fst range))%expr @
+                            ($(v (Compile.reflect x1)))%expr,
+                           #(Z_cast (Datatypes.snd range))%expr @
+                           ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
+                 Base fv0)%under_lets
              else None
          | None => None
          end
      | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _
         (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t idc) x2) x1) x0 =>
-         _ <- invert_bind_args idc Raw.ident.Z_add_with_carry;
-         match
-           pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-             ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
-         with
-         | Some (_, _, _)%zrange =>
-             if
-              type.type_beq base.type base.type.type_beq
-                ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
-             then
-              v <- type.try_make_transport_cps s1 ℤ;
-              v0 <- type.try_make_transport_cps s0 ℤ;
-              v1 <- type.try_make_transport_cps s ℤ;
-              Some
-                (UnderLet
-                   (#(Z_cast range)%expr @
-                    (#(Z_add_with_carry)%expr @ v (Compile.reflect x2) @
-                     v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                   (fun v2 : var ℤ =>
-                    Base (#(Z_cast range)%expr @ ($v2)%expr)%expr_pat))
-             else None
-         | None => None
-         end
-     | @expr.App _ _ _ s _
-       (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ ($_)%expr _) _) _ |
-       @expr.App _ _ _ s _
-       (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _)
-        _) _ | @expr.App _ _ _ s _
-       (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ (_ @ _)%expr_pat _) _) _ |
-       @expr.App _ _ _ s _
-       (@expr.App _ _ _ s0 _
-        (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
-     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(_)%expr_pat _) _ |
-       @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
-       _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
-       _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-         None
-     | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
-       (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
-       (@expr.LetIn _ _ _ _ _ _ _) _ => None
-     | _ => None
-     end;;;
-     Base (#(Z_cast range)%expr @ x)%expr_pat)%option
-| Z_cast2 range =>
-    fun x : expr (ℤ * ℤ)%etype =>
-    ((match x with
-      | @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x1) x0 =>
-          args <- invert_bind_args idc Raw.ident.pair;
-          match
-            pattern.type.unify_extracted_cps
-              (((ℤ -> ℤ -> (ℤ * ℤ)%pbtype) -> ℤ) -> ℤ)%ptype
-              ((((let (x2, _) := args in x2) ->
-                 (let (_, y) := args in y) ->
-                 ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-                s0) -> s)%ptype option (fun x2 : option => x2)
-          with
-          | Some (_, (_, (_, _)), _, _)%zrange =>
-              if
-               type.type_beq base.type base.type.type_beq
-                 (((ℤ -> ℤ -> (ℤ * ℤ)%etype) -> ℤ) -> ℤ)%ptype
-                 ((((let (x2, _) := args in x2) ->
-                    (let (_, y) := args in y) ->
-                    ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-                   s0) -> s)%ptype
-              then
-               _ <- ident.unify pattern.ident.pair pair;
-               v <- type.try_make_transport_cps s0 ℤ;
-               v0 <- type.try_make_transport_cps s ℤ;
-               Some
-                 (fv0 <-- do_again (ℤ * ℤ)
-                            (#(Z_cast (Datatypes.fst range))%expr @
-                             ($(v (Compile.reflect x1)))%expr,
-                            #(Z_cast (Datatypes.snd range))%expr @
-                            ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
-                  Base fv0)%under_lets
-              else None
-          | None => None
-          end
-      | @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t idc) x2) x1) x0 =>
-          (match x1 with
-           | (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-               (@expr.Ident _ _ _ t2 idc2) x5))%expr_pat =>
-               args <- invert_bind_args idc2 Raw.ident.Z_cast;
-               _ <- invert_bind_args idc1 Raw.ident.Z_opp;
-               args1 <- invert_bind_args idc0 Raw.ident.Z_cast;
-               _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
-               match
-                 pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-                   ((s1 -> s4) -> s)%ptype option (fun x6 : option => x6)
-               with
-               | Some (_, _, _)%zrange =>
-                   if
-                    type.type_beq base.type base.type.type_beq
-                      ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s4) -> s)%ptype
-                   then
-                    v <- type.try_make_transport_cps s1 ℤ;
-                    v0 <- type.try_make_transport_cps s4 ℤ;
-                    v1 <- type.try_make_transport_cps s ℤ;
-                    fv <- (if
-                            (ZRange.normalize args <=?
-                             - ZRange.normalize args1)%zrange
-                           then
-                            Some
-                              (UnderLet
-                                 (#(Z_cast2
-                                      (Datatypes.fst range,
-                                      - Datatypes.snd range))%expr @
-                                  (#(Z_sub_get_borrow)%expr @
-                                   v (Compile.reflect x2) @
-                                   v1 (Compile.reflect x0) @
-                                   (#(Z_cast args)%expr @
-                                    v0 (Compile.reflect x5))))%expr_pat
-                                 (fun vc : var (ℤ * ℤ)%etype =>
-                                  Base
-                                    (#(Z_cast (Datatypes.fst range))%expr @
-                                     (#(fst)%expr @
+         (match x1 with
+          | (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
+              (@expr.Ident _ _ _ t2 idc2) x5))%expr_pat =>
+              args <- invert_bind_args idc2 Raw.ident.Z_cast;
+              _ <- invert_bind_args idc1 Raw.ident.Z_opp;
+              args1 <- invert_bind_args idc0 Raw.ident.Z_cast;
+              _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
+              match
+                pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+                  ((s1 -> s4) -> s)%ptype option (fun x6 : option => x6)
+              with
+              | Some (_, _, _)%zrange =>
+                  if
+                   type.type_beq base.type base.type.type_beq
+                     ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s4) -> s)%ptype
+                  then
+                   v <- type.try_make_transport_cps s1 ℤ;
+                   v0 <- type.try_make_transport_cps s4 ℤ;
+                   v1 <- type.try_make_transport_cps s ℤ;
+                   fv <- (if
+                           (ZRange.normalize args <=?
+                            - ZRange.normalize args1)%zrange
+                          then
+                           Some
+                             (UnderLet
+                                (#(Z_cast2
+                                     (Datatypes.fst range,
+                                     - Datatypes.snd range))%expr @
+                                 (#(Z_sub_get_borrow)%expr @
+                                  v (Compile.reflect x2) @
+                                  v1 (Compile.reflect x0) @
+                                  (#(Z_cast args)%expr @
+                                   v0 (Compile.reflect x5))))%expr_pat
+                                (fun vc : var (ℤ * ℤ)%etype =>
+                                 Base
+                                   (#(Z_cast (Datatypes.fst range))%expr @
+                                    (#(fst)%expr @
+                                     (#(Z_cast2
+                                          (Datatypes.fst range,
+                                          - Datatypes.snd range))%expr @
+                                      ($vc)%expr)),
+                                   #(Z_cast (Datatypes.snd range))%expr @
+                                   (-
+                                    (#(Z_cast (- Datatypes.snd range))%expr @
+                                     (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @
-                                       ($vc)%expr)),
-                                    #(Z_cast (Datatypes.snd range))%expr @
-                                    (-
-                                     (#(Z_cast (- Datatypes.snd range))%expr @
-                                      (#(snd)%expr @
-                                       (#(Z_cast2
-                                            (Datatypes.fst range,
-                                            - Datatypes.snd range))%expr @
-                                        $vc)))%expr_pat)%expr)%expr_pat))
-                           else None);
-                    Some (fv0 <-- fv;
-                          Base fv0)%under_lets
-                   else None
-               | None => None
-               end
-           | (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ ($_)%expr _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-               (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ (_ @ _) _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-               (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
-           | (@expr.Ident _ _ _ t0 idc0 @ (@expr.Ident _ _ _ t1 idc1 @ #(_)))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-               None
-           | (@expr.Ident _ _ _ t0 idc0 @ #(_))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (($_)%expr @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (_ @ _ @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-               None
-           | _ => None
-           end;;
-           match x0 with
-           | (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-               (@expr.Ident _ _ _ t2 idc2) x5))%expr_pat =>
-               args <- invert_bind_args idc2 Raw.ident.Z_cast;
-               _ <- invert_bind_args idc1 Raw.ident.Z_opp;
-               args1 <- invert_bind_args idc0 Raw.ident.Z_cast;
-               _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
-               match
-                 pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-                   ((s1 -> s0) -> s4)%ptype option (fun x6 : option => x6)
-               with
-               | Some (_, _, _)%zrange =>
-                   if
-                    type.type_beq base.type base.type.type_beq
-                      ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s4)%ptype
-                   then
-                    v <- type.try_make_transport_cps s1 ℤ;
-                    v0 <- type.try_make_transport_cps s0 ℤ;
-                    v1 <- type.try_make_transport_cps s4 ℤ;
-                    fv <- (if
-                            (ZRange.normalize args <=?
-                             - ZRange.normalize args1)%zrange
-                           then
-                            Some
-                              (UnderLet
-                                 (#(Z_cast2
-                                      (Datatypes.fst range,
-                                      - Datatypes.snd range))%expr @
-                                  (#(Z_sub_get_borrow)%expr @
-                                   v (Compile.reflect x2) @
-                                   v0 (Compile.reflect x1) @
-                                   (#(Z_cast args)%expr @
-                                    v1 (Compile.reflect x5))))%expr_pat
-                                 (fun vc : var (ℤ * ℤ)%etype =>
-                                  Base
-                                    (#(Z_cast (Datatypes.fst range))%expr @
-                                     (#(fst)%expr @
+                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                          else None);
+                   Some (fv0 <-- fv;
+                         Base fv0)%under_lets
+                  else None
+              | None => None
+              end
+          | (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ ($_)%expr _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
+              (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ (_ @ _) _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
+              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+          | (@expr.Ident _ _ _ t0 idc0 @ (@expr.Ident _ _ _ t1 idc1 @ #(_)))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
+              None
+          | (@expr.Ident _ _ _ t0 idc0 @ #(_))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (($_)%expr @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (_ @ _ @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+              None
+          | _ => None
+          end;;
+          match x0 with
+          | (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
+              (@expr.Ident _ _ _ t2 idc2) x5))%expr_pat =>
+              args <- invert_bind_args idc2 Raw.ident.Z_cast;
+              _ <- invert_bind_args idc1 Raw.ident.Z_opp;
+              args1 <- invert_bind_args idc0 Raw.ident.Z_cast;
+              _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
+              match
+                pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+                  ((s1 -> s0) -> s4)%ptype option (fun x6 : option => x6)
+              with
+              | Some (_, _, _)%zrange =>
+                  if
+                   type.type_beq base.type base.type.type_beq
+                     ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s4)%ptype
+                  then
+                   v <- type.try_make_transport_cps s1 ℤ;
+                   v0 <- type.try_make_transport_cps s0 ℤ;
+                   v1 <- type.try_make_transport_cps s4 ℤ;
+                   fv <- (if
+                           (ZRange.normalize args <=?
+                            - ZRange.normalize args1)%zrange
+                          then
+                           Some
+                             (UnderLet
+                                (#(Z_cast2
+                                     (Datatypes.fst range,
+                                     - Datatypes.snd range))%expr @
+                                 (#(Z_sub_get_borrow)%expr @
+                                  v (Compile.reflect x2) @
+                                  v0 (Compile.reflect x1) @
+                                  (#(Z_cast args)%expr @
+                                   v1 (Compile.reflect x5))))%expr_pat
+                                (fun vc : var (ℤ * ℤ)%etype =>
+                                 Base
+                                   (#(Z_cast (Datatypes.fst range))%expr @
+                                    (#(fst)%expr @
+                                     (#(Z_cast2
+                                          (Datatypes.fst range,
+                                          - Datatypes.snd range))%expr @
+                                      ($vc)%expr)),
+                                   #(Z_cast (Datatypes.snd range))%expr @
+                                   (-
+                                    (#(Z_cast (- Datatypes.snd range))%expr @
+                                     (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @
-                                       ($vc)%expr)),
-                                    #(Z_cast (Datatypes.snd range))%expr @
-                                    (-
-                                     (#(Z_cast (- Datatypes.snd range))%expr @
-                                      (#(snd)%expr @
-                                       (#(Z_cast2
-                                            (Datatypes.fst range,
-                                            - Datatypes.snd range))%expr @
-                                        $vc)))%expr_pat)%expr)%expr_pat))
-                           else None);
-                    Some (fv0 <-- fv;
-                          Base fv0)%under_lets
-                   else None
-               | None => None
-               end
-           | (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ ($_)%expr _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-               (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ (_ @ _) _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-               (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
-           | (@expr.Ident _ _ _ t0 idc0 @ (@expr.Ident _ _ _ t1 idc1 @ #(_)))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @
-              (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-               None
-           | (@expr.Ident _ _ _ t0 idc0 @ #(_))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (($_)%expr @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (_ @ _ @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
-             (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-               None
-           | _ => None
-           end;;
-           match x1 with
-           | @expr.Ident _ _ _ t0 idc0 =>
-               args <- invert_bind_args idc0 Raw.ident.Literal;
-               _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
-               match
-                 pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-                   ((s1 -> (projT1 args)) -> s)%ptype option
-                   (fun x3 : option => x3)
-               with
-               | Some (_, _, _)%zrange =>
-                   if
-                    type.type_beq base.type base.type.type_beq
-                      ((ℤ -> ℤ) -> ℤ)%ptype
-                      ((s1 -> (projT1 args)) -> s)%ptype
-                   then
-                    v <- type.try_make_transport_cps s1 ℤ;
-                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                    v0 <- type.try_make_transport_cps s ℤ;
-                    fv <- (if (let (x3, _) := xv in x3) <? 0
-                           then
-                            Some
-                              (UnderLet
-                                 (#(Z_cast2
-                                      (Datatypes.fst range,
-                                      - Datatypes.snd range))%expr @
-                                  (#(Z_sub_get_borrow)%expr @
-                                   v (Compile.reflect x2) @
-                                   v0 (Compile.reflect x0) @
-                                   (##(- (let (x3, _) := xv in x3))%Z)%expr))%expr_pat
-                                 (fun vc : var (ℤ * ℤ)%etype =>
-                                  Base
-                                    (#(Z_cast (Datatypes.fst range))%expr @
-                                     (#(fst)%expr @
+                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                          else None);
+                   Some (fv0 <-- fv;
+                         Base fv0)%under_lets
+                  else None
+              | None => None
+              end
+          | (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ ($_)%expr _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
+              (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ (_ @ _) _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
+              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+          | (@expr.Ident _ _ _ t0 idc0 @ (@expr.Ident _ _ _ t1 idc1 @ #(_)))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @
+             (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
+              None
+          | (@expr.Ident _ _ _ t0 idc0 @ #(_))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (($_)%expr @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (_ @ _ @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
+            (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+              None
+          | _ => None
+          end;;
+          match x1 with
+          | @expr.Ident _ _ _ t0 idc0 =>
+              args <- invert_bind_args idc0 Raw.ident.Literal;
+              _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
+              match
+                pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+                  ((s1 -> (projT1 args)) -> s)%ptype option
+                  (fun x3 : option => x3)
+              with
+              | Some (_, _, _)%zrange =>
+                  if
+                   type.type_beq base.type base.type.type_beq
+                     ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> (projT1 args)) -> s)%ptype
+                  then
+                   v <- type.try_make_transport_cps s1 ℤ;
+                   xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                   v0 <- type.try_make_transport_cps s ℤ;
+                   fv <- (if (let (x3, _) := xv in x3) <? 0
+                          then
+                           Some
+                             (UnderLet
+                                (#(Z_cast2
+                                     (Datatypes.fst range,
+                                     - Datatypes.snd range))%expr @
+                                 (#(Z_sub_get_borrow)%expr @
+                                  v (Compile.reflect x2) @
+                                  v0 (Compile.reflect x0) @
+                                  (##(- (let (x3, _) := xv in x3))%Z)%expr))%expr_pat
+                                (fun vc : var (ℤ * ℤ)%etype =>
+                                 Base
+                                   (#(Z_cast (Datatypes.fst range))%expr @
+                                    (#(fst)%expr @
+                                     (#(Z_cast2
+                                          (Datatypes.fst range,
+                                          - Datatypes.snd range))%expr @
+                                      ($vc)%expr)),
+                                   #(Z_cast (Datatypes.snd range))%expr @
+                                   (-
+                                    (#(Z_cast (- Datatypes.snd range))%expr @
+                                     (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @
-                                       ($vc)%expr)),
-                                    #(Z_cast (Datatypes.snd range))%expr @
-                                    (-
-                                     (#(Z_cast (- Datatypes.snd range))%expr @
-                                      (#(snd)%expr @
-                                       (#(Z_cast2
-                                            (Datatypes.fst range,
-                                            - Datatypes.snd range))%expr @
-                                        $vc)))%expr_pat)%expr)%expr_pat))
-                           else None);
-                    Some (fv0 <-- fv;
-                          Base fv0)%under_lets
-                   else None
-               | None => None
-               end
-           | _ => None
-           end;;
-           match x0 with
-           | @expr.Ident _ _ _ t0 idc0 =>
-               args <- invert_bind_args idc0 Raw.ident.Literal;
-               _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
-               match
-                 pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-                   ((s1 -> s0) -> (projT1 args))%ptype option
-                   (fun x3 : option => x3)
-               with
-               | Some (_, _, _)%zrange =>
-                   if
-                    type.type_beq base.type base.type.type_beq
-                      ((ℤ -> ℤ) -> ℤ)%ptype
-                      ((s1 -> s0) -> (projT1 args))%ptype
-                   then
-                    v <- type.try_make_transport_cps s1 ℤ;
-                    v0 <- type.try_make_transport_cps s0 ℤ;
-                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                    fv <- (if (let (x3, _) := xv in x3) <? 0
-                           then
-                            Some
-                              (UnderLet
-                                 (#(Z_cast2
-                                      (Datatypes.fst range,
-                                      - Datatypes.snd range))%expr @
-                                  (#(Z_sub_get_borrow)%expr @
-                                   v (Compile.reflect x2) @
-                                   v0 (Compile.reflect x1) @
-                                   (##(- (let (x3, _) := xv in x3))%Z)%expr))%expr_pat
-                                 (fun vc : var (ℤ * ℤ)%etype =>
-                                  Base
-                                    (#(Z_cast (Datatypes.fst range))%expr @
-                                     (#(fst)%expr @
+                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                          else None);
+                   Some (fv0 <-- fv;
+                         Base fv0)%under_lets
+                  else None
+              | None => None
+              end
+          | _ => None
+          end;;
+          match x0 with
+          | @expr.Ident _ _ _ t0 idc0 =>
+              args <- invert_bind_args idc0 Raw.ident.Literal;
+              _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
+              match
+                pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+                  ((s1 -> s0) -> (projT1 args))%ptype option
+                  (fun x3 : option => x3)
+              with
+              | Some (_, _, _)%zrange =>
+                  if
+                   type.type_beq base.type base.type.type_beq
+                     ((ℤ -> ℤ) -> ℤ)%ptype
+                     ((s1 -> s0) -> (projT1 args))%ptype
+                  then
+                   v <- type.try_make_transport_cps s1 ℤ;
+                   v0 <- type.try_make_transport_cps s0 ℤ;
+                   xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                   fv <- (if (let (x3, _) := xv in x3) <? 0
+                          then
+                           Some
+                             (UnderLet
+                                (#(Z_cast2
+                                     (Datatypes.fst range,
+                                     - Datatypes.snd range))%expr @
+                                 (#(Z_sub_get_borrow)%expr @
+                                  v (Compile.reflect x2) @
+                                  v0 (Compile.reflect x1) @
+                                  (##(- (let (x3, _) := xv in x3))%Z)%expr))%expr_pat
+                                (fun vc : var (ℤ * ℤ)%etype =>
+                                 Base
+                                   (#(Z_cast (Datatypes.fst range))%expr @
+                                    (#(fst)%expr @
+                                     (#(Z_cast2
+                                          (Datatypes.fst range,
+                                          - Datatypes.snd range))%expr @
+                                      ($vc)%expr)),
+                                   #(Z_cast (Datatypes.snd range))%expr @
+                                   (-
+                                    (#(Z_cast (- Datatypes.snd range))%expr @
+                                     (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @
-                                       ($vc)%expr)),
-                                    #(Z_cast (Datatypes.snd range))%expr @
-                                    (-
-                                     (#(Z_cast (- Datatypes.snd range))%expr @
-                                      (#(snd)%expr @
-                                       (#(Z_cast2
-                                            (Datatypes.fst range,
-                                            - Datatypes.snd range))%expr @
-                                        $vc)))%expr_pat)%expr)%expr_pat))
-                           else None);
-                    Some (fv0 <-- fv;
-                          Base fv0)%under_lets
-                   else None
-               | None => None
-               end
-           | _ => None
-           end;;
-           _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
-           match
-             pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-               ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
-           with
-           | Some (_, _, _)%zrange =>
-               if
-                type.type_beq base.type base.type.type_beq
-                  ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
-               then
-                v <- type.try_make_transport_cps s1 ℤ;
-                v0 <- type.try_make_transport_cps s0 ℤ;
-                v1 <- type.try_make_transport_cps s ℤ;
-                Some
-                  (UnderLet
-                     (#(Z_cast2 range)%expr @
-                      (#(Z_add_get_carry)%expr @ v (Compile.reflect x2) @
-                       v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                     (fun v2 : var (ℤ * ℤ)%etype =>
-                      Base
-                        (#(Z_cast (Datatypes.fst range))%expr @
-                         (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
-                        #(Z_cast (Datatypes.snd range))%expr @
-                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
-               else None
-           | None => None
-           end);;
-          (_ <- invert_bind_args idc Raw.ident.Z_sub_get_borrow;
-           match
-             pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
-               ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
-           with
-           | Some (_, _, _)%zrange =>
-               if
-                type.type_beq base.type base.type.type_beq
-                  ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
-               then
-                v <- type.try_make_transport_cps s1 ℤ;
-                v0 <- type.try_make_transport_cps s0 ℤ;
-                v1 <- type.try_make_transport_cps s ℤ;
-                Some
-                  (UnderLet
-                     (#(Z_cast2 range)%expr @
-                      (#(Z_sub_get_borrow)%expr @ v (Compile.reflect x2) @
-                       v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                     (fun v2 : var (ℤ * ℤ)%etype =>
-                      Base
-                        (#(Z_cast (Datatypes.fst range))%expr @
-                         (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
-                        #(Z_cast (Datatypes.snd range))%expr @
-                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
-               else None
-           | None => None
-           end);;
-          _ <- invert_bind_args idc Raw.ident.Z_mul_split;
+                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                          else None);
+                   Some (fv0 <-- fv;
+                         Base fv0)%under_lets
+                  else None
+              | None => None
+              end
+          | _ => None
+          end;;
+          _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
           match
             pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
               ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
@@ -1364,7 +1323,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                Some
                  (UnderLet
                     (#(Z_cast2 range)%expr @
-                     (#(Z_mul_split)%expr @ v (Compile.reflect x2) @
+                     (#(Z_add_get_carry)%expr @ v (Compile.reflect x2) @
                       v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
                     (fun v2 : var (ℤ * ℤ)%etype =>
                      Base
@@ -1374,77 +1333,72 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
               else None
           | None => None
-          end
-      | @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _
-          (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t idc) x3) x2) x1) x0 =>
-          (match x2 with
-           | @expr.Ident _ _ _ t0 idc0 =>
-               match x1 with
-               | (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
-                   (@expr.Ident _ _ _ t3 idc3) x6))%expr_pat =>
-                   (args <- invert_bind_args idc3 Raw.ident.Z_cast;
-                    _ <- invert_bind_args idc2 Raw.ident.Z_opp;
-                    args1 <- invert_bind_args idc1 Raw.ident.Z_cast;
-                    args2 <- invert_bind_args idc0 Raw.ident.Literal;
-                    _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
-                    match
-                      pattern.type.unify_extracted_cps
-                        (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                        (((s2 -> (projT1 args2)) -> s5) -> s)%ptype option
-                        (fun x7 : option => x7)
-                    with
-                    | Some (_, _, _, _)%zrange =>
-                        if
-                         type.type_beq base.type base.type.type_beq
-                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                           (((s2 -> (projT1 args2)) -> s5) -> s)%ptype
-                        then
-                         v <- type.try_make_transport_cps s2 ℤ;
-                         xv <- ident.unify pattern.ident.Literal
-                                 ##(projT2 args2);
-                         v0 <- type.try_make_transport_cps s5 ℤ;
-                         v1 <- type.try_make_transport_cps s ℤ;
-                         fv <- (if
-                                 ((let (x7, _) := xv in x7) =? 0) &&
-                                 (ZRange.normalize args <=?
-                                  - ZRange.normalize args1)%zrange
-                                then
-                                 Some
-                                   (UnderLet
-                                      (#(Z_cast2
-                                           (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @
-                                       (#(Z_sub_get_borrow)%expr @
-                                        v (Compile.reflect x3) @
-                                        v1 (Compile.reflect x0) @
-                                        (#(Z_cast args)%expr @
-                                         v0 (Compile.reflect x6))))%expr_pat
-                                      (fun vc : var (ℤ * ℤ)%etype =>
-                                       Base
-                                         (#(Z_cast (Datatypes.fst range))%expr @
-                                          (#(fst)%expr @
-                                           (#(Z_cast2
-                                                (Datatypes.fst range,
-                                                - Datatypes.snd range))%expr @
-                                            ($vc)%expr)),
-                                         #(Z_cast (Datatypes.snd range))%expr @
-                                         (-
-                                          (#(Z_cast (- Datatypes.snd range))%expr @
-                                           (#(snd)%expr @
-                                            (#(Z_cast2
-                                                 (Datatypes.fst range,
-                                                 - Datatypes.snd range))%expr @
-                                             $vc)))%expr_pat)%expr)%expr_pat))
-                                else None);
-                         Some (fv0 <-- fv;
-                               Base fv0)%under_lets
-                        else None
-                    | None => None
-                    end);;
-                   args <- invert_bind_args idc3 Raw.ident.Z_cast;
+          end);;
+         (_ <- invert_bind_args idc Raw.ident.Z_sub_get_borrow;
+          match
+            pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+              ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
+          with
+          | Some (_, _, _)%zrange =>
+              if
+               type.type_beq base.type base.type.type_beq
+                 ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
+              then
+               v <- type.try_make_transport_cps s1 ℤ;
+               v0 <- type.try_make_transport_cps s0 ℤ;
+               v1 <- type.try_make_transport_cps s ℤ;
+               Some
+                 (UnderLet
+                    (#(Z_cast2 range)%expr @
+                     (#(Z_sub_get_borrow)%expr @ v (Compile.reflect x2) @
+                      v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
+                    (fun v2 : var (ℤ * ℤ)%etype =>
+                     Base
+                       (#(Z_cast (Datatypes.fst range))%expr @
+                        (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
+                       #(Z_cast (Datatypes.snd range))%expr @
+                       (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
+              else None
+          | None => None
+          end);;
+         _ <- invert_bind_args idc Raw.ident.Z_mul_split;
+         match
+           pattern.type.unify_extracted_cps ((ℤ -> ℤ) -> ℤ)%ptype
+             ((s1 -> s0) -> s)%ptype option (fun x3 : option => x3)
+         with
+         | Some (_, _, _)%zrange =>
+             if
+              type.type_beq base.type base.type.type_beq
+                ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
+             then
+              v <- type.try_make_transport_cps s1 ℤ;
+              v0 <- type.try_make_transport_cps s0 ℤ;
+              v1 <- type.try_make_transport_cps s ℤ;
+              Some
+                (UnderLet
+                   (#(Z_cast2 range)%expr @
+                    (#(Z_mul_split)%expr @ v (Compile.reflect x2) @
+                     v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
+                   (fun v2 : var (ℤ * ℤ)%etype =>
+                    Base
+                      (#(Z_cast (Datatypes.fst range))%expr @
+                       (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
+                      #(Z_cast (Datatypes.snd range))%expr @
+                      (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
+             else None
+         | None => None
+         end
+     | @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _
+        (@expr.App _ _ _ s1 _
+         (@expr.App _ _ _ s2 _ (@expr.Ident _ _ _ t idc) x3) x2) x1) x0 =>
+         (match x2 with
+          | @expr.Ident _ _ _ t0 idc0 =>
+              match x1 with
+              | (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
+                  (@expr.Ident _ _ _ t3 idc3) x6))%expr_pat =>
+                  (args <- invert_bind_args idc3 Raw.ident.Z_cast;
                    _ <- invert_bind_args idc2 Raw.ident.Z_opp;
                    args1 <- invert_bind_args idc1 Raw.ident.Z_cast;
                    args2 <- invert_bind_args idc0 Raw.ident.Literal;
@@ -1467,7 +1421,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         v0 <- type.try_make_transport_cps s5 ℤ;
                         v1 <- type.try_make_transport_cps s ℤ;
                         fv <- (if
-                                ((let (x7, _) := xv in x7) <? 0) &&
+                                ((let (x7, _) := xv in x7) =? 0) &&
                                 (ZRange.normalize args <=?
                                  - ZRange.normalize args1)%zrange
                                then
@@ -1476,9 +1430,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (#(Z_cast2
                                           (Datatypes.fst range,
                                           - Datatypes.snd range))%expr @
-                                      (#(Z_sub_with_get_borrow)%expr @
+                                      (#(Z_sub_get_borrow)%expr @
                                        v (Compile.reflect x3) @
-                                       (##(- (let (x7, _) := xv in x7))%Z)%expr @
                                        v1 (Compile.reflect x0) @
                                        (#(Z_cast args)%expr @
                                         v0 (Compile.reflect x6))))%expr_pat
@@ -1503,102 +1456,103 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               Base fv0)%under_lets
                        else None
                    | None => None
-                   end
-               | (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ ($_)%expr
-                   _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
-                   (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ (_ @ _) _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
-                   (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
-               | (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ #(_)))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                   None
-               | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (($_)%expr @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (_ @ _ @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                   None
-               | _ => None
-               end;;
-               match x0 with
-               | (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
-                   (@expr.Ident _ _ _ t3 idc3) x6))%expr_pat =>
-                   (args <- invert_bind_args idc3 Raw.ident.Z_cast;
-                    _ <- invert_bind_args idc2 Raw.ident.Z_opp;
-                    args1 <- invert_bind_args idc1 Raw.ident.Z_cast;
-                    args2 <- invert_bind_args idc0 Raw.ident.Literal;
-                    _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
-                    match
-                      pattern.type.unify_extracted_cps
-                        (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                        (((s2 -> (projT1 args2)) -> s0) -> s5)%ptype option
-                        (fun x7 : option => x7)
-                    with
-                    | Some (_, _, _, _)%zrange =>
-                        if
-                         type.type_beq base.type base.type.type_beq
-                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                           (((s2 -> (projT1 args2)) -> s0) -> s5)%ptype
-                        then
-                         v <- type.try_make_transport_cps s2 ℤ;
-                         xv <- ident.unify pattern.ident.Literal
-                                 ##(projT2 args2);
-                         v0 <- type.try_make_transport_cps s0 ℤ;
-                         v1 <- type.try_make_transport_cps s5 ℤ;
-                         fv <- (if
-                                 ((let (x7, _) := xv in x7) =? 0) &&
-                                 (ZRange.normalize args <=?
-                                  - ZRange.normalize args1)%zrange
-                                then
-                                 Some
-                                   (UnderLet
-                                      (#(Z_cast2
-                                           (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @
-                                       (#(Z_sub_get_borrow)%expr @
-                                        v (Compile.reflect x3) @
-                                        v0 (Compile.reflect x1) @
-                                        (#(Z_cast args)%expr @
-                                         v1 (Compile.reflect x6))))%expr_pat
-                                      (fun vc : var (ℤ * ℤ)%etype =>
-                                       Base
-                                         (#(Z_cast (Datatypes.fst range))%expr @
-                                          (#(fst)%expr @
-                                           (#(Z_cast2
-                                                (Datatypes.fst range,
-                                                - Datatypes.snd range))%expr @
-                                            ($vc)%expr)),
-                                         #(Z_cast (Datatypes.snd range))%expr @
-                                         (-
-                                          (#(Z_cast (- Datatypes.snd range))%expr @
-                                           (#(snd)%expr @
-                                            (#(Z_cast2
-                                                 (Datatypes.fst range,
-                                                 - Datatypes.snd range))%expr @
-                                             $vc)))%expr_pat)%expr)%expr_pat))
-                                else None);
-                         Some (fv0 <-- fv;
-                               Base fv0)%under_lets
-                        else None
-                    | None => None
-                    end);;
-                   args <- invert_bind_args idc3 Raw.ident.Z_cast;
+                   end);;
+                  args <- invert_bind_args idc3 Raw.ident.Z_cast;
+                  _ <- invert_bind_args idc2 Raw.ident.Z_opp;
+                  args1 <- invert_bind_args idc1 Raw.ident.Z_cast;
+                  args2 <- invert_bind_args idc0 Raw.ident.Literal;
+                  _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
+                  match
+                    pattern.type.unify_extracted_cps
+                      (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                      (((s2 -> (projT1 args2)) -> s5) -> s)%ptype option
+                      (fun x7 : option => x7)
+                  with
+                  | Some (_, _, _, _)%zrange =>
+                      if
+                       type.type_beq base.type base.type.type_beq
+                         (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                         (((s2 -> (projT1 args2)) -> s5) -> s)%ptype
+                      then
+                       v <- type.try_make_transport_cps s2 ℤ;
+                       xv <- ident.unify pattern.ident.Literal
+                               ##(projT2 args2);
+                       v0 <- type.try_make_transport_cps s5 ℤ;
+                       v1 <- type.try_make_transport_cps s ℤ;
+                       fv <- (if
+                               ((let (x7, _) := xv in x7) <? 0) &&
+                               (ZRange.normalize args <=?
+                                - ZRange.normalize args1)%zrange
+                              then
+                               Some
+                                 (UnderLet
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @
+                                     (#(Z_sub_with_get_borrow)%expr @
+                                      v (Compile.reflect x3) @
+                                      (##(- (let (x7, _) := xv in x7))%Z)%expr @
+                                      v1 (Compile.reflect x0) @
+                                      (#(Z_cast args)%expr @
+                                       v0 (Compile.reflect x6))))%expr_pat
+                                    (fun vc : var (ℤ * ℤ)%etype =>
+                                     Base
+                                       (#(Z_cast (Datatypes.fst range))%expr @
+                                        (#(fst)%expr @
+                                         (#(Z_cast2
+                                              (Datatypes.fst range,
+                                              - Datatypes.snd range))%expr @
+                                          ($vc)%expr)),
+                                       #(Z_cast (Datatypes.snd range))%expr @
+                                       (-
+                                        (#(Z_cast (- Datatypes.snd range))%expr @
+                                         (#(snd)%expr @
+                                          (#(Z_cast2
+                                               (Datatypes.fst range,
+                                               - Datatypes.snd range))%expr @
+                                           $vc)))%expr_pat)%expr)%expr_pat))
+                              else None);
+                       Some (fv0 <-- fv;
+                             Base fv0)%under_lets
+                      else None
+                  | None => None
+                  end
+              | (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ ($_)%expr
+                  _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
+                  (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ (_ @ _) _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
+                  (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+              | (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ #(_)))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
+                  None
+              | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (($_)%expr @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (_ @ _ @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+                  None
+              | _ => None
+              end;;
+              match x0 with
+              | (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
+                  (@expr.Ident _ _ _ t3 idc3) x6))%expr_pat =>
+                  (args <- invert_bind_args idc3 Raw.ident.Z_cast;
                    _ <- invert_bind_args idc2 Raw.ident.Z_opp;
                    args1 <- invert_bind_args idc1 Raw.ident.Z_cast;
                    args2 <- invert_bind_args idc0 Raw.ident.Literal;
@@ -1621,7 +1575,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         v0 <- type.try_make_transport_cps s0 ℤ;
                         v1 <- type.try_make_transport_cps s5 ℤ;
                         fv <- (if
-                                ((let (x7, _) := xv in x7) <? 0) &&
+                                ((let (x7, _) := xv in x7) =? 0) &&
                                 (ZRange.normalize args <=?
                                  - ZRange.normalize args1)%zrange
                                then
@@ -1630,9 +1584,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (#(Z_cast2
                                           (Datatypes.fst range,
                                           - Datatypes.snd range))%expr @
-                                      (#(Z_sub_with_get_borrow)%expr @
+                                      (#(Z_sub_get_borrow)%expr @
                                        v (Compile.reflect x3) @
-                                       (##(- (let (x7, _) := xv in x7))%Z)%expr @
                                        v0 (Compile.reflect x1) @
                                        (#(Z_cast args)%expr @
                                         v1 (Compile.reflect x6))))%expr_pat
@@ -1657,665 +1610,688 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               Base fv0)%under_lets
                        else None
                    | None => None
-                   end
-               | (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ ($_)%expr
-                   _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
-                   (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ (_ @ _) _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
-                   (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
-               | (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ #(_)))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @
-                  (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                   None
-               | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (($_)%expr @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (_ @ _ @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                   None
-               | _ => None
-               end;;
-               match x1 with
-               | @expr.Ident _ _ _ t1 idc1 =>
-                   args <- invert_bind_args idc1 Raw.ident.Literal;
-                   args0 <- invert_bind_args idc0 Raw.ident.Literal;
-                   _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
-                   match
-                     pattern.type.unify_extracted_cps
-                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                       (((s2 -> (projT1 args0)) -> (projT1 args)) -> s)%ptype
-                       option (fun x4 : option => x4)
-                   with
-                   | Some (_, _, _, _)%zrange =>
-                       if
-                        type.type_beq base.type base.type.type_beq
-                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                          (((s2 -> (projT1 args0)) -> (projT1 args)) -> s)%ptype
-                       then
-                        v <- type.try_make_transport_cps s2 ℤ;
-                        xv <- ident.unify pattern.ident.Literal
-                                ##(projT2 args0);
-                        xv0 <- ident.unify pattern.ident.Literal
-                                 ##(projT2 args);
-                        v0 <- type.try_make_transport_cps s ℤ;
-                        fv <- (if
-                                ((let (x4, _) := xv0 in x4) <=? 0) &&
-                                ((let (x4, _) := xv in x4) <=? 0) &&
-                                ((let (x4, _) := xv0 in x4) +
-                                 (let (x4, _) := xv in x4) <? 0)
-                               then
-                                Some
-                                  (UnderLet
-                                     (#(Z_cast2
-                                          (Datatypes.fst range,
-                                          - Datatypes.snd range))%expr @
-                                      (#(Z_sub_with_get_borrow)%expr @
-                                       v (Compile.reflect x3) @
-                                       (##(- (let (x4, _) := xv in x4))%Z)%expr @
-                                       v0 (Compile.reflect x0) @
-                                       (##(- (let (x4, _) := xv0 in x4))%Z)%expr))%expr_pat
-                                     (fun vc : var (ℤ * ℤ)%etype =>
-                                      Base
-                                        (#(Z_cast (Datatypes.fst range))%expr @
-                                         (#(fst)%expr @
-                                          (#(Z_cast2
-                                               (Datatypes.fst range,
-                                               - Datatypes.snd range))%expr @
-                                           ($vc)%expr)),
-                                        #(Z_cast (Datatypes.snd range))%expr @
-                                        (-
-                                         (#(Z_cast (- Datatypes.snd range))%expr @
-                                          (#(snd)%expr @
-                                           (#(Z_cast2
-                                                (Datatypes.fst range,
-                                                - Datatypes.snd range))%expr @
-                                            $vc)))%expr_pat)%expr)%expr_pat))
-                               else None);
-                        Some (fv0 <-- fv;
-                              Base fv0)%under_lets
-                       else None
-                   | None => None
-                   end
-               | _ => None
-               end;;
-               match x0 with
-               | @expr.Ident _ _ _ t1 idc1 =>
-                   args <- invert_bind_args idc1 Raw.ident.Literal;
-                   args0 <- invert_bind_args idc0 Raw.ident.Literal;
-                   _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
-                   match
-                     pattern.type.unify_extracted_cps
-                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                       (((s2 -> (projT1 args0)) -> s0) -> (projT1 args))%ptype
-                       option (fun x4 : option => x4)
-                   with
-                   | Some (_, _, _, _)%zrange =>
-                       if
-                        type.type_beq base.type base.type.type_beq
-                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                          (((s2 -> (projT1 args0)) -> s0) -> (projT1 args))%ptype
-                       then
-                        v <- type.try_make_transport_cps s2 ℤ;
-                        xv <- ident.unify pattern.ident.Literal
-                                ##(projT2 args0);
-                        v0 <- type.try_make_transport_cps s0 ℤ;
-                        xv0 <- ident.unify pattern.ident.Literal
-                                 ##(projT2 args);
-                        fv <- (if
-                                ((let (x4, _) := xv0 in x4) <=? 0) &&
-                                ((let (x4, _) := xv in x4) <=? 0) &&
-                                ((let (x4, _) := xv0 in x4) +
-                                 (let (x4, _) := xv in x4) <? 0)
-                               then
-                                Some
-                                  (UnderLet
-                                     (#(Z_cast2
-                                          (Datatypes.fst range,
-                                          - Datatypes.snd range))%expr @
-                                      (#(Z_sub_with_get_borrow)%expr @
-                                       v (Compile.reflect x3) @
-                                       (##(- (let (x4, _) := xv in x4))%Z)%expr @
-                                       v0 (Compile.reflect x1) @
-                                       (##(- (let (x4, _) := xv0 in x4))%Z)%expr))%expr_pat
-                                     (fun vc : var (ℤ * ℤ)%etype =>
-                                      Base
-                                        (#(Z_cast (Datatypes.fst range))%expr @
-                                         (#(fst)%expr @
-                                          (#(Z_cast2
-                                               (Datatypes.fst range,
-                                               - Datatypes.snd range))%expr @
-                                           ($vc)%expr)),
-                                        #(Z_cast (Datatypes.snd range))%expr @
-                                        (-
-                                         (#(Z_cast (- Datatypes.snd range))%expr @
-                                          (#(snd)%expr @
-                                           (#(Z_cast2
-                                                (Datatypes.fst range,
-                                                - Datatypes.snd range))%expr @
-                                            $vc)))%expr_pat)%expr)%expr_pat))
-                               else None);
-                        Some (fv0 <-- fv;
-                              Base fv0)%under_lets
-                       else None
-                   | None => None
-                   end
-               | _ => None
-               end;;
-               args <- invert_bind_args idc0 Raw.ident.Literal;
-               _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
-               match
-                 pattern.type.unify_extracted_cps
-                   (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                   (((s2 -> (projT1 args)) -> s0) -> s)%ptype option
-                   (fun x4 : option => x4)
-               with
-               | Some (_, _, _, _)%zrange =>
-                   if
-                    type.type_beq base.type base.type.type_beq
+                   end);;
+                  args <- invert_bind_args idc3 Raw.ident.Z_cast;
+                  _ <- invert_bind_args idc2 Raw.ident.Z_opp;
+                  args1 <- invert_bind_args idc1 Raw.ident.Z_cast;
+                  args2 <- invert_bind_args idc0 Raw.ident.Literal;
+                  _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
+                  match
+                    pattern.type.unify_extracted_cps
                       (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                      (((s2 -> (projT1 args)) -> s0) -> s)%ptype
-                   then
-                    v <- type.try_make_transport_cps s2 ℤ;
-                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                    v0 <- type.try_make_transport_cps s0 ℤ;
-                    v1 <- type.try_make_transport_cps s ℤ;
-                    fv <- (if (let (x4, _) := xv in x4) =? 0
-                           then
-                            Some
-                              (UnderLet
-                                 (#(Z_cast2 range)%expr @
-                                  (#(Z_add_get_carry)%expr @
-                                   v (Compile.reflect x3) @
-                                   v0 (Compile.reflect x1) @
-                                   v1 (Compile.reflect x0)))%expr_pat
-                                 (fun vc : var (ℤ * ℤ)%etype =>
-                                  Base
-                                    (#(Z_cast (Datatypes.fst range))%expr @
-                                     (#(fst)%expr @
-                                      (#(Z_cast2 range)%expr @ ($vc)%expr)),
-                                    #(Z_cast (Datatypes.snd range))%expr @
-                                    (#(snd)%expr @
-                                     (#(Z_cast2 range)%expr @ ($vc)%expr)))%expr_pat))
-                           else None);
-                    Some (fv0 <-- fv;
-                          Base fv0)%under_lets
-                   else None
-               | None => None
-               end
-           | @expr.App _ _ _ s3 _ (@expr.Ident _ _ _ t0 idc0) x4 =>
-               match x4 with
-               | (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
-                  (@expr.Ident _ _ _ t2 idc2) x6)%expr_pat =>
-                   match x1 with
-                   | (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (@expr.Ident _ _ _ t5 idc5) x9))%expr_pat =>
-                       args <- invert_bind_args idc5 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc4 Raw.ident.Z_opp;
-                       args1 <- invert_bind_args idc3 Raw.ident.Z_cast;
-                       args2 <- invert_bind_args idc2 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc1 Raw.ident.Z_opp;
-                       args4 <- invert_bind_args idc0 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc
-                              Raw.ident.Z_add_with_get_carry;
-                       match
-                         pattern.type.unify_extracted_cps
-                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                           (((s2 -> s5) -> s8) -> s)%ptype option
-                           (fun x10 : option => x10)
-                       with
-                       | Some (_, _, _, _)%zrange =>
-                           if
-                            type.type_beq base.type base.type.type_beq
-                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                              (((s2 -> s5) -> s8) -> s)%ptype
-                           then
-                            v <- type.try_make_transport_cps s2 ℤ;
-                            v0 <- type.try_make_transport_cps s5 ℤ;
-                            v1 <- type.try_make_transport_cps s8 ℤ;
-                            v2 <- type.try_make_transport_cps s ℤ;
-                            fv <- (if
-                                    (ZRange.normalize args <=?
-                                     - ZRange.normalize args1)%zrange &&
-                                    (ZRange.normalize args2 <=?
-                                     - ZRange.normalize args4)%zrange
-                                   then
-                                    Some
-                                      (UnderLet
+                      (((s2 -> (projT1 args2)) -> s0) -> s5)%ptype option
+                      (fun x7 : option => x7)
+                  with
+                  | Some (_, _, _, _)%zrange =>
+                      if
+                       type.type_beq base.type base.type.type_beq
+                         (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                         (((s2 -> (projT1 args2)) -> s0) -> s5)%ptype
+                      then
+                       v <- type.try_make_transport_cps s2 ℤ;
+                       xv <- ident.unify pattern.ident.Literal
+                               ##(projT2 args2);
+                       v0 <- type.try_make_transport_cps s0 ℤ;
+                       v1 <- type.try_make_transport_cps s5 ℤ;
+                       fv <- (if
+                               ((let (x7, _) := xv in x7) <? 0) &&
+                               (ZRange.normalize args <=?
+                                - ZRange.normalize args1)%zrange
+                              then
+                               Some
+                                 (UnderLet
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @
+                                     (#(Z_sub_with_get_borrow)%expr @
+                                      v (Compile.reflect x3) @
+                                      (##(- (let (x7, _) := xv in x7))%Z)%expr @
+                                      v0 (Compile.reflect x1) @
+                                      (#(Z_cast args)%expr @
+                                       v1 (Compile.reflect x6))))%expr_pat
+                                    (fun vc : var (ℤ * ℤ)%etype =>
+                                     Base
+                                       (#(Z_cast (Datatypes.fst range))%expr @
+                                        (#(fst)%expr @
                                          (#(Z_cast2
                                               (Datatypes.fst range,
                                               - Datatypes.snd range))%expr @
-                                          (#(Z_sub_with_get_borrow)%expr @
-                                           v (Compile.reflect x3) @
-                                           (#(Z_cast args2)%expr @
-                                            v0 (Compile.reflect x6)) @
-                                           v2 (Compile.reflect x0) @
-                                           (#(Z_cast args)%expr @
-                                            v1 (Compile.reflect x9))))%expr_pat
-                                         (fun vc : var (ℤ * ℤ)%etype =>
-                                          Base
-                                            (#(Z_cast (Datatypes.fst range))%expr @
-                                             (#(fst)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               ($vc)%expr)),
-                                            #(Z_cast (Datatypes.snd range))%expr @
-                                            (-
-                                             (#(Z_cast
-                                                  (- Datatypes.snd range))%expr @
-                                              (#(snd)%expr @
-                                               (#(Z_cast2
-                                                    (Datatypes.fst range,
-                                                    - Datatypes.snd range))%expr @
-                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                   else None);
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
-                       end
-                   | (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       ($_)%expr _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (_ @ _) _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
-                   | (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ #(_)))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ ($_)%expr))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                       None
-                   | (@expr.Ident _ _ _ t3 idc3 @ #(_))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ (($_)%expr @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ (_ @ _ @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                       None
-                   | _ => None
-                   end;;
-                   match x0 with
-                   | (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (@expr.Ident _ _ _ t5 idc5) x9))%expr_pat =>
-                       args <- invert_bind_args idc5 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc4 Raw.ident.Z_opp;
-                       args1 <- invert_bind_args idc3 Raw.ident.Z_cast;
-                       args2 <- invert_bind_args idc2 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc1 Raw.ident.Z_opp;
-                       args4 <- invert_bind_args idc0 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc
-                              Raw.ident.Z_add_with_get_carry;
-                       match
-                         pattern.type.unify_extracted_cps
-                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                           (((s2 -> s5) -> s0) -> s8)%ptype option
-                           (fun x10 : option => x10)
-                       with
-                       | Some (_, _, _, _)%zrange =>
-                           if
-                            type.type_beq base.type base.type.type_beq
-                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                              (((s2 -> s5) -> s0) -> s8)%ptype
-                           then
-                            v <- type.try_make_transport_cps s2 ℤ;
-                            v0 <- type.try_make_transport_cps s5 ℤ;
-                            v1 <- type.try_make_transport_cps s0 ℤ;
-                            v2 <- type.try_make_transport_cps s8 ℤ;
-                            fv <- (if
-                                    (ZRange.normalize args <=?
-                                     - ZRange.normalize args1)%zrange &&
-                                    (ZRange.normalize args2 <=?
-                                     - ZRange.normalize args4)%zrange
-                                   then
-                                    Some
-                                      (UnderLet
+                                          ($vc)%expr)),
+                                       #(Z_cast (Datatypes.snd range))%expr @
+                                       (-
+                                        (#(Z_cast (- Datatypes.snd range))%expr @
+                                         (#(snd)%expr @
+                                          (#(Z_cast2
+                                               (Datatypes.fst range,
+                                               - Datatypes.snd range))%expr @
+                                           $vc)))%expr_pat)%expr)%expr_pat))
+                              else None);
+                       Some (fv0 <-- fv;
+                             Base fv0)%under_lets
+                      else None
+                  | None => None
+                  end
+              | (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ ($_)%expr
+                  _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
+                  (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _ (_ @ _) _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s5 _
+                  (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+              | (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ #(_)))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @
+                 (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
+                  None
+              | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (($_)%expr @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (_ @ _ @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+                  None
+              | _ => None
+              end;;
+              match x1 with
+              | @expr.Ident _ _ _ t1 idc1 =>
+                  args <- invert_bind_args idc1 Raw.ident.Literal;
+                  args0 <- invert_bind_args idc0 Raw.ident.Literal;
+                  _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
+                  match
+                    pattern.type.unify_extracted_cps
+                      (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                      (((s2 -> (projT1 args0)) -> (projT1 args)) -> s)%ptype
+                      option (fun x4 : option => x4)
+                  with
+                  | Some (_, _, _, _)%zrange =>
+                      if
+                       type.type_beq base.type base.type.type_beq
+                         (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                         (((s2 -> (projT1 args0)) -> (projT1 args)) -> s)%ptype
+                      then
+                       v <- type.try_make_transport_cps s2 ℤ;
+                       xv <- ident.unify pattern.ident.Literal
+                               ##(projT2 args0);
+                       xv0 <- ident.unify pattern.ident.Literal
+                                ##(projT2 args);
+                       v0 <- type.try_make_transport_cps s ℤ;
+                       fv <- (if
+                               ((let (x4, _) := xv0 in x4) <=? 0) &&
+                               ((let (x4, _) := xv in x4) <=? 0) &&
+                               ((let (x4, _) := xv0 in x4) +
+                                (let (x4, _) := xv in x4) <? 0)
+                              then
+                               Some
+                                 (UnderLet
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @
+                                     (#(Z_sub_with_get_borrow)%expr @
+                                      v (Compile.reflect x3) @
+                                      (##(- (let (x4, _) := xv in x4))%Z)%expr @
+                                      v0 (Compile.reflect x0) @
+                                      (##(- (let (x4, _) := xv0 in x4))%Z)%expr))%expr_pat
+                                    (fun vc : var (ℤ * ℤ)%etype =>
+                                     Base
+                                       (#(Z_cast (Datatypes.fst range))%expr @
+                                        (#(fst)%expr @
                                          (#(Z_cast2
                                               (Datatypes.fst range,
                                               - Datatypes.snd range))%expr @
-                                          (#(Z_sub_with_get_borrow)%expr @
-                                           v (Compile.reflect x3) @
-                                           (#(Z_cast args2)%expr @
-                                            v0 (Compile.reflect x6)) @
-                                           v1 (Compile.reflect x1) @
-                                           (#(Z_cast args)%expr @
-                                            v2 (Compile.reflect x9))))%expr_pat
-                                         (fun vc : var (ℤ * ℤ)%etype =>
-                                          Base
-                                            (#(Z_cast (Datatypes.fst range))%expr @
-                                             (#(fst)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               ($vc)%expr)),
-                                            #(Z_cast (Datatypes.snd range))%expr @
-                                            (-
-                                             (#(Z_cast
-                                                  (- Datatypes.snd range))%expr @
-                                              (#(snd)%expr @
-                                               (#(Z_cast2
-                                                    (Datatypes.fst range,
-                                                    - Datatypes.snd range))%expr @
-                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                   else None);
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
-                       end
-                   | (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       ($_)%expr _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (_ @ _) _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                       (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
-                   | (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ #(_)))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ ($_)%expr))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                       None
-                   | (@expr.Ident _ _ _ t3 idc3 @ #(_))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ (($_)%expr @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ (_ @ _ @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @
-                      (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
-                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                       None
-                   | _ => None
-                   end;;
-                   match x1 with
-                   | @expr.Ident _ _ _ t3 idc3 =>
-                       args <- invert_bind_args idc3 Raw.ident.Literal;
-                       args0 <- invert_bind_args idc2 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc1 Raw.ident.Z_opp;
-                       args2 <- invert_bind_args idc0 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc
-                              Raw.ident.Z_add_with_get_carry;
-                       match
-                         pattern.type.unify_extracted_cps
-                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                           (((s2 -> s5) -> (projT1 args)) -> s)%ptype option
-                           (fun x7 : option => x7)
-                       with
-                       | Some (_, _, _, _)%zrange =>
-                           if
-                            type.type_beq base.type base.type.type_beq
-                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                              (((s2 -> s5) -> (projT1 args)) -> s)%ptype
-                           then
-                            v <- type.try_make_transport_cps s2 ℤ;
-                            v0 <- type.try_make_transport_cps s5 ℤ;
-                            xv <- ident.unify pattern.ident.Literal
-                                    ##(projT2 args);
-                            v1 <- type.try_make_transport_cps s ℤ;
-                            fv <- (if
-                                    ((let (x7, _) := xv in x7) <=? 0) &&
-                                    (ZRange.normalize args0 <=?
-                                     - ZRange.normalize args2)%zrange
-                                   then
-                                    Some
-                                      (UnderLet
+                                          ($vc)%expr)),
+                                       #(Z_cast (Datatypes.snd range))%expr @
+                                       (-
+                                        (#(Z_cast (- Datatypes.snd range))%expr @
+                                         (#(snd)%expr @
+                                          (#(Z_cast2
+                                               (Datatypes.fst range,
+                                               - Datatypes.snd range))%expr @
+                                           $vc)))%expr_pat)%expr)%expr_pat))
+                              else None);
+                       Some (fv0 <-- fv;
+                             Base fv0)%under_lets
+                      else None
+                  | None => None
+                  end
+              | _ => None
+              end;;
+              match x0 with
+              | @expr.Ident _ _ _ t1 idc1 =>
+                  args <- invert_bind_args idc1 Raw.ident.Literal;
+                  args0 <- invert_bind_args idc0 Raw.ident.Literal;
+                  _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
+                  match
+                    pattern.type.unify_extracted_cps
+                      (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                      (((s2 -> (projT1 args0)) -> s0) -> (projT1 args))%ptype
+                      option (fun x4 : option => x4)
+                  with
+                  | Some (_, _, _, _)%zrange =>
+                      if
+                       type.type_beq base.type base.type.type_beq
+                         (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                         (((s2 -> (projT1 args0)) -> s0) -> (projT1 args))%ptype
+                      then
+                       v <- type.try_make_transport_cps s2 ℤ;
+                       xv <- ident.unify pattern.ident.Literal
+                               ##(projT2 args0);
+                       v0 <- type.try_make_transport_cps s0 ℤ;
+                       xv0 <- ident.unify pattern.ident.Literal
+                                ##(projT2 args);
+                       fv <- (if
+                               ((let (x4, _) := xv0 in x4) <=? 0) &&
+                               ((let (x4, _) := xv in x4) <=? 0) &&
+                               ((let (x4, _) := xv0 in x4) +
+                                (let (x4, _) := xv in x4) <? 0)
+                              then
+                               Some
+                                 (UnderLet
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @
+                                     (#(Z_sub_with_get_borrow)%expr @
+                                      v (Compile.reflect x3) @
+                                      (##(- (let (x4, _) := xv in x4))%Z)%expr @
+                                      v0 (Compile.reflect x1) @
+                                      (##(- (let (x4, _) := xv0 in x4))%Z)%expr))%expr_pat
+                                    (fun vc : var (ℤ * ℤ)%etype =>
+                                     Base
+                                       (#(Z_cast (Datatypes.fst range))%expr @
+                                        (#(fst)%expr @
                                          (#(Z_cast2
                                               (Datatypes.fst range,
                                               - Datatypes.snd range))%expr @
-                                          (#(Z_sub_with_get_borrow)%expr @
-                                           v (Compile.reflect x3) @
-                                           (#(Z_cast args0)%expr @
-                                            v0 (Compile.reflect x6)) @
-                                           v1 (Compile.reflect x0) @
-                                           (##(- (let (x7, _) := xv in x7))%Z)%expr))%expr_pat
-                                         (fun vc : var (ℤ * ℤ)%etype =>
-                                          Base
-                                            (#(Z_cast (Datatypes.fst range))%expr @
-                                             (#(fst)%expr @
+                                          ($vc)%expr)),
+                                       #(Z_cast (Datatypes.snd range))%expr @
+                                       (-
+                                        (#(Z_cast (- Datatypes.snd range))%expr @
+                                         (#(snd)%expr @
+                                          (#(Z_cast2
+                                               (Datatypes.fst range,
+                                               - Datatypes.snd range))%expr @
+                                           $vc)))%expr_pat)%expr)%expr_pat))
+                              else None);
+                       Some (fv0 <-- fv;
+                             Base fv0)%under_lets
+                      else None
+                  | None => None
+                  end
+              | _ => None
+              end;;
+              args <- invert_bind_args idc0 Raw.ident.Literal;
+              _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
+              match
+                pattern.type.unify_extracted_cps (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                  (((s2 -> (projT1 args)) -> s0) -> s)%ptype option
+                  (fun x4 : option => x4)
+              with
+              | Some (_, _, _, _)%zrange =>
+                  if
+                   type.type_beq base.type base.type.type_beq
+                     (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                     (((s2 -> (projT1 args)) -> s0) -> s)%ptype
+                  then
+                   v <- type.try_make_transport_cps s2 ℤ;
+                   xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                   v0 <- type.try_make_transport_cps s0 ℤ;
+                   v1 <- type.try_make_transport_cps s ℤ;
+                   fv <- (if (let (x4, _) := xv in x4) =? 0
+                          then
+                           Some
+                             (UnderLet
+                                (#(Z_cast2 range)%expr @
+                                 (#(Z_add_get_carry)%expr @
+                                  v (Compile.reflect x3) @
+                                  v0 (Compile.reflect x1) @
+                                  v1 (Compile.reflect x0)))%expr_pat
+                                (fun vc : var (ℤ * ℤ)%etype =>
+                                 Base
+                                   (#(Z_cast (Datatypes.fst range))%expr @
+                                    (#(fst)%expr @
+                                     (#(Z_cast2 range)%expr @ ($vc)%expr)),
+                                   #(Z_cast (Datatypes.snd range))%expr @
+                                   (#(snd)%expr @
+                                    (#(Z_cast2 range)%expr @ ($vc)%expr)))%expr_pat))
+                          else None);
+                   Some (fv0 <-- fv;
+                         Base fv0)%under_lets
+                  else None
+              | None => None
+              end
+          | @expr.App _ _ _ s3 _ (@expr.Ident _ _ _ t0 idc0) x4 =>
+              match x4 with
+              | (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
+                 (@expr.Ident _ _ _ t2 idc2) x6)%expr_pat =>
+                  match x1 with
+                  | (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (@expr.Ident _ _ _ t5 idc5) x9))%expr_pat =>
+                      args <- invert_bind_args idc5 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc4 Raw.ident.Z_opp;
+                      args1 <- invert_bind_args idc3 Raw.ident.Z_cast;
+                      args2 <- invert_bind_args idc2 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc1 Raw.ident.Z_opp;
+                      args4 <- invert_bind_args idc0 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc
+                             Raw.ident.Z_add_with_get_carry;
+                      match
+                        pattern.type.unify_extracted_cps
+                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                          (((s2 -> s5) -> s8) -> s)%ptype option
+                          (fun x10 : option => x10)
+                      with
+                      | Some (_, _, _, _)%zrange =>
+                          if
+                           type.type_beq base.type base.type.type_beq
+                             (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                             (((s2 -> s5) -> s8) -> s)%ptype
+                          then
+                           v <- type.try_make_transport_cps s2 ℤ;
+                           v0 <- type.try_make_transport_cps s5 ℤ;
+                           v1 <- type.try_make_transport_cps s8 ℤ;
+                           v2 <- type.try_make_transport_cps s ℤ;
+                           fv <- (if
+                                   (ZRange.normalize args <=?
+                                    - ZRange.normalize args1)%zrange &&
+                                   (ZRange.normalize args2 <=?
+                                    - ZRange.normalize args4)%zrange
+                                  then
+                                   Some
+                                     (UnderLet
+                                        (#(Z_cast2
+                                             (Datatypes.fst range,
+                                             - Datatypes.snd range))%expr @
+                                         (#(Z_sub_with_get_borrow)%expr @
+                                          v (Compile.reflect x3) @
+                                          (#(Z_cast args2)%expr @
+                                           v0 (Compile.reflect x6)) @
+                                          v2 (Compile.reflect x0) @
+                                          (#(Z_cast args)%expr @
+                                           v1 (Compile.reflect x9))))%expr_pat
+                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                         Base
+                                           (#(Z_cast (Datatypes.fst range))%expr @
+                                            (#(fst)%expr @
+                                             (#(Z_cast2
+                                                  (Datatypes.fst range,
+                                                  - Datatypes.snd range))%expr @
+                                              ($vc)%expr)),
+                                           #(Z_cast (Datatypes.snd range))%expr @
+                                           (-
+                                            (#(Z_cast (- Datatypes.snd range))%expr @
+                                             (#(snd)%expr @
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               ($vc)%expr)),
-                                            #(Z_cast (Datatypes.snd range))%expr @
-                                            (-
-                                             (#(Z_cast
-                                                  (- Datatypes.snd range))%expr @
-                                              (#(snd)%expr @
-                                               (#(Z_cast2
-                                                    (Datatypes.fst range,
-                                                    - Datatypes.snd range))%expr @
-                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                   else None);
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
-                       end
-                   | _ => None
-                   end;;
-                   match x0 with
-                   | @expr.Ident _ _ _ t3 idc3 =>
-                       args <- invert_bind_args idc3 Raw.ident.Literal;
-                       args0 <- invert_bind_args idc2 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc1 Raw.ident.Z_opp;
-                       args2 <- invert_bind_args idc0 Raw.ident.Z_cast;
-                       _ <- invert_bind_args idc
-                              Raw.ident.Z_add_with_get_carry;
-                       match
-                         pattern.type.unify_extracted_cps
-                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                           (((s2 -> s5) -> s0) -> (projT1 args))%ptype option
-                           (fun x7 : option => x7)
-                       with
-                       | Some (_, _, _, _)%zrange =>
-                           if
-                            type.type_beq base.type base.type.type_beq
+                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                  else None);
+                           Some (fv0 <-- fv;
+                                 Base fv0)%under_lets
+                          else None
+                      | None => None
+                      end
+                  | (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      ($_)%expr _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (_ @ _) _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+                  | (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ #(_)))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ ($_)%expr))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
+                      None
+                  | (@expr.Ident _ _ _ t3 idc3 @ #(_))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ (($_)%expr @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ (_ @ _ @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+                      None
+                  | _ => None
+                  end;;
+                  match x0 with
+                  | (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (@expr.Ident _ _ _ t5 idc5) x9))%expr_pat =>
+                      args <- invert_bind_args idc5 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc4 Raw.ident.Z_opp;
+                      args1 <- invert_bind_args idc3 Raw.ident.Z_cast;
+                      args2 <- invert_bind_args idc2 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc1 Raw.ident.Z_opp;
+                      args4 <- invert_bind_args idc0 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc
+                             Raw.ident.Z_add_with_get_carry;
+                      match
+                        pattern.type.unify_extracted_cps
+                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                          (((s2 -> s5) -> s0) -> s8)%ptype option
+                          (fun x10 : option => x10)
+                      with
+                      | Some (_, _, _, _)%zrange =>
+                          if
+                           type.type_beq base.type base.type.type_beq
+                             (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                             (((s2 -> s5) -> s0) -> s8)%ptype
+                          then
+                           v <- type.try_make_transport_cps s2 ℤ;
+                           v0 <- type.try_make_transport_cps s5 ℤ;
+                           v1 <- type.try_make_transport_cps s0 ℤ;
+                           v2 <- type.try_make_transport_cps s8 ℤ;
+                           fv <- (if
+                                   (ZRange.normalize args <=?
+                                    - ZRange.normalize args1)%zrange &&
+                                   (ZRange.normalize args2 <=?
+                                    - ZRange.normalize args4)%zrange
+                                  then
+                                   Some
+                                     (UnderLet
+                                        (#(Z_cast2
+                                             (Datatypes.fst range,
+                                             - Datatypes.snd range))%expr @
+                                         (#(Z_sub_with_get_borrow)%expr @
+                                          v (Compile.reflect x3) @
+                                          (#(Z_cast args2)%expr @
+                                           v0 (Compile.reflect x6)) @
+                                          v1 (Compile.reflect x1) @
+                                          (#(Z_cast args)%expr @
+                                           v2 (Compile.reflect x9))))%expr_pat
+                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                         Base
+                                           (#(Z_cast (Datatypes.fst range))%expr @
+                                            (#(fst)%expr @
+                                             (#(Z_cast2
+                                                  (Datatypes.fst range,
+                                                  - Datatypes.snd range))%expr @
+                                              ($vc)%expr)),
+                                           #(Z_cast (Datatypes.snd range))%expr @
+                                           (-
+                                            (#(Z_cast (- Datatypes.snd range))%expr @
+                                             (#(snd)%expr @
+                                              (#(Z_cast2
+                                                   (Datatypes.fst range,
+                                                   - Datatypes.snd range))%expr @
+                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                  else None);
+                           Some (fv0 <-- fv;
+                                 Base fv0)%under_lets
+                          else None
+                      | None => None
+                      end
+                  | (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      ($_)%expr _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (@expr.Abs _ _ _ _ _ _) _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (_ @ _) _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
+                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+                  | (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ #(_)))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ ($_)%expr))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
+                      None
+                  | (@expr.Ident _ _ _ t3 idc3 @ #(_))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ (($_)%expr @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ (@expr.Abs _ _ _ _ _ _ @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ (_ @ _ @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @
+                     (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
+                    (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+                      None
+                  | _ => None
+                  end;;
+                  match x1 with
+                  | @expr.Ident _ _ _ t3 idc3 =>
+                      args <- invert_bind_args idc3 Raw.ident.Literal;
+                      args0 <- invert_bind_args idc2 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc1 Raw.ident.Z_opp;
+                      args2 <- invert_bind_args idc0 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc
+                             Raw.ident.Z_add_with_get_carry;
+                      match
+                        pattern.type.unify_extracted_cps
+                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                          (((s2 -> s5) -> (projT1 args)) -> s)%ptype option
+                          (fun x7 : option => x7)
+                      with
+                      | Some (_, _, _, _)%zrange =>
+                          if
+                           type.type_beq base.type base.type.type_beq
+                             (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                             (((s2 -> s5) -> (projT1 args)) -> s)%ptype
+                          then
+                           v <- type.try_make_transport_cps s2 ℤ;
+                           v0 <- type.try_make_transport_cps s5 ℤ;
+                           xv <- ident.unify pattern.ident.Literal
+                                   ##(projT2 args);
+                           v1 <- type.try_make_transport_cps s ℤ;
+                           fv <- (if
+                                   ((let (x7, _) := xv in x7) <=? 0) &&
+                                   (ZRange.normalize args0 <=?
+                                    - ZRange.normalize args2)%zrange
+                                  then
+                                   Some
+                                     (UnderLet
+                                        (#(Z_cast2
+                                             (Datatypes.fst range,
+                                             - Datatypes.snd range))%expr @
+                                         (#(Z_sub_with_get_borrow)%expr @
+                                          v (Compile.reflect x3) @
+                                          (#(Z_cast args0)%expr @
+                                           v0 (Compile.reflect x6)) @
+                                          v1 (Compile.reflect x0) @
+                                          (##(- (let (x7, _) := xv in x7))%Z)%expr))%expr_pat
+                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                         Base
+                                           (#(Z_cast (Datatypes.fst range))%expr @
+                                            (#(fst)%expr @
+                                             (#(Z_cast2
+                                                  (Datatypes.fst range,
+                                                  - Datatypes.snd range))%expr @
+                                              ($vc)%expr)),
+                                           #(Z_cast (Datatypes.snd range))%expr @
+                                           (-
+                                            (#(Z_cast (- Datatypes.snd range))%expr @
+                                             (#(snd)%expr @
+                                              (#(Z_cast2
+                                                   (Datatypes.fst range,
+                                                   - Datatypes.snd range))%expr @
+                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                  else None);
+                           Some (fv0 <-- fv;
+                                 Base fv0)%under_lets
+                          else None
+                      | None => None
+                      end
+                  | _ => None
+                  end;;
+                  match x0 with
+                  | @expr.Ident _ _ _ t3 idc3 =>
+                      args <- invert_bind_args idc3 Raw.ident.Literal;
+                      args0 <- invert_bind_args idc2 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc1 Raw.ident.Z_opp;
+                      args2 <- invert_bind_args idc0 Raw.ident.Z_cast;
+                      _ <- invert_bind_args idc
+                             Raw.ident.Z_add_with_get_carry;
+                      match
+                        pattern.type.unify_extracted_cps
+                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                          (((s2 -> s5) -> s0) -> (projT1 args))%ptype option
+                          (fun x7 : option => x7)
+                      with
+                      | Some (_, _, _, _)%zrange =>
+                          if
+                           type.type_beq base.type base.type.type_beq
+                             (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                             (((s2 -> s5) -> s0) -> (projT1 args))%ptype
+                          then
+                           v <- type.try_make_transport_cps s2 ℤ;
+                           v0 <- type.try_make_transport_cps s5 ℤ;
+                           v1 <- type.try_make_transport_cps s0 ℤ;
+                           xv <- ident.unify pattern.ident.Literal
+                                   ##(projT2 args);
+                           fv <- (if
+                                   ((let (x7, _) := xv in x7) <=? 0) &&
+                                   (ZRange.normalize args0 <=?
+                                    - ZRange.normalize args2)%zrange
+                                  then
+                                   Some
+                                     (UnderLet
+                                        (#(Z_cast2
+                                             (Datatypes.fst range,
+                                             - Datatypes.snd range))%expr @
+                                         (#(Z_sub_with_get_borrow)%expr @
+                                          v (Compile.reflect x3) @
+                                          (#(Z_cast args0)%expr @
+                                           v0 (Compile.reflect x6)) @
+                                          v1 (Compile.reflect x1) @
+                                          (##(- (let (x7, _) := xv in x7))%Z)%expr))%expr_pat
+                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                         Base
+                                           (#(Z_cast (Datatypes.fst range))%expr @
+                                            (#(fst)%expr @
+                                             (#(Z_cast2
+                                                  (Datatypes.fst range,
+                                                  - Datatypes.snd range))%expr @
+                                              ($vc)%expr)),
+                                           #(Z_cast (Datatypes.snd range))%expr @
+                                           (-
+                                            (#(Z_cast (- Datatypes.snd range))%expr @
+                                             (#(snd)%expr @
+                                              (#(Z_cast2
+                                                   (Datatypes.fst range,
+                                                   - Datatypes.snd range))%expr @
+                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                  else None);
+                           Some (fv0 <-- fv;
+                                 Base fv0)%under_lets
+                          else None
+                      | None => None
+                      end
+                  | _ => None
+                  end
+              | (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _ ($_)%expr _)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
+                 (@expr.Abs _ _ _ _ _ _) _)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _ (_ @ _) _)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
+                 (@expr.LetIn _ _ _ _ _ _ _) _)%expr_pat => None
+              | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
+                (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+                  None
+              | _ => None
+              end;;
+              match x3 with
+              | @expr.Ident _ _ _ t1 idc1 =>
+                  match x1 with
+                  | @expr.Ident _ _ _ t2 idc2 =>
+                      match x0 with
+                      | @expr.Ident _ _ _ t3 idc3 =>
+                          args <- invert_bind_args idc3 Raw.ident.Literal;
+                          args0 <- invert_bind_args idc2 Raw.ident.Literal;
+                          args1 <- invert_bind_args idc1 Raw.ident.Literal;
+                          args2 <- invert_bind_args idc0 Raw.ident.Z_cast;
+                          _ <- invert_bind_args idc
+                                 Raw.ident.Z_add_with_get_carry;
+                          match
+                            pattern.type.unify_extracted_cps
                               (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                              (((s2 -> s5) -> s0) -> (projT1 args))%ptype
-                           then
-                            v <- type.try_make_transport_cps s2 ℤ;
-                            v0 <- type.try_make_transport_cps s5 ℤ;
-                            v1 <- type.try_make_transport_cps s0 ℤ;
-                            xv <- ident.unify pattern.ident.Literal
-                                    ##(projT2 args);
-                            fv <- (if
-                                    ((let (x7, _) := xv in x7) <=? 0) &&
-                                    (ZRange.normalize args0 <=?
-                                     - ZRange.normalize args2)%zrange
-                                   then
-                                    Some
-                                      (UnderLet
-                                         (#(Z_cast2
-                                              (Datatypes.fst range,
-                                              - Datatypes.snd range))%expr @
-                                          (#(Z_sub_with_get_borrow)%expr @
-                                           v (Compile.reflect x3) @
-                                           (#(Z_cast args0)%expr @
-                                            v0 (Compile.reflect x6)) @
-                                           v1 (Compile.reflect x1) @
-                                           (##(- (let (x7, _) := xv in x7))%Z)%expr))%expr_pat
-                                         (fun vc : var (ℤ * ℤ)%etype =>
-                                          Base
-                                            (#(Z_cast (Datatypes.fst range))%expr @
-                                             (#(fst)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               ($vc)%expr)),
-                                            #(Z_cast (Datatypes.snd range))%expr @
-                                            (-
-                                             (#(Z_cast
-                                                  (- Datatypes.snd range))%expr @
-                                              (#(snd)%expr @
-                                               (#(Z_cast2
-                                                    (Datatypes.fst range,
-                                                    - Datatypes.snd range))%expr @
-                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                   else None);
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
-                       end
-                   | _ => None
-                   end
-               | (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _ ($_)%expr
-                  _)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
-                  (@expr.Abs _ _ _ _ _ _) _)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _ (_ @ _) _)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
-                  (@expr.LetIn _ _ _ _ _ _ _) _)%expr_pat => None
-               | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
-                 (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                   None
-               | _ => None
-               end;;
-               match x3 with
-               | @expr.Ident _ _ _ t1 idc1 =>
-                   match x1 with
-                   | @expr.Ident _ _ _ t2 idc2 =>
-                       match x0 with
-                       | @expr.Ident _ _ _ t3 idc3 =>
-                           args <- invert_bind_args idc3 Raw.ident.Literal;
-                           args0 <- invert_bind_args idc2 Raw.ident.Literal;
-                           args1 <- invert_bind_args idc1 Raw.ident.Literal;
-                           args2 <- invert_bind_args idc0 Raw.ident.Z_cast;
-                           _ <- invert_bind_args idc
-                                  Raw.ident.Z_add_with_get_carry;
-                           match
-                             pattern.type.unify_extracted_cps
-                               (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                               ((((projT1 args1) -> s3) -> (projT1 args0)) ->
-                                (projT1 args))%ptype option
-                               (fun x5 : option => x5)
-                           with
-                           | Some (_, _, _, _)%zrange =>
-                               if
-                                type.type_beq base.type base.type.type_beq
-                                  (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                                  ((((projT1 args1) -> s3) -> (projT1 args0)) ->
-                                   (projT1 args))%ptype
-                               then
-                                xv <- ident.unify pattern.ident.Literal
-                                        ##(projT2 args1);
-                                v <- type.try_make_transport_cps s3 ℤ;
-                                xv0 <- ident.unify pattern.ident.Literal
-                                         ##(projT2 args0);
-                                xv1 <- ident.unify pattern.ident.Literal
-                                         ##(projT2 args);
-                                fv <- (if
-                                        ((let (x5, _) := xv0 in x5) =? 0) &&
-                                        ((let (x5, _) := xv1 in x5) =? 0) &&
-                                        (ZRange.normalize args2 <=?
-                                         r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
-                                        is_bounded_by_bool 0
-                                          (Datatypes.snd range)
-                                       then
-                                        Some
-                                          (UnderLet
-                                             (#(Z_cast2 range)%expr @
-                                              (#(Z_add_with_get_carry)%expr @
-                                               (##(let (x5, _) := xv in x5))%expr @
-                                               (#(Z_cast args2)%expr @
-                                                v (Compile.reflect x4)) @
-                                               (##(let (x5, _) := xv0 in x5))%expr @
-                                               (##(let (x5, _) := xv1 in x5))%expr))%expr_pat
-                                             (fun vc : var (ℤ * ℤ)%etype =>
-                                              Base
-                                                (#(Z_cast
-                                                     (Datatypes.fst range))%expr @
-                                                 (#(fst)%expr @
-                                                  (#(Z_cast2 range)%expr @
-                                                   ($vc)%expr)), (##0)%expr)%expr_pat))
-                                       else None);
-                                Some (fv0 <-- fv;
-                                      Base fv0)%under_lets
-                               else None
-                           | None => None
-                           end
-                       | _ => None
-                       end
-                   | _ => None
-                   end
-               | _ => None
-               end
-           | @expr.App _ _ _ s3 _ ($_)%expr _ | @expr.App _ _ _ s3 _
-             (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s3 _
-             (_ @ _)%expr_pat _ | @expr.App _ _ _ s3 _
-             (@expr.LetIn _ _ _ _ _ _ _) _ => None
-           | _ => None
-           end;;
-           _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
-           match
-             pattern.type.unify_extracted_cps (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-               (((s2 -> s1) -> s0) -> s)%ptype option (fun x4 : option => x4)
-           with
-           | Some (_, _, _, _)%zrange =>
-               if
-                type.type_beq base.type base.type.type_beq
-                  (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
-                  (((s2 -> s1) -> s0) -> s)%ptype
-               then
-                v <- type.try_make_transport_cps s2 ℤ;
-                v0 <- type.try_make_transport_cps s1 ℤ;
-                v1 <- type.try_make_transport_cps s0 ℤ;
-                v2 <- type.try_make_transport_cps s ℤ;
-                Some
-                  (UnderLet
-                     (#(Z_cast2 range)%expr @
-                      (#(Z_add_with_get_carry)%expr @ v (Compile.reflect x3) @
-                       v0 (Compile.reflect x2) @ v1 (Compile.reflect x1) @
-                       v2 (Compile.reflect x0)))%expr_pat
-                     (fun v3 : var (ℤ * ℤ)%etype =>
-                      Base
-                        (#(Z_cast (Datatypes.fst range))%expr @
-                         (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)),
-                        #(Z_cast (Datatypes.snd range))%expr @
-                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
-               else None
-           | None => None
-           end);;
-          _ <- invert_bind_args idc Raw.ident.Z_sub_with_get_borrow;
+                              ((((projT1 args1) -> s3) -> (projT1 args0)) ->
+                               (projT1 args))%ptype option
+                              (fun x5 : option => x5)
+                          with
+                          | Some (_, _, _, _)%zrange =>
+                              if
+                               type.type_beq base.type base.type.type_beq
+                                 (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                                 ((((projT1 args1) -> s3) -> (projT1 args0)) ->
+                                  (projT1 args))%ptype
+                              then
+                               xv <- ident.unify pattern.ident.Literal
+                                       ##(projT2 args1);
+                               v <- type.try_make_transport_cps s3 ℤ;
+                               xv0 <- ident.unify pattern.ident.Literal
+                                        ##(projT2 args0);
+                               xv1 <- ident.unify pattern.ident.Literal
+                                        ##(projT2 args);
+                               fv <- (if
+                                       ((let (x5, _) := xv0 in x5) =? 0) &&
+                                       ((let (x5, _) := xv1 in x5) =? 0) &&
+                                       (ZRange.normalize args2 <=?
+                                        r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
+                                       is_bounded_by_bool 0
+                                         (Datatypes.snd range)
+                                      then
+                                       Some
+                                         (UnderLet
+                                            (#(Z_cast2 range)%expr @
+                                             (#(Z_add_with_get_carry)%expr @
+                                              (##(let (x5, _) := xv in x5))%expr @
+                                              (#(Z_cast args2)%expr @
+                                               v (Compile.reflect x4)) @
+                                              (##(let (x5, _) := xv0 in x5))%expr @
+                                              (##(let (x5, _) := xv1 in x5))%expr))%expr_pat
+                                            (fun vc : var (ℤ * ℤ)%etype =>
+                                             Base
+                                               (#(Z_cast
+                                                    (Datatypes.fst range))%expr @
+                                                (#(fst)%expr @
+                                                 (#(Z_cast2 range)%expr @
+                                                  ($vc)%expr)), (##0)%expr)%expr_pat))
+                                      else None);
+                               Some (fv0 <-- fv;
+                                     Base fv0)%under_lets
+                              else None
+                          | None => None
+                          end
+                      | _ => None
+                      end
+                  | _ => None
+                  end
+              | _ => None
+              end
+          | @expr.App _ _ _ s3 _ ($_)%expr _ | @expr.App _ _ _ s3 _
+            (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s3 _ (_ @ _)%expr_pat
+            _ | @expr.App _ _ _ s3 _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
+          | _ => None
+          end;;
+          _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
           match
             pattern.type.unify_extracted_cps (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
               (((s2 -> s1) -> s0) -> s)%ptype option (fun x4 : option => x4)
@@ -2332,7 +2308,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                Some
                  (UnderLet
                     (#(Z_cast2 range)%expr @
-                     (#(Z_sub_with_get_borrow)%expr @ v (Compile.reflect x3) @
+                     (#(Z_add_with_get_carry)%expr @ v (Compile.reflect x3) @
                       v0 (Compile.reflect x2) @ v1 (Compile.reflect x1) @
                       v2 (Compile.reflect x0)))%expr_pat
                     (fun v3 : var (ℤ * ℤ)%etype =>
@@ -2343,40 +2319,66 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
               else None
           | None => None
-          end
-      | @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _ (@expr.App _ _ _ s2 _ ($_)%expr _) _) _) _ |
-        @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _
-          (@expr.App _ _ _ s2 _ (@expr.Abs _ _ _ _ _ _) _) _) _) _ |
-        @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _ (@expr.App _ _ _ s2 _ (_ @ _)%expr_pat _) _)
-         _) _ | @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _
-          (@expr.App _ _ _ s2 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _) _ =>
-          None
-      | @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ ($_)%expr _) _) _ |
-        @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _) _) _ | @expr.App _
-        _ _ s _
-        (@expr.App _ _ _ s0 _
-         (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
-      | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
-        _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
-        @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => None
-      | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr
-        _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s
-        _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-      | _ => None
-      end;;
-      None);;;
+          end);;
+         _ <- invert_bind_args idc Raw.ident.Z_sub_with_get_borrow;
+         match
+           pattern.type.unify_extracted_cps (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+             (((s2 -> s1) -> s0) -> s)%ptype option (fun x4 : option => x4)
+         with
+         | Some (_, _, _, _)%zrange =>
+             if
+              type.type_beq base.type base.type.type_beq
+                (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((s2 -> s1) -> s0) -> s)%ptype
+             then
+              v <- type.try_make_transport_cps s2 ℤ;
+              v0 <- type.try_make_transport_cps s1 ℤ;
+              v1 <- type.try_make_transport_cps s0 ℤ;
+              v2 <- type.try_make_transport_cps s ℤ;
+              Some
+                (UnderLet
+                   (#(Z_cast2 range)%expr @
+                    (#(Z_sub_with_get_borrow)%expr @ v (Compile.reflect x3) @
+                     v0 (Compile.reflect x2) @ v1 (Compile.reflect x1) @
+                     v2 (Compile.reflect x0)))%expr_pat
+                   (fun v3 : var (ℤ * ℤ)%etype =>
+                    Base
+                      (#(Z_cast (Datatypes.fst range))%expr @
+                       (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)),
+                      #(Z_cast (Datatypes.snd range))%expr @
+                      (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
+             else None
+         | None => None
+         end
+     | @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _
+        (@expr.App _ _ _ s1 _ (@expr.App _ _ _ s2 _ ($_)%expr _) _) _) _ |
+       @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _
+        (@expr.App _ _ _ s1 _
+         (@expr.App _ _ _ s2 _ (@expr.Abs _ _ _ _ _ _) _) _) _) _ | @expr.App
+       _ _ _ s _
+       (@expr.App _ _ _ s0 _
+        (@expr.App _ _ _ s1 _ (@expr.App _ _ _ s2 _ (_ @ _)%expr_pat _) _) _)
+       _ | @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _
+        (@expr.App _ _ _ s1 _
+         (@expr.App _ _ _ s2 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _) _ => None
+     | @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ ($_)%expr _) _) _ |
+       @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _)
+        _) _ | @expr.App _ _ _ s _
+       (@expr.App _ _ _ s0 _
+        (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
+     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
+       _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
+       _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
+         None
+     | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr
+       _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s
+       _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
+     | _ => None
+     end;;;
      Base (#(Z_cast2 range)%expr @ x)%expr_pat)%option
 | fancy_add log2wordmax imm =>
     fun x : expr (ℤ * ℤ)%etype =>
