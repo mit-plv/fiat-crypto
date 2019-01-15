@@ -222,7 +222,7 @@ Section Instructions.
 
 End Instructions.
 
-Section Registers.
+Module Registers.
   Inductive register : Type :=
   | r0 : register
   | r1 : register
