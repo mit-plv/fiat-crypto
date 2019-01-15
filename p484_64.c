@@ -46,7 +46,7 @@ static void fiat_p484_addcarryx_u64(uint64_t* out1, fiat_p484_uint1* out2, fiat_
  */
 static void fiat_p484_subborrowx_u64(uint64_t* out1, fiat_p484_uint1* out2, fiat_p484_uint1 arg1, uint64_t arg2, uint64_t arg3) {
   fiat_p484_int128 x1 = ((arg2 - (fiat_p484_int128)arg1) - arg3);
-  fiat_p484_int1 x2 = (fiat_p484_int1)((fiat_p484_uint128)x1 >> 64);
+  fiat_p484_int1 x2 = (fiat_p484_int1)((fiat_p484_int256)x1 >> 64);
   uint64_t x3 = (uint64_t)(x1 & UINT64_C(0xffffffffffffffff));
   *out1 = x3;
   *out2 = (fiat_p484_uint1)(0x0 - x2);
@@ -2998,7 +2998,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x19 = (uint8_t)(x16 & UINT8_C(0xff));
   uint8_t x20 = (uint8_t)(x18 >> 8);
   uint8_t x21 = (uint8_t)(x18 & UINT8_C(0xff));
-  fiat_p484_uint1 x22 = (fiat_p484_uint1)(x20 >> 8);
+  fiat_p484_uint1 x22 = (fiat_p484_uint1)((int64_t)x20 >> 8);
   uint8_t x23 = (uint8_t)(x20 & UINT8_C(0xff));
   uint64_t x24 = (x22 + x6);
   uint64_t x25 = (x24 >> 8);
@@ -3015,7 +3015,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x36 = (uint8_t)(x33 & UINT8_C(0xff));
   uint8_t x37 = (uint8_t)(x35 >> 8);
   uint8_t x38 = (uint8_t)(x35 & UINT8_C(0xff));
-  fiat_p484_uint1 x39 = (fiat_p484_uint1)(x37 >> 8);
+  fiat_p484_uint1 x39 = (fiat_p484_uint1)((int64_t)x37 >> 8);
   uint8_t x40 = (uint8_t)(x37 & UINT8_C(0xff));
   uint64_t x41 = (x39 + x5);
   uint64_t x42 = (x41 >> 8);
@@ -3032,7 +3032,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x53 = (uint8_t)(x50 & UINT8_C(0xff));
   uint8_t x54 = (uint8_t)(x52 >> 8);
   uint8_t x55 = (uint8_t)(x52 & UINT8_C(0xff));
-  fiat_p484_uint1 x56 = (fiat_p484_uint1)(x54 >> 8);
+  fiat_p484_uint1 x56 = (fiat_p484_uint1)((int64_t)x54 >> 8);
   uint8_t x57 = (uint8_t)(x54 & UINT8_C(0xff));
   uint64_t x58 = (x56 + x4);
   uint64_t x59 = (x58 >> 8);
@@ -3049,7 +3049,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x70 = (uint8_t)(x67 & UINT8_C(0xff));
   uint8_t x71 = (uint8_t)(x69 >> 8);
   uint8_t x72 = (uint8_t)(x69 & UINT8_C(0xff));
-  fiat_p484_uint1 x73 = (fiat_p484_uint1)(x71 >> 8);
+  fiat_p484_uint1 x73 = (fiat_p484_uint1)((int64_t)x71 >> 8);
   uint8_t x74 = (uint8_t)(x71 & UINT8_C(0xff));
   uint64_t x75 = (x73 + x3);
   uint64_t x76 = (x75 >> 8);
@@ -3066,7 +3066,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x87 = (uint8_t)(x84 & UINT8_C(0xff));
   uint8_t x88 = (uint8_t)(x86 >> 8);
   uint8_t x89 = (uint8_t)(x86 & UINT8_C(0xff));
-  fiat_p484_uint1 x90 = (fiat_p484_uint1)(x88 >> 8);
+  fiat_p484_uint1 x90 = (fiat_p484_uint1)((int64_t)x88 >> 8);
   uint8_t x91 = (uint8_t)(x88 & UINT8_C(0xff));
   uint64_t x92 = (x90 + x2);
   uint64_t x93 = (x92 >> 8);
@@ -3083,7 +3083,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x104 = (uint8_t)(x101 & UINT8_C(0xff));
   uint8_t x105 = (uint8_t)(x103 >> 8);
   uint8_t x106 = (uint8_t)(x103 & UINT8_C(0xff));
-  fiat_p484_uint1 x107 = (fiat_p484_uint1)(x105 >> 8);
+  fiat_p484_uint1 x107 = (fiat_p484_uint1)((int64_t)x105 >> 8);
   uint8_t x108 = (uint8_t)(x105 & UINT8_C(0xff));
   uint64_t x109 = (x107 + x1);
   uint64_t x110 = (x109 >> 8);
@@ -3098,7 +3098,7 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
   uint8_t x119 = (uint8_t)(x116 & UINT8_C(0xff));
   uint8_t x120 = (uint8_t)(x118 >> 8);
   uint8_t x121 = (uint8_t)(x118 & UINT8_C(0xff));
-  fiat_p484_uint1 x122 = (fiat_p484_uint1)(x120 >> 8);
+  fiat_p484_uint1 x122 = (fiat_p484_uint1)((int64_t)x120 >> 8);
   uint8_t x123 = (uint8_t)(x120 & UINT8_C(0xff));
   out1[0] = x9;
   out1[1] = x11;
