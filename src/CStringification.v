@@ -616,7 +616,7 @@ Module Compilers.
         Definition to_zrange (t : type) : zrange
           := let bw := bitwidth_of t in
              if is_signed t
-             then r[-2^bw ~> 2^(bw-1) - 1]
+             then r[-2^(bw-1) ~> 2^(bw-1) - 1]
              else r[0 ~> 2^bw - 1].
         Definition is_tighter_than (t1 t2 : type)
           := ZRange.is_tighter_than_bool (to_zrange t1) (to_zrange t2).
