@@ -14,6 +14,7 @@ Require Import Crypto.Algebra.SubsetoidRing.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -495,7 +496,7 @@ Section of_prefancy.
                   | exfalso; assumption
                   | progress inversion_sigma
                   | progress inversion_option
-                  | progress Prod.inversion_prod
+                  | progress inversion_prod
                   | progress LanguageInversion.Compilers.expr.inversion_expr
                   | progress LanguageInversion.Compilers.expr.invert_subst
                   | progress LanguageWf.Compilers.expr.inversion_wf_one_constr
@@ -591,7 +592,7 @@ Section of_prefancy.
                   | progress inversion_sigma
                   | progress inversion_option
                   | progress inversion_of_prefancy_ident
-                  | progress Prod.inversion_prod
+                  | progress inversion_prod
                   | progress cbv [id]
                   | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base interp invert_expr.invert_Ident interp_if_Z option_map] in *
                   | progress LanguageInversion.Compilers.type_beq_to_eq
@@ -1108,7 +1109,7 @@ Section Proofs.
            | _ => progress break_match_hyps
            | _ => progress inversion_sigma
            | _ => progress inversion_option
-           | _ => progress Prod.inversion_prod
+           | _ => progress inversion_prod
            | _ => progress HProp.eliminate_hprop_eq
            | _ => progress Z.ltb_to_lt
            | _ => reflexivity
