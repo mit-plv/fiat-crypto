@@ -163,12 +163,53 @@ Section interp_proofs.
       [reflexivity|].
     intros; break_match; auto.
   Qed.
+  
+  Local Ltac prove_comm H :=
+    rewrite !interp_step; cbn - [Fancy.interp];
+    intros; rewrite H; try reflexivity.
+
+  Lemma mulll_comm rd x y cont cc ctx :
+    interp (Fancy.Instr Fancy.MUL128LL rd (x, y) cont) cc ctx =
+    interp (Fancy.Instr Fancy.MUL128LL rd (y, x) cont) cc ctx.
+  Proof. prove_comm Z.mul_comm. Qed.
+
+  Lemma mulhh_comm rd x y cont cc ctx :
+    interp (Fancy.Instr Fancy.MUL128UU rd (x, y) cont) cc ctx =
+    interp (Fancy.Instr Fancy.MUL128UU rd (y, x) cont) cc ctx.
+  Proof. prove_comm Z.mul_comm. Qed.
+
+  Lemma mullh_mulhl rd x y cont cc ctx :
+    interp (Fancy.Instr Fancy.MUL128LU rd (x, y) cont) cc ctx =
+    interp (Fancy.Instr Fancy.MUL128UL rd (y, x) cont) cc ctx.
+  Proof. prove_comm Z.mul_comm. Qed.
+
+  Lemma add_comm rd x y cont cc ctx :
+    0 <= ctx x < 2^256 ->
+    0 <= ctx y < 2^256 ->
+    interp (Fancy.Instr (Fancy.ADD 0) rd (x, y) cont) cc ctx =
+    interp (Fancy.Instr (Fancy.ADD 0) rd (y, x) cont) cc ctx.
+  Proof.
+    prove_comm Z.add_comm.
+    rewrite !(Z.mod_small (ctx _)) by omega.
+    reflexivity.
+  Qed.
+
+  Lemma addc_comm rd x y cont cc ctx :
+    0 <= ctx x < 2^256 ->
+    0 <= ctx y < 2^256 ->
+    interp (Fancy.Instr (Fancy.ADDC 0) rd (x, y) cont) cc ctx =
+    interp (Fancy.Instr (Fancy.ADDC 0) rd (y, x) cont) cc ctx.
+  Proof.
+    prove_comm (Z.add_comm (ctx x)).
+    rewrite !(Z.mod_small (ctx _)) by omega.
+    reflexivity.
+  Qed.
 End interp_proofs.
 
-Module ProdEquiv.
+Section ProdEquiv.
+  Context (wordmax : Z).
 
-  Definition wordmax := 2^256.
-  Definition interp256 := Fancy.interp reg_eqb (2^256) cc_spec.
+  Let interp256 := Fancy.interp reg_eqb wordmax cc_spec.
   Lemma cc_overwrite_full x1 x2 l1 cc :
     CC.update [CC.C; CC.M; CC.L; CC.Z] x2 cc_spec (CC.update l1 x1 cc_spec cc) = CC.update [CC.C; CC.M; CC.L; CC.Z] x2 cc_spec cc.
   Proof.
@@ -219,6 +260,7 @@ Module ProdEquiv.
     break_match; congruence.
   Qed.
 
+  (* TODO: these tactics seem redundant; see if they can be replaced by [step] and [remember_single_result] *)
   Ltac remember_results :=
     repeat match goal with |- context [(spec ?i ?args ?flags) mod ?w] =>
                     let x := fresh "x" in
@@ -311,57 +353,8 @@ Module ProdEquiv.
       lia. }
   Qed.
 
-  Local Ltac prove_comm H :=
-    cbv [interp256]; rewrite !interp_step; cbn - [Fancy.interp];
-    intros; rewrite H; try reflexivity.
-
-  Lemma mulll_comm rd x y cont cc ctx :
-    interp256 (Fancy.Instr Fancy.MUL128LL rd (x, y) cont) cc ctx =
-    interp256 (Fancy.Instr Fancy.MUL128LL rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
-
-  Lemma mulhh_comm rd x y cont cc ctx :
-    interp256 (Fancy.Instr Fancy.MUL128UU rd (x, y) cont) cc ctx =
-    interp256 (Fancy.Instr Fancy.MUL128UU rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
-
-  Lemma mullh_mulhl rd x y cont cc ctx :
-    interp256 (Fancy.Instr Fancy.MUL128LU rd (x, y) cont) cc ctx =
-    interp256 (Fancy.Instr Fancy.MUL128UL rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
-
-  Lemma add_comm rd x y cont cc ctx :
-    0 <= ctx x < 2^256 ->
-    0 <= ctx y < 2^256 ->
-    interp256 (Fancy.Instr (Fancy.ADD 0) rd (x, y) cont) cc ctx =
-    interp256 (Fancy.Instr (Fancy.ADD 0) rd (y, x) cont) cc ctx.
-  Proof.
-    prove_comm Z.add_comm.
-    rewrite !(Z.mod_small (ctx _)) by (cbn in *; omega).
-    reflexivity.
-  Qed.
-
-  Lemma addc_comm rd x y cont cc ctx :
-    0 <= ctx x < 2^256 ->
-    0 <= ctx y < 2^256 ->
-    interp256 (Fancy.Instr (Fancy.ADDC 0) rd (x, y) cont) cc ctx =
-    interp256 (Fancy.Instr (Fancy.ADDC 0) rd (y, x) cont) cc ctx.
-  Proof.
-    intros;
-    prove_comm (Z.add_comm (ctx x)).
-    rewrite !(Z.mod_small (ctx _)) by (cbn in *; omega).
-    reflexivity.
-  Qed.
-
-  (* Tactics to help prove that something in Fancy is line-by-line equivalent to something in PreFancy *)
-  Ltac push_value_unused :=
-    repeat match goal with
-           | |- ~ In _ _ => cbn; intuition; congruence
-           | _ => apply ProdEquiv.value_unused_overwrite
-           | _ => apply ProdEquiv.value_unused_skip; [ | congruence | ]
-           | _ => apply ProdEquiv.value_unused_ret; congruence
-           end.
-
+  (*
+  (* TODO: remove these tactics *)
   Ltac remember_single_result :=
     match goal with |- context [(Fancy.spec ?i ?args ?cc) mod ?w] =>
                     let x := fresh "x" in
@@ -391,5 +384,13 @@ Module ProdEquiv.
                     | _ => idtac
                     end
     end.
+*)
 End ProdEquiv.
 
+Ltac push_value_unused :=
+  repeat match goal with
+         | |- ~ In _ _ => cbn; intuition; congruence
+         | _ => apply value_unused_overwrite
+         | _ => apply value_unused_skip; [ | congruence | ]
+         | _ => apply value_unused_ret; congruence
+         end.

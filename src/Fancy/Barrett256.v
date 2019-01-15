@@ -46,7 +46,6 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Arithmetic.
-Require Import Crypto.Fancy.PrintingNotations.
 Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Fancy.Translation.
@@ -86,10 +85,9 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 
 Import Spec.Fancy.
-Import ProdEquiv.
+Import LanguageWf.Compilers.
 
 Module Barrett256.
-  Import LanguageWf.Compilers.
 
   Definition M := Eval lazy in (2^256-2^224+2^192+2^96-1).
   Definition machine_wordsize := 256.
@@ -115,44 +113,6 @@ Module Barrett256.
           end; lazy; try split; congruence.
   Qed.
 
-  (*
-  (* TODO: delete if unneeded *)
-  (* Note: If this is not factored out, then for some reason Qed takes forever in barrett_red256_correct_full. *)
-  Lemma barrett_red256_correct_proj2 :
-    forall x y,
-      ZRange.type.option.is_bounded_by
-        (t:=base.type.prod base.type.Z base.type.Z)
-        (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
-        (x, y) = true ->
-      type.app_curried
-          (expr.Interp (@ident.gen_interp ident.cast_outside_of_range)
-             barrett_red256) (x, (y, tt)) =
-        BarrettReduction.barrett_reduce machine_wordsize M
-             ((2 ^ (2 * machine_wordsize) / M)
-              mod 2 ^ machine_wordsize) 2 2 x y.
-  Proof.
-    intros.
-    destruct ((proj1 barrett_red256_correct) (x, (y, tt)) (x, (y, tt))).
-    { cbn; tauto. }
-    { cbn in *. rewrite andb_true_r. auto. }
-    { auto. }
-  Qed.
-  Lemma barrett_red256_correct_proj2' :
-    forall x y,
-      ZRange.type.option.is_bounded_by
-        (t:=base.type.prod base.type.Z base.type.Z)
-        (Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange, Some r[0 ~> 2 ^ machine_wordsize - 1]%zrange)
-        (x, y) = true ->
-      expr.Interp (@ident.interp) barrett_red256 x y =
-        BarrettReduction.barrett_reduce machine_wordsize M
-             ((2 ^ (2 * machine_wordsize) / M)
-              mod 2 ^ machine_wordsize) 2 2 x y.
-  Proof.
-    intros.
-    erewrite <-barrett_red256_correct_proj2 by assumption.
-    unfold type.app_curried. exact eq_refl.
-  Qed.
-*)
   Strategy -100 [type.app_curried].
   Local Arguments is_bounded_by_bool / .
   Lemma barrett_red256_correct_full  :
@@ -302,42 +262,6 @@ Module Barrett256.
     | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; omega
     | _ => assumption
     end.
-
-  Lemma barrett_red256_alloc_equivalent errorP errorR cc_start_state start_context :
-    forall x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 extra_reg,
-      NoDup [x; xHigh; RegMuLow; scratchp1; scratchp2; scratchp3; scratchp4; scratchp5; extra_reg; RegMod; RegZero] ->
-      0 <= start_context x < 2^machine_wordsize ->
-      0 <= start_context xHigh < 2^machine_wordsize ->
-      0 <= start_context RegMuLow < 2^machine_wordsize ->
-      ProdEquiv.interp256 (barrett_red256_alloc r0 r1 r30 errorP errorR) cc_start_state
-                          (fun r => if reg_eqb r r0
-                                    then start_context x
-                                    else if reg_eqb r r1
-                                         then start_context xHigh
-                                         else if reg_eqb r r30
-                                              then start_context RegMuLow
-                                              else start_context r)
-    = ProdEquiv.interp256 (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context.
-  Proof.
-    intros.
-    let r := eval compute in (2^machine_wordsize) in
-        replace (2^machine_wordsize) with r in * by reflexivity.
-    cbv [Prod.MulMod barrett_red256_alloc].
-
-    (* Extract proofs that no registers are equal to each other *)
-    repeat match goal with
-           | H : NoDup _ |- _ => inversion H; subst; clear H
-           | H : ~ In _ _ |- _ => cbv [In] in H
-           | H : ~ (_ \/ _) |- _ => apply Decidable.not_or in H; destruct H
-           | H : ~ False |- _ => clear H
-           end.
-
-    step_both_sides.
-
-    (* TODO: To prove equivalence between these two, we need to either relocate the RSHI instructions so they're in the same places or use instruction commutativity to push them down. *)
-
-  Admitted.
-
   Local Ltac results_equiv :=
     match goal with
       |- ?lhs = ?rhs =>
@@ -356,7 +280,14 @@ Module Barrett256.
       (CC.update to_write result cc_spec old_state) in
           change (CC.update to_write result cc_spec old_state) with e
     end.
-
+  Ltac remember_single_result :=
+    match goal with |- context [(Fancy.spec ?i ?args ?cc) mod ?w] =>
+                    let x := fresh "x" in
+                    let y := fresh "y" in
+                    let Heqx := fresh "Heqx" in
+                    remember (Fancy.spec i args cc) as x eqn:Heqx;
+                    remember (x mod w) as y
+    end.
   Local Ltac step :=
     match goal with
       |- interp _ _ _ (Instr ?i ?rd1 ?args1 ?cont1) ?cc1 ?ctx1 =
@@ -367,6 +298,44 @@ Module Barrett256.
     cbn - [Fancy.interp Fancy.spec cc_spec];
     repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence;
     results_equiv; [ remember_single_result; repeat simplify_cc | try reflexivity ].
+
+  Local Notation interp := (interp reg_eqb wordmax cc_spec).
+  Lemma barrett_red256_alloc_equivalent errorP errorR cc_start_state start_context :
+    forall x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 extra_reg,
+      NoDup [x; xHigh; RegMuLow; scratchp1; scratchp2; scratchp3; scratchp4; scratchp5; extra_reg; RegMod; RegZero] ->
+      0 <= start_context x < 2^machine_wordsize ->
+      0 <= start_context xHigh < 2^machine_wordsize ->
+      0 <= start_context RegMuLow < 2^machine_wordsize ->
+      interp
+        (barrett_red256_alloc r0 r1 r30 errorP errorR) cc_start_state
+                          (fun r => if reg_eqb r r0
+                                    then start_context x
+                                    else if reg_eqb r r1
+                                         then start_context xHigh
+                                         else if reg_eqb r r30
+                                              then start_context RegMuLow
+                                              else start_context r)
+    = interp (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context.
+  Proof.
+    intros.
+    let r := eval compute in (2^machine_wordsize) in
+        replace (2^machine_wordsize) with r in * by reflexivity.
+    cbv [Prod.MulMod barrett_red256_alloc].
+
+    (* Extract proofs that no registers are equal to each other *)
+    repeat match goal with
+           | H : NoDup _ |- _ => inversion H; subst; clear H
+           | H : ~ In _ _ |- _ => cbv [In] in H
+           | H : ~ (_ \/ _) |- _ => apply Decidable.not_or in H; destruct H
+           | H : ~ False |- _ => clear H
+           end.
+
+    step.
+    step.
+
+    (* TODO: To prove equivalence between these two, we need to either relocate the RSHI instructions so they're in the same places or use instruction commutativity to push them down. *)
+
+  Admitted.
 
   Lemma prod_barrett_red256_correct :
     forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
@@ -380,7 +349,7 @@ Module Barrett256.
              start_context RegZero = 0 ->
              cc_start_state.(Fancy.CC.cc_m) = cc_spec CC.M (start_context xHigh) ->
              let X := start_context x + 2^machine_wordsize * start_context xHigh in
-             ProdEquiv.interp256 (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
+             interp (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
   Proof.
     intros. subst X.
     assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; omega).
@@ -391,7 +360,6 @@ Module Barrett256.
     rewrite <-barrett_red256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
       by (auto; cbv [M muLow] in *; cbn; auto with omega).
 
-    cbv [interp256 Translation.wordmax].
     match goal with
       |- context [make_cc ?last_wrote ?ctx ?carry] =>
       let e := fresh in
