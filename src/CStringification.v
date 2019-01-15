@@ -1126,11 +1126,12 @@ Module Compilers.
                               generate these things in the first
                               place...
 
-                              N.B. We must preserve signedness of the
-                              value being shifted, because shift does
-                              not commute with mod. *)
+                              N.B. We make sure that we only
+                              left-shift unsigned values, since
+                              shifting into the sign bit is undefined
+                              behavior. *)
                        let rpre_out := match rout with
-                                       | Some rout => Some (int.union_zrange r[0~>2^offset] rout)
+                                       | Some rout => Some (int.union_zrange r[0~>2^offset] (int.unsigned_counterpart_of rout))
                                        | None => Some (int.of_zrange_relaxed r[0~>2^offset]%zrange)
                                        end in
                        let '(e', rin') := Zcast_up_if_needed rpre_out (e, rin) in
