@@ -1,91 +1,19 @@
-(* TODO: prune all these dependencies *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.derive.Derive.
 Require Import Coq.Bool.Bool.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Crypto.Util.Strings.String.
-Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
-Require Import Crypto.Algebra.Ring.
-Require Import Crypto.Algebra.SubsetoidRing.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ListUtil.FoldBool.
-Require Import Crypto.Util.LetIn.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Tactics.DestructHead.
-Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ListUtil Coq.Lists.List.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.GetGoal.
-Require Import Crypto.Util.Tactics.UniquePose.
-Require Import Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.ZUtil.Zselect.
-Require Import Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.CC.
-Require Import Crypto.Util.ZUtil.Modulo.
-Require Import Crypto.Util.ZUtil.Notations.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
-Require Import Crypto.Util.ErrorT.
-Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.Util.ZRange.Operations.
-Require Import Crypto.Util.ZRange.BasicLemmas.
-Require Import Crypto.Util.ZRange.Show.
+Require Import Coq.derive.Derive.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.
+Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
-Require Import Crypto.Fancy.Translation.
-Require Crypto.Language.
-Require Crypto.UnderLets.
-Require Crypto.AbstractInterpretation.
-Require Crypto.AbstractInterpretationProofs.
-Require Crypto.Rewriter.
-Require Crypto.MiscCompilerPasses.
-Require Crypto.CStringification.
-Require Export Crypto.PushButtonSynthesis.
+Require Import Crypto.Language. Import Language.Compilers.
+Require Import Crypto.LanguageWf.
+Require Import Crypto.PushButtonSynthesis.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.EquivModulo.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Notations.
-Import ListNotations. Local Open Scope Z_scope.
-
-Import Associational Positional.
-
-Import
-  Crypto.Language
-  Crypto.UnderLets
-  Crypto.AbstractInterpretation
-  Crypto.AbstractInterpretationProofs
-  Crypto.Rewriter
-  Crypto.MiscCompilerPasses
-  Crypto.CStringification.
-
-Import
-  Language.Compilers
-  UnderLets.Compilers
-  AbstractInterpretation.Compilers
-  AbstractInterpretationProofs.Compilers
-  Rewriter.Compilers
-  MiscCompilerPasses.Compilers
-  CStringification.Compilers.
-
-Import Compilers.defaults.
-Local Coercion Z.of_nat : nat >-> Z.
-Local Coercion QArith_base.inject_Z : Z >-> Q.
-
-Import Spec.Fancy.
-Import LanguageWf.Compilers.
+Local Open Scope Z_scope.
 
 Module Barrett256.
 
@@ -114,7 +42,7 @@ Module Barrett256.
   Qed.
 
   Strategy -100 [type.app_curried].
-  Local Arguments is_bounded_by_bool / .
+  Local Arguments ZRange.is_bounded_by_bool / .
   Lemma barrett_red256_correct_full  :
     forall (xLow xHigh : Z),
       0 <= xLow < 2 ^ machine_wordsize ->
@@ -145,9 +73,7 @@ Module Barrett256.
          As barrett_red256_fancy_eq.
   Proof.
     intros.
-    lazy - [Fancy.ADD Fancy.ADDC Fancy.SUB Fancy.SUBC
-                      Fancy.MUL128LL Fancy.MUL128LU Fancy.MUL128UL Fancy.MUL128UU
-                      Fancy.RSHI Fancy.SELC Fancy.SELM Fancy.SELL Fancy.ADDM].
+    lazy - [ADD ADDC SUB SUBC MUL128LL MUL128LU MUL128UL MUL128UU RSHI SELC SELM SELL ADDM].
     reflexivity.
   Qed.
 
@@ -185,13 +111,13 @@ Module Barrett256.
       let arg_list := [(RegxHigh, xHigh); (RegxLow, xLow)] in
       let ctx := make_ctx (consts_list ++ arg_list) in
       let carry_flag := false in (* TODO: don't rely on this value, given it's unused *)
-      let last_wrote := (fun x : Fancy.CC.code =>
+      let last_wrote := (fun x : CC.code =>
                            match x with
-                           | Fancy.CC.C => RegZero
+                           | CC.C => RegZero
                            | _ => RegxHigh (* xHigh needs to have written M; others unused *)
                            end) in
       let cc := make_cc last_wrote ctx carry_flag in
-      interp Pos.eqb wordmax Fancy.cc_spec (barrett_red256_fancy RegxLow RegxHigh RegMuLow RegMod RegZero error) cc ctx = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
+      interp Pos.eqb wordmax cc_spec (barrett_red256_fancy RegxLow RegxHigh RegMuLow RegMod RegZero error) cc ctx = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
   Proof.
     intros.
     rewrite barrett_red256_fancy_eq.
@@ -217,7 +143,7 @@ Module Barrett256.
       intuition; Prod.inversion_prod; subst; apply Z.mod_small; omega. }
     { cbn.
       repeat match goal with
-             | _ => apply expr.WfLetIn
+             | _ => apply Compilers.expr.WfLetIn
              | _ => progress wf_subgoal 
              | _ => econstructor
              end. }
@@ -232,7 +158,7 @@ Module Barrett256.
       reflexivity. }
   Admitted.
 
-  Import Fancy.Registers.
+  Import Spec.Registers.
 
   Definition barrett_red256_alloc' xLow xHigh RegMuLow :=
     fun errorP errorR =>
@@ -246,7 +172,7 @@ Module Barrett256.
                               else if n =? 1002 then RegMuLow
                                    else if n =? 1003 then RegMod
                                         else if n =? 1004 then RegZero
-                                             else errorR).
+                                             else errorR)%positive.
   Derive barrett_red256_alloc
          SuchThat (barrett_red256_alloc = barrett_red256_alloc')
          As barrett_red256_alloc_eq.
@@ -281,11 +207,11 @@ Module Barrett256.
           change (CC.update to_write result cc_spec old_state) with e
     end.
   Ltac remember_single_result :=
-    match goal with |- context [(Fancy.spec ?i ?args ?cc) mod ?w] =>
+    match goal with |- context [(spec ?i ?args ?cc) mod ?w] =>
                     let x := fresh "x" in
                     let y := fresh "y" in
                     let Heqx := fresh "Heqx" in
-                    remember (Fancy.spec i args cc) as x eqn:Heqx;
+                    remember (spec i args cc) as x eqn:Heqx;
                     remember (x mod w) as y
     end.
   Local Ltac step :=
@@ -295,7 +221,7 @@ Module Barrett256.
       rewrite (interp_step _ _ i rd1 args1 cont1);
       rewrite (interp_step _ _ i rd2 args2 cont2)
     end;
-    cbn - [Fancy.interp Fancy.spec cc_spec];
+    cbn - [interp spec cc_spec];
     repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence;
     results_equiv; [ remember_single_result; repeat simplify_cc | try reflexivity ].
 
@@ -338,7 +264,7 @@ Module Barrett256.
   Admitted.
 
   Lemma prod_barrett_red256_correct :
-    forall (cc_start_state : Fancy.CC.state) (* starting carry flags *)
+    forall (cc_start_state : CC.state) (* starting carry flags *)
            (start_context : register -> Z)   (* starting register values *)
            (x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 extra_reg : register), (* registers to use in computation *)
       NoDup [x; xHigh; RegMuLow; scratchp1; scratchp2; scratchp3; scratchp4; scratchp5; extra_reg; RegMod; RegZero] -> (* registers are unique *)
@@ -347,7 +273,7 @@ Module Barrett256.
              start_context RegMuLow = muLow ->
              start_context RegMod = M ->
              start_context RegZero = 0 ->
-             cc_start_state.(Fancy.CC.cc_m) = cc_spec CC.M (start_context xHigh) ->
+             cc_start_state.(CC.cc_m) = cc_spec CC.M (start_context xHigh) ->
              let X := start_context x + 2^machine_wordsize * start_context xHigh in
              interp (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
   Proof.
