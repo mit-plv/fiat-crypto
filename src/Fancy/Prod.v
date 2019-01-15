@@ -1,99 +1,19 @@
-(* TODO: prune all these dependencies *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.derive.Derive.
-Require Import Coq.Bool.Bool.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Crypto.Util.Strings.String.
-Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
-Require Import Crypto.Algebra.Ring.
-Require Import Crypto.Algebra.SubsetoidRing.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ListUtil.FoldBool.
-Require Import Crypto.Util.LetIn.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Tactics.DestructHead.
-Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ListUtil Coq.Lists.List.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.GetGoal.
-Require Import Crypto.Util.Tactics.UniquePose.
-Require Import Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.ZUtil.Zselect.
-Require Import Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.CC.
-Require Import Crypto.Util.ZUtil.Modulo.
-Require Import Crypto.Util.ZUtil.Notations.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
-Require Import Crypto.Util.ErrorT.
-Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.Util.ZRange.Operations.
-Require Import Crypto.Util.ZRange.BasicLemmas.
-Require Import Crypto.Util.ZRange.Show.
-Require Import Crypto.Arithmetic.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
+Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Fancy.Spec.
-Require Crypto.Language.
-Require Crypto.UnderLets.
-Require Crypto.AbstractInterpretation.
-Require Crypto.AbstractInterpretationProofs.
-Require Crypto.Rewriter.
-Require Crypto.MiscCompilerPasses.
-Require Crypto.CStringification.
-Require Import Crypto.Util.Notations.
-Import ListNotations. Local Open Scope Z_scope.
+Require Import Crypto.Fancy.Compiler.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Import Spec.Registers.
 
-Import Associational Positional.
-
-Import
-  Crypto.Language
-  Crypto.UnderLets
-  Crypto.AbstractInterpretation
-  Crypto.AbstractInterpretationProofs
-  Crypto.Rewriter
-  Crypto.MiscCompilerPasses
-  Crypto.CStringification.
-
-Import
-  Language.Compilers
-  UnderLets.Compilers
-  AbstractInterpretation.Compilers
-  AbstractInterpretationProofs.Compilers
-  Rewriter.Compilers
-  MiscCompilerPasses.Compilers
-  CStringification.Compilers.
-
-Import Compilers.defaults.
-Local Coercion Z.of_nat : nat >-> Z.
-Local Coercion QArith_base.inject_Z : Z >-> Q.
-(* Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope. *)
-
-Import UnsaturatedSolinas.
-Import Spec.Fancy. Import Registers.
-
-(* TODO : change these modules to sections *)
-Module Prod.
-  Definition Mul256 (out src1 src2 tmp : register) (cont : Fancy.expr) : Fancy.expr :=
+Section Prod.
+  Definition Mul256 (out src1 src2 tmp : register) (cont : expr) : expr :=
     Instr MUL128LL out (src1, src2)
           (Instr MUL128UL tmp (src1, src2)
                  (Instr (ADD 128) out (out, tmp)
                         (Instr MUL128LU tmp (src1, src2)
                                (Instr (ADD 128) out (out, tmp) cont)))).
-  Definition Mul256x256 (out outHigh src1 src2 tmp : register) (cont : Fancy.expr) : Fancy.expr :=
+  Definition Mul256x256 (out outHigh src1 src2 tmp : register) (cont : expr) : expr :=
     Instr MUL128LL out (src1, src2)
           (Instr MUL128UU outHigh (src1, src2)
                  (Instr MUL128UL tmp (src1, src2)
@@ -103,7 +23,7 @@ Module Prod.
                                              (Instr (ADD 128) out (out, tmp)
                                                     (Instr (ADDC (-128)) outHigh (outHigh, tmp) cont))))))).
 
-  Definition MontRed256 lo hi y t1 t2 scratch RegPInv : @Fancy.expr register :=
+  Definition MontRed256 lo hi y t1 t2 scratch RegPInv : @expr register :=
     Mul256 y lo RegPInv t1
            (Mul256x256 t1 t2 y RegMod scratch
                        (Instr (ADD 0) lo (lo, t1)
@@ -114,7 +34,7 @@ Module Prod.
                                                           (Ret lo))))))).
 
   (* Barrett reduction -- this is only the "reduce" part, excluding the initial multiplication. *)
-  Definition MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : @Fancy.expr register :=
+  Definition MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : @expr register :=
     let q1Bottom256 := scratchp1 in
     let muSelect := scratchp2 in
     let q2 := scratchp3 in
@@ -142,74 +62,10 @@ Module Prod.
                                                                                                                       (Ret x))))))))))))))).
 End Prod.
 
-(* TODO : move to Fancy *)
-Section interp_proofs.
-  Context {name} (name_eqb : name -> name -> bool) (wordmax : Z).
-  Let interp := interp name_eqb wordmax cc_spec.
-  Lemma interp_step i rd args cont cc ctx :
-    interp (Instr i rd args cont) cc ctx =
-    let result := spec i (Tuple.map ctx args) cc in
-    let new_cc := CC.update (writes_conditions i) result cc_spec cc in
-    let new_ctx := fun n => if name_eqb n rd then result mod wordmax else ctx n in interp cont new_cc new_ctx.
-  Proof. reflexivity. Qed.
-
-  Lemma interp_state_equiv e :
-    forall cc ctx cc' ctx',
-      cc = cc' -> (forall r, ctx r = ctx' r) ->
-      interp e cc ctx = interp e cc' ctx'.
-  Proof.
-    induction e; intros; subst; cbn; [solve[auto]|].
-    apply IHe; rewrite Tuple.map_ext with (g:=ctx') by auto;
-      [reflexivity|].
-    intros; break_match; auto.
-  Qed.
-  
-  Local Ltac prove_comm H :=
-    rewrite !interp_step; cbn - [Fancy.interp];
-    intros; rewrite H; try reflexivity.
-
-  Lemma mulll_comm rd x y cont cc ctx :
-    interp (Fancy.Instr Fancy.MUL128LL rd (x, y) cont) cc ctx =
-    interp (Fancy.Instr Fancy.MUL128LL rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
-
-  Lemma mulhh_comm rd x y cont cc ctx :
-    interp (Fancy.Instr Fancy.MUL128UU rd (x, y) cont) cc ctx =
-    interp (Fancy.Instr Fancy.MUL128UU rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
-
-  Lemma mullh_mulhl rd x y cont cc ctx :
-    interp (Fancy.Instr Fancy.MUL128LU rd (x, y) cont) cc ctx =
-    interp (Fancy.Instr Fancy.MUL128UL rd (y, x) cont) cc ctx.
-  Proof. prove_comm Z.mul_comm. Qed.
-
-  Lemma add_comm rd x y cont cc ctx :
-    0 <= ctx x < 2^256 ->
-    0 <= ctx y < 2^256 ->
-    interp (Fancy.Instr (Fancy.ADD 0) rd (x, y) cont) cc ctx =
-    interp (Fancy.Instr (Fancy.ADD 0) rd (y, x) cont) cc ctx.
-  Proof.
-    prove_comm Z.add_comm.
-    rewrite !(Z.mod_small (ctx _)) by omega.
-    reflexivity.
-  Qed.
-
-  Lemma addc_comm rd x y cont cc ctx :
-    0 <= ctx x < 2^256 ->
-    0 <= ctx y < 2^256 ->
-    interp (Fancy.Instr (Fancy.ADDC 0) rd (x, y) cont) cc ctx =
-    interp (Fancy.Instr (Fancy.ADDC 0) rd (y, x) cont) cc ctx.
-  Proof.
-    prove_comm (Z.add_comm (ctx x)).
-    rewrite !(Z.mod_small (ctx _)) by omega.
-    reflexivity.
-  Qed.
-End interp_proofs.
-
 Section ProdEquiv.
   Context (wordmax : Z).
 
-  Let interp256 := Fancy.interp reg_eqb wordmax cc_spec.
+  Let interp256 := interp reg_eqb wordmax cc_spec.
   Lemma cc_overwrite_full x1 x2 l1 cc :
     CC.update [CC.C; CC.M; CC.L; CC.Z] x2 cc_spec (CC.update l1 x1 cc_spec cc) = CC.update [CC.C; CC.M; CC.L; CC.Z] x2 cc_spec cc.
   Proof.
@@ -260,21 +116,6 @@ Section ProdEquiv.
     break_match; congruence.
   Qed.
 
-  (* TODO: these tactics seem redundant; see if they can be replaced by [step] and [remember_single_result] *)
-  Ltac remember_results :=
-    repeat match goal with |- context [(spec ?i ?args ?flags) mod ?w] =>
-                    let x := fresh "x" in
-                    let y := fresh "y" in
-                    let Heqx := fresh "Heqx" in
-                    remember (spec i args flags) as x eqn:Heqx;
-                    remember (x mod w) as y
-           end.
-
-  Ltac do_interp_step :=
-    rewrite interp_step; cbn - [interp spec];
-    repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence;
-    remember_results.
-
   Lemma interp_Mul256 out src1 src2 tmp tmp2 cont cc ctx:
     out <> src1 ->
     out <> src2 ->
@@ -288,7 +129,7 @@ Section ProdEquiv.
     tmp <> tmp2 ->
     value_unused tmp cont ->
     value_unused tmp2 cont ->
-    interp256 (Prod.Mul256 out src1 src2 tmp cont) cc ctx =
+    interp256 (Mul256 out src1 src2 tmp cont) cc ctx =
     interp256 (
         Instr MUL128LU tmp (src1, src2)
               (Instr MUL128UL tmp2 (src1, src2)
@@ -296,16 +137,20 @@ Section ProdEquiv.
                                  (Instr (ADD 128) out (out, tmp2)
                                         (Instr (ADD 128) out (out, tmp) cont))))) cc ctx.
   Proof.
-    intros; cbv [Prod.Mul256 interp256].
-    repeat (do_interp_step; cbn [spec MUL128LL MUL128UL MUL128LU ADD] in * ).
+    intros; cbv [Mul256 interp256].
+    repeat
+      (rewrite interp_step; cbn - [interp spec cc_spec];
+       rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence;
+       remember_single_result;
+       cbn [spec MUL128LL MUL128LU MUL128UL ADD] in *).
 
     match goal with H : value_unused tmp _ |- _ => erewrite H end.
     match goal with H : value_unused tmp2 _ |- _ => erewrite H end.
     apply interp_state_equiv.
     { rewrite !cc_overwrite_full.
-      f_equal. subst. lia. }
+      f_equal; subst; lia. }
     { intros; cbv [reg_eqb].
-      repeat (break_match_step ltac:(fun _ => idtac); try congruence); reflexivity. }
+      break_innermost_match; try congruence; reflexivity. }
   Qed.
 
   Lemma interp_Mul256x256 out outHigh src1 src2 tmp tmp2 cont cc ctx:
@@ -326,7 +171,7 @@ Section ProdEquiv.
     tmp <> tmp2 ->
     value_unused tmp cont ->
     value_unused tmp2 cont ->
-    interp256 (Prod.Mul256x256 out outHigh src1 src2 tmp cont) cc ctx =
+    interp256 (Mul256x256 out outHigh src1 src2 tmp cont) cc ctx =
     interp256 (
         Instr MUL128LL out (src1, src2)
               (Instr MUL128LU tmp (src1, src2)
@@ -337,54 +182,26 @@ Section ProdEquiv.
                                                  (Instr (ADD 128) out (out, tmp)
                                                         (Instr (ADDC (-128)) outHigh (outHigh, tmp) cont)))))))) cc ctx.
   Proof.
-    intros; cbv [Prod.Mul256x256 interp256].
-    repeat (do_interp_step; cbn [spec MUL128LL MUL128UL MUL128LU MUL128UU ADD ADDC] in * ).
+    intros; cbv [Mul256x256 interp256].
+    repeat
+      (rewrite interp_step; cbn - [interp spec cc_spec];
+       rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence;
+       remember_single_result;
+       cbn [spec MUL128LL MUL128LU MUL128UL MUL128UU ADD ADDC] in *).
 
     match goal with H : value_unused tmp _ |- _ => erewrite H end.
     match goal with H : value_unused tmp2 _ |- _ => erewrite H end.
     apply interp_state_equiv.
     { rewrite !cc_overwrite_full.
       f_equal.
-      subst. cbn - [Z.add Z.modulo Z.testbit Z.mul Z.shiftl Fancy.lower128 Fancy.upper128].
+      subst. cbn - [Z.add Z.modulo Z.testbit Z.mul Z.shiftl lower128 upper128].
       lia. }
     { intros; cbv [reg_eqb].
-      repeat (break_match_step ltac:(fun _ => idtac); try congruence); try reflexivity; [ ].
-      subst. cbn - [Z.add Z.modulo Z.testbit Z.mul Z.shiftl Fancy.lower128 Fancy.upper128].
+      break_innermost_match; try congruence; try reflexivity; [ ].
+      subst. cbn - [Z.add Z.modulo Z.testbit Z.mul Z.shiftl lower128 upper128].
       lia. }
   Qed.
 
-  (*
-  (* TODO: remove these tactics *)
-  Ltac remember_single_result :=
-    match goal with |- context [(Fancy.spec ?i ?args ?cc) mod ?w] =>
-                    let x := fresh "x" in
-                    let y := fresh "y" in
-                    let Heqx := fresh "Heqx" in
-                    remember (Fancy.spec i args cc) as x eqn:Heqx;
-                    remember (x mod w) as y
-    end.
-  Ltac step_both_sides :=
-    match goal with |- ProdEquiv.interp256 (Fancy.Instr ?i ?rd1 ?args1 _) _ ?ctx1 = ProdEquiv.interp256 (Fancy.Instr ?i ?rd2 ?args2 _) _ ?ctx2 =>
-                    rewrite (interp_step reg_eqb wordmax i rd1 args1); rewrite (interp_step reg_eqb wordmax i rd2 args2);
-                    cbn - [Fancy.interp Fancy.spec];
-                    repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence;
-                    remember_single_result;
-                    lazymatch goal with
-                    | |- context [Fancy.spec i _ _] =>
-                      let Heqa1 := fresh in
-                      let Heqa2 := fresh in
-                      remember (Tuple.map (n:=i.(Fancy.num_source_regs)) ctx1 args1) eqn:Heqa1;
-                      remember (Tuple.map (n:=i.(Fancy.num_source_regs)) ctx2 args2) eqn:Heqa2;
-                      cbn in Heqa1; cbn in Heqa2;
-                      repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl in Heqa1 by congruence;
-                      repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl in Heqa2 by congruence;
-                      let a1 := match type of Heqa1 with _ = ?a1 => a1 end in
-                      let a2 := match type of Heqa2 with _ = ?a2 => a2 end in
-                      (fail 1 "arguments to " i " do not match; LHS has " a1 " and RHS has " a2)
-                    | _ => idtac
-                    end
-    end.
-*)
 End ProdEquiv.
 
 Ltac push_value_unused :=
