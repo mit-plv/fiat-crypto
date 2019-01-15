@@ -1,94 +1,18 @@
-(* TODO: prune all these dependencies *)
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
-Require Import Coq.derive.Derive.
 Require Import Coq.Bool.Bool.
-Require Import Coq.Strings.String.
-Require Import Coq.Lists.List.
-Require Crypto.Util.Strings.String.
-Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
-Require Import Crypto.Algebra.Ring.
-Require Import Crypto.Algebra.SubsetoidRing.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ListUtil.FoldBool.
-Require Import Crypto.Util.LetIn.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Tactics.DestructHead.
-Require Import Crypto.Util.Tuple.
-Require Import Crypto.Util.ListUtil Coq.Lists.List.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.GetGoal.
-Require Import Crypto.Util.Tactics.UniquePose.
-Require Import Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.ZUtil.Zselect.
-Require Import Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.CC.
-Require Import Crypto.Util.ZUtil.Modulo.
-Require Import Crypto.Util.ZUtil.Notations.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
-Require Import Crypto.Util.ErrorT.
-Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.Util.ZRange.Operations.
-Require Import Crypto.Util.ZRange.BasicLemmas.
-Require Import Crypto.Util.ZRange.Show.
-Require Import Crypto.Arithmetic.
+Require Import Coq.derive.Derive.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.Lists.List. Import ListNotations.
+Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
-Require Import Crypto.Fancy.Translation.
-Require Crypto.Language.
-Require Crypto.UnderLets.
-Require Crypto.AbstractInterpretation.
-Require Crypto.AbstractInterpretationProofs.
-Require Crypto.Rewriter.
-Require Crypto.MiscCompilerPasses.
-Require Crypto.CStringification.
-Require Export Crypto.PushButtonSynthesis.
+Require Import Crypto.Language. Import Language.Compilers.
+Require Import Crypto.LanguageWf.
+Require Import Crypto.PushButtonSynthesis.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.EquivModulo.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Notations.
-Import ListNotations. Local Open Scope Z_scope.
-
-Import Associational Positional.
-
-Import
-  Crypto.Language
-  Crypto.UnderLets
-  Crypto.AbstractInterpretation
-  Crypto.AbstractInterpretationProofs
-  Crypto.Rewriter
-  Crypto.MiscCompilerPasses
-  Crypto.CStringification.
-
-Import
-  Language.Compilers
-  UnderLets.Compilers
-  AbstractInterpretation.Compilers
-  AbstractInterpretationProofs.Compilers
-  Rewriter.Compilers
-  MiscCompilerPasses.Compilers
-  CStringification.Compilers.
-
-Import Compilers.defaults.
-Local Coercion Z.of_nat : nat >-> Z.
-Local Coercion QArith_base.inject_Z : Z >-> Q.
-(* Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope. *)
-
-Import UnsaturatedSolinas.
-
-Import Spec.Fancy.
-Import LanguageWf.Compilers.
+Local Open Scope Z_scope.
 
 Module Montgomery256.
 
@@ -118,7 +42,7 @@ Module Montgomery256.
   Qed.
 
   Strategy -100 [type.app_curried].
-  Local Arguments is_bounded_by_bool / .
+  Local Arguments ZRange.is_bounded_by_bool / .
   Lemma montred256_correct_full  R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
       0 <= lo < R ->
@@ -137,6 +61,7 @@ Module Montgomery256.
       generalize MontgomeryReduction.montred'; vm_compute; reflexivity. }
   Qed.
 
+
   Definition montred256_fancy' (RegMod RegPInv RegZero lo hi error : positive) :=
     of_Expr 6%positive
             (make_consts [(RegMod, N); (RegZero, 0); (RegPInv, N')])
@@ -150,9 +75,7 @@ Module Montgomery256.
   Proof.
     intros.
     cbv [montred256_fancy'].
-    lazy - [Fancy.ADD Fancy.ADDC Fancy.SUB
-                      Fancy.MUL128LL Fancy.MUL128LU Fancy.MUL128UL Fancy.MUL128UU
-                      Fancy.RSHI Fancy.SELC Fancy.SELM Fancy.SELL Fancy.ADDM].
+    lazy - [ADD ADDC SUB MUL128LL MUL128LU MUL128UL MUL128UU RSHI SELC SELM SELL ADDM].
     reflexivity.
   Qed.
 
@@ -191,9 +114,9 @@ Module Montgomery256.
       let arg_list := [(RegHi, hi); (RegLo, lo)] in
       let ctx := make_ctx (consts_list ++ arg_list) in
       let carry_flag := false in
-      let last_wrote := (fun x : Fancy.CC.code => RegZero) in
+      let last_wrote := (fun x : CC.code => RegZero) in
       let cc := make_cc last_wrote ctx carry_flag in
-      interp Pos.eqb wordmax Fancy.cc_spec (montred256_fancy RegMod RegPInv RegZero RegLo RegHi error) cc ctx = ((lo + R * hi) * R') mod N.
+      interp Pos.eqb wordmax cc_spec (montred256_fancy RegMod RegPInv RegZero RegLo RegHi error) cc ctx = ((lo + R * hi) * R') mod N.
   Proof.
     intros.
     rewrite montred256_fancy_eq.
@@ -216,7 +139,7 @@ Module Montgomery256.
       intuition; Prod.inversion_prod; subst; apply Z.mod_small; omega. }
     { cbn.
       repeat match goal with
-             | _ => apply expr.WfLetIn
+             | _ => apply Compilers.expr.WfLetIn
              | _ => progress wf_subgoal 
              | _ => econstructor
              end. }
@@ -231,7 +154,7 @@ Module Montgomery256.
       reflexivity. }
   Admitted.
 
-  Import Fancy.Registers.
+  Import Spec.Registers.
 
   Definition montred256_alloc' lo hi RegPInv :=
     fun errorP errorR =>
@@ -245,7 +168,7 @@ Module Montgomery256.
                               else if n =? 1002 then RegZero
                                    else if n =? 1003 then lo
                                         else if n =? 1004 then hi
-                                                 else errorR).
+                                                 else errorR)%positive.
   Derive montred256_alloc
          SuchThat (montred256_alloc = montred256_alloc')
          As montred256_alloc_eq.
@@ -256,49 +179,12 @@ Module Montgomery256.
     reflexivity.
   Qed.
 
-  (* TODO: also factor out these tactics *)
-  Local Ltac solve_bounds :=
+  (* TODO: could this be simplified? *)
+  Ltac solve_bounds :=
     match goal with
     | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; omega
     | _ => assumption
     end.
-  Local Ltac results_equiv :=
-    match goal with
-      |- ?lhs = ?rhs =>
-      match lhs with
-        context [spec ?li ?largs ?lcc] =>
-        match rhs with
-          context [spec ?ri ?rargs ?rcc] =>
-          replace (spec li largs lcc) with (spec ri rargs rcc)
-        end
-      end
-    end.
-  Local Ltac simplify_cc :=
-    match goal with
-      |- context [CC.update ?to_write ?result ?cc_spec ?old_state] =>
-      let e := eval cbv -[spec cc_spec CC.cc_l CC.cc_m CC.cc_z CC.cc_c] in
-      (CC.update to_write result cc_spec old_state) in
-          change (CC.update to_write result cc_spec old_state) with e
-    end.
-  Ltac remember_single_result :=
-    match goal with |- context [(Fancy.spec ?i ?args ?cc) mod ?w] =>
-                    let x := fresh "x" in
-                    let y := fresh "y" in
-                    let Heqx := fresh "Heqx" in
-                    remember (Fancy.spec i args cc) as x eqn:Heqx;
-                    remember (x mod w) as y
-    end.
-  Local Ltac step :=
-    match goal with
-      |- interp _ _ _ (Instr ?i ?rd1 ?args1 ?cont1) ?cc1 ?ctx1 =
-         interp _ _ _ (Instr ?i ?rd2 ?args2 ?cont2) ?cc2 ?ctx2 =>
-      rewrite (interp_step _ _ i rd1 args1 cont1);
-      rewrite (interp_step _ _ i rd2 args2 cont2)
-    end;
-    cbn - [Fancy.interp Fancy.spec cc_spec];
-    repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence;
-    results_equiv; [ remember_single_result; repeat simplify_cc | try reflexivity ].
-
   Local Notation interp := (interp reg_eqb wordmax cc_spec).
   Lemma montred256_alloc_equivalent errorP errorR cc_start_state start_context :
     forall lo hi y t1 t2 scratch RegPInv extra_reg,
@@ -357,7 +243,7 @@ Module Montgomery256.
 
 
   Lemma prod_montred256_correct :
-    forall (cc_start_state : Fancy.CC.state) (* starting carry flags can be anything *)
+    forall (cc_start_state : CC.state) (* starting carry flags can be anything *)
            (start_context : register -> Z)   (* starting register values *)
            (lo hi y t1 t2 scratch RegPInv extra_reg : register), (* registers to use in computation *)
       NoDup [lo; hi; y; t1; t2; scratch; RegPInv; extra_reg; RegMod; RegZero] -> (* registers must be distinct *)
