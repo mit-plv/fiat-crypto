@@ -2938,10 +2938,10 @@ Module MontgomeryReduction.
     Let w_mul : nat -> Z := weight (Zlog2R / n) 1.
     Context (nout : nat) (Hnout : nout = 2%nat).
 
-    Definition montred' (lo_hi : (Z * Z)) :=
-      dlet_nd y := nth_default 0 (BaseConversion.widemul_inlined Zlog2R n nout (fst lo_hi) N') 0  in
+    Definition montred' (lo hi : Z) :=
+      dlet_nd y := nth_default 0 (BaseConversion.widemul_inlined Zlog2R n nout lo N') 0  in
       dlet_nd t1_t2 := (BaseConversion.widemul_inlined_reverse Zlog2R n nout N y) in
-      dlet_nd sum_carry := Rows.add (weight Zlog2R 1) 2 [fst lo_hi; snd lo_hi] t1_t2 in
+      dlet_nd sum_carry := Rows.add (weight Zlog2R 1) 2 [lo;hi] t1_t2 in
       dlet_nd y' := Z.zselect (snd sum_carry) 0 N in
       dlet_nd lo''_carry := Z.sub_get_borrow_full R (nth_default 0 (fst sum_carry) 1) y' in
       Z.add_modulo (fst lo''_carry) 0 N.
@@ -2972,9 +2972,9 @@ Module MontgomeryReduction.
     Hint Rewrite BaseConversion.widemul_inlined_reverse_correct BaseConversion.widemul_inlined_correct
          using (autorewrite with widemul push_nth_default; solve [solve_range]) : widemul.
 
-    Lemma montred'_eq lo_hi T (HT_range: 0 <= T < R * N)
-          (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R):
-      montred' lo_hi = reduce_via_partial N R N' T.
+    Lemma montred'_eq lo hi T (HT_range: 0 <= T < R * N)
+          (Hlo: lo = T mod R) (Hhi: hi = T / R):
+      montred' lo hi = reduce_via_partial N R N' T.
     Proof.
       rewrite <-reduce_via_partial_alt_eq by nia.
       cbv [montred' partial_reduce_alt reduce_via_partial_alt prereduce Let_In].
@@ -3006,8 +3006,8 @@ Module MontgomeryReduction.
                end.
     Qed.
 
-    Lemma montred'_correct lo_hi T (HT_range: 0 <= T < R * N)
-          (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R): montred' lo_hi = (T * R') mod N.
+    Lemma montred'_correct lo hi T (HT_range: 0 <= T < R * N)
+          (Hlo: lo = T mod R) (Hhi: hi = T / R): montred' lo hi = (T * R') mod N.
     Proof.
       erewrite montred'_eq by eauto.
       apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
@@ -3074,7 +3074,7 @@ Module MontgomeryReduction.
            possible_values
            (reified_montred_gen
               @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify (Z.log2 R) @ GallinaReify.Reify 2%nat @ GallinaReify.Reify 2%nat)
-           ((bound, bound), tt)
+           (bound, (bound, tt))
            bound.
 
     Definition smontred (prefix : string)
@@ -3107,7 +3107,7 @@ Lemma montred_correct res
 
     Definition rmontred_correct
       := BoundsPipeline_correct
-           ((bound, bound), tt)
+           (bound, (bound, tt))
            bound
            (montred' N R N' (Z.log2 R) 2 2).
 
