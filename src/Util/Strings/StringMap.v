@@ -1,4 +1,3 @@
-Require Import Coq.FSets.FMapInterface.
 Require Import Coq.FSets.FMapList.
 Require Import Coq.Structures.OrderedType.
 Require Import Coq.Strings.String.
