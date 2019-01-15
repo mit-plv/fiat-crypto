@@ -41,7 +41,7 @@ static void fiat_p521_addcarryx_u30(uint32_t* out1, fiat_p521_uint1* out2, fiat_
  */
 static void fiat_p521_subborrowx_u30(uint32_t* out1, fiat_p521_uint1* out2, fiat_p521_uint1 arg1, uint32_t arg2, uint32_t arg3) {
   int32_t x1 = ((int32_t)(arg2 - arg1) - (int32_t)arg3);
-  fiat_p521_int1 x2 = (fiat_p521_int1)((uint32_t)x1 >> 30);
+  fiat_p521_int1 x2 = (fiat_p521_int1)((int64_t)x1 >> 30);
   uint32_t x3 = (x1 & UINT32_C(0x3fffffff));
   *out1 = x3;
   *out2 = (fiat_p521_uint1)(0x0 - x2);
@@ -75,7 +75,7 @@ static void fiat_p521_addcarryx_u31(uint32_t* out1, fiat_p521_uint1* out2, fiat_
  */
 static void fiat_p521_subborrowx_u31(uint32_t* out1, fiat_p521_uint1* out2, fiat_p521_uint1 arg1, uint32_t arg2, uint32_t arg3) {
   int32_t x1 = ((int32_t)(arg2 - arg1) - (int32_t)arg3);
-  fiat_p521_int1 x2 = (fiat_p521_int1)((uint32_t)x1 >> 31);
+  fiat_p521_int1 x2 = (fiat_p521_int1)((int64_t)x1 >> 31);
   uint32_t x3 = (x1 & UINT32_C(0x7fffffff));
   *out1 = x3;
   *out2 = (fiat_p521_uint1)(0x0 - x2);
@@ -1200,7 +1200,7 @@ static void fiat_p521_to_bytes(uint8_t out1[66], const uint32_t arg1[17]) {
   uint8_t x130 = (uint8_t)(x127 & UINT8_C(0xff));
   uint8_t x131 = (uint8_t)(x129 >> 8);
   uint8_t x132 = (uint8_t)(x129 & UINT8_C(0xff));
-  fiat_p521_uint1 x133 = (fiat_p521_uint1)(x131 >> 8);
+  fiat_p521_uint1 x133 = (fiat_p521_uint1)((int64_t)x131 >> 8);
   uint8_t x134 = (uint8_t)(x131 & UINT8_C(0xff));
   uint32_t x135 = (x133 + x48);
   uint32_t x136 = (x135 >> 8);
@@ -1252,7 +1252,7 @@ static void fiat_p521_to_bytes(uint8_t out1[66], const uint32_t arg1[17]) {
   uint8_t x182 = (uint8_t)(x179 & UINT8_C(0xff));
   uint8_t x183 = (uint8_t)(x181 >> 8);
   uint8_t x184 = (uint8_t)(x181 & UINT8_C(0xff));
-  fiat_p521_uint1 x185 = (fiat_p521_uint1)(x183 >> 8);
+  fiat_p521_uint1 x185 = (fiat_p521_uint1)((int64_t)x183 >> 8);
   uint8_t x186 = (uint8_t)(x183 & UINT8_C(0xff));
   uint32_t x187 = (x185 + x60);
   uint32_t x188 = (x187 >> 8);

@@ -46,7 +46,7 @@ static void fiat_p224_addcarryx_u64(uint64_t* out1, fiat_p224_uint1* out2, fiat_
  */
 static void fiat_p224_subborrowx_u64(uint64_t* out1, fiat_p224_uint1* out2, fiat_p224_uint1 arg1, uint64_t arg2, uint64_t arg3) {
   fiat_p224_int128 x1 = ((arg2 - (fiat_p224_int128)arg1) - arg3);
-  fiat_p224_int1 x2 = (fiat_p224_int1)((fiat_p224_uint128)x1 >> 64);
+  fiat_p224_int1 x2 = (fiat_p224_int1)((fiat_p224_int256)x1 >> 64);
   uint64_t x3 = (uint64_t)(x1 & UINT64_C(0xffffffffffffffff));
   *out1 = x3;
   *out2 = (fiat_p224_uint1)(0x0 - x2);
@@ -1183,7 +1183,7 @@ static void fiat_p224_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
   uint8_t x16 = (uint8_t)(x13 & UINT8_C(0xff));
   uint8_t x17 = (uint8_t)(x15 >> 8);
   uint8_t x18 = (uint8_t)(x15 & UINT8_C(0xff));
-  fiat_p224_uint1 x19 = (fiat_p224_uint1)(x17 >> 8);
+  fiat_p224_uint1 x19 = (fiat_p224_uint1)((int64_t)x17 >> 8);
   uint8_t x20 = (uint8_t)(x17 & UINT8_C(0xff));
   uint64_t x21 = (x19 + x3);
   uint64_t x22 = (x21 >> 8);
@@ -1200,7 +1200,7 @@ static void fiat_p224_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
   uint8_t x33 = (uint8_t)(x30 & UINT8_C(0xff));
   uint8_t x34 = (uint8_t)(x32 >> 8);
   uint8_t x35 = (uint8_t)(x32 & UINT8_C(0xff));
-  fiat_p224_uint1 x36 = (fiat_p224_uint1)(x34 >> 8);
+  fiat_p224_uint1 x36 = (fiat_p224_uint1)((int64_t)x34 >> 8);
   uint8_t x37 = (uint8_t)(x34 & UINT8_C(0xff));
   uint64_t x38 = (x36 + x2);
   uint64_t x39 = (x38 >> 8);
@@ -1217,7 +1217,7 @@ static void fiat_p224_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
   uint8_t x50 = (uint8_t)(x47 & UINT8_C(0xff));
   uint8_t x51 = (uint8_t)(x49 >> 8);
   uint8_t x52 = (uint8_t)(x49 & UINT8_C(0xff));
-  fiat_p224_uint1 x53 = (fiat_p224_uint1)(x51 >> 8);
+  fiat_p224_uint1 x53 = (fiat_p224_uint1)((int64_t)x51 >> 8);
   uint8_t x54 = (uint8_t)(x51 & UINT8_C(0xff));
   uint64_t x55 = (x53 + x1);
   uint64_t x56 = (x55 >> 8);
@@ -1226,13 +1226,13 @@ static void fiat_p224_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
   uint8_t x59 = (uint8_t)(x56 & UINT8_C(0xff));
   uint8_t x60 = (uint8_t)(x58 >> 8);
   uint8_t x61 = (uint8_t)(x58 & UINT8_C(0xff));
-  fiat_p224_uint1 x62 = (fiat_p224_uint1)(x60 >> 8);
+  fiat_p224_uint1 x62 = (fiat_p224_uint1)((int64_t)x60 >> 8);
   uint8_t x63 = (uint8_t)(x60 & UINT8_C(0xff));
-  fiat_p224_uint1 x64 = (fiat_p224_uint1)(x62 >> 8);
+  fiat_p224_uint1 x64 = (fiat_p224_uint1)((int64_t)x62 >> 8);
   fiat_p224_uint1 x65 = (fiat_p224_uint1)(x62 & UINT8_C(0xff));
-  fiat_p224_uint1 x66 = (fiat_p224_uint1)(x64 >> 8);
+  fiat_p224_uint1 x66 = (fiat_p224_uint1)((int64_t)x64 >> 8);
   fiat_p224_uint1 x67 = (fiat_p224_uint1)(x64 & UINT8_C(0xff));
-  fiat_p224_uint1 x68 = (fiat_p224_uint1)(x66 >> 8);
+  fiat_p224_uint1 x68 = (fiat_p224_uint1)((int64_t)x66 >> 8);
   fiat_p224_uint1 x69 = (fiat_p224_uint1)(x66 & UINT8_C(0xff));
   out1[0] = x6;
   out1[1] = x8;

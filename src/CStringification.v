@@ -646,6 +646,9 @@ Module Compilers.
 
         Definition union (t1 t2 : type) : type := of_zrange_relaxed (ZRange.union (to_zrange t1) (to_zrange t2)).
 
+        Definition union_zrange (r : zrange) (t : type) : type
+          := of_zrange_relaxed (ZRange.union r (to_zrange t)).
+
         Fixpoint base_interp (t : base.type) : Set
           := match t with
              | base.type.Z => type
@@ -1100,8 +1103,12 @@ Module Compilers.
                               behavior to shift >= width of the type.
                               We should probably figure out how to not
                               generate these things in the first
-                              place... *)
-                       let '(e', rin') := Zcast_up_if_needed (Some (int.of_zrange_relaxed r[0~>2^offset]%zrange)) (e, rin) in
+                              place...
+
+                              N.B. We must preserve signedness of the
+                              value being shifted, because shift does
+                              not commute with mod. *)
+                       let '(e', rin') := Zcast_up_if_needed (option_map (int.union_zrange r[0~>2^offset]%zrange) rin) (e, rin) in
                        ret (cast_down_if_needed rout (Z_shiftr offset @@ e', rin'))
                      | None => inr ["Invalid right-shift by a non-literal"]%string
                      end
@@ -1117,11 +1124,14 @@ Module Compilers.
                               behavior to shift >= width of the type.
                               We should probably figure out how to not
                               generate these things in the first
-                              place... *)
-                       let rpre_out := int.of_zrange_relaxed r[0~>2^offset]%zrange in
+                              place...
+
+                              N.B. We must preserve signedness of the
+                              value being shifted, because shift does
+                              not commute with mod. *)
                        let rpre_out := match rout with
-                                       | Some rout => Some (ToString.C.int.union rout rpre_out)
-                                       | None => Some rpre_out
+                                       | Some rout => Some (int.union_zrange r[0~>2^offset] rout)
+                                       | None => Some (int.of_zrange_relaxed r[0~>2^offset]%zrange)
                                        end in
                        let '(e', rin') := Zcast_up_if_needed rpre_out (e, rin) in
                        ret (cast_down_if_needed rout (Z_shiftl offset @@ e', rin'))
