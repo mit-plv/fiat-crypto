@@ -950,6 +950,126 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            | None => None
            end
        | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0))
+         (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t1 idc1) x2) =>
+           args <- invert_bind_args idc1 Raw.ident.Z_cast;
+           args0 <- invert_bind_args idc0 Raw.ident.Literal;
+           _ <- invert_bind_args idc Raw.ident.Z_add;
+           match
+             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
+               ((projT1 args0) -> s1)%ptype option (fun x3 : option => x3)
+           with
+           | Some (_, _)%zrange =>
+               if
+                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
+                  ((projT1 args0) -> s1)%ptype
+               then
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                v <- type.try_make_transport_cps s1 ℤ;
+                fv <- (x3 <- (if
+                               ((let (x3, _) := xv in x3) =? 0) &&
+                               (ZRange.normalize args <=?
+                                ZRange.normalize range)%zrange
+                              then
+                               Some
+                                 (#(Z_cast args)%expr @
+                                  v (Compile.reflect x2))%expr_pat
+                              else None);
+                       Some (Base x3));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
+               else None
+           | None => None
+           end
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0)) (@expr.App _ _ _ s1 _ ($_)%expr _) |
+         @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0))
+         (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _) | @expr.App _ _ _ s
+         _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0))
+         (@expr.App _ _ _ s1 _ (_ @ _)%expr_pat _) | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0))
+         (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) => None
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0)) #(_)%expr_pat | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0)) ($_)%expr | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0)) (@expr.Abs _ _ _ _ _ _) | @expr.App _
+         _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Ident _ _ _ t0 idc0)) (@expr.LetIn _ _ _ _ _ _ _) => None
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t0 idc0) x2))
+         (@expr.Ident _ _ _ t1 idc1) =>
+           args <- invert_bind_args idc1 Raw.ident.Literal;
+           args0 <- invert_bind_args idc0 Raw.ident.Z_cast;
+           _ <- invert_bind_args idc Raw.ident.Z_add;
+           match
+             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
+               (s1 -> (projT1 args))%ptype option (fun x3 : option => x3)
+           with
+           | Some (_, _)%zrange =>
+               if
+                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
+                  (s1 -> (projT1 args))%ptype
+               then
+                v <- type.try_make_transport_cps s1 ℤ;
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (x3 <- (if
+                               ((let (x3, _) := xv in x3) =? 0) &&
+                               (ZRange.normalize args0 <=?
+                                ZRange.normalize range)%zrange
+                              then
+                               Some
+                                 (#(Z_cast args0)%expr @
+                                  v (Compile.reflect x2))%expr_pat
+                              else None);
+                       Some (Base x3));
+                Some (fv0 <-- fv;
+                      Base fv0)%under_lets
+               else None
+           | None => None
+           end
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t0 idc0) x2)) ($_)%expr |
+         @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t0 idc0) x2))
+         (@expr.Abs _ _ _ _ _ _) | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t0 idc0) x2))
+         (_ @ _)%expr_pat | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t0 idc0) x2))
+         (@expr.LetIn _ _ _ _ _ _ _) => None
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ ($_)%expr _)) _ | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _)) _ | @expr.App _ _
+         _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (_ @ _)%expr_pat _)) _ | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _)) _ => None
+       | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) ($_)%expr) _ |
+         @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.Abs _ _ _ _ _ _)) _ | @expr.App _ _ _ s _
+         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc)
+          (@expr.LetIn _ _ _ _ _ _ _)) _ => None
+       | @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _
           (@expr.App _ _ _ s1 _ (@expr.Ident _ _ _ t idc) x2) x1) x0 =>
            _ <- invert_bind_args idc Raw.ident.Z_add_with_carry;
@@ -985,8 +1105,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          _ | @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _
           (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
-       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(_)%expr_pat _) _ |
-         @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
+       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
          _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
          @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => None

@@ -1793,6 +1793,13 @@ Module Compilers.
             ; make_rewriteo (??') (fun r v => ##(lower r)  when  lower r =? upper r)
 
             ; make_rewriteo
+                (#?ℤ   +' ??')
+                (fun rp z rv v => cst rv v  when  (z =? 0) && (ZRange.normalize rv <=? ZRange.normalize rp)%zrange)
+            ; make_rewriteo
+                (??' +' #?ℤ  )
+                (fun rp rv v z => cst rv v  when  (z =? 0) && (ZRange.normalize rv <=? ZRange.normalize rp)%zrange)
+
+            ; make_rewriteo
                 (#?ℤ   - (-'??'))
                 (fun z rnv rv v => cst rv v  when  (z =? 0) && (ZRange.normalize rv <=? -ZRange.normalize rnv)%zrange)
             ; make_rewriteo (#?ℤ   -   ?? ) (fun z v => -v  when  z =? 0)
