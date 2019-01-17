@@ -97,7 +97,6 @@ Global Arguments orelse {A%type} (parse parse')%parse s%string.
 
 Local Open Scope parse_scope.
 Notation "a <- parse_A ; parse_B" := (bind_parse parse_A%parse (fun a => parse_B%parse)) : parse_scope.
-Notation "?" := maybe_parse : parse_scope.
 Infix "||" := orelse : parse_scope.
 
 Fixpoint parse_Z (s : string) : option (Z * string)
