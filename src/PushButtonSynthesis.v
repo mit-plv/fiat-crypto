@@ -2833,10 +2833,8 @@ Module BarrettReduction.
     Let muLow := mu mod (2 ^ machine_wordsize).
     Let consts_list := [M; muLow].
 
-    (* We include [0], so that even after bounds relaxation, we can
-       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [0; 1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
     Let possible_values := possible_values_of_machine_wordsize.
 
     Definition check_args {T} (res : Pipeline.ErrorT T)
@@ -3036,10 +3034,8 @@ Module MontgomeryReduction.
     Let bound := Some value_range.
     Let consts_list := [N; N'].
 
-    (* We include [0], so that even after bounds relaxation, we can
-       notice where the constant 0s are, and remove them. *)
     Definition possible_values_of_machine_wordsize
-      := [0; 1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
+      := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
     Local Arguments possible_values_of_machine_wordsize / .
 
     Let possible_values := possible_values_of_machine_wordsize.
