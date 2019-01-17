@@ -8,7 +8,7 @@ Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Language. Import Language.Compilers.
 Require Import Crypto.LanguageWf.
-Require Import Crypto.PushButtonSynthesis.
+Require Import Crypto.PushButtonSynthesis.BarrettReduction.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -144,7 +144,7 @@ Module Barrett256.
     { cbn.
       repeat match goal with
              | _ => apply Compilers.expr.WfLetIn
-             | _ => progress wf_subgoal 
+             | _ => progress wf_subgoal
              | _ => econstructor
              end. }
     { cbn. cbv [muLow M].
@@ -299,7 +299,7 @@ Module Barrett256.
     repeat match goal with
              H : context [start_context] |- _ =>
              rewrite <-H end.
-    
+
     cbv [barrett_red256_alloc barrett_red256_fancy].
     repeat step.
     reflexivity.

@@ -7,7 +7,6 @@ Require Import Coq.Strings.String.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.HexString.
-Require Import Crypto.PushButtonSynthesis.
 Require Import Crypto.CLI.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope string_scope.

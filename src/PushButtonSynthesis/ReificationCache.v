@@ -26,10 +26,13 @@ Definition is_reification_of' {t} (e : Expr t) (v : type.interp base.interp t) :
   := pointwise_equal (Interp e) v /\ Wf e.
 
 Notation is_reification_of rop op
-  := (ltac:(let T := constr:(@is_reification_of' (reify_type_of op) rop op) in
-            let T := (eval cbv [pointwise_equal is_reification_of'] in T) in
-            let T := (eval cbn [type.interp base.interp base.base_interp] in T) in
-            exact T))
+  := (match @is_reification_of' (reify_type_of op) rop op with
+      | T
+        => ltac:(
+             let T := (eval cbv [pointwise_equal is_reification_of' T] in T) in
+             let T := (eval cbn [type.interp base.interp base.base_interp] in T) in
+             exact T)
+      end)
        (only parsing).
 
 Ltac cache_reify _ :=

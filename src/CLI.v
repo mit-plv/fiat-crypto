@@ -9,7 +9,9 @@ Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.PushButtonSynthesis.
+Require Crypto.PushButtonSynthesis.SaturatedSolinas.
+Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Import Crypto.CStringification.
 Require Import Crypto.BoundsPipeline.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
