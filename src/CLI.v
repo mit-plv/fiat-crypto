@@ -27,17 +27,24 @@ Module ForExtraction.
                  else (s, 1)
        | _ => (s, 1)
        end.
-  Definition parse_N (s : string) : N
-    := DecimalHelpers.N.of_uint (DecimalHelpers.String.to_uint s).
-  Definition parse_Z (s : string) : Z
-    := let '(s, sgn) := parse_neg s in
-       sgn * Z.of_N (parse_N s).
-  Definition parse_nat (s : string) : nat
-    := N.to_nat (parse_N s).
+  Definition parse_Z (s : string) : option Z
+    := z <- ParseArithmetic.parse_Z s;
+         match snd z with
+         | EmptyString => Some (fst z)
+         | _ => None
+         end.
+  Definition parse_N (s : string) : option N
+    := match parse_Z s with
+       | Some Z0 => Some N0
+       | Some (Zpos p) => Some (Npos p)
+       | _ => None
+       end.
+  Definition parse_nat (s : string) : option nat
+    := option_map N.to_nat (parse_N s).
   Definition parse_Q (s : string) : option Q
     := match List.map parse_Z (String.split "/" s) with
-       | [num;Zpos den] => Some (Qmake num den)
-       | [num] => Some (Qmake num 1)
+       | [Some num;Some (Zpos den)] => Some (Qmake num den)
+       | [Some num] => Some (Qmake num 1)
        | _ => None
        end.
   Definition parse_bool (s : string) : option bool
@@ -47,16 +54,16 @@ Module ForExtraction.
             then Some false
             else None.
 
-  Definition parse_n (n : string) : nat
+  Definition parse_n (n : string) : option nat
     := parse_nat n.
 
   Definition parse_pow (s : string) : option Z
     := let '(s, sgn) := parse_neg s in
        match String.split "^" s with
        | v::nil
-         => Some (sgn * parse_Z v)
+         => v <- parse_Z v; Some (sgn * v)
        | b::e::nil
-         => Some (sgn * parse_Z b ^ parse_Z e)
+         => b <- parse_Z b; e <- parse_Z e; Some (sgn * b ^ e)
        | _ => None
        end.
 
@@ -81,7 +88,7 @@ Module ForExtraction.
          (Some nil)
          (List.map (String.split ",") (String.split ";" s)).
 
-  Definition parse_machine_wordsize (s : string) : Z
+  Definition parse_machine_wordsize (s : string) : option Z
     := parse_Z s.
   Definition parse_m (s : string) : option Z
     := parseZ_arith s.
@@ -139,6 +146,59 @@ Module ForExtraction.
          ++ String.NewLine ++
        "                            Valid options are " ++ valid_names.
 
+  Record > Dyn := dyn { dyn_ty : Type ; dyn_val :> option dyn_ty }.
+  Arguments dyn {_} _.
+
+  Fixpoint parse_resultL' (acc : Type) (ls : list (string (* name *) * string (* string value *) * Dyn))
+    : Type
+    := match ls with
+       | nil => acc
+       | cons (_, _, {| dyn_ty := T |}) ls'
+         => parse_resultL' (acc * T) ls'
+       end.
+  Definition parse_resultL (ls : list (string (* name *) * string (* string value *) * Dyn))
+    := match ls return Type with
+       | nil => unit
+       | cons (_, _, {| dyn_ty := T |}) ls'
+         => parse_resultL' T ls' + list string
+       end%type.
+
+  Fixpoint parse_many' {accT : Type} (acc : accT)
+           (ls : list (string (* name *) * string (* string value *) * Dyn))
+    : parse_resultL' accT ls + list string
+    := match ls return parse_resultL' accT ls + list string with
+       | nil => inl acc
+       | cons (_, _, {| dyn_val := Some v |}) ls'
+         => @parse_many' _ (acc, v) ls'
+       | cons (name, str_val, {| dyn_val := None |}) ls'
+         => let err_ls := match @parse_many' _ tt ls' with
+                          | inl _ => nil
+                          | inr err_ls => err_ls
+                          end in
+            inr ((name ++ " (" ++ str_val ++ ")")%string :: err_ls)
+       end.
+
+  Definition parse_many
+             (ls : list (string (* name *) * string (* string value *) * Dyn))
+    : parse_resultL ls
+    := let transform_err T (v : T + list string)
+           := match v with
+              | inl v => inl v
+              | inr nil => inr ["Internal Error: Parse failure without an error message"]
+              | inr ls => inr ["Could not parse " ++ String.concat " nor " ls]
+              end%string in
+       match ls with
+       | nil => tt
+       | cons (_, _, {| dyn_val := Some v |}) ls'
+         => transform_err _ (@parse_many' _ v ls')
+       | cons (name, str_val, {| dyn_val := None |}) ls'
+         => let err_ls := match @parse_many' _ tt ls' with
+                          | inl _ => nil
+                          | inr err_ls => err_ls
+                          end in
+            transform_err _ (inr ((name ++ " (" ++ str_val ++ ")")%string :: err_ls))
+       end.
+
   Module UnsaturatedSolinas.
     Definition PipelineLines
                (curve_description : string)
@@ -150,20 +210,16 @@ Module ForExtraction.
     : list (string * Pipeline.ErrorT (list string)) + list string
       := let prefix := ("fiat_" ++ curve_description ++ "_")%string in
          let str_n := n in
-         let n : nat := parse_n n in
          let str_machine_wordsize := machine_wordsize in
          let str_c := c in
          let str_s := s in
-         let machine_wordsize := parse_machine_wordsize machine_wordsize in
          let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-         match parse_s s, parse_c c with
-         | None, None
-           => inr ["Could not parse s (" ++ s ++ ") nor c (" ++ c ++ ")"]
-         | None, _
-           => inr ["Could not parse s (" ++ s ++ ")"]
-         | _, None
-           => inr ["Could not parse c (" ++ c ++ ")"]
-         | Some s, Some c
+         match parse_many [("n", n, parse_n n:Dyn)
+                           ; ("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
+                           ; ("s", s, parse_s s:Dyn)
+                           ; ("c", c, parse_c c:Dyn)] with
+         | inr errs => inr errs
+         | inl (n, machine_wordsize, s, c)
            => let '(res, types_used)
                  := UnsaturatedSolinas.Synthesize n s c machine_wordsize prefix requests in
              let header :=
@@ -259,12 +315,11 @@ Module ForExtraction.
       := let prefix := ("fiat_" ++ curve_description ++ "_")%string in
          let str_machine_wordsize := machine_wordsize in
          let str_m := m in
-         let machine_wordsize := parse_machine_wordsize machine_wordsize in
          let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-         match parse_m m with
-         | None
-           => inr ["Could not parse m (" ++ m ++ ")"]
-         | Some m
+         match parse_many [("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn);
+                             ("m", m, parse_m m:Dyn)] with
+         | inr errs => inr errs
+         | inl (machine_wordsize, m)
            => let '(res, types_used)
                   := WordByWordMontgomery.Synthesize m machine_wordsize prefix requests in
              let header :=
@@ -359,16 +414,12 @@ Module ForExtraction.
          let str_machine_wordsize := machine_wordsize in
          let str_c := c in
          let str_s := s in
-         let machine_wordsize := parse_machine_wordsize machine_wordsize in
          let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-         match parse_s s, parse_c c with
-         | None, None
-           => inr ["Could not parse s (" ++ s ++ ") nor c (" ++ c ++ ")"]
-         | None, _
-           => inr ["Could not parse s (" ++ s ++ ")"]
-         | _, None
-           => inr ["Could not parse c (" ++ c ++ ")"]
-         | Some s, Some c
+         match parse_many [("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
+                           ; ("s", s, parse_s s:Dyn)
+                           ; ("c", c, parse_c c:Dyn)] with
+         | inr errs => inr errs
+         | inl (machine_wordsize, s, c)
            => let '(res, types_used)
                  := SaturatedSolinas.Synthesize s c machine_wordsize prefix requests in
              let header :=
