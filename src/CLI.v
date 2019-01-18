@@ -142,7 +142,7 @@ Module ForExtraction.
   Definition machine_wordsize_help
     := "  machine_wordsize        The machine bitwidth (e.g., 32 or 64)".
   Definition function_to_synthesize_help (valid_names : string)
-    := "  function_to_synthesize  A list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
+    := "  function_to_synthesize  A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
          ++ String.NewLine ++
        "                            Valid options are " ++ valid_names.
 
