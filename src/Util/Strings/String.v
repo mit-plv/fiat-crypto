@@ -283,4 +283,7 @@ Proof.
   {
 Abort.
 
+Definition replace (from to s : string) : string
+  := concat to (split from s).
+
 Notation NewLine := (String Ascii.NewLine "").
