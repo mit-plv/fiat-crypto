@@ -293,7 +293,8 @@ Module ForExtraction.
                error
          | nil => error ["empty argv"]
          | prog::args
-           => error ["Expected arguments curve_description, n, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog;
+           => error ["USAGE: " ++ prog ++ " curve_description n s c machine_wordsize [function_to_synthesize*]";
+                       "Got " ++ show false (List.length args) ++ " arguments.";
                        "";
                        curve_description_help;
                        n_help;
@@ -394,7 +395,8 @@ Module ForExtraction.
                error
          | nil => error ["empty argv"]
          | prog::args
-           => error ["Expected arguments curve_description, m, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog;
+           => error ["USAGE: " ++ prog ++ " curve_description m machine_wordsize [function_to_synthesize*]";
+                       "Got " ++ show false (List.length args) ++ " arguments";
                        "";
                        curve_description_help;
                        m_help;
@@ -490,7 +492,8 @@ Module ForExtraction.
                error
          | nil => error ["empty argv"]
          | prog::args
-           => error ["Expected arguments curve_description, s, c, machine_wordsize, [function_to_synthesize*] got " ++ show false (List.length args) ++ " arguments in " ++ prog;
+           => error ["USAGE: " ++ prog ++ " curve_description s c machine_wordsize [function_to_synthesize*]";
+                       "Got " ++ show false (List.length args) ++ " arguments";
                        "";
                        curve_description_help;
                        s_help;
