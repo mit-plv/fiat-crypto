@@ -62,6 +62,9 @@ Module Compilers.
     Lemma arith_with_casts_rewrite_head_eq : @arith_with_casts_rewrite_head = @arith_with_casts_rewrite_head0.
     Proof. reflexivity. Qed.
 
+    Lemma strip_literal_casts_rewrite_head_eq : (fun var do_again => @strip_literal_casts_rewrite_head var) = @strip_literal_casts_rewrite_head0.
+    Proof. reflexivity. Qed.
+
     Lemma nbe_all_rewrite_rules_eq : @nbe_all_rewrite_rules = @nbe_rewrite_rules.
     Proof. reflexivity. Qed.
 
@@ -75,6 +78,9 @@ Module Compilers.
     Proof. reflexivity. Qed.
 
     Lemma arith_with_casts_all_rewrite_rules_eq : @arith_with_casts_all_rewrite_rules = @arith_with_casts_rewrite_rules.
+    Proof. reflexivity. Qed.
+
+    Lemma strip_literal_casts_all_rewrite_rules_eq : @strip_literal_casts_all_rewrite_rules = @strip_literal_casts_rewrite_rules.
     Proof. reflexivity. Qed.
 
     Section good.
@@ -353,6 +359,13 @@ Module Compilers.
 
       Lemma arith_with_casts_rewrite_rules_good
         : rewrite_rules_goodT arith_with_casts_rewrite_rules arith_with_casts_rewrite_rules.
+      Proof using Type.
+        Time start_good.
+        Time all: repeat good_t_step.
+      Qed.
+
+      Lemma strip_literal_casts_rewrite_rules_good
+        : rewrite_rules_goodT strip_literal_casts_rewrite_rules strip_literal_casts_rewrite_rules.
       Proof using Type.
         Time start_good.
         Time all: repeat good_t_step.

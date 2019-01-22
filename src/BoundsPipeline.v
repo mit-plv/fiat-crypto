@@ -311,6 +311,7 @@ Module Pipeline.
                       => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range E
                     | None => E
                     end in
+           let E := RewriteRules.RewriteStripLiteralCasts E in
            Success E
       | inr (inl (b, E))
         => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
