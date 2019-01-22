@@ -743,6 +743,13 @@ Module Compilers.
         Time all: try solve [ repeat interp_good_t_step_related; repeat interp_good_t_step_arith; fin_with_nia ].
       Qed.
 
+      Lemma strip_literal_casts_rewrite_rules_interp_good
+        : rewrite_rules_interp_goodT strip_literal_casts_rewrite_rules.
+      Proof using Type.
+        Time start_interp_good.
+        Time all: try solve [ repeat interp_good_t_step_related; repeat interp_good_t_step_arith ].
+      Qed.
+
       Local Ltac fancy_local_t :=
         repeat match goal with
                | [ H : forall s v v', ?invert_low s v = Some v' -> v = _,
