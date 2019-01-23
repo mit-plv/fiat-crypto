@@ -2206,3 +2206,185 @@ Proof using Type.
                       | [ IH : forall n : nat, _, H : forall v1, nth_error ?l ?n = Some v1 -> _ |- _ ] => specialize (IH n H)
                       end ].
 Qed.
+
+Fixpoint remove_duplicates' {A} (beq : A -> A -> bool) (ls : list A) : list A
+  := match ls with
+     | nil => nil
+     | cons x xs => if existsb (beq x) xs
+                    then @remove_duplicates' A beq xs
+                    else x :: @remove_duplicates' A beq xs
+     end.
+Definition remove_duplicates {A} (beq : A -> A -> bool) (ls : list A) : list A
+  := List.rev (remove_duplicates' beq (List.rev ls)).
+
+Lemma InA_remove_duplicates'
+      {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      {R_Transitive : Transitive R}
+      (A_bl : forall x y, A_beq x y = true -> R x y)
+      (ls : list A)
+  : forall x, InA R x (remove_duplicates' A_beq ls) <-> InA R x ls.
+Proof using Type.
+  induction ls as [|x xs IHxs]; intro y; [ reflexivity | ].
+  cbn [remove_duplicates']; break_innermost_match;
+    rewrite ?InA_cons, IHxs; [ | reflexivity ].
+  split; [ now auto | ].
+  intros [?|?]; subst; auto; [].
+  rewrite existsb_exists in *.
+  destruct_head'_ex; destruct_head'_and.
+  match goal with H : _ |- _ => apply A_bl in H end.
+  rewrite InA_alt.
+  eexists; split; [ | eassumption ].
+  etransitivity; eassumption.
+Qed.
+
+Lemma InA_remove_duplicates
+      {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      {R_Transitive : Transitive R}
+      (A_bl : forall x y, A_beq x y = true -> R x y)
+      (ls : list A)
+  : forall x, InA R x (remove_duplicates A_beq ls) <-> InA R x ls.
+Proof using Type.
+  cbv [remove_duplicates]; intro.
+  rewrite InA_rev, InA_remove_duplicates', InA_rev; auto; reflexivity.
+Qed.
+
+Lemma InA_eq_In_iff {A} x ls
+  : InA eq x ls <-> @List.In A x ls.
+Proof using Type.
+  rewrite InA_alt.
+  repeat first [ progress destruct_head'_and
+               | progress destruct_head'_ex
+               | progress subst
+               | solve [ eauto ]
+               | apply conj
+               | progress intros ].
+Qed.
+
+Lemma NoDupA_eq_NoDup {A} ls
+  : @NoDupA A eq ls <-> NoDup ls.
+Proof using Type.
+  split; intro H; induction H; constructor; eauto;
+    (idtac + rewrite <- InA_eq_In_iff + rewrite InA_eq_In_iff); assumption.
+Qed.
+
+Lemma in_remove_duplicates'
+      {A} (A_beq : A -> A -> bool) (A_bl : forall x y, A_beq x y = true -> x = y)
+      (ls : list A)
+  : forall x, List.In x (remove_duplicates' A_beq ls) <-> List.In x ls.
+Proof using Type.
+  intro x; rewrite <- !InA_eq_In_iff; apply InA_remove_duplicates'; eauto; exact _.
+Qed.
+
+Lemma in_remove_duplicates
+      {A} (A_beq : A -> A -> bool) (A_bl : forall x y, A_beq x y = true -> x = y)
+      (ls : list A)
+  : forall x, List.In x (remove_duplicates A_beq ls) <-> List.In x ls.
+Proof using Type.
+  intro x; rewrite <- !InA_eq_In_iff; apply InA_remove_duplicates; eauto; exact _.
+Qed.
+
+Lemma NoDupA_remove_duplicates' {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      {R_Transitive : Transitive R}
+      (A_lb : forall x y, A_beq x y = true -> R x y)
+      (A_bl : forall x y, R x y -> A_beq x y = true)
+      (ls : list A)
+  : NoDupA R (remove_duplicates' A_beq ls).
+Proof using Type.
+  induction ls as [|x xs IHxs]; [ now constructor | ].
+  cbn [remove_duplicates']; break_innermost_match; [ assumption | constructor; auto ]; [].
+  intro H'.
+  cut (false = true); [ discriminate | ].
+  match goal with H : _ = false |- _ => rewrite <- H end.
+  rewrite existsb_exists in *.
+  rewrite InA_remove_duplicates' in H' by eauto.
+  rewrite InA_alt in H'.
+  destruct_head'_ex; destruct_head'_and.
+  eauto.
+Qed.
+
+Lemma NoDupA_remove_duplicates {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      {R_Equivalence : Equivalence R}
+      (A_lb : forall x y, A_beq x y = true -> R x y)
+      (A_bl : forall x y, R x y -> A_beq x y = true)
+      (ls : list A)
+  : NoDupA R (remove_duplicates A_beq ls).
+Proof using Type.
+  cbv [remove_duplicates].
+  apply NoDupA_rev; [ assumption | ].
+  apply NoDupA_remove_duplicates'; auto; exact _.
+Qed.
+
+Lemma NoDup_remove_duplicates' {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      (A_lb : forall x y, A_beq x y = true -> x = y)
+      (A_bl : forall x y, x = y -> A_beq x y = true)
+      (ls : list A)
+  : NoDup (remove_duplicates' A_beq ls).
+Proof using Type.
+  apply NoDupA_eq_NoDup, NoDupA_remove_duplicates'; auto; exact _.
+Qed.
+
+Lemma NoDup_remove_duplicates {A} (A_beq : A -> A -> bool)
+      (A_lb : forall x y, A_beq x y = true -> x = y)
+      (A_bl : forall x y, x = y -> A_beq x y = true)
+      (ls : list A)
+  : NoDup (remove_duplicates A_beq ls).
+Proof using Type.
+  apply NoDupA_eq_NoDup, NoDupA_remove_duplicates; auto; exact _.
+Qed.
+
+Lemma remove_duplicates'_eq_NoDupA {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      (A_lb : forall x y, A_beq x y = true -> R x y)
+      (ls : list A)
+  : NoDupA R ls -> remove_duplicates' A_beq ls = ls.
+Proof using Type.
+  intro H; induction H as [|x xs H0 H1 IHxs]; [ reflexivity | ].
+  cbn [remove_duplicates'].
+  rewrite IHxs.
+  repeat first [ break_innermost_match_step
+               | reflexivity
+               | progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress rewrite existsb_exists in *
+               | progress rewrite InA_alt in *
+               | match goal with
+                 | [ H : ~(exists x, and _ _) |- _ ]
+                   => specialize (fun x H0 H1 => H (ex_intro _ x (conj H0 H1)))
+                 end
+               | solve [ exfalso; eauto ] ].
+Qed.
+
+Lemma remove_duplicates_eq_NoDupA {A} (A_beq : A -> A -> bool)
+      (R : A -> A -> Prop)
+      {R_equiv : Equivalence R}
+      (A_lb : forall x y, A_beq x y = true -> R x y)
+      (ls : list A)
+  : NoDupA R ls -> remove_duplicates A_beq ls = ls.
+Proof using Type.
+  cbv [remove_duplicates]; intro.
+  erewrite remove_duplicates'_eq_NoDupA by (eauto + apply NoDupA_rev; eauto).
+  rewrite rev_involutive; reflexivity.
+Qed.
+
+Lemma remove_duplicates'_eq_NoDup {A} (A_beq : A -> A -> bool)
+      (A_lb : forall x y, A_beq x y = true -> x = y)
+      (ls : list A)
+  : NoDup ls -> remove_duplicates' A_beq ls = ls.
+Proof using Type.
+  intro H; apply remove_duplicates'_eq_NoDupA with (R:=eq); eauto.
+  now apply NoDupA_eq_NoDup.
+Qed.
+
+Lemma remove_duplicates_eq_NoDup {A} (A_beq : A -> A -> bool)
+      (A_lb : forall x y, A_beq x y = true -> x = y)
+      (ls : list A)
+  : NoDup ls -> remove_duplicates A_beq ls = ls.
+Proof using Type.
+  intro H; apply remove_duplicates_eq_NoDupA with (R:=eq); eauto; try exact _.
+  now apply NoDupA_eq_NoDup.
+Qed.
