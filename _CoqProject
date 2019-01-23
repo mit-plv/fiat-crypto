@@ -44,6 +44,7 @@ src/RewriterWf2.v
 src/SlowPrimeSynthesisExamples.v
 src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v
+src/TAPSort.v
 src/UnderLets.v
 src/UnderLetsProofs.v
 src/Algebra/Field.v

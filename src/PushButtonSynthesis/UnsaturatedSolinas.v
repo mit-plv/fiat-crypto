@@ -6,6 +6,7 @@ Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
 Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Require Import Coq.derive.Derive.
+Require Crypto.TAPSort.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.
@@ -72,7 +73,35 @@ Section __.
           (machine_wordsize : Z).
 
   Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
-  Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
+  (** Translating from https://github.com/mit-plv/fiat-crypto/blob/c60b1d2556a72c37f4bc7444204e9ddc0791ce4f/src/Specific/solinas64_2e448m2e224m1_8limbs/CurveParameters.v#L11-L35
+<<
+if len(p) > 2:
+    # do interleaved carry chains, starting at where the taps are
+    starts = [(int(t[1] / (num_bits(p) / sz)) - 1) % sz for t in p[1:]]
+    chain2 = []
+    for n in range(1,sz):
+        for j in starts:
+            chain2.append((j + n) % sz)
+    chain2 = remove_duplicates(chain2)
+    chain3 = list(map(lambda x:(x+1)%sz,starts))
+    carry_chains = [starts,chain2,chain3]
+else:
+    carry_chains = "default"
+>> *)
+  (* p is [(value, weight)]; c is [(weight, value)] *)
+  Let p := [(s / 2^Z.log2 s, Z.log2 s)] ++ TAPSort.sort (List.map (fun '(w, v) => (-v, Z.log2 w)) c).
+  Let idxs : list nat
+    := if (2 <? List.length p)%nat
+       then (* do interleaved carry chains, starting at where the taps are *)
+         let starts := List.map (fun '((v, w) : Z * Z) => (Qfloor (w / limbwidth) - 1) mod n) (tl p) in
+         let chain2 := flat_map
+                         (fun n' : nat
+                          => List.map (fun j => (j + n') mod n) starts)
+                         (List.seq 1 (pred n)) in
+         let chain2 := remove_duplicates Z.eqb chain2 in
+         let chain3 := List.map (fun x => (x + 1) mod n) starts in
+         List.map Z.to_nat (starts ++ chain2 ++ chain3)
+       else (List.seq 0 n ++ [0; 1])%list%nat.
   Let coef := 2.
   Let n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
   Let prime_upperbound_list : list Z
