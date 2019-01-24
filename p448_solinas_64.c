@@ -6,6 +6,9 @@
 /* c = [(26959946667150639794667015087019630673637144422540572481103610249216, 1), (1, 1)] (from "2^224,1;1,1") */
 /* machine_wordsize = 64 (from "64") */
 
+/* Computed values: */
+/* carry_chain = [3, 7, 4, 0, 5, 1, 6, 2, 7, 3, 4, 0] */
+
 #include <stdint.h>
 typedef unsigned char fiat_p448_uint1;
 typedef signed char fiat_p448_int1;

@@ -6,6 +6,9 @@
 /* c = [(1, 19)] (from "1,19") */
 /* machine_wordsize = 32 (from "32") */
 
+/* Computed values: */
+/* carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1] */
+
 #include <stdint.h>
 typedef unsigned char fiat_25519_uint1;
 typedef signed char fiat_25519_int1;
