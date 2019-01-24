@@ -369,15 +369,16 @@ Section __.
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-    Definition Synthesize (function_name_prefix : string) (requests : list string)
-      : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+    Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
+      : list string (* comment header *) * list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
       := let ls := match requests with
                    | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
                    | requests => List.map (synthesize_of_name function_name_prefix) requests
                    end in
          let infos := aggregate_infos ls in
          let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
-         (extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
+         (comment_header,
+          extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
           PositiveSet.union extra_bit_widths (ToString.C.bitwidths_used infos)).
   End for_stringification.
 End __.

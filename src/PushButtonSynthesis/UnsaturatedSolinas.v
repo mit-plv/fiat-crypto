@@ -13,6 +13,7 @@ Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -623,9 +624,12 @@ else:
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (function_name_prefix : string) (requests : list string)
-      : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+      : list string * list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
+           ["/* Computed values: */";
+              "/* carry_chain = " ++ show false idxs ++ " */";
+              ""]%string
            function_name_prefix requests.
   End for_stringification.
 End __.
