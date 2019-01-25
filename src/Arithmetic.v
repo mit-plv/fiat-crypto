@@ -178,6 +178,47 @@ Module Associational.
     autorewrite with zsimplify_const; rewrite eval_split; trivial.
   Qed.
 
+  (* reduce at most [n] times, stopping early if the high list is nil at any point *)
+  Definition repeat_reduce (n : nat) (s:Z) (c:list _) (p:list _) : list (Z * Z)
+    := nat_rect
+         _
+         (fun p => p)
+         (fun n' repeat_reduce_n' p
+          => let lo_hi := split s p in
+             if (length (snd lo_hi) =? 0)%nat
+             then p
+             else let p := fst lo_hi ++ mul c (snd lo_hi) in
+                  repeat_reduce_n' p)
+         n
+         p.
+
+  Lemma repeat_reduce_S_step n s c p
+    : repeat_reduce (S n) s c p
+      = if (length (snd (split s p)) =? 0)%nat
+        then p
+        else repeat_reduce n s c (reduce s c p).
+  Proof using Type. cbv [repeat_reduce]; cbn [nat_rect]; break_innermost_match; auto. Qed.
+
+  Lemma eval_repeat_reduce n s c p (s_nz:s<>0) (modulus_nz:s-eval c<>0) :
+    eval (repeat_reduce n s c p) mod (s - eval c) = eval p mod (s - eval c).
+  Proof using Type.
+    revert p; induction n as [|n IHn]; intro p; [ reflexivity | ];
+      rewrite repeat_reduce_S_step; break_innermost_match;
+        [ reflexivity | rewrite IHn ].
+    now rewrite eval_reduce.
+  Qed.
+  Hint Rewrite eval_repeat_reduce : push_eval.
+
+  Lemma eval_repeat_reduce_adjusted n s c p w c' (s_nz:s<>0) (modulus_nz:s-eval c<>0)
+        (w_mod:w mod s = 0) (w_nz:w <> 0) (Hc' : eval c' = (w / s) * eval c) :
+    eval (repeat_reduce n w c' p) mod (s - eval c) = eval p mod (s - eval c).
+  Proof using Type.
+    revert p; induction n as [|n IHn]; intro p; [ reflexivity | ];
+      rewrite repeat_reduce_S_step; break_innermost_match;
+        [ reflexivity | rewrite IHn ].
+    now rewrite eval_reduce_adjusted.
+  Qed.
+
   (*
   Definition splitQ (s:Q) (p:list (Z*Z)) : list (Z*Z) * list (Z*Z)
     := let hi_lo := partition (fun t => (fst t * Zpos (Qden s)) mod (Qnum s) =? 0) p in
@@ -789,7 +830,7 @@ Module Positional.
       := let a_a := to_associational n a in
          let b_a := to_associational n b in
          let ab_a := Associational.mul a_a b_a in
-         let abm_a := Associational.reduce s c ab_a in
+         let abm_a := Associational.repeat_reduce n s c ab_a in
          from_associational n abm_a.
     Lemma eval_mulmod n (f g:list Z)
           (Hf : length f = n) (Hg : length g = n) :
@@ -797,13 +838,14 @@ Module Positional.
       = (eval n f * eval n g) mod (s - Associational.eval c).
     Proof using m_nz s_nz weight_0 weight_nz. cbv [mulmod]; push; trivial.
     destruct f, g; simpl in *; [ right; subst n | left; try omega.. ].
-    clear; cbv -[Associational.reduce].
+    clear; cbv -[Associational.repeat_reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
 
     Definition squaremod (n:nat) (a:list Z) : list Z
       := let a_a := to_associational n a in
          let aa_a := Associational.reduce_square s c a_a in
-         from_associational n aa_a.
+         let aam_a := Associational.repeat_reduce (pred n) s c aa_a in
+         from_associational n aam_a.
     Lemma eval_squaremod n (f:list Z)
           (Hf : length f = n) :
       eval n (squaremod n f) mod (s - Associational.eval c)
