@@ -1,15 +1,146 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.QArith.QArith.
+Require Import Coq.QArith.Qround.
 Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
+Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.CStringification.
+Require Import Crypto.BoundsPipeline.
 
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
-Import UnsaturatedSolinas.
+Import
+  Language.Compilers
+  CStringification.Compilers.
+
+Import Language.Compilers.defaults.
+
+Import Associational Positional.
+
+Local Coercion Z.of_nat : nat >-> Z.
+Local Coercion QArith_base.inject_Z : Z >-> Q.
+Local Coercion Z.pos : positive >-> Z.
+
+Section debugging_p448.
+  Context (n : nat := 8%nat)
+          (s : Z := 2^448)
+          (c : list (Z * Z) := [(2^224,1);(1,1)])
+          (machine_wordsize : Z := 64).
+
+  Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
+  Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
+
+  Definition possible_values_of_machine_wordsize
+    := [0; machine_wordsize; 2 * machine_wordsize]%Z.
+
+  Let possible_values := possible_values_of_machine_wordsize.
+
+
+  Let prime_upperbound_list : list Z
+    := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+  Let tight_upperbounds : list Z
+    := List.map
+         (fun v : Z => Qceiling (11/10 * v))
+         prime_upperbound_list.
+  Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
+    := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
+  Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
+    := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
+
+
+  Let limbwidth_num := Eval vm_compute in Qnum limbwidth.
+  Let limbwidth_den := Eval vm_compute in QDen limbwidth.
+
+  Set Printing Depth 100000.
+  Local Open Scope string_scope.
+  Print squaremod.
+  Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify (fun f
+                              => (  (squaremod (weight limbwidth_num limbwidth_den) s c n f)
+                                    )) in
+              exact r)
+               (Some (repeat (@None _) n), tt)
+               ZRange.type.base.option.None).
+
+  Time Compute
+       Pipeline.BoundsPipelineToStrings
+       true (* static *)
+       "" (* prefix *)
+       "mul"
+       [] (* comment *)
+       false (* subst01 *)
+       None (* fancy *)
+       possible_values
+       ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
+             exact r)
+              (Some loose_bounds, (Some loose_bounds, tt))
+              (Some tight_bounds).
+
+  Time Compute
+       Pipeline.BoundsPipeline
+       false (* subst01 *)
+       None (* fancy *)
+       possible_values
+       ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
+             exact r)
+              (Some loose_bounds, (Some loose_bounds, tt))
+              (Some tight_bounds).
+
+  Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
+              exact r)
+               (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+               ZRange.type.base.option.None).
+
+  Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n []%nat)) in
+              exact r)
+               (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+               ZRange.type.base.option.None).
+
+  Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify (fun f g
+                              => (  (mulmod (weight limbwidth_num limbwidth_den) s c n f g)
+                                    )) in
+              exact r)
+               (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+               ZRange.type.base.option.None).
+
+  Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify (fun a b
+                              => (let weight := weight limbwidth_num limbwidth_den in
+                                  let a_a := to_associational weight n a in
+                                  let b_a := to_associational weight n b in
+                                  let ab_a := mul a_a b_a in
+                                  let abm_a := reduce s c ab_a in
+                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := reduce s c abm_a in
+                                  from_associational weight n abm_a
+
+                                    )) in
+              exact r)
+               (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+               ZRange.type.base.option.None).
+End debugging_p448.
 
 (* TODO: Figure out what examples should go here *)
 (*
