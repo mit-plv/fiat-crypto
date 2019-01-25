@@ -1143,6 +1143,7 @@ Module Compilers.
         | Nat.succ => then_tac Nat_succ
         | Nat.add => then_tac Nat_add
         | Nat.sub => then_tac Nat_sub
+        | Nat.eqb => then_tac Nat_eqb
         | Nat.mul => then_tac Nat_mul
         | Nat.max => then_tac Nat_max
         | Nat.pred => then_tac Nat_pred
