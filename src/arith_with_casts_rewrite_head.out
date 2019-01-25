@@ -7,6 +7,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | Nat_mul => fun x x0 : expr ℕ => Base (#(Nat_mul)%expr @ x @ x0)%expr_pat
 | Nat_add => fun x x0 : expr ℕ => Base (#(Nat_add)%expr @ x @ x0)%expr_pat
 | Nat_sub => fun x x0 : expr ℕ => Base (#(Nat_sub)%expr @ x @ x0)%expr_pat
+| Nat_eqb => fun x x0 : expr ℕ => Base (#(Nat_eqb)%expr @ x @ x0)%expr_pat
 | @nil t => Base []%expr_pat
 | @cons t => fun (x : expr t) (x0 : expr (list t)) => Base (x :: x0)%expr_pat
 | @pair A B => fun (x : expr A) (x0 : expr B) => Base (x, x0)%expr_pat

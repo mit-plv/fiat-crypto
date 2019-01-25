@@ -377,6 +377,7 @@ Module Compilers.
              | ident.Nat_mul as idc
              | ident.Nat_add as idc
              | ident.Nat_sub as idc
+             | ident.Nat_eqb as idc
              | ident.List_seq as idc
                => fun x y => x <- x; y <- y; rSome (ident.interp idc x y)
              | ident.List_repeat _

@@ -211,6 +211,7 @@ Module Compilers.
              | ident.Nat_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " *ℕ " ++ y 39%nat), ZRange.type.base.option.None)
              | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " +ℕ " ++ y 49%nat), ZRange.type.base.option.None)
              | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " -ℕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Nat_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " =ℕ " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
              | ident.cons t => fun '(x, ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (maybe_wrap_cast with_casts x 59%nat ++ " :: " ++ y 60%nat), ZRange.type.base.option.None)
              | ident.pair A B => fun '(x, (y, tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts x 201%nat ++ ", " ++ maybe_wrap_cast with_casts y 200%nat), ZRange.type.base.option.None)
@@ -340,6 +341,7 @@ Module Compilers.
                 | ident.Nat_mul => "Nat.mul"
                 | ident.Nat_add => "Nat.add"
                 | ident.Nat_sub => "Nat.sub"
+                | ident.Nat_eqb => "Nat.eqb"
                 | ident.nil t => "[]"
                 | ident.cons t => "(::)"
                 | ident.pair A B => "(,)"
@@ -1175,6 +1177,7 @@ Module Compilers.
                | ident.Nat_mul
                | ident.Nat_add
                | ident.Nat_sub
+               | ident.Nat_eqb
                | ident.prod_rect _ _ _
                | ident.bool_rect _
                | ident.nat_rect _

@@ -855,6 +855,7 @@ Module Compilers.
         | Nat_mul : ident (nat -> nat -> nat)
         | Nat_add : ident (nat -> nat -> nat)
         | Nat_sub : ident (nat -> nat -> nat)
+        | Nat_eqb : ident (nat -> nat -> bool)
         | nil {t} : ident (list t)
         | cons {t:base.type} : ident (t -> list t -> list t)
         | pair {A B:base.type} : ident (A -> B -> A * B)
@@ -995,6 +996,7 @@ Module Compilers.
              | Nat_mul => Nat.mul
              | Nat_add => Nat.add
              | Nat_sub => Nat.sub
+             | Nat_eqb => Nat.eqb
              | nil t => Datatypes.nil
              | cons t => Datatypes.cons
              | pair A B => Datatypes.pair

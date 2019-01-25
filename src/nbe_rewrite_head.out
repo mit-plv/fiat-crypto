@@ -175,6 +175,39 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
       end;;
       None);;;
      Base (#(Nat_sub)%expr @ x @ x0)%expr_pat)%option
+| Nat_eqb =>
+    fun x x0 : expr ℕ =>
+    ((match x with
+      | @expr.Ident _ _ _ t idc =>
+          match x0 with
+          | @expr.Ident _ _ _ t0 idc0 =>
+              args <- invert_bind_args idc0 Raw.ident.Literal;
+              args0 <- invert_bind_args idc Raw.ident.Literal;
+              match
+                pattern.type.unify_extracted_cps (ℕ -> ℕ)%ptype
+                  ((projT1 args0) -> (projT1 args))%ptype option
+                  (fun x1 : option => x1)
+              with
+              | Some (_, _)%zrange =>
+                  if
+                   type.type_beq base.type base.type.type_beq (ℕ -> ℕ)%ptype
+                     ((projT1 args0) -> (projT1 args))%ptype
+                  then
+                   xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                   xv0 <- ident.unify pattern.ident.Literal ##(projT2 args);
+                   Some
+                     (Base
+                        (##((let (x1, _) := xv in x1) =?
+                            (let (x1, _) := xv0 in x1))%nat)%expr)
+                  else None
+              | None => None
+              end
+          | _ => None
+          end
+      | _ => None
+      end;;
+      None);;;
+     Base (#(Nat_eqb)%expr @ x @ x0)%expr_pat)%option
 | @nil t => Base []%expr_pat
 | @cons t => fun (x : expr t) (x0 : expr (list t)) => Base (x :: x0)%expr_pat
 | @pair A B => fun (x : expr A) (x0 : expr B) => Base (x, x0)%expr_pat

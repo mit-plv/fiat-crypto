@@ -156,6 +156,13 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                    (Compilers.base.type.type_base base.type.nat) ->
                  (fun x : Compilers.base.type => type.base x)
                    (Compilers.base.type.type_base base.type.nat))%ptype
+  | Nat_eqb : ident
+                ((fun x : Compilers.base.type => type.base x)
+                   (Compilers.base.type.type_base base.type.nat) ->
+                 (fun x : Compilers.base.type => type.base x)
+                   (Compilers.base.type.type_base base.type.nat) ->
+                 (fun x : Compilers.base.type => type.base x)
+                   (Compilers.base.type.type_base base.type.bool))%ptype
   | nil : forall t : Compilers.base.type,
           ident
             ((fun x : Compilers.base.type => type.base x)
@@ -711,6 +718,7 @@ show_match_ident = r"""match # with
  | ident.Nat_mul =>
  | ident.Nat_add =>
  | ident.Nat_sub =>
+ | ident.Nat_eqb =>
  | ident.nil t =>
  | ident.cons t =>
  | ident.pair A B =>
@@ -1281,6 +1289,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
         | Nat_mul
         | Nat_add
         | Nat_sub
+        | Nat_eqb
         | nil
         | cons
         | pair
@@ -1361,6 +1370,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Nat_mul => unit
              | Nat_add => unit
              | Nat_sub => unit
+             | Nat_eqb => unit
              | nil => Compilers.base.type
              | cons => Compilers.base.type
              | pair => Compilers.base.type * Compilers.base.type
@@ -1442,6 +1452,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Nat_mul => true
              | Nat_add => true
              | Nat_sub => true
+             | Nat_eqb => true
              | nil => false
              | cons => false
              | pair => false
@@ -1523,6 +1534,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Nat_mul, Compilers.ident.Nat_mul => Some tt
              | Nat_add, Compilers.ident.Nat_add => Some tt
              | Nat_sub, Compilers.ident.Nat_sub => Some tt
+             | Nat_eqb, Compilers.ident.Nat_eqb => Some tt
              | nil, Compilers.ident.nil t => Some t
              | cons, Compilers.ident.cons t => Some t
              | pair, Compilers.ident.pair A B => Some (A, B)
@@ -1600,6 +1612,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Nat_mul, _
              | Nat_add, _
              | Nat_sub, _
+             | Nat_eqb, _
              | nil, _
              | cons, _
              | pair, _
@@ -1682,6 +1695,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Nat_mul => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%ptype
              | Nat_add => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%ptype
              | Nat_sub => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat))%ptype
+             | Nat_eqb => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.bool))%ptype
              | nil => fun t => (type.base (Compilers.base.type.list t))
              | cons => fun t => (type.base t -> type.base (Compilers.base.type.list t) -> type.base (Compilers.base.type.list t))%ptype
              | pair => fun arg => let '(A, B) := eta2 arg in (type.base A -> type.base B -> type.base (A * B)%etype)%ptype
@@ -1763,6 +1777,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Nat_mul => fun _ => @Compilers.ident.Nat_mul
              | Nat_add => fun _ => @Compilers.ident.Nat_add
              | Nat_sub => fun _ => @Compilers.ident.Nat_sub
+             | Nat_eqb => fun _ => @Compilers.ident.Nat_eqb
              | nil => fun t => @Compilers.ident.nil t
              | cons => fun t => @Compilers.ident.cons t
              | pair => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of pair arg') with (A, B) => @Compilers.ident.pair A B end
@@ -1851,6 +1866,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Nat_mul => f _ Compilers.ident.Nat_mul
            | Compilers.ident.Nat_add => f _ Compilers.ident.Nat_add
            | Compilers.ident.Nat_sub => f _ Compilers.ident.Nat_sub
+           | Compilers.ident.Nat_eqb => f _ Compilers.ident.Nat_eqb
            | Compilers.ident.nil t => f _ (@Compilers.ident.nil t)
            | Compilers.ident.cons t => f _ (@Compilers.ident.cons t)
            | Compilers.ident.pair A B => f _ (@Compilers.ident.pair A B)
@@ -1931,6 +1947,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | Nat_mul : ident (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))%ptype
       | Nat_add : ident (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))%ptype
       | Nat_sub : ident (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat))%ptype
+      | Nat_eqb : ident (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.bool))%ptype
       | nil {t : base.type} : ident (type.base (base.type.list t))
       | cons {t : base.type} : ident (type.base t -> type.base (base.type.list t) -> type.base (base.type.list t))%ptype
       | pair {A : base.type} {B : base.type} : ident (type.base A -> type.base B -> type.base (A * B)%pbtype)%ptype
@@ -2011,6 +2028,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Nat_mul => Raw.ident.Nat_mul
            | @Nat_add => Raw.ident.Nat_add
            | @Nat_sub => Raw.ident.Nat_sub
+           | @Nat_eqb => Raw.ident.Nat_eqb
            | @nil t => Raw.ident.nil
            | @cons t => Raw.ident.cons
            | @pair A B => Raw.ident.pair
@@ -2092,6 +2110,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Nat_mul => []
            | @Nat_add => []
            | @Nat_sub => []
+           | @Nat_eqb => []
            | @nil t => []
            | @cons t => []
            | @pair A B => []
@@ -2173,6 +2192,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Nat_mul => fun _ => @Compilers.ident.Nat_mul
            | @Nat_add => fun _ => @Compilers.ident.Nat_add
            | @Nat_sub => fun _ => @Compilers.ident.Nat_sub
+           | @Nat_eqb => fun _ => @Compilers.ident.Nat_eqb
            | @nil t => fun _ => @Compilers.ident.nil _
            | @cons t => fun _ => @Compilers.ident.cons _
            | @pair A B => fun _ => @Compilers.ident.pair _ _
@@ -2257,6 +2277,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Nat_mul, Compilers.ident.Nat_mul => Some tt
            | @Nat_add, Compilers.ident.Nat_add => Some tt
            | @Nat_sub, Compilers.ident.Nat_sub => Some tt
+           | @Nat_eqb, Compilers.ident.Nat_eqb => Some tt
            | @nil t, Compilers.ident.nil t' => Some tt
            | @cons t, Compilers.ident.cons t' => Some tt
            | @pair A B, Compilers.ident.pair A' B' => Some tt
@@ -2334,6 +2355,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Nat_mul, _
            | @Nat_add, _
            | @Nat_sub, _
+           | @Nat_eqb, _
            | @nil _, _
            | @cons _, _
            | @pair _ _, _
@@ -2416,6 +2438,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Nat_mul => @Nat_mul
            | Compilers.ident.Nat_add => @Nat_add
            | Compilers.ident.Nat_sub => @Nat_sub
+           | Compilers.ident.Nat_eqb => @Nat_eqb
            | Compilers.ident.nil t => @nil (base.relax t)
            | Compilers.ident.cons t => @cons (base.relax t)
            | Compilers.ident.pair A B => @pair (base.relax A) (base.relax B)
