@@ -183,6 +183,9 @@ Module CorrectnessStringification.
       => strip_bounds_info T
     | list_Z_bounded_by _ _ -> ?T
       => strip_bounds_info T
+    | (_ = List.map (fun z => (_ mod _) / _) (List.seq _ _)) /\ (?a <= ?b < ?c) -> ?T
+      => let T := strip_bounds_info T in
+         constr:(a <= b < c -> T)
     | ?T /\ list_Z_bounded_by _ _
       => T
     | ?T /\ (match _ with pair _ _ => _ end = true)
@@ -191,8 +194,10 @@ Module CorrectnessStringification.
       => T
     | iff _ _
       => correctness
-    | _ = _ /\ (_ = _ /\ (_ <= _ < _))
-      => correctness
+    | ?x = ?y /\ (_ = List.map (fun z => (_ mod _) / _) (List.seq _ _)) /\ (?a <= ?b < ?c)
+      => constr:(x = y /\ a <= b < c)
+    | (_ = List.map (fun z => (_ mod _) / _) (List.seq _ _)) /\ (?a <= ?b < ?c)
+      => constr:(a <= b < c)
     | _ = _ :> list Z
       => correctness
     | forall x : ?T, ?f

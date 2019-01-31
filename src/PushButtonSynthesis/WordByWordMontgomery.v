@@ -235,10 +235,11 @@ Section __.
           (CorrectnessStringification.dyn_context.cons
              r' ("((2^" ++ decimal_string_of_Z machine_wordsize ++ ")⁻¹ mod m)")%string
              (CorrectnessStringification.dyn_context.cons
-                from_montgomery_res (prefix ++ "from_montgomery")%string
+                from_montgomery_res "from_montgomery"%string
                 (CorrectnessStringification.dyn_context.cons
                    (@eval 8 n_bytes) "bytes_eval"%string
-                   CorrectnessStringification.dyn_context.nil)))).
+                   CorrectnessStringification.dyn_context.nil))))
+         (only parsing).
   Local Notation stringify_correctness prefix pre_extra correctness
     := (stringify_correctness_with_ctx
           (initial_ctx prefix)
