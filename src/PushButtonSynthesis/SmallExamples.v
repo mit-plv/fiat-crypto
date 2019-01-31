@@ -43,53 +43,59 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_mulx_u64" []
+     true "fiat_" "fiat_mulx_u64"
         true None [64; 128]
         ltac:(let r := Reify (Arithmetic.mulx 64) in
               exact r)
+               (fun _ _ => [])
                (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt))%zrange
                (Some r[0~>2^64-1], Some r[0~>2^64-1])%zrange).
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_addcarryx_u64" []
+     true "fiat_" "fiat_addcarryx_u64"
         true None [1; 64; 128]
         ltac:(let r := Reify (Arithmetic.addcarryx 64) in
               exact r)
+               (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
                (Some r[0~>2^64-1], Some r[0~>1])%zrange).
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_addcarryx_u51" []
+     true "fiat_" "fiat_addcarryx_u51"
         true None [1; 64; 128]
         ltac:(let r := Reify (Arithmetic.addcarryx 51) in
               exact r)
+               (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
                (Some r[0~>2^51-1], Some r[0~>1])%zrange).
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_subborrowx_u64" []
+     true "fiat_" "fiat_subborrowx_u64"
         true None [1; 64; 128]
         ltac:(let r := Reify (Arithmetic.subborrowx 64) in
               exact r)
+               (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
                (Some r[0~>2^64-1], Some r[0~>1])%zrange).
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_subborrowx_u51" []
+     true "fiat_" "fiat_subborrowx_u51"
         true None [1; 64; 128]
         ltac:(let r := Reify (Arithmetic.subborrowx 51) in
               exact r)
+               (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
                (Some r[0~>2^51-1], Some r[0~>1])%zrange).
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_cmovznz64" []
+     true "fiat_" "fiat_cmovznz64"
         true None [1; 64; 128]
         ltac:(let r := Reify (Arithmetic.cmovznz 64) in
               exact r)
+               (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
                (Some r[0~>2^64-1])%zrange).

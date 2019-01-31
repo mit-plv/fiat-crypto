@@ -258,6 +258,17 @@ else:
     { use_curve_good_t. }
   Qed.
 
+  Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
+  Local Notation evalf := (eval weightf n).
+  Local Notation initial_ctx := (CorrectnessStringification.dyn_context.cons m "m"%string CorrectnessStringification.dyn_context.nil).
+  Local Notation stringify_correctness pre_extra correctness
+    := (stringify_correctness_with_ctx
+          initial_ctx
+          evalf
+          pre_extra
+          correctness)
+         (only parsing).
+
   Definition carry_mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -270,7 +281,12 @@ else:
 
   Definition scarry_mul (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "carry_mul" carry_mul.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "carry_mul" carry_mul
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (carry_mul_correct weightf n m tight_bounds loose_bounds)).
 
   Definition carry_square
     := Pipeline.BoundsPipeline
@@ -284,7 +300,12 @@ else:
 
   Definition scarry_square (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "carry_square" carry_square.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "carry_square" carry_square
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (carry_square_correct weightf n m tight_bounds loose_bounds)).
 
   Definition carry_scmul_const (x : Z)
     := Pipeline.BoundsPipeline
@@ -298,7 +319,12 @@ else:
 
   Definition scarry_scmul_const (prefix : string) (x : Z)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x).
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x)
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
 
   Definition carry
     := Pipeline.BoundsPipeline
@@ -312,7 +338,12 @@ else:
 
   Definition scarry (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "carry" carry.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "carry" carry
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (carry_correct weightf n m tight_bounds loose_bounds)).
 
   Definition add
     := Pipeline.BoundsPipeline
@@ -326,7 +357,12 @@ else:
 
   Definition sadd (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "add" add.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "add" add
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (add_correct weightf n m tight_bounds loose_bounds)).
 
   Definition sub
     := Pipeline.BoundsPipeline
@@ -340,7 +376,12 @@ else:
 
   Definition ssub (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "sub" sub.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "sub" sub
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (sub_correct weightf n m tight_bounds loose_bounds)).
 
   Definition opp
     := Pipeline.BoundsPipeline
@@ -354,7 +395,12 @@ else:
 
   Definition sopp (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "opp" opp.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "opp" opp
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (opp_correct weightf n m tight_bounds loose_bounds)).
 
   Definition to_bytes
     := Pipeline.BoundsPipeline
@@ -368,7 +414,12 @@ else:
 
   Definition sto_bytes (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "to_bytes" to_bytes.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "to_bytes" to_bytes
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (to_bytes_correct weightf n n_bytes m tight_bounds)).
 
   Definition from_bytes
     := Pipeline.BoundsPipeline
@@ -382,7 +433,12 @@ else:
 
   Definition sfrom_bytes (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "from_bytes" from_bytes.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "from_bytes" from_bytes
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (from_bytes_correct weightf n n_bytes m s tight_bounds)).
 
   Definition encode
     := Pipeline.BoundsPipeline
@@ -396,7 +452,12 @@ else:
 
   Definition sencode (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "encode" encode.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "encode" encode
+          (stringify_correctness
+             (fun fname : string => [fname ++ ":"]%string)
+             (encode_correct weightf n m tight_bounds)).
 
   Definition zero
     := Pipeline.BoundsPipeline
@@ -410,7 +471,12 @@ else:
 
   Definition szero (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "zero" zero.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "zero" zero
+          (stringify_correctness
+             (fun fname : string => @nil string)
+             (zero_correct weightf n m tight_bounds)).
 
   Definition one
     := Pipeline.BoundsPipeline
@@ -424,7 +490,12 @@ else:
 
   Definition sone (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "one" one.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "one" one
+          (stringify_correctness
+             (fun fname : string => @nil string)
+             (one_correct weightf n m tight_bounds)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)

@@ -19,6 +19,9 @@ typedef unsigned __int128 fiat_secp256k1_uint128;
 
 
 /*
+ * The function fiat_secp256k1_addcarryx_u64 is an add with carry.
+ * out1 = (arg1 + arg2 + arg3) mod 2^64
+ * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -36,6 +39,9 @@ static void fiat_secp256k1_addcarryx_u64(uint64_t* out1, fiat_secp256k1_uint1* o
 }
 
 /*
+ * The function fiat_secp256k1_subborrowx_u64 is a sub with borrow.
+ * out1 = (-arg1 + arg2 + -arg3) mod 2^64
+ * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -53,6 +59,9 @@ static void fiat_secp256k1_subborrowx_u64(uint64_t* out1, fiat_secp256k1_uint1* 
 }
 
 /*
+ * The function fiat_secp256k1_mulx_u64 is an extended multiplication.
+ * out1 = (arg1 * arg2) mod 2^64
+ * ∧ out2 = ⌊arg1 * arg2 / 2^64⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0xffffffffffffffff]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -69,6 +78,8 @@ static void fiat_secp256k1_mulx_u64(uint64_t* out1, uint64_t* out2, uint64_t arg
 }
 
 /*
+ * The function fiat_secp256k1_cmovznz_u64 is a single-word conditional move.
+ * out1 = (if arg1 = 0 then arg2 else arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -84,6 +95,12 @@ static void fiat_secp256k1_cmovznz_u64(uint64_t* out1, fiat_secp256k1_uint1 arg1
 }
 
 /*
+ * The function fiat_secp256k1_mul does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_secp256k1_from_montgomery out1) mod m = (eval (fiat_secp256k1_from_montgomery arg1) * eval (fiat_secp256k1_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -446,6 +463,11 @@ static void fiat_secp256k1_mul(uint64_t out1[4], const uint64_t arg1[4], const u
 }
 
 /*
+ * The function fiat_secp256k1_square does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * eval (fiat_secp256k1_from_montgomery out1) mod m = (eval (fiat_secp256k1_from_montgomery arg1) * eval (fiat_secp256k1_from_montgomery arg1)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -807,6 +829,12 @@ static void fiat_secp256k1_square(uint64_t out1[4], const uint64_t arg1[4]) {
 }
 
 /*
+ * The function fiat_secp256k1_add does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_secp256k1_from_montgomery out1) mod m = (eval (fiat_secp256k1_from_montgomery arg1) + eval (fiat_secp256k1_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -856,6 +884,12 @@ static void fiat_secp256k1_add(uint64_t out1[4], const uint64_t arg1[4], const u
 }
 
 /*
+ * The function fiat_secp256k1_sub does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_secp256k1_from_montgomery out1) mod m = (eval (fiat_secp256k1_from_montgomery arg1) - eval (fiat_secp256k1_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -896,6 +930,11 @@ static void fiat_secp256k1_sub(uint64_t out1[4], const uint64_t arg1[4], const u
 }
 
 /*
+ * The function fiat_secp256k1_opp does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * eval (fiat_secp256k1_from_montgomery out1) mod m = -eval (fiat_secp256k1_from_montgomery arg1) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -935,6 +974,11 @@ static void fiat_secp256k1_opp(uint64_t out1[4], const uint64_t arg1[4]) {
 }
 
 /*
+ * The function fiat_secp256k1_from_montgomery does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * eval out1 mod m = (eval arg1 * 97798581649299591516383885342152904135335272353249846763749256112567415731113^4) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -1197,6 +1241,9 @@ static void fiat_secp256k1_from_montgomery(uint64_t out1[4], const uint64_t arg1
 }
 
 /*
+ * The function fiat_secp256k1_nonzero does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * out1 = 0 ↔ eval (fiat_secp256k1_from_montgomery arg1) mod m = 0
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -1208,6 +1255,8 @@ static void fiat_secp256k1_nonzero(uint64_t* out1, const uint64_t arg1[4]) {
 }
 
 /*
+ * The function fiat_secp256k1_selectznz is a multi-limb conditional select.
+ * eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -1231,6 +1280,9 @@ static void fiat_secp256k1_selectznz(uint64_t out1[4], fiat_secp256k1_uint1 arg1
 }
 
 /*
+ * The function fiat_secp256k1_to_bytes does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -1335,6 +1387,11 @@ static void fiat_secp256k1_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
 }
 
 /*
+ * The function fiat_secp256k1_from_bytes does stuff.
+ * arg1 = map (λ x, ⌊bytes_eval arg1 mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31] ∧ 0 ≤ bytes_eval arg1 < m →
+ * eval out1 mod m = bytes_eval arg1 mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  * Output Bounds:

@@ -17,6 +17,9 @@ typedef unsigned __int128 fiat_25519_uint128;
 
 
 /*
+ * The function fiat_25519_addcarryx_u51 is an add with carry.
+ * out1 = (arg1 + arg2 + arg3) mod 2^51
+ * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^51⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0x7ffffffffffff]
@@ -34,6 +37,9 @@ static void fiat_25519_addcarryx_u51(uint64_t* out1, fiat_25519_uint1* out2, fia
 }
 
 /*
+ * The function fiat_25519_subborrowx_u51 is a sub with borrow.
+ * out1 = (-arg1 + arg2 + -arg3) mod 2^51
+ * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^51⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0x7ffffffffffff]
@@ -51,6 +57,8 @@ static void fiat_25519_subborrowx_u51(uint64_t* out1, fiat_25519_uint1* out2, fi
 }
 
 /*
+ * The function fiat_25519_cmovznz_u64 is a single-word conditional move.
+ * out1 = (if arg1 = 0 then arg2 else arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -66,6 +74,8 @@ static void fiat_25519_cmovznz_u64(uint64_t* out1, fiat_25519_uint1 arg1, uint64
 }
 
 /*
+ * The function fiat_25519_carry_mul does stuff.
+ * eval out1 mod m = (eval arg1 * eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  *   arg2: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
@@ -133,6 +143,8 @@ static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const
 }
 
 /*
+ * The function fiat_25519_carry_square does stuff.
+ * eval out1 mod m = (eval arg1 * eval arg1) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  * Output Bounds:
@@ -197,6 +209,8 @@ static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
 }
 
 /*
+ * The function fiat_25519_carry_scmul_121666 does stuff.
+ * eval out1 mod m = (121666 * eval arg1) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  * Output Bounds:
@@ -238,6 +252,8 @@ static void fiat_25519_carry_scmul_121666(uint64_t out1[5], const uint64_t arg1[
 }
 
 /*
+ * The function fiat_25519_carry does stuff.
+ * eval out1 mod m = eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  * Output Bounds:
@@ -264,6 +280,8 @@ static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
 }
 
 /*
+ * The function fiat_25519_add does stuff.
+ * eval out1 mod m = (eval arg1 + eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  *   arg2: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
@@ -284,6 +302,8 @@ static void fiat_25519_add(uint64_t out1[5], const uint64_t arg1[5], const uint6
 }
 
 /*
+ * The function fiat_25519_sub does stuff.
+ * eval out1 mod m = (eval arg1 - eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  *   arg2: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
@@ -304,6 +324,8 @@ static void fiat_25519_sub(uint64_t out1[5], const uint64_t arg1[5], const uint6
 }
 
 /*
+ * The function fiat_25519_opp does stuff.
+ * eval out1 mod m = -eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
@@ -323,6 +345,8 @@ static void fiat_25519_opp(uint64_t out1[5], const uint64_t arg1[5]) {
 }
 
 /*
+ * The function fiat_25519_selectznz is a multi-limb conditional select.
+ * eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -349,6 +373,8 @@ static void fiat_25519_selectznz(uint64_t out1[5], fiat_25519_uint1 arg1, const 
 }
 
 /*
+ * The function fiat_25519_to_bytes does stuff.
+ * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  * Output Bounds:
@@ -492,6 +518,8 @@ static void fiat_25519_to_bytes(uint8_t out1[32], const uint64_t arg1[5]) {
 }
 
 /*
+ * The function fiat_25519_from_bytes does stuff.
+ * eval out1 mod m = bytes_eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
  * Output Bounds:

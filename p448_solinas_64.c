@@ -17,6 +17,9 @@ typedef unsigned __int128 fiat_p448_uint128;
 
 
 /*
+ * The function fiat_p448_addcarryx_u56 is an add with carry.
+ * out1 = (arg1 + arg2 + arg3) mod 2^56
+ * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^56⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffff]
@@ -34,6 +37,9 @@ static void fiat_p448_addcarryx_u56(uint64_t* out1, fiat_p448_uint1* out2, fiat_
 }
 
 /*
+ * The function fiat_p448_subborrowx_u56 is a sub with borrow.
+ * out1 = (-arg1 + arg2 + -arg3) mod 2^56
+ * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^56⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffff]
@@ -51,6 +57,8 @@ static void fiat_p448_subborrowx_u56(uint64_t* out1, fiat_p448_uint1* out2, fiat
 }
 
 /*
+ * The function fiat_p448_cmovznz_u64 is a single-word conditional move.
+ * out1 = (if arg1 = 0 then arg2 else arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -66,6 +74,8 @@ static void fiat_p448_cmovznz_u64(uint64_t* out1, fiat_p448_uint1 arg1, uint64_t
 }
 
 /*
+ * The function fiat_p448_carry_mul does stuff.
+ * eval out1 mod m = (eval arg1 * eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb]]
  *   arg2: [[0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb]]
@@ -228,6 +238,8 @@ static void fiat_p448_carry_mul(uint64_t out1[8], const uint64_t arg1[8], const 
 }
 
 /*
+ * The function fiat_p448_carry_square does stuff.
+ * eval out1 mod m = (eval arg1 * eval arg1) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb]]
  * Output Bounds:
@@ -368,6 +380,8 @@ static void fiat_p448_carry_square(uint64_t out1[8], const uint64_t arg1[8]) {
 }
 
 /*
+ * The function fiat_p448_carry does stuff.
+ * eval out1 mod m = eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb], [0x0 ~> 0x34ccccccccccccb]]
  * Output Bounds:
@@ -407,6 +421,8 @@ static void fiat_p448_carry(uint64_t out1[8], const uint64_t arg1[8]) {
 }
 
 /*
+ * The function fiat_p448_add does stuff.
+ * eval out1 mod m = (eval arg1 + eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999]]
  *   arg2: [[0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999]]
@@ -433,6 +449,8 @@ static void fiat_p448_add(uint64_t out1[8], const uint64_t arg1[8], const uint64
 }
 
 /*
+ * The function fiat_p448_sub does stuff.
+ * eval out1 mod m = (eval arg1 - eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999]]
  *   arg2: [[0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999]]
@@ -459,6 +477,8 @@ static void fiat_p448_sub(uint64_t out1[8], const uint64_t arg1[8], const uint64
 }
 
 /*
+ * The function fiat_p448_opp does stuff.
+ * eval out1 mod m = -eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999]]
  * Output Bounds:
@@ -484,6 +504,8 @@ static void fiat_p448_opp(uint64_t out1[8], const uint64_t arg1[8]) {
 }
 
 /*
+ * The function fiat_p448_selectznz is a multi-limb conditional select.
+ * eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -519,6 +541,8 @@ static void fiat_p448_selectznz(uint64_t out1[8], fiat_p448_uint1 arg1, const ui
 }
 
 /*
+ * The function fiat_p448_to_bytes does stuff.
+ * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..55]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999], [0x0 ~> 0x119999999999999]]
  * Output Bounds:
@@ -737,6 +761,8 @@ static void fiat_p448_to_bytes(uint8_t out1[56], const uint64_t arg1[8]) {
 }
 
 /*
+ * The function fiat_p448_from_bytes does stuff.
+ * eval out1 mod m = bytes_eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  * Output Bounds:
