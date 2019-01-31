@@ -233,10 +233,12 @@ Section __.
     := (CorrectnessStringification.dyn_context.cons
           m "m"%string
           (CorrectnessStringification.dyn_context.cons
-             from_montgomery_res (prefix ++ "from_montgomery")%string
+             r' ("((2^" ++ decimal_string_of_Z machine_wordsize ++ ")⁻¹ mod m)")%string
              (CorrectnessStringification.dyn_context.cons
-                (@eval 8 n_bytes) "bytes_eval"%string
-                CorrectnessStringification.dyn_context.nil))).
+                from_montgomery_res (prefix ++ "from_montgomery")%string
+                (CorrectnessStringification.dyn_context.cons
+                   (@eval 8 n_bytes) "bytes_eval"%string
+                   CorrectnessStringification.dyn_context.nil)))).
   Local Notation stringify_correctness prefix pre_extra correctness
     := (stringify_correctness_with_ctx
           (initial_ctx prefix)
@@ -262,7 +264,7 @@ Section __.
           prefix "mul" mul
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
              (mul_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition square
@@ -282,7 +284,7 @@ Section __.
           prefix "square" square
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
              (square_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition add
@@ -302,7 +304,7 @@ Section __.
           prefix "add" add
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
              (add_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition sub
@@ -322,7 +324,7 @@ Section __.
           prefix "sub" sub
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
              (sub_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition opp
@@ -342,7 +344,7 @@ Section __.
           prefix "opp" opp
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " negates a field element in the Montgomery domain."]%string)
              (opp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition from_montgomery
@@ -362,7 +364,7 @@ Section __.
           prefix "from_montgomery" from_montgomery
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
              (from_montgomery_correct machine_wordsize n m r' valid)).
 
   Definition nonzero
@@ -381,7 +383,7 @@ Section __.
           prefix "nonzero" nonzero
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
              (nonzero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition to_bytes
@@ -401,7 +403,7 @@ Section __.
           prefix "to_bytes" to_bytes
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " serializes a field element in the Montgomery domain to bytes in little-endian order."]%string)
              (to_bytes_correct machine_wordsize n n_bytes m valid)).
 
   Definition from_bytes
@@ -421,7 +423,7 @@ Section __.
           prefix "from_bytes" from_bytes
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element in the Montgomery domain from bytes in little-endian order."]%string)
              (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)).
 
   Definition encode
@@ -441,7 +443,7 @@ Section __.
           prefix "encode" encode
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
              (encode_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition zero
@@ -461,7 +463,7 @@ Section __.
           prefix "zero" zero
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname => ["The function " ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
              (zero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition one
@@ -481,7 +483,7 @@ Section __.
           prefix "one" one
           (stringify_correctness
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
              (one_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.

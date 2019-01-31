@@ -162,7 +162,7 @@ Section __.
         FromPipelineToString
           prefix "mul" mul
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
