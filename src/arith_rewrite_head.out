@@ -18,7 +18,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x1) _ =>
           args <- invert_bind_args idc Raw.ident.pair;
           match
-            pattern.type.unify_extracted_cps
+            pattern.type.unify_extracted
               ((('1 * '2)%pbtype -> '1%pbtype) ->
                (('1%pbtype -> '2%pbtype -> ('1 * '2)%pbtype) -> '1%pbtype) ->
                '2%pbtype)%ptype
@@ -26,7 +26,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (((let (x2, _) := args in x2) ->
                  (let (_, y) := args in y) ->
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-                s0) -> s)%ptype option (fun x2 : option => x2)
+                s0) -> s)%ptype
           with
           | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
@@ -70,7 +70,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) _) x0 =>
           args <- invert_bind_args idc Raw.ident.pair;
           match
-            pattern.type.unify_extracted_cps
+            pattern.type.unify_extracted
               ((('1 * '2)%pbtype -> '2%pbtype) ->
                (('1%pbtype -> '2%pbtype -> ('1 * '2)%pbtype) -> '1%pbtype) ->
                '2%pbtype)%ptype
@@ -78,7 +78,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (((let (x2, _) := args in x2) ->
                  (let (_, y) := args in y) ->
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-                s0) -> s)%ptype option (fun x2 : option => x2)
+                s0) -> s)%ptype
           with
           | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
@@ -222,8 +222,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -246,8 +246,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            (args <- invert_bind_args idc Raw.ident.Literal;
             match
-              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+              pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                (ℤ -> (projT1 args))%ptype
             with
             | Some (_, _)%zrange =>
                 if
@@ -269,9 +269,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (_ <- invert_bind_args idc0 Raw.ident.Z_opp;
                 args0 <- invert_bind_args idc Raw.ident.Literal;
                 match
-                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                    (s -> (projT1 args0))%ptype option
-                    (fun x2 : option => x2)
+                  pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                    (s -> (projT1 args0))%ptype
                 with
                 | Some (_, _)%zrange =>
                     if
@@ -295,8 +294,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_opp;
                args0 <- invert_bind_args idc Raw.ident.Literal;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   (s -> (projT1 args0))%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   (s -> (projT1 args0))%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -329,8 +328,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (args <- invert_bind_args idc0 Raw.ident.Literal;
                 _ <- invert_bind_args idc Raw.ident.Z_opp;
                 match
-                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                    ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
+                  pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                    ((projT1 args) -> s)%ptype
                 with
                 | Some (_, _)%zrange =>
                     if
@@ -354,8 +353,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                args <- invert_bind_args idc0 Raw.ident.Literal;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   ((projT1 args) -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -381,8 +380,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_opp;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   (s0 -> s)%ptype option (fun x3 : option => x3)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype (s0 -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -413,8 +411,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x1 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
-               option (fun x2 : option => x2)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -435,8 +432,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x1 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
-               option (fun x2 : option => x2)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -464,9 +460,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                args <- invert_bind_args idc0 Raw.ident.Literal;
                args0 <- invert_bind_args idc Raw.ident.Literal;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   ((projT1 args0) -> (projT1 args))%ptype option
-                   (fun x1 : option => x1)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   ((projT1 args0) -> (projT1 args))%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -486,8 +481,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            end;;
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -510,8 +505,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -534,8 +529,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -558,8 +553,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            (args <- invert_bind_args idc Raw.ident.Literal;
             match
-              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+              pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                (ℤ -> (projT1 args))%ptype
             with
             | Some (_, _)%zrange =>
                 if
@@ -581,8 +576,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_opp;
                args0 <- invert_bind_args idc Raw.ident.Literal;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   (s -> (projT1 args0))%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   (s -> (projT1 args0))%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -611,8 +606,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                args <- invert_bind_args idc0 Raw.ident.Literal;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   ((projT1 args) -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -641,8 +636,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -665,8 +660,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -689,8 +684,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -715,8 +710,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -741,8 +736,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_opp;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   (s0 -> s)%ptype option (fun x3 : option => x3)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype (s0 -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -772,8 +766,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x1 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
-               option (fun x2 : option => x2)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -794,8 +787,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -820,8 +813,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x1 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
-               option (fun x2 : option => x2)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -842,8 +834,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            (args <- invert_bind_args idc Raw.ident.Literal;
             match
-              pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+              pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                ((projT1 args) -> ℤ)%ptype
             with
             | Some (_, _)%zrange =>
                 if
@@ -879,10 +871,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        _ <- invert_bind_args idc0 Raw.ident.Z_mul;
                        args2 <- invert_bind_args idc Raw.ident.Literal;
                        match
-                         pattern.type.unify_extracted_cps
+                         pattern.type.unify_extracted
                            (ℤ -> ℤ -> ℤ -> ℤ)%ptype
                            ((projT1 args2) -> (projT1 args0) -> s2 -> s1)%ptype
-                           option (fun x5 : option => x5)
                        with
                        | Some (_, (_, (_, _)))%zrange =>
                            if
@@ -938,10 +929,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    _ <- invert_bind_args idc0 Raw.ident.Z_mul;
                    args2 <- invert_bind_args idc Raw.ident.Literal;
                    match
-                     pattern.type.unify_extracted_cps
-                       (ℤ -> ℤ -> ℤ -> ℤ)%ptype
+                     pattern.type.unify_extracted (ℤ -> ℤ -> ℤ -> ℤ)%ptype
                        ((projT1 args2) -> s0 -> s2 -> (projT1 args))%ptype
-                       option (fun x5 : option => x5)
                    with
                    | Some (_, (_, (_, _)))%zrange =>
                        if
@@ -991,9 +980,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_mul;
                args0 <- invert_bind_args idc Raw.ident.Literal;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ -> ℤ)%ptype
-                   ((projT1 args0) -> s0 -> s)%ptype option
-                   (fun x3 : option => x3)
+                 pattern.type.unify_extracted (ℤ -> ℤ -> ℤ)%ptype
+                   ((projT1 args0) -> s0 -> s)%ptype
                with
                | Some (_, (_, _))%zrange =>
                    if
@@ -1031,8 +1019,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            end;;
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1066,8 +1054,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_opp;
                args0 <- invert_bind_args idc Raw.ident.Literal;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   ((projT1 args0) -> s)%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   ((projT1 args0) -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -1092,8 +1080,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            end;;
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1116,8 +1104,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1140,8 +1128,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (args <- invert_bind_args idc0 Raw.ident.Literal;
                 _ <- invert_bind_args idc Raw.ident.Z_opp;
                 match
-                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                    ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
+                  pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                    ((projT1 args) -> s)%ptype
                 with
                 | Some (_, _)%zrange =>
                     if
@@ -1165,8 +1153,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                args <- invert_bind_args idc0 Raw.ident.Literal;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   ((projT1 args) -> s)%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   ((projT1 args) -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -1198,8 +1186,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1224,8 +1212,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                (args <- invert_bind_args idc0 Raw.ident.Literal;
                 _ <- invert_bind_args idc Raw.ident.Z_opp;
                 match
-                  pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                    (s -> (projT1 args))%ptype option (fun x2 : option => x2)
+                  pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                    (s -> (projT1 args))%ptype
                 with
                 | Some (_, _)%zrange =>
                     if
@@ -1250,8 +1238,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                args <- invert_bind_args idc0 Raw.ident.Literal;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   (s -> (projT1 args))%ptype option (fun x2 : option => x2)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+                   (s -> (projT1 args))%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -1283,8 +1271,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1309,8 +1297,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- invert_bind_args idc0 Raw.ident.Z_opp;
                _ <- invert_bind_args idc Raw.ident.Z_opp;
                match
-                 pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-                   (s0 -> s)%ptype option (fun x3 : option => x3)
+                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype (s0 -> s)%ptype
                with
                | Some (_, _)%zrange =>
                    if
@@ -1340,8 +1327,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x1 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
-               option (fun x2 : option => x2)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype (s -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1362,8 +1348,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x1 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
-               option (fun x2 : option => x2)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype (ℤ -> s)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1387,10 +1372,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     (((match x with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x0 =>
            _ <- invert_bind_args idc Raw.ident.Z_opp;
-           match
-             pattern.type.unify_extracted_cps ℤ s option
-               (fun x1 : option => x1)
-           with
+           match pattern.type.unify_extracted ℤ s with
            | Some _ =>
                if type.type_beq base.type base.type.type_beq ℤ s
                then
@@ -1404,9 +1386,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
        | _ => None
        end;;
-       match
-         pattern.type.unify_extracted_cps ℤ ℤ option (fun x0 : option => x0)
-       with
+       match pattern.type.unify_extracted ℤ ℤ with
        | Some _ =>
            if type.type_beq base.type base.type.type_beq ℤ ℤ
            then
@@ -1426,8 +1406,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
       | @expr.Ident _ _ _ t idc =>
           (args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1446,8 +1426,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            end);;
           args <- invert_bind_args idc Raw.ident.Literal;
           match
-            pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-              (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+            pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+              (ℤ -> (projT1 args))%ptype
           with
           | Some (_, _)%zrange =>
               if
@@ -1478,8 +1458,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
      | @expr.Ident _ _ _ t idc =>
          (args <- invert_bind_args idc Raw.ident.Literal;
           match
-            pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-              (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+            pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+              (ℤ -> (projT1 args))%ptype
           with
           | Some (_, _)%zrange =>
               if
@@ -1498,8 +1478,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           end);;
          args <- invert_bind_args idc Raw.ident.Literal;
          match
-           pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-             (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+           pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+             (ℤ -> (projT1 args))%ptype
          with
          | Some (_, _)%zrange =>
              if
@@ -1538,8 +1518,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               (ℤ -> (projT1 args))%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               (ℤ -> (projT1 args))%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1562,8 +1542,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | @expr.Ident _ _ _ t idc =>
            args <- invert_bind_args idc Raw.ident.Literal;
            match
-             pattern.type.unify_extracted_cps (ℤ -> ℤ)%ptype
-               ((projT1 args) -> ℤ)%ptype option (fun x1 : option => x1)
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
            with
            | Some (_, _)%zrange =>
                if
@@ -1622,12 +1602,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x1) x0 =>
          args <- invert_bind_args idc Raw.ident.pair;
          match
-           pattern.type.unify_extracted_cps
+           pattern.type.unify_extracted
              (((ℤ -> ℤ -> (ℤ * ℤ)%pbtype) -> ℤ) -> ℤ)%ptype
              ((((let (x2, _) := args in x2) ->
                 (let (_, y) := args in y) ->
                 ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-               s0) -> s)%ptype option (fun x2 : option => x2)
+               s0) -> s)%ptype
          with
          | Some (_, (_, (_, _)), _, _)%zrange =>
              if

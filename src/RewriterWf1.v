@@ -302,20 +302,6 @@ Module Compilers.
         Ltac add_var_types_cps_id :=
           cps_id_with_option (@add_var_types_cps_id _ _ _ _ _).
 
-        Lemma unify_extracted_cps_id {pt et T k}
-          : @pattern.base.unify_extracted_cps pt et T k = k (@pattern.base.unify_extracted_cps pt et _ id).
-        Proof using Type.
-          revert et T k; induction pt, et; cbn [pattern.base.unify_extracted_cps]; cbv [id] in *; intros;
-            repeat first [ reflexivity
-                         | progress inversion_option
-                         | progress subst
-                         | break_innermost_match_step
-                         | rewrite_hyp !* ].
-        Qed.
-
-        Ltac unify_extracted_cps_id :=
-          cps_id_with_option (@unify_extracted_cps_id _ _ _ _).
-
         Lemma mem_collect_vars_subst_Some_find {x t evm t'}
               (Hmem : PositiveSet.mem x (pattern.base.collect_vars t) = true)
               (H : pattern.base.subst t evm = Some t')
@@ -402,21 +388,6 @@ Module Compilers.
 
         Ltac add_var_types_cps_id :=
           cps_id_with_option (@add_var_types_cps_id _ _ _ _ _).
-
-        Lemma unify_extracted_cps_id {pt et T k}
-          : @pattern.type.unify_extracted_cps pt et T k = k (@pattern.type.unify_extracted_cps pt et _ id).
-        Proof using Type.
-          revert et T k; induction pt, et; cbn [pattern.type.unify_extracted_cps]; cbv [id] in *; intros;
-            repeat first [ reflexivity
-                         | progress inversion_option
-                         | progress subst
-                         | apply base.unify_extracted_cps_id
-                         | break_innermost_match_step
-                         | rewrite_hyp !* ].
-        Qed.
-
-        Ltac unify_extracted_cps_id :=
-          cps_id_with_option (@unify_extracted_cps_id _ _ _ _).
 
         Local Ltac t_subst_eq_iff :=
           repeat first [ progress apply conj

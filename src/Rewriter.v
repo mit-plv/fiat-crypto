@@ -87,48 +87,26 @@ Module Compilers.
               | type.type_base _ => fun _ => k evm
               end v.
 
-      Fixpoint unify_extracted_cps
+      Fixpoint unify_extracted
                (ptype : type) (etype : Compilers.base.type)
-        : ~> option (var_types_of ptype)
-        := match ptype return ~> option (var_types_of ptype) with
-           | type.var p => fun T k => k (Some etype)
-           | type.type_base t
-             => fun T k
-                => match etype with
-                   | Compilers.base.type.type_base t'
-                     => if base.type.base_beq t t'
-                        then k (Some tt)
-                        else k None
-                   | _ => k None
-                   end
-           | type.prod A B
-             => fun T k
-                => match etype with
-                   | Compilers.base.type.prod A' B'
-                     => unify_extracted_cps
-                          A A' _
-                          (fun a
-                           => match a with
-                              | Some a
-                                => unify_extracted_cps
-                                     B B' _
-                                     (fun b
-                                      => match b with
-                                         | Some b => k (Some (a, b))
-                                         | None => k None
-                                         end)
-                              | None => k None
-                              end)
-                   | _ => k None
-                   end
-           | type.list A
-             => fun T k
-                => match etype with
-                   | Compilers.base.type.list A'
-                     => unify_extracted_cps A A' _ k
-                   | _ => k None
-                   end
-           end%cps.
+        : option (var_types_of ptype)
+        := match ptype, etype return option (var_types_of ptype) with
+           | type.var p, _ => Some etype
+           | type.type_base t, Compilers.base.type.type_base t'
+             => if base.type.base_beq t t'
+                then Some tt
+                else None
+           | type.prod A B, Compilers.base.type.prod A' B'
+             => a <- unify_extracted A A';
+                  b <- unify_extracted B B';
+                  Some (a, b)
+           | type.list A, Compilers.base.type.list A'
+             => unify_extracted A A'
+           | type.type_base _, _
+           | type.prod _ _, _
+           | type.list _, _
+             => None
+           end%option.
     End base.
 
     Module type.
@@ -173,39 +151,20 @@ Module Compilers.
                 => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
               end v.
 
-      Fixpoint unify_extracted_cps
+      Fixpoint unify_extracted
                (ptype : type) (etype : type.type Compilers.base.type)
-        : ~> option (var_types_of ptype)
-        := match ptype return ~> option (var_types_of ptype) with
-           | type.base t
-             => fun T k
-                => match etype with
-                   | type.base t' => base.unify_extracted_cps t t' T k
-                   | type.arrow _ _ => k None
-                   end
-           | type.arrow A B
-             => fun T k
-                => match etype with
-                   | type.arrow A' B'
-                     => unify_extracted_cps
-                          A A' _
-                          (fun a
-                           => match a with
-                              | Some a
-                                => unify_extracted_cps
-                                     B B' _
-                                     (fun b
-                                      => match b with
-                                         | Some b => k (Some (a, b))
-                                         | None => k None
-                                         end)
-                              | None => k None
-                              end)
-                   | type.base _ => k None
-                   end
-           end%cps.
-
-      Notation unify_extracted ptype etype := (unify_extracted_cps ptype etype _ id).
+        : option (var_types_of ptype)
+        := match ptype, etype return option (var_types_of ptype) with
+           | type.base t, type.base t'
+             => base.unify_extracted t t'
+           | type.arrow A B, type.arrow A' B'
+             => a <- unify_extracted A A';
+                  b <- unify_extracted B B';
+                  Some (a, b)
+           | type.base _, _
+           | type.arrow _ _, _
+             => None
+           end%option.
 
       Local Notation forall_vars_body K LS EVM0
         := (fold_right
@@ -2442,7 +2401,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
           := (eval cbv -[pr2_rewrite_rules
                            base.interp base.try_make_transport_cps
                            type.try_make_transport_cps
-                           pattern.type.unify_extracted_cps
+                           pattern.type.unify_extracted
                            Compile.option_type_type_beq
                            Let_In Option.sequence Option.sequence_return
                            UnderLets.splice UnderLets.to_expr
