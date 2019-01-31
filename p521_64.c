@@ -17,7 +17,7 @@ typedef unsigned __int128 fiat_p521_uint128;
 
 
 /*
- * The function fiat_p521_addcarryx_u58 is an add with carry.
+ * The function fiat_p521_addcarryx_u58 is an addition with carry.
  * out1 = (arg1 + arg2 + arg3) mod 2^58
  * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^58⌋
  * Input Bounds:
@@ -37,7 +37,7 @@ static void fiat_p521_addcarryx_u58(uint64_t* out1, fiat_p521_uint1* out2, fiat_
 }
 
 /*
- * The function fiat_p521_subborrowx_u58 is a sub with borrow.
+ * The function fiat_p521_subborrowx_u58 is a subtraction with borrow.
  * out1 = (-arg1 + arg2 + -arg3) mod 2^58
  * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^58⌋
  * Input Bounds:
@@ -57,7 +57,7 @@ static void fiat_p521_subborrowx_u58(uint64_t* out1, fiat_p521_uint1* out2, fiat
 }
 
 /*
- * The function fiat_p521_addcarryx_u57 is an add with carry.
+ * The function fiat_p521_addcarryx_u57 is an addition with carry.
  * out1 = (arg1 + arg2 + arg3) mod 2^57
  * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^57⌋
  * Input Bounds:
@@ -77,7 +77,7 @@ static void fiat_p521_addcarryx_u57(uint64_t* out1, fiat_p521_uint1* out2, fiat_
 }
 
 /*
- * The function fiat_p521_subborrowx_u57 is a sub with borrow.
+ * The function fiat_p521_subborrowx_u57 is a subtraction with borrow.
  * out1 = (-arg1 + arg2 + -arg3) mod 2^57
  * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^57⌋
  * Input Bounds:
@@ -114,7 +114,7 @@ static void fiat_p521_cmovznz_u64(uint64_t* out1, fiat_p521_uint1 arg1, uint64_t
 }
 
 /*
- * The function fiat_p521_carry_mul does stuff.
+ * The function fiat_p521_carry_mul multiplies two field elements and reduces the result.
  * eval out1 mod m = (eval arg1 * eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0x699999999999999]]
@@ -258,7 +258,7 @@ static void fiat_p521_carry_mul(uint64_t out1[9], const uint64_t arg1[9], const 
 }
 
 /*
- * The function fiat_p521_carry_square does stuff.
+ * The function fiat_p521_carry_square squares a field element and reduces the result.
  * eval out1 mod m = (eval arg1 * eval arg1) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0x699999999999999]]
@@ -381,7 +381,7 @@ static void fiat_p521_carry_square(uint64_t out1[9], const uint64_t arg1[9]) {
 }
 
 /*
- * The function fiat_p521_carry does stuff.
+ * The function fiat_p521_carry reduces a field element.
  * eval out1 mod m = eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0xd33333333333332], [0x0 ~> 0x699999999999999]]
@@ -421,7 +421,7 @@ static void fiat_p521_carry(uint64_t out1[9], const uint64_t arg1[9]) {
 }
 
 /*
- * The function fiat_p521_add does stuff.
+ * The function fiat_p521_add adds two field elements.
  * eval out1 mod m = (eval arg1 + eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x233333333333333]]
@@ -451,7 +451,7 @@ static void fiat_p521_add(uint64_t out1[9], const uint64_t arg1[9], const uint64
 }
 
 /*
- * The function fiat_p521_sub does stuff.
+ * The function fiat_p521_sub subtracts two field elements.
  * eval out1 mod m = (eval arg1 - eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x233333333333333]]
@@ -481,7 +481,7 @@ static void fiat_p521_sub(uint64_t out1[9], const uint64_t arg1[9], const uint64
 }
 
 /*
- * The function fiat_p521_opp does stuff.
+ * The function fiat_p521_opp negates a field element.
  * eval out1 mod m = -eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x233333333333333]]
@@ -550,7 +550,7 @@ static void fiat_p521_selectznz(uint64_t out1[9], fiat_p521_uint1 arg1, const ui
 }
 
 /*
- * The function fiat_p521_to_bytes does stuff.
+ * The function fiat_p521_to_bytes serializes a field element to bytes in little-endian order.
  * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..65]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x466666666666666], [0x0 ~> 0x233333333333333]]
@@ -823,7 +823,7 @@ static void fiat_p521_to_bytes(uint8_t out1[66], const uint64_t arg1[9]) {
 }
 
 /*
- * The function fiat_p521_from_bytes does stuff.
+ * The function fiat_p521_from_bytes deserializes a field element from bytes in little-endian order.
  * eval out1 mod m = bytes_eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x1]]

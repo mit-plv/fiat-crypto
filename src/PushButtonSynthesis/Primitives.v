@@ -660,7 +660,7 @@ Section __.
           prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
           (stringify_correctness
              evalf
-             (fun fname : string => ["The function " ++ fname ++ " is an add with carry."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
 
   Definition subborrowx (s : Z)
@@ -680,7 +680,7 @@ Section __.
           prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
           (stringify_correctness
              evalf
-             (fun fname : string => ["The function " ++ fname ++ " is a sub with borrow."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
 
 

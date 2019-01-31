@@ -285,7 +285,7 @@ else:
         FromPipelineToString
           prefix "carry_mul" carry_mul
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements and reduces the result."]%string)
              (carry_mul_correct weightf n m tight_bounds loose_bounds)).
 
   Definition carry_square
@@ -304,7 +304,7 @@ else:
         FromPipelineToString
           prefix "carry_square" carry_square
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " squares a field element and reduces the result."]%string)
              (carry_square_correct weightf n m tight_bounds loose_bounds)).
 
   Definition carry_scmul_const (x : Z)
@@ -323,7 +323,7 @@ else:
         FromPipelineToString
           prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x)
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " multiplies a field element by " ++ decimal_string_of_Z x ++ " and reduces the result."]%string)
              (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
 
   Definition carry
@@ -342,7 +342,7 @@ else:
         FromPipelineToString
           prefix "carry" carry
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " reduces a field element."]%string)
              (carry_correct weightf n m tight_bounds loose_bounds)).
 
   Definition add
@@ -361,7 +361,7 @@ else:
         FromPipelineToString
           prefix "add" add
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " adds two field elements."]%string)
              (add_correct weightf n m tight_bounds loose_bounds)).
 
   Definition sub
@@ -380,7 +380,7 @@ else:
         FromPipelineToString
           prefix "sub" sub
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements."]%string)
              (sub_correct weightf n m tight_bounds loose_bounds)).
 
   Definition opp
@@ -399,7 +399,7 @@ else:
         FromPipelineToString
           prefix "opp" opp
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " negates a field element."]%string)
              (opp_correct weightf n m tight_bounds loose_bounds)).
 
   Definition to_bytes
@@ -418,7 +418,7 @@ else:
         FromPipelineToString
           prefix "to_bytes" to_bytes
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " serializes a field element to bytes in little-endian order."]%string)
              (to_bytes_correct weightf n n_bytes m tight_bounds)).
 
   Definition from_bytes
@@ -437,7 +437,7 @@ else:
         FromPipelineToString
           prefix "from_bytes" from_bytes
           (stringify_correctness
-             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element from bytes in little-endian order."]%string)
              (from_bytes_correct weightf n n_bytes m s tight_bounds)).
 
   Definition encode
@@ -456,7 +456,7 @@ else:
         FromPipelineToString
           prefix "encode" encode
           (stringify_correctness
-             (fun fname : string => [fname ++ ":"]%string)
+             (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element."]%string)
              (encode_correct weightf n m tight_bounds)).
 
   Definition zero
@@ -475,7 +475,7 @@ else:
         FromPipelineToString
           prefix "zero" zero
           (stringify_correctness
-             (fun fname : string => @nil string)
+             (fun fname => ["The function " ++ fname ++ " returns the field element zero."]%string)
              (zero_correct weightf n m tight_bounds)).
 
   Definition one
@@ -494,7 +494,7 @@ else:
         FromPipelineToString
           prefix "one" one
           (stringify_correctness
-             (fun fname : string => @nil string)
+             (fun fname => ["The function " ++ fname ++ " returns the field element one."]%string)
              (one_correct weightf n m tight_bounds)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.

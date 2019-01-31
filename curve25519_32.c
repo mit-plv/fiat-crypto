@@ -15,7 +15,7 @@ typedef signed char fiat_25519_int1;
 
 
 /*
- * The function fiat_25519_addcarryx_u26 is an add with carry.
+ * The function fiat_25519_addcarryx_u26 is an addition with carry.
  * out1 = (arg1 + arg2 + arg3) mod 2^26
  * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^26⌋
  * Input Bounds:
@@ -35,7 +35,7 @@ static void fiat_25519_addcarryx_u26(uint32_t* out1, fiat_25519_uint1* out2, fia
 }
 
 /*
- * The function fiat_25519_subborrowx_u26 is a sub with borrow.
+ * The function fiat_25519_subborrowx_u26 is a subtraction with borrow.
  * out1 = (-arg1 + arg2 + -arg3) mod 2^26
  * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^26⌋
  * Input Bounds:
@@ -55,7 +55,7 @@ static void fiat_25519_subborrowx_u26(uint32_t* out1, fiat_25519_uint1* out2, fi
 }
 
 /*
- * The function fiat_25519_addcarryx_u25 is an add with carry.
+ * The function fiat_25519_addcarryx_u25 is an addition with carry.
  * out1 = (arg1 + arg2 + arg3) mod 2^25
  * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^25⌋
  * Input Bounds:
@@ -75,7 +75,7 @@ static void fiat_25519_addcarryx_u25(uint32_t* out1, fiat_25519_uint1* out2, fia
 }
 
 /*
- * The function fiat_25519_subborrowx_u25 is a sub with borrow.
+ * The function fiat_25519_subborrowx_u25 is a subtraction with borrow.
  * out1 = (-arg1 + arg2 + -arg3) mod 2^25
  * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^25⌋
  * Input Bounds:
@@ -112,7 +112,7 @@ static void fiat_25519_cmovznz_u32(uint32_t* out1, fiat_25519_uint1 arg1, uint32
 }
 
 /*
- * The function fiat_25519_carry_mul does stuff.
+ * The function fiat_25519_carry_mul multiplies two field elements and reduces the result.
  * eval out1 mod m = (eval arg1 * eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
@@ -281,7 +281,7 @@ static void fiat_25519_carry_mul(uint32_t out1[10], const uint32_t arg1[10], con
 }
 
 /*
- * The function fiat_25519_carry_square does stuff.
+ * The function fiat_25519_carry_square squares a field element and reduces the result.
  * eval out1 mod m = (eval arg1 * eval arg1) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
@@ -422,7 +422,7 @@ static void fiat_25519_carry_square(uint32_t out1[10], const uint32_t arg1[10]) 
 }
 
 /*
- * The function fiat_25519_carry_scmul_121666 does stuff.
+ * The function fiat_25519_carry_scmul_121666 multiplies a field element by 121666 and reduces the result.
  * eval out1 mod m = (121666 * eval arg1) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
@@ -490,7 +490,7 @@ static void fiat_25519_carry_scmul_121666(uint32_t out1[10], const uint32_t arg1
 }
 
 /*
- * The function fiat_25519_carry does stuff.
+ * The function fiat_25519_carry reduces a field element.
  * eval out1 mod m = eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
@@ -533,7 +533,7 @@ static void fiat_25519_carry(uint32_t out1[10], const uint32_t arg1[10]) {
 }
 
 /*
- * The function fiat_25519_add does stuff.
+ * The function fiat_25519_add adds two field elements.
  * eval out1 mod m = (eval arg1 + eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
@@ -565,7 +565,7 @@ static void fiat_25519_add(uint32_t out1[10], const uint32_t arg1[10], const uin
 }
 
 /*
- * The function fiat_25519_sub does stuff.
+ * The function fiat_25519_sub subtracts two field elements.
  * eval out1 mod m = (eval arg1 - eval arg2) mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
@@ -597,7 +597,7 @@ static void fiat_25519_sub(uint32_t out1[10], const uint32_t arg1[10], const uin
 }
 
 /*
- * The function fiat_25519_opp does stuff.
+ * The function fiat_25519_opp negates a field element.
  * eval out1 mod m = -eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
@@ -671,7 +671,7 @@ static void fiat_25519_selectznz(uint32_t out1[10], fiat_25519_uint1 arg1, const
 }
 
 /*
- * The function fiat_25519_to_bytes does stuff.
+ * The function fiat_25519_to_bytes serializes a field element to bytes in little-endian order.
  * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
@@ -853,7 +853,7 @@ static void fiat_25519_to_bytes(uint8_t out1[32], const uint32_t arg1[10]) {
 }
 
 /*
- * The function fiat_25519_from_bytes does stuff.
+ * The function fiat_25519_from_bytes deserializes a field element from bytes in little-endian order.
  * eval out1 mod m = bytes_eval arg1 mod m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]

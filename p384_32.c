@@ -17,7 +17,7 @@ typedef signed char fiat_p384_int1;
 
 
 /*
- * The function fiat_p384_addcarryx_u32 is an add with carry.
+ * The function fiat_p384_addcarryx_u32 is an addition with carry.
  * out1 = (arg1 + arg2 + arg3) mod 2^32
  * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
  * Input Bounds:
@@ -37,7 +37,7 @@ static void fiat_p384_addcarryx_u32(uint32_t* out1, fiat_p384_uint1* out2, fiat_
 }
 
 /*
- * The function fiat_p384_subborrowx_u32 is a sub with borrow.
+ * The function fiat_p384_subborrowx_u32 is a subtraction with borrow.
  * out1 = (-arg1 + arg2 + -arg3) mod 2^32
  * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
  * Input Bounds:
@@ -93,7 +93,7 @@ static void fiat_p384_cmovznz_u32(uint32_t* out1, fiat_p384_uint1 arg1, uint32_t
 }
 
 /*
- * The function fiat_p384_mul does stuff.
+ * The function fiat_p384_mul multiplies two field elements in the Montgomery domain.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * arg2 = map (λ x, ⌊eval arg2 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg2 < m →
  * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) * eval (fiat_p384_from_montgomery arg2)) mod m
@@ -2677,7 +2677,7 @@ static void fiat_p384_mul(uint32_t out1[12], const uint32_t arg1[12], const uint
 }
 
 /*
- * The function fiat_p384_square does stuff.
+ * The function fiat_p384_square squares a field element in the Montgomery domain.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) * eval (fiat_p384_from_montgomery arg1)) mod m
  * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
@@ -5259,7 +5259,7 @@ static void fiat_p384_square(uint32_t out1[12], const uint32_t arg1[12]) {
 }
 
 /*
- * The function fiat_p384_add does stuff.
+ * The function fiat_p384_add adds two field elements in the Montgomery domain.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * arg2 = map (λ x, ⌊eval arg2 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg2 < m →
  * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) + eval (fiat_p384_from_montgomery arg2)) mod m
@@ -5386,7 +5386,7 @@ static void fiat_p384_add(uint32_t out1[12], const uint32_t arg1[12], const uint
 }
 
 /*
- * The function fiat_p384_sub does stuff.
+ * The function fiat_p384_sub subtracts two field elements in the Montgomery domain.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * arg2 = map (λ x, ⌊eval arg2 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg2 < m →
  * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) - eval (fiat_p384_from_montgomery arg2)) mod m
@@ -5488,7 +5488,7 @@ static void fiat_p384_sub(uint32_t out1[12], const uint32_t arg1[12], const uint
 }
 
 /*
- * The function fiat_p384_opp does stuff.
+ * The function fiat_p384_opp negates a field element in the Montgomery domain.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * eval (fiat_p384_from_montgomery out1) mod m = -eval (fiat_p384_from_montgomery arg1) mod m
  * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
@@ -5588,9 +5588,9 @@ static void fiat_p384_opp(uint32_t out1[12], const uint32_t arg1[12]) {
 }
 
 /*
- * The function fiat_p384_from_montgomery does stuff.
+ * The function fiat_p384_from_montgomery translates a field element out of the Montgomery domain.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
- * eval out1 mod m = (eval arg1 * 9173994463960286046443283581208347763186259956673124494950355357547691504353860004117541501358835492716545^12) mod m
+ * eval out1 mod m = (eval arg1 * ((2^32)⁻¹ mod m)^12) mod m
  * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
@@ -7226,7 +7226,7 @@ static void fiat_p384_from_montgomery(uint32_t out1[12], const uint32_t arg1[12]
 }
 
 /*
- * The function fiat_p384_nonzero does stuff.
+ * The function fiat_p384_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * out1 = 0 ↔ eval (fiat_p384_from_montgomery arg1) mod m = 0
  * Input Bounds:
@@ -7289,7 +7289,7 @@ static void fiat_p384_selectznz(uint32_t out1[12], fiat_p384_uint1 arg1, const u
 }
 
 /*
- * The function fiat_p384_to_bytes does stuff.
+ * The function fiat_p384_to_bytes serializes a field element in the Montgomery domain to bytes in little-endian order.
  * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
  * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..47]
  * Input Bounds:
@@ -7444,7 +7444,7 @@ static void fiat_p384_to_bytes(uint8_t out1[48], const uint32_t arg1[12]) {
 }
 
 /*
- * The function fiat_p384_from_bytes does stuff.
+ * The function fiat_p384_from_bytes deserializes a field element in the Montgomery domain from bytes in little-endian order.
  * arg1 = map (λ x, ⌊bytes_eval arg1 mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..47] ∧ 0 ≤ bytes_eval arg1 < m →
  * eval out1 mod m = bytes_eval arg1 mod m
  * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
