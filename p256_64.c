@@ -96,10 +96,9 @@ static void fiat_p256_cmovznz_u64(uint64_t* out1, fiat_p256_uint1 arg1, uint64_t
 
 /*
  * The function fiat_p256_mul multiplies two field elements in the Montgomery domain.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
- * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg2 < m →
- * eval (fiat_p256_from_montgomery out1) mod m = (eval (fiat_p256_from_montgomery arg1) * eval (fiat_p256_from_montgomery arg2)) mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * 0 ≤ eval arg1 < m →
+ * 0 ≤ eval arg2 < m →
+ * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -416,9 +415,8 @@ static void fiat_p256_mul(uint64_t out1[4], const uint64_t arg1[4], const uint64
 
 /*
  * The function fiat_p256_square squares a field element in the Montgomery domain.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
- * eval (fiat_p256_from_montgomery out1) mod m = (eval (fiat_p256_from_montgomery arg1) * eval (fiat_p256_from_montgomery arg1)) mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * 0 ≤ eval arg1 < m →
+ * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -734,10 +732,9 @@ static void fiat_p256_square(uint64_t out1[4], const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p256_add adds two field elements in the Montgomery domain.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
- * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg2 < m →
- * eval (fiat_p256_from_montgomery out1) mod m = (eval (fiat_p256_from_montgomery arg1) + eval (fiat_p256_from_montgomery arg2)) mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * 0 ≤ eval arg1 < m →
+ * 0 ≤ eval arg2 < m →
+ * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -789,10 +786,9 @@ static void fiat_p256_add(uint64_t out1[4], const uint64_t arg1[4], const uint64
 
 /*
  * The function fiat_p256_sub subtracts two field elements in the Montgomery domain.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
- * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg2 < m →
- * eval (fiat_p256_from_montgomery out1) mod m = (eval (fiat_p256_from_montgomery arg1) - eval (fiat_p256_from_montgomery arg2)) mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * 0 ≤ eval arg1 < m →
+ * 0 ≤ eval arg2 < m →
+ * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -835,9 +831,8 @@ static void fiat_p256_sub(uint64_t out1[4], const uint64_t arg1[4], const uint64
 
 /*
  * The function fiat_p256_opp negates a field element in the Montgomery domain.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
- * eval (fiat_p256_from_montgomery out1) mod m = -eval (fiat_p256_from_montgomery arg1) mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
+ * 0 ≤ eval arg1 < m →
+ * eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -879,9 +874,8 @@ static void fiat_p256_opp(uint64_t out1[4], const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p256_from_montgomery translates a field element out of the Montgomery domain.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * 0 ≤ eval arg1 < m →
  * eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^4) mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -1065,8 +1059,8 @@ static void fiat_p256_from_montgomery(uint64_t out1[4], const uint64_t arg1[4]) 
 
 /*
  * The function fiat_p256_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
- * out1 = 0 ↔ eval (fiat_p256_from_montgomery arg1) mod m = 0
+ * 0 ≤ eval arg1 < m →
+ * out1 = 0 ↔ eval (from_montgomery arg1) mod m = 0
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -1104,7 +1098,7 @@ static void fiat_p256_selectznz(uint64_t out1[4], fiat_p256_uint1 arg1, const ui
 
 /*
  * The function fiat_p256_to_bytes serializes a field element in the Montgomery domain to bytes in little-endian order.
- * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3] ∧ 0 ≤ eval arg1 < m →
+ * 0 ≤ eval arg1 < m →
  * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -1211,9 +1205,8 @@ static void fiat_p256_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p256_from_bytes deserializes a field element in the Montgomery domain from bytes in little-endian order.
- * arg1 = map (λ x, ⌊bytes_eval arg1 mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31] ∧ 0 ≤ bytes_eval arg1 < m →
+ * 0 ≤ bytes_eval arg1 < m →
  * eval out1 mod m = bytes_eval arg1 mod m
- * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..3]
  * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
