@@ -19,6 +19,9 @@ typedef unsigned __int128 fiat_p484_uint128;
 
 
 /*
+ * The function fiat_p484_addcarryx_u64 is an add with carry.
+ * out1 = (arg1 + arg2 + arg3) mod 2^64
+ * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -36,6 +39,9 @@ static void fiat_p484_addcarryx_u64(uint64_t* out1, fiat_p484_uint1* out2, fiat_
 }
 
 /*
+ * The function fiat_p484_subborrowx_u64 is a sub with borrow.
+ * out1 = (-arg1 + arg2 + -arg3) mod 2^64
+ * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -53,6 +59,9 @@ static void fiat_p484_subborrowx_u64(uint64_t* out1, fiat_p484_uint1* out2, fiat
 }
 
 /*
+ * The function fiat_p484_mulx_u64 is an extended multiplication.
+ * out1 = (arg1 * arg2) mod 2^64
+ * ∧ out2 = ⌊arg1 * arg2 / 2^64⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0xffffffffffffffff]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -69,6 +78,8 @@ static void fiat_p484_mulx_u64(uint64_t* out1, uint64_t* out2, uint64_t arg1, ui
 }
 
 /*
+ * The function fiat_p484_cmovznz_u64 is a single-word conditional move.
+ * out1 = (if arg1 = 0 then arg2 else arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -84,6 +95,12 @@ static void fiat_p484_cmovznz_u64(uint64_t* out1, fiat_p484_uint1 arg1, uint64_t
 }
 
 /*
+ * The function fiat_p484_mul does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_p484_from_montgomery out1) mod m = (eval (fiat_p484_from_montgomery arg1) * eval (fiat_p484_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -1067,6 +1084,11 @@ static void fiat_p484_mul(uint64_t out1[7], const uint64_t arg1[7], const uint64
 }
 
 /*
+ * The function fiat_p484_square does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * eval (fiat_p484_from_montgomery out1) mod m = (eval (fiat_p484_from_montgomery arg1) * eval (fiat_p484_from_montgomery arg1)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -2049,6 +2071,12 @@ static void fiat_p484_square(uint64_t out1[7], const uint64_t arg1[7]) {
 }
 
 /*
+ * The function fiat_p484_add does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_p484_from_montgomery out1) mod m = (eval (fiat_p484_from_montgomery arg1) + eval (fiat_p484_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -2125,6 +2153,12 @@ static void fiat_p484_add(uint64_t out1[7], const uint64_t arg1[7], const uint64
 }
 
 /*
+ * The function fiat_p484_sub does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_p484_from_montgomery out1) mod m = (eval (fiat_p484_from_montgomery arg1) - eval (fiat_p484_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -2186,6 +2220,11 @@ static void fiat_p484_sub(uint64_t out1[7], const uint64_t arg1[7], const uint64
 }
 
 /*
+ * The function fiat_p484_opp does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * eval (fiat_p484_from_montgomery out1) mod m = -eval (fiat_p484_from_montgomery arg1) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -2246,6 +2285,11 @@ static void fiat_p484_opp(uint64_t out1[7], const uint64_t arg1[7]) {
 }
 
 /*
+ * The function fiat_p484_from_montgomery does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * eval out1 mod m = (eval arg1 * 1324863811396206510028543369708678912454650048974215908631025180695212704414528066624039943565284982500305666048^7) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -2889,6 +2933,9 @@ static void fiat_p484_from_montgomery(uint64_t out1[7], const uint64_t arg1[7]) 
 }
 
 /*
+ * The function fiat_p484_nonzero does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * out1 = 0 ↔ eval (fiat_p484_from_montgomery arg1) mod m = 0
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -2900,6 +2947,8 @@ static void fiat_p484_nonzero(uint64_t* out1, const uint64_t arg1[7]) {
 }
 
 /*
+ * The function fiat_p484_selectznz is a multi-limb conditional select.
+ * eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -2932,6 +2981,9 @@ static void fiat_p484_selectznz(uint64_t out1[7], fiat_p484_uint1 arg1, const ui
 }
 
 /*
+ * The function fiat_p484_to_bytes does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6] ∧ 0 ≤ eval arg1 < m →
+ * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..55]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0x3ffffffffffff]]
  * Output Bounds:
@@ -3107,6 +3159,11 @@ static void fiat_p484_to_bytes(uint8_t out1[56], const uint64_t arg1[7]) {
 }
 
 /*
+ * The function fiat_p484_from_bytes does stuff.
+ * arg1 = map (λ x, ⌊bytes_eval arg1 mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..55] ∧ 0 ≤ bytes_eval arg1 < m →
+ * eval out1 mod m = bytes_eval arg1 mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(64 * (x + 1)) / 2^(64 * x)⌋) [0..6]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3], [0x0 ~> 0x0]]
  * Output Bounds:

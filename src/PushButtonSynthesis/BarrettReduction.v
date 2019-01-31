@@ -91,7 +91,10 @@ Section rbarrett_red.
 
   Definition sbarrett_red (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "barrett_red" barrett_red.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "barrett_red" barrett_red
+          (fun _ _ _ => @nil string).
 
   (* TODO: Replace the following lemmas with a new-glue-style correctness lemma, like
 <<

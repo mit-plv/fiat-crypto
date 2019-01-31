@@ -135,6 +135,17 @@ Section __.
     { use_curve_good_t. }
   Qed.
 
+  Local Notation weightf := (weight machine_wordsize 1).
+  Local Notation evalf := (eval weightf n).
+  Local Notation initial_ctx := (CorrectnessStringification.dyn_context.nil).
+  Local Notation stringify_correctness pre_extra correctness
+    := (stringify_correctness_with_ctx
+          initial_ctx
+          evalf
+          pre_extra
+          correctness)
+         (only parsing).
+
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -147,7 +158,12 @@ Section __.
 
   Definition smul (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "mul" mul.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "mul" mul
+          (stringify_correctness
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (mul_correct weightf n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.

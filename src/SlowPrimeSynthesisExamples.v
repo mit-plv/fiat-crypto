@@ -73,12 +73,12 @@ Section debugging_p448.
        true (* static *)
        "" (* prefix *)
        "mul"
-       [] (* comment *)
        false (* subst01 *)
        None (* fancy *)
        possible_values
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
              exact r)
+              (fun _ _ => []) (* comment *)
               (Some loose_bounds, (Some loose_bounds, tt))
               (Some tight_bounds).
 

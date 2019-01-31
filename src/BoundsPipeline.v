@@ -211,7 +211,7 @@ Module Pipeline.
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
                       ++ match ToString.C.ToFunctionLines
-                                 false (* do extra bounds check *) false (* static *) "" "f" nil syntax_tree None arg_bounds ZRange.type.base.option.None with
+                                 false (* do extra bounds check *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
                                 ++ E_lines ++ [""]
@@ -322,13 +322,13 @@ Module Pipeline.
              (static : bool)
              (type_prefix : string)
              (name : string)
-             (comment : list string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              {t}
              (E : Expr t)
+             (comment : type.for_each_lhs_of_arrow ToString.C.OfPHOAS.var_data t -> ToString.C.OfPHOAS.var_data (type.final_codomain t) -> list string)
              arg_bounds
              out_bounds
     : ErrorT (list string * ToString.C.ident_infos)
@@ -340,7 +340,7 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.C.ToFunctionLines
-                                  true static type_prefix name comment E' None arg_bounds out_bounds in
+                                  true static type_prefix name E' comment None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
                       | inr err => Error (Stringification_failed E' err)
@@ -352,50 +352,53 @@ Module Pipeline.
              (static : bool)
              (type_prefix : string)
              (name : string)
-             (comment : list string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
              relax_zrange
              {t}
              (E : Expr t)
+             (comment : type.for_each_lhs_of_arrow ToString.C.OfPHOAS.var_data t -> ToString.C.OfPHOAS.var_data (type.final_codomain t) -> list string)
              arg_bounds
              out_bounds
     : ErrorT (string * ToString.C.ident_infos)
     := let E := BoundsPipelineToStrings
-                  static type_prefix name comment
+                  static type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
                   relax_zrange
-                  E arg_bounds out_bounds in
+                  E comment arg_bounds out_bounds in
        match E with
        | Success (E, types_used) => Success (ToString.C.LinesToString E, types_used)
        | Error err => Error err
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString prefix name result
-    := (((prefix ++ name)%string,
-         match result with
-         | Success E'
-           => let E := ToString.C.ToFunctionLines
-                         true true (* static *) prefix (prefix ++ name)%string [] E' None
-                         (arg_bounds_of_pipeline result)
-                         (out_bounds_of_pipeline result) in
-              match E with
-              | inl E => Success E
-              | inr err => Error (Pipeline.Stringification_failed E' err)
-              end
-         | Error err => Error err
-         end)).
-
+    := (fun comment
+        => ((prefix ++ name)%string,
+            match result with
+            | Success E'
+              => let E := ToString.C.ToFunctionLines
+                            true true (* static *) prefix (prefix ++ name)%string
+                            E'
+                            (comment (prefix ++ name)%string)
+                            None
+                            (arg_bounds_of_pipeline result)
+                            (out_bounds_of_pipeline result) in
+                 match E with
+                 | inl E => Success E
+                 | inr err => Error (Pipeline.Stringification_failed E' err)
+                 end
+            | Error err => Error err
+            end)).
 
   Local Ltac wf_interp_t :=
     repeat first [ progress destruct_head'_and

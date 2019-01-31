@@ -17,6 +17,9 @@ typedef signed char fiat_p384_int1;
 
 
 /*
+ * The function fiat_p384_addcarryx_u32 is an add with carry.
+ * out1 = (arg1 + arg2 + arg3) mod 2^32
+ * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffff]
@@ -34,6 +37,9 @@ static void fiat_p384_addcarryx_u32(uint32_t* out1, fiat_p384_uint1* out2, fiat_
 }
 
 /*
+ * The function fiat_p384_subborrowx_u32 is a sub with borrow.
+ * out1 = (-arg1 + arg2 + -arg3) mod 2^32
+ * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffff]
@@ -51,6 +57,9 @@ static void fiat_p384_subborrowx_u32(uint32_t* out1, fiat_p384_uint1* out2, fiat
 }
 
 /*
+ * The function fiat_p384_mulx_u32 is an extended multiplication.
+ * out1 = (arg1 * arg2) mod 2^32
+ * ∧ out2 = ⌊arg1 * arg2 / 2^32⌋
  * Input Bounds:
  *   arg1: [0x0 ~> 0xffffffff]
  *   arg2: [0x0 ~> 0xffffffff]
@@ -67,6 +76,8 @@ static void fiat_p384_mulx_u32(uint32_t* out1, uint32_t* out2, uint32_t arg1, ui
 }
 
 /*
+ * The function fiat_p384_cmovznz_u32 is a single-word conditional move.
+ * out1 = (if arg1 = 0 then arg2 else arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffff]
@@ -82,6 +93,12 @@ static void fiat_p384_cmovznz_u32(uint32_t* out1, fiat_p384_uint1 arg1, uint32_t
 }
 
 /*
+ * The function fiat_p384_mul does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) * eval (fiat_p384_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
@@ -2660,6 +2677,11 @@ static void fiat_p384_mul(uint32_t out1[12], const uint32_t arg1[12], const uint
 }
 
 /*
+ * The function fiat_p384_square does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) * eval (fiat_p384_from_montgomery arg1)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
@@ -5237,6 +5259,12 @@ static void fiat_p384_square(uint32_t out1[12], const uint32_t arg1[12]) {
 }
 
 /*
+ * The function fiat_p384_add does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) + eval (fiat_p384_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
@@ -5358,6 +5386,12 @@ static void fiat_p384_add(uint32_t out1[12], const uint32_t arg1[12], const uint
 }
 
 /*
+ * The function fiat_p384_sub does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * arg2 = map (λ x, ⌊eval arg2 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg2 < m →
+ * eval (fiat_p384_from_montgomery out1) mod m = (eval (fiat_p384_from_montgomery arg1) - eval (fiat_p384_from_montgomery arg2)) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
@@ -5454,6 +5488,11 @@ static void fiat_p384_sub(uint32_t out1[12], const uint32_t arg1[12], const uint
 }
 
 /*
+ * The function fiat_p384_opp does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * eval (fiat_p384_from_montgomery out1) mod m = -eval (fiat_p384_from_montgomery arg1) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
@@ -5549,6 +5588,11 @@ static void fiat_p384_opp(uint32_t out1[12], const uint32_t arg1[12]) {
 }
 
 /*
+ * The function fiat_p384_from_montgomery does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * eval out1 mod m = (eval arg1 * 9173994463960286046443283581208347763186259956673124494950355357547691504353860004117541501358835492716545^12) mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
@@ -7182,6 +7226,9 @@ static void fiat_p384_from_montgomery(uint32_t out1[12], const uint32_t arg1[12]
 }
 
 /*
+ * The function fiat_p384_nonzero does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * out1 = 0 ↔ eval (fiat_p384_from_montgomery arg1) mod m = 0
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
@@ -7193,6 +7240,8 @@ static void fiat_p384_nonzero(uint32_t* out1, const uint32_t arg1[12]) {
 }
 
 /*
+ * The function fiat_p384_selectznz is a multi-limb conditional select.
+ * eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
@@ -7240,6 +7289,9 @@ static void fiat_p384_selectznz(uint32_t out1[12], fiat_p384_uint1 arg1, const u
 }
 
 /*
+ * The function fiat_p384_to_bytes does stuff.
+ * arg1 = map (λ x, ⌊eval arg1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11] ∧ 0 ≤ eval arg1 < m →
+ * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..47]
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
@@ -7392,6 +7444,11 @@ static void fiat_p384_to_bytes(uint8_t out1[48], const uint32_t arg1[12]) {
 }
 
 /*
+ * The function fiat_p384_from_bytes does stuff.
+ * arg1 = map (λ x, ⌊bytes_eval arg1 mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..47] ∧ 0 ≤ bytes_eval arg1 < m →
+ * eval out1 mod m = bytes_eval arg1 mod m
+ * ∧ out1 = map (λ x, ⌊eval out1 mod 2^(32 * (x + 1)) / 2^(32 * x)⌋) [0..11]
+ * ∧ 0 ≤ eval out1 < m
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  * Output Bounds:

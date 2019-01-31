@@ -784,6 +784,40 @@ Module Compilers.
              | type.arrow s d => Empty_set
              end.
 
+        Fixpoint base_var_names (t : base.type) : Set
+          := match t with
+             | base.type.unit
+               => unit
+             | base.type.nat
+             | base.type.bool
+               => Empty_set
+             | base.type.Z => string
+             | base.type.prod A B => base_var_names A * base_var_names B
+             | base.type.list A => string
+             end.
+        Definition var_names (t : Compilers.type.type base.type) : Set
+          := match t with
+             | type.base t => base_var_names t
+             | type.arrow s d => Empty_set
+             end.
+
+        Fixpoint names_of_base_var_data {t} : base_var_data t -> base_var_names t
+          := match t return base_var_data t -> base_var_names t with
+             | base.type.unit
+             | base.type.nat
+             | base.type.bool
+               => fun x => x
+             | base.type.Z => @fst _ _
+             | base.type.prod A B
+               => fun xy => (@names_of_base_var_data A (fst xy), @names_of_base_var_data B (snd xy))
+             | base.type.list A => fun x => fst (fst x)
+             end.
+        Definition names_of_var_data {t} : var_data t -> var_names t
+          := match t with
+             | type.base t => names_of_base_var_data
+             | type.arrow _ _ => fun x => x
+             end.
+
         Fixpoint arith_expr_for_base (t : base.type) : Set
           := match t with
              | base.type.Z
@@ -2167,9 +2201,10 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
-      Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string) (comment : list string)
+      Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
+                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
@@ -2177,7 +2212,7 @@ Module Compilers.
         := match ExprOfPHOAS do_bounds_check e name_list inbounds with
            | inl (indata, outdata, f)
              => inl ((["/*"]
-                        ++ (List.map (fun s => " * " ++ s)%string comment)
+                        ++ (List.map (fun s => " * " ++ s)%string (comment indata outdata))
                         ++ [" * Input Bounds:"]
                         ++ List.map (fun v => " *   " ++ v)%string (input_bounds_to_string indata inbounds)
                         ++ [" * Output Bounds:"]
@@ -2197,14 +2232,15 @@ Module Compilers.
         : string
         := String.concat String.NewLine lines.
 
-      Definition ToFunctionString (do_bounds_check : bool) (static : bool) (prefix : string) (name : string) (comment : list string)
+      Definition ToFunctionString (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
+                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.final_codomain t))
         : (string * ident_infos) + string
-        := match ToFunctionLines do_bounds_check static prefix name comment e name_list inbounds outbounds with
+        := match ToFunctionLines do_bounds_check static prefix name e comment name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.

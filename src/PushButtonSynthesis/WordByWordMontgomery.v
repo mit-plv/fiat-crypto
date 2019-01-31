@@ -223,6 +223,28 @@ Section __.
   Qed.
 
 
+  Local Notation valid := (Arithmetic.WordByWordMontgomery.valid machine_wordsize n m).
+  Local Notation bytes_valid := (Arithmetic.WordByWordMontgomery.valid 8 n_bytes m).
+
+  Local Notation from_montgomery_res := (from_montgomerymod machine_wordsize n m m').
+
+  Local Notation evalf := (@eval machine_wordsize n).
+  Local Notation initial_ctx prefix
+    := (CorrectnessStringification.dyn_context.cons
+          m "m"%string
+          (CorrectnessStringification.dyn_context.cons
+             from_montgomery_res (prefix ++ "from_montgomery")%string
+             (CorrectnessStringification.dyn_context.cons
+                (@eval 8 n_bytes) "bytes_eval"%string
+                CorrectnessStringification.dyn_context.nil))).
+  Local Notation stringify_correctness prefix pre_extra correctness
+    := (stringify_correctness_with_ctx
+          (initial_ctx prefix)
+          evalf
+          pre_extra
+          correctness)
+         (only parsing).
+
   Definition mul
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -235,7 +257,13 @@ Section __.
 
   Definition smul (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "mul" mul.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "mul" mul
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (mul_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition square
     := Pipeline.BoundsPipeline
@@ -249,7 +277,13 @@ Section __.
 
   Definition ssquare (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "square" square.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "square" square
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (square_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition add
     := Pipeline.BoundsPipeline
@@ -263,7 +297,13 @@ Section __.
 
   Definition sadd (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "add" add.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "add" add
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (add_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition sub
     := Pipeline.BoundsPipeline
@@ -277,7 +317,13 @@ Section __.
 
   Definition ssub (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "sub" sub.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "sub" sub
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (sub_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition opp
     := Pipeline.BoundsPipeline
@@ -291,7 +337,13 @@ Section __.
 
   Definition sopp (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "opp" opp.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "opp" opp
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (opp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition from_montgomery
     := Pipeline.BoundsPipeline
@@ -305,7 +357,13 @@ Section __.
 
   Definition sfrom_montgomery (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "from_montgomery" from_montgomery.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "from_montgomery" from_montgomery
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (from_montgomery_correct machine_wordsize n m r' valid)).
 
   Definition nonzero
     := Pipeline.BoundsPipeline
@@ -318,7 +376,13 @@ Section __.
 
   Definition snonzero (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "nonzero" nonzero.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "nonzero" nonzero
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (nonzero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition to_bytes
     := Pipeline.BoundsPipeline
@@ -332,7 +396,13 @@ Section __.
 
   Definition sto_bytes (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "to_bytes" to_bytes.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "to_bytes" to_bytes
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (to_bytes_correct machine_wordsize n n_bytes m valid)).
 
   Definition from_bytes
     := Pipeline.BoundsPipeline
@@ -346,7 +416,13 @@ Section __.
 
   Definition sfrom_bytes (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "from_bytes" from_bytes.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "from_bytes" from_bytes
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)).
 
   Definition encode
     := Pipeline.BoundsPipeline
@@ -360,7 +436,13 @@ Section __.
 
   Definition sencode (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "encode" encode.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "encode" encode
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (encode_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition zero
     := Pipeline.BoundsPipeline
@@ -374,7 +456,13 @@ Section __.
 
   Definition szero (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "zero" zero.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "zero" zero
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (zero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition one
     := Pipeline.BoundsPipeline
@@ -388,15 +476,18 @@ Section __.
 
   Definition sone (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
-    := Eval cbv beta in FromPipelineToString prefix "one" one.
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "one" one
+          (stringify_correctness
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " does stuff."]%string)
+             (one_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
     := Primitives.sselectznz n machine_wordsize prefix.
-
-  Local Notation valid := (Arithmetic.WordByWordMontgomery.valid machine_wordsize n m).
-  Local Notation bytes_valid := (Arithmetic.WordByWordMontgomery.valid 8 n_bytes m).
 
   Lemma bounded_by_of_valid x
         (H : valid x)
@@ -617,8 +708,6 @@ Section __.
         from arithmetic, or should I use `Interp
         reified_from_montgomery` (the post-pipeline version), and take
         in success of the pipeline on `from_montgomery` as well? *)
-
-  Local Notation from_montgomery_res := (from_montgomerymod machine_wordsize n m m').
 
   Lemma mul_correct res
         (Hres : mul = Success res)
