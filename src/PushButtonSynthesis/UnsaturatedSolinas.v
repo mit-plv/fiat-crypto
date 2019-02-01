@@ -260,14 +260,20 @@ else:
 
   Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
   Local Notation evalf := (eval weightf n).
-  Local Notation initial_ctx := (CorrectnessStringification.dyn_context.cons m "m"%string CorrectnessStringification.dyn_context.nil).
-  Local Notation "'docstring_with_summary_from_lemma!' pre_extra correctness"
+  Local Notation notations_for_docstring
+    := (CorrectnessStringification.dyn_context.cons
+          m "m"
+          (CorrectnessStringification.dyn_context.cons
+             weightf "weight"
+             (CorrectnessStringification.dyn_context.cons
+                evalf "eval"
+                CorrectnessStringification.dyn_context.nil)))%string.
+  Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
-          initial_ctx
-          evalf
-          pre_extra
+          notations_for_docstring
+          summary
           correctness)
-         (only parsing, at level 10, pre_extra at next level, correctness at next level).
+         (only parsing, at level 10, summary at next level, correctness at next level).
 
   Definition carry_mul
     := Pipeline.BoundsPipeline

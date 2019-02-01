@@ -228,25 +228,25 @@ Section __.
 
   Local Notation from_montgomery_res := (from_montgomerymod machine_wordsize n m m').
 
-  Local Notation evalf := (@eval machine_wordsize n).
-  Local Notation initial_ctx prefix
-    := (CorrectnessStringification.dyn_context.cons
-          m "m"%string
-          (CorrectnessStringification.dyn_context.cons
-             r' ("((2^" ++ decimal_string_of_Z machine_wordsize ++ ")⁻¹ mod m)")%string
-             (CorrectnessStringification.dyn_context.cons
-                from_montgomery_res "from_montgomery"%string
-                (CorrectnessStringification.dyn_context.cons
-                   (@eval 8 n_bytes) "bytes_eval"%string
-                   CorrectnessStringification.dyn_context.nil))))
+  Local Notation notations_for_docstring prefix
+    := ((CorrectnessStringification.dyn_context.cons
+           m "m"
+           (CorrectnessStringification.dyn_context.cons
+              r' ("((2^" ++ decimal_string_of_Z machine_wordsize ++ ")⁻¹ mod m)")
+              (CorrectnessStringification.dyn_context.cons
+                 from_montgomery_res "from_montgomery"
+                 (CorrectnessStringification.dyn_context.cons
+                    (@eval machine_wordsize n) "eval"
+                    (CorrectnessStringification.dyn_context.cons
+                       (@eval 8 n_bytes) "bytes_eval"
+                       CorrectnessStringification.dyn_context.nil)))))%string)
          (only parsing).
-  Local Notation "'docstring_with_summary_from_lemma!' prefix pre_extra correctness"
+  Local Notation "'docstring_with_summary_from_lemma!' prefix summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
-          (initial_ctx prefix)
-          evalf
-          pre_extra
+          (notations_for_docstring prefix)
+          summary
           correctness)
-         (only parsing, at level 10, prefix at next level, pre_extra at next level, correctness at next level).
+         (only parsing, at level 10, prefix at next level, summary at next level, correctness at next level).
 
   Definition mul
     := Pipeline.BoundsPipeline

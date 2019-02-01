@@ -351,10 +351,9 @@ Module CorrectnessStringification.
     | _ => false
     end.
 
-  Ltac stringify_rec0 evalf ctx correctness lvl :=
-    let recurse v lvl := stringify_rec0 evalf ctx v lvl in
+  Ltac stringify_rec0 ctx correctness lvl :=
+    let recurse v lvl := stringify_rec0 ctx v lvl in
     let name_of_var := find_head_in_ctx ctx correctness in
-    let weightf := lazymatch evalf with eval ?weightf _ => weightf | _ => I end in
     let stringify_if testv t f :=
         let stest := recurse testv 200 in
         let st := recurse t 200 in
@@ -424,12 +423,6 @@ Module CorrectnessStringification.
               | ?T' => let __ := match goal with _ => idtac "Error: Unrecognized type for equality:" T' end in
                        constr:(I : I)
               end
-         | evalf ?v
-           => let sv := recurse v 9 in
-              maybe_parenthesize (("eval " ++ sv)%string) 10 lvl
-         | weightf ?v
-           => let sv := recurse v 9 in
-              maybe_parenthesize (("weight " ++ sv)%string) 10 lvl
          | eval (weight 8 1) _ ?v
            => let sv := recurse v 9 in
               maybe_parenthesize (("bytes_eval " ++ sv)%string) 10 lvl
@@ -494,7 +487,7 @@ Module CorrectnessStringification.
                 => recurse (n - 1)%nat lvl
               end
          | fun x : ?T => ?f
-           => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 evalf ctx body 200) in
+           => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body 200) in
               maybe_parenthesize ("λ" ++ slam) 200 lvl
          | ?v
            => let iv := test_is_var v in
@@ -515,14 +508,14 @@ Module CorrectnessStringification.
          end
     end.
 
-  Ltac stringify_rec prefix evalf ctx correctness lvl :=
-    let recurse' prefix v lvl := stringify_rec prefix evalf ctx v lvl in
+  Ltac stringify_rec prefix ctx correctness lvl :=
+    let recurse' prefix v lvl := stringify_rec prefix ctx v lvl in
     let recurse := recurse' "" in
-    let default _ := let v := stringify_rec0 evalf ctx correctness lvl in
+    let default _ := let v := stringify_rec0 ctx correctness lvl in
                      constr:((prefix ++ v)::nil) in
     lazymatch correctness with
     | ?A -> ?B
-      => let sA := stringify_rec0 evalf ctx A 98 in
+      => let sA := stringify_rec0 ctx A 98 in
          let sB := recurse B 200 in
          constr:((prefix ++ sA ++ " →")%string :: sB)
     | _ <= _ <  _ => default ()
@@ -546,7 +539,7 @@ Module CorrectnessStringification.
     | ?v => v
     end.
 
-  Ltac stringify ctx correctness evalf fname arg_var_data out_var_data :=
+  Ltac stringify ctx correctness fname arg_var_data out_var_data :=
     let G := match goal with |- ?G => G end in
     let correctness := (eval hnf in correctness) in
     let correctness := (eval cbv [Partition.partition Arithmetic.WordByWordMontgomery.valid Arithmetic.WordByWordMontgomery.small] in correctness) in
@@ -560,26 +553,26 @@ Module CorrectnessStringification.
                  out_var_names
                  ltac:(
                  fun ctx T
-                 => let v := stringify_rec "" evalf ctx T 200 in refine v
+                 => let v := stringify_rec "" ctx T 200 in refine v
                ) in
     let res := strip_lambdas res in
     res.
 
-  Notation docstring_with_summary_from_lemma_with_ctx ctx evalf pre_extra correctness
+  Notation docstring_with_summary_from_lemma_with_ctx ctx summary correctness
     := (fun fname arg_var_data out_var_data
-        => ltac:(let res := stringify ctx correctness evalf fname arg_var_data out_var_data in
-                 refine (List.app (pre_extra fname) res))) (only parsing).
-  Notation docstring_with_summary_from_lemma evalf pre_extra correctness
+        => ltac:(let res := stringify ctx correctness fname arg_var_data out_var_data in
+                 refine (List.app (summary fname) res))) (only parsing).
+  Notation docstring_with_summary_from_lemma summary correctness
     := (match dyn_context.nil with
-        | ctx' => docstring_with_summary_from_lemma_with_ctx ctx' evalf pre_extra correctness
+        | ctx' => docstring_with_summary_from_lemma_with_ctx ctx' summary correctness
         end)
          (only parsing).
 End CorrectnessStringification.
 
-Notation "'docstring_with_summary_from_lemma_with_ctx!' ctx evalf pre_extra correctness"
-  := (CorrectnessStringification.docstring_with_summary_from_lemma_with_ctx ctx evalf pre_extra correctness) (only parsing, at level 10, ctx at next level, evalf at next level, pre_extra at next level, correctness at next level).
-Notation "'docstring_with_summary_from_lemma!' evalf pre_extra correctness"
-  := (CorrectnessStringification.docstring_with_summary_from_lemma evalf pre_extra correctness) (only parsing, at level 10, evalf at next level, pre_extra at next level, correctness at next level).
+Notation "'docstring_with_summary_from_lemma_with_ctx!' ctx summary correctness"
+  := (CorrectnessStringification.docstring_with_summary_from_lemma_with_ctx ctx summary correctness) (only parsing, at level 10, ctx at next level, summary at next level, correctness at next level).
+Notation "'docstring_with_summary_from_lemma!' summary correctness"
+  := (CorrectnessStringification.docstring_with_summary_from_lemma summary correctness) (only parsing, at level 10, summary at next level, correctness at next level).
 
 Section __.
   Context (n : nat)
@@ -607,6 +600,16 @@ Section __.
 
   Local Notation dummy_weight := (weight 0 0).
   Local Notation evalf := (eval dummy_weight n).
+  Local Notation notations_for_docstring
+    := (CorrectnessStringification.dyn_context.cons
+          evalf "eval"
+          CorrectnessStringification.dyn_context.nil)%string.
+  Local Notation "'docstring_with_summary_from_lemma!' summary correctness"
+    := (docstring_with_summary_from_lemma_with_ctx!
+          notations_for_docstring
+          summary
+          correctness)
+         (only parsing, at level 10, summary at next level, correctness at next level).
 
   Definition selectznz
     := Pipeline.BoundsPipeline
@@ -623,7 +626,6 @@ Section __.
         FromPipelineToString
           prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
-             evalf
              (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
 
@@ -643,7 +645,6 @@ Section __.
         FromPipelineToString
           prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
           (docstring_with_summary_from_lemma!
-             evalf
              (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
 
@@ -664,7 +665,6 @@ Section __.
         FromPipelineToString
           prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
           (docstring_with_summary_from_lemma!
-             evalf
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
 
@@ -684,7 +684,6 @@ Section __.
         FromPipelineToString
           prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
           (docstring_with_summary_from_lemma!
-             evalf
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
 
@@ -705,7 +704,6 @@ Section __.
         FromPipelineToString
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
           (docstring_with_summary_from_lemma!
-             evalf
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct s)).
 
