@@ -138,13 +138,13 @@ Section __.
   Local Notation weightf := (weight machine_wordsize 1).
   Local Notation evalf := (eval weightf n).
   Local Notation initial_ctx := (CorrectnessStringification.dyn_context.nil).
-  Local Notation stringify_correctness pre_extra correctness
-    := (stringify_correctness_with_ctx
+  Local Notation "'stringify_correctness!' pre_extra correctness"
+    := (stringify_correctness_with_ctx!
           initial_ctx
           evalf
           pre_extra
           correctness)
-         (only parsing).
+         (only parsing, at level 10, pre_extra at next level, correctness at next level).
 
   Definition mul
     := Pipeline.BoundsPipeline
@@ -161,7 +161,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "mul" mul
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
 

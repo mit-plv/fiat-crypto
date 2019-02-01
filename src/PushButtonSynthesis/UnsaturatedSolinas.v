@@ -261,13 +261,13 @@ else:
   Local Notation weightf := (weight (Qnum limbwidth) (QDen limbwidth)).
   Local Notation evalf := (eval weightf n).
   Local Notation initial_ctx := (CorrectnessStringification.dyn_context.cons m "m"%string CorrectnessStringification.dyn_context.nil).
-  Local Notation stringify_correctness pre_extra correctness
-    := (stringify_correctness_with_ctx
+  Local Notation "'stringify_correctness!' pre_extra correctness"
+    := (stringify_correctness_with_ctx!
           initial_ctx
           evalf
           pre_extra
           correctness)
-         (only parsing).
+         (only parsing, at level 10, pre_extra at next level, correctness at next level).
 
   Definition carry_mul
     := Pipeline.BoundsPipeline
@@ -284,7 +284,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "carry_mul" carry_mul
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements and reduces the result."]%string)
              (carry_mul_correct weightf n m tight_bounds loose_bounds)).
 
@@ -303,7 +303,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "carry_square" carry_square
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " squares a field element and reduces the result."]%string)
              (carry_square_correct weightf n m tight_bounds loose_bounds)).
 
@@ -322,7 +322,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x)
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " multiplies a field element by " ++ decimal_string_of_Z x ++ " and reduces the result."]%string)
              (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
 
@@ -341,7 +341,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "carry" carry
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " reduces a field element."]%string)
              (carry_correct weightf n m tight_bounds loose_bounds)).
 
@@ -360,7 +360,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "add" add
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " adds two field elements."]%string)
              (add_correct weightf n m tight_bounds loose_bounds)).
 
@@ -379,7 +379,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "sub" sub
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements."]%string)
              (sub_correct weightf n m tight_bounds loose_bounds)).
 
@@ -398,7 +398,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "opp" opp
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " negates a field element."]%string)
              (opp_correct weightf n m tight_bounds loose_bounds)).
 
@@ -417,7 +417,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "to_bytes" to_bytes
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " serializes a field element to bytes in little-endian order."]%string)
              (to_bytes_correct weightf n n_bytes m tight_bounds)).
 
@@ -436,7 +436,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "from_bytes" from_bytes
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " deserializes a field element from bytes in little-endian order."]%string)
              (from_bytes_correct weightf n n_bytes m s tight_bounds)).
 
@@ -455,7 +455,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "encode" encode
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element."]%string)
              (encode_correct weightf n m tight_bounds)).
 
@@ -474,7 +474,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "zero" zero
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname => ["The function " ++ fname ++ " returns the field element zero."]%string)
              (zero_correct weightf n m tight_bounds)).
 
@@ -493,7 +493,7 @@ else:
     := Eval cbv beta in
         FromPipelineToString
           prefix "one" one
-          (stringify_correctness
+          (stringify_correctness!
              (fun fname => ["The function " ++ fname ++ " returns the field element one."]%string)
              (one_correct weightf n m tight_bounds)).
 

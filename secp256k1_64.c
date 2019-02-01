@@ -59,7 +59,7 @@ static void fiat_secp256k1_subborrowx_u64(uint64_t* out1, fiat_secp256k1_uint1* 
 }
 
 /*
- * The function fiat_secp256k1_mulx_u64 is an extended multiplication.
+ * The function fiat_secp256k1_mulx_u64 is a multiplication, returning the full double-width result.
  * out1 = (arg1 * arg2) mod 2^64
  * ∧ out2 = ⌊arg1 * arg2 / 2^64⌋
  * Input Bounds:

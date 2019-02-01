@@ -576,10 +576,10 @@ Module CorrectnessStringification.
          (only parsing).
 End CorrectnessStringification.
 
-Notation stringify_correctness_with_ctx ctx evalf pre_extra correctness
-  := (CorrectnessStringification.stringify_correctness_with_ctx ctx evalf pre_extra correctness) (only parsing).
-Notation stringify_correctness evalf pre_extra correctness
-  := (CorrectnessStringification.stringify_correctness evalf pre_extra correctness) (only parsing).
+Notation "'stringify_correctness_with_ctx!' ctx evalf pre_extra correctness"
+  := (CorrectnessStringification.stringify_correctness_with_ctx ctx evalf pre_extra correctness) (only parsing, at level 10, ctx at next level, evalf at next level, pre_extra at next level, correctness at next level).
+Notation "'stringify_correctness!' evalf pre_extra correctness"
+  := (CorrectnessStringification.stringify_correctness evalf pre_extra correctness) (only parsing, at level 10, evalf at next level, pre_extra at next level, correctness at next level).
 
 Section __.
   Context (n : nat)
@@ -622,7 +622,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "selectznz" selectznz
-          (stringify_correctness
+          (stringify_correctness!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
@@ -642,9 +642,9 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
-          (stringify_correctness
+          (stringify_correctness!
              evalf
-             (fun fname : string => ["The function " ++ fname ++ " is an extended multiplication."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
 
   Definition addcarryx (s : Z)
@@ -663,7 +663,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
-          (stringify_correctness
+          (stringify_correctness!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
@@ -683,7 +683,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
-          (stringify_correctness
+          (stringify_correctness!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
@@ -704,7 +704,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
-          (stringify_correctness
+          (stringify_correctness!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct s)).
