@@ -459,7 +459,7 @@ Module CorrectnessStringification.
          | ?x <  ?y <  ?z => stringify_infix2 "<" "<" 70 69 69 69
          | iff _ _ => stringify_infix "↔" 95 94 94
          | and _ _ => stringify_infix "∧" 80 80 80
-         | Z.modulo _ _ => stringify_infix "mod" 40 39 39
+         | Z.modulo _ _ => stringify_infix "mod" 41 39 39
          | Z.mul _ _ => stringify_infix "*" 40 40 39
          | Z.pow _ _ => stringify_infix_without_space "^" 30 29 30
          | Z.add _ _ => stringify_infix "+" 50 50 49
@@ -508,29 +508,53 @@ Module CorrectnessStringification.
          end
     end.
 
-  Ltac stringify_rec prefix ctx correctness lvl :=
-    let recurse' prefix v lvl := stringify_rec prefix ctx v lvl in
-    let recurse := recurse' "" in
-    let default _ := let v := stringify_rec0 ctx correctness lvl in
-                     constr:((prefix ++ v)::nil) in
+  Ltac stringify_preconditions ctx so_far_rev correctness :=
+    let recurse so_far_rev v := stringify_preconditions ctx so_far_rev v in
     lazymatch correctness with
     | ?A -> ?B
-      => let sA := stringify_rec0 ctx A 98 in
-         let sB := recurse B 200 in
-         constr:((prefix ++ sA ++ " →")%string :: sB)
+      => let sA := stringify_rec0 ctx A 200 in
+         recurse (sA :: so_far_rev) B
+    | ?T
+      => let so_far := (eval cbv [List.rev] in (List.rev so_far_rev)) in
+         constr:((so_far, T))
+    end.
+
+  Ltac stringify_postconditions ctx correctness :=
+    let recurse v := stringify_postconditions ctx v in
+    let default _ := let v := stringify_rec0 ctx correctness 200 in
+                     constr:(v::nil) in
+    lazymatch correctness with
     | _ <= _ <  _ => default ()
     | _ <= _ <= _ => default ()
     | _ <  _ <= _ => default ()
     | _ <  _ <  _ => default ()
     | and ?A ?B
-      => let sA := recurse' prefix A 80 in
-         let sB := recurse' "∧ " B 80 in
-         constr:(List.app sA sB)
+      => let sA := recurse A in
+         let sB := recurse B in
+         (eval cbv [List.app] in (List.app sA sB))
     | ?x = ?y :> prod ?A ?B
       => let v := (eval cbn [fst snd] in (fst x = fst y /\ snd x = snd y)) in
-         recurse' prefix v lvl
+         recurse v
     | _
       => default ()
+    end.
+
+  Ltac stringify_rec ctx correctness :=
+    let pre_rest := stringify_preconditions ctx (@nil string) correctness in
+    lazymatch pre_rest with
+    | (?preconditions, ?correctness)
+      => let postconditions := stringify_postconditions ctx correctness in
+         let preconditions_list_string
+             := lazymatch preconditions with
+                | nil => constr:(@nil string)
+                | _ => constr:((["Preconditions:"]
+                                  ++ List.map (fun s => "  " ++ s)%string preconditions)%list%string)
+                end in
+         let postconditions_list_string
+             := constr:((["Postconditions:"]
+                           ++ List.map (fun s => "  " ++ s)%string postconditions)%list%string) in
+         (eval cbv [List.map List.app] in
+             (preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
     end.
 
   Ltac strip_lambdas v :=
@@ -553,7 +577,7 @@ Module CorrectnessStringification.
                  out_var_names
                  ltac:(
                  fun ctx T
-                 => let v := stringify_rec "" ctx T 200 in refine v
+                 => let v := stringify_rec ctx T in refine v
                ) in
     let res := strip_lambdas res in
     res.

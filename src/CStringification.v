@@ -2212,7 +2212,7 @@ Module Compilers.
         := match ExprOfPHOAS do_bounds_check e name_list inbounds with
            | inl (indata, outdata, f)
              => inl ((["/*"]
-                        ++ (List.map (fun s => " * " ++ s)%string (comment indata outdata))
+                        ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
                         ++ [" * Input Bounds:"]
                         ++ List.map (fun v => " *   " ++ v)%string (input_bounds_to_string indata inbounds)
                         ++ [" * Output Bounds:"]
