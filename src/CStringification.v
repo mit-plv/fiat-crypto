@@ -41,12 +41,16 @@ Module Compilers.
                | base.type.Z => @show zrange _
                | base.type.bool => @show bool _
                | base.type.nat => @show nat _
+               | base.type.zrange => @show zrange _
                | base.type.prod A B
                  => fun _ '(a, b)
                     => "(" ++ @show_interp A false a ++ ", " ++ @show_interp B true b ++ ")"
                | base.type.list A
                  => let SA := @show_interp A in
                     @show (list (ZRange.type.base.interp A)) _
+               | base.type.option A
+                 => let SA := @show_interp A in
+                    @show (option (ZRange.type.base.interp A)) _
                end%string.
           Global Existing Instance show_interp.
           Module Export option.
@@ -56,6 +60,7 @@ Module Compilers.
                  | base.type.Z => @show (option zrange) _
                  | base.type.bool => @show (option bool) _
                  | base.type.nat => @show (option nat) _
+                 | base.type.zrange => @show (option zrange) _
                  | base.type.prod A B
                    => let SA := @show_interp A in
                       let SB := @show_interp B in
@@ -63,6 +68,9 @@ Module Compilers.
                  | base.type.list A
                    => let SA := @show_interp A in
                       @show (option (list (ZRange.type.base.option.interp A))) _
+                 | base.type.option A
+                   => let SA := @show_interp A in
+                      @show (option (option (ZRange.type.base.option.interp A))) _
                  end.
             Global Existing Instance show_interp.
           End option.
@@ -90,6 +98,7 @@ Module Compilers.
                        | base.type.Z => "ℤ"
                        | base.type.bool => "𝔹"
                        | base.type.nat => "ℕ"
+                       | base.type.zrange => "zrange"
                        end.
           Fixpoint show_type (with_parens : bool) (t : base.type) : string
             := match t with
@@ -98,6 +107,10 @@ Module Compilers.
                                         with_parens
                                         (@show_type false A ++ " * " ++ @show_type true B)
                | base.type.list A => "[" ++ @show_type false A ++ "]"
+               | base.type.option A
+                 => maybe_wrap_parens
+                      with_parens
+                      ("option " ++ @show_type true A)
                end.
           Fixpoint show_base_interp {t} : Show (base.base_interp t)
             := match t with
@@ -105,6 +118,7 @@ Module Compilers.
                | base.type.Z => @show Z _
                | base.type.bool => @show bool _
                | base.type.nat => @show nat _
+               | base.type.zrange => @show zrange _
                end.
           Global Existing Instance show_base_interp.
           Fixpoint show_interp {t} : Show (base.interp t)
@@ -112,6 +126,7 @@ Module Compilers.
                | base.type.type_base t => @show (base.base_interp t) _
                | base.type.prod A B => @show (base.interp A * base.interp B) _
                | base.type.list A => @show (list (base.interp A)) _
+               | base.type.option A => @show (option (base.interp A)) _
                end.
           Global Existing Instance show_interp.
           Global Instance show : Show base.type := show_type.
@@ -174,7 +189,9 @@ Module Compilers.
                    | Some c, None => Some (c ++ ", ??")
                    | None, None => None
                    end
-           | base.type.list A => fun _ => None
+           | base.type.list _
+           | base.type.option _
+             => fun _ => None
            end.
       Fixpoint make_cast {t} : ZRange.type.option.interp t -> option string
         := match t with
@@ -212,6 +229,9 @@ Module Compilers.
              | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " +ℕ " ++ y 49%nat), ZRange.type.base.option.None)
              | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " -ℕ " ++ y 49%nat), ZRange.type.base.option.None)
              | ident.Nat_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " =ℕ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Some _
+               => fun args => (show_application with_casts (fun _ => "Some") args, ZRange.type.base.option.None)
+             | ident.None _ => fun 'tt => (fun _ => "None", ZRange.type.base.option.None)
              | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
              | ident.cons t => fun '(x, ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (maybe_wrap_cast with_casts x 59%nat ++ " :: " ++ y 60%nat), ZRange.type.base.option.None)
              | ident.pair A B => fun '(x, (y, tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts x 201%nat ++ ", " ++ maybe_wrap_cast with_casts y 200%nat), ZRange.type.base.option.None)
@@ -223,6 +243,8 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "nat_rect") args, ZRange.type.base.option.None)
              | ident.nat_rect_arrow P Q
                => fun args => (show_application with_casts (fun _ => "nat_rect(→)") args, ZRange.type.base.option.None)
+             | ident.option_rect A P
+               => fun args => (show_application with_casts (fun _ => "option_rect") args, ZRange.type.base.option.None)
              | ident.list_rect A P
                => fun args => (show_application with_casts (fun _ => "list_rect") args, ZRange.type.base.option.None)
              | ident.list_case A P
@@ -265,7 +287,9 @@ Module Compilers.
              | ident.Z_div => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " / " ++ y 39%nat), ZRange.type.base.option.None)
              | ident.Z_modulo => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " mod " ++ y 39%nat), ZRange.type.base.option.None)
              | ident.Z_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " = " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_ltb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " < " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_leb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≤ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_gtb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " > " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_geb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≥ " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_log2
                => fun args => (show_application with_casts (fun _ => "Z.log2") args, ZRange.type.base.option.None)
@@ -275,6 +299,10 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "(ℕ→ℤ)") args, ZRange.type.base.option.None)
              | ident.Z_to_nat
                => fun args => (show_application with_casts (fun _ => "(ℤ→ℕ)") args, ZRange.type.base.option.None)
+             | ident.Z_min
+               => fun args => (show_application with_casts (fun _ => "Z.min") args, ZRange.type.base.option.None)
+             | ident.Z_max
+               => fun args => (show_application with_casts (fun _ => "Z.max") args, ZRange.type.base.option.None)
              | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
              | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
              | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " & " ++ y 49%nat), ZRange.type.base.option.None)
@@ -303,6 +331,9 @@ Module Compilers.
                => fun '((x, xr), tt) => (x, Some range)
              | ident.Z_cast2 (r1, r2)
                => fun '((x, xr), tt) => (x, (Some r1, Some r2))
+             | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
+             | ident.zrange_rect A
+               => fun args => (show_application with_casts (fun _ => "zrange_rect") args, ZRange.type.base.option.None)
              | ident.fancy_add log2wordmax imm
                => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
              | ident.fancy_addc log2wordmax imm
@@ -367,6 +398,9 @@ Module Compilers.
                 | ident.List_fold_right A B => "fold_right"
                 | ident.List_update_nth T => "update_nth"
                 | ident.List_nth_default T => "nth"
+                | ident.Some _ => "Some"
+                | ident.None _ => "None"
+                | ident.option_rect _ _ => "option_rect"
                 | ident.Z_add => "(+)"
                 | ident.Z_mul => "( * )"
                 | ident.Z_pow => "(^)"
@@ -376,7 +410,11 @@ Module Compilers.
                 | ident.Z_modulo => "(mod)"
                 | ident.Z_eqb => "(=)"
                 | ident.Z_leb => "(≤)"
+                | ident.Z_ltb => "(<)"
                 | ident.Z_geb => "(≥)"
+                | ident.Z_gtb => "(>)"
+                | ident.Z_min => "min"
+                | ident.Z_max => "max"
                 | ident.Z_log2 => "log₂"
                 | ident.Z_log2_up => "⌈log₂⌉"
                 | ident.Z_of_nat => "(ℕ→ℤ)"
@@ -399,6 +437,8 @@ Module Compilers.
                 | ident.Z_cc_m => "Z.cc_m"
                 | ident.Z_cast range => "(" ++ show_range_or_ctype range ++ ")"
                 | ident.Z_cast2 (r1, r2) => "(" ++ show_range_or_ctype r1 ++ ", " ++ show_range_or_ctype r2 ++ ")"
+                | ident.Build_zrange => "Build_zrange"
+                | ident.zrange_rect _ => "zrange_rect"
                 | ident.fancy_add log2wordmax imm
                   => maybe_wrap_parens with_parens ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
                 | ident.fancy_addc log2wordmax imm
@@ -657,6 +697,7 @@ Module Compilers.
              | base.type.type_base _ => unit
              | base.type.prod A B => base_interp A * base_interp B
              | base.type.list A => list (base_interp A)
+             | base.type.option A => option (base_interp A)
              end%type.
 
         Module option.
@@ -666,6 +707,7 @@ Module Compilers.
                | base.type.type_base _ => unit
                | base.type.prod A B => interp A * interp B
                | base.type.list A => option (list (interp A))
+               | base.type.option A => option (option (interp A))
                end%type.
           Fixpoint None {t} : interp t
             := match t with
@@ -673,6 +715,7 @@ Module Compilers.
                | base.type.type_base _ => tt
                | base.type.prod A B => (@None A, @None B)
                | base.type.list A => Datatypes.None
+               | base.type.option A => Datatypes.None
                end.
           Fixpoint Some {t} : base_interp t -> interp t
             := match t with
@@ -680,6 +723,7 @@ Module Compilers.
                | base.type.type_base _ => fun tt => tt
                | base.type.prod A B => fun '(a, b) => (@Some A a, @Some B b)
                | base.type.list A => fun ls => Datatypes.Some (List.map (@Some A) ls)
+               | base.type.option A => fun ls => Datatypes.Some (Option.map (@Some A) ls)
                end.
         End option.
 
@@ -773,6 +817,8 @@ Module Compilers.
                => unit
              | base.type.nat
              | base.type.bool
+             | base.type.zrange
+             | base.type.option _
                => Empty_set
              | base.type.Z => string * option int.type
              | base.type.prod A B => base_var_data A * base_var_data B
@@ -790,6 +836,8 @@ Module Compilers.
                => unit
              | base.type.nat
              | base.type.bool
+             | base.type.zrange
+             | base.type.option _
                => Empty_set
              | base.type.Z => string
              | base.type.prod A B => base_var_names A * base_var_names B
@@ -806,6 +854,8 @@ Module Compilers.
              | base.type.unit
              | base.type.nat
              | base.type.bool
+             | base.type.zrange
+             | base.type.option _
                => fun x => x
              | base.type.Z => @fst _ _
              | base.type.prod A B
@@ -825,6 +875,7 @@ Module Compilers.
              | base.type.prod A B
                => arith_expr_for_base A * arith_expr_for_base B
              | base.type.list A => list (arith_expr_for_base A)
+             | base.type.option A => option (arith_expr_for_base A)
              | base.type.type_base _ as t
                => base.interp t
              end.
@@ -969,6 +1020,13 @@ Module Compilers.
                                         (List.combine r1 ls)
                    | None => ls
                    end
+             | base.type.option A
+               => fun r1 ls
+                 => match r1 with
+                   | Some r1 => Option.map (fun '(r, e) => @cast_down_if_needed A r e)
+                                        (Option.combine r1 ls)
+                   | None => ls
+                   end
              end.
 
         Definition Zcast_up_if_needed
@@ -995,6 +1053,13 @@ Module Compilers.
                  => match r1 with
                    | Some r1 => List.map (fun '(r, e) => @cast_up_if_needed A r e)
                                         (List.combine r1 ls)
+                   | None => ls
+                   end
+             | base.type.option A
+               => fun r1 ls
+                 => match r1 with
+                   | Some r1 => Option.map (fun '(r, e) => @cast_up_if_needed A r e)
+                                        (Option.combine r1 ls)
                    | None => ls
                    end
              end.
@@ -1216,6 +1281,9 @@ Module Compilers.
                | ident.bool_rect _
                | ident.nat_rect _
                | ident.nat_rect_arrow _ _
+               | ident.Some _
+               | ident.None _
+               | ident.option_rect _ _
                | ident.list_rect _ _
                | ident.list_case _ _
                | ident.List_length _
@@ -1237,7 +1305,11 @@ Module Compilers.
                | ident.Z_modulo
                | ident.Z_eqb
                | ident.Z_leb
+               | ident.Z_ltb
                | ident.Z_geb
+               | ident.Z_gtb
+               | ident.Z_min
+               | ident.Z_max
                | ident.Z_log2
                | ident.Z_log2_up
                | ident.Z_of_nat
@@ -1254,6 +1326,8 @@ Module Compilers.
                | ident.Z_cc_m
                | ident.Z_cast _
                | ident.Z_cast2 _
+               | ident.Build_zrange
+               | ident.zrange_rect _
                | ident.fancy_add _ _
                | ident.fancy_addc _ _
                | ident.fancy_sub _ _
@@ -1369,6 +1443,7 @@ Module Compilers.
                             (fun i => (List_nth i @@ Var type.Zptr n, r))%core%Cexpr
                             (List.seq 0 len))
                | base.type.list _
+               | base.type.option _
                | base.type.type_base _
                  => fun _ _ => inr ["Invalid type " ++ show false t]%string
                end.
@@ -1438,7 +1513,9 @@ Module Compilers.
                         ret (List.map
                                (fun '(i, (e, _)) => AssignNth n i e)
                                (List.combine (List.seq 0 len) ls)))
-               | base.type.list _ => fun _ _ => inr ["Invalid type of expr: " ++ show false t]%string
+               | base.type.list _
+               | base.type.option _
+                 => fun _ _ => inr ["Invalid type of expr: " ++ show false t]%string
                end%list.
           Definition make_return_assignment_of_arith {t}
             : var_data t
@@ -1537,11 +1614,12 @@ Module Compilers.
                             fun retptr => [Call (Z_mul_split s @@ (retptr, (e1, e2)))%Cexpr]))
                | Some s, ident.Z_add_get_carry as idc
                | Some s, ident.Z_sub_get_borrow as idc
-                 => let idc' : ident _ _ := invert_Some match idc with
-                                                       | ident.Z_add_get_carry => Some (Z_add_with_get_carry s)
-                                                       | ident.Z_sub_get_borrow => Some (Z_sub_with_get_borrow s)
-                                                       | _ => None
-                                                       end in
+                 => let idc' : ident _ _ := Option.invert_Some
+                                              match idc with
+                                              | ident.Z_add_get_carry => Some (Z_add_with_get_carry s)
+                                              | ident.Z_sub_get_borrow => Some (Z_sub_with_get_borrow s)
+                                              | _ => None
+                                              end in
                    (_ ,, _ ,, _ ,, _
                       <- bounds_check do_bounds_check "first argument to" idc s e1v r1,
                     bounds_check do_bounds_check "second argument to" idc s e2v r2,
@@ -1566,11 +1644,12 @@ Module Compilers.
                with
                | Some s, ident.Z_add_with_get_carry as idc
                | Some s, ident.Z_sub_with_get_borrow as idc
-                 => let idc' : ident _ _ := invert_Some match idc with
-                                                       | ident.Z_add_with_get_carry => Some (Z_add_with_get_carry s)
-                                                       | ident.Z_sub_with_get_borrow => Some (Z_sub_with_get_borrow s)
-                                                       | _ => None
-                                                       end in
+                 => let idc' : ident _ _ := Option.invert_Some
+                                              match idc with
+                                              | ident.Z_add_with_get_carry => Some (Z_add_with_get_carry s)
+                                              | ident.Z_sub_with_get_borrow => Some (Z_sub_with_get_borrow s)
+                                              | _ => None
+                                              end in
                    (_ ,, _ ,, _ ,, _ ,, _
                       <- (bounds_check do_bounds_check "first (carry) argument to" idc 1 e1v r1,
                          bounds_check do_bounds_check "second argument to" idc s e2v r2,
@@ -1691,6 +1770,7 @@ Module Compilers.
                | base.type.type_base t => 1
                | base.type.prod A B => size_of_type A + size_of_type B
                | base.type.list A => 1
+               | base.type.option A => 1
                end%positive.
 
           Let make_uniform_assign_expr_of_PHOAS
@@ -1779,6 +1859,7 @@ Module Compilers.
                | base.type.unit
                  => fun _ => Some (count, tt)
                | base.type.list _
+               | base.type.option _
                | base.type.type_base _
                  => fun _ => None
                end%option.
@@ -2113,9 +2194,11 @@ Module Compilers.
            | base.type.list base.type.Z
              => fun '(n, r, len) => ["const " ++ String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
+           | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
            | base.type.nat => fun _ => ["#error ℕ;"]
            | base.type.bool => fun _ => ["#error bool;"]
+           | base.type.zrange => fun _ => ["#error zrange;"]
            end.
 
       Definition to_arg_list (prefix : string) {t} : var_data t -> list string
@@ -2141,9 +2224,11 @@ Module Compilers.
            | base.type.list base.type.Z
              => fun '(n, r, len) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
+           | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
            | base.type.nat => fun _ => ["#error ℕ;"]
            | base.type.bool => fun _ => ["#error bool;"]
+           | base.type.zrange => fun _ => ["#error zrange;"]
            end.
 
       Definition to_retarg_list (prefix : string) {t} : var_data t -> list string
@@ -2171,9 +2256,11 @@ Module Compilers.
                          | Some arg => show false arg
                          | None => show false arg
                          end]%string
+           | base.type.option _
            | base.type.unit
            | base.type.bool
            | base.type.nat
+           | base.type.zrange
              => fun _ _ => nil
            end%list.
 

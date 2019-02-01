@@ -283,6 +283,7 @@ Module Compilers.
                          | simplify_ranges_t_step
                          | match goal with
                            | [ |- context[andb ?a ?b = true] ] => rewrite !Bool.andb_true_iff
+                           | [ H : context[andb ?a ?b = true] |- _ ] => rewrite !Bool.andb_true_iff
                            | [ H : FoldBool.fold_andb_map _ _ _ = true |- _ ] => rewrite FoldBool.fold_andb_map_iff in H
                            | [ |- FoldBool.fold_andb_map _ _ _ = true ] => rewrite FoldBool.fold_andb_map_iff
                            | [ H : forall (x : option _), _ |- _ ] => pose proof (H None); specialize (fun x => H (Some x))
@@ -315,7 +316,7 @@ Module Compilers.
                              => rewrite OptionList.fold_right_option_seq in H
                            | [ |- and _ _ ] => apply conj
                            end
-                         | progress cbv [bool_eq option_map List.nth_default Definitions.Z.bneg is_bounded_by_bool] in *
+                         | progress cbv [bool_eq option_map List.nth_default Definitions.Z.bneg is_bounded_by_bool zrange_beq] in *
                          | match goal with
                            | [ |- ?R (nat_rect ?P ?O ?S ?n) (nat_rect ?P' ?O' ?S' ?n) = true ]
                              => is_var n; induction n; cbn [nat_rect];
@@ -358,6 +359,9 @@ Module Compilers.
                              => apply H; clear H
                            | [ H : forall a b, ?R a b = true -> forall c d, ?R' c d = true -> forall e f, ?R'' e f = true -> ?R''' (?F _ _ _) (?G _ _ _) = true |- ?R''' (?F _ _ _) (?G _ _ _) = true ]
                              => apply H; clear H
+                           | [ H : context[ZRange.type.base.option.is_bounded_by (?f (Some _) (Some _)) (?g _ _) = true]
+                               |- ZRange.type.base.option.is_bounded_by (?f (Some _) (Some _)) (?g _ _) = true ]
+                             => apply H
                            end ].
 
           Local Lemma mul_by_halves_bounds x y n :
@@ -422,7 +426,7 @@ Module Compilers.
                  | _ => idtac
                  end.
             all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
-            all: cbv [respectful_hetero option_map list_case].
+            all: cbv [respectful_hetero option_map option_rect zrange_rect list_case].
             all: intros.
             all: destruct_head_hnf' prod.
             all: destruct_head_hnf' option.
@@ -497,7 +501,7 @@ Module Compilers.
                         end.
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; lia ].
             all: try solve [ cbv [Proper respectful Basics.flip]; constructor; intros; autorewrite with zsimplify_const; lia ].
-            all: cbv [is_bounded_by_bool upper lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
+            all: cbv [is_bounded_by_bool ZRange.upper ZRange.lower]; rewrite ?Bool.andb_true_iff, ?Z.leb_le.
             all: try solve [ match goal with
                              | [ |- ((0 <= _ mod _ <= _) /\ (0 <= _ <= _))%Z ]
                                => Z.div_mod_to_quot_rem; nia
@@ -507,6 +511,7 @@ Module Compilers.
               rewrite Z.le_sub_1_iff.
               break_innermost_match; Z.ltb_to_lt;
                 auto with zarith. }
+            { non_arith_t; Z.ltb_to_lt; reflexivity. }
           Qed.
         End interp_related.
       End option.

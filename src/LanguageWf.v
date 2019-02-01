@@ -220,7 +220,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
     Proof.
       destruct idc; cbn [type.eqv ident.gen_interp type.interp base.interp base.base_interp];
         try solve [ typeclasses eauto
-                  | cbv [respectful]; repeat intro; subst; destruct_head_hnf bool; destruct_head_hnf prod; eauto
+                  | cbv [respectful]; repeat intro; subst; destruct_head_hnf bool; destruct_head_hnf prod; destruct_head_hnf option; destruct_head_hnf zrange; eauto
                   | cbv [respectful]; repeat intro; (apply nat_rect_Proper_nondep || apply list_rect_Proper || apply list_case_Proper); repeat intro; eauto ].
     Qed.
 
@@ -996,9 +996,58 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                             | progress expr.invert_match ].
         Qed.
 
+        Lemma wf_reify_option G {t} e1 e2
+          : @wf _ _ var1 var2 G _ (reify_option (t:=t) e1) (reify_option (t:=t) e2)
+            <-> option_eq (wf G) e1 e2.
+        Proof.
+          destruct_head' option; cbn in *; split; intros.
+          all: repeat first [ assumption
+                            | progress inversion_option
+                            | exfalso; assumption
+                            | progress inversion_wf_constr
+                            | progress destruct_head'_sig
+                            | progress destruct_head'_and
+                            | progress type.inversion_type
+                            | constructor ].
+        Qed.
+
+        Lemma wf_reflect_option G {t} e1 e2
+           : @wf _ _ var1 var2 G (type.base (base.type.option t)) e1 e2
+            -> (invert_expr.reflect_option e1 = None <-> invert_expr.reflect_option e2 = None).
+        Proof.
+          destruct (invert_expr.reflect_option e1) eqn:H1, (invert_expr.reflect_option e2) eqn:H2;
+            try (split; congruence); expr.invert_subst;
+              try (revert dependent e2; intro); try (revert dependent e1; intro);
+                match goal with
+                | [ |- context[Some ?l = None] ]
+                  => destruct l
+                end;
+                rewrite ?expr.reify_option_Some, ?expr.reify_option_None;
+                cbv [invert_expr.reflect_option];
+                break_innermost_match; try congruence; intros.
+          all: repeat first [ congruence
+                            | progress inversion_wf_constr
+                            | progress subst
+                            | progress cbv [option_map] in *
+                            | progress destruct_head' False
+                            | progress destruct_head'_sig
+                            | progress destruct_head'_and
+                            | progress inversion_option
+                            | progress inversion_sigma
+                            | progress inversion_prod
+                            | progress type.inversion_type
+                            | progress base.type.inversion_type
+                            | progress break_match_hyps
+                            | progress cbn [fst snd invert_expr.invert_Ident invert_expr.invert_None invert_expr.invert_Some invert_expr.invert_AppIdent invert_expr.invert_Ident invert_expr.invert_App2 invert_expr.invert_App Option.bind fst snd projT1 projT2 eq_rect] in *
+                            | progress expr.invert_subst
+                            | solve [ eauto ]
+                            | progress inversion_wf_one_constr
+                            | progress expr.invert_match ].
+        Qed.
+
         Lemma wf_reify {t} v G : expr.wf G (@GallinaReify.base.reify var1 t v) (@GallinaReify.base.reify var2 t v).
         Proof.
-          induction t; cbn; break_innermost_match; repeat constructor; auto; [].
+          induction t; cbn; cbv [option_map]; break_innermost_match; repeat constructor; auto; [].
           rewrite wf_reify_list, !map_length, combine_map_map, combine_same, map_map; split; auto; intros *; [].
           cbn [fst snd]; rewrite in_map_iff; intros.
           repeat first [ progress destruct_head'_and
@@ -1026,11 +1075,13 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
               reflexivity.
         Qed.
 
+        Lemma interp_reify_option {t} v : interp (reify_option (t:=t) v) = Option.map interp v.
+        Proof. destruct v; reflexivity. Qed.
+
         Lemma interp_smart_Literal {t} v : interp (@ident.smart_Literal _ t v) = v.
         Proof.
           cbv [ident.interp]; induction t; cbn [ident.smart_Literal expr.interp ident.gen_interp];
-            break_innermost_match; cbn [expr.interp ident.gen_interp].
-          { reflexivity. }
+            break_innermost_match; cbn [expr.interp ident.gen_interp]; cbv [option_map]; break_innermost_match; cbn; rewrite ?IHt; try reflexivity.
           { apply f_equal2; auto. }
           { etransitivity; [ rewrite interp_reify_list, map_map | apply map_id ].
             apply map_ext; auto. }
@@ -1038,7 +1089,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
         Lemma interp_reify {t} v : interp (GallinaReify.base.reify (t:=t) v) = v.
         Proof.
-          induction t; cbn [GallinaReify.base.reify]; break_innermost_match; cbn; f_equal;
+          induction t; cbn [GallinaReify.base.reify]; cbv [option_map]; break_innermost_match; cbn; f_equal;
             rewrite ?interp_reify_list, ?map_map; auto.
           { etransitivity; [ | apply map_id ]; apply map_ext; auto. }
         Qed.
@@ -1065,7 +1116,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
 
   Hint Constructors expr.wf : wf.
   Hint Resolve @expr.Wf_APP expr.Wf_Reify expr.Wf_reify : wf.
-  Hint Rewrite @expr.Interp_Reify @expr.interp_reify @expr.interp_reify_list @expr.Interp_reify @expr.Interp_APP : interp.
+  Hint Rewrite @expr.Interp_Reify @expr.interp_reify @expr.interp_reify_list @expr.interp_reify_option @expr.Interp_reify @expr.Interp_APP : interp.
 
   Notation Wf := expr.Wf.
 

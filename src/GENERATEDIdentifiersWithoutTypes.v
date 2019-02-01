@@ -23,7 +23,7 @@ Module Compilers.
     Module base.
       Local Notation einterp := type.interp.
       Module type.
-        Inductive type := var (p : positive) | type_base (t : Compilers.base.type.base) | prod (A B : type) | list (A : type).
+        Inductive type := var (p : positive) | type_base (t : Compilers.base.type.base) | prod (A B : type) | list (A : type) | option (A : type).
       End type.
       Notation type := type.type.
 
@@ -32,18 +32,20 @@ Module Compilers.
            | Compilers.base.type.type_base t => type.type_base t
            | Compilers.base.type.prod A B => type.prod (relax A) (relax B)
            | Compilers.base.type.list A => type.list (relax A)
+           | Compilers.base.type.option A => type.option (relax A)
            end.
 
       Fixpoint subst_default (ptype : type) (evar_map : EvarMap) : Compilers.base.type
         := match ptype with
            | type.var p => match PositiveMap.find p evar_map with
-                           | Some t => t
-                           | None => Compilers.base.type.type_base base.type.unit
+                           | Datatypes.Some t => t
+                           | Datatypes.None => Compilers.base.type.type_base base.type.unit
                            end
            | type.type_base t => Compilers.base.type.type_base t
            | type.prod A B
              => Compilers.base.type.prod (subst_default A evar_map) (subst_default B evar_map)
            | type.list A => Compilers.base.type.list (subst_default A evar_map)
+           | type.option A => Compilers.base.type.option (subst_default A evar_map)
            end.
 
       Fixpoint collect_vars (t : type) : PositiveSet.t
@@ -52,6 +54,7 @@ Module Compilers.
            | type.type_base t => PositiveSet.empty
            | type.prod A B => PositiveSet.union (collect_vars A) (collect_vars B)
            | type.list A => collect_vars A
+           | type.option A => collect_vars A
            end.
 
       Module Notations.
@@ -435,7 +438,21 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                  (Compilers.base.type.type_base base.type.Z) ->
                (fun x : Compilers.base.type => type.base x)
                  (Compilers.base.type.type_base base.type.bool))%ptype
+  | Z_ltb : ident
+              ((fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.bool))%ptype
   | Z_geb : ident
+              ((fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.bool))%ptype
+  | Z_gtb : ident
               ((fun x : Compilers.base.type => type.base x)
                  (Compilers.base.type.type_base base.type.Z) ->
                (fun x : Compilers.base.type => type.base x)
@@ -474,6 +491,20 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                 (fun x : Compilers.base.type => type.base x)
                   (Compilers.base.type.type_base base.type.Z))%ptype
   | Z_lor : ident
+              ((fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z))%ptype
+  | Z_min : ident
+              ((fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z) ->
+               (fun x : Compilers.base.type => type.base x)
+                 (Compilers.base.type.type_base base.type.Z))%ptype
+  | Z_max : ident
               ((fun x : Compilers.base.type => type.base x)
                  (Compilers.base.type.type_base base.type.Z) ->
                (fun x : Compilers.base.type => type.base x)
@@ -605,6 +636,41 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                  (fun x : Compilers.base.type => type.base x)
                    (Compilers.base.type.type_base base.type.Z *
                     Compilers.base.type.type_base base.type.Z)%etype)%ptype
+  | option_Some : forall A : Compilers.base.type,
+                  ident
+                    ((fun x : Compilers.base.type => type.base x) A ->
+                     (fun x : Compilers.base.type => type.base x)
+                       (Compilers.base.type.option A))%ptype
+  | option_None : forall A : Compilers.base.type,
+                  ident
+                    ((fun x : Compilers.base.type => type.base x)
+                       (Compilers.base.type.option A))
+  | option_rect : forall A P : Compilers.base.type,
+                  ident
+                    (((fun x : Compilers.base.type => type.base x) A ->
+                      (fun x : Compilers.base.type => type.base x) P) ->
+                     ((fun x : Compilers.base.type => type.base x) ()%etype ->
+                      (fun x : Compilers.base.type => type.base x) P) ->
+                     (fun x : Compilers.base.type => type.base x)
+                       (Compilers.base.type.option A) ->
+                     (fun x : Compilers.base.type => type.base x) P)%ptype
+  | Build_zrange : ident
+                     ((fun x : Compilers.base.type => type.base x)
+                        (Compilers.base.type.type_base base.type.Z) ->
+                      (fun x : Compilers.base.type => type.base x)
+                        (Compilers.base.type.type_base base.type.Z) ->
+                      (fun x : Compilers.base.type => type.base x)
+                        (Compilers.base.type.type_base base.type.zrange))%ptype
+  | zrange_rect : forall P : Compilers.base.type,
+                  ident
+                    (((fun x : Compilers.base.type => type.base x)
+                        (Compilers.base.type.type_base base.type.Z) ->
+                      (fun x : Compilers.base.type => type.base x)
+                        (Compilers.base.type.type_base base.type.Z) ->
+                      (fun x : Compilers.base.type => type.base x) P) ->
+                     (fun x : Compilers.base.type => type.base x)
+                       (Compilers.base.type.type_base base.type.zrange) ->
+                     (fun x : Compilers.base.type => type.base x) P)%ptype
   | fancy_add : Z ->
                 Z ->
                 ident
@@ -755,13 +821,17 @@ show_match_ident = r"""match # with
  | ident.Z_log2_up =>
  | ident.Z_eqb =>
  | ident.Z_leb =>
+ | ident.Z_ltb =>
  | ident.Z_geb =>
+ | ident.Z_gtb =>
  | ident.Z_of_nat =>
  | ident.Z_to_nat =>
  | ident.Z_shiftr =>
  | ident.Z_shiftl =>
  | ident.Z_land =>
  | ident.Z_lor =>
+ | ident.Z_min =>
+ | ident.Z_max =>
  | ident.Z_bneg =>
  | ident.Z_lnot_modulo =>
  | ident.Z_mul_split =>
@@ -776,6 +846,11 @@ show_match_ident = r"""match # with
  | ident.Z_cc_m =>
  | ident.Z_cast range =>
  | ident.Z_cast2 range =>
+ | ident.option_Some A =>
+ | ident.option_None A =>
+ | ident.option_rect A P =>
+ | ident.Build_zrange =>
+ | ident.zrange_rect P =>
  | ident.fancy_add log2wordmax imm =>
  | ident.fancy_addc log2wordmax imm =>
  | ident.fancy_sub log2wordmax imm =>
@@ -804,7 +879,7 @@ indent0 = '    '
 indent1 = '  ' + indent0
 indent2 = '  ' + indent1
 #exts = ('Unit', 'Z', 'Bool', 'Nat')
-base_types = [('%sbase.type.' % prefix) + i for i in ('unit', 'Z', 'bool', 'nat')]
+base_types = [('%sbase.type.' % prefix) + i for i in ('unit', 'Z', 'bool', 'nat', 'zrange')]
 type_or_set = 'Type'
 ctors = [i.strip('|=> ').split(' ') for i in show_match_ident.split('\n') if i.strip().startswith('|')]
 assert(ctors[0][0] == 'ident.Literal')
@@ -862,7 +937,7 @@ Module Compilers.
     Module base.
       Local Notation einterp := type.interp.
       Module type.
-        Inductive type := var (p : positive) | type_base (t : Compilers.base.type.base) | prod (A B : type) | list (A : type).
+        Inductive type := var (p : positive) | type_base (t : Compilers.base.type.base) | prod (A B : type) | list (A : type) | option (A : type).
       End type.
       Notation type := type.type.
 
@@ -871,18 +946,20 @@ Module Compilers.
            | Compilers.base.type.type_base t => type.type_base t
            | Compilers.base.type.prod A B => type.prod (relax A) (relax B)
            | Compilers.base.type.list A => type.list (relax A)
+           | Compilers.base.type.option A => type.option (relax A)
            end.
 
       Fixpoint subst_default (ptype : type) (evar_map : EvarMap) : Compilers.base.type
         := match ptype with
            | type.var p => match PositiveMap.find p evar_map with
-                           | Some t => t
-                           | None => Compilers.base.type.type_base base.type.unit
+                           | Datatypes.Some t => t
+                           | Datatypes.None => Compilers.base.type.type_base base.type.unit
                            end
            | type.type_base t => Compilers.base.type.type_base t
            | type.prod A B
              => Compilers.base.type.prod (subst_default A evar_map) (subst_default B evar_map)
            | type.list A => Compilers.base.type.list (subst_default A evar_map)
+           | type.option A => Compilers.base.type.option (subst_default A evar_map)
            end.
 
       Fixpoint collect_vars (t : type) : PositiveSet.t
@@ -891,6 +968,7 @@ Module Compilers.
            | type.type_base t => PositiveSet.empty
            | type.prod A B => PositiveSet.union (collect_vars A) (collect_vars B)
            | type.list A => collect_vars A
+           | type.option A => collect_vars A
            end.
 
       Module Notations.
@@ -1050,14 +1128,14 @@ retcode += addnewline((r"""%sDefinition is_simple (idc : ident) : bool
        '\n     | '.join(pctor + ' => ' + ('true' if len(named_ttype) == 0 else 'false')
                         for pctor, named_ttype in zip(pctors, named_ttypes_with_prefix)))).replace('\n', '\n' + indent2))
 
-retcode += addnewline((r"""%sDefinition invert_bind_args {t} (idc : %sident.ident t) (pidc : ident) : option (full_types pidc)
-  := match pidc, idc return option (full_types pidc) with
+retcode += addnewline((r"""%sDefinition invert_bind_args {t} (idc : %sident.ident t) (pidc : ident) : Datatypes.option (full_types pidc)
+  := match pidc, idc return Datatypes.option (full_types pidc) with
      | %s
      | %s
-       => None
+       => Datatypes.None
      end%%cps.
 """ % (indent2, prefix,
-       '\n     | '.join(pctor + ', ' + ' '.join(ctor) + ' => Some ' + make_pair_of_types(named_ttype, ctype, ctor)
+       '\n     | '.join(pctor + ', ' + ' '.join(ctor) + ' => Datatypes.Some ' + make_pair_of_types(named_ttype, ctype, ctor)
                         for pctor, ctor, named_ttype, ctype in zip(pctors, ctors_with_prefix, named_ttypes_with_prefix, ctypes)),
        '\n     | '.join(pctor + ', _' for pctor in pctors))).replace('\n', '\n' + indent2))
 
@@ -1149,18 +1227,18 @@ retcode += addnewline((r"""%sDefinition to_typed {t} (idc : ident t) (evm : Evar
 assert(ctors[0][0] == 'ident.Literal')
 assert(len(ctypes[0]) == 1)
 
-retcode += addnewline((r"""%sDefinition unify {t t'} (pidc : ident t) (idc : %sident.ident t') : option (type_of_list (@arg_types t pidc))
-  := match pidc, idc return option (type_of_list (arg_types pidc)) with
+retcode += addnewline((r"""%sDefinition unify {t t'} (pidc : ident t) (idc : %sident.ident t') : Datatypes.option (type_of_list (@arg_types t pidc))
+  := match pidc, idc return Datatypes.option (type_of_list (arg_types pidc)) with
      | %s
      | %s
      | %s
-       => None
+       => Datatypes.None
      end%%cps.
 """ % (indent1, prefix,
-       '\n     | '.join('@' + pctor + ' ' + ty + ', ' + ' '.join([ctor[0], ty] + ctor[2:]) + ' => Some ' + fold_right_pair(ctor[-len(ctype):])
+       '\n     | '.join('@' + pctor + ' ' + ty + ', ' + ' '.join([ctor[0], ty] + ctor[2:]) + ' => Datatypes.Some ' + fold_right_pair(ctor[-len(ctype):])
                         for pctor, ctor, ctype in zip(pctors[:1], ctors_with_prefix[:1], ctypes[:1])
                         for ty in base_types),
-       '\n     | '.join('@' + pctor + ', ' + ' '.join([ctor[0]] + [i + "'" for i in ctor[1:]]) + ' => Some ' + ('tt' if len(ctype) == 0 else fold_right_pair([i + "'" for i in ctor[-len(ctype):]]))
+       '\n     | '.join('@' + pctor + ', ' + ' '.join([ctor[0]] + [i + "'" for i in ctor[1:]]) + ' => Datatypes.Some ' + ('tt' if len(ctype) == 0 else fold_right_pair([i + "'" for i in ctor[-len(ctype):]]))
                         for pctor, ctor, ctype in zip(pctors_with_args[1:], ctors_with_prefix[1:], ctypes[1:])),
        '\n     | '.join('@' + pctor + ', _' for pctor, named_ttype in zip(pctors_with_underscores, named_ttypes)))).replace('\n', '\n' + indent1))
 
@@ -1178,8 +1256,8 @@ retcode += addnewline((r"""%sDefinition of_typed_ident {t} (idc : %sident.ident 
 """ % (indent1, prefix, '\n     | '.join(' '.join(ctor) + ' => @' + pctor + ' ' + ' '.join(relax_type_var(n, t) for n, t in named_ttype) for ctor, pctor, named_ttype in zip(ctors_with_prefix, pctors, named_ttypes)))).replace('\n', '\n' + indent1))
 #
 #
-#retcode += addnewline((r"""%sDefinition retype_ident {t} (idc : %sident.ident t) : match arg_types (of_typed_ident idc) return %s with Some t => t | None => unit end -> %sident.ident t
-#  := match idc in %sident.ident t return match arg_types (of_typed_ident idc) return %s with Some t => t | None => unit end -> %sident.ident t with
+#retcode += addnewline((r"""%sDefinition retype_ident {t} (idc : %sident.ident t) : match arg_types (of_typed_ident idc) return %s with Datatypes.Some t => t | Datatypes.None => unit end -> %sident.ident t
+#  := match idc in %sident.ident t return match arg_types (of_typed_ident idc) return %s with Datatypes.Some t => t | Datatypes.None => unit end -> %sident.ident t with
 #     | %s
 #     end.
 #""" % (indent1, prefix, type_or_set, prefix, prefix, type_or_set, prefix,
@@ -1188,7 +1266,7 @@ retcode += addnewline((r"""%sDefinition of_typed_ident {t} (idc : %sident.ident 
 #                        + 'fun ' + ('_ => ' if len(ctype) == 0 else ((ctor[-1] + ' => ') if len(ctype) == 1 else "arg => let '(%s) := eta%d arg in " % (', '.join(ctor[-len(ctype):]), len(ctype)))) + "@" + ' '.join(ctor)
 #                        + ('' if not do_adjust_type(ctor, ctype) else
 #                           (') : '
-#                            + ('match arg_types (of_typed_ident %s) return %s with Some t => t | None => unit end -> _'
+#                            + ('match arg_types (of_typed_ident %s) return %s with Datatypes.Some t => t | Datatypes.None => unit end -> _'
 #                               % (('%s' if ' ' not in ' '.join(ctor) else '(@%s)') % ' '.join(ctor),
 #                                  type_or_set))
 #                            + ' (* COQBUG(https://github.com/coq/coq/issues/7726) *)'))
@@ -1197,20 +1275,20 @@ retcode += addnewline((r"""%sDefinition of_typed_ident {t} (idc : %sident.ident 
 
 
 
-#retcode += addnewline((r"""%sDefinition try_make_transport_ident_cps (P : ident -> Type) (idc1 idc2 : ident) : ~> option (P idc1 -> P idc2)
+#retcode += addnewline((r"""%sDefinition try_make_transport_ident_cps (P : ident -> Type) (idc1 idc2 : ident) : ~> Datatypes.option (P idc1 -> P idc2)
 #  := match idc1, idc2 with
 #     | %s
-#       => fun T k => k (Some (fun v => v))
+#       => fun T k => k (Datatypes.Some (fun v => v))
 #     | %s
-#       => fun T k => k None
+#       => fun T k => k Datatypes.None
 #     end%%cps.
 #""" % (indent2,
 #       '\n     | '.join(pctor + ', ' + pctor for pctor in pctors),
 #       '\n     | '.join(pctor + ', _' for pctor in pctors))).replace('\n', '\n' + indent2))
-#retcode += addnewline((r"""%sDefinition eta_all_option_cps {T} (f : ident -> option T)
-#  : option (ident -> T)
+#retcode += addnewline((r"""%sDefinition eta_all_option_cps {T} (f : ident -> Datatypes.option T)
+#  : Datatypes.option (ident -> T)
 #  := (%s;
-#      Some (fun c
+#      Datatypes.Some (fun c
 #            => match c with
 #               | %s
 #               end))%%option.
@@ -1326,13 +1404,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
         | Z_log2_up
         | Z_eqb
         | Z_leb
+        | Z_ltb
         | Z_geb
+        | Z_gtb
         | Z_of_nat
         | Z_to_nat
         | Z_shiftr
         | Z_shiftl
         | Z_land
         | Z_lor
+        | Z_min
+        | Z_max
         | Z_bneg
         | Z_lnot_modulo
         | Z_mul_split
@@ -1347,6 +1429,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
         | Z_cc_m
         | Z_cast
         | Z_cast2
+        | option_Some
+        | option_None
+        | option_rect
+        | Build_zrange
+        | zrange_rect
         | fancy_add
         | fancy_addc
         | fancy_sub
@@ -1407,13 +1494,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_log2_up => unit
              | Z_eqb => unit
              | Z_leb => unit
+             | Z_ltb => unit
              | Z_geb => unit
+             | Z_gtb => unit
              | Z_of_nat => unit
              | Z_to_nat => unit
              | Z_shiftr => unit
              | Z_shiftl => unit
              | Z_land => unit
              | Z_lor => unit
+             | Z_min => unit
+             | Z_max => unit
              | Z_bneg => unit
              | Z_lnot_modulo => unit
              | Z_mul_split => unit
@@ -1428,6 +1519,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_cc_m => unit
              | Z_cast => zrange
              | Z_cast2 => zrange * zrange
+             | option_Some => Compilers.base.type
+             | option_None => Compilers.base.type
+             | option_rect => Compilers.base.type * Compilers.base.type
+             | Build_zrange => unit
+             | zrange_rect => Compilers.base.type
              | fancy_add => Z * Z
              | fancy_addc => Z * Z
              | fancy_sub => Z * Z
@@ -1489,13 +1585,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_log2_up => true
              | Z_eqb => true
              | Z_leb => true
+             | Z_ltb => true
              | Z_geb => true
+             | Z_gtb => true
              | Z_of_nat => true
              | Z_to_nat => true
              | Z_shiftr => true
              | Z_shiftl => true
              | Z_land => true
              | Z_lor => true
+             | Z_min => true
+             | Z_max => true
              | Z_bneg => true
              | Z_lnot_modulo => true
              | Z_mul_split => true
@@ -1510,6 +1610,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_cc_m => true
              | Z_cast => true
              | Z_cast2 => true
+             | option_Some => false
+             | option_None => false
+             | option_rect => false
+             | Build_zrange => true
+             | zrange_rect => false
              | fancy_add => true
              | fancy_addc => true
              | fancy_sub => true
@@ -1525,86 +1630,95 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | fancy_addm => true
              end.
 
-        Definition invert_bind_args {t} (idc : Compilers.ident.ident t) (pidc : ident) : option (full_types pidc)
-          := match pidc, idc return option (full_types pidc) with
-             | Literal, Compilers.ident.Literal t v => Some (existT _ t v)
-             | Nat_succ, Compilers.ident.Nat_succ => Some tt
-             | Nat_pred, Compilers.ident.Nat_pred => Some tt
-             | Nat_max, Compilers.ident.Nat_max => Some tt
-             | Nat_mul, Compilers.ident.Nat_mul => Some tt
-             | Nat_add, Compilers.ident.Nat_add => Some tt
-             | Nat_sub, Compilers.ident.Nat_sub => Some tt
-             | Nat_eqb, Compilers.ident.Nat_eqb => Some tt
-             | nil, Compilers.ident.nil t => Some t
-             | cons, Compilers.ident.cons t => Some t
-             | pair, Compilers.ident.pair A B => Some (A, B)
-             | fst, Compilers.ident.fst A B => Some (A, B)
-             | snd, Compilers.ident.snd A B => Some (A, B)
-             | prod_rect, Compilers.ident.prod_rect A B T => Some (A, B, T)
-             | bool_rect, Compilers.ident.bool_rect T => Some T
-             | nat_rect, Compilers.ident.nat_rect P => Some P
-             | nat_rect_arrow, Compilers.ident.nat_rect_arrow P Q => Some (P, Q)
-             | list_rect, Compilers.ident.list_rect A P => Some (A, P)
-             | list_case, Compilers.ident.list_case A P => Some (A, P)
-             | List_length, Compilers.ident.List_length T => Some T
-             | List_seq, Compilers.ident.List_seq => Some tt
-             | List_firstn, Compilers.ident.List_firstn A => Some A
-             | List_skipn, Compilers.ident.List_skipn A => Some A
-             | List_repeat, Compilers.ident.List_repeat A => Some A
-             | List_combine, Compilers.ident.List_combine A B => Some (A, B)
-             | List_map, Compilers.ident.List_map A B => Some (A, B)
-             | List_app, Compilers.ident.List_app A => Some A
-             | List_rev, Compilers.ident.List_rev A => Some A
-             | List_flat_map, Compilers.ident.List_flat_map A B => Some (A, B)
-             | List_partition, Compilers.ident.List_partition A => Some A
-             | List_fold_right, Compilers.ident.List_fold_right A B => Some (A, B)
-             | List_update_nth, Compilers.ident.List_update_nth T => Some T
-             | List_nth_default, Compilers.ident.List_nth_default T => Some T
-             | Z_add, Compilers.ident.Z_add => Some tt
-             | Z_mul, Compilers.ident.Z_mul => Some tt
-             | Z_pow, Compilers.ident.Z_pow => Some tt
-             | Z_sub, Compilers.ident.Z_sub => Some tt
-             | Z_opp, Compilers.ident.Z_opp => Some tt
-             | Z_div, Compilers.ident.Z_div => Some tt
-             | Z_modulo, Compilers.ident.Z_modulo => Some tt
-             | Z_log2, Compilers.ident.Z_log2 => Some tt
-             | Z_log2_up, Compilers.ident.Z_log2_up => Some tt
-             | Z_eqb, Compilers.ident.Z_eqb => Some tt
-             | Z_leb, Compilers.ident.Z_leb => Some tt
-             | Z_geb, Compilers.ident.Z_geb => Some tt
-             | Z_of_nat, Compilers.ident.Z_of_nat => Some tt
-             | Z_to_nat, Compilers.ident.Z_to_nat => Some tt
-             | Z_shiftr, Compilers.ident.Z_shiftr => Some tt
-             | Z_shiftl, Compilers.ident.Z_shiftl => Some tt
-             | Z_land, Compilers.ident.Z_land => Some tt
-             | Z_lor, Compilers.ident.Z_lor => Some tt
-             | Z_bneg, Compilers.ident.Z_bneg => Some tt
-             | Z_lnot_modulo, Compilers.ident.Z_lnot_modulo => Some tt
-             | Z_mul_split, Compilers.ident.Z_mul_split => Some tt
-             | Z_add_get_carry, Compilers.ident.Z_add_get_carry => Some tt
-             | Z_add_with_carry, Compilers.ident.Z_add_with_carry => Some tt
-             | Z_add_with_get_carry, Compilers.ident.Z_add_with_get_carry => Some tt
-             | Z_sub_get_borrow, Compilers.ident.Z_sub_get_borrow => Some tt
-             | Z_sub_with_get_borrow, Compilers.ident.Z_sub_with_get_borrow => Some tt
-             | Z_zselect, Compilers.ident.Z_zselect => Some tt
-             | Z_add_modulo, Compilers.ident.Z_add_modulo => Some tt
-             | Z_rshi, Compilers.ident.Z_rshi => Some tt
-             | Z_cc_m, Compilers.ident.Z_cc_m => Some tt
-             | Z_cast, Compilers.ident.Z_cast range => Some range
-             | Z_cast2, Compilers.ident.Z_cast2 range => Some range
-             | fancy_add, Compilers.ident.fancy_add log2wordmax imm => Some (log2wordmax, imm)
-             | fancy_addc, Compilers.ident.fancy_addc log2wordmax imm => Some (log2wordmax, imm)
-             | fancy_sub, Compilers.ident.fancy_sub log2wordmax imm => Some (log2wordmax, imm)
-             | fancy_subb, Compilers.ident.fancy_subb log2wordmax imm => Some (log2wordmax, imm)
-             | fancy_mulll, Compilers.ident.fancy_mulll log2wordmax => Some log2wordmax
-             | fancy_mullh, Compilers.ident.fancy_mullh log2wordmax => Some log2wordmax
-             | fancy_mulhl, Compilers.ident.fancy_mulhl log2wordmax => Some log2wordmax
-             | fancy_mulhh, Compilers.ident.fancy_mulhh log2wordmax => Some log2wordmax
-             | fancy_rshi, Compilers.ident.fancy_rshi log2wordmax x => Some (log2wordmax, x)
-             | fancy_selc, Compilers.ident.fancy_selc => Some tt
-             | fancy_selm, Compilers.ident.fancy_selm log2wordmax => Some log2wordmax
-             | fancy_sell, Compilers.ident.fancy_sell => Some tt
-             | fancy_addm, Compilers.ident.fancy_addm => Some tt
+        Definition invert_bind_args {t} (idc : Compilers.ident.ident t) (pidc : ident) : Datatypes.option (full_types pidc)
+          := match pidc, idc return Datatypes.option (full_types pidc) with
+             | Literal, Compilers.ident.Literal t v => Datatypes.Some (existT _ t v)
+             | Nat_succ, Compilers.ident.Nat_succ => Datatypes.Some tt
+             | Nat_pred, Compilers.ident.Nat_pred => Datatypes.Some tt
+             | Nat_max, Compilers.ident.Nat_max => Datatypes.Some tt
+             | Nat_mul, Compilers.ident.Nat_mul => Datatypes.Some tt
+             | Nat_add, Compilers.ident.Nat_add => Datatypes.Some tt
+             | Nat_sub, Compilers.ident.Nat_sub => Datatypes.Some tt
+             | Nat_eqb, Compilers.ident.Nat_eqb => Datatypes.Some tt
+             | nil, Compilers.ident.nil t => Datatypes.Some t
+             | cons, Compilers.ident.cons t => Datatypes.Some t
+             | pair, Compilers.ident.pair A B => Datatypes.Some (A, B)
+             | fst, Compilers.ident.fst A B => Datatypes.Some (A, B)
+             | snd, Compilers.ident.snd A B => Datatypes.Some (A, B)
+             | prod_rect, Compilers.ident.prod_rect A B T => Datatypes.Some (A, B, T)
+             | bool_rect, Compilers.ident.bool_rect T => Datatypes.Some T
+             | nat_rect, Compilers.ident.nat_rect P => Datatypes.Some P
+             | nat_rect_arrow, Compilers.ident.nat_rect_arrow P Q => Datatypes.Some (P, Q)
+             | list_rect, Compilers.ident.list_rect A P => Datatypes.Some (A, P)
+             | list_case, Compilers.ident.list_case A P => Datatypes.Some (A, P)
+             | List_length, Compilers.ident.List_length T => Datatypes.Some T
+             | List_seq, Compilers.ident.List_seq => Datatypes.Some tt
+             | List_firstn, Compilers.ident.List_firstn A => Datatypes.Some A
+             | List_skipn, Compilers.ident.List_skipn A => Datatypes.Some A
+             | List_repeat, Compilers.ident.List_repeat A => Datatypes.Some A
+             | List_combine, Compilers.ident.List_combine A B => Datatypes.Some (A, B)
+             | List_map, Compilers.ident.List_map A B => Datatypes.Some (A, B)
+             | List_app, Compilers.ident.List_app A => Datatypes.Some A
+             | List_rev, Compilers.ident.List_rev A => Datatypes.Some A
+             | List_flat_map, Compilers.ident.List_flat_map A B => Datatypes.Some (A, B)
+             | List_partition, Compilers.ident.List_partition A => Datatypes.Some A
+             | List_fold_right, Compilers.ident.List_fold_right A B => Datatypes.Some (A, B)
+             | List_update_nth, Compilers.ident.List_update_nth T => Datatypes.Some T
+             | List_nth_default, Compilers.ident.List_nth_default T => Datatypes.Some T
+             | Z_add, Compilers.ident.Z_add => Datatypes.Some tt
+             | Z_mul, Compilers.ident.Z_mul => Datatypes.Some tt
+             | Z_pow, Compilers.ident.Z_pow => Datatypes.Some tt
+             | Z_sub, Compilers.ident.Z_sub => Datatypes.Some tt
+             | Z_opp, Compilers.ident.Z_opp => Datatypes.Some tt
+             | Z_div, Compilers.ident.Z_div => Datatypes.Some tt
+             | Z_modulo, Compilers.ident.Z_modulo => Datatypes.Some tt
+             | Z_log2, Compilers.ident.Z_log2 => Datatypes.Some tt
+             | Z_log2_up, Compilers.ident.Z_log2_up => Datatypes.Some tt
+             | Z_eqb, Compilers.ident.Z_eqb => Datatypes.Some tt
+             | Z_leb, Compilers.ident.Z_leb => Datatypes.Some tt
+             | Z_ltb, Compilers.ident.Z_ltb => Datatypes.Some tt
+             | Z_geb, Compilers.ident.Z_geb => Datatypes.Some tt
+             | Z_gtb, Compilers.ident.Z_gtb => Datatypes.Some tt
+             | Z_of_nat, Compilers.ident.Z_of_nat => Datatypes.Some tt
+             | Z_to_nat, Compilers.ident.Z_to_nat => Datatypes.Some tt
+             | Z_shiftr, Compilers.ident.Z_shiftr => Datatypes.Some tt
+             | Z_shiftl, Compilers.ident.Z_shiftl => Datatypes.Some tt
+             | Z_land, Compilers.ident.Z_land => Datatypes.Some tt
+             | Z_lor, Compilers.ident.Z_lor => Datatypes.Some tt
+             | Z_min, Compilers.ident.Z_min => Datatypes.Some tt
+             | Z_max, Compilers.ident.Z_max => Datatypes.Some tt
+             | Z_bneg, Compilers.ident.Z_bneg => Datatypes.Some tt
+             | Z_lnot_modulo, Compilers.ident.Z_lnot_modulo => Datatypes.Some tt
+             | Z_mul_split, Compilers.ident.Z_mul_split => Datatypes.Some tt
+             | Z_add_get_carry, Compilers.ident.Z_add_get_carry => Datatypes.Some tt
+             | Z_add_with_carry, Compilers.ident.Z_add_with_carry => Datatypes.Some tt
+             | Z_add_with_get_carry, Compilers.ident.Z_add_with_get_carry => Datatypes.Some tt
+             | Z_sub_get_borrow, Compilers.ident.Z_sub_get_borrow => Datatypes.Some tt
+             | Z_sub_with_get_borrow, Compilers.ident.Z_sub_with_get_borrow => Datatypes.Some tt
+             | Z_zselect, Compilers.ident.Z_zselect => Datatypes.Some tt
+             | Z_add_modulo, Compilers.ident.Z_add_modulo => Datatypes.Some tt
+             | Z_rshi, Compilers.ident.Z_rshi => Datatypes.Some tt
+             | Z_cc_m, Compilers.ident.Z_cc_m => Datatypes.Some tt
+             | Z_cast, Compilers.ident.Z_cast range => Datatypes.Some range
+             | Z_cast2, Compilers.ident.Z_cast2 range => Datatypes.Some range
+             | option_Some, Compilers.ident.option_Some A => Datatypes.Some A
+             | option_None, Compilers.ident.option_None A => Datatypes.Some A
+             | option_rect, Compilers.ident.option_rect A P => Datatypes.Some (A, P)
+             | Build_zrange, Compilers.ident.Build_zrange => Datatypes.Some tt
+             | zrange_rect, Compilers.ident.zrange_rect P => Datatypes.Some P
+             | fancy_add, Compilers.ident.fancy_add log2wordmax imm => Datatypes.Some (log2wordmax, imm)
+             | fancy_addc, Compilers.ident.fancy_addc log2wordmax imm => Datatypes.Some (log2wordmax, imm)
+             | fancy_sub, Compilers.ident.fancy_sub log2wordmax imm => Datatypes.Some (log2wordmax, imm)
+             | fancy_subb, Compilers.ident.fancy_subb log2wordmax imm => Datatypes.Some (log2wordmax, imm)
+             | fancy_mulll, Compilers.ident.fancy_mulll log2wordmax => Datatypes.Some log2wordmax
+             | fancy_mullh, Compilers.ident.fancy_mullh log2wordmax => Datatypes.Some log2wordmax
+             | fancy_mulhl, Compilers.ident.fancy_mulhl log2wordmax => Datatypes.Some log2wordmax
+             | fancy_mulhh, Compilers.ident.fancy_mulhh log2wordmax => Datatypes.Some log2wordmax
+             | fancy_rshi, Compilers.ident.fancy_rshi log2wordmax x => Datatypes.Some (log2wordmax, x)
+             | fancy_selc, Compilers.ident.fancy_selc => Datatypes.Some tt
+             | fancy_selm, Compilers.ident.fancy_selm log2wordmax => Datatypes.Some log2wordmax
+             | fancy_sell, Compilers.ident.fancy_sell => Datatypes.Some tt
+             | fancy_addm, Compilers.ident.fancy_addm => Datatypes.Some tt
              | Literal, _
              | Nat_succ, _
              | Nat_pred, _
@@ -1649,13 +1763,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_log2_up, _
              | Z_eqb, _
              | Z_leb, _
+             | Z_ltb, _
              | Z_geb, _
+             | Z_gtb, _
              | Z_of_nat, _
              | Z_to_nat, _
              | Z_shiftr, _
              | Z_shiftl, _
              | Z_land, _
              | Z_lor, _
+             | Z_min, _
+             | Z_max, _
              | Z_bneg, _
              | Z_lnot_modulo, _
              | Z_mul_split, _
@@ -1670,6 +1788,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_cc_m, _
              | Z_cast, _
              | Z_cast2, _
+             | option_Some, _
+             | option_None, _
+             | option_rect, _
+             | Build_zrange, _
+             | zrange_rect, _
              | fancy_add, _
              | fancy_addc, _
              | fancy_sub, _
@@ -1683,7 +1806,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | fancy_selm, _
              | fancy_sell, _
              | fancy_addm, _
-               => None
+               => Datatypes.None
              end%cps.
 
         Definition type_of (pidc : ident) : full_types pidc -> Compilers.type Compilers.base.type
@@ -1732,13 +1855,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_log2_up => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_eqb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%ptype
              | Z_leb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%ptype
+             | Z_ltb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%ptype
              | Z_geb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%ptype
+             | Z_gtb => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.bool))%ptype
              | Z_of_nat => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_to_nat => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.nat))%ptype
              | Z_shiftr => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_shiftl => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_land => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_lor => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
+             | Z_min => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
+             | Z_max => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_bneg => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_lnot_modulo => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_mul_split => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%ptype
@@ -1753,6 +1880,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_cc_m => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_cast => fun range => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_cast2 => fun range => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%ptype
+             | option_Some => fun A => (type.base A -> type.base (Compilers.base.type.option A))%ptype
+             | option_None => fun A => (type.base (Compilers.base.type.option A))
+             | option_rect => fun arg => let '(A, P) := eta2 arg in ((type.base A -> type.base P) -> (type.base ()%etype -> type.base P) -> type.base (Compilers.base.type.option A) -> type.base P)%ptype
+             | Build_zrange => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.zrange))%ptype
+             | zrange_rect => fun P => ((type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base P) -> type.base (Compilers.base.type.type_base base.type.zrange) -> type.base P)%ptype
              | fancy_add => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%ptype
              | fancy_addc => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%ptype
              | fancy_sub => fun arg => let '(log2wordmax, imm) := eta2 arg in (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%ptype
@@ -1814,13 +1946,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_log2_up => fun _ => @Compilers.ident.Z_log2_up
              | Z_eqb => fun _ => @Compilers.ident.Z_eqb
              | Z_leb => fun _ => @Compilers.ident.Z_leb
+             | Z_ltb => fun _ => @Compilers.ident.Z_ltb
              | Z_geb => fun _ => @Compilers.ident.Z_geb
+             | Z_gtb => fun _ => @Compilers.ident.Z_gtb
              | Z_of_nat => fun _ => @Compilers.ident.Z_of_nat
              | Z_to_nat => fun _ => @Compilers.ident.Z_to_nat
              | Z_shiftr => fun _ => @Compilers.ident.Z_shiftr
              | Z_shiftl => fun _ => @Compilers.ident.Z_shiftl
              | Z_land => fun _ => @Compilers.ident.Z_land
              | Z_lor => fun _ => @Compilers.ident.Z_lor
+             | Z_min => fun _ => @Compilers.ident.Z_min
+             | Z_max => fun _ => @Compilers.ident.Z_max
              | Z_bneg => fun _ => @Compilers.ident.Z_bneg
              | Z_lnot_modulo => fun _ => @Compilers.ident.Z_lnot_modulo
              | Z_mul_split => fun _ => @Compilers.ident.Z_mul_split
@@ -1835,6 +1971,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_cc_m => fun _ => @Compilers.ident.Z_cc_m
              | Z_cast => fun range => @Compilers.ident.Z_cast range
              | Z_cast2 => fun range => @Compilers.ident.Z_cast2 range
+             | option_Some => fun A => @Compilers.ident.option_Some A
+             | option_None => fun A => @Compilers.ident.option_None A
+             | option_rect => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of option_rect arg') with (A, P) => @Compilers.ident.option_rect A P end
+             | Build_zrange => fun _ => @Compilers.ident.Build_zrange
+             | zrange_rect => fun P => @Compilers.ident.zrange_rect P
              | fancy_add => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of fancy_add arg') with (log2wordmax, imm) => @Compilers.ident.fancy_add log2wordmax imm end
              | fancy_addc => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of fancy_addc arg') with (log2wordmax, imm) => @Compilers.ident.fancy_addc log2wordmax imm end
              | fancy_sub => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of fancy_sub arg') with (log2wordmax, imm) => @Compilers.ident.fancy_sub log2wordmax imm end
@@ -1903,13 +2044,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_log2_up => f _ Compilers.ident.Z_log2_up
            | Compilers.ident.Z_eqb => f _ Compilers.ident.Z_eqb
            | Compilers.ident.Z_leb => f _ Compilers.ident.Z_leb
+           | Compilers.ident.Z_ltb => f _ Compilers.ident.Z_ltb
            | Compilers.ident.Z_geb => f _ Compilers.ident.Z_geb
+           | Compilers.ident.Z_gtb => f _ Compilers.ident.Z_gtb
            | Compilers.ident.Z_of_nat => f _ Compilers.ident.Z_of_nat
            | Compilers.ident.Z_to_nat => f _ Compilers.ident.Z_to_nat
            | Compilers.ident.Z_shiftr => f _ Compilers.ident.Z_shiftr
            | Compilers.ident.Z_shiftl => f _ Compilers.ident.Z_shiftl
            | Compilers.ident.Z_land => f _ Compilers.ident.Z_land
            | Compilers.ident.Z_lor => f _ Compilers.ident.Z_lor
+           | Compilers.ident.Z_min => f _ Compilers.ident.Z_min
+           | Compilers.ident.Z_max => f _ Compilers.ident.Z_max
            | Compilers.ident.Z_bneg => f _ Compilers.ident.Z_bneg
            | Compilers.ident.Z_lnot_modulo => f _ Compilers.ident.Z_lnot_modulo
            | Compilers.ident.Z_mul_split => f _ Compilers.ident.Z_mul_split
@@ -1924,6 +2069,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_cc_m => f _ Compilers.ident.Z_cc_m
            | Compilers.ident.Z_cast range => f _ (@Compilers.ident.Z_cast range)
            | Compilers.ident.Z_cast2 range => f _ (@Compilers.ident.Z_cast2 range)
+           | Compilers.ident.option_Some A => f _ (@Compilers.ident.option_Some A)
+           | Compilers.ident.option_None A => f _ (@Compilers.ident.option_None A)
+           | Compilers.ident.option_rect A P => f _ (@Compilers.ident.option_rect A P)
+           | Compilers.ident.Build_zrange => f _ Compilers.ident.Build_zrange
+           | Compilers.ident.zrange_rect P => f _ (@Compilers.ident.zrange_rect P)
            | Compilers.ident.fancy_add log2wordmax imm => f _ (@Compilers.ident.fancy_add log2wordmax imm)
            | Compilers.ident.fancy_addc log2wordmax imm => f _ (@Compilers.ident.fancy_addc log2wordmax imm)
            | Compilers.ident.fancy_sub log2wordmax imm => f _ (@Compilers.ident.fancy_sub log2wordmax imm)
@@ -1984,13 +2134,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | Z_log2_up : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_eqb : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))%ptype
       | Z_leb : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))%ptype
+      | Z_ltb : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))%ptype
       | Z_geb : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))%ptype
+      | Z_gtb : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.bool))%ptype
       | Z_of_nat : ident (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_to_nat : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.nat))%ptype
       | Z_shiftr : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_shiftl : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_land : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_lor : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
+      | Z_min : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
+      | Z_max : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_bneg : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_lnot_modulo : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_mul_split : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype)%ptype
@@ -2005,6 +2159,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | Z_cc_m : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_cast : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_cast2 : ident (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype)%ptype
+      | option_Some {A : base.type} : ident (type.base A -> type.base (base.type.option A))%ptype
+      | option_None {A : base.type} : ident (type.base (base.type.option A))
+      | option_rect {A : base.type} {P : base.type} : ident ((type.base A -> type.base P) -> (type.base ()%pbtype -> type.base P) -> type.base (base.type.option A) -> type.base P)%ptype
+      | Build_zrange : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.zrange))%ptype
+      | zrange_rect {P : base.type} : ident ((type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base P) -> type.base (base.type.type_base base.type.zrange) -> type.base P)%ptype
       | fancy_add : ident (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype)%ptype
       | fancy_addc : ident (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype)%ptype
       | fancy_sub : ident (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype)%ptype
@@ -2065,13 +2224,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_log2_up => Raw.ident.Z_log2_up
            | @Z_eqb => Raw.ident.Z_eqb
            | @Z_leb => Raw.ident.Z_leb
+           | @Z_ltb => Raw.ident.Z_ltb
            | @Z_geb => Raw.ident.Z_geb
+           | @Z_gtb => Raw.ident.Z_gtb
            | @Z_of_nat => Raw.ident.Z_of_nat
            | @Z_to_nat => Raw.ident.Z_to_nat
            | @Z_shiftr => Raw.ident.Z_shiftr
            | @Z_shiftl => Raw.ident.Z_shiftl
            | @Z_land => Raw.ident.Z_land
            | @Z_lor => Raw.ident.Z_lor
+           | @Z_min => Raw.ident.Z_min
+           | @Z_max => Raw.ident.Z_max
            | @Z_bneg => Raw.ident.Z_bneg
            | @Z_lnot_modulo => Raw.ident.Z_lnot_modulo
            | @Z_mul_split => Raw.ident.Z_mul_split
@@ -2086,6 +2249,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_cc_m => Raw.ident.Z_cc_m
            | @Z_cast => Raw.ident.Z_cast
            | @Z_cast2 => Raw.ident.Z_cast2
+           | @option_Some A => Raw.ident.option_Some
+           | @option_None A => Raw.ident.option_None
+           | @option_rect A P => Raw.ident.option_rect
+           | @Build_zrange => Raw.ident.Build_zrange
+           | @zrange_rect P => Raw.ident.zrange_rect
            | @fancy_add => Raw.ident.fancy_add
            | @fancy_addc => Raw.ident.fancy_addc
            | @fancy_sub => Raw.ident.fancy_sub
@@ -2147,13 +2315,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_log2_up => []
            | @Z_eqb => []
            | @Z_leb => []
+           | @Z_ltb => []
            | @Z_geb => []
+           | @Z_gtb => []
            | @Z_of_nat => []
            | @Z_to_nat => []
            | @Z_shiftr => []
            | @Z_shiftl => []
            | @Z_land => []
            | @Z_lor => []
+           | @Z_min => []
+           | @Z_max => []
            | @Z_bneg => []
            | @Z_lnot_modulo => []
            | @Z_mul_split => []
@@ -2168,6 +2340,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_cc_m => []
            | @Z_cast => [zrange : Type]
            | @Z_cast2 => [zrange * zrange : Type]
+           | @option_Some A => []
+           | @option_None A => []
+           | @option_rect A P => []
+           | @Build_zrange => []
+           | @zrange_rect P => []
            | @fancy_add => [Z : Type; Z : Type]
            | @fancy_addc => [Z : Type; Z : Type]
            | @fancy_sub => [Z : Type; Z : Type]
@@ -2229,13 +2406,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_log2_up => fun _ => @Compilers.ident.Z_log2_up
            | @Z_eqb => fun _ => @Compilers.ident.Z_eqb
            | @Z_leb => fun _ => @Compilers.ident.Z_leb
+           | @Z_ltb => fun _ => @Compilers.ident.Z_ltb
            | @Z_geb => fun _ => @Compilers.ident.Z_geb
+           | @Z_gtb => fun _ => @Compilers.ident.Z_gtb
            | @Z_of_nat => fun _ => @Compilers.ident.Z_of_nat
            | @Z_to_nat => fun _ => @Compilers.ident.Z_to_nat
            | @Z_shiftr => fun _ => @Compilers.ident.Z_shiftr
            | @Z_shiftl => fun _ => @Compilers.ident.Z_shiftl
            | @Z_land => fun _ => @Compilers.ident.Z_land
            | @Z_lor => fun _ => @Compilers.ident.Z_lor
+           | @Z_min => fun _ => @Compilers.ident.Z_min
+           | @Z_max => fun _ => @Compilers.ident.Z_max
            | @Z_bneg => fun _ => @Compilers.ident.Z_bneg
            | @Z_lnot_modulo => fun _ => @Compilers.ident.Z_lnot_modulo
            | @Z_mul_split => fun _ => @Compilers.ident.Z_mul_split
@@ -2250,6 +2431,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_cc_m => fun _ => @Compilers.ident.Z_cc_m
            | @Z_cast => fun arg => let '(range, _) := eta2r arg in @Compilers.ident.Z_cast range
            | @Z_cast2 => fun arg => let '(range, _) := eta2r arg in @Compilers.ident.Z_cast2 range
+           | @option_Some A => fun _ => @Compilers.ident.option_Some _
+           | @option_None A => fun _ => @Compilers.ident.option_None _
+           | @option_rect A P => fun _ => @Compilers.ident.option_rect _ _
+           | @Build_zrange => fun _ => @Compilers.ident.Build_zrange
+           | @zrange_rect P => fun _ => @Compilers.ident.zrange_rect _
            | @fancy_add => fun arg => let '(log2wordmax, (imm, _)) := eta3r arg in @Compilers.ident.fancy_add log2wordmax imm
            | @fancy_addc => fun arg => let '(log2wordmax, (imm, _)) := eta3r arg in @Compilers.ident.fancy_addc log2wordmax imm
            | @fancy_sub => fun arg => let '(log2wordmax, (imm, _)) := eta3r arg in @Compilers.ident.fancy_sub log2wordmax imm
@@ -2265,89 +2451,99 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @fancy_addm => fun _ => @Compilers.ident.fancy_addm
            end.
 
-      Definition unify {t t'} (pidc : ident t) (idc : Compilers.ident.ident t') : option (type_of_list (@arg_types t pidc))
-        := match pidc, idc return option (type_of_list (arg_types pidc)) with
-           | @Literal Compilers.base.type.unit, Compilers.ident.Literal Compilers.base.type.unit v => Some (v, tt)
-           | @Literal Compilers.base.type.Z, Compilers.ident.Literal Compilers.base.type.Z v => Some (v, tt)
-           | @Literal Compilers.base.type.bool, Compilers.ident.Literal Compilers.base.type.bool v => Some (v, tt)
-           | @Literal Compilers.base.type.nat, Compilers.ident.Literal Compilers.base.type.nat v => Some (v, tt)
-           | @Nat_succ, Compilers.ident.Nat_succ => Some tt
-           | @Nat_pred, Compilers.ident.Nat_pred => Some tt
-           | @Nat_max, Compilers.ident.Nat_max => Some tt
-           | @Nat_mul, Compilers.ident.Nat_mul => Some tt
-           | @Nat_add, Compilers.ident.Nat_add => Some tt
-           | @Nat_sub, Compilers.ident.Nat_sub => Some tt
-           | @Nat_eqb, Compilers.ident.Nat_eqb => Some tt
-           | @nil t, Compilers.ident.nil t' => Some tt
-           | @cons t, Compilers.ident.cons t' => Some tt
-           | @pair A B, Compilers.ident.pair A' B' => Some tt
-           | @fst A B, Compilers.ident.fst A' B' => Some tt
-           | @snd A B, Compilers.ident.snd A' B' => Some tt
-           | @prod_rect A B T, Compilers.ident.prod_rect A' B' T' => Some tt
-           | @bool_rect T, Compilers.ident.bool_rect T' => Some tt
-           | @nat_rect P, Compilers.ident.nat_rect P' => Some tt
-           | @nat_rect_arrow P Q, Compilers.ident.nat_rect_arrow P' Q' => Some tt
-           | @list_rect A P, Compilers.ident.list_rect A' P' => Some tt
-           | @list_case A P, Compilers.ident.list_case A' P' => Some tt
-           | @List_length T, Compilers.ident.List_length T' => Some tt
-           | @List_seq, Compilers.ident.List_seq => Some tt
-           | @List_firstn A, Compilers.ident.List_firstn A' => Some tt
-           | @List_skipn A, Compilers.ident.List_skipn A' => Some tt
-           | @List_repeat A, Compilers.ident.List_repeat A' => Some tt
-           | @List_combine A B, Compilers.ident.List_combine A' B' => Some tt
-           | @List_map A B, Compilers.ident.List_map A' B' => Some tt
-           | @List_app A, Compilers.ident.List_app A' => Some tt
-           | @List_rev A, Compilers.ident.List_rev A' => Some tt
-           | @List_flat_map A B, Compilers.ident.List_flat_map A' B' => Some tt
-           | @List_partition A, Compilers.ident.List_partition A' => Some tt
-           | @List_fold_right A B, Compilers.ident.List_fold_right A' B' => Some tt
-           | @List_update_nth T, Compilers.ident.List_update_nth T' => Some tt
-           | @List_nth_default T, Compilers.ident.List_nth_default T' => Some tt
-           | @Z_add, Compilers.ident.Z_add => Some tt
-           | @Z_mul, Compilers.ident.Z_mul => Some tt
-           | @Z_pow, Compilers.ident.Z_pow => Some tt
-           | @Z_sub, Compilers.ident.Z_sub => Some tt
-           | @Z_opp, Compilers.ident.Z_opp => Some tt
-           | @Z_div, Compilers.ident.Z_div => Some tt
-           | @Z_modulo, Compilers.ident.Z_modulo => Some tt
-           | @Z_log2, Compilers.ident.Z_log2 => Some tt
-           | @Z_log2_up, Compilers.ident.Z_log2_up => Some tt
-           | @Z_eqb, Compilers.ident.Z_eqb => Some tt
-           | @Z_leb, Compilers.ident.Z_leb => Some tt
-           | @Z_geb, Compilers.ident.Z_geb => Some tt
-           | @Z_of_nat, Compilers.ident.Z_of_nat => Some tt
-           | @Z_to_nat, Compilers.ident.Z_to_nat => Some tt
-           | @Z_shiftr, Compilers.ident.Z_shiftr => Some tt
-           | @Z_shiftl, Compilers.ident.Z_shiftl => Some tt
-           | @Z_land, Compilers.ident.Z_land => Some tt
-           | @Z_lor, Compilers.ident.Z_lor => Some tt
-           | @Z_bneg, Compilers.ident.Z_bneg => Some tt
-           | @Z_lnot_modulo, Compilers.ident.Z_lnot_modulo => Some tt
-           | @Z_mul_split, Compilers.ident.Z_mul_split => Some tt
-           | @Z_add_get_carry, Compilers.ident.Z_add_get_carry => Some tt
-           | @Z_add_with_carry, Compilers.ident.Z_add_with_carry => Some tt
-           | @Z_add_with_get_carry, Compilers.ident.Z_add_with_get_carry => Some tt
-           | @Z_sub_get_borrow, Compilers.ident.Z_sub_get_borrow => Some tt
-           | @Z_sub_with_get_borrow, Compilers.ident.Z_sub_with_get_borrow => Some tt
-           | @Z_zselect, Compilers.ident.Z_zselect => Some tt
-           | @Z_add_modulo, Compilers.ident.Z_add_modulo => Some tt
-           | @Z_rshi, Compilers.ident.Z_rshi => Some tt
-           | @Z_cc_m, Compilers.ident.Z_cc_m => Some tt
-           | @Z_cast, Compilers.ident.Z_cast range' => Some (range', tt)
-           | @Z_cast2, Compilers.ident.Z_cast2 range' => Some (range', tt)
-           | @fancy_add, Compilers.ident.fancy_add log2wordmax' imm' => Some (log2wordmax', (imm', tt))
-           | @fancy_addc, Compilers.ident.fancy_addc log2wordmax' imm' => Some (log2wordmax', (imm', tt))
-           | @fancy_sub, Compilers.ident.fancy_sub log2wordmax' imm' => Some (log2wordmax', (imm', tt))
-           | @fancy_subb, Compilers.ident.fancy_subb log2wordmax' imm' => Some (log2wordmax', (imm', tt))
-           | @fancy_mulll, Compilers.ident.fancy_mulll log2wordmax' => Some (log2wordmax', tt)
-           | @fancy_mullh, Compilers.ident.fancy_mullh log2wordmax' => Some (log2wordmax', tt)
-           | @fancy_mulhl, Compilers.ident.fancy_mulhl log2wordmax' => Some (log2wordmax', tt)
-           | @fancy_mulhh, Compilers.ident.fancy_mulhh log2wordmax' => Some (log2wordmax', tt)
-           | @fancy_rshi, Compilers.ident.fancy_rshi log2wordmax' x' => Some (log2wordmax', (x', tt))
-           | @fancy_selc, Compilers.ident.fancy_selc => Some tt
-           | @fancy_selm, Compilers.ident.fancy_selm log2wordmax' => Some (log2wordmax', tt)
-           | @fancy_sell, Compilers.ident.fancy_sell => Some tt
-           | @fancy_addm, Compilers.ident.fancy_addm => Some tt
+      Definition unify {t t'} (pidc : ident t) (idc : Compilers.ident.ident t') : Datatypes.option (type_of_list (@arg_types t pidc))
+        := match pidc, idc return Datatypes.option (type_of_list (arg_types pidc)) with
+           | @Literal Compilers.base.type.unit, Compilers.ident.Literal Compilers.base.type.unit v => Datatypes.Some (v, tt)
+           | @Literal Compilers.base.type.Z, Compilers.ident.Literal Compilers.base.type.Z v => Datatypes.Some (v, tt)
+           | @Literal Compilers.base.type.bool, Compilers.ident.Literal Compilers.base.type.bool v => Datatypes.Some (v, tt)
+           | @Literal Compilers.base.type.nat, Compilers.ident.Literal Compilers.base.type.nat v => Datatypes.Some (v, tt)
+           | @Literal Compilers.base.type.zrange, Compilers.ident.Literal Compilers.base.type.zrange v => Datatypes.Some (v, tt)
+           | @Nat_succ, Compilers.ident.Nat_succ => Datatypes.Some tt
+           | @Nat_pred, Compilers.ident.Nat_pred => Datatypes.Some tt
+           | @Nat_max, Compilers.ident.Nat_max => Datatypes.Some tt
+           | @Nat_mul, Compilers.ident.Nat_mul => Datatypes.Some tt
+           | @Nat_add, Compilers.ident.Nat_add => Datatypes.Some tt
+           | @Nat_sub, Compilers.ident.Nat_sub => Datatypes.Some tt
+           | @Nat_eqb, Compilers.ident.Nat_eqb => Datatypes.Some tt
+           | @nil t, Compilers.ident.nil t' => Datatypes.Some tt
+           | @cons t, Compilers.ident.cons t' => Datatypes.Some tt
+           | @pair A B, Compilers.ident.pair A' B' => Datatypes.Some tt
+           | @fst A B, Compilers.ident.fst A' B' => Datatypes.Some tt
+           | @snd A B, Compilers.ident.snd A' B' => Datatypes.Some tt
+           | @prod_rect A B T, Compilers.ident.prod_rect A' B' T' => Datatypes.Some tt
+           | @bool_rect T, Compilers.ident.bool_rect T' => Datatypes.Some tt
+           | @nat_rect P, Compilers.ident.nat_rect P' => Datatypes.Some tt
+           | @nat_rect_arrow P Q, Compilers.ident.nat_rect_arrow P' Q' => Datatypes.Some tt
+           | @list_rect A P, Compilers.ident.list_rect A' P' => Datatypes.Some tt
+           | @list_case A P, Compilers.ident.list_case A' P' => Datatypes.Some tt
+           | @List_length T, Compilers.ident.List_length T' => Datatypes.Some tt
+           | @List_seq, Compilers.ident.List_seq => Datatypes.Some tt
+           | @List_firstn A, Compilers.ident.List_firstn A' => Datatypes.Some tt
+           | @List_skipn A, Compilers.ident.List_skipn A' => Datatypes.Some tt
+           | @List_repeat A, Compilers.ident.List_repeat A' => Datatypes.Some tt
+           | @List_combine A B, Compilers.ident.List_combine A' B' => Datatypes.Some tt
+           | @List_map A B, Compilers.ident.List_map A' B' => Datatypes.Some tt
+           | @List_app A, Compilers.ident.List_app A' => Datatypes.Some tt
+           | @List_rev A, Compilers.ident.List_rev A' => Datatypes.Some tt
+           | @List_flat_map A B, Compilers.ident.List_flat_map A' B' => Datatypes.Some tt
+           | @List_partition A, Compilers.ident.List_partition A' => Datatypes.Some tt
+           | @List_fold_right A B, Compilers.ident.List_fold_right A' B' => Datatypes.Some tt
+           | @List_update_nth T, Compilers.ident.List_update_nth T' => Datatypes.Some tt
+           | @List_nth_default T, Compilers.ident.List_nth_default T' => Datatypes.Some tt
+           | @Z_add, Compilers.ident.Z_add => Datatypes.Some tt
+           | @Z_mul, Compilers.ident.Z_mul => Datatypes.Some tt
+           | @Z_pow, Compilers.ident.Z_pow => Datatypes.Some tt
+           | @Z_sub, Compilers.ident.Z_sub => Datatypes.Some tt
+           | @Z_opp, Compilers.ident.Z_opp => Datatypes.Some tt
+           | @Z_div, Compilers.ident.Z_div => Datatypes.Some tt
+           | @Z_modulo, Compilers.ident.Z_modulo => Datatypes.Some tt
+           | @Z_log2, Compilers.ident.Z_log2 => Datatypes.Some tt
+           | @Z_log2_up, Compilers.ident.Z_log2_up => Datatypes.Some tt
+           | @Z_eqb, Compilers.ident.Z_eqb => Datatypes.Some tt
+           | @Z_leb, Compilers.ident.Z_leb => Datatypes.Some tt
+           | @Z_ltb, Compilers.ident.Z_ltb => Datatypes.Some tt
+           | @Z_geb, Compilers.ident.Z_geb => Datatypes.Some tt
+           | @Z_gtb, Compilers.ident.Z_gtb => Datatypes.Some tt
+           | @Z_of_nat, Compilers.ident.Z_of_nat => Datatypes.Some tt
+           | @Z_to_nat, Compilers.ident.Z_to_nat => Datatypes.Some tt
+           | @Z_shiftr, Compilers.ident.Z_shiftr => Datatypes.Some tt
+           | @Z_shiftl, Compilers.ident.Z_shiftl => Datatypes.Some tt
+           | @Z_land, Compilers.ident.Z_land => Datatypes.Some tt
+           | @Z_lor, Compilers.ident.Z_lor => Datatypes.Some tt
+           | @Z_min, Compilers.ident.Z_min => Datatypes.Some tt
+           | @Z_max, Compilers.ident.Z_max => Datatypes.Some tt
+           | @Z_bneg, Compilers.ident.Z_bneg => Datatypes.Some tt
+           | @Z_lnot_modulo, Compilers.ident.Z_lnot_modulo => Datatypes.Some tt
+           | @Z_mul_split, Compilers.ident.Z_mul_split => Datatypes.Some tt
+           | @Z_add_get_carry, Compilers.ident.Z_add_get_carry => Datatypes.Some tt
+           | @Z_add_with_carry, Compilers.ident.Z_add_with_carry => Datatypes.Some tt
+           | @Z_add_with_get_carry, Compilers.ident.Z_add_with_get_carry => Datatypes.Some tt
+           | @Z_sub_get_borrow, Compilers.ident.Z_sub_get_borrow => Datatypes.Some tt
+           | @Z_sub_with_get_borrow, Compilers.ident.Z_sub_with_get_borrow => Datatypes.Some tt
+           | @Z_zselect, Compilers.ident.Z_zselect => Datatypes.Some tt
+           | @Z_add_modulo, Compilers.ident.Z_add_modulo => Datatypes.Some tt
+           | @Z_rshi, Compilers.ident.Z_rshi => Datatypes.Some tt
+           | @Z_cc_m, Compilers.ident.Z_cc_m => Datatypes.Some tt
+           | @Z_cast, Compilers.ident.Z_cast range' => Datatypes.Some (range', tt)
+           | @Z_cast2, Compilers.ident.Z_cast2 range' => Datatypes.Some (range', tt)
+           | @option_Some A, Compilers.ident.option_Some A' => Datatypes.Some tt
+           | @option_None A, Compilers.ident.option_None A' => Datatypes.Some tt
+           | @option_rect A P, Compilers.ident.option_rect A' P' => Datatypes.Some tt
+           | @Build_zrange, Compilers.ident.Build_zrange => Datatypes.Some tt
+           | @zrange_rect P, Compilers.ident.zrange_rect P' => Datatypes.Some tt
+           | @fancy_add, Compilers.ident.fancy_add log2wordmax' imm' => Datatypes.Some (log2wordmax', (imm', tt))
+           | @fancy_addc, Compilers.ident.fancy_addc log2wordmax' imm' => Datatypes.Some (log2wordmax', (imm', tt))
+           | @fancy_sub, Compilers.ident.fancy_sub log2wordmax' imm' => Datatypes.Some (log2wordmax', (imm', tt))
+           | @fancy_subb, Compilers.ident.fancy_subb log2wordmax' imm' => Datatypes.Some (log2wordmax', (imm', tt))
+           | @fancy_mulll, Compilers.ident.fancy_mulll log2wordmax' => Datatypes.Some (log2wordmax', tt)
+           | @fancy_mullh, Compilers.ident.fancy_mullh log2wordmax' => Datatypes.Some (log2wordmax', tt)
+           | @fancy_mulhl, Compilers.ident.fancy_mulhl log2wordmax' => Datatypes.Some (log2wordmax', tt)
+           | @fancy_mulhh, Compilers.ident.fancy_mulhh log2wordmax' => Datatypes.Some (log2wordmax', tt)
+           | @fancy_rshi, Compilers.ident.fancy_rshi log2wordmax' x' => Datatypes.Some (log2wordmax', (x', tt))
+           | @fancy_selc, Compilers.ident.fancy_selc => Datatypes.Some tt
+           | @fancy_selm, Compilers.ident.fancy_selm log2wordmax' => Datatypes.Some (log2wordmax', tt)
+           | @fancy_sell, Compilers.ident.fancy_sell => Datatypes.Some tt
+           | @fancy_addm, Compilers.ident.fancy_addm => Datatypes.Some tt
            | @Literal _, _
            | @Nat_succ, _
            | @Nat_pred, _
@@ -2392,13 +2588,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_log2_up, _
            | @Z_eqb, _
            | @Z_leb, _
+           | @Z_ltb, _
            | @Z_geb, _
+           | @Z_gtb, _
            | @Z_of_nat, _
            | @Z_to_nat, _
            | @Z_shiftr, _
            | @Z_shiftl, _
            | @Z_land, _
            | @Z_lor, _
+           | @Z_min, _
+           | @Z_max, _
            | @Z_bneg, _
            | @Z_lnot_modulo, _
            | @Z_mul_split, _
@@ -2413,6 +2613,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_cc_m, _
            | @Z_cast, _
            | @Z_cast2, _
+           | @option_Some _, _
+           | @option_None _, _
+           | @option_rect _ _, _
+           | @Build_zrange, _
+           | @zrange_rect _, _
            | @fancy_add, _
            | @fancy_addc, _
            | @fancy_sub, _
@@ -2426,7 +2631,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @fancy_selm, _
            | @fancy_sell, _
            | @fancy_addm, _
-             => None
+             => Datatypes.None
            end%cps.
 
       Definition of_typed_ident {t} (idc : Compilers.ident.ident t) : ident (type.relax t)
@@ -2475,13 +2680,17 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_log2_up => @Z_log2_up
            | Compilers.ident.Z_eqb => @Z_eqb
            | Compilers.ident.Z_leb => @Z_leb
+           | Compilers.ident.Z_ltb => @Z_ltb
            | Compilers.ident.Z_geb => @Z_geb
+           | Compilers.ident.Z_gtb => @Z_gtb
            | Compilers.ident.Z_of_nat => @Z_of_nat
            | Compilers.ident.Z_to_nat => @Z_to_nat
            | Compilers.ident.Z_shiftr => @Z_shiftr
            | Compilers.ident.Z_shiftl => @Z_shiftl
            | Compilers.ident.Z_land => @Z_land
            | Compilers.ident.Z_lor => @Z_lor
+           | Compilers.ident.Z_min => @Z_min
+           | Compilers.ident.Z_max => @Z_max
            | Compilers.ident.Z_bneg => @Z_bneg
            | Compilers.ident.Z_lnot_modulo => @Z_lnot_modulo
            | Compilers.ident.Z_mul_split => @Z_mul_split
@@ -2496,6 +2705,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_cc_m => @Z_cc_m
            | Compilers.ident.Z_cast range => @Z_cast
            | Compilers.ident.Z_cast2 range => @Z_cast2
+           | Compilers.ident.option_Some A => @option_Some (base.relax A)
+           | Compilers.ident.option_None A => @option_None (base.relax A)
+           | Compilers.ident.option_rect A P => @option_rect (base.relax A) (base.relax P)
+           | Compilers.ident.Build_zrange => @Build_zrange
+           | Compilers.ident.zrange_rect P => @zrange_rect (base.relax P)
            | Compilers.ident.fancy_add log2wordmax imm => @fancy_add
            | Compilers.ident.fancy_addc log2wordmax imm => @fancy_addc
            | Compilers.ident.fancy_sub log2wordmax imm => @fancy_sub

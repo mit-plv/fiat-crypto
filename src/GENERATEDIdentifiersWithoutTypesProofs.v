@@ -21,6 +21,7 @@ Module Compilers.
 
   Module pattern.
     Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.
+    Import Datatypes. (* for Some, None, option *)
 
     Local Lemma quick_invert_eq_option {A} (P : Type) (x y : option A) (H : x = y)
       : match x, y return Type with
@@ -81,6 +82,7 @@ Module Compilers.
     Module Raw.
       Module ident.
         Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.Raw.ident.
+        Import Datatypes. (* for Some, None, option *)
 
         Global Instance eq_ident_Decidable : DecidableRel (@eq ident) := ident_eq_dec.
 
@@ -144,6 +146,7 @@ Module Compilers.
 
     Module ident.
       Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.ident.
+      Import Datatypes. (* for Some, None, option *)
 
       Lemma eta_ident_cps_correct T t idc f
         : @eta_ident_cps T t idc f = f t idc.
@@ -201,35 +204,6 @@ Module Compilers.
                             end
                           | progress Compilers.type.inversion_type ].
       Qed.
-
-      (*
-      Local Ltac solve_ex_or_eq :=
-        lazymatch goal with
-        | [ |- ex _ ] => eexists; solve_ex_or_eq
-        | [ |- _ /\ _ ] => split; solve_ex_or_eq
-        | [ |- _ \/ _ ] => (left + right); solve_ex_or_eq
-        | [ |- _ = _ ] => reflexivity || eassumption
-        end.
-      Lemma type_vars_enough
-        : forall t idc k,
-          PositiveSet.mem k (pattern.type.collect_vars t) = true
-          -> exists v, List.In v (@pattern.ident.type_vars t idc) /\ PositiveSet.mem k (pattern.type.collect_vars v) = true.
-      Proof using Type.
-        destruct idc; cbn [type.collect_vars ident.type_vars List.In base.collect_vars PositiveSet.mem PositiveSet.empty PositiveSet.union] in *.
-        all: repeat first [ match goal with
-                            | [ H : true = false |- _ ] => exfalso; apply Bool.diff_true_false, H
-                            | [ H : false = true |- _ ] => exfalso; apply Bool.diff_false_true, H
-                            | [ H : context[PositiveSet.mem _ (PositiveSet.union _ _)] |- _ ]
-                              => rewrite PositiveSetFacts.union_b in H
-                            | [ H : context[orb _ _ = true] |- _ ]
-                              => rewrite Bool.orb_true_iff in H
-                            end
-                          | progress cbn [PositiveSet.mem PositiveSet.empty] in *
-                          | progress intros
-                          | progress destruct_head'_or
-                          | solve_ex_or_eq ].
-      Qed.
-       *)
     End ident.
   End pattern.
 End Compilers.

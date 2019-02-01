@@ -108,6 +108,13 @@ Module Compilers.
              => splice x (fun x => @splice_list A B xs (fun xs => e (cons x xs)))
            end.
 
+      Definition splice_option {A B} (v : option (@UnderLets A)) (e : option A -> @UnderLets B) : @UnderLets B
+        := match v with
+           | None => e None
+           | Some x
+             => splice x (fun x => e (Some x))
+           end.
+
       Fixpoint to_expr {t} (x : @UnderLets (expr t)) : expr t
         := match x with
            | Base v => v
@@ -127,6 +134,7 @@ Module Compilers.
       Bind Scope under_lets_scope with UnderLets.UnderLets.
       Notation "x <-- y ; f" := (UnderLets.splice y (fun x => f%under_lets)) : under_lets_scope.
       Notation "x <---- y ; f" := (UnderLets.splice_list y (fun x => f%under_lets)) : under_lets_scope.
+      Notation "x <----- y ; f" := (UnderLets.splice_option y (fun x => f%under_lets)) : under_lets_scope.
     End Notations.
 
     Section reify.
@@ -179,6 +187,22 @@ Module Compilers.
                                 A x _
                                 (fun xe
                                  => rec (fun xse => k (xe :: xse)%expr)))
+                          ls
+                          k
+                   | None => @default_reify_and_let_binds_base_cps _ e T k
+                   end
+           | base.type.option A
+             => fun e T k
+                => match reflect_option e with
+                   | Some ls
+                     => option_rect
+                          _
+                          (fun x k
+                           => @reify_and_let_binds_base_cps
+                                A x _
+                                (fun xe
+                                 => k (#ident.Some @ xe)%expr))
+                          (fun k => k (#ident.None)%expr)
                           ls
                           k
                    | None => @default_reify_and_let_binds_base_cps _ e T k

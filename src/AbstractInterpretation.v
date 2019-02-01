@@ -29,9 +29,11 @@ Module Compilers.
              | base.type.unit as t
              | base.type.nat as t
              | base.type.bool as t
+             | base.type.zrange as t
                => base.interp t
              | base.type.prod A B => interp A * interp B
              | base.type.list A => list (interp A)
+             | base.type.option A => option (interp A)
              end%type.
         Definition is_neg {t} : interp t -> bool
           := match t with
@@ -44,11 +46,14 @@ Module Compilers.
              | base.type.nat => Nat.eqb
              | base.type.unit => fun _ _ => true
              | base.type.bool => bool_eq
+             | base.type.zrange => zrange_beq
              | base.type.prod A B
                => fun '(a, b) '(a', b')
                   => @is_tighter_than A a a' && @is_tighter_than B b b'
              | base.type.list A
                => fold_andb_map (@is_tighter_than A)
+             | base.type.option A
+               => option_beq (@is_tighter_than A)
              end%bool.
         Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
           := match t with
@@ -56,11 +61,14 @@ Module Compilers.
              | base.type.nat => Nat.eqb
              | base.type.unit => fun _ _ => true
              | base.type.bool => bool_eq
+             | base.type.zrange => zrange_beq
              | base.type.prod A B
                => fun '(a, b) '(a', b')
                   => @is_bounded_by A a a' && @is_bounded_by B b b'
              | base.type.list A
                => fold_andb_map (@is_bounded_by A)
+             | base.type.option A
+               => option_beq_hetero (@is_bounded_by A)
              end.
         Module option.
           (** turn a [base.type] into a [Set] describing the type
@@ -73,44 +81,55 @@ Module Compilers.
                | base.type.unit => unit
                | base.type.nat as t
                | base.type.bool as t
+               | base.type.zrange as t
                  => option (base.interp t)
                | base.type.prod A B => interp A * interp B
                | base.type.list A => option (list (interp A))
+               | base.type.option A => option (option (interp A))
                end%type.
           Fixpoint None {t} : interp t
             := match t with
                | base.type.unit => tt
                | base.type.list _
+               | base.type.option _
                | base.type.Z
                | base.type.nat
                | base.type.bool
+               | base.type.zrange
                  => Datatypes.None
                | base.type.prod A B
                  => (@None A, @None B)
                end.
           Fixpoint Some {t} : base.interp t -> interp t
             := match t with
+               | base.type.unit
+                 => fun _ => tt
                | base.type.Z
                | base.type.nat
                | base.type.bool
+               | base.type.zrange
                  => Datatypes.Some
                | base.type.list A
                  => fun ls => Datatypes.Some (List.map (@Some A) ls)
+               | base.type.option A
+                 => fun ls => Datatypes.Some (option_map (@Some A) ls)
                | base.type.prod A B
                  => fun '(a, b)
                     => (@Some A a, @Some B b)
-               | _ => fun _ => tt
                end.
           Fixpoint lift_Some {t} : interp t -> option (base.interp t)
             := match t with
                | base.type.Z
                | base.type.nat
                | base.type.bool
+               | base.type.zrange
                  => fun x => x
                | base.type.unit
                  => fun x => Datatypes.Some tt
                | base.type.list A
-                 => fun ls => ls <- ls; ls <-- List.map (@lift_Some A) ls; Datatypes.Some ls
+                 => fun ls => ls <- ls; Option.List.lift (List.map (@lift_Some A) ls)
+               | base.type.option A
+                 => fun v => v <- v; Option.lift (option_map (@lift_Some A) v)
                | base.type.prod A B
                  => fun '(a, b) => a <- @lift_Some A a; b <- @lift_Some B b; Datatypes.Some (a, b)
                end%option.
@@ -121,9 +140,12 @@ Module Compilers.
                | base.type.nat
                | base.type.bool
                | base.type.unit
+               | base.type.zrange
                  => fun x => x
                | base.type.list A
                  => fun ls => ls <- ls; Datatypes.Some (List.map (@strip_ranges A) ls)
+               | base.type.option A
+                 => fun v => v <- v; Datatypes.Some (option_map (@strip_ranges A) v)
                | base.type.prod A B
                  => fun '(a, b)
                     => (@strip_ranges A a, @strip_ranges B b)
@@ -142,6 +164,7 @@ Module Compilers.
                | base.type.Z as t
                | base.type.nat as t
                | base.type.bool as t
+               | base.type.zrange as t
                  => fun r1 r2
                     => match r1, r2 with
                        | _, Datatypes.None => true
@@ -159,6 +182,14 @@ Module Compilers.
                        | Datatypes.None, Datatypes.Some _ => false
                        | Datatypes.Some ls1, Datatypes.Some ls2 => fold_andb_map (@is_tighter_than A) ls1 ls2
                        end
+               | base.type.option A
+                 => fun v1 v2
+                    => match v1, v2 with
+                       | Datatypes.None, Datatypes.None => true
+                       | Datatypes.Some _, Datatypes.None => true
+                       | Datatypes.None, Datatypes.Some _ => false
+                       | Datatypes.Some v1, Datatypes.Some v2 => option_beq (@is_tighter_than A) v1 v2
+                       end
                | _ => fun 'tt 'tt => true
                end.
           Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
@@ -166,6 +197,7 @@ Module Compilers.
                | base.type.Z as t
                | base.type.nat as t
                | base.type.bool as t
+               | base.type.zrange as t
                  => fun r
                     => match r with
                        | Datatypes.Some r => @base.is_bounded_by t r
@@ -180,6 +212,12 @@ Module Compilers.
                        | Datatypes.None => true
                        | Datatypes.Some ls1 => fold_andb_map (@is_bounded_by A) ls1 ls2
                        end
+               | base.type.option A
+                 => fun v1 v2
+                    => match v1 with
+                       | Datatypes.None => true
+                       | Datatypes.Some v1 => option_beq_hetero (@is_bounded_by A) v1 v2
+                       end
                | _ => fun 'tt _ => true
                end.
 
@@ -191,6 +229,7 @@ Module Compilers.
                            | progress cbn in *
                            | progress destruct_head'_prod
                            | progress destruct_head' base.type.base
+                           | progress destruct_head' option
                            | rewrite fold_andb_map_map1
                            | match goal with H : _ |- _ => rewrite H end
                            | match goal with H : _ |- _ => setoid_rewrite H end ].
@@ -216,10 +255,12 @@ Module Compilers.
                            | progress break_innermost_match_hyps
                            | progress subst
                            | rewrite NPeano.Nat.eqb_refl
+                           | apply zrange_lb
                            | reflexivity
                            | match goal with
                              | [ H : Nat.eqb _ _ = true |- _ ] => apply beq_nat_true in H
                              | [ H : bool_eq _ _ = true |- _ ] => apply bool_eq_ok in H
+                             | [ H : zrange_beq _ _ = true |- _ ] => apply zrange_bl in H
                              | [ |- bool_eq ?x ?x = true ] => destruct x; reflexivity
                              end ].
             { lazymatch goal with
@@ -325,6 +366,7 @@ Module Compilers.
              | base.type.Z => fun z => Some r[z~>z]%zrange
              | base.type.nat
              | base.type.bool
+             | base.type.zrange
                => fun n => Some n
              | base.type.unit
                => fun _ => tt
@@ -332,21 +374,24 @@ Module Compilers.
                => fun '(a, b) => (@of_literal A a, @of_literal B b)
              | base.type.list A
                => fun ls => Some (List.map (@of_literal A) ls)
+             | base.type.option A
+               => fun v => Some (option_map (@of_literal A) v)
              end.
         Fixpoint to_literal {t} : type.base.option.interp t -> option (base.interp t)
           := match t with
              | base.type.Z => fun r => r <- r; if r.(lower) =? r.(upper) then Some r.(lower) else None
              | base.type.nat
              | base.type.bool
+             | base.type.zrange
                => fun v => v
              | base.type.unit
                => fun _ => Some tt
              | base.type.prod A B
                => fun '(a, b) => a <- @to_literal A a; b <- @to_literal B b; Some (a, b)
              | base.type.list A
-               => fun ls => ls <- ls; fold_right (fun x xs => x <- x; xs <- xs; Some (x :: xs))
-                                                 (Some nil)
-                                                 (List.map (@to_literal A) ls)
+               => fun ls => ls <- ls; Option.List.lift (List.map (@to_literal A) ls)
+             | base.type.option A
+               => fun v => v <- v; Option.lift (option_map (@to_literal A) v)
              end%option%Z.
         Local Notation rSome v
           := (ZRange.type.base.option.Some (t:=base.reify_norm_type_of v) v)
@@ -414,9 +459,14 @@ Module Compilers.
                    end
              | ident.Z_eqb as idc
              | ident.Z_leb as idc
+             | ident.Z_ltb as idc
              | ident.Z_geb as idc
+             | ident.Z_gtb as idc
+             | ident.Z_max as idc
+             | ident.Z_min as idc
              | ident.Z_pow as idc
              | ident.Z_modulo as idc
+             | ident.Build_zrange as idc
                => fun x y => match to_literal x, to_literal y with
                              | Some x, Some y => of_literal (ident.interp idc x y)
                              | _, _ => ZRange.type.base.option.None
@@ -441,6 +491,21 @@ Module Compilers.
                => fun t f b
                  => match b with
                    | Some b => if b then t tt else f tt
+                   | None => ZRange.type.base.option.None
+                   end
+             | ident.option_rect _ _
+               => fun s n o
+                 => match o with
+                   | Some o => option_rect _ s (n tt) o
+                   | None => ZRange.type.base.option.None
+                   end
+             | ident.zrange_rect _
+               => fun f v
+                 => match v with
+                    | Some v => ZRange.zrange_rect
+                                  _
+                                  (fun l u => f (Some (ZRange.constant l)) (Some (ZRange.constant u)))
+                                  v
                    | None => ZRange.type.base.option.None
                    end
              | ident.nat_rect _
@@ -506,6 +571,8 @@ Module Compilers.
                => fun n f ls => ls <- ls; n <- n; Some (update_nth n f ls)
              | ident.nil t => Some nil
              | ident.cons t => fun x => option_map (cons x)
+             | ident.None t => Some None
+             | ident.Some t => fun x => Some (Some x)
              | ident.pair A B => pair
              | ident.fst A B => fst
              | ident.snd A B => snd
@@ -837,6 +904,7 @@ Module Compilers.
                 (bottom' : forall A, abstract_domain' A)
                 (abstract_interp_ident : forall t, ident t -> type.interp abstract_domain' t)
                 (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A)))
+                (extract_option_state : forall A, abstract_domain' (base.type.option A) -> option (option (abstract_domain' A)))
                 (is_annotated_for : forall t t', ident t -> abstract_domain' t' -> bool).
 
         (** TODO: Is it okay to commute annotations? *)
@@ -896,6 +964,18 @@ Module Compilers.
                                          (List.combine (List.seq 0 (List.length ls_st)) ls_st));
                              Base (reify_list retv))
                      | None, _ => annotate_with_ident is_let_bound st e
+                     end
+             | base.type.option A
+               => fun st e
+                  => match extract_option_state _ st, reflect_option e with
+                     | Some v_st, Some v_e
+                       => (retv <----- (Option.map
+                                          (fun '(st', e') => @annotate is_let_bound A st' e')
+                                          (Option.combine v_st v_e));
+                             Base (reify_option retv))
+                     | Some _, None
+                     | None, _
+                       => annotate_with_ident is_let_bound st e
                      end
              end%under_lets.
 
@@ -1001,14 +1081,16 @@ Module Compilers.
           := ZRange.ident.option.interp idc.
         Definition extract_list_state A (st : abstract_domain' (base.type.list A)) : option (list (abstract_domain' A))
           := st.
+        Definition extract_option_state A (st : abstract_domain' (base.type.option A)) : option (option (abstract_domain' A))
+          := st.
 
         Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
           := (@partial.ident.eval_with_bound)
-               var abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state is_annotated_for true t e bound.
+               var abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for true t e bound.
 
         Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
           := (@partial.ident.eta_expand_with_bound)
-               var abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state is_annotated_for t e bound.
+               var abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for t e bound.
 
         Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
           := fun var => eval_with_bound (e _) bound.
@@ -1018,7 +1100,7 @@ Module Compilers.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
         := (@partial.ident.eval)
-             var abstract_domain' (annotate_ident default_relax_zrange) bottom' abstract_interp_ident extract_list_state (is_annotated_for default_relax_zrange) t e.
+             var abstract_domain' (annotate_ident default_relax_zrange) bottom' abstract_interp_ident extract_list_state extract_option_state (is_annotated_for default_relax_zrange) t e.
       Definition Eval {t} (e : Expr t) : Expr t
         := fun var => eval (e _).
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
