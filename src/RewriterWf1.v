@@ -71,6 +71,7 @@ Module Compilers.
                          | progress intros
                          | reflexivity
                          | apply (f_equal base.type.list)
+                         | apply (f_equal base.type.option)
                          | apply (f_equal2 base.type.prod)
                          | break_innermost_match_step
                          | break_innermost_match_hyps_step
@@ -126,6 +127,7 @@ Module Compilers.
                          | [ |- iff _ _ ] => split
                          | [ H : base.type.prod _ _ = base.type.prod _ _ |- _ ] => inversion H; clear H
                          | [ H : base.type.list _ = base.type.list _ |- _ ] => inversion H; clear H
+                         | [ H : base.type.option _ = base.type.option _ |- _ ] => inversion H; clear H
                          | [ H : Some _ = _ |- _ ] => symmetry in H
                          | [ H : None = _ |- _ ] => symmetry in H
                          | [ H : ?x = Some _ |- context[?x] ] => rewrite H

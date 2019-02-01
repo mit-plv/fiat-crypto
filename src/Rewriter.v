@@ -41,6 +41,7 @@ Module Compilers.
            | type.type_base t => type.type_base t
            | type.prod A B => type.prod (partial_subst A evar_map) (partial_subst B evar_map)
            | type.list A => type.list (partial_subst A evar_map)
+           | type.option A => type.option (partial_subst A evar_map)
            end.
 
       Fixpoint subst (ptype : type) (evar_map : EvarMap) : option Compilers.base.type
@@ -52,6 +53,7 @@ Module Compilers.
                    B' <- subst B evar_map;
                    Some (Compilers.base.type.prod A' B'))
            | type.list A => option_map Compilers.base.type.list (subst A evar_map)
+           | type.option A => option_map Compilers.base.type.option (subst A evar_map)
            end%option.
 
       Fixpoint subst_default_relax P {t evm} : P t -> P (subst_default (relax t) evm)
@@ -66,6 +68,8 @@ Module Compilers.
                         v)
            | Compilers.base.type.list A
              => @subst_default_relax (fun t => P (Compilers.base.type.list t)) A evm
+           | Compilers.base.type.option A
+             => @subst_default_relax (fun t => P (Compilers.base.type.option t)) A evm
            end.
 
       Fixpoint var_types_of (t : type) : Set
@@ -74,6 +78,7 @@ Module Compilers.
            | type.type_base _ => unit
            | type.prod A B => var_types_of A * var_types_of B
            | type.list A => var_types_of A
+           | type.option A => var_types_of A
            end%type.
 
       Fixpoint add_var_types_cps {t : type} (v : var_types_of t) (evm : EvarMap) : ~> EvarMap
@@ -84,6 +89,7 @@ Module Compilers.
               | type.prod A B
                 => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
               | type.list A => fun t => @add_var_types_cps A t evm _ k
+              | type.option A => fun t => @add_var_types_cps A t evm _ k
               | type.type_base _ => fun _ => k evm
               end v.
 
@@ -102,9 +108,12 @@ Module Compilers.
                   Some (a, b)
            | type.list A, Compilers.base.type.list A'
              => unify_extracted A A'
+           | type.option A, Compilers.base.type.option A'
+             => unify_extracted A A'
            | type.type_base _, _
            | type.prod _ _, _
            | type.list _, _
+           | type.option _, _
              => None
            end%option.
     End base.
@@ -1231,6 +1240,7 @@ Module Compilers.
                     b <- make_Literal_pattern B;
                     Some ((#pattern.ident.pair @ a @ b)%pattern))
              | pattern.base.type.list A => None
+             | pattern.base.type.option A => None
              end%option%cps.
 
         Fixpoint make_interp_rewrite_pattern {t}
@@ -1272,6 +1282,7 @@ Module Compilers.
                  with
                  | pattern.base.type.var _
                  | pattern.base.type.list _
+                 | pattern.base.type.option _
                    => I
                  | pattern.base.type.type_base t
                    => fun f x => f x
@@ -1937,13 +1948,13 @@ Module Compilers.
       Definition strip_literal_casts_dtree'
         := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 strip_literal_casts_rewrite_rules.
       Definition nbe_dtree : decision_tree
-        := Eval compute in invert_Some nbe_dtree'.
+        := Eval compute in Option.invert_Some nbe_dtree'.
       Definition arith_dtree : decision_tree
-        := Eval compute in invert_Some arith_dtree'.
+        := Eval compute in Option.invert_Some arith_dtree'.
       Definition arith_with_casts_dtree : decision_tree
-        := Eval compute in invert_Some arith_with_casts_dtree'.
+        := Eval compute in Option.invert_Some arith_with_casts_dtree'.
       Definition strip_literal_casts_dtree : decision_tree
-        := Eval compute in invert_Some strip_literal_casts_dtree'.
+        := Eval compute in Option.invert_Some strip_literal_casts_dtree'.
 
       Definition nbe_default_fuel := Eval compute in List.length nbe_rewrite_rules.
       Definition arith_default_fuel := Eval compute in List.length (arith_rewrite_rules 0%Z (* dummy val *)).
@@ -2214,11 +2225,11 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
         Definition fancy_dtree'
           := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_rewrite_rules.
         Definition fancy_dtree : decision_tree
-          := Eval compute in invert_Some fancy_dtree'.
+          := Eval compute in Option.invert_Some fancy_dtree'.
         Definition fancy_with_casts_dtree'
           := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_with_casts_rewrite_rules.
         Definition fancy_with_casts_dtree : decision_tree
-          := Eval compute in invert_Some fancy_with_casts_dtree'.
+          := Eval compute in Option.invert_Some fancy_with_casts_dtree'.
         Definition fancy_default_fuel := Eval compute in List.length fancy_rewrite_rules.
         Definition fancy_with_casts_default_fuel := Eval compute in List.length fancy_with_casts_rewrite_rules.
         Import PrimitiveHList.
@@ -2255,8 +2266,8 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
       Export Language.Compilers.defaults.
       Export PrimitiveSigma.Primitive.
       Notation "'llet' x := v 'in' f" := (Let_In v (fun x => f)).
-      Notation "x <- 'type.try_make_transport_cps' t1 t2 ; f" := (type.try_make_transport_cps t1 t2 (fun y => match y with Some x => f | None => None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'type.try_make_transport_cps'  t1  t2 ; '/' f ']'").
-      Notation "x <- 'base.try_make_transport_cps' t1 t2 ; f" := (base.try_make_transport_cps t1 t2 (fun y => match y with Some x => f | None => None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'base.try_make_transport_cps'  t1  t2 ; '/' f ']'").
+      Notation "x <- 'type.try_make_transport_cps' t1 t2 ; f" := (type.try_make_transport_cps t1 t2 (fun y => match y with Datatypes.Some x => f | Datatypes.None => Datatypes.None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'type.try_make_transport_cps'  t1  t2 ; '/' f ']'").
+      Notation "x <- 'base.try_make_transport_cps' t1 t2 ; f" := (base.try_make_transport_cps t1 t2 (fun y => match y with Datatypes.Some x => f | Datatypes.None => Datatypes.None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'base.try_make_transport_cps'  t1  t2 ; '/' f ']'").
     End RewriterPrintingNotations.
 
     Ltac make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=

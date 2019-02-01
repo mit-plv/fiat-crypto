@@ -25,9 +25,11 @@ Module Compilers.
                | base.type.type_base t1, base.type.type_base t2 => t1 = t2
                | base.type.prod A1 B1, base.type.prod A2 B2 => A1 = A2 /\ B1 = B2
                | base.type.list A1, base.type.list A2 => A1 = A2
+               | base.type.option A1, base.type.option A2 => A1 = A2
                | base.type.type_base _, _
                | base.type.prod _ _, _
                | base.type.list _, _
+               | base.type.option _, _
                  => False
                end.
 
@@ -80,6 +82,10 @@ Module Compilers.
                 | [ H : _ = base.type.list _ |- _ ]
                   => induction_type_in_using H @path_rect
                 | [ H : base.type.list _ = _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : _ = base.type.option _ |- _ ]
+                  => induction_type_in_using H @path_rect
+                | [ H : base.type.option _ = _ |- _ ]
                   => induction_type_in_using H @path_rect
                 end ];
         cbn [f_equal f_equal2 eq_rect decode] in *.
@@ -518,6 +524,39 @@ Module Compilers.
         apply invert_AppIdent2_Some in H; subst; break_innermost_match.
         t.
       Qed.
+      Lemma invert_None_Some {t} {e : expr (base.type.option t)}
+        : invert_expr.invert_None e = true -> e = (#ident.None)%expr.
+      Proof. cbv [invert_expr.invert_None invert_expr.invert_Ident]; t. Qed.
+      Lemma invert_Some_Some {t} {e : expr (base.type.option t)} {v}
+        : invert_expr.invert_Some e = Some v -> e = (#ident.Some @ v)%expr.
+      Proof.
+        cbv [invert_expr.invert_Some].
+        destruct (invert_expr.invert_AppIdent _) eqn:H; [ | congruence ].
+        apply invert_AppIdent_Some in H; subst; break_innermost_match.
+        t.
+      Qed.
+
+      Lemma reify_option_None {t} : reify_option None = (#ident.None)%expr :> expr (base.type.option t).
+      Proof. reflexivity. Qed.
+      Lemma reify_option_Some {t} (x : expr (type.base t)) : reify_option (Some x) = (#ident.Some @ x)%expr.
+      Proof. reflexivity. Qed.
+      Lemma reflect_option_Some {t} {e : expr (base.type.option t)} {v} : invert_expr.reflect_option e = Some v -> e = reify_option v.
+      Proof.
+        cbv [invert_expr.reflect_option].
+        destruct (invert_expr.invert_None _) eqn:H;
+          [ | destruct (invert_expr.invert_Some _) eqn:H' ];
+          try apply invert_None_Some in H;
+          try apply invert_Some_Some in H';
+          intros; inversion_option; subst; reflexivity.
+      Qed.
+      Lemma reflect_option_Some_None {t} {e : expr (base.type.option t)} : invert_expr.reflect_option e = Some None -> e = (#ident.None)%expr.
+      Proof. exact (@reflect_option_Some _ e None). Qed.
+      Lemma reflect_reify_option {t} {v} : invert_expr.reflect_option (var:=var) (reify_option (t:=t) v) = Some v.
+      Proof.
+        destruct v; rewrite ?reify_option_Some, ?reify_option_None; reflexivity.
+      Qed.
+      Lemma reflect_option_Some_iff  {t} {e : expr (base.type.option t)} {v} : invert_expr.reflect_option e = Some v <-> e = reify_option v.
+      Proof. split; intro; subst; apply reflect_reify_option || apply reflect_option_Some; assumption. Qed.
 
       Lemma reflect_list_cps'_id_nil {t} (e : expr _ := (#(@ident.nil t))%expr)
         : forall T k, invert_expr.reflect_list_cps' e T k = k (invert_expr.reflect_list_cps' e _ id).
@@ -676,6 +715,11 @@ Module Compilers.
       | [ H : invert_expr.reflect_list ?e = Some _ |- _ ]
         => guard_tac H; first [ apply reflect_list_Some_nil in H | apply reflect_list_Some in H ];
           rewrite ?reify_list_cons, ?reify_list_nil in H
+      | [ H : invert_expr.invert_None ?e = Some _ |- _ ] => guard_tac H; apply invert_None_Some in H
+      | [ H : invert_expr.invert_Some ?e = Some _ |- _ ] => guard_tac H; apply invert_Some_Some in H
+      | [ H : invert_expr.reflect_option ?e = Some _ |- _ ]
+        => guard_tac H; first [ apply reflect_option_Some_None in H | apply reflect_option_Some in H ];
+          rewrite ?reify_option_Some, ?reify_option_None in H
       end.
     Ltac invert_subst_step :=
       first [ invert_subst_step_helper ltac:(fun _ => idtac)

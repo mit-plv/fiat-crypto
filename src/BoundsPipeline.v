@@ -141,6 +141,7 @@ Module Pipeline.
            => fun 'tt 'tt => (false, nil, nil)
          | base.type.nat
          | base.type.bool
+         | base.type.zrange
            => fun _ _ => (false, nil, nil)
          | base.type.Z
            => fun a b
@@ -152,6 +153,19 @@ Module Pipeline.
                    => if is_tighter_than_bool a b
                       then (false, nil, nil)
                       else (false, nil, ((a, b)::nil))
+                 end
+         | base.type.option A
+           => fun a b
+              => match a, b with
+                 | None, None => (false, nil, nil)
+                 | Some _, None => (false, nil, nil)
+                 | None, Some _ => (true, nil, nil)
+                 | Some None, Some None
+                 | Some (Some _), Some None
+                 | Some None, Some (Some _)
+                   => (false, nil, nil)
+                 | Some (Some a), Some (Some b)
+                   => @find_too_loose_base_bounds A a b
                  end
          | base.type.prod A B
            => fun '(ra, rb) '(ra', rb')

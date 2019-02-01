@@ -61,7 +61,7 @@ Module testrewrite.
                                       (RewriteRules.RewriteNBE (fun var =>
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr) _)
-                (Some r[0~>100]%zrange, tt).
+                (Datatypes.Some r[0~>100]%zrange, tt).
 End testrewrite.
 Module testpartial.
   Import expr.
@@ -85,7 +85,7 @@ Module testpartial.
                 partial.default_relax_zrange
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr
-                (Some r[0~>100]%zrange, tt).
+                (Datatypes.Some r[0~>100]%zrange, tt).
 End testpartial.
 
 Module test2.

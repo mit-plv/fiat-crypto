@@ -652,8 +652,9 @@ Module Compilers.
           : wf P G (reify_and_let_binds_base_cps e1 T1 k1) (reify_and_let_binds_base_cps e2 T2 k2).
         Proof.
           revert dependent G; induction t; cbn [reify_and_let_binds_base_cps]; intros;
+            cbv [option_rect];
             try (cbv [SubstVarLike.is_var_fst_snd_pair_opp_cast] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
-            break_innermost_match; wf_reify_and_let_binds_base_cps_t Hk.
+            break_innermost_match; wf_reify_and_let_binds_base_cps_t Hk; eauto.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.
           all: lazymatch goal with
@@ -719,13 +720,14 @@ Module Compilers.
           : P (UnderLets.interp (@ident_interp) (@reify_and_let_binds_base_cps _ t e T k)).
         Proof.
           revert T k P Hk; induction t; cbn [reify_and_let_binds_base_cps]; intros;
-            break_innermost_match;
+            cbv [option_rect]; break_innermost_match;
             expr.invert_subst; cbn [type.related UnderLets.interp fst snd expr.interp ident_interp] in *; subst; eauto;
               repeat first [ progress intros
                            | reflexivity
                            | progress cbn [expr.interp ident_interp List.map]
                            | apply (f_equal2 (@pair _ _))
                            | apply (f_equal2 (@cons _))
+                           | apply (f_equal (@Some _))
                            | match goal with
                              | [ H : _ |- _ ] => apply H; clear H
                              | [ H : SubstVarLike.is_var_fst_snd_pair_opp_cast (reify_list _) = _ |- _ ] => clear H
@@ -823,6 +825,7 @@ Module Compilers.
           : interp (to_expr (reify_and_let_binds_base_cps e1 _ k1)) == k2 (interp e2).
         Proof.
           revert dependent G; revert dependent t'; induction t; cbn [reify_and_let_binds_base_cps]; intros;
+            cbv [option_rect];
             try (cbv [SubstVarLike.is_var_fst_snd_pair_opp_cast] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
             break_innermost_match; interp_to_expr_reify_and_let_binds_base_cps_t Hk.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
@@ -950,7 +953,7 @@ Module Compilers.
         Proof using Type.
           cbv [expr.interp_related]; revert T T' k R v; induction t.
           all: repeat first [ progress cbn [expr.interp_related_gen interp_related reify_and_let_binds_base_cps fst snd] in *
-                            | progress cbv [expr.interp_related] in *
+                            | progress cbv [expr.interp_related option_rect] in *
                             | progress intros
                             | assumption
                             | progress destruct_head'_ex
