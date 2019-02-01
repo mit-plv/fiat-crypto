@@ -57,7 +57,7 @@ static void fiat_p224_subborrowx_u32(uint32_t* out1, fiat_p224_uint1* out2, fiat
 }
 
 /*
- * The function fiat_p224_mulx_u32 is an extended multiplication.
+ * The function fiat_p224_mulx_u32 is a multiplication, returning the full double-width result.
  * out1 = (arg1 * arg2) mod 2^32
  * ∧ out2 = ⌊arg1 * arg2 / 2^32⌋
  * Input Bounds:

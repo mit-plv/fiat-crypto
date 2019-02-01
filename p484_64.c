@@ -59,7 +59,7 @@ static void fiat_p484_subborrowx_u64(uint64_t* out1, fiat_p484_uint1* out2, fiat
 }
 
 /*
- * The function fiat_p484_mulx_u64 is an extended multiplication.
+ * The function fiat_p484_mulx_u64 is a multiplication, returning the full double-width result.
  * out1 = (arg1 * arg2) mod 2^64
  * ∧ out2 = ⌊arg1 * arg2 / 2^64⌋
  * Input Bounds:
