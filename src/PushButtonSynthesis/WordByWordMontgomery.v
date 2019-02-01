@@ -240,8 +240,8 @@ Section __.
                    (@eval 8 n_bytes) "bytes_eval"%string
                    CorrectnessStringification.dyn_context.nil))))
          (only parsing).
-  Local Notation "'stringify_correctness!' prefix pre_extra correctness"
-    := (stringify_correctness_with_ctx!
+  Local Notation "'docstring_with_summary_from_lemma!' prefix pre_extra correctness"
+    := (docstring_with_summary_from_lemma_with_ctx!
           (initial_ctx prefix)
           evalf
           pre_extra
@@ -263,7 +263,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "mul" mul
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
              (mul_correct machine_wordsize n m valid from_montgomery_res)).
@@ -283,7 +283,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "square" square
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
              (square_correct machine_wordsize n m valid from_montgomery_res)).
@@ -303,7 +303,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "add" add
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
              (add_correct machine_wordsize n m valid from_montgomery_res)).
@@ -323,7 +323,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "sub" sub
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
              (sub_correct machine_wordsize n m valid from_montgomery_res)).
@@ -343,7 +343,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "opp" opp
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " negates a field element in the Montgomery domain."]%string)
              (opp_correct machine_wordsize n m valid from_montgomery_res)).
@@ -363,7 +363,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "from_montgomery" from_montgomery
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
              (from_montgomery_correct machine_wordsize n m r' valid)).
@@ -382,7 +382,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "nonzero" nonzero
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
              (nonzero_correct machine_wordsize n m valid from_montgomery_res)).
@@ -402,7 +402,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "to_bytes" to_bytes
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " serializes a field element in the Montgomery domain to bytes in little-endian order."]%string)
              (to_bytes_correct machine_wordsize n n_bytes m valid)).
@@ -422,7 +422,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "from_bytes" from_bytes
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " deserializes a field element in the Montgomery domain from bytes in little-endian order."]%string)
              (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)).
@@ -442,7 +442,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "encode" encode
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
              (encode_correct machine_wordsize n m valid from_montgomery_res)).
@@ -462,7 +462,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "zero" zero
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
              (zero_correct machine_wordsize n m valid from_montgomery_res)).
@@ -482,7 +482,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "one" one
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
              (one_correct machine_wordsize n m valid from_montgomery_res)).
