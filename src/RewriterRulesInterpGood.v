@@ -475,7 +475,10 @@ Module Compilers.
                 | [ |- ?x = ?x ] => reflexivity
                 | [ |- True ] => exact I
                 | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
+                | [ H : true = false |- _ ]=> exfalso; clear -H; congruence
+                | [ H : false = true |- _ ]=> exfalso; clear -H; congruence
                 end
+              | progress cbv [option_beq] in *
               | match goal with
                 | [ H : context[ZRange.normalize (ZRange.normalize _)] |- _ ]
                   => rewrite ZRange.normalize_idempotent in H
@@ -689,6 +692,8 @@ Module Compilers.
                    |- context[?v mod ?m] ]
                  => unique assert (is_bounded_by_bool v r[0~>x-1] = true)
                    by (eapply ZRange.is_bounded_by_of_is_tighter_than; eassumption)
+               | _ => progress Z.ltb_to_lt
+               | _ => progress subst
                end.
 
       Local Ltac unfold_cast_lemmas :=
