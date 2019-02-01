@@ -20,8 +20,10 @@ typedef unsigned __int128 fiat_p224_uint128;
 
 /*
  * The function fiat_p224_addcarryx_u64 is an addition with carry.
- * out1 = (arg1 + arg2 + arg3) mod 2^64
- * ∧ out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
+ * Postconditions:
+ *   out1 = (arg1 + arg2 + arg3) mod 2^64
+ *   out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
+ *
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -40,8 +42,10 @@ static void fiat_p224_addcarryx_u64(uint64_t* out1, fiat_p224_uint1* out2, fiat_
 
 /*
  * The function fiat_p224_subborrowx_u64 is a subtraction with borrow.
- * out1 = (-arg1 + arg2 + -arg3) mod 2^64
- * ∧ out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
+ * Postconditions:
+ *   out1 = (-arg1 + arg2 + -arg3) mod 2^64
+ *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
+ *
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -60,8 +64,10 @@ static void fiat_p224_subborrowx_u64(uint64_t* out1, fiat_p224_uint1* out2, fiat
 
 /*
  * The function fiat_p224_mulx_u64 is a multiplication, returning the full double-width result.
- * out1 = (arg1 * arg2) mod 2^64
- * ∧ out2 = ⌊arg1 * arg2 / 2^64⌋
+ * Postconditions:
+ *   out1 = (arg1 * arg2) mod 2^64
+ *   out2 = ⌊arg1 * arg2 / 2^64⌋
+ *
  * Input Bounds:
  *   arg1: [0x0 ~> 0xffffffffffffffff]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -79,7 +85,9 @@ static void fiat_p224_mulx_u64(uint64_t* out1, uint64_t* out2, uint64_t arg1, ui
 
 /*
  * The function fiat_p224_cmovznz_u64 is a single-word conditional move.
- * out1 = (if arg1 = 0 then arg2 else arg3)
+ * Postconditions:
+ *   out1 = (if arg1 = 0 then arg2 else arg3)
+ *
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [0x0 ~> 0xffffffffffffffff]
@@ -96,10 +104,13 @@ static void fiat_p224_cmovznz_u64(uint64_t* out1, fiat_p224_uint1 arg1, uint64_t
 
 /*
  * The function fiat_p224_mul multiplies two field elements in the Montgomery domain.
- * 0 ≤ eval arg1 < m →
- * 0 ≤ eval arg2 < m →
- * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ *   0 ≤ eval arg2 < m
+ * Postconditions:
+ *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -439,9 +450,12 @@ static void fiat_p224_mul(uint64_t out1[4], const uint64_t arg1[4], const uint64
 
 /*
  * The function fiat_p224_square squares a field element in the Montgomery domain.
- * 0 ≤ eval arg1 < m →
- * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ * Postconditions:
+ *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -780,10 +794,13 @@ static void fiat_p224_square(uint64_t out1[4], const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p224_add adds two field elements in the Montgomery domain.
- * 0 ≤ eval arg1 < m →
- * 0 ≤ eval arg2 < m →
- * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ *   0 ≤ eval arg2 < m
+ * Postconditions:
+ *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -834,10 +851,13 @@ static void fiat_p224_add(uint64_t out1[4], const uint64_t arg1[4], const uint64
 
 /*
  * The function fiat_p224_sub subtracts two field elements in the Montgomery domain.
- * 0 ≤ eval arg1 < m →
- * 0 ≤ eval arg2 < m →
- * eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ *   0 ≤ eval arg2 < m
+ * Postconditions:
+ *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -879,9 +899,12 @@ static void fiat_p224_sub(uint64_t out1[4], const uint64_t arg1[4], const uint64
 
 /*
  * The function fiat_p224_opp negates a field element in the Montgomery domain.
- * 0 ≤ eval arg1 < m →
- * eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ * Postconditions:
+ *   eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -922,9 +945,12 @@ static void fiat_p224_opp(uint64_t out1[4], const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p224_from_montgomery translates a field element out of the Montgomery domain.
- * 0 ≤ eval arg1 < m →
- * eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^4) mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ * Postconditions:
+ *   eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^4) mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -1143,8 +1169,11 @@ static void fiat_p224_from_montgomery(uint64_t out1[4], const uint64_t arg1[4]) 
 
 /*
  * The function fiat_p224_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
- * 0 ≤ eval arg1 < m →
- * out1 = 0 ↔ eval (from_montgomery arg1) mod m = 0
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ * Postconditions:
+ *   out1 = 0 ↔ eval (from_montgomery arg1) mod m = 0
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  * Output Bounds:
@@ -1157,7 +1186,9 @@ static void fiat_p224_nonzero(uint64_t* out1, const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p224_selectznz is a multi-limb conditional select.
- * eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
+ * Postconditions:
+ *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
+ *
  * Input Bounds:
  *   arg1: [0x0 ~> 0x1]
  *   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
@@ -1182,8 +1213,11 @@ static void fiat_p224_selectznz(uint64_t out1[4], fiat_p224_uint1 arg1, const ui
 
 /*
  * The function fiat_p224_to_bytes serializes a field element in the Montgomery domain to bytes in little-endian order.
- * 0 ≤ eval arg1 < m →
- * out1 = map (λ x, ⌊(eval arg1 mod m) mod 2^(8 * (x + 1)) / 2^(8 * x)⌋) [0..31]
+ * Preconditions:
+ *   0 ≤ eval arg1 < m
+ * Postconditions:
+ *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..31]
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
@@ -1282,9 +1316,12 @@ static void fiat_p224_to_bytes(uint8_t out1[32], const uint64_t arg1[4]) {
 
 /*
  * The function fiat_p224_from_bytes deserializes a field element in the Montgomery domain from bytes in little-endian order.
- * 0 ≤ bytes_eval arg1 < m →
- * eval out1 mod m = bytes_eval arg1 mod m
- * ∧ 0 ≤ eval out1 < m
+ * Preconditions:
+ *   0 ≤ bytes_eval arg1 < m
+ * Postconditions:
+ *   eval out1 mod m = bytes_eval arg1 mod m
+ *   0 ≤ eval out1 < m
+ *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0]]
  * Output Bounds:
