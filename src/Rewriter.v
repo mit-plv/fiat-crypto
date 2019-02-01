@@ -948,7 +948,7 @@ Module Compilers.
 
           Local Notation maybe_do_again := (maybe_do_again do_again).
 
-          Definition rewrite_with_rule {t} (defaulte : expr t) e' (pf : rewrite_ruleT)
+          Definition rewrite_with_rule {t} e' (pf : rewrite_ruleT)
             : option (UnderLets (expr t))
             := let 'existT p f := pf in
                let should_do_again := rew_should_do_again f in
@@ -980,7 +980,7 @@ Module Compilers.
                   (fun k ctx
                    => match ctx return option (UnderLets (expr (type_of_rawexpr e))) with
                       | e'::nil
-                        => (pf <- nth_error rews k; rewrite_with_rule defaulte e' pf)%option
+                        => (pf <- nth_error rews k; rewrite_with_rule e' pf)%option
                       | _ => None
                       end);;;
                   (UnderLets.Base defaulte))%option.

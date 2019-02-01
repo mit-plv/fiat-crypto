@@ -326,7 +326,7 @@ Module Compilers.
             \/ exists n pf e',
               nth_error rew_rules n = Some pf
               /\ Some res
-                 = rewrite_with_rule do_again (expr_of_rawexpr e) e' pf
+                 = rewrite_with_rule do_again e' pf
               /\ rawexpr_equiv e e'.
         Proof using raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct.
           subst res; cbv [eval_rewrite_rules].
@@ -1017,11 +1017,10 @@ Module Compilers.
                   -> UnderLets_interp_related (do_again t e) v)
               (rewr : rewrite_ruleT)
               (Hrewr : rewrite_rule_data_interp_goodT (projT2 rewr))
-              t e re v1 v2
+              t re v1 v2
               (Ht : t = type_of_rawexpr re)
               (Ht' : rawexpr_types_ok re (type_of_rawexpr re))
-              (He : expr_interp_related e v2)
-          : @rewrite_with_rule do_again t e re rewr = Some v1
+          : @rewrite_with_rule do_again t re rewr = Some v1
             -> rawexpr_interp_related re (rew Ht in v2)
             -> UnderLets_interp_related v1 v2.
         Proof using pident_unify_to_typed pident_unify_unknown_correct.
@@ -1123,11 +1122,10 @@ Module Compilers.
           | [ |- ?R (Option.sequence_return ?x ?y) _ ]
             => destruct x eqn:Hinterp
           end; cbn [Option.sequence_return UnderLets.interp]; [ | now apply expr_of_rawexpr_interp_related ].
-          unshelve (eapply interp_rewrite_with_rule; [ | | | | eassumption | ]; try eassumption).
+          unshelve (eapply interp_rewrite_with_rule; [ | | | eassumption | ]; try eassumption).
           { apply eq_type_of_rawexpr_equiv; assumption. }
           { eapply Hrew_rules, nth_error_In; rewrite <- sigT_eta; eassumption. }
           { erewrite <- rawexpr_types_ok_iff_of_rawexpr_equiv, <- eq_type_of_rawexpr_equiv by eassumption; assumption. }
-          { apply expr_of_rawexpr_interp_related; assumption. }
           { apply rawexpr_interp_related_Proper_rawexpr_equiv; assumption. }
         Qed.
 
