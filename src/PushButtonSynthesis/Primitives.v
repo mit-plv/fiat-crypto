@@ -565,21 +565,21 @@ Module CorrectnessStringification.
     let res := strip_lambdas res in
     res.
 
-  Notation stringify_correctness_with_ctx ctx evalf pre_extra correctness
+  Notation docstring_with_summary_from_lemma_with_ctx ctx evalf pre_extra correctness
     := (fun fname arg_var_data out_var_data
         => ltac:(let res := stringify ctx correctness evalf fname arg_var_data out_var_data in
                  refine (List.app (pre_extra fname) res))) (only parsing).
-  Notation stringify_correctness evalf pre_extra correctness
+  Notation docstring_with_summary_from_lemma evalf pre_extra correctness
     := (match dyn_context.nil with
-        | ctx' => stringify_correctness_with_ctx ctx' evalf pre_extra correctness
+        | ctx' => docstring_with_summary_from_lemma_with_ctx ctx' evalf pre_extra correctness
         end)
          (only parsing).
 End CorrectnessStringification.
 
-Notation "'stringify_correctness_with_ctx!' ctx evalf pre_extra correctness"
-  := (CorrectnessStringification.stringify_correctness_with_ctx ctx evalf pre_extra correctness) (only parsing, at level 10, ctx at next level, evalf at next level, pre_extra at next level, correctness at next level).
-Notation "'stringify_correctness!' evalf pre_extra correctness"
-  := (CorrectnessStringification.stringify_correctness evalf pre_extra correctness) (only parsing, at level 10, evalf at next level, pre_extra at next level, correctness at next level).
+Notation "'docstring_with_summary_from_lemma_with_ctx!' ctx evalf pre_extra correctness"
+  := (CorrectnessStringification.docstring_with_summary_from_lemma_with_ctx ctx evalf pre_extra correctness) (only parsing, at level 10, ctx at next level, evalf at next level, pre_extra at next level, correctness at next level).
+Notation "'docstring_with_summary_from_lemma!' evalf pre_extra correctness"
+  := (CorrectnessStringification.docstring_with_summary_from_lemma evalf pre_extra correctness) (only parsing, at level 10, evalf at next level, pre_extra at next level, correctness at next level).
 
 Section __.
   Context (n : nat)
@@ -622,7 +622,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix "selectznz" selectznz
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
@@ -642,7 +642,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
@@ -663,7 +663,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
@@ -683,7 +683,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
@@ -704,7 +704,7 @@ Section __.
     := Eval cbv beta in
         FromPipelineToString
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
-          (stringify_correctness!
+          (docstring_with_summary_from_lemma!
              evalf
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct s)).
