@@ -35,90 +35,64 @@ matrix:
 
 jobs:
   include:
-    - stage: some-early util
+    - stage: some-early util printlite lite
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
-      allow_failure: true
-      script: CUR=early ./etc/ci/travis.sh some-early util
-    - stage: some-early util
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
+    - stage: some-early util printlite lite
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
-      allow_failure: true
-      script: CUR=early ./etc/ci/travis.sh some-early util
-    - stage: some-early util
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
+    - stage: some-early util printlite lite
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      allow_failure: true
-      script: CUR=early ./etc/ci/travis.sh some-early util
-    - stage: some-early util
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
+    - stage: some-early util printlite lite
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      allow_failure: true
-      script: CUR=early ./etc/ci/travis.sh some-early util
-    - stage: some-early util
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
+    - stage: some-early util printlite lite
+      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
+    - stage: some-early util printlite lite
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: CUR=early ./etc/ci/travis.sh some-early util
-    - stage: some-early util
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
+    - stage: some-early util printlite lite
       env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: CUR=early ./etc/ci/travis.sh some-early util
+      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
 
-    - stage: printlite lite
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
-      allow_failure: true
-      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
-    - stage: printlite lite
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
-      allow_failure: true
-      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
-    - stage: printlite lite
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      allow_failure: true
-      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
-    - stage: printlite lite
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      allow_failure: true
-      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
-    - stage: printlite lite
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
+      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
-    - stage: printlite lite
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=early CUR=lite ./etc/ci/travis.sh printlite lite
-
-    - stage: pre-standalone
-      env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
-      allow_failure: true
-      script: PREV=lite CUR=pre-standalone ./etc/ci/travis.sh pre-standalone
-    - stage: pre-standalone
-      env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
-      allow_failure: true
-      script: PREV=lite CUR=pre-standalone ./etc/ci/travis.sh pre-standalone
-    - stage: pre-standalone
-      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      allow_failure: true
-      script: PREV=lite CUR=pre-standalone ./etc/ci/travis.sh pre-standalone
-    - stage: pre-standalone
-      env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      allow_failure: true
-      script: PREV=lite CUR=pre-standalone ./etc/ci/travis.sh pre-standalone
-    - stage: pre-standalone
-      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=lite CUR=pre-standalone ./etc/ci/travis.sh pre-standalone
-    - stage: pre-standalone
-      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=lite CUR=pre-standalone ./etc/ci/travis.sh pre-standalone
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
 
     - stage: coq
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
-      allow_failure: true
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
     - stage: coq
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
-      allow_failure: true
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
     - stage: coq
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      allow_failure: true
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
     - stage: coq
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      allow_failure: true
+      script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
+    - stage: coq
+      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
     - stage: coq
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
@@ -127,6 +101,9 @@ jobs:
       env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
 
+    - stage: standalone-ocaml
+      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
+      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh standalone-ocaml c-files test-c-files CC=gcc
     - stage: standalone-ocaml
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh standalone-ocaml c-files test-c-files CC=gcc
@@ -136,11 +113,9 @@ jobs:
 
 #    - stage: selected-test selected-bench
 #      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-#      allow_failure: true
 #      script: PREV=standalone-ocaml CUR=selected-test-bench ./etc/ci/travis.sh selected-test selected-bench
 #    - stage: selected-test selected-bench
 #      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
-#      allow_failure: true
 #      script: PREV=standalone-ocaml CUR=selected-test-bench ./etc/ci/travis.sh selected-test selected-bench
 
 after_success:
