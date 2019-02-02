@@ -1,9 +1,12 @@
+Require Import Coq.Classes.Morphisms.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 
 Delimit Scope zrange_scope with zrange.
+Local Set Nonrecursive Elimination Schemes.
 (* COQBUG(https://github.com/coq/coq/issues/7835) *)
 (*
 Local Set Boolean Equality Schemes.
@@ -93,6 +96,19 @@ Lemma zrange_lb (x y : zrange) (H : x = y) : zrange_beq x y = true.
 Proof.
   cbv [zrange_beq] in *; rewrite Bool.andb_true_iff, !Z.eqb_eq in *.
   subst; split; reflexivity.
+Qed.
+
+Global Instance zrange_rect_Proper {P}
+  : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq) (@zrange_rect (fun _ => P)) | 10.
+Proof.
+  cbv [pointwise_relation zrange_rect]; repeat intro; subst; break_innermost_match; eauto.
+Qed.
+
+Global Instance zrange_rect_Proper_dep {P}
+  : Proper (forall_relation (fun _ => forall_relation (fun _ => eq)) ==> forall_relation (fun _ => eq))
+           (@zrange_rect P) | 10.
+Proof.
+  cbv [forall_relation zrange_rect]; repeat intro; subst; break_innermost_match; eauto.
 Qed.
 
 Module Export Notations.
