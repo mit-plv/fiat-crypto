@@ -7,6 +7,15 @@ Require Import Crypto.Util.Notations.
 Scheme Equality for option.
 Arguments option_beq {_} _ _ _.
 
+Definition option_beq_hetero {A B} (AB_beq : A -> B -> bool) (x : option A) (y : option B) : bool
+  := match x, y with
+     | Some x, Some y => AB_beq x y
+     | None, None => true
+     | Some _, _
+     | None, _
+       => false
+     end.
+
 Definition bind {A B} (v : option A) (f : A -> option B) : option B
   := match v with
      | Some v => f v
@@ -74,6 +83,22 @@ Section Relations.
   Global Instance Equivalence_option_eq {T} {R} {Equivalence_R:@Equivalence T R}
     : Equivalence (option_eq R). Proof. split; exact _. Qed.
 End Relations.
+
+Lemma option_bl_hetero {A B} {AB_beq : A -> B -> bool} {AB_R : A -> B -> Prop}
+      (AB_bl : forall x y, AB_beq x y = true -> AB_R x y)
+      {x y}
+  : option_beq_hetero AB_beq x y = true -> option_eq AB_R x y.
+Proof using Type.
+  destruct x, y; cbn in *; eauto; congruence.
+Qed.
+
+Lemma option_lb_hetero {A B} {AB_beq : A -> B -> bool} {AB_R : A -> B -> Prop}
+      (AB_lb : forall x y, AB_R x y -> AB_beq x y = true)
+      {x y}
+  : option_eq AB_R x y -> option_beq_hetero AB_beq x y = true.
+Proof using Type.
+  destruct x, y; cbn in *; eauto; intuition congruence.
+Qed.
 
 Global Instance bind_Proper {A B}
   : Proper (eq ==> (pointwise_relation _ eq) ==> eq) (@bind A B).
