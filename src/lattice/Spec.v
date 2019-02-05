@@ -8,6 +8,9 @@ Require Import Crypto.lattice.Matrix.
 Local Open Scope Z_scope.
 
 (* following https://pq-crystals.org/kyber/data/kyber-specification.pdf *)
+(* Note: Number-theoretic transforms (NTT) have been removed in this
+specification, since their specification is that they are equivalent
+to normal multiplication. *)
 Module KyberSpec.
   Import Tuple.
   Section KyberSpec.
@@ -16,8 +19,8 @@ Module KyberSpec.
     Local Notation bit_array n := (tuple bool n).
 
     (* Kyber parameters *)
-    Context (k eta n : nat) (q log2q : positive)
-            (dt du dv : positive) (* fields into which elements are compressed *)
+    Context (k eta n : nat) (q q_nbits : positive)
+            (dt du dv : nat) (* fields into which elements are compressed *)
             (XOF : stream -> stream) (* "extendable output function" *)
             (PRF : byte_array 32 * byte -> stream) (* pseudorandom function *)
             (H : stream -> byte_array 32)
@@ -34,14 +37,6 @@ Module KyberSpec.
             (* Operations on polynomials form a ring *)
             (Rqring : @ring Rq Rqeq Rqzero Rqone Rqopp Rqadd Rqsub Rqmul).
 
-    (* NTT domain *)
-    Context (Rq_NTT : Type) (* Type of polynomials in NTT domain *)
-            {Rq_NTTeq Rq_NTTzero Rq_NTTone Rq_NTTopp Rq_NTTadd Rq_NTTsub Rq_NTTmul}
-            (* Operations on NTT-domain polynomials form a ring *)
-            (Rq_NTTring : @ring Rq_NTT Rq_NTTeq Rq_NTTzero Rq_NTTone Rq_NTTopp Rq_NTTadd Rq_NTTsub Rq_NTTmul).
-    Context (NTT : Rq -> Rq_NTT) (NTT_inv : Rq_NTT -> Rq). (* Convert to and from NTT domain *)
-    Context (NTT_of_F :tuple (F (2^log2q)) n -> Rq_NTT) (NTT_to_F : Rq_NTT -> tuple (F (2^log2q)) n). (* Convert to and from integers *)
-
     Context (nmod8 : (n mod 8 = 0)%nat). (* This is necessary for encodings *)
 
     (* More parameters about bytes *)
@@ -56,18 +51,7 @@ Module KyberSpec.
 
 
     (* Algorithm 1 *)
-    Axiom parse : stream -> Rq_NTT. (* TODO *)
-
-    Section compression.
-      Definition poly_compress (d : positive) : Rq -> tuple (F (2 ^ d)) n :=
-        map  (fun x : Fq => F.of_Z _ ((Z.shiftl (Fq_to_Z x) d + (q / 2)) / q)).
-      Definition poly_decompress {d : positive} : tuple (F (2 ^ d)) n -> Rq :=
-        map (fun x : F (2 ^ d) => Fq_of_Z (Z.shiftr (F.to_Z x * q + 2^(d-1)) d)).
-      Definition polyvec_compress {m} d
-        : tuple Rq m -> Matrix.matrix (F (2^d)) m n := map (poly_compress d).
-      Definition polyvec_decompress {m d}
-        : Matrix.matrix (F (2^d)) m n -> tuple Rq m := map (poly_decompress).
-    End compression.
+    Axiom parse : stream -> Rq. (* TODO *)
 
     Section sample.
       (* Equivalent to \sum_{j=0}^{len-1} B[j] *)
@@ -87,60 +71,72 @@ Module KyberSpec.
             (Tuple.seq 0 n).
     End sample.
 
-    Section encoding.
-      Section helpers.
-        (* Splits a tuple into m chunks of n elements each *)
-        Definition split_array {T} n m {nm} (* nm = n * m *)
-                   (d : T) (A : tuple T nm) : tuple (tuple T n) m :=
-          map (fun i => map (fun j => nth_default d (i*m+j) A) (seq 0 n)) (seq 0 m).
-        Definition bits_to_Z {n} (B : bit_array n) :=
-          List.fold_right
-            (fun i acc => acc + Z.shiftl (Z.b2z (nth_bit B i)) (Z.of_nat i))
-            0 (List.seq 0 n).
-        Definition bits_to_F m {n} (B : bit_array n) :=
-          F.of_Z m (bits_to_Z B).
-        Definition Z_to_bits (x : Z) n : bit_array n :=
-          map (fun i => Z.testbit x (Z.of_nat i)) (seq 0 n).
-        Definition F_to_bits {m} (x : F m) n : bit_array n :=
-          Z_to_bits (F.to_Z x) n.
-        Lemma encode_sizes_ok l : (l * n = 8 * ((n / 8) * l))%nat.
-        Proof. rewrite (Nat.div_mod n 8) at 1 by congruence. rewrite nmod8; lia. Qed.
-      End helpers.
+    Section helpers.
+      (* Splits a tuple into m chunks of n elements each *)
+      Definition split_array {T} n m {nm} (* nm = n * m *)
+                 (d : T) (A : tuple T nm) : tuple (tuple T n) m :=
+        map (fun i => map (fun j => nth_default d (i*m+j) A) (seq 0 n)) (seq 0 m).
+      Lemma encode_sizes_ok l : (l * n = 8 * ((n / 8) * l))%nat.
+      Proof. rewrite (Nat.div_mod n 8) at 1 by congruence. rewrite nmod8; lia. Qed.
+      Definition bits_to_Z {n} (B : bit_array n) :=
+        List.fold_right
+          (fun i acc => acc + Z.shiftl (Z.b2z (nth_bit B i)) (Z.of_nat i))
+          0 (List.seq 0 n).
+      Definition bits_to_Fq {n} (B : bit_array n) :=
+        Fq_of_Z (bits_to_Z B).
+      Definition Z_to_bits n (x : Z) : bit_array n :=
+        map (fun i => Z.testbit x (Z.of_nat i)) (seq 0 n).
+      Definition Fq_to_bits n (x : Fq) : bit_array n :=
+        Z_to_bits n (Fq_to_Z x).
+    End helpers.
 
+    Section compression.
+      Definition poly_compress (d : nat) : Rq -> tuple (bit_array d) n :=
+        map  (fun x : Fq => Z_to_bits d ((Z.shiftl (Fq_to_Z x) (Z.of_nat d) + (q / 2)) / q)).
+      Definition poly_decompress {d : nat} : tuple (bit_array d) n -> Rq :=
+        map (fun x : bit_array d =>
+               Fq_of_Z (Z.shiftr (bits_to_Z x * q + 2^(Z.of_nat d-1)) (Z.of_nat d))).
+      Definition polyvec_compress {m} d
+        : tuple Rq m -> Matrix.matrix (bit_array d) m n := map (poly_compress d).
+      Definition polyvec_decompress {m d}
+        : Matrix.matrix (bit_array d) m n -> tuple Rq m := map (poly_decompress).
+    End compression.
+
+    Section encoding.
       (* Algorithm 3 *)
-      Definition decode {l} (B : byte_array ((n/8)*Pos.to_nat l))
-        : tuple (F (2^l)) n :=
+      Definition decode {l} (B : byte_array ((n/8)*l))
+        : tuple (bit_array l) n :=
         let B' := bytes_to_bits B in
-        map (bits_to_F (2^l)) (split_array (Pos.to_nat l) n false B').
-      Definition encode {l} (t : tuple (F (2^l)) n)
-        : byte_array ((n/8) * Pos.to_nat l) :=
-        bits_to_bytes _ (encode_sizes_ok _) (flat_map (fun x => F_to_bits x (Pos.to_nat l)) t).
+        split_array l n false B'.
+      Definition encode {l} (t : tuple (bit_array l) n)
+        : byte_array ((n/8) * l) :=
+        bits_to_bytes _ (encode_sizes_ok _) (flat_map id t).
       Definition polyvec_decode {k l}
-                 (B : byte_array ((n/8)*Pos.to_nat l*k))
-        : Matrix.matrix (F (2^l)) k n :=
+                 (B : byte_array ((n/8)*l*k))
+        : Matrix.matrix (bit_array l) k n :=
         map decode
-            (split_array ((n/8)*Pos.to_nat l) k default_byte B).
+            (split_array ((n/8)*l) k default_byte B).
       Definition polyvec_encode {k l}
-                 (A : Matrix.matrix (F (2^l)) k n)
-        : byte_array ((n/8)*Pos.to_nat l*k) :=
+                 (A : Matrix.matrix (bit_array l) k n)
+        : byte_array ((n/8)*l*k) :=
         Tuple.flat_map encode A.
     End encoding.
 
-    Definition pksize := (n / 8 * Pos.to_nat dt * k + 32)%nat.
-    Definition sksize := (n / 8 * Pos.to_nat log2q * k)%nat.
-    Definition ciphertextsize := (n / 8 * Pos.to_nat du * k + n / 8 * Pos.to_nat dv * 1)%nat.
+    Definition pksize := (n / 8 * dt * k + 32)%nat.
+    Definition sksize := (n / 8 * Pos.to_nat q_nbits * k)%nat.
+    Definition ciphertextsize := (n / 8 *du * k + n / 8 * dv * 1)%nat.
     Definition msgsize := (n / 8 * Pos.to_nat 1)%nat.
     Local Hint Transparent pksize sksize ciphertextsize msgsize.
 
     (* Some notations and definitions to make things clearer *)
-    Local Notation matrix_mul := (Matrix.mul Rq_NTT Rq_NTTzero Rq_NTTadd Rq_NTTmul).
-    Local Notation matrix_transpose := (Matrix.transpose Rq_NTT Rq_NTTzero).
+    Local Notation matrix_mul := (Matrix.mul Rq Rqzero Rqadd Rqmul).
+    Local Notation matrix_transpose := (Matrix.transpose Rq Rqzero).
     Definition polyvec_add {k} : tuple Rq k -> tuple Rq k -> tuple Rq k := map2 Rqadd.
     Local Infix "+" := polyvec_add : polyvec_scope. Delimit Scope polyvec_scope with poly.
     Local Infix "||" := Tuple.concat.
 
     Definition gen_matrix (seed : byte_array 32) (transposed : bool)
-      : Matrix.matrix Rq_NTT k k
+      : Matrix.matrix Rq k k
       := map (fun i => map (fun j =>
                               let i := nat_to_byte i in
                               let j := nat_to_byte j in
@@ -163,10 +159,9 @@ Module KyberSpec.
       let A := gen_a rho in
       let s := map (getnoise sigma) (Tuple.seq 0 k) in
       let e := map (getnoise sigma) (Tuple.seq k k) in
-      let s' := map NTT s in
-      let t := (map NTT_inv (matrix_mul k k 1 A s') + e)%poly in
+      let t := ((matrix_mul k k 1 A s) + e)%poly in
       let pk := polyvec_encode (polyvec_compress dt t) || rho in
-      let sk := polyvec_encode (map NTT_to_F s') in
+      let sk := polyvec_encode (map (map (Fq_to_bits _)) s) in
       (pk, sk).
 
     (* Algorithm 5 *)
@@ -174,15 +169,13 @@ Module KyberSpec.
                (coins : byte_array 32) (msg : byte_array msgsize)
       : byte_array ciphertextsize :=
       let t := polyvec_decompress (polyvec_decode (Tuple.firstn _ pk)) in
-      let rho := Tuple.skipn (n / 8 * Pos.to_nat dt * k) pk in
+      let rho := Tuple.skipn (n / 8 * dt * k) pk in
       let At := gen_at rho in
       let r := map (getnoise coins) (Tuple.seq 0 k) in
       let e1 := map (getnoise coins) (Tuple.seq k k) in
       let e2 : tuple Rq 1 := getnoise coins (2*k)%nat in
-      let r' := map NTT r in
-      let u := (map NTT_inv (matrix_mul k k 1 At r') + e1)%poly in
-      let t' := map NTT t in
-      let tTr : tuple Rq 1 := NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k t') r') in
+      let u := ((matrix_mul k k 1 At r) + e1)%poly in
+      let tTr : tuple Rq 1 := (matrix_mul 1 k 1 (matrix_transpose 1 k t) r) in
       let v := (tTr + e2 + (poly_decompress (decode msg)))%poly in
       let c1 := polyvec_encode (polyvec_compress du u) in
       let c2 := polyvec_encode (polyvec_compress dv v) in
@@ -194,9 +187,8 @@ Module KyberSpec.
       : byte_array msgsize :=
       let u := polyvec_decompress (polyvec_decode (firstn _ c)) in
       let v := polyvec_decompress (polyvec_decode (skipn _ c)) in
-      let s' := map NTT_of_F (polyvec_decode sk) in
-      let u' := map NTT u in
-      let sTu := NTT_inv (matrix_mul 1 k 1 (matrix_transpose 1 k s') u') in
+      let s := map (map bits_to_Fq) (polyvec_decode sk) in
+      let sTu := matrix_mul 1 k 1 (matrix_transpose 1 k s) u in
       let m := encode (poly_compress 1 (Rqsub v sTu)) in
       m.
   End KyberSpec.
