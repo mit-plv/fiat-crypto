@@ -97,7 +97,6 @@ Module Barrett256.
            | |- of_prefancy_scalar _ _ _ _ = _ => cbn; solve [eauto]
            end.
 
-  (* TODO: don't rely on the C, M, and L flags *)
   Lemma barrett_red256_fancy_correct :
     forall xLow xHigh error,
       0 <= xLow < 2 ^ machine_wordsize ->
@@ -110,7 +109,7 @@ Module Barrett256.
       let consts_list := [(RegMuLow, muLow); (RegMod, M); (RegZero, 0)] in
       let arg_list := [(RegxHigh, xHigh); (RegxLow, xLow)] in
       let ctx := make_ctx (consts_list ++ arg_list) in
-      let carry_flag := false in (* TODO: don't rely on this value, given it's unused *)
+      let carry_flag := false in
       let last_wrote := (fun x : CC.code =>
                            match x with
                            | CC.C => RegZero
