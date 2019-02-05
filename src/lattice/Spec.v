@@ -19,7 +19,7 @@ Module KyberSpec.
     Local Notation bit_array n := (tuple bool n).
 
     (* Kyber parameters *)
-    Context (k eta n : nat) (q q_nbits : positive)
+    Context (k eta n : nat) (q : positive) (q_nbits : nat)
             (dt du dv : nat) (* fields into which elements are compressed *)
             (XOF : stream -> stream) (* "extendable output function" *)
             (PRF : byte_array 32 * byte -> stream) (* pseudorandom function *)
@@ -82,12 +82,14 @@ Module KyberSpec.
         List.fold_right
           (fun i acc => acc + Z.shiftl (Z.b2z (nth_bit B i)) (Z.of_nat i))
           0 (List.seq 0 n).
-      Definition bits_to_Fq {n} (B : bit_array n) :=
+      Definition bits_to_Fq (B : bit_array q_nbits) :=
         Fq_of_Z (bits_to_Z B).
       Definition Z_to_bits n (x : Z) : bit_array n :=
         map (fun i => Z.testbit x (Z.of_nat i)) (seq 0 n).
-      Definition Fq_to_bits n (x : Fq) : bit_array n :=
-        Z_to_bits n (Fq_to_Z x).
+      Definition Fq_to_bits (x : Fq) : bit_array q_nbits :=
+        Z_to_bits _ (Fq_to_Z x).
+      Definition matrix_map {A B m n} (f : A -> B) :
+        Matrix.matrix A m n -> Matrix.matrix B m n := map (map f).
     End helpers.
 
     Section compression.
@@ -123,7 +125,7 @@ Module KyberSpec.
     End encoding.
 
     Definition pksize := (n / 8 * dt * k + 32)%nat.
-    Definition sksize := (n / 8 * Pos.to_nat q_nbits * k)%nat.
+    Definition sksize := (n / 8 * q_nbits * k)%nat.
     Definition ciphertextsize := (n / 8 *du * k + n / 8 * dv * 1)%nat.
     Definition msgsize := (n / 8 * Pos.to_nat 1)%nat.
     Local Hint Transparent pksize sksize ciphertextsize msgsize.
@@ -161,8 +163,9 @@ Module KyberSpec.
       let e := map (getnoise sigma) (Tuple.seq k k) in
       let t := ((matrix_mul k k 1 A s) + e)%poly in
       let pk := polyvec_encode (polyvec_compress dt t) || rho in
-      let sk := polyvec_encode (map (map (Fq_to_bits _)) s) in
+      let sk := polyvec_encode (matrix_map Fq_to_bits s) in
       (pk, sk).
+
 
     (* Algorithm 5 *)
     Definition Enc (pk : byte_array pksize)
@@ -187,7 +190,7 @@ Module KyberSpec.
       : byte_array msgsize :=
       let u := polyvec_decompress (polyvec_decode (firstn _ c)) in
       let v := polyvec_decompress (polyvec_decode (skipn _ c)) in
-      let s := map (map bits_to_Fq) (polyvec_decode sk) in
+      let s := matrix_map bits_to_Fq (polyvec_decode sk) in
       let sTu := matrix_mul 1 k 1 (matrix_transpose 1 k s) u in
       let m := encode (poly_compress 1 (Rqsub v sTu)) in
       m.
