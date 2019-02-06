@@ -84,7 +84,7 @@ PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
 endif
 
 UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c p521_64.c p521_32.c p448_solinas_64.c # p224_solinas_64.c
-WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c p484_64.c # p484_32.c
+WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c p434_64.c # p434_32.c
 ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
@@ -245,9 +245,9 @@ p224_64.c p224_32.c : p224_%.c :
 	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p224' '2^224 - 2^96 + 1' '$*' > $@
 
 # 2^216 * 3^137 - 1
-p484_64.c p484_32.c : p484_%.c :
+p434_64.c p434_32.c : p434_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p484' '2^216 * 3^137 - 1' '$*' > $@
+	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p434' '2^216 * 3^137 - 1' '$*' > $@
 
 test-c-files: $(ALL_C_FILES)
 	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
