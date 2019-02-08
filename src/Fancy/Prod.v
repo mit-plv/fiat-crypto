@@ -376,3 +376,14 @@ Ltac push_value_unused :=
                 [ try assumption; symmetry; assumption | ]
          | _ => apply in_nil
          end.
+
+(* Solves subgoals for commutativity proofs and simplifies register
+lookup expressions *)
+Ltac simplify_with_register_properties :=
+  repeat match goal with
+         | _ => rewrite reg_eqb_refl
+         | _ => rewrite reg_eqb_neq by congruence
+         | H : ?y = _ mod ?m |- 0 <= ?y < _ =>
+           rewrite H; apply Z.mod_pos_bound; lia
+         | _ => assumption
+         end.

@@ -264,62 +264,45 @@ Module Barrett256.
     rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
         (try congruence; push_value_unused).
     repeat step_rhs.
-    rewrite mulhh_comm.
+    rewrite mulhh_comm by simplify_with_register_properties.
     repeat step_rhs.
-    rewrite mulll_comm.
+    rewrite mulll_comm by simplify_with_register_properties.
     repeat step_rhs.
 
     rewrite swap_add_chain
       by
         repeat match goal with
                | |- _ <> _ => congruence
-               | _ => rewrite reg_eqb_refl
-               | _ => rewrite reg_eqb_neq by congruence
-               | H : ?y = _ mod ?m |- 0 <= ?y < ?m =>
-                 rewrite H; apply Z.mod_pos_bound; omega
+               | _ => progress simplify_with_register_properties
                | |- _ = 2 ^ 256 => reflexivity
                | |- flags_unused _ _ =>
                  cbv [flags_unused]; intros;
                    do 2 step; reflexivity
                end.
-
-    Local Ltac simplify :=
-      repeat match goal with
-             | _ => rewrite reg_eqb_refl
-             | _ => rewrite reg_eqb_neq by congruence
-             | H : ?y = _ mod ?m |- 0 <= ?y < _ =>
-               rewrite H; apply Z.mod_pos_bound; omega
-             | _ => assumption
-             end.
-
     repeat step_rhs.
 
     assert (0 < 2 ^ 256) by ZeroBounds.Z.zero_bounds.
-    rewrite add_comm by simplify.
+    rewrite add_comm by simplify_with_register_properties.
     step_rhs.
-    rewrite addc_comm by simplify.
+    rewrite addc_comm by simplify_with_register_properties.
     step_rhs.
-    rewrite add_comm by simplify.
+    rewrite add_comm by simplify_with_register_properties.
     step_rhs.
-    rewrite addc_comm by simplify.
+    rewrite addc_comm by simplify_with_register_properties.
     step_rhs.
     repeat step_rhs.
     rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
         (try congruence; push_value_unused).
     repeat step_rhs.
-    rewrite mulhh_comm by simplify.
+    rewrite mulhh_comm by simplify_with_register_properties.
     repeat step_rhs.
-    rewrite mulll_comm by simplify.
+    rewrite mulll_comm by simplify_with_register_properties.
     repeat step_rhs.
 
-    rewrite swap_add_chain
-      by
+    rewrite swap_add_chain;
         repeat match goal with
                | |- _ <> _ => congruence
-               | _ => rewrite reg_eqb_refl
-               | _ => rewrite reg_eqb_neq by congruence
-               | H : ?y = _ mod ?m |- 0 <= ?y < ?m =>
-                 rewrite H; apply Z.mod_pos_bound; omega
+               | _ => progress simplify_with_register_properties
                | |- _ = 2 ^ 256 => reflexivity
                | |- flags_unused _ _ =>
                  cbv [flags_unused]; intros;
@@ -426,43 +409,6 @@ Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
        ADDM x q3 RegZero RegMod;
        Ret x
  *)
-
-(* Barrett generated code (equivalence with reference admitted) *)
-Eval cbv beta iota delta [Barrett256.barrett_red256_alloc] in Barrett256.barrett_red256_alloc.
-(*
-     = fun (xLow xHigh RegMuLow : register) (_ : positive) (_ : register) =>
-       SELM r2 RegMuLow RegZero;
-       RSHI 255 r3 RegZero xHigh;
-       RSHI 255 r4 xHigh xLow;
-       MUL128UU r5 RegMuLow r4;
-       MUL128UL r6 r4 RegMuLow;
-       MUL128LU r7 r4 RegMuLow;
-       MUL128LL r8 RegMuLow r4;
-       ADD 128 r9 r8 r7;
-       ADDC (-128) r10 r5 r7;
-       ADD 128 r5 r9 r6;
-       ADDC (-128) r11 r10 r6;
-       ADD 0 r6 r4 r11;
-       ADDC 0 r12 RegZero r3;
-       ADD 0 r13 r2 r6;
-       ADDC 0 r14 RegZero r12;
-       RSHI 1 r15 r14 r13;
-       MUL128UU r16 RegMod r15;
-       MUL128LU r17 r15 RegMod;
-       MUL128UL r18 r15 RegMod;
-       MUL128LL r19 RegMod r15;
-       ADD 128 r20 r19 r18;
-       ADDC (-128) r21 r16 r18;
-       ADD 128 r22 r20 r17;
-       ADDC (-128) r23 r21 r17;
-       SUB 0 r24 xLow r22;
-       SUBC 0 r25 xHigh r23;
-       SELL r26 RegMod RegZero;
-       SUB 0 r27 r24 r26;
-       ADDM r28 r27 RegZero RegMod;
-       Ret r28
- *)
-(* Note that the reference code and production code are the same except for a misplaced RSHI instruction; the current proof assumes that this RSHI commutes. *)
 
 (* Uncomment to see proof statement and remaining admitted statements. *)
 (*

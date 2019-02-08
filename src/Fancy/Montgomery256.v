@@ -180,12 +180,6 @@ Module Montgomery256.
     reflexivity.
   Qed.
 
-  (* TODO: could this be simplified? *)
-  Ltac solve_bounds :=
-    match goal with
-    | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; omega
-    | _ => assumption
-    end.
   Local Notation interp := (interp reg_eqb wordmax cc_spec).
   Lemma montred256_alloc_equivalent errorP errorR cc_start_state start_context :
     forall lo hi y t1 t2 scratch RegPInv extra_reg,
@@ -215,28 +209,27 @@ Module Montgomery256.
            | H : ~ False |- _ => clear H
            end.
 
+    (* TODO: the manual steps here can probably be replaced with a
+    tactic *)
+    
+    repeat step_lhs.
     rewrite interp_Mul256 with (tmp2:=extra_reg) by (congruence || push_value_unused).
 
     rewrite mullh_mulhl.
-    step.
-    rewrite mullh_mulhl.
-    step. step. step. step.
-
-
-    rewrite interp_Mul256x256 with (tmp2:=extra_reg) by
-        (match goal with
-         | |- _ <> _ => congruence
-         | _ => push_value_unused
-         end).
-
-    rewrite mulll_comm.
-    step. step. step.
-    rewrite mulhh_comm.
-    step. step. step. step. step.
-    rewrite add_comm by (cbn; solve_bounds).
-    step.
-    rewrite addc_comm by (cbn; solve_bounds).
-    step. step. step. step.
+    step_rhs.
+    rewrite <-mullh_mulhl.
+    repeat step_rhs.
+    
+    rewrite interp_Mul256x256 with (tmp2:=extra_reg) by (congruence || push_value_unused).
+    rewrite mulhh_comm by simplify_with_register_properties.
+    repeat step_rhs.
+    rewrite mulll_comm by simplify_with_register_properties.
+    repeat step_rhs.
+    rewrite add_comm by simplify_with_register_properties.
+    step_rhs.
+    rewrite addc_comm by simplify_with_register_properties.
+    repeat step_rhs.
+    
 
     cbn; repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence.
     reflexivity.
