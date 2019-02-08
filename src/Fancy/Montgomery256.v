@@ -101,6 +101,15 @@ Module Montgomery256.
            | |- of_prefancy_scalar _ _ _ _ = _ => cbn; solve [eauto]
            end.
 
+  (* TODO(jgross): switch out casts *)
+  (* might need to use CheckCasts.interp_eqv_without_casts? *)
+  Lemma swap_casts lo hi :
+    expr.interp (@ident.gen_interp cast_oor)
+                (invert_expr.smart_App_curried (montred256 (type.interp base.interp)) (lo, (hi, tt))) =
+    expr.interp (@ident.interp)
+                (invert_expr.smart_App_curried (montred256 (type.interp base.interp)) (lo, (hi, tt))).
+  Admitted.
+
   Lemma montred256_fancy_correct :
     forall lo hi error,
       0 <= lo < R ->
@@ -149,11 +158,8 @@ Module Montgomery256.
       econstructor. valid_expr_subgoal. }
     { cbn - [montred256]. cbv [id].
       f_equal.
-      (* TODO(jgross): switch out casts *)
-      (* might need to use CheckCasts.interp_eqv_without_casts? *)
-      replace (@ident.gen_interp cast_oor) with (@ident.interp) by admit.
-      reflexivity. }
-  Admitted.
+      apply swap_casts. }
+  Qed.
 
   Import Spec.Registers.
 
@@ -209,29 +215,21 @@ Module Montgomery256.
            | H : ~ False |- _ => clear H
            end.
 
-    (* TODO: the manual steps here can probably be replaced with a
-    tactic *)
-    
-    repeat step_lhs.
-    rewrite interp_Mul256 with (tmp2:=extra_reg) by (congruence || push_value_unused).
+    Time repeat match goal with
+                | _ => progress prove_programs_equivalent
+                | _ => rewrite interp_Mul256 with (tmp2 := extra_reg) by
+                      (match goal with
+                       | |- _ <> _ => assumption || congruence
+                       | _ => push_value_unused
+                       end)
+                | _ => rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
+                      (match goal with
+                       | |- _ <> _ => assumption || congruence
+                       | _ => push_value_unused
+                       end)
+                end.
 
-    rewrite mullh_mulhl.
-    step_rhs.
-    rewrite <-mullh_mulhl.
-    repeat step_rhs.
-    
-    rewrite interp_Mul256x256 with (tmp2:=extra_reg) by (congruence || push_value_unused).
-    rewrite mulhh_comm by simplify_with_register_properties.
-    repeat step_rhs.
-    rewrite mulll_comm by simplify_with_register_properties.
-    repeat step_rhs.
-    rewrite add_comm by simplify_with_register_properties.
-    step_rhs.
-    rewrite addc_comm by simplify_with_register_properties.
-    repeat step_rhs.
-    
-
-    cbn; repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence.
+    cbn [Spec.interp]; simplify_with_register_properties.
     reflexivity.
   Qed.
 

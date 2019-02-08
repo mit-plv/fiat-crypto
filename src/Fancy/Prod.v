@@ -85,9 +85,19 @@ Section Prod.
                                                                                                                       (Ret x))))))))))))))).
 End Prod.
 
+(* Solves subgoals for commutativity proofs and simplifies register
+lookup expressions *)
+Ltac simplify_with_register_properties :=
+  repeat
+    match goal with
+    | _ => rewrite reg_eqb_refl
+    | _ => rewrite reg_eqb_neq by (assumption || congruence) 
+    | H:?y = _ mod ?m |- 0 <= ?y < _ => rewrite H; apply Z.mod_pos_bound; lia
+    | _ => assumption
+    end.
 Ltac cleanup :=
   cbn - [interp spec cc_spec];
-  rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence;
+  simplify_with_register_properties;
   cbv [CC.update in_dec list_rec list_rect
                  CC.code_dec];
   cbn [CC.cc_c CC.cc_m CC.cc_z CC.cc_l].
@@ -110,6 +120,18 @@ Ltac step_rhs :=
   | H : ?y = (?x mod ?m)%Z |- context [(?x mod ?m)%Z] =>
     rewrite <-H
   end.
+Ltac prove_programs_equivalent :=
+  repeat step_lhs; (* remember the results of each step on the LHS *)
+  repeat match goal with
+         | _ => step_rhs
+         | |- ?x = ?x => reflexivity
+         | _ => rewrite mulhh_comm by simplify_with_register_properties; step_rhs
+         | _ => rewrite mulll_comm by simplify_with_register_properties; step_rhs
+         | _ => rewrite add_comm by simplify_with_register_properties; step_rhs
+         | _ => rewrite addc_comm by simplify_with_register_properties; step_rhs
+         | _ => rewrite mullh_mulhl; step_rhs
+         | _ => rewrite <-mullh_mulhl; step_rhs
+         end.
 
 Section ProdEquiv.
   Context (wordmax : Z).
@@ -375,15 +397,4 @@ Ltac push_value_unused :=
          | _ => apply not_in_cons; split;
                 [ try assumption; symmetry; assumption | ]
          | _ => apply in_nil
-         end.
-
-(* Solves subgoals for commutativity proofs and simplifies register
-lookup expressions *)
-Ltac simplify_with_register_properties :=
-  repeat match goal with
-         | _ => rewrite reg_eqb_refl
-         | _ => rewrite reg_eqb_neq by congruence
-         | H : ?y = _ mod ?m |- 0 <= ?y < _ =>
-           rewrite H; apply Z.mod_pos_bound; lia
-         | _ => assumption
          end.

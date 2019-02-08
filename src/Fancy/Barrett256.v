@@ -182,48 +182,6 @@ Module Barrett256.
     reflexivity.
   Qed.
 
-  Local Ltac solve_bounds :=
-    match goal with
-    | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; omega
-    | _ => assumption
-    end.
-  Local Ltac results_equiv :=
-    match goal with
-      |- ?lhs = ?rhs =>
-      match lhs with
-        context [spec ?li ?largs ?lcc] =>
-        match rhs with
-          context [spec ?ri ?rargs ?rcc] =>
-          replace (spec li largs lcc) with (spec ri rargs rcc)
-        end
-      end
-    end.
-  Local Ltac simplify_cc :=
-    match goal with
-      |- context [CC.update ?to_write ?result ?cc_spec ?old_state] =>
-      let e := eval cbv -[spec cc_spec CC.cc_l CC.cc_m CC.cc_z CC.cc_c] in
-      (CC.update to_write result cc_spec old_state) in
-          change (CC.update to_write result cc_spec old_state) with e
-    end.
-  Ltac remember_single_result :=
-    match goal with |- context [(spec ?i ?args ?cc) mod ?w] =>
-                    let x := fresh "x" in
-                    let y := fresh "y" in
-                    let Heqx := fresh "Heqx" in
-                    remember (spec i args cc) as x eqn:Heqx;
-                    remember (x mod w) as y
-    end.
-  Local Ltac step :=
-    match goal with
-      |- interp _ _ _ (Instr ?i ?rd1 ?args1 ?cont1) ?cc1 ?ctx1 =
-         interp _ _ _ (Instr ?i ?rd2 ?args2 ?cont2) ?cc2 ?ctx2 =>
-      rewrite (interp_step _ _ i rd1 args1 cont1);
-      rewrite (interp_step _ _ i rd2 args2 cont2)
-    end;
-    cbn - [interp spec cc_spec];
-    repeat progress rewrite ?reg_eqb_neq, ?reg_eqb_refl by congruence;
-    results_equiv; [ remember_single_result; repeat simplify_cc | try reflexivity ].
-
   Local Notation interp := (interp reg_eqb wordmax cc_spec).
   Lemma barrett_red256_alloc_equivalent errorP errorR cc_start_state start_context :
     forall x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 extra_reg,
@@ -256,62 +214,51 @@ Module Barrett256.
            | H : ~ False |- _ => clear H
            end.
 
-    repeat step_lhs.
+    Ltac simplify_with_register_properties ::=
+      repeat
+        match goal with
+        | _ => rewrite reg_eqb_refl
+        | _ => rewrite reg_eqb_neq by (assumption || congruence) 
+        | H:?y = _ mod ?m |- 0 <= ?y < _ => rewrite H; apply Z.mod_pos_bound; lia
+        | _ => assumption
+        end.
+    Ltac cleanup ::=
+      cbn-[Spec.interp spec cc_spec]; simplify_with_register_properties;
+      cbv[CC.update in_dec list_rec list_rect CC.code_dec]; cbn[CC.cc_c CC.cc_m CC.cc_z CC.cc_l].
 
 
-    repeat step_rhs.
-    rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
-        (try congruence; push_value_unused).
-    repeat step_rhs.
-    rewrite mulhh_comm by simplify_with_register_properties.
-    repeat step_rhs.
-    rewrite mulll_comm by simplify_with_register_properties.
-    repeat step_rhs.
-
-    rewrite swap_add_chain
-      by
-        repeat match goal with
-               | |- _ <> _ => congruence
-               | _ => progress simplify_with_register_properties
-               | |- _ = 2 ^ 256 => reflexivity
-               | |- flags_unused _ _ =>
-                 cbv [flags_unused]; intros;
-                   do 2 step; reflexivity
-               end.
-    repeat step_rhs.
-
-    assert (0 < 2 ^ 256) by ZeroBounds.Z.zero_bounds.
-    rewrite add_comm by simplify_with_register_properties.
-    step_rhs.
-    rewrite addc_comm by simplify_with_register_properties.
-    step_rhs.
-    rewrite add_comm by simplify_with_register_properties.
-    step_rhs.
-    rewrite addc_comm by simplify_with_register_properties.
-    step_rhs.
-    repeat step_rhs.
-    rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
-        (try congruence; push_value_unused).
-    repeat step_rhs.
-    rewrite mulhh_comm by simplify_with_register_properties.
-    repeat step_rhs.
-    rewrite mulll_comm by simplify_with_register_properties.
-    repeat step_rhs.
-
-    rewrite swap_add_chain;
-        repeat match goal with
-               | |- _ <> _ => congruence
-               | _ => progress simplify_with_register_properties
-               | |- _ = 2 ^ 256 => reflexivity
-               | |- flags_unused _ _ =>
-                 cbv [flags_unused]; intros;
-                   repeat (step; try reflexivity)
-               end.
-
-    repeat step_rhs.
+    Ltac prove_programs_equivalent :=
+      repeat step_lhs; (* remember the results of each step on the LHS *)
+      repeat match goal with
+             | _ => step_rhs
+             | |- ?x = ?x => reflexivity
+             | _ => rewrite mulhh_comm by simplify_with_register_properties; step_rhs
+             | _ => rewrite mulll_comm by simplify_with_register_properties; step_rhs
+             | _ => rewrite add_comm by simplify_with_register_properties; step_rhs
+             | _ => rewrite addc_comm by simplify_with_register_properties; step_rhs
+             | _ => rewrite mullh_mulhl; step_rhs
+             | _ => rewrite <-mullh_mulhl; step_rhs
+             end.
+    Time repeat match goal with
+                | _ => progress prove_programs_equivalent
+                | _ => rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
+                      (match goal with
+                       | |- _ <> _ => assumption || congruence
+                       | _ => push_value_unused
+                       end)
+                | _ => 
+                  rewrite swap_add_chain by
+                      repeat match goal with
+                             | |- _ <> _ => assumption || congruence
+                             | _ => progress simplify_with_register_properties
+                             | |- _ = 2 ^ 256 => reflexivity
+                             | |- flags_unused _ _ =>
+                               cbv [flags_unused]; intros; prove_programs_equivalent (* TODO: there is probably a faster way to do this one *)
+                             end
+                end.
 
     cbv [Spec.interp].
-    rewrite !reg_eqb_refl.
+    simplify_with_register_properties.
     reflexivity.
   Qed.
 
