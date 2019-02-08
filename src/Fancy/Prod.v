@@ -267,45 +267,44 @@ Section ProdEquiv.
     cbn [spec ADD ADDC CC.cc_c] in *.
     replace x0 with (result / wordmax)%Z in *.
 
+    { apply interp_state_equiv; [ reflexivity | ].
+      intros; cbv [reg_eqb].
+      break_innermost_match; try congruence; try reflexivity.
+      { subst. subst result.
+        autorewrite with zsimplify.
+        pull_Zmod. reflexivity. } }
+
     (* TODO: this is a stupidly ugly arithmetic proof *)
-    2 : { subst. subst result.
-          rewrite Z.shiftl_mul_pow2 by omega.
-          rewrite Z.shiftl_div_pow2 by omega.
-          rewrite Pos2Z.opp_neg. (* TODO : add to zsimplify? *)
-          autorewrite with zsimplify.
-
-          match goal with
-            |- context [if ?x then 1 else 0] =>
-            change (if x then 1 else 0) with (Z.b2z x)
-          end.
-          cbv [cc_spec].
-          rewrite Z.testbit_spec' by omega.
-
-          rewrite Z.mod_small with (b:=2).
-          2 : { split; [ Z.zero_bounds | ].
-                apply Z.div_lt_upper_bound; try lia.
-                match goal with
-                  |- context [ ?x mod ?y ] =>
-                  pose proof (Z.mod_pos_bound x y ltac:(lia))
-                end.
-                lia. }
-                
-          autorewrite with zsimplify.
-
-          rewrite Z.div_add_mod_cond_r' by omega.
-          rewrite Z.mod_small with (a := ctx c / 2 ^ 128)
-            by (split; [ Z.zero_bounds | apply Z.div_lt_upper_bound; lia ]).
-          assert (0 < 2 ^ 128) by (cbn; omega).
-          change (2 ^ 256)%Z with (2 ^ 128 * 2 ^ 128)%Z.
-          rewrite Z.div_mul_cancel_r by omega.
-          ring. }
-    
-    apply interp_state_equiv; [ reflexivity | ].
-    intros; cbv [reg_eqb].
-    break_innermost_match; try congruence; try reflexivity.
     { subst. subst result.
+      rewrite Z.shiftl_mul_pow2 by omega.
+      rewrite Z.shiftl_div_pow2 by omega.
+      rewrite Pos2Z.opp_neg. (* TODO : add to zsimplify? *)
       autorewrite with zsimplify.
-      pull_Zmod. reflexivity. }
+
+      match goal with
+        |- context [if ?x then 1 else 0] =>
+        change (if x then 1 else 0) with (Z.b2z x)
+      end.
+      cbv [cc_spec].
+      rewrite Z.testbit_spec' by omega.
+
+      rewrite Z.mod_small with (b:=2) by
+          (split; [ Z.zero_bounds | ];
+            apply Z.div_lt_upper_bound; try lia;
+            match goal with
+              |- context [ ?x mod ?y ] =>
+              pose proof (Z.mod_pos_bound x y ltac:(lia))
+            end; lia).
+      
+      autorewrite with zsimplify.
+
+      rewrite Z.div_add_mod_cond_r' by omega.
+      rewrite Z.mod_small with (a := ctx c / 2 ^ 128)
+        by (split; [ Z.zero_bounds | apply Z.div_lt_upper_bound; lia ]).
+      assert (0 < 2 ^ 128) by (cbn; omega).
+      change (2 ^ 256)%Z with (2 ^ 128 * 2 ^ 128)%Z.
+      rewrite Z.div_mul_cancel_r by omega.
+      ring. }
   Qed.
 
   Definition flags_unused e wordmax : Prop :=
