@@ -97,6 +97,12 @@ Module Barrett256.
            | |- of_prefancy_scalar _ _ _ _ = _ => cbn; solve [eauto]
            end.
 
+  Lemma swap_casts xLow xHigh :
+    expr.interp (@ident.gen_interp cast_oor)
+                (invert_expr.smart_App_curried (barrett_red256 (type.interp base.interp)) (xLow, (xHigh, tt))) =
+    defaults.Interp barrett_red256 xLow xHigh.
+  Admitted.
+
   Lemma barrett_red256_fancy_correct :
     forall xLow xHigh error,
       0 <= xLow < 2 ^ machine_wordsize ->
@@ -151,11 +157,8 @@ Module Barrett256.
       econstructor. valid_expr_subgoal. }
     { cbn - [barrett_red256]. cbv [id].
       f_equal.
-      (* TODO(jgross): switch out casts *)
-      (* might need to use CheckCasts.interp_eqv_without_casts? *)
-      replace (@ident.gen_interp cast_oor) with (@ident.interp) by admit.
-      reflexivity. }
-  Admitted.
+      apply swap_casts. }
+  Qed.
 
   Import Spec.Registers.
 
@@ -214,31 +217,6 @@ Module Barrett256.
            | H : ~ False |- _ => clear H
            end.
 
-    Ltac simplify_with_register_properties ::=
-      repeat
-        match goal with
-        | _ => rewrite reg_eqb_refl
-        | _ => rewrite reg_eqb_neq by (assumption || congruence) 
-        | H:?y = _ mod ?m |- 0 <= ?y < _ => rewrite H; apply Z.mod_pos_bound; lia
-        | _ => assumption
-        end.
-    Ltac cleanup ::=
-      cbn-[Spec.interp spec cc_spec]; simplify_with_register_properties;
-      cbv[CC.update in_dec list_rec list_rect CC.code_dec]; cbn[CC.cc_c CC.cc_m CC.cc_z CC.cc_l].
-
-
-    Ltac prove_programs_equivalent :=
-      repeat step_lhs; (* remember the results of each step on the LHS *)
-      repeat match goal with
-             | _ => step_rhs
-             | |- ?x = ?x => reflexivity
-             | _ => rewrite mulhh_comm by simplify_with_register_properties; step_rhs
-             | _ => rewrite mulll_comm by simplify_with_register_properties; step_rhs
-             | _ => rewrite add_comm by simplify_with_register_properties; step_rhs
-             | _ => rewrite addc_comm by simplify_with_register_properties; step_rhs
-             | _ => rewrite mullh_mulhl; step_rhs
-             | _ => rewrite <-mullh_mulhl; step_rhs
-             end.
     Time repeat match goal with
                 | _ => progress prove_programs_equivalent
                 | _ => rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
