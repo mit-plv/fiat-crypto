@@ -232,6 +232,7 @@ Module Barrett256.
       0 <= start_context x < 2^machine_wordsize ->
       0 <= start_context xHigh < 2^machine_wordsize ->
       0 <= start_context RegMuLow < 2^machine_wordsize ->
+      0 <= start_context RegZero < 2^machine_wordsize ->
       interp
         (barrett_red256_alloc r0 r1 r30 errorP errorR) cc_start_state
                           (fun r => if reg_eqb r r0
@@ -256,12 +257,81 @@ Module Barrett256.
            | H : ~ False |- _ => clear H
            end.
 
-    step.
-    step.
+    repeat step_lhs.
 
-    (* TODO: To prove equivalence between these two, we need to either relocate the RSHI instructions so they're in the same places or use instruction commutativity to push them down. *)
 
-  Admitted.
+    repeat step_rhs.
+    rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
+        (try congruence; push_value_unused).
+    repeat step_rhs.
+    rewrite mulhh_comm.
+    repeat step_rhs.
+    rewrite mulll_comm.
+    repeat step_rhs.
+
+    rewrite swap_add_chain
+      by
+        repeat match goal with
+               | |- _ <> _ => congruence
+               | _ => rewrite reg_eqb_refl
+               | _ => rewrite reg_eqb_neq by congruence
+               | H : ?y = _ mod ?m |- 0 <= ?y < ?m =>
+                 rewrite H; apply Z.mod_pos_bound; omega
+               | |- _ = 2 ^ 256 => reflexivity
+               | |- flags_unused _ _ =>
+                 cbv [flags_unused]; intros;
+                   do 2 step; reflexivity
+               end.
+
+    Local Ltac simplify :=
+      repeat match goal with
+             | _ => rewrite reg_eqb_refl
+             | _ => rewrite reg_eqb_neq by congruence
+             | H : ?y = _ mod ?m |- 0 <= ?y < _ =>
+               rewrite H; apply Z.mod_pos_bound; omega
+             | _ => assumption
+             end.
+
+    repeat step_rhs.
+
+    assert (0 < 2 ^ 256) by ZeroBounds.Z.zero_bounds.
+    rewrite add_comm by simplify.
+    step_rhs.
+    rewrite addc_comm by simplify.
+    step_rhs.
+    rewrite add_comm by simplify.
+    step_rhs.
+    rewrite addc_comm by simplify.
+    step_rhs.
+    repeat step_rhs.
+    rewrite interp_Mul256x256 with (tmp2 := extra_reg) by
+        (try congruence; push_value_unused).
+    repeat step_rhs.
+    rewrite mulhh_comm by simplify.
+    repeat step_rhs.
+    rewrite mulll_comm by simplify.
+    repeat step_rhs.
+
+    rewrite swap_add_chain
+      by
+        repeat match goal with
+               | |- _ <> _ => congruence
+               | _ => rewrite reg_eqb_refl
+               | _ => rewrite reg_eqb_neq by congruence
+               | H : ?y = _ mod ?m |- 0 <= ?y < ?m =>
+                 rewrite H; apply Z.mod_pos_bound; omega
+               | |- _ = 2 ^ 256 => reflexivity
+               | |- flags_unused _ _ =>
+                 cbv [flags_unused]; intros;
+                   repeat (step; try reflexivity)
+               end.
+
+    repeat step_rhs.
+
+    cbv [Spec.interp].
+    rewrite !reg_eqb_refl.
+    reflexivity.
+  Qed.
 
   Lemma prod_barrett_red256_correct :
     forall (cc_start_state : CC.state) (* starting carry flags *)

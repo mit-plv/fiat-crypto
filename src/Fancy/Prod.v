@@ -1,10 +1,33 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Crypto.Fancy.Spec.
+Require Import Crypto.Algebra.Ring. (* for ring_simplify_subterms *)
+Require Import Crypto.Fancy.Spec. Import Spec.Registers.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Import Spec.Registers.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Local Open Scope Z_scope.
+
+Module Z.
+(* TODO: move to Div *)
+Lemma div_add_mod_cond_l' x y d :
+  d <> 0 ->
+  (x mod d + y) / d = (x + y) / d - x / d.
+Proof.
+  intros.
+  rewrite (Div.Z.div_add_mod_cond_l x y d) by omega.
+  ring.
+Qed.
+Lemma div_add_mod_cond_r' x y d :
+  d <> 0 ->
+  (x + y mod d) / d = (x + y) / d - y / d.
+Proof.
+  intros.
+  rewrite (Div.Z.div_add_mod_cond_r x y d) by omega.
+  ring.
+Qed.
+End Z.
 
 Section Prod.
   Definition Mul256 (out src1 src2 tmp : register) (cont : expr) : expr :=
@@ -61,6 +84,32 @@ Section Prod.
                                                                                                                (Instr ADDM x (q3, RegZero, RegMod)
                                                                                                                       (Ret x))))))))))))))).
 End Prod.
+
+Ltac cleanup :=
+  cbn - [interp spec cc_spec];
+  rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence;
+  cbv [CC.update in_dec list_rec list_rect
+                 CC.code_dec];
+  cbn [CC.cc_c CC.cc_m CC.cc_z CC.cc_l].
+Ltac step_and_remember := 
+  rewrite interp_step; cleanup;
+  remember_single_result.
+Ltac step_lhs :=
+  match goal with
+  | |- Spec.interp _ _ _ (Instr _ _ _ _) _ _ = _ =>
+    step_and_remember
+  end.
+Ltac step_rhs :=
+  rewrite interp_step; cleanup;
+  match goal with
+  | H: ?x = spec ?i ?args _
+    |- context [spec ?i ?args ?cc] =>
+    replace (spec i args cc) with x by idtac
+  end;
+  match goal with
+  | H : ?y = (?x mod ?m)%Z |- context [(?x mod ?m)%Z] =>
+    rewrite <-H
+  end.
 
 Section ProdEquiv.
   Context (wordmax : Z).
@@ -138,17 +187,13 @@ Section ProdEquiv.
                                         (Instr (ADD 128) out (out, tmp) cont))))) cc ctx.
   Proof.
     intros; cbv [Mul256 interp256].
-    repeat
-      (rewrite interp_step; cbn - [interp spec cc_spec];
-       rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence;
-       remember_single_result;
-       cbn [spec MUL128LL MUL128LU MUL128UL ADD] in *).
+    repeat step_lhs.
+    repeat step_rhs.
 
     match goal with H : value_unused tmp _ |- _ => erewrite H end.
     match goal with H : value_unused tmp2 _ |- _ => erewrite H end.
     apply interp_state_equiv.
-    { rewrite !cc_overwrite_full.
-      f_equal; subst; lia. }
+    { reflexivity. }
     { intros; cbv [reg_eqb].
       break_innermost_match; try congruence; reflexivity. }
   Qed.
@@ -173,41 +218,162 @@ Section ProdEquiv.
     value_unused tmp2 cont ->
     interp256 (Mul256x256 out outHigh src1 src2 tmp cont) cc ctx =
     interp256 (
-        Instr MUL128LL out (src1, src2)
+        Instr MUL128UU outHigh (src1, src2)
               (Instr MUL128LU tmp (src1, src2)
                      (Instr MUL128UL tmp2 (src1, src2)
-                            (Instr MUL128UU outHigh (src1, src2)
+                            (Instr MUL128LL out (src1, src2)
                                    (Instr (ADD 128) out (out, tmp2)
                                           (Instr (ADDC (-128)) outHigh (outHigh, tmp2)
                                                  (Instr (ADD 128) out (out, tmp)
                                                         (Instr (ADDC (-128)) outHigh (outHigh, tmp) cont)))))))) cc ctx.
   Proof.
     intros; cbv [Mul256x256 interp256].
-    repeat
-      (rewrite interp_step; cbn - [interp spec cc_spec];
-       rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence;
-       remember_single_result;
-       cbn [spec MUL128LL MUL128LU MUL128UL MUL128UU ADD ADDC] in *).
+    repeat step_lhs.
+    repeat step_rhs.
 
     match goal with H : value_unused tmp _ |- _ => erewrite H end.
     match goal with H : value_unused tmp2 _ |- _ => erewrite H end.
-    apply interp_state_equiv.
-    { rewrite !cc_overwrite_full.
-      f_equal.
-      subst. cbn - [Z.add Z.modulo Z.testbit Z.mul Z.shiftl lower128 upper128].
-      lia. }
-    { intros; cbv [reg_eqb].
-      break_innermost_match; try congruence; try reflexivity; [ ].
-      subst. cbn - [Z.add Z.modulo Z.testbit Z.mul Z.shiftl lower128 upper128].
-      lia. }
+    apply interp_state_equiv; [ reflexivity | ].
+    intros; cbv [reg_eqb].
+    break_innermost_match; try congruence; reflexivity.
+  Qed.
+
+  Lemma interp_add_chain a b c cont cc ctx:
+    a <> b -> 
+    a <> c -> 
+    b <> c ->
+    (0 <= ctx a < wordmax)%Z ->
+    (0 <= ctx b < wordmax)%Z ->
+    (0 <= ctx c < wordmax)%Z ->
+    (wordmax = 2 ^ 256)%Z ->
+    let result := (ctx a + Z.shiftl (ctx c) 128 + ctx b * wordmax)%Z in
+    interp256 (
+        Instr (ADD 128) a (a, c)
+              (Instr (ADDC (-128)) b (b, c) cont))
+              cc ctx =
+    interp256 cont
+              (CC.update [CC.C; CC.M; CC.L; CC.Z]
+                         (result / wordmax) cc_spec cc)
+              (fun r =>
+                 if reg_eqb r a
+                 then (result mod wordmax)%Z
+                 else
+                   if reg_eqb r b
+                   then ((result / wordmax) mod wordmax)%Z
+                   else ctx r).
+  Proof.
+    intros; cbv [interp256].
+    repeat step_and_remember.
+    cbn [spec ADD ADDC CC.cc_c] in *.
+    replace x0 with (result / wordmax)%Z in *.
+
+    (* TODO: this is a stupidly ugly arithmetic proof *)
+    2 : { subst. subst result.
+          rewrite Z.shiftl_mul_pow2 by omega.
+          rewrite Z.shiftl_div_pow2 by omega.
+          rewrite Pos2Z.opp_neg. (* TODO : add to zsimplify? *)
+          autorewrite with zsimplify.
+
+          match goal with
+            |- context [if ?x then 1 else 0] =>
+            change (if x then 1 else 0) with (Z.b2z x)
+          end.
+          cbv [cc_spec].
+          rewrite Z.testbit_spec' by omega.
+
+          rewrite Z.mod_small with (b:=2).
+          2 : { split; [ Z.zero_bounds | ].
+                apply Z.div_lt_upper_bound; try lia.
+                match goal with
+                  |- context [ ?x mod ?y ] =>
+                  pose proof (Z.mod_pos_bound x y ltac:(lia))
+                end.
+                lia. }
+                
+          autorewrite with zsimplify.
+
+          rewrite Z.div_add_mod_cond_r' by omega.
+          rewrite Z.mod_small with (a := ctx c / 2 ^ 128)
+            by (split; [ Z.zero_bounds | apply Z.div_lt_upper_bound; lia ]).
+          assert (0 < 2 ^ 128) by (cbn; omega).
+          change (2 ^ 256)%Z with (2 ^ 128 * 2 ^ 128)%Z.
+          rewrite Z.div_mul_cancel_r by omega.
+          ring. }
+    
+    apply interp_state_equiv; [ reflexivity | ].
+    intros; cbv [reg_eqb].
+    break_innermost_match; try congruence; try reflexivity.
+    { subst. subst result.
+      autorewrite with zsimplify.
+      pull_Zmod. reflexivity. }
+  Qed.
+
+  Definition flags_unused e wordmax : Prop :=
+    forall cc x ctx,
+      interp reg_eqb wordmax cc_spec e cc ctx =
+      interp reg_eqb wordmax cc_spec e (CC.update [CC.C; CC.M; CC.L; CC.Z] x cc_spec cc) ctx.
+
+  Lemma swap_add_chain a b c d cont cc ctx:
+    a <> b -> 
+    a <> c -> 
+    a <> d -> 
+    b <> c ->
+    b <> d ->
+    c <> d ->
+    0 <= ctx a < wordmax ->
+    0 <= ctx b < wordmax ->
+    0 <= ctx c < wordmax ->
+    0 <= ctx d < wordmax ->
+    wordmax = 2 ^ 256 ->
+    flags_unused cont wordmax ->
+    interp256 (
+        Instr (ADD 128) a (a, c)
+              (Instr (ADDC (-128)) b (b, c)
+                     (Instr (ADD 128) a (a, d)
+                            (Instr (ADDC (-128)) b (b, d) cont))))
+              cc ctx =
+    interp256 (
+        Instr (ADD 128) a (a, d)
+              (Instr (ADDC (-128)) b (b, d)
+                     (Instr (ADD 128) a (a, c)
+                            (Instr (ADDC (-128)) b (b, c) cont))))
+              cc ctx.
+  Proof.
+    intros.
+    assert (0 < wordmax) by omega.
+    repeat (rewrite interp_add_chain by (rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence; try assumption; auto using Z.mod_pos_bound with omega)).
+    rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence.
+    match goal with
+    | H : flags_unused ?e _
+      |- interp256 ?e ?ccl _ = interp256 ?e ?ccr _ =>
+      rewrite H with (cc:=ccl) (x:=0);
+        rewrite H with (cc:=ccr) (x:=0)
+    end.
+    rewrite !cc_overwrite_full.
+    apply interp_state_equiv; [ reflexivity | ].
+    intros; cbv [reg_eqb].
+    break_innermost_match; try congruence; try reflexivity.
+    { autorewrite with zsimplify. pull_Zmod.
+      f_equal; ring. }
+    { autorewrite with zsimplify. pull_Zmod.
+      rewrite !Z.div_add_mod_cond_l' by (subst; cbn; omega).
+      ring_simplify.
+      (* This is really annoying, can't a tactic do this? *)
+      match goal with |- context [?a + ?b + ?c] =>
+                      match goal with |- context [?a + ?c + ?b] =>
+                                      replace (a + b + c) with (a + c + b) by ring
+                      end end.
+      f_equal. ring. }
   Qed.
 
 End ProdEquiv.
 
 Ltac push_value_unused :=
   repeat match goal with
-         | |- ~ In _ _ => cbn; intuition; congruence
+         | _ => apply value_unused_skip; [ | assumption | ]
          | _ => apply value_unused_overwrite
-         | _ => apply value_unused_skip; [ | congruence | ]
          | _ => apply value_unused_ret; congruence
+         | _ => apply not_in_cons; split;
+                [ try assumption; symmetry; assumption | ]
+         | _ => apply in_nil
          end.
