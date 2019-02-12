@@ -54,7 +54,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Tactics.SetEvars.
-Import ListNotations. Local Open Scope Z_scope.
+Import Coq.Lists.List ListNotations. Local Open Scope Z_scope.
 
 Module Associational.
   Definition eval (p:list (Z*Z)) : Z :=

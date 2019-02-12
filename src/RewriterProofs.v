@@ -27,7 +27,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
-Import ListNotations. Local Open Scope list_scope.
+Import Coq.Lists.List ListNotations. Local Open Scope list_scope.
 Local Open Scope Z_scope.
 
 Import EqNotations.

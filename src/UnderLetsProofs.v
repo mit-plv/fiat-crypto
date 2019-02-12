@@ -12,7 +12,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Import ListNotations. Local Open Scope list_scope.
+Import Coq.Lists.List ListNotations. Local Open Scope list_scope.
 
 Import EqNotations.
 Module Compilers.

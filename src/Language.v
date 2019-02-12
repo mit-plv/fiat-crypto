@@ -1237,7 +1237,7 @@ Module Compilers.
         | @repeat ?A
           => let rA := base.reify A in
              then_tac (@ident.List_repeat rA)
-        | @combine ?A ?B
+        | @List.combine ?A ?B
           => let rA := base.reify A in
              let rB := base.reify B in
              then_tac (@ident.List_combine rA rB)
