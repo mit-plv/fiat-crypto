@@ -16,6 +16,19 @@ Definition option_beq_hetero {A B} (AB_beq : A -> B -> bool) (x : option A) (y :
        => false
      end.
 
+(** In general, [lift : M (option A) -> option (M A)].  This is a bit
+    confusing for [option] because [M = option].  We want to return
+    [None] if the thing contained in the [M (option A)] is [None], and
+    say [Some] otherwise. *)
+Definition lift {A} (x : option (option A)) : option (option A)
+  := match x with
+     | Some None => None (* the contained thing is bad/not present *)
+     | Some (Some x) => Some (Some x)
+     | None => Some None
+     end.
+
+Notation map := option_map (only parsing). (* so we have [Option.map] *)
+
 Definition bind {A B} (v : option A) (f : A -> option B) : option B
   := match v with
      | Some v => f v
@@ -44,6 +57,12 @@ Module Export Notations.
   Infix ";;;" := sequence_return : option_scope.
 End Notations.
 Local Open Scope option_scope.
+
+Definition combine {A B} (x : option A) (y : option B) : option (A * B)
+  := match x, y with
+     | Some x, Some y => Some (x, y)
+     | _, _ => None
+     end.
 
 Section Relations.
   Definition option_eq {A B} eq (x : option A) (y : option B) :=

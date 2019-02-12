@@ -56,7 +56,7 @@ Section EdDSA.
   Context {Edec:word b-> option E}   {eq_enc_E_iff: forall P_ P, Eenc P = P_ <-> option_eq Eeq (Edec P_) (Some P)}.
   Context {Sdec:word b-> option (F l)} {eq_enc_S_iff: forall n_ n, Senc n = n_ <-> Sdec n_ = Some n}.
 
-  Local Infix "++" := combine.
+  Local Infix "++" := Word.combine.
   Definition verify'_sig : { verify | forall mlen (message:word mlen) (pk:word b) (sig:word (b+b)),
       verify mlen message pk sig = true <-> valid message pk sig }.
   Proof.
@@ -231,7 +231,7 @@ Section EdDSA.
       dlet r := SRepDecModL (H _ (p ++ msg)) in
       dlet R := SRepERepMul r ErepB in
       dlet S := SRepAdd r (SRepMul (SRepDecModL (H _ (ERepEnc R ++ pk ++ msg))) s) in
-      ERepEnc R ++ SRepEnc S. 
+      ERepEnc R ++ SRepEnc S.
 
     Lemma Z_l_nonzero : Z.pos l <> 0%Z. discriminate. Qed.
 

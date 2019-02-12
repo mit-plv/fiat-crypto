@@ -18,7 +18,7 @@ Require Import Crypto.Language.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
-Import ListNotations. Local Open Scope zrange_scope. Local Open Scope Z_scope.
+Import Coq.Lists.List ListNotations. Local Open Scope zrange_scope. Local Open Scope Z_scope.
 
 Module Compilers.
   Local Set Boolean Equality Schemes.

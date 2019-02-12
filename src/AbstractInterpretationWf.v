@@ -23,6 +23,7 @@ Require Import Crypto.LanguageInversion.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.UnderLetsProofs.
 Require Import Crypto.AbstractInterpretation.
+Import Coq.Lists.List.
 
 Module Compilers.
   Import Language.Compilers.

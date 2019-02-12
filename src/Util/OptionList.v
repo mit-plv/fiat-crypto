@@ -25,6 +25,11 @@ Module Option.
          | x :: xs => (x <- x; @bind_list A B xs (fun xs => f (x :: xs)))
          end%option%list.
 
+    Definition lift {A} (ls : list (option A)) : option (list A)
+      := fold_right (fun x xs => x <- x; xs <- xs; Some (x :: xs))%option
+                    (Some nil)
+                    ls.
+
     Module Export Notations.
       Notation "A <-- X ; B" := (bind_list X (fun A => B%option)) : option_scope.
     End Notations.
