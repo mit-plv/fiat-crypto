@@ -28,7 +28,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                 s0) -> s)%ptype
           with
-          | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
+          | Datatypes.Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b3 * b2)%etype -> b3) ->
@@ -47,21 +47,22 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b3 A;
                v4 <- base.try_make_transport_cps A A;
-               Some (Base (v4 (v3 (v1 (v (Compile.reflect x1))))))
-              else None
-          | None => None
+               Datatypes.Some (Base (v4 (v3 (v1 (v (Compile.reflect x1))))))
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end
       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
         _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
         @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
         @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => None
+        (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
+          Datatypes.None
       | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr
         _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s
-        _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-      | _ => None
+        _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+      | _ => Datatypes.None
       end;;
-      None);;;
+      Datatypes.None);;;
      Base (#(fst)%expr @ x)%expr_pat)%option
 | @snd A B =>
     fun x : expr (A * B)%etype =>
@@ -80,7 +81,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                 s0) -> s)%ptype
           with
-          | Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
+          | Datatypes.Some (_, _, _, (_, (_, (_, _)), b3, b2))%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((b3 * b2)%etype -> b2) ->
@@ -99,21 +100,22 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v2 <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b2 B;
                v4 <- base.try_make_transport_cps B B;
-               Some (Base (v4 (v3 (v2 (v0 (Compile.reflect x0))))))
-              else None
-          | None => None
+               Datatypes.Some (Base (v4 (v3 (v2 (v0 (Compile.reflect x0))))))
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end
       | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
         _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
         @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ |
         @expr.App _ _ _ s _
-        (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => None
+        (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
+          Datatypes.None
       | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr
         _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s
-        _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-      | _ => None
+        _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+      | _ => Datatypes.None
       end;;
-      None);;;
+      Datatypes.None);;;
      Base (#(snd)%expr @ x)%expr_pat)%option
 | @prod_rect A B T =>
     fun (x : expr A -> expr B -> UnderLets (expr T))
@@ -226,7 +228,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted (ℤ -> ℤ)%ptype
                ((projT1 args) -> ℤ)%ptype
            with
-           | Some (_, _)%zrange =>
+           | Datatypes.Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   ((projT1 args) -> ℤ)%ptype
@@ -236,20 +238,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                ((let (x2, _) := xv in x2) =? 0) &&
                                is_bounded_by_bool (let (x2, _) := xv in x2)
                                  (ZRange.normalize args0)
-                              then Some x0
-                              else None);
-                       Some (Base x2));
-                Some (fv0 <-- fv;
-                      Base fv0)%under_lets
-               else None
-           | None => None
+                              then Datatypes.Some x0
+                              else Datatypes.None);
+                       Datatypes.Some (Base x2));
+                Datatypes.Some (fv0 <-- fv;
+                                Base fv0)%under_lets
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
            end
        | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
          (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
          (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
          (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-           None
-       | _ => None
+           Datatypes.None
+       | _ => Datatypes.None
        end;;
        match x0 with
        | (@expr.Ident _ _ _ t idc @ @expr.Ident _ _ _ t0 idc0)%expr_pat =>
@@ -259,7 +261,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted (ℤ -> ℤ)%ptype
                (ℤ -> (projT1 args))%ptype
            with
-           | Some (_, _)%zrange =>
+           | Datatypes.Some (_, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                   (ℤ -> (projT1 args))%ptype
@@ -269,22 +271,22 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                ((let (x2, _) := xv in x2) =? 0) &&
                                is_bounded_by_bool (let (x2, _) := xv in x2)
                                  (ZRange.normalize args0)
-                              then Some x
-                              else None);
-                       Some (Base x2));
-                Some (fv0 <-- fv;
-                      Base fv0)%under_lets
-               else None
-           | None => None
+                              then Datatypes.Some x
+                              else Datatypes.None);
+                       Datatypes.Some (Base x2));
+                Datatypes.Some (fv0 <-- fv;
+                                Base fv0)%under_lets
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
            end
        | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
          (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
          (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
          (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-           None
-       | _ => None
+           Datatypes.None
+       | _ => Datatypes.None
        end);;
-      None);;;
+      Datatypes.None);;;
      Base (x + x0)%expr)%option
 | Z_mul => fun x x0 : expr ℤ => Base (x * x0)%expr
 | Z_pow => fun x x0 : expr ℤ => Base (#(Z_pow)%expr @ x @ x0)%expr_pat
@@ -305,7 +307,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 pattern.type.unify_extracted (ℤ -> ℤ)%ptype
                   ((projT1 args2) -> s2)%ptype
               with
-              | Some (_, _)%zrange =>
+              | Datatypes.Some (_, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                      ((projT1 args2) -> s2)%ptype
@@ -319,15 +321,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   is_bounded_by_bool
                                     (let (x5, _) := xv in x5) args3
                                  then
-                                  Some
+                                  Datatypes.Some
                                     (#(Z_cast args)%expr @
                                      v (Compile.reflect x4))%expr_pat
-                                 else None);
-                          Some (Base x5));
-                   Some (fv0 <-- fv;
-                         Base fv0)%under_lets
-                  else None
-              | None => None
+                                 else Datatypes.None);
+                          Datatypes.Some (Base x5));
+                   Datatypes.Some (fv0 <-- fv;
+                                   Base fv0)%under_lets
+                  else Datatypes.None
+              | Datatypes.None => Datatypes.None
               end
           | (@expr.Ident _ _ _ t1 idc1 @
              (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s2 _ ($_)%expr _))%expr_pat |
@@ -338,7 +340,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s2 _ (_ @ _) _))%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @
              (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s2 _
-              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => Datatypes.None
           | (@expr.Ident _ _ _ t1 idc1 @ (@expr.Ident _ _ _ t2 idc2 @ #(_)))%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @
              (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr))%expr_pat |
@@ -346,7 +348,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @
              (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-              None
+              Datatypes.None
           | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -355,8 +357,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             (@expr.Ident _ _ _ t1 idc1 @ (_ @ _ @ _))%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
             (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-              None
-          | _ => None
+              Datatypes.None
+          | _ => Datatypes.None
           end;;
           args <- invert_bind_args idc0 Raw.ident.Literal;
           args0 <- invert_bind_args idc Raw.ident.Z_cast;
@@ -364,7 +366,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
               ((projT1 args) -> ℤ)%ptype
           with
-          | Some (_, _)%zrange =>
+          | Datatypes.Some (_, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                  ((projT1 args) -> ℤ)%ptype
@@ -374,22 +376,22 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               ((let (x2, _) := xv in x2) =? 0) &&
                               is_bounded_by_bool (let (x2, _) := xv in x2)
                                 (ZRange.normalize args0)
-                             then Some (- x0)%expr
-                             else None);
-                      Some (Base x2));
-               Some (fv0 <-- fv;
-                     Base fv0)%under_lets
-              else None
-          | None => None
+                             then Datatypes.Some (- x0)%expr
+                             else Datatypes.None);
+                      Datatypes.Some (Base x2));
+               Datatypes.Some (fv0 <-- fv;
+                               Base fv0)%under_lets
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end
       | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
         (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-          None
-      | _ => None
+          Datatypes.None
+      | _ => Datatypes.None
       end;;
-      None);;;
+      Datatypes.None);;;
      Base (x - x0)%expr)%option
 | Z_opp =>
     fun x : expr ℤ =>
@@ -401,7 +403,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           _ <- invert_bind_args idc0 Raw.ident.Z_opp;
           args1 <- invert_bind_args idc Raw.ident.Z_cast;
           match pattern.type.unify_extracted ℤ s1 with
-          | Some _ =>
+          | Datatypes.Some _ =>
               if type.type_beq base.type base.type.type_beq ℤ s1
               then
                v <- type.try_make_transport_cps s1 ℤ;
@@ -409,14 +411,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               (ZRange.normalize args <=?
                                - ZRange.normalize args1)%zrange
                              then
-                              Some
+                              Datatypes.Some
                                 (#(Z_cast args)%expr @ v (Compile.reflect x2))%expr_pat
-                             else None);
-                      Some (Base x3));
-               Some (fv0 <-- fv;
-                     Base fv0)%under_lets
-              else None
-          | None => None
+                             else Datatypes.None);
+                      Datatypes.Some (Base x3));
+               Datatypes.Some (fv0 <-- fv;
+                               Base fv0)%under_lets
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end
       | (@expr.Ident _ _ _ t idc @
          (@expr.Ident _ _ _ t0 idc0 @ @expr.App _ _ _ s1 _ ($_)%expr _))%expr_pat |
@@ -427,14 +429,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          (@expr.Ident _ _ _ t0 idc0 @ @expr.App _ _ _ s1 _ (_ @ _) _))%expr_pat |
         (@expr.Ident _ _ _ t idc @
          (@expr.Ident _ _ _ t0 idc0 @ @expr.App _ _ _ s1 _
-          (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+          (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => Datatypes.None
       | (@expr.Ident _ _ _ t idc @ (@expr.Ident _ _ _ t0 idc0 @ #(_)))%expr_pat |
         (@expr.Ident _ _ _ t idc @ (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr))%expr_pat |
         (@expr.Ident _ _ _ t idc @
          (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
         (@expr.Ident _ _ _ t idc @
          (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-          None
+          Datatypes.None
       | (@expr.Ident _ _ _ t idc @ #(_))%expr_pat |
         (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -443,10 +445,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         (@expr.Ident _ _ _ t idc @ (_ @ _ @ _))%expr_pat |
         (@expr.Ident _ _ _ t idc @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-          None
-      | _ => None
+          Datatypes.None
+      | _ => Datatypes.None
       end;;
-      None);;;
+      Datatypes.None);;;
      Base (- x)%expr)%option
 | Z_div => fun x x0 : expr ℤ => Base (x / x0)%expr
 | Z_modulo => fun x x0 : expr ℤ => Base (x mod x0)%expr
@@ -454,7 +456,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | Z_log2_up => fun x : expr ℤ => Base (#(Z_log2_up)%expr @ x)%expr_pat
 | Z_eqb => fun x x0 : expr ℤ => Base (#(Z_eqb)%expr @ x @ x0)%expr_pat
 | Z_leb => fun x x0 : expr ℤ => Base (#(Z_leb)%expr @ x @ x0)%expr_pat
+| Z_ltb => fun x x0 : expr ℤ => Base (#(Z_ltb)%expr @ x @ x0)%expr_pat
 | Z_geb => fun x x0 : expr ℤ => Base (#(Z_geb)%expr @ x @ x0)%expr_pat
+| Z_gtb => fun x x0 : expr ℤ => Base (#(Z_gtb)%expr @ x @ x0)%expr_pat
 | Z_of_nat => fun x : expr ℕ => Base (#(Z_of_nat)%expr @ x)%expr_pat
 | Z_to_nat => fun x : expr ℤ => Base (#(Z_to_nat)%expr @ x)%expr_pat
 | Z_shiftr => fun x x0 : expr ℤ => Base (x >> x0)%expr
@@ -468,7 +472,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            pattern.type.unify_extracted (ℤ -> ℤ)%ptype
              ((projT1 args) -> ℤ)%ptype
          with
-         | Some (_, _)%zrange =>
+         | Datatypes.Some (_, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
                 ((projT1 args) -> ℤ)%ptype
@@ -478,23 +482,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                              ((let (x2, _) := xv in x2) =? 0) &&
                              is_bounded_by_bool (let (x2, _) := xv in x2)
                                (ZRange.normalize args0)
-                            then Some (##0)%expr
-                            else None);
-                     Some (Base x2));
-              Some (fv0 <-- fv;
-                    Base fv0)%under_lets
-             else None
-         | None => None
+                            then Datatypes.Some (##0)%expr
+                            else Datatypes.None);
+                     Datatypes.Some (Base x2));
+              Datatypes.Some (fv0 <-- fv;
+                              Base fv0)%under_lets
+             else Datatypes.None
+         | Datatypes.None => Datatypes.None
          end
      | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
        (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
        (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
-       (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat => None
-     | _ => None
+       (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+         Datatypes.None
+     | _ => Datatypes.None
      end;;;
      Base (x << x0)%expr)%option
 | Z_land => fun x x0 : expr ℤ => Base (x &' x0)%expr
 | Z_lor => fun x x0 : expr ℤ => Base (x || x0)%expr
+| Z_min => fun x x0 : expr ℤ => Base (#(Z_min)%expr @ x @ x0)%expr_pat
+| Z_max => fun x x0 : expr ℤ => Base (#(Z_max)%expr @ x @ x0)%expr_pat
 | Z_bneg => fun x : expr ℤ => Base (#(Z_bneg)%expr @ x)%expr_pat
 | Z_lnot_modulo =>
     fun x x0 : expr ℤ => Base (#(Z_lnot_modulo)%expr @ x @ x0)%expr_pat
@@ -508,7 +515,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                ((ℤ -> (projT1 args)) -> ℤ)%ptype
            with
-           | Some (_, _, _)%zrange =>
+           | Datatypes.Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> (projT1 args)) -> ℤ)%ptype
@@ -519,22 +526,22 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                is_bounded_by_bool (let (x3, _) := xv in x3)
                                  (ZRange.normalize args0)
                               then
-                               Some
+                               Datatypes.Some
                                  (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
                                  #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat
-                              else None);
-                       Some (Base x3));
-                Some (fv0 <-- fv;
-                      Base fv0)%under_lets
-               else None
-           | None => None
+                              else Datatypes.None);
+                       Datatypes.Some (Base x3));
+                Datatypes.Some (fv0 <-- fv;
+                                Base fv0)%under_lets
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
            end
        | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
          (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
          (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
          (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-           None
-       | _ => None
+           Datatypes.None
+       | _ => Datatypes.None
        end;;
        match x1 with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x2 =>
@@ -546,7 +553,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                    ((ℤ -> ℤ) -> (projT1 args))%ptype
                with
-               | Some (_, _, _)%zrange =>
+               | Datatypes.Some (_, _, _)%zrange =>
                    if
                     type.type_beq base.type base.type.type_beq
                       ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> ℤ) -> (projT1 args))%ptype
@@ -558,17 +565,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x3, _) := xv in x3)
                                      (ZRange.normalize args0)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
                                      #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat
-                                  else None);
-                           Some (Base x3));
-                    Some (fv0 <-- fv;
-                          Base fv0)%under_lets
-                   else None
-               | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (Base x3));
+                    Datatypes.Some (fv0 <-- fv;
+                                    Base fv0)%under_lets
+                   else Datatypes.None
+               | Datatypes.None => Datatypes.None
                end
-           | _ => None
+           | _ => Datatypes.None
            end;;
            match x with
            | (@expr.Ident _ _ _ t0 idc0 @ @expr.Ident _ _ _ t1 idc1)%expr_pat =>
@@ -585,7 +592,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                            (((projT1 args1) -> (projT1 args)) -> s)%ptype
                        with
-                       | Some (_, _, _)%zrange =>
+                       | Datatypes.Some (_, _, _)%zrange =>
                            if
                             type.type_beq base.type base.type.type_beq
                               ((ℤ -> ℤ) -> ℤ)%ptype
@@ -608,19 +615,19 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                              (let (x5, _) := xv0 in x5)
                                              (ZRange.normalize args0)
                                           then
-                                           Some
+                                           Datatypes.Some
                                              (#(Z_cast args3)%expr @
                                               v (Compile.reflect x2),
                                              #(Z_cast r[0 ~> 0])%expr @
                                              (##0)%expr)%expr_pat
-                                          else None);
-                                   Some (Base x5));
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
+                                          else Datatypes.None);
+                                   Datatypes.Some (Base x5));
+                            Datatypes.Some (fv0 <-- fv;
+                                            Base fv0)%under_lets
+                           else Datatypes.None
+                       | Datatypes.None => Datatypes.None
                        end
-                   | _ => None
+                   | _ => Datatypes.None
                    end;;
                    match x2 with
                    | @expr.Ident _ _ _ t3 idc3 =>
@@ -633,7 +640,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                            (((projT1 args1) -> s1) -> (projT1 args))%ptype
                        with
-                       | Some (_, _, _)%zrange =>
+                       | Datatypes.Some (_, _, _)%zrange =>
                            if
                             type.type_beq base.type base.type.type_beq
                               ((ℤ -> ℤ) -> ℤ)%ptype
@@ -656,39 +663,39 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                              (let (x5, _) := xv0 in x5)
                                              (ZRange.normalize args3)
                                           then
-                                           Some
+                                           Datatypes.Some
                                              (#(Z_cast args0)%expr @
                                               v (Compile.reflect x4),
                                              #(Z_cast r[0 ~> 0])%expr @
                                              (##0)%expr)%expr_pat
-                                          else None);
-                                   Some (Base x5));
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
+                                          else Datatypes.None);
+                                   Datatypes.Some (Base x5));
+                            Datatypes.Some (fv0 <-- fv;
+                                            Base fv0)%under_lets
+                           else Datatypes.None
+                       | Datatypes.None => Datatypes.None
                        end
-                   | _ => None
+                   | _ => Datatypes.None
                    end
                | @expr.App _ _ _ s1 _ ($_)%expr _ | @expr.App _ _ _ s1 _
                  (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s1 _
                  (_ @ _)%expr_pat _ | @expr.App _ _ _ s1 _
-                 (@expr.LetIn _ _ _ _ _ _ _) _ => None
-               | _ => None
+                 (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+               | _ => Datatypes.None
                end
            | (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
              (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
              (@expr.Ident _ _ _ t0 idc0 @ (_ @ _))%expr_pat |
              (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-               None
-           | _ => None
+               Datatypes.None
+           | _ => Datatypes.None
            end
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
-         @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-       | _ => None
+         @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+       | _ => Datatypes.None
        end);;
-      None);;;
+      Datatypes.None);;;
      Base (#(Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat)%option
 | Z_add_get_carry =>
     fun x x0 x1 : expr ℤ =>
@@ -714,7 +721,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               (((projT1 args3) -> (projT1 args1)) ->
                                (projT1 args))%ptype
                           with
-                          | Some (_, _, _)%zrange =>
+                          | Datatypes.Some (_, _, _)%zrange =>
                               if
                                type.type_beq base.type base.type.type_beq
                                  ((ℤ -> ℤ) -> ℤ)%ptype
@@ -738,7 +745,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                 (let (x5, _) := xv1 in x5)
                                                 (ZRange.normalize args0)
                                              then
-                                              Some
+                                              Datatypes.Some
                                                 (let
                                                  '(a1, b1)%zrange :=
                                                   Z.add_get_carry_full
@@ -747,14 +754,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                     (let (x5, _) := xv1 in x5)
                                                   in
                                                   ((##a1)%expr, (##b1)%expr)%expr_pat)
-                                             else None);
-                                      Some (Base x5));
-                               Some (fv0 <-- fv;
-                                     Base fv0)%under_lets
-                              else None
-                          | None => None
+                                             else Datatypes.None);
+                                      Datatypes.Some (Base x5));
+                               Datatypes.Some
+                                 (fv0 <-- fv;
+                                  Base fv0)%under_lets
+                              else Datatypes.None
+                          | Datatypes.None => Datatypes.None
                           end
-                      | _ => None
+                      | _ => Datatypes.None
                       end;;
                       args <- invert_bind_args idc3 Raw.ident.Z_cast;
                       args0 <- invert_bind_args idc2 Raw.ident.Literal;
@@ -765,7 +773,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                           (((projT1 args2) -> (projT1 args0)) -> s1)%ptype
                       with
-                      | Some (_, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              ((ℤ -> ℤ) -> ℤ)%ptype
@@ -788,25 +796,25 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                             (let (x5, _) := xv in x5)
                                             (ZRange.normalize args3)
                                          then
-                                          Some
+                                          Datatypes.Some
                                             (#(Z_cast args)%expr @
                                              v (Compile.reflect x4),
                                             #(Z_cast r[0 ~> 0])%expr @
                                             (##0)%expr)%expr_pat
-                                         else None);
-                                  Some (Base x5));
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                         else Datatypes.None);
+                                  Datatypes.Some (Base x5));
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | @expr.App _ _ _ s1 _ ($_)%expr _ | @expr.App _ _ _ s1 _
                     (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s1 _
                     (_ @ _)%expr_pat _ | @expr.App _ _ _ s1 _
-                    (@expr.LetIn _ _ _ _ _ _ _) _ => None
-                  | _ => None
+                    (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+                  | _ => Datatypes.None
                   end
-              | _ => None
+              | _ => Datatypes.None
               end;;
               match x1 with
               | (@expr.Ident _ _ _ t2 idc2 @ @expr.Ident _ _ _ t3 idc3)%expr_pat =>
@@ -819,7 +827,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                       (((projT1 args2) -> s0) -> (projT1 args))%ptype
                   with
-                  | Some (_, _, _)%zrange =>
+                  | Datatypes.Some (_, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          ((ℤ -> ℤ) -> ℤ)%ptype
@@ -841,37 +849,38 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         (let (x5, _) := xv in x5)
                                         (ZRange.normalize args3)
                                      then
-                                      Some
+                                      Datatypes.Some
                                         (#(Z_cast args1)%expr @
                                          v (Compile.reflect x3),
                                         #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat
-                                     else None);
-                              Some (Base x5));
-                       Some (fv0 <-- fv;
-                             Base fv0)%under_lets
-                      else None
-                  | None => None
+                                     else Datatypes.None);
+                              Datatypes.Some (Base x5));
+                       Datatypes.Some (fv0 <-- fv;
+                                       Base fv0)%under_lets
+                      else Datatypes.None
+                  | Datatypes.None => Datatypes.None
                   end
               | (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr)%expr_pat |
                 (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                 (@expr.Ident _ _ _ t2 idc2 @ (_ @ _))%expr_pat |
                 (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                  None
-              | _ => None
+                  Datatypes.None
+              | _ => Datatypes.None
               end
           | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
             (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _ (_ @ _)%expr_pat
-            _ | @expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-          | _ => None
+            _ | @expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
+              Datatypes.None
+          | _ => Datatypes.None
           end
       | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
         (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-          None
-      | _ => None
+          Datatypes.None
+      | _ => Datatypes.None
       end;;
-      None);;;
+      Datatypes.None);;;
      Base (#(Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat)%option
 | Z_add_with_carry =>
     fun x x0 x1 : expr ℤ =>
@@ -883,7 +892,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
              (((projT1 args) -> ℤ) -> ℤ)%ptype
          with
-         | Some (_, _, _)%zrange =>
+         | Datatypes.Some (_, _, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 ((ℤ -> ℤ) -> ℤ)%ptype (((projT1 args) -> ℤ) -> ℤ)%ptype
@@ -893,19 +902,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                              ((let (x3, _) := xv in x3) =? 0) &&
                              is_bounded_by_bool (let (x3, _) := xv in x3)
                                (ZRange.normalize args0)
-                            then Some (x0 + x1)%expr
-                            else None);
-                     Some (Base x3));
-              Some (fv0 <-- fv;
-                    Base fv0)%under_lets
-             else None
-         | None => None
+                            then Datatypes.Some (x0 + x1)%expr
+                            else Datatypes.None);
+                     Datatypes.Some (Base x3));
+              Datatypes.Some (fv0 <-- fv;
+                              Base fv0)%under_lets
+             else Datatypes.None
+         | Datatypes.None => Datatypes.None
          end
      | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
        (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
        (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
-       (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat => None
-     | _ => None
+       (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+         Datatypes.None
+     | _ => Datatypes.None
      end;;;
      Base (#(Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat)%option
 | Z_add_with_get_carry =>
@@ -936,7 +946,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  ((((projT1 args5) -> (projT1 args3)) ->
                                    (projT1 args1)) -> (projT1 args))%ptype
                              with
-                             | Some (_, _, _, _)%zrange =>
+                             | Datatypes.Some (_, _, _, _)%zrange =>
                                  if
                                   type.type_beq base.type base.type.type_beq
                                     (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -965,7 +975,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (let (x7, _) := xv2 in x7)
                                                    (ZRange.normalize args0)
                                                 then
-                                                 Some
+                                                 Datatypes.Some
                                                    (let
                                                     '(a2, b2)%zrange :=
                                                      Z.add_with_get_carry_full
@@ -979,14 +989,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                         x7) in
                                                      ((##a2)%expr,
                                                      (##b2)%expr)%expr_pat)
-                                                else None);
-                                         Some (Base x7));
-                                  Some (fv0 <-- fv;
-                                        Base fv0)%under_lets
-                                 else None
-                             | None => None
+                                                else Datatypes.None);
+                                         Datatypes.Some (Base x7));
+                                  Datatypes.Some
+                                    (fv0 <-- fv;
+                                     Base fv0)%under_lets
+                                 else Datatypes.None
+                             | Datatypes.None => Datatypes.None
                              end
-                         | _ => None
+                         | _ => Datatypes.None
                          end;;
                          args <- invert_bind_args idc5 Raw.ident.Z_cast;
                          args0 <- invert_bind_args idc4 Raw.ident.Literal;
@@ -1001,7 +1012,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                              ((((projT1 args4) -> (projT1 args2)) ->
                                (projT1 args0)) -> s2)%ptype
                          with
-                         | Some (_, _, _, _)%zrange =>
+                         | Datatypes.Some (_, _, _, _)%zrange =>
                              if
                               type.type_beq base.type base.type.type_beq
                                 (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -1031,25 +1042,25 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                (let (x7, _) := xv1 in x7)
                                                (ZRange.normalize args1)
                                             then
-                                             Some
+                                             Datatypes.Some
                                                (#(Z_cast args)%expr @
                                                 v (Compile.reflect x6),
                                                #(Z_cast r[0 ~> 0])%expr @
                                                (##0)%expr)%expr_pat
-                                            else None);
-                                     Some (Base x7));
-                              Some (fv0 <-- fv;
-                                    Base fv0)%under_lets
-                             else None
-                         | None => None
+                                            else Datatypes.None);
+                                     Datatypes.Some (Base x7));
+                              Datatypes.Some (fv0 <-- fv;
+                                              Base fv0)%under_lets
+                             else Datatypes.None
+                         | Datatypes.None => Datatypes.None
                          end
                      | @expr.App _ _ _ s2 _ ($_)%expr _ | @expr.App _ _ _ s2
                        _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s2 _
                        (_ @ _)%expr_pat _ | @expr.App _ _ _ s2 _
-                       (@expr.LetIn _ _ _ _ _ _ _) _ => None
-                     | _ => None
+                       (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+                     | _ => Datatypes.None
                      end
-                 | _ => None
+                 | _ => Datatypes.None
                  end;;
                  match x2 with
                  | (@expr.Ident _ _ _ t4 idc4 @ @expr.Ident _ _ _ t5 idc5)%expr_pat =>
@@ -1066,7 +1077,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          ((((projT1 args4) -> (projT1 args2)) -> s1) ->
                           (projT1 args))%ptype
                      with
-                     | Some (_, _, _, _)%zrange =>
+                     | Datatypes.Some (_, _, _, _)%zrange =>
                          if
                           type.type_beq base.type base.type.type_beq
                             (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -1096,43 +1107,44 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            (let (x7, _) := xv1 in x7)
                                            (ZRange.normalize args0)
                                         then
-                                         Some
+                                         Datatypes.Some
                                            (#(Z_cast args1)%expr @
                                             v (Compile.reflect x5),
                                            #(Z_cast r[0 ~> 0])%expr @
                                            (##0)%expr)%expr_pat
-                                        else None);
-                                 Some (Base x7));
-                          Some (fv0 <-- fv;
-                                Base fv0)%under_lets
-                         else None
-                     | None => None
+                                        else Datatypes.None);
+                                 Datatypes.Some (Base x7));
+                          Datatypes.Some (fv0 <-- fv;
+                                          Base fv0)%under_lets
+                         else Datatypes.None
+                     | Datatypes.None => Datatypes.None
                      end
                  | (@expr.Ident _ _ _ t4 idc4 @ ($_)%expr)%expr_pat |
                    (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                    (@expr.Ident _ _ _ t4 idc4 @ (_ @ _))%expr_pat |
                    (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                     None
-                 | _ => None
+                     Datatypes.None
+                 | _ => Datatypes.None
                  end
              | @expr.App _ _ _ s1 _ ($_)%expr _ | @expr.App _ _ _ s1 _
                (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s1 _
                (_ @ _)%expr_pat _ | @expr.App _ _ _ s1 _
-               (@expr.LetIn _ _ _ _ _ _ _) _ => None
-             | _ => None
+               (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+             | _ => Datatypes.None
              end
          | (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
            (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
            (@expr.Ident _ _ _ t1 idc1 @ (_ @ _))%expr_pat |
            (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-             None
-         | _ => None
+             Datatypes.None
+         | _ => Datatypes.None
          end
      | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
        (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
        (@expr.Ident _ _ _ t idc @ (_ @ _))%expr_pat |
-       (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat => None
-     | _ => None
+       (@expr.Ident _ _ _ t idc @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
+         Datatypes.None
+     | _ => Datatypes.None
      end;;;
      Base (#(Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat)%option
 | Z_sub_get_borrow =>
@@ -1153,25 +1165,25 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | Z_cast range =>
     fun x : expr ℤ =>
     (((match pattern.type.unify_extracted ℤ ℤ with
-       | Some _ =>
+       | Datatypes.Some _ =>
            if type.type_beq base.type base.type.type_beq ℤ ℤ
            then
             fv <- (x0 <- (if lower range =? upper range
                           then
-                           Some
+                           Datatypes.Some
                              (#(Z_cast range)%expr @ (##(lower range))%expr)%expr_pat
-                          else None);
-                   Some (Base x0));
-            Some (fv0 <-- fv;
-                  Base fv0)%under_lets
-           else None
-       | None => None
+                          else Datatypes.None);
+                   Datatypes.Some (Base x0));
+            Datatypes.Some (fv0 <-- fv;
+                            Base fv0)%under_lets
+           else Datatypes.None
+       | Datatypes.None => Datatypes.None
        end;;
        match x with
        | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x0 =>
            args <- invert_bind_args idc Raw.ident.Z_cast;
            match pattern.type.unify_extracted ℤ s with
-           | Some _ =>
+           | Datatypes.Some _ =>
                if type.type_beq base.type base.type.type_beq ℤ s
                then
                 v <- type.try_make_transport_cps s ℤ;
@@ -1179,15 +1191,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                (ZRange.normalize args <=?
                                 ZRange.normalize range)%zrange
                               then
-                               Some
+                               Datatypes.Some
                                  (#(Z_cast args)%expr @
                                   v (Compile.reflect x0))%expr_pat
-                              else None);
-                       Some (Base x1));
-                Some (fv0 <-- fv;
-                      Base fv0)%under_lets
-               else None
-           | None => None
+                              else Datatypes.None);
+                       Datatypes.Some (Base x1));
+                Datatypes.Some (fv0 <-- fv;
+                                Base fv0)%under_lets
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
            end
        | @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _
@@ -1197,7 +1209,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                ((s1 -> s0) -> s)%ptype
            with
-           | Some (_, _, _)%zrange =>
+           | Datatypes.Some (_, _, _)%zrange =>
                if
                 type.type_beq base.type base.type.type_beq
                   ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
@@ -1205,15 +1217,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 v <- type.try_make_transport_cps s1 ℤ;
                 v0 <- type.try_make_transport_cps s0 ℤ;
                 v1 <- type.try_make_transport_cps s ℤ;
-                Some
+                Datatypes.Some
                   (UnderLet
                      (#(Z_cast range)%expr @
                       (#(Z_add_with_carry)%expr @ v (Compile.reflect x2) @
                        v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
                      (fun v2 : var ℤ =>
                       Base (#(Z_cast range)%expr @ ($v2)%expr)%expr_pat))
-               else None
-           | None => None
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
            end
        | @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ ($_)%expr _) _) _ |
@@ -1224,18 +1236,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ (_ @ _)%expr_pat _) _)
          _ | @expr.App _ _ _ s _
          (@expr.App _ _ _ s0 _
-          (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
+          (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ =>
+           Datatypes.None
        | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ #(_)%expr_pat _) _ |
          @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App
          _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ |
          @expr.App _ _ _ s _
-         (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ => None
+         (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
+           Datatypes.None
        | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
          (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _
-         (@expr.LetIn _ _ _ _ _ _ _) _ => None
-       | _ => None
+         (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+       | _ => Datatypes.None
        end);;
-      None);;;
+      Datatypes.None);;;
      Base (#(Z_cast range)%expr @ x)%expr_pat)%option
 | Z_cast2 range =>
     fun x : expr (ℤ * ℤ)%etype =>
@@ -1251,7 +1265,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
                s0) -> s)%ptype
          with
-         | Some (_, (_, (_, _)), _, _)%zrange =>
+         | Datatypes.Some (_, (_, (_, _)), _, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 (((ℤ -> ℤ -> (ℤ * ℤ)%etype) -> ℤ) -> ℤ)%ptype
@@ -1263,15 +1277,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               _ <- ident.unify pattern.ident.pair pair;
               v <- type.try_make_transport_cps s0 ℤ;
               v0 <- type.try_make_transport_cps s ℤ;
-              Some
+              Datatypes.Some
                 (fv0 <-- do_again (ℤ * ℤ)
                            (#(Z_cast (Datatypes.fst range))%expr @
                             ($(v (Compile.reflect x1)))%expr,
                            #(Z_cast (Datatypes.snd range))%expr @
                            ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
                  Base fv0)%under_lets
-             else None
-         | None => None
+             else Datatypes.None
+         | Datatypes.None => Datatypes.None
          end
      | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _
@@ -1288,7 +1302,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                   ((s1 -> s4) -> s)%ptype
               with
-              | Some (_, _, _)%zrange =>
+              | Datatypes.Some (_, _, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq
                      ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s4) -> s)%ptype
@@ -1300,7 +1314,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            (ZRange.normalize args <=?
                             - ZRange.normalize args1)%zrange
                           then
-                           Some
+                           Datatypes.Some
                              (UnderLet
                                 (#(Z_cast2
                                      (Datatypes.fst range,
@@ -1325,11 +1339,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       (#(Z_cast2
                                            (Datatypes.fst range,
                                            - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
-                          else None);
-                   Some (fv0 <-- fv;
-                         Base fv0)%under_lets
-                  else None
-              | None => None
+                          else Datatypes.None);
+                   Datatypes.Some (fv0 <-- fv;
+                                   Base fv0)%under_lets
+                  else Datatypes.None
+              | Datatypes.None => Datatypes.None
               end
           | (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ ($_)%expr _))%expr_pat |
@@ -1340,7 +1354,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ (_ @ _) _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => Datatypes.None
           | (@expr.Ident _ _ _ t0 idc0 @ (@expr.Ident _ _ _ t1 idc1 @ #(_)))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr))%expr_pat |
@@ -1348,7 +1362,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-              None
+              Datatypes.None
           | (@expr.Ident _ _ _ t0 idc0 @ #(_))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -1357,8 +1371,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             (@expr.Ident _ _ _ t0 idc0 @ (_ @ _ @ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-              None
-          | _ => None
+              Datatypes.None
+          | _ => Datatypes.None
           end;;
           match x0 with
           | (@expr.Ident _ _ _ t0 idc0 @
@@ -1372,7 +1386,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                   ((s1 -> s0) -> s4)%ptype
               with
-              | Some (_, _, _)%zrange =>
+              | Datatypes.Some (_, _, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq
                      ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s4)%ptype
@@ -1384,7 +1398,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            (ZRange.normalize args <=?
                             - ZRange.normalize args1)%zrange
                           then
-                           Some
+                           Datatypes.Some
                              (UnderLet
                                 (#(Z_cast2
                                      (Datatypes.fst range,
@@ -1409,11 +1423,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       (#(Z_cast2
                                            (Datatypes.fst range,
                                            - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
-                          else None);
-                   Some (fv0 <-- fv;
-                         Base fv0)%under_lets
-                  else None
-              | None => None
+                          else Datatypes.None);
+                   Datatypes.Some (fv0 <-- fv;
+                                   Base fv0)%under_lets
+                  else Datatypes.None
+              | Datatypes.None => Datatypes.None
               end
           | (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ ($_)%expr _))%expr_pat |
@@ -1424,7 +1438,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _ (_ @ _) _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s4 _
-              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+              (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => Datatypes.None
           | (@expr.Ident _ _ _ t0 idc0 @ (@expr.Ident _ _ _ t1 idc1 @ #(_)))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr))%expr_pat |
@@ -1432,7 +1446,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @
              (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-              None
+              Datatypes.None
           | (@expr.Ident _ _ _ t0 idc0 @ #(_))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -1441,8 +1455,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             (@expr.Ident _ _ _ t0 idc0 @ (_ @ _ @ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-              None
-          | _ => None
+              Datatypes.None
+          | _ => Datatypes.None
           end;;
           match x1 with
           | (@expr.Ident _ _ _ t0 idc0 @ @expr.Ident _ _ _ t1 idc1)%expr_pat =>
@@ -1453,7 +1467,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                   ((s1 -> (projT1 args)) -> s)%ptype
               with
-              | Some (_, _, _)%zrange =>
+              | Datatypes.Some (_, _, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq
                      ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> (projT1 args)) -> s)%ptype
@@ -1466,7 +1480,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            is_bounded_by_bool (let (x4, _) := xv in x4)
                              (ZRange.normalize args0)
                           then
-                           Some
+                           Datatypes.Some
                              (UnderLet
                                 (#(Z_cast2
                                      (Datatypes.fst range,
@@ -1491,18 +1505,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       (#(Z_cast2
                                            (Datatypes.fst range,
                                            - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
-                          else None);
-                   Some (fv0 <-- fv;
-                         Base fv0)%under_lets
-                  else None
-              | None => None
+                          else Datatypes.None);
+                   Datatypes.Some (fv0 <-- fv;
+                                   Base fv0)%under_lets
+                  else Datatypes.None
+              | Datatypes.None => Datatypes.None
               end
           | (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ (_ @ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-              None
-          | _ => None
+              Datatypes.None
+          | _ => Datatypes.None
           end;;
           match x0 with
           | (@expr.Ident _ _ _ t0 idc0 @ @expr.Ident _ _ _ t1 idc1)%expr_pat =>
@@ -1513,7 +1527,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
                   ((s1 -> s0) -> (projT1 args))%ptype
               with
-              | Some (_, _, _)%zrange =>
+              | Datatypes.Some (_, _, _)%zrange =>
                   if
                    type.type_beq base.type base.type.type_beq
                      ((ℤ -> ℤ) -> ℤ)%ptype
@@ -1527,7 +1541,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            is_bounded_by_bool (let (x4, _) := xv in x4)
                              (ZRange.normalize args0)
                           then
-                           Some
+                           Datatypes.Some
                              (UnderLet
                                 (#(Z_cast2
                                      (Datatypes.fst range,
@@ -1552,25 +1566,25 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       (#(Z_cast2
                                            (Datatypes.fst range,
                                            - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
-                          else None);
-                   Some (fv0 <-- fv;
-                         Base fv0)%under_lets
-                  else None
-              | None => None
+                          else Datatypes.None);
+                   Datatypes.Some (fv0 <-- fv;
+                                   Base fv0)%under_lets
+                  else Datatypes.None
+              | Datatypes.None => Datatypes.None
               end
           | (@expr.Ident _ _ _ t0 idc0 @ ($_)%expr)%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ (_ @ _))%expr_pat |
             (@expr.Ident _ _ _ t0 idc0 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-              None
-          | _ => None
+              Datatypes.None
+          | _ => Datatypes.None
           end;;
           _ <- invert_bind_args idc Raw.ident.Z_add_get_carry;
           match
             pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
               ((s1 -> s0) -> s)%ptype
           with
-          | Some (_, _, _)%zrange =>
+          | Datatypes.Some (_, _, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
@@ -1578,7 +1592,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v <- type.try_make_transport_cps s1 ℤ;
                v0 <- type.try_make_transport_cps s0 ℤ;
                v1 <- type.try_make_transport_cps s ℤ;
-               Some
+               Datatypes.Some
                  (UnderLet
                     (#(Z_cast2 range)%expr @
                      (#(Z_add_get_carry)%expr @ v (Compile.reflect x2) @
@@ -1589,15 +1603,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
                        #(Z_cast (Datatypes.snd range))%expr @
                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
-              else None
-          | None => None
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end);;
          (_ <- invert_bind_args idc Raw.ident.Z_sub_get_borrow;
           match
             pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
               ((s1 -> s0) -> s)%ptype
           with
-          | Some (_, _, _)%zrange =>
+          | Datatypes.Some (_, _, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
@@ -1605,7 +1619,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v <- type.try_make_transport_cps s1 ℤ;
                v0 <- type.try_make_transport_cps s0 ℤ;
                v1 <- type.try_make_transport_cps s ℤ;
-               Some
+               Datatypes.Some
                  (UnderLet
                     (#(Z_cast2 range)%expr @
                      (#(Z_sub_get_borrow)%expr @ v (Compile.reflect x2) @
@@ -1616,15 +1630,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
                        #(Z_cast (Datatypes.snd range))%expr @
                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
-              else None
-          | None => None
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end);;
          _ <- invert_bind_args idc Raw.ident.Z_mul_split;
          match
            pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
              ((s1 -> s0) -> s)%ptype
          with
-         | Some (_, _, _)%zrange =>
+         | Datatypes.Some (_, _, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 ((ℤ -> ℤ) -> ℤ)%ptype ((s1 -> s0) -> s)%ptype
@@ -1632,7 +1646,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v <- type.try_make_transport_cps s1 ℤ;
               v0 <- type.try_make_transport_cps s0 ℤ;
               v1 <- type.try_make_transport_cps s ℤ;
-              Some
+              Datatypes.Some
                 (UnderLet
                    (#(Z_cast2 range)%expr @
                     (#(Z_mul_split)%expr @ v (Compile.reflect x2) @
@@ -1643,8 +1657,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
                       #(Z_cast (Datatypes.snd range))%expr @
                       (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
-             else None
-         | None => None
+             else Datatypes.None
+         | Datatypes.None => Datatypes.None
          end
      | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _
@@ -1670,7 +1684,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                            (((s2 -> (projT1 args2)) -> s6) -> s)%ptype
                        with
-                       | Some (_, _, _, _)%zrange =>
+                       | Datatypes.Some (_, _, _, _)%zrange =>
                            if
                             type.type_beq base.type base.type.type_beq
                               (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -1689,7 +1703,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       (let (x8, _) := xv in x8)
                                       (ZRange.normalize args3)
                                    then
-                                    Some
+                                    Datatypes.Some
                                       (UnderLet
                                          (#(Z_cast2
                                               (Datatypes.fst range,
@@ -1716,11 +1730,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                     (Datatypes.fst range,
                                                     - Datatypes.snd range))%expr @
                                                 $vc)))%expr_pat)%expr)%expr_pat))
-                                   else None);
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
+                                   else Datatypes.None);
+                            Datatypes.Some (fv0 <-- fv;
+                                            Base fv0)%under_lets
+                           else Datatypes.None
+                       | Datatypes.None => Datatypes.None
                        end);;
                       args <- invert_bind_args idc4 Raw.ident.Z_cast;
                       _ <- invert_bind_args idc3 Raw.ident.Z_opp;
@@ -1734,7 +1748,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> (projT1 args2)) -> s6) -> s)%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -1753,7 +1767,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x8, _) := xv in x8)
                                      (ZRange.normalize args3)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -1781,11 +1795,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.App _ _ _ s6 _
@@ -1798,7 +1812,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (_ @ _) _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.App _ _ _ s6 _
-                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat =>
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ #(_)))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @
@@ -1807,7 +1822,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                      None
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t2 idc2 @ #(_))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -1817,8 +1832,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   match x0 with
                   | (@expr.Ident _ _ _ t2 idc2 @
@@ -1836,7 +1851,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                            (((s2 -> (projT1 args2)) -> s0) -> s6)%ptype
                        with
-                       | Some (_, _, _, _)%zrange =>
+                       | Datatypes.Some (_, _, _, _)%zrange =>
                            if
                             type.type_beq base.type base.type.type_beq
                               (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -1855,7 +1870,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       (let (x8, _) := xv in x8)
                                       (ZRange.normalize args3)
                                    then
-                                    Some
+                                    Datatypes.Some
                                       (UnderLet
                                          (#(Z_cast2
                                               (Datatypes.fst range,
@@ -1882,11 +1897,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                     (Datatypes.fst range,
                                                     - Datatypes.snd range))%expr @
                                                 $vc)))%expr_pat)%expr)%expr_pat))
-                                   else None);
-                            Some (fv0 <-- fv;
-                                  Base fv0)%under_lets
-                           else None
-                       | None => None
+                                   else Datatypes.None);
+                            Datatypes.Some (fv0 <-- fv;
+                                            Base fv0)%under_lets
+                           else Datatypes.None
+                       | Datatypes.None => Datatypes.None
                        end);;
                       args <- invert_bind_args idc4 Raw.ident.Z_cast;
                       _ <- invert_bind_args idc3 Raw.ident.Z_opp;
@@ -1900,7 +1915,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> (projT1 args2)) -> s0) -> s6)%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -1919,7 +1934,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x8, _) := xv in x8)
                                      (ZRange.normalize args3)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -1947,11 +1962,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.App _ _ _ s6 _
@@ -1964,7 +1979,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (_ @ _) _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.App _ _ _ s6 _
-                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat =>
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ #(_)))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @
@@ -1973,7 +1989,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                      None
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t2 idc2 @ #(_))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -1983,8 +1999,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (@expr.Ident _ _ _ t2 idc2 @
                      (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   match x1 with
                   | (@expr.Ident _ _ _ t2 idc2 @ @expr.Ident _ _ _ t3 idc3)%expr_pat =>
@@ -1999,7 +2015,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> (projT1 args1)) -> (projT1 args)) -> s)%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2023,7 +2039,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x6, _) := xv in x6)
                                      (ZRange.normalize args2)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -2051,18 +2067,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ (_ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   match x0 with
                   | (@expr.Ident _ _ _ t2 idc2 @ @expr.Ident _ _ _ t3 idc3)%expr_pat =>
@@ -2077,7 +2093,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> (projT1 args1)) -> s0) -> (projT1 args))%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2101,7 +2117,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x6, _) := xv in x6)
                                      (ZRange.normalize args2)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -2129,18 +2145,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t2 idc2 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ (_ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t2 idc2 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   args <- invert_bind_args idc1 Raw.ident.Literal;
                   args0 <- invert_bind_args idc0 Raw.ident.Z_cast;
@@ -2149,7 +2165,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                       (((s2 -> (projT1 args)) -> s0) -> s)%ptype
                   with
-                  | Some (_, _, _, _)%zrange =>
+                  | Datatypes.Some (_, _, _, _)%zrange =>
                       if
                        type.type_beq base.type base.type.type_beq
                          (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2165,7 +2181,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                is_bounded_by_bool (let (x5, _) := xv in x5)
                                  (ZRange.normalize args0)
                               then
-                               Some
+                               Datatypes.Some
                                  (UnderLet
                                     (#(Z_cast2 range)%expr @
                                      (#(Z_add_get_carry)%expr @
@@ -2180,11 +2196,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                        #(Z_cast (Datatypes.snd range))%expr @
                                        (#(snd)%expr @
                                         (#(Z_cast2 range)%expr @ ($vc)%expr)))%expr_pat))
-                              else None);
-                       Some (fv0 <-- fv;
-                             Base fv0)%under_lets
-                      else None
-                  | None => None
+                              else Datatypes.None);
+                       Datatypes.Some (fv0 <-- fv;
+                                       Base fv0)%under_lets
+                      else Datatypes.None
+                  | Datatypes.None => Datatypes.None
                   end
               | (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
                  (@expr.Ident _ _ _ t2 idc2) x6)%expr_pat =>
@@ -2205,7 +2221,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> s5) -> s8) -> s)%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2221,7 +2237,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                    (ZRange.normalize args2 <=?
                                     - ZRange.normalize args4)%zrange
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -2249,11 +2265,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
@@ -2266,7 +2282,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (_ @ _) _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat =>
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ #(_)))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @
@@ -2275,7 +2292,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                      None
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t3 idc3 @ #(_))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -2285,8 +2302,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   match x0 with
                   | (@expr.Ident _ _ _ t3 idc3 @
@@ -2305,7 +2322,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> s5) -> s0) -> s8)%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2321,7 +2338,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                    (ZRange.normalize args2 <=?
                                     - ZRange.normalize args4)%zrange
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -2349,11 +2366,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
@@ -2366,7 +2383,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       (_ @ _) _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.App _ _ _ s8 _
-                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat => None
+                      (@expr.LetIn _ _ _ _ _ _ _) _))%expr_pat =>
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ #(_)))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @
@@ -2375,7 +2393,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.Abs _ _ _ _ _ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.Ident _ _ _ t4 idc4 @ @expr.LetIn _ _ _ _ _ _ _))%expr_pat =>
-                      None
+                      Datatypes.None
                   | (@expr.Ident _ _ _ t3 idc3 @ #(_))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -2385,8 +2403,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     (@expr.Ident _ _ _ t3 idc3 @
                      (@expr.LetIn _ _ _ _ _ _ _ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   match x1 with
                   | (@expr.Ident _ _ _ t3 idc3 @ @expr.Ident _ _ _ t4 idc4)%expr_pat =>
@@ -2402,7 +2420,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> s5) -> (projT1 args)) -> s)%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2421,7 +2439,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x8, _) := xv in x8)
                                      (ZRange.normalize args0)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -2449,18 +2467,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ (_ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end;;
                   match x0 with
                   | (@expr.Ident _ _ _ t3 idc3 @ @expr.Ident _ _ _ t4 idc4)%expr_pat =>
@@ -2476,7 +2494,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
                           (((s2 -> s5) -> s0) -> (projT1 args))%ptype
                       with
-                      | Some (_, _, _, _)%zrange =>
+                      | Datatypes.Some (_, _, _, _)%zrange =>
                           if
                            type.type_beq base.type base.type.type_beq
                              (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2495,7 +2513,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (let (x8, _) := xv in x8)
                                      (ZRange.normalize args0)
                                   then
-                                   Some
+                                   Datatypes.Some
                                      (UnderLet
                                         (#(Z_cast2
                                              (Datatypes.fst range,
@@ -2523,31 +2541,31 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
                                                $vc)))%expr_pat)%expr)%expr_pat))
-                                  else None);
-                           Some (fv0 <-- fv;
-                                 Base fv0)%under_lets
-                          else None
-                      | None => None
+                                  else Datatypes.None);
+                           Datatypes.Some (fv0 <-- fv;
+                                           Base fv0)%under_lets
+                          else Datatypes.None
+                      | Datatypes.None => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ (_ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end
               | (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _ ($_)%expr _)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
                  (@expr.Abs _ _ _ _ _ _) _)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _ (_ @ _) _)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.App _ _ _ s5 _
-                 (@expr.LetIn _ _ _ _ _ _ _) _)%expr_pat => None
+                 (@expr.LetIn _ _ _ _ _ _ _) _)%expr_pat => Datatypes.None
               | (@expr.Ident _ _ _ t1 idc1 @ #(_))%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                  None
-              | _ => None
+                  Datatypes.None
+              | _ => Datatypes.None
               end;;
               match x3 with
               | (@expr.Ident _ _ _ t1 idc1 @ @expr.Ident _ _ _ t2 idc2)%expr_pat =>
@@ -2571,7 +2589,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               ((((projT1 args3) -> s3) -> (projT1 args1)) ->
                                (projT1 args))%ptype
                           with
-                          | Some (_, _, _, _)%zrange =>
+                          | Datatypes.Some (_, _, _, _)%zrange =>
                               if
                                type.type_beq base.type base.type.type_beq
                                  (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
@@ -2602,7 +2620,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                          (let (x8, _) := xv1 in x8)
                                          (ZRange.normalize args0)
                                       then
-                                       Some
+                                       Datatypes.Some
                                          (UnderLet
                                             (#(Z_cast2 range)%expr @
                                              (#(Z_add_with_get_carry)%expr @
@@ -2623,44 +2641,46 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                   ($vc)%expr)),
                                                #(Z_cast r[0 ~> 0])%expr @
                                                (##0)%expr)%expr_pat))
-                                      else None);
-                               Some (fv0 <-- fv;
-                                     Base fv0)%under_lets
-                              else None
-                          | None => None
+                                      else Datatypes.None);
+                               Datatypes.Some
+                                 (fv0 <-- fv;
+                                  Base fv0)%under_lets
+                              else Datatypes.None
+                          | Datatypes.None => Datatypes.None
                           end
                       | (@expr.Ident _ _ _ t5 idc5 @ ($_)%expr)%expr_pat |
                         (@expr.Ident _ _ _ t5 idc5 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                         (@expr.Ident _ _ _ t5 idc5 @ (_ @ _))%expr_pat |
                         (@expr.Ident _ _ _ t5 idc5 @ @expr.LetIn _ _ _ _ _ _
-                         _)%expr_pat => None
-                      | _ => None
+                         _)%expr_pat => Datatypes.None
+                      | _ => Datatypes.None
                       end
                   | (@expr.Ident _ _ _ t3 idc3 @ ($_)%expr)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ (_ @ _))%expr_pat |
                     (@expr.Ident _ _ _ t3 idc3 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                      None
-                  | _ => None
+                      Datatypes.None
+                  | _ => Datatypes.None
                   end
               | (@expr.Ident _ _ _ t1 idc1 @ ($_)%expr)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.Abs _ _ _ _ _ _)%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ (_ @ _))%expr_pat |
                 (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
-                  None
-              | _ => None
+                  Datatypes.None
+              | _ => Datatypes.None
               end
           | @expr.App _ _ _ s3 _ ($_)%expr _ | @expr.App _ _ _ s3 _
             (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s3 _ (_ @ _)%expr_pat
-            _ | @expr.App _ _ _ s3 _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-          | _ => None
+            _ | @expr.App _ _ _ s3 _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
+              Datatypes.None
+          | _ => Datatypes.None
           end;;
           _ <- invert_bind_args idc Raw.ident.Z_add_with_get_carry;
           match
             pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
               (((s2 -> s1) -> s0) -> s)%ptype
           with
-          | Some (_, _, _, _)%zrange =>
+          | Datatypes.Some (_, _, _, _)%zrange =>
               if
                type.type_beq base.type base.type.type_beq
                  (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((s2 -> s1) -> s0) -> s)%ptype
@@ -2669,7 +2689,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v0 <- type.try_make_transport_cps s1 ℤ;
                v1 <- type.try_make_transport_cps s0 ℤ;
                v2 <- type.try_make_transport_cps s ℤ;
-               Some
+               Datatypes.Some
                  (UnderLet
                     (#(Z_cast2 range)%expr @
                      (#(Z_add_with_get_carry)%expr @ v (Compile.reflect x3) @
@@ -2681,15 +2701,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)),
                        #(Z_cast (Datatypes.snd range))%expr @
                        (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
-              else None
-          | None => None
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
           end);;
          _ <- invert_bind_args idc Raw.ident.Z_sub_with_get_borrow;
          match
            pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
              (((s2 -> s1) -> s0) -> s)%ptype
          with
-         | Some (_, _, _, _)%zrange =>
+         | Datatypes.Some (_, _, _, _)%zrange =>
              if
               type.type_beq base.type base.type.type_beq
                 (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype (((s2 -> s1) -> s0) -> s)%ptype
@@ -2698,7 +2718,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v0 <- type.try_make_transport_cps s1 ℤ;
               v1 <- type.try_make_transport_cps s0 ℤ;
               v2 <- type.try_make_transport_cps s ℤ;
-              Some
+              Datatypes.Some
                 (UnderLet
                    (#(Z_cast2 range)%expr @
                     (#(Z_sub_with_get_borrow)%expr @ v (Compile.reflect x3) @
@@ -2710,8 +2730,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)),
                       #(Z_cast (Datatypes.snd range))%expr @
                       (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
-             else None
-         | None => None
+             else Datatypes.None
+         | Datatypes.None => Datatypes.None
          end
      | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _
@@ -2726,24 +2746,45 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        _ | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _
         (@expr.App _ _ _ s1 _
-         (@expr.App _ _ _ s2 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _) _ => None
+         (@expr.App _ _ _ s2 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _) _ =>
+         Datatypes.None
      | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ ($_)%expr _) _) _ |
        @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _ (@expr.App _ _ _ s1 _ (@expr.Abs _ _ _ _ _ _) _)
         _) _ | @expr.App _ _ _ s _
        (@expr.App _ _ _ s0 _
-        (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ => None
+        (@expr.App _ _ _ s1 _ (@expr.LetIn _ _ _ _ _ _ _) _) _) _ =>
+         Datatypes.None
      | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
        _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
        _ _ _ s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-         None
+         Datatypes.None
      | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr
        _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s
-       _ (@expr.LetIn _ _ _ _ _ _ _) _ => None
-     | _ => None
+       _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+     | _ => Datatypes.None
      end;;;
      Base (#(Z_cast2 range)%expr @ x)%expr_pat)%option
+| Some A => fun x : expr A => Base (#(Some)%expr @ x)%expr_pat
+| None A => Base #(None)%expr
+| @option_rect A P =>
+    fun (x : expr A -> UnderLets (expr P))
+      (x0 : expr unit -> UnderLets (expr P)) (x1 : expr (base.type.option A))
+    =>
+    Base
+      (#(option_rect)%expr @ (λ x2 : var A,
+                              to_expr (x ($x2)))%expr @
+       (λ x2 : var unit,
+        to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+| Build_zrange =>
+    fun x x0 : expr ℤ => Base (#(Build_zrange)%expr @ x @ x0)%expr_pat
+| @zrange_rect P =>
+    fun (x : expr ℤ -> expr ℤ -> UnderLets (expr P))
+      (x0 : expr base.type.zrange) =>
+    Base
+      (#(zrange_rect)%expr @ (λ x1 x2 : var ℤ,
+                              to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat
 | fancy_add log2wordmax imm =>
     fun x : expr (ℤ * ℤ)%etype =>
     Base (#(fancy_add log2wordmax imm)%expr @ x)%expr_pat

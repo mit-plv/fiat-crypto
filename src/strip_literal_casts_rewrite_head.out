@@ -125,13 +125,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | Z_log2_up => fun x : expr ℤ => Base (#(Z_log2_up)%expr @ x)%expr_pat
 | Z_eqb => fun x x0 : expr ℤ => Base (#(Z_eqb)%expr @ x @ x0)%expr_pat
 | Z_leb => fun x x0 : expr ℤ => Base (#(Z_leb)%expr @ x @ x0)%expr_pat
+| Z_ltb => fun x x0 : expr ℤ => Base (#(Z_ltb)%expr @ x @ x0)%expr_pat
 | Z_geb => fun x x0 : expr ℤ => Base (#(Z_geb)%expr @ x @ x0)%expr_pat
+| Z_gtb => fun x x0 : expr ℤ => Base (#(Z_gtb)%expr @ x @ x0)%expr_pat
 | Z_of_nat => fun x : expr ℕ => Base (#(Z_of_nat)%expr @ x)%expr_pat
 | Z_to_nat => fun x : expr ℤ => Base (#(Z_to_nat)%expr @ x)%expr_pat
 | Z_shiftr => fun x x0 : expr ℤ => Base (x >> x0)%expr
 | Z_shiftl => fun x x0 : expr ℤ => Base (x << x0)%expr
 | Z_land => fun x x0 : expr ℤ => Base (x &' x0)%expr
 | Z_lor => fun x x0 : expr ℤ => Base (x || x0)%expr
+| Z_min => fun x x0 : expr ℤ => Base (#(Z_min)%expr @ x @ x0)%expr_pat
+| Z_max => fun x x0 : expr ℤ => Base (#(Z_max)%expr @ x @ x0)%expr_pat
 | Z_bneg => fun x : expr ℤ => Base (#(Z_bneg)%expr @ x)%expr_pat
 | Z_lnot_modulo =>
     fun x x0 : expr ℤ => Base (#(Z_lnot_modulo)%expr @ x @ x0)%expr_pat
@@ -167,26 +171,47 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
      | @expr.Ident _ _ _ t idc =>
          args <- invert_bind_args idc Raw.ident.Literal;
          match pattern.type.unify_extracted ℤ (projT1 args) with
-         | Some _ =>
+         | Datatypes.Some _ =>
              if type.type_beq base.type base.type.type_beq ℤ (projT1 args)
              then
               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
               fv <- (x0 <- (if
                              is_bounded_by_bool (let (x0, _) := xv in x0)
                                (ZRange.normalize range)
-                            then Some (##(let (x0, _) := xv in x0))%expr
-                            else None);
-                     Some (Base x0));
-              Some (fv0 <-- fv;
-                    Base fv0)%under_lets
-             else None
-         | None => None
+                            then
+                             Datatypes.Some
+                               (##(let (x0, _) := xv in x0))%expr
+                            else Datatypes.None);
+                     Datatypes.Some (Base x0));
+              Datatypes.Some (fv0 <-- fv;
+                              Base fv0)%under_lets
+             else Datatypes.None
+         | Datatypes.None => Datatypes.None
          end
-     | _ => None
+     | _ => Datatypes.None
      end;;;
      Base (#(Z_cast range)%expr @ x)%expr_pat)%option
 | Z_cast2 range =>
     fun x : expr (ℤ * ℤ)%etype => Base (#(Z_cast2 range)%expr @ x)%expr_pat
+| Some A => fun x : expr A => Base (#(Some)%expr @ x)%expr_pat
+| None A => Base #(None)%expr
+| @option_rect A P =>
+    fun (x : expr A -> UnderLets (expr P))
+      (x0 : expr unit -> UnderLets (expr P)) (x1 : expr (base.type.option A))
+    =>
+    Base
+      (#(option_rect)%expr @ (λ x2 : var A,
+                              to_expr (x ($x2)))%expr @
+       (λ x2 : var unit,
+        to_expr (x0 ($x2)))%expr @ x1)%expr_pat
+| Build_zrange =>
+    fun x x0 : expr ℤ => Base (#(Build_zrange)%expr @ x @ x0)%expr_pat
+| @zrange_rect P =>
+    fun (x : expr ℤ -> expr ℤ -> UnderLets (expr P))
+      (x0 : expr base.type.zrange) =>
+    Base
+      (#(zrange_rect)%expr @ (λ x1 x2 : var ℤ,
+                              to_expr (x ($x1) ($x2)))%expr @ x0)%expr_pat
 | fancy_add log2wordmax imm =>
     fun x : expr (ℤ * ℤ)%etype =>
     Base (#(fancy_add log2wordmax imm)%expr @ x)%expr_pat
