@@ -784,7 +784,7 @@ Module Compilers.
         Time all: fancy_local_t. (* Finished transaction in 0.051 secs (0.052u,0.s) (successful) *)
         Time all: systematically_handle_casts. (* Finished transaction in 2.004 secs (1.952u,0.052s) (successful) *)
         Time all: try solve [ repeat interp_good_t_step_arith ]. (* Finished transaction in 44.411 secs (44.004u,0.411s) (successful) *)
-      Admitted.
+      Qed.
     End with_cast.
   End RewriteRules.
 End Compilers.
