@@ -183,7 +183,8 @@ Lemma montred_correct res
            | rewrite Z.div_add' by lia
            | rewrite Z.div_small by lia
            | progress Z.rewrite_mod_small ].
- 
+
+  Local Strategy -100 [montred]. (* needed for making Qed not take forever *)
   Lemma montred_correct res (Hres : montred = Success res)
     : montred_correct N R R' (expr.Interp (@ident.gen_interp cast_oor) res).
   Proof using n nout curve_good.
@@ -195,7 +196,7 @@ Lemma montred_correct res
       rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower].
       rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
-  Admitted.
+  Qed.
 End rmontred.
 
-(* TODO: get Barrett to this same point, even if Qed slow, and then use these lemmas in the specific files *)
+(* TODO: get Barrett to this same point, and then use these lemmas in the specific files *)
