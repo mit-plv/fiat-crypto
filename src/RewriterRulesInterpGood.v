@@ -679,9 +679,9 @@ Module Compilers.
                          clear H;
                          rewrite (@ident.cast_in_normalized_bounds coor rs (Zf v1)) in * by assumption
                     end
-               | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) |- context[ident.cast ?coor ?r ?v] ]
+               | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast ?coor ?r ?v] ]
                  => rewrite (@ident.cast_in_normalized_bounds coor r v) in * by assumption
-               | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r), H' : context[ident.cast ?coor ?r ?v] |- _ ]
+               | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true, H' : context[ident.cast ?coor ?r ?v] |- _ ]
                  => rewrite (@ident.cast_in_normalized_bounds coor r v) in * by assumption
                | [ H : is_bounded_by_bool ?v ?r = true,
                        H' : is_tighter_than_bool ?r r[0~>?x-1]%zrange = true,
@@ -784,7 +784,7 @@ Module Compilers.
         Time all: fancy_local_t. (* Finished transaction in 0.051 secs (0.052u,0.s) (successful) *)
         Time all: systematically_handle_casts. (* Finished transaction in 2.004 secs (1.952u,0.052s) (successful) *)
         Time all: try solve [ repeat interp_good_t_step_arith ]. (* Finished transaction in 44.411 secs (44.004u,0.411s) (successful) *)
-      Admitted.
+      Qed.
     End with_cast.
   End RewriteRules.
 End Compilers.
