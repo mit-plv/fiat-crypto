@@ -49,7 +49,7 @@ Module Montgomery256.
       0 <= lo < R ->
       0 <= hi < R ->
       0 <= lo + R * hi < R * N ->
-      expr.Interp (@ident.interp) montred256 lo hi = ((lo + R * hi) * R') mod N.
+      expr.Interp (@ident.gen_interp cast_oor) montred256 lo hi = ((lo + R * hi) * R') mod N.
   Proof.
     intros.
     rewrite <-montred'_correct_specialized by assumption.
@@ -61,7 +61,6 @@ Module Montgomery256.
     { etransitivity; [ eapply H3 | ]. (* need Strategy -100 [type.app_curried]. for this to be fast *)
       generalize MontgomeryReduction.montred'; vm_compute; reflexivity. }
   Qed.
-
 
   Definition montred256_fancy' (RegMod RegPInv RegZero lo hi error : positive) :=
     of_Expr 6%positive
@@ -100,15 +99,6 @@ Module Montgomery256.
            | |- _ <> None => cbn; congruence
            | |- of_prefancy_scalar _ _ _ _ = _ => cbn; solve [eauto]
            end.
-
-  (* TODO(jgross): switch out casts *)
-  (* might need to use CheckCasts.interp_eqv_without_casts? *)
-  Lemma swap_casts lo hi :
-    expr.interp (@ident.gen_interp cast_oor)
-                (invert_expr.smart_App_curried (montred256 (type.interp base.interp)) (lo, (hi, tt))) =
-    expr.interp (@ident.interp)
-                (invert_expr.smart_App_curried (montred256 (type.interp base.interp)) (lo, (hi, tt))).
-  Admitted.
 
   Lemma montred256_fancy_correct :
     forall lo hi error,
@@ -156,9 +146,7 @@ Module Montgomery256.
     { cbn. cbv [N' N].
       repeat (econstructor; [ solve [valid_expr_subgoal] | intros ]).
       econstructor. valid_expr_subgoal. }
-    { cbn - [montred256]. cbv [id].
-      f_equal.
-      apply swap_casts. }
+    { reflexivity. }
   Qed.
 
   Import Spec.Registers.

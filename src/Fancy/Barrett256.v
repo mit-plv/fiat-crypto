@@ -47,7 +47,7 @@ Module Barrett256.
     forall (xLow xHigh : Z),
       0 <= xLow < 2 ^ machine_wordsize ->
       0 <= xHigh < M ->
-      expr.Interp (@ident.interp) barrett_red256 xLow xHigh = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
+      expr.Interp (@ident.gen_interp cast_oor) barrett_red256 xLow xHigh = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
   Proof.
     intros.
     rewrite <-barrett_reduce_correct_specialized by assumption.
@@ -96,12 +96,6 @@ Module Barrett256.
            | |- _ <> None => cbn; congruence
            | |- of_prefancy_scalar _ _ _ _ = _ => cbn; solve [eauto]
            end.
-
-  Lemma swap_casts xLow xHigh :
-    expr.interp (@ident.gen_interp cast_oor)
-                (invert_expr.smart_App_curried (barrett_red256 (type.interp base.interp)) (xLow, (xHigh, tt))) =
-    defaults.Interp barrett_red256 xLow xHigh.
-  Admitted.
 
   Lemma barrett_red256_fancy_correct :
     forall xLow xHigh error,
@@ -155,9 +149,7 @@ Module Barrett256.
     { cbn. cbv [muLow M].
       repeat (econstructor; [ solve [valid_expr_subgoal] | intros ]).
       econstructor. valid_expr_subgoal. }
-    { cbn - [barrett_red256]. cbv [id].
-      f_equal.
-      apply swap_casts. }
+    { reflexivity. }
   Qed.
 
   Import Spec.Registers.
