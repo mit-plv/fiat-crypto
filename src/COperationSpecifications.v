@@ -562,21 +562,9 @@ Module WordByWordMontgomery.
   End __.
 End WordByWordMontgomery.
 
-(*
 Module BarrettReduction.
   Section __.
-    (** TODO(jadep, from jgross): Remove any of these not needed to state the spec *)
-    Context (k M muLow : Z)
-            (n nout : nat)
-            (k_bound : 2 <= k)
-            (M_pos : 0 < M)
-            (muLow_eq : muLow + 2 ^ k = 2 ^ (2 * k) / M)
-            (muLow_bounds : 0 <= muLow < 2 ^ k)
-            (M_bound1 : 2 ^ (k - 1) < M < 2 ^ k)
-            (M_bound2 : 2 * (2 ^ (2 * k) mod M) <= 2 ^ (k + 1) - (muLow + 2 ^ k))
-            (Hn_nz : n <> 0%nat)
-            (n_le_k : Z.of_nat n <= k)
-            (Hnout : nout = 2%nat).
+    Context (k M : Z).
 
     Definition barrett_red_correct
                (barrett_red : Z -> Z -> Z)
@@ -589,18 +577,14 @@ End BarrettReduction.
 
 Module MontgomeryReduction.
   Section __.
-    Context (N R N' R' : Z).
+    Context (N R R' : Z).
 
     Definition montred_correct
-    Context (T R R' N
-  Lemma montred'_correct lo_hi T (HT_range: 0 <= T < R * N)
-          (Hlo: fst lo_hi = T mod R) (Hhi: snd lo_hi = T / R): montred' lo_hi = (T * R') mod N.
-    Proof.
-      erewrite montred'_eq by eauto.
-      apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
-      replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; omega).
-      apply reduce_via_partial_in_range; omega.
-    Qed.
-
-    End MontgomeryReduction.
-*)
+               (mont_red : Z -> Z -> Z)
+      := forall lo hi,
+        0 <= lo < R
+        -> 0 <= hi < R
+        -> 0 <= lo + R * hi < R * N
+        -> mont_red lo hi = ((lo + R * hi) * R') mod N.
+  End __.
+End MontgomeryReduction.
