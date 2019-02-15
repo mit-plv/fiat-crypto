@@ -135,14 +135,14 @@ Local Notation out_bounds_of_pipeline result
 Notation FromPipelineToString prefix name result
   := (Pipeline.FromPipelineToString prefix name result).
 
-Ltac prove_correctness use_curve_good :=
+Ltac prove_correctness' should_not_clear use_curve_good :=
   let Hres := match goal with H : _ = Success _ |- _ => H end in
   let H := fresh in
   pose proof use_curve_good as H;
   (* I want to just use [clear -H Hres], but then I can't use any lemmas in the section because of COQBUG(https://github.com/coq/coq/issues/8153) *)
   repeat match goal with
          | [ H' : _ |- _ ]
-           => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres ]
+           => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres | should_not_clear H' ]
            then fail
            else clear H'
          end;
@@ -162,6 +162,8 @@ Ltac prove_correctness use_curve_good :=
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in * ]
   | .. ].
+
+Ltac prove_correctness use_curve_good := prove_correctness' ltac:(fun _ => fail) use_curve_good.
 
 Module CorrectnessStringification.
   Module dyn_context.
