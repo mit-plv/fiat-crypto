@@ -96,6 +96,7 @@ Section rbarrett_red.
           prefix "barrett_red" barrett_red
           (fun _ _ _ => @nil string).
 
+  Local Strategy -100 [barrett_red]. (* Probably needed to make Qed not take forever *)
   (* TODO: Replace the following lemmas with a new-glue-style correctness lemma, like
 <<
 Lemma barrett_red_correct res
