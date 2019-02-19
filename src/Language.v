@@ -315,6 +315,23 @@ Module Compilers.
          | type.option A => Datatypes.option (interp A)
          end%type.
 
+    Fixpoint base_interp_beq {t} : base_interp t -> base_interp t -> bool
+      := match t with
+         | type.unit => fun _ _ => true
+         | type.Z => Z.eqb
+         | type.bool => Bool.eqb
+         | type.nat => Nat.eqb
+         | type.zrange => zrange_beq
+         end.
+
+    Fixpoint interp_beq {t} : interp t -> interp t -> bool
+      := match t with
+         | type.type_base t => @base_interp_beq t
+         | type.prod A B => prod_beq _ _ (@interp_beq A) (@interp_beq B)
+         | type.list A => list_beq _ (@interp_beq A)
+         | type.option A => option_beq (@interp_beq A)
+         end.
+
     Definition try_make_base_transport_cps
                (P : type.base -> Type) (t1 t2 : type.base)
       : ~> option (P t1 -> P t2)

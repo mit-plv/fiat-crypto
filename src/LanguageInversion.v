@@ -92,6 +92,43 @@ Module Compilers.
       Ltac inversion_type := repeat inversion_type_step.
     End type.
 
+    Local Ltac beq_t :=
+      repeat first [ progress cbn in *
+                   | apply BinInt.Z.eqb_eq
+                   | apply Bool.eqb_true_iff
+                   | apply PeanoNat.Nat.eqb_eq
+                   | apply ZRange.zrange_bl
+                   | apply ZRange.zrange_lb
+                   | apply internal_prod_dec_bl
+                   | apply internal_prod_dec_lb
+                   | apply ListUtil.internal_list_dec_bl
+                   | apply ListUtil.internal_list_dec_lb
+                   | apply internal_option_dec_bl
+                   | apply internal_option_dec_lb
+                   | progress destruct_head'_unit
+                   | reflexivity
+                   | solve [ auto ] ].
+
+    Lemma base_interp_bl {t x y} : @base.base_interp_beq t x y = true -> x = y.
+    Proof. induction t; beq_t. Qed.
+    Local Hint Resolve base_interp_bl : core.
+
+    Lemma base_interp_lb {t x y} : x = y -> @base.base_interp_beq t x y = true.
+    Proof. induction t; beq_t. Qed.
+    Local Hint Resolve base_interp_lb : core.
+
+    Global Instance dec_eq_base_interp {t} : DecidableRel (@eq (@base.base_interp t)) | 10
+      := dec_rel_of_bool_dec_rel base.base_interp_beq (@base_interp_bl t) (@base_interp_lb t).
+
+    Lemma interp_bl {t x y} : @base.interp_beq t x y = true -> x = y.
+    Proof. induction t; beq_t. Qed.
+
+    Lemma interp_lb {t x y} : x = y -> @base.interp_beq t x y = true.
+    Proof. induction t; beq_t. Qed.
+
+    Global Instance dec_eq_interp {t} : DecidableRel (@eq (@base.interp t)) | 10
+      := dec_rel_of_bool_dec_rel base.interp_beq (@interp_bl t) (@interp_lb t).
+
     Global Instance Decidable_type_eq : DecidableRel (@eq base.type)
       := base.type.type_eq_dec.
 
