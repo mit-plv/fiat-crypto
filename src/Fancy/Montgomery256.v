@@ -24,9 +24,17 @@ Module Montgomery256.
   Definition machine_wordsize := 256.
 
   Derive montred256
-         SuchThat (MontgomeryReduction.rmontred_correctT N R N' machine_wordsize montred256)
-         As montred256_correct.
-  Proof. Time solve_rmontred_nocache machine_wordsize. Time Qed.
+         SuchThat (montred N R N' machine_wordsize = ErrorT.Success montred256)
+         As montred256_eq.
+  Proof. lazy; reflexivity. Qed.
+
+  Lemma montred256_correct :
+    COperationSpecifications.MontgomeryReduction.montred_correct N R R' (expr.Interp (@ident.gen_interp cast_oor) montred256).
+  Proof.
+    apply montred_correct with (n:=2%nat) (nout:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N').
+    { lazy. reflexivity. }
+    { apply montred256_eq. }
+  Qed.
 
   Lemma montred'_correct_specialized R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
@@ -40,26 +48,6 @@ Module Montgomery256.
             | |- context [lo] =>
               try assumption; progress autorewrite with zsimplify cancel_pair; reflexivity
           end; lazy; try split; congruence.
-  Qed.
-
-  Strategy -100 [type.app_curried].
-  Local Arguments ZRange.is_bounded_by_bool / .
-  Lemma montred256_correct_full  R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
-    forall (lo hi : Z),
-      0 <= lo < R ->
-      0 <= hi < R ->
-      0 <= lo + R * hi < R * N ->
-      expr.Interp (@ident.gen_interp cast_oor) montred256 lo hi = ((lo + R * hi) * R') mod N.
-  Proof.
-    intros.
-    rewrite <-montred'_correct_specialized by assumption.
-    destruct (proj1 montred256_correct (lo, (hi, tt)) (lo, (hi, tt))) as [H2 H3].
-    { repeat split. }
-    { cbn -[Z.pow].
-      rewrite !andb_true_iff.
-      repeat apply conj; Z.ltb_to_lt; trivial; cbv [R N machine_wordsize] in *; lia. }
-    { etransitivity; [ eapply H3 | ]. (* need Strategy -100 [type.app_curried]. for this to be fast *)
-      generalize MontgomeryReduction.montred'; vm_compute; reflexivity. }
   Qed.
 
   Definition montred256_fancy' (RegMod RegPInv RegZero lo hi error : positive) :=
@@ -121,7 +109,7 @@ Module Montgomery256.
     intros.
     rewrite montred256_fancy_eq.
     cbv [montred256_fancy'].
-    rewrite <-montred256_correct_full by (auto; reflexivity).
+    rewrite <-montred256_correct by (auto; reflexivity).
     eapply of_Expr_correct with (x2 := (lo, (hi, tt))).
     { cbn; intros; subst RegZero RegMod RegPInv RegHi RegLo.
       intuition; Prod.inversion_prod; subst; cbv. break_innermost_match; congruence. }
