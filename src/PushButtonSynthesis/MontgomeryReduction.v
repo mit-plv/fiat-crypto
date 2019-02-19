@@ -168,13 +168,6 @@ Section rmontred.
           prefix "montred" montred
           (fun _ _ _ => @nil string).
 
-  (* TODO: Replace the following lemmas with a new-glue-style correctness lemma, like
-<<
-Lemma montred_correct res
-          (Hres : montred = Success res)
-      : montred_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
-    Proof using curve_good. prove_correctness (). Qed.
->> *)
   Local Ltac solve_montred_preconditions :=
     repeat first [ lia
            | apply use_curve_good
@@ -198,5 +191,3 @@ Lemma montred_correct res
       rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
   Qed.
 End rmontred.
-
-(* TODO: get Barrett to this same point, and then use these lemmas in the specific files *)
