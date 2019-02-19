@@ -3,6 +3,7 @@ Require Import Coq.derive.Derive.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Arithmetic.
+Require Import Crypto.COperationSpecifications. Import COperationSpecifications.BarrettReduction.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
@@ -21,9 +22,17 @@ Module Barrett256.
   Definition machine_wordsize := 256.
 
   Derive barrett_red256
-         SuchThat (BarrettReduction.rbarrett_red_correctT M machine_wordsize barrett_red256)
-         As barrett_red256_correct.
-  Proof. Time solve_rbarrett_red_nocache machine_wordsize. Time Qed.
+         SuchThat (barrett_red M machine_wordsize = ErrorT.Success barrett_red256)
+         As barrett_red256_eq.
+  Proof. lazy; reflexivity. Qed.
+
+  Lemma barrett_red256_correct :
+    COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (expr.Interp (@ident.gen_interp cast_oor) barrett_red256).
+  Proof.
+    apply barrett_red_correct with (n:=2%nat) (nout:=2%nat) (machine_wordsize:=machine_wordsize).
+    { lazy. reflexivity. }
+    { apply barrett_red256_eq. }
+  Qed.
 
   Definition muLow := Eval lazy in (2 ^ (2 * machine_wordsize) / M) mod (2^machine_wordsize).
 
@@ -39,26 +48,6 @@ Module Barrett256.
       try match goal with
           | |- context [weight] => intros; cbv [weight]; autorewrite with zsimplify; auto using Z.pow_mul_r with omega
           end; lazy; try split; congruence.
-  Qed.
-
-  Strategy -100 [type.app_curried].
-  Local Arguments ZRange.is_bounded_by_bool / .
-  Lemma barrett_red256_correct_full  :
-    forall (xLow xHigh : Z),
-      0 <= xLow < 2 ^ machine_wordsize ->
-      0 <= xHigh < M ->
-      expr.Interp (@ident.gen_interp cast_oor) barrett_red256 xLow xHigh = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
-  Proof.
-    intros.
-    rewrite <-barrett_reduce_correct_specialized by assumption.
-    destruct (proj1 barrett_red256_correct (xLow, (xHigh, tt)) (xLow, (xHigh, tt))) as [H1 H2].
-    { repeat split. }
-    { cbn -[Z.pow].
-      rewrite !andb_true_iff.
-      assert (M < 2^machine_wordsize) by (vm_compute; reflexivity).
-      repeat apply conj; Z.ltb_to_lt; trivial; omega. }
-    { etransitivity; [ eapply H2 | ]. (* need Strategy -100 [type.app_curried]. for this to be fast *)
-      generalize BarrettReduction.barrett_reduce; vm_compute; reflexivity. }
   Qed.
 
   Definition barrett_red256_fancy' (xLow xHigh RegMuLow RegMod RegZero error : positive) :=
@@ -121,7 +110,7 @@ Module Barrett256.
     intros.
     rewrite barrett_red256_fancy_eq.
     cbv [barrett_red256_fancy'].
-    rewrite <-barrett_red256_correct_full by auto.
+    rewrite <-barrett_red256_correct by auto.
     eapply of_Expr_correct with (x2 := (xLow, (xHigh, tt))).
     { cbn; intros; subst RegZero RegMod RegMuLow RegxHigh RegxLow.
       intuition; Prod.inversion_prod; subst; cbv. break_innermost_match; congruence. }
@@ -330,5 +319,4 @@ Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
 (*
 Check Barrett256.prod_barrett_red256_correct.
 Print Assumptions Barrett256.prod_barrett_red256_correct.
-(* The equivalence with generated code is admitted as barrett_red256_alloc_equivalent. *)
 *)
