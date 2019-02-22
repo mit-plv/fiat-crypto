@@ -4820,7 +4820,138 @@ Module WordByWordMontgomery.
   End modops.
 End WordByWordMontgomery.
 
+Hint Rewrite Z2Nat.inj_succ using omega : push_Zto_nat. (* TODO: put in PullPush *)
+Hint Rewrite Nat.add_1_r : natsimplify. (* TODO : put in a better location *)
 Module BarrettReduction.
+  Locate barrett_reduction_small.
+  Check barrett_reduction_small.
+  Locate Associational.
+  Section Generic.
+    Context (k : Z) (k_pos : 0 < k) (b : Z) (b_ok : 2 < b).
+    Local Notation weight := (UniformWeight.uweight b).
+    Local Notation rep := (list Z).
+
+    Definition eval (x : list Z) := Positional.eval weight (length x) x.
+    Definition valid (x : list Z) :=
+      x = Partition.partition weight (length x) (eval x).
+
+    (* TODO: make a lemma sort of like this (actually, probably doesn't have to be specialized to uniform weights) to allow splitting [app] in a positional evaluation *) 
+    Lemma UniformWeight_eval_app :
+      forall b y n x,
+        length (x ++ y) = n ->
+        Positional.eval (UniformWeight.uweight b) n (x ++ y)
+        = Positional.eval (UniformWeight.uweight b) (length x) x
+          + UniformWeight.uweight b (length x) * Positional.eval (UniformWeight.uweight b) (n - length x) y.
+    Proof.
+      induction y using rev_ind;
+        repeat match goal with
+               | _ => progress (intros; subst)
+               | _ => progress distr_length; autorewrite with natsimplify in *
+               | |- context [(?a + ?b - ?a)%nat] => replace (a + b - a)%nat with b by lia
+               | _ => progress rewrite ?app_nil_r, ?app_assoc, ?Nat.add_succ_r
+               | _ => erewrite IHy by distr_length
+               | _ => progress autorewrite with natsimplify push_eval zsimplify_fast
+               | _ => reflexivity
+               end.
+      ring_simplify.
+      (* TODO: need to say here that uweight (i + j) = uweight i * uweight j *)
+    Admitted.
+
+    Definition low : rep -> rep := firstn (Z.to_nat k).
+    Lemma low_correct : forall x, valid x -> eval (low x) = eval x mod b ^ k.
+    Proof.
+      cbv [eval low]; intros.
+      match goal with |- context [firstn ?n ?l] =>
+                      rewrite <-(firstn_skipn n l);
+                        replace (firstn n (firstn n l ++ skipn n l)) with (firstn n l)
+                        by (rewrite firstn_skipn; reflexivity)
+      end.
+      erewrite UniformWeight_eval_app by distr_length.
+      distr_length.
+      apply Nat.min_case_strong; intros.
+      { (* weight k = b ^ k, so second term goes away by mod *)
+        admit. }
+      { autorewrite with push_skipn push_eval zsimplify.
+        SearchAbout Partition.partition.
+        (* annoying, how do I prove valid -> mod_small? *)
+        (* might need to use recursive_paritition? *)
+        (*
+         if length x <= k:
+            skipn k x = []
+            second term goes away by eval_nil
+       *)
+      distr_length.
+      2:distr_length.
+      repeat match goal with
+             | |- context [Nat.min ?x (S (length ?p))] =>
+               destruct (lt_dec (length p) x);
+                 [ rewrite (Nat.min_r x) by lia | rewrite (Nat.min_l x) by lia ]
+             end.
+
+      Print UniformWeight.
+      
+      apply natlike_ind with (x:=k); try omega; destruct x using rev_ind.
+      { autorewrite with push_eval zsimplify. reflexivity. }
+      { autorewrite with push_eval zsimplify. reflexivity. }
+      { intros; autorewrite with push_eval zsimplify distr_length push_firstn. reflexivity. }
+      { intros. clear IHx.
+        autorewrite with push_Zto_nat distr_length natsimplify push_firstn in *.
+        repeat match goal with
+               | |- context [Nat.min ?x (S (length ?p))] =>
+                 destruct (lt_dec (length p) x);
+                   [ rewrite (Nat.min_r x) by lia | rewrite (Nat.min_l x) by lia ]
+               | |- context [firstn (?a - ?b)%nat [_] ] =>
+                 destruct (le_dec a b); [ rewrite (not_le_minus_0 a b) by lia
+                                        | rewrite (firstn_all2 (n:=(a-b)%nat)) by (distr_length; lia) ];
+                 try lia
+               end.
+        { rewrite firstn_all2 by lia.
+          autorewrite with push_eval in *.
+          rewrite Z.mod_small; [ reflexivity | ].
+          (* since length x0 < S x1, it must be that length x0 <= x1 and therefore
+             [weight (length x0) <= b ^x1] *)
+          (* since length x0 < S x1, it must be that length x0 <= x1 and therefore
+             [weight (length x0) <= b ^x1] *)
+        
+        { admit. }
+        { SearchAbout (_ - _ = 0)%nat.
+          SearchAbout (S _ - _)%nat.
+          rewrite not_le_minus_0.
+          2:lia.
+
+        
+        match goal with |- context [firstn ?n ?l] =>
+                        rewrite <-(firstn_skipn n l);
+                            replace (firstn n (firstn n l ++ skipn n l)) with (firstn n l) by (rewrite firstn_skipn; reflexivity)
+        end.
+        distr_length.
+        autorewrite with push_Zto_nat push_firstn push_skipn.
+        Print Rewrite HintDb push_skipn.
+        SearchAbout Nat.min S.
+        repeat apply Nat.min_case_strong; intros; try lia.
+      { SearchAbout Positional.eval app.
+
+        match goal with
+        | |- context [(?a + (?b - ?a))%nat] => replace (a + (b - a))%nat with b by lia
+        end.
+        
+      { 
+      Focus 9.
+      app
+      distr_length.
+      SearchAbout firstn nil.
+      
+      rewrite <-firstn
+      autorewrite with distr_length.
+      SearchAbout Nat.min.
+      apply Nat.min_case_strong; intros.
+      2:autorewrite with push_firstn.
+      SearchAbout Positional.eval.
+      SearchAbout firstn.
+    Admitted.
+    Print Positional.
+
+  
   (* TODO : generalize to multi-word and operate on (list Z) instead of T; maybe stop taking ops as context variables *)
   Section Generic.
     Context {T} (rep : T -> Z -> Prop)
