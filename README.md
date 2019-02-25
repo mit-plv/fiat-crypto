@@ -3,6 +3,7 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primiti
 
 Building
 -----
+[![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=master)](https://travis-ci.org/mit-plv/fiat-crypto)
 
 This repository requires coq 8.8 or later. 8.7 may work, but we don't use it ourselves.
 
