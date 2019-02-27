@@ -137,6 +137,22 @@ Module Compilers.
       Notation "x <----- y ; f" := (UnderLets.splice_option y (fun x => f%under_lets)) : under_lets_scope.
     End Notations.
 
+    Section with_var2.
+      Context {base_type : Type}.
+      Local Notation type := (type base_type).
+      Context {ident1 var1 ident2 var2 : type -> Type}
+              (f : forall t, @expr base_type ident1 var1 t -> @expr base_type ident2 var2 t)
+              (f' : forall t, var2 t -> var1 t)
+              {T : Type}.
+
+      Fixpoint map (x : @UnderLets base_type ident1 var1 T) : @UnderLets base_type ident2 var2 T
+        := match x with
+           | UnderLet A x F
+             => UnderLet (f A x) (fun v => map (F (f' A v)))
+           | Base x => Base x
+           end.
+    End with_var2.
+
     Section reify.
       Context {var : type.type base.type -> Type}.
       Local Notation type := (type.type base.type).
