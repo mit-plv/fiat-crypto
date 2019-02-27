@@ -351,9 +351,9 @@ Module Compilers.
 
         Lemma interp_splice_list {A B} (x : list (UnderLets A)) (e : list A -> UnderLets B)
           : interp (splice_list x e)
-            = interp (e (map interp x)).
+            = interp (e (List.map interp x)).
         Proof.
-          revert e; induction x as [|x xs IHx]; intros; cbn [splice_list interp map]; [ reflexivity | ].
+          revert e; induction x as [|x xs IHx]; intros; cbn [splice_list interp List.map]; [ reflexivity | ].
           rewrite interp_splice, IHx; reflexivity.
         Qed.
 
