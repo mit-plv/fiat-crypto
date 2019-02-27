@@ -1,0 +1,44 @@
+static void fesub(uint32_t out[7], const uint32_t in1[7], const uint32_t in2[7]) {
+  { const uint32_t x14 = in1[6];
+  { const uint32_t x15 = in1[5];
+  { const uint32_t x13 = in1[4];
+  { const uint32_t x11 = in1[3];
+  { const uint32_t x9 = in1[2];
+  { const uint32_t x7 = in1[1];
+  { const uint32_t x5 = in1[0];
+  { const uint32_t x26 = in2[6];
+  { const uint32_t x27 = in2[5];
+  { const uint32_t x25 = in2[4];
+  { const uint32_t x23 = in2[3];
+  { const uint32_t x21 = in2[2];
+  { const uint32_t x19 = in2[1];
+  { const uint32_t x17 = in2[0];
+  { uint32_t x29; uint8_t/*bool*/ x30 = _subborrow_u32(0x0, x5, x17, &x29);
+  { uint32_t x32; uint8_t/*bool*/ x33 = _subborrow_u32(x30, x7, x19, &x32);
+  { uint32_t x35; uint8_t/*bool*/ x36 = _subborrow_u32(x33, x9, x21, &x35);
+  { uint32_t x38; uint8_t/*bool*/ x39 = _subborrow_u32(x36, x11, x23, &x38);
+  { uint32_t x41; uint8_t/*bool*/ x42 = _subborrow_u32(x39, x13, x25, &x41);
+  { uint32_t x44; uint8_t/*bool*/ x45 = _subborrow_u32(x42, x15, x27, &x44);
+  { uint32_t x47; uint8_t/*bool*/ x48 = _subborrow_u32(x45, x14, x26, &x47);
+  { uint32_t x49 = cmovznz32(x48, 0x0, 0xffffffff);
+  { uint8_t/*bool*/ x50 = (1&(uint8_t/*bool*/)x49 & 0x1);
+  { uint32_t x52; uint8_t/*bool*/ x53 = _addcarryx_u32(0x0, x29, x50, &x52);
+  { uint32_t x55; uint8_t/*bool*/ x56 = _addcarryx_u32(x53, x32, 0x0, &x55);
+  { uint32_t x58; uint8_t/*bool*/ x59 = _addcarryx_u32(x56, x35, 0x0, &x58);
+  { uint32_t x60 = (x49 & 0xffffffff);
+  { uint32_t x62; uint8_t/*bool*/ x63 = _addcarryx_u32(x59, x38, x60, &x62);
+  { uint32_t x64 = (x49 & 0xffffffff);
+  { uint32_t x66; uint8_t/*bool*/ x67 = _addcarryx_u32(x63, x41, x64, &x66);
+  { uint32_t x68 = (x49 & 0xffffffff);
+  { uint32_t x70; uint8_t/*bool*/ x71 = _addcarryx_u32(x67, x44, x68, &x70);
+  { uint32_t x72 = (x49 & 0xffffffff);
+  { uint32_t x74; uint8_t/*bool*/ _ = _addcarryx_u32(x71, x47, x72, &x74);
+  out[0] = x52;
+  out[1] = x55;
+  out[2] = x58;
+  out[3] = x62;
+  out[4] = x66;
+  out[5] = x70;
+  out[6] = x74;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}

@@ -1,0 +1,43 @@
+static void fecarry(uint32_t out[7], const uint32_t in1[7]) {
+  { const uint32_t x11 = in1[6];
+  { const uint32_t x12 = in1[5];
+  { const uint32_t x10 = in1[4];
+  { const uint32_t x8 = in1[3];
+  { const uint32_t x6 = in1[2];
+  { const uint32_t x4 = in1[1];
+  { const uint32_t x2 = in1[0];
+  { uint32_t x13 = (x2 >> 0x15);
+  { uint32_t x14 = (x2 & 0x1fffff);
+  { uint32_t x15 = (x13 + x4);
+  { uint32_t x16 = (x15 >> 0x14);
+  { uint32_t x17 = (x15 & 0xfffff);
+  { uint32_t x18 = (x16 + x6);
+  { uint32_t x19 = (x18 >> 0x14);
+  { uint32_t x20 = (x18 & 0xfffff);
+  { uint32_t x21 = (x19 + x8);
+  { uint32_t x22 = (x21 >> 0x14);
+  { uint32_t x23 = (x21 & 0xfffff);
+  { uint32_t x24 = (x22 + x10);
+  { uint32_t x25 = (x24 >> 0x14);
+  { uint32_t x26 = (x24 & 0xfffff);
+  { uint32_t x27 = (x25 + x12);
+  { uint32_t x28 = (x27 >> 0x14);
+  { uint32_t x29 = (x27 & 0xfffff);
+  { uint32_t x30 = (x28 + x11);
+  { uint32_t x31 = (x30 >> 0x14);
+  { uint32_t x32 = (x30 & 0xfffff);
+  { uint32_t x33 = (x14 + (0x9 * x31));
+  { uint32_t x34 = (x33 >> 0x15);
+  { uint32_t x35 = (x33 & 0x1fffff);
+  { uint32_t x36 = (x34 + x17);
+  { uint32_t x37 = (x36 >> 0x14);
+  { uint32_t x38 = (x36 & 0xfffff);
+  out[0] = x35;
+  out[1] = x38;
+  out[2] = (x37 + x20);
+  out[3] = x23;
+  out[4] = x26;
+  out[5] = x29;
+  out[6] = x32;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}

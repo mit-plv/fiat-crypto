@@ -1,0 +1,43 @@
+static void fecarry(uint64_t out[7], const uint64_t in1[7]) {
+  { const uint64_t x11 = in1[6];
+  { const uint64_t x12 = in1[5];
+  { const uint64_t x10 = in1[4];
+  { const uint64_t x8 = in1[3];
+  { const uint64_t x6 = in1[2];
+  { const uint64_t x4 = in1[1];
+  { const uint64_t x2 = in1[0];
+  { uint64_t x13 = (x2 >> 0x3b);
+  { uint64_t x14 = (x2 & 0x7ffffffffffffff);
+  { uint64_t x15 = (x13 + x4);
+  { uint64_t x16 = (x15 >> 0x3b);
+  { uint64_t x17 = (x15 & 0x7ffffffffffffff);
+  { uint64_t x18 = (x16 + x6);
+  { uint64_t x19 = (x18 >> 0x3b);
+  { uint64_t x20 = (x18 & 0x7ffffffffffffff);
+  { uint64_t x21 = (x19 + x8);
+  { uint64_t x22 = (x21 >> 0x3b);
+  { uint64_t x23 = (x21 & 0x7ffffffffffffff);
+  { uint64_t x24 = (x22 + x10);
+  { uint64_t x25 = (x24 >> 0x3b);
+  { uint64_t x26 = (x24 & 0x7ffffffffffffff);
+  { uint64_t x27 = (x25 + x12);
+  { uint64_t x28 = (x27 >> 0x3b);
+  { uint64_t x29 = (x27 & 0x7ffffffffffffff);
+  { uint64_t x30 = (x28 + x11);
+  { uint64_t x31 = (x30 >> 0x3b);
+  { uint64_t x32 = (x30 & 0x7ffffffffffffff);
+  { uint64_t x33 = (x14 + (0x15 * x31));
+  { uint64_t x34 = (x33 >> 0x3b);
+  { uint64_t x35 = (x33 & 0x7ffffffffffffff);
+  { uint64_t x36 = (x34 + x17);
+  { uint64_t x37 = (x36 >> 0x3b);
+  { uint64_t x38 = (x36 & 0x7ffffffffffffff);
+  out[0] = x35;
+  out[1] = x38;
+  out[2] = (x37 + x20);
+  out[3] = x23;
+  out[4] = x26;
+  out[5] = x29;
+  out[6] = x32;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}
