@@ -1,0 +1,62 @@
+λ x : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x23, x24, x22, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint32_t x25 = (x2 >> 0x14);
+ uint32_t x26 = (x2 & 0xfffff);
+ uint32_t x27 = (x23 >> 0x13);
+ uint32_t x28 = (x23 & 0x7ffff);
+ uint32_t x29 = ((0x80000 * x27) + x28);
+ uint32_t x30 = (x29 >> 0x13);
+ uint32_t x31 = (x29 & 0x7ffff);
+ uint32_t x32 = ((x25 + x4) + (0x1000 * x30));
+ uint32_t x33 = (x32 >> 0x14);
+ uint32_t x34 = (x32 & 0xfffff);
+ uint32_t x35 = (x26 + (0x3d1 * x30));
+ uint32_t x36 = (x35 >> 0x14);
+ uint32_t x37 = (x35 & 0xfffff);
+ uint32_t x38 = (x33 + x6);
+ uint32_t x39 = (x38 >> 0x14);
+ uint32_t x40 = (x38 & 0xfffff);
+ uint32_t x41 = (x39 + x8);
+ uint32_t x42 = (x41 >> 0x13);
+ uint32_t x43 = (x41 & 0x7ffff);
+ uint32_t x44 = (x42 + x10);
+ uint32_t x45 = (x44 >> 0x14);
+ uint32_t x46 = (x44 & 0xfffff);
+ uint32_t x47 = (x45 + x12);
+ uint32_t x48 = (x47 >> 0x14);
+ uint32_t x49 = (x47 & 0xfffff);
+ uint32_t x50 = (x48 + x14);
+ uint32_t x51 = (x50 >> 0x13);
+ uint32_t x52 = (x50 & 0x7ffff);
+ uint32_t x53 = (x51 + x16);
+ uint32_t x54 = (x53 >> 0x14);
+ uint32_t x55 = (x53 & 0xfffff);
+ uint32_t x56 = (x54 + x18);
+ uint32_t x57 = (x56 >> 0x14);
+ uint32_t x58 = (x56 & 0xfffff);
+ uint32_t x59 = (x57 + x20);
+ uint32_t x60 = (x59 >> 0x13);
+ uint32_t x61 = (x59 & 0x7ffff);
+ uint32_t x62 = (x60 + x22);
+ uint32_t x63 = (x62 >> 0x14);
+ uint32_t x64 = (x62 & 0xfffff);
+ uint32_t x65 = (x63 + x24);
+ uint32_t x66 = (x65 >> 0x14);
+ uint32_t x67 = (x65 & 0xfffff);
+ uint32_t x68 = (x66 + x31);
+ uint32_t x69 = (x68 >> 0x13);
+ uint32_t x70 = (x68 & 0x7ffff);
+ uint32_t x71 = ((0x80000 * x69) + x70);
+ uint32_t x72 = (x71 >> 0x13);
+ uint32_t x73 = (x71 & 0x7ffff);
+ uint32_t x74 = ((x36 + x34) + (0x1000 * x72));
+ uint32_t x75 = (x74 >> 0x14);
+ uint32_t x76 = (x74 & 0xfffff);
+ uint32_t x77 = (x37 + (0x3d1 * x72));
+ uint32_t x78 = (x77 >> 0x14);
+ uint32_t x79 = (x77 & 0xfffff);
+ return (Return x73, Return x67, Return x64, Return x61, Return x58, Return x55, Return x52, Return x49, Return x46, Return x43, (x75 + x40), (x78 + x76), Return x79))
+x
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)
