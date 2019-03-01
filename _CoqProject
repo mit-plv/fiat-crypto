@@ -123,6 +123,7 @@ src/Util/BoundedWord.v
 src/Util/CPSNotations.v
 src/Util/CPSUtil.v
 src/Util/ChangeInAll.v
+src/Util/Comparison.v
 src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/DefaultedTypes.v

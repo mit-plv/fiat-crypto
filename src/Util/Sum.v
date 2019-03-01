@@ -3,6 +3,8 @@ Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.GlobalSettings.
 
+Scheme Equality for sum.
+
 Definition sumwise {A B} (RA:relation A) (RB : relation B) : relation (A + B)
   := fun x y => match x, y with
                 | inl x', inl y' => RA x' y'

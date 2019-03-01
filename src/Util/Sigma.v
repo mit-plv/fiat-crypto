@@ -101,6 +101,67 @@ Section sigT.
   Definition sigT_eta {A P} (p : { a : A & P a })
     : p = existT _ (projT1 p) (projT2 p).
   Proof. destruct p; reflexivity. Defined.
+
+  (** *** Boolean equality for [sigT] *)
+  Definition sigT_beq {A A' P P'} (eqA : A -> A' -> bool) (eqP : forall a a', P a -> P' a' -> bool) (p : { a : A & P a }) (q : { a' : A' & P' a' })
+    : bool
+    := andb (eqA (projT1 p) (projT1 q)) (eqP _ _ (projT2 p) (projT2 q)).
+
+  Lemma sigT_dec_bl {A P}
+        (eqA : A -> A -> bool) (eqP : forall a a', P a -> P a' -> bool)
+        (blA : forall a a', eqA a a' = true -> a = a')
+        (blP : forall a p p', eqP a a p p' = true -> p = p')
+        {p q}
+    : sigT_beq eqA eqP p q = true -> p = q.
+  Proof.
+    destruct p as [a p], q as [a' q]; cbv.
+    specialize (blA a a'); specialize (blP a p).
+    destruct (eqA a a') eqn:H'; [ specialize (blA eq_refl) | discriminate ]; subst.
+    intro H''; specialize (blP _ H''); subst; reflexivity.
+  Qed.
+
+  Lemma sigT_dec_lb {A P}
+        (eqA : A -> A -> bool) (eqP : forall a a', P a -> P a' -> bool)
+        (lbA : forall a a', a = a' -> eqA a a' = true)
+        (lbP : forall a p p', p = p' -> eqP a a p p' = true)
+        {p q}
+    : p = q -> sigT_beq eqA eqP p q = true.
+  Proof.
+    intro; subst q; destruct p as [a p]; cbv in *.
+    specialize (lbA a a eq_refl); specialize (lbP a p p eq_refl).
+    now rewrite lbA, lbP.
+  Qed.
+
+  Lemma sigT_dec_bl_hprop {A P}
+        (eqA : A -> A -> bool)
+        (blA : forall a a', eqA a a' = true -> a = a')
+        (P_hprop : forall (x : A) (p q : P x), p = q)
+        {p q}
+    : @sigT_beq A A P P eqA (fun _ _ _ _ => true) p q = true -> p = q.
+  Proof. apply sigT_dec_bl; eauto. Qed.
+
+  Lemma sigT_dec_lb_hprop {A P}
+        (eqA : A -> A -> bool)
+        (lbA : forall a a', a = a' -> eqA a a' = true)
+        (P_hprop : forall (x : A) (p q : P x), p = q)
+        {p q}
+    : p = q -> @sigT_beq A A P P eqA (fun _ _ _ _ => true) p q = true.
+  Proof. apply sigT_dec_lb; eauto. Qed.
+
+  Definition sigT_eq_dec {A P}
+             (eqA : A -> A -> bool) (eqP : forall a a', P a -> P a' -> bool)
+             (blA : forall a a', eqA a a' = true -> a = a')
+             (blP : forall a p p', eqP a a p p' = true -> p = p')
+             (lbA : forall a a', a = a' -> eqA a a' = true)
+             (lbP : forall a p p', p = p' -> eqP a a p p' = true)
+             (p q : { a : A & P a })
+    : {p = q} + {p <> q}.
+  Proof.
+    destruct (sigT_beq eqA eqP p q) eqn:H; [ left | right; intro H' ].
+    { eapply sigT_dec_bl; eassumption. }
+    { eapply sigT_dec_lb in H'; [ | eassumption.. ].
+      generalize (eq_trans (eq_sym H) H'); clear; abstract discriminate. }
+  Defined.
 End sigT.
 
 (** ** Equality for [sig] *)
@@ -171,6 +232,67 @@ Section sig.
   Definition sig_eta {A P} (p : { a : A | P a })
     : p = exist _ (proj1_sig p) (proj2_sig p).
   Proof. destruct p; reflexivity. Defined.
+
+  (** *** Boolean equality for [sig] *)
+  Definition sig_beq {A A'} {P P' : _ -> Prop} (eqA : A -> A' -> bool) (eqP : forall a a', P a -> P' a' -> bool) (p : { a : A | P a }) (q : { a' : A' | P' a' })
+    : bool
+    := andb (eqA (proj1_sig p) (proj1_sig q)) (eqP _ _ (proj2_sig p) (proj2_sig q)).
+
+  Lemma sig_dec_bl {A} {P : A -> Prop}
+        (eqA : A -> A -> bool) (eqP : forall a a', P a -> P a' -> bool)
+        (blA : forall a a', eqA a a' = true -> a = a')
+        (blP : forall a p p', eqP a a p p' = true -> p = p')
+        {p q}
+    : sig_beq eqA eqP p q = true -> p = q.
+  Proof.
+    destruct p as [a p], q as [a' q]; cbv.
+    specialize (blA a a'); specialize (blP a p).
+    destruct (eqA a a') eqn:H'; [ specialize (blA eq_refl) | discriminate ]; subst.
+    intro H''; specialize (blP _ H''); subst; reflexivity.
+  Qed.
+
+  Lemma sig_dec_lb {A} {P : A -> Prop}
+        (eqA : A -> A -> bool) (eqP : forall a a', P a -> P a' -> bool)
+        (lbA : forall a a', a = a' -> eqA a a' = true)
+        (lbP : forall a p p', p = p' -> eqP a a p p' = true)
+        {p q}
+    : p = q -> sig_beq eqA eqP p q = true.
+  Proof.
+    intro; subst q; destruct p as [a p]; cbv in *.
+    specialize (lbA a a eq_refl); specialize (lbP a p p eq_refl).
+    now rewrite lbA, lbP.
+  Qed.
+
+  Lemma sig_dec_bl_hprop {A} {P : A -> Prop}
+        (eqA : A -> A -> bool)
+        (blA : forall a a', eqA a a' = true -> a = a')
+        (P_hprop : forall (x : A) (p q : P x), p = q)
+        {p q}
+    : @sig_beq A A P P eqA (fun _ _ _ _ => true) p q = true -> p = q.
+  Proof. apply sig_dec_bl; eauto. Qed.
+
+  Lemma sig_dec_lb_hprop {A} {P : A -> Prop}
+        (eqA : A -> A -> bool)
+        (lbA : forall a a', a = a' -> eqA a a' = true)
+        (P_hprop : forall (x : A) (p q : P x), p = q)
+        {p q}
+    : p = q -> @sig_beq A A P P eqA (fun _ _ _ _ => true) p q = true.
+  Proof. apply sig_dec_lb; eauto. Qed.
+
+  Definition sig_eq_dec {A} {P : A -> Prop}
+             (eqA : A -> A -> bool) (eqP : forall a a', P a -> P a' -> bool)
+             (blA : forall a a', eqA a a' = true -> a = a')
+             (blP : forall a p p', eqP a a p p' = true -> p = p')
+             (lbA : forall a a', a = a' -> eqA a a' = true)
+             (lbP : forall a p p', p = p' -> eqP a a p p' = true)
+             (p q : { a : A | P a })
+    : {p = q} + {p <> q}.
+  Proof.
+    destruct (sig_beq eqA eqP p q) eqn:H; [ left | right; intro H' ].
+    { eapply sig_dec_bl; eassumption. }
+    { eapply sig_dec_lb in H'; [ | eassumption.. ].
+      generalize (eq_trans (eq_sym H) H'); clear; abstract discriminate. }
+  Defined.
 End sig.
 
 (** ** Equality for [ex] *)
