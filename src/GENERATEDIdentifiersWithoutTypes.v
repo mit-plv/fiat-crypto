@@ -2,10 +2,12 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
+Require Import Coq.derive.Derive.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.PrimitiveSigma.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Language.
 Import ListNotations. Local Open Scope list_scope.
@@ -35,12 +37,15 @@ Module Compilers.
            | Compilers.base.type.option A => type.option (relax A)
            end.
 
+      Definition lookup_default (p : positive) (evar_map : EvarMap) : Compilers.base.type
+        := match PositiveMap.find p evar_map with
+           | Datatypes.Some t => t
+           | Datatypes.None => Compilers.base.type.type_base base.type.unit
+           end.
+
       Fixpoint subst_default (ptype : type) (evar_map : EvarMap) : Compilers.base.type
         := match ptype with
-           | type.var p => match PositiveMap.find p evar_map with
-                           | Datatypes.Some t => t
-                           | Datatypes.None => Compilers.base.type.type_base base.type.unit
-                           end
+           | type.var p => lookup_default p evar_map
            | type.type_base t => Compilers.base.type.type_base t
            | type.prod A B
              => Compilers.base.type.prod (subst_default A evar_map) (subst_default B evar_map)
@@ -916,10 +921,12 @@ retcode = r"""Require Import Coq.ZArith.ZArith.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
+Require Import Coq.derive.Derive.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.PrimitiveSigma.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Language.
 Import ListNotations. Local Open Scope list_scope.
@@ -949,12 +956,15 @@ Module Compilers.
            | Compilers.base.type.option A => type.option (relax A)
            end.
 
+      Definition lookup_default (p : positive) (evar_map : EvarMap) : Compilers.base.type
+        := match PositiveMap.find p evar_map with
+           | Datatypes.Some t => t
+           | Datatypes.None => Compilers.base.type.type_base base.type.unit
+           end.
+
       Fixpoint subst_default (ptype : type) (evar_map : EvarMap) : Compilers.base.type
         := match ptype with
-           | type.var p => match PositiveMap.find p evar_map with
-                           | Datatypes.Some t => t
-                           | Datatypes.None => Compilers.base.type.type_base base.type.unit
-                           end
+           | type.var p => lookup_default p evar_map
            | type.type_base t => Compilers.base.type.type_base t
            | type.prod A B
              => Compilers.base.type.prod (subst_default A evar_map) (subst_default B evar_map)
@@ -1254,6 +1264,16 @@ retcode += addnewline((r"""%sDefinition of_typed_ident {t} (idc : %sident.ident 
      | %s
      end.
 """ % (indent1, prefix, '\n     | '.join(' '.join(ctor) + ' => @' + pctor + ' ' + ' '.join(relax_type_var(n, t) for n, t in named_ttype) for ctor, pctor, named_ttype in zip(ctors_with_prefix, pctors, named_ttypes)))).replace('\n', '\n' + indent1))
+
+retcode += addnewline((r"""%sDefinition arg_types_of_typed_ident {t} (idc : %sident.ident t) : type_of_list (arg_types (of_typed_ident idc))
+  := match idc in %sident.ident t return type_of_list (arg_types (of_typed_ident idc)) with
+     | %s
+     end.
+""" % (indent1, prefix, prefix,
+       '\n     | '.join(' '.join(ctor) + ' => ' + ('tt' if len(ctype) == 0 else fold_right_pair(ctor[-len(ctype):]))
+                        for ctor, ctype in zip(ctors_with_prefix, ctypes)))).replace('\n', '\n' + indent1))
+
+
 #
 #
 #retcode += addnewline((r"""%sDefinition retype_ident {t} (idc : %sident.ident t) : match arg_types (of_typed_ident idc) return %s with Datatypes.Some t => t | Datatypes.None => unit end -> %sident.ident t
@@ -1335,6 +1355,14 @@ retcode += addnewline((r"""%sDefinition of_typed_ident {t} (idc : %sident.ident 
 
 
 
+retcode += r"""      Derive type_of_list_arg_types_beq
+             SuchThat (forall {t idc}, reflect_rel (@eq (type_of_list (@arg_types t idc))) (@type_of_list_arg_types_beq t idc))
+             As reflect_type_of_list_arg_types_beq.
+      Proof.
+        subst type_of_list_arg_types_beq; intros t idc.
+        instantiate (1:=ltac:(intros t idc; destruct idc)); destruct idc; cbn [fold_right arg_types]; try solve [ exact reflect_eq_unit ]; instantiate (1:=ltac:(cbn [fold_right arg_types])); exact _.
+      Qed.
+"""
 
 
 retcode += r"""    End ident.
@@ -2725,6 +2753,104 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.fancy_addm => @fancy_addm
            end.
 
+      Definition arg_types_of_typed_ident {t} (idc : Compilers.ident.ident t) : type_of_list (arg_types (of_typed_ident idc))
+        := match idc in Compilers.ident.ident t return type_of_list (arg_types (of_typed_ident idc)) with
+           | Compilers.ident.Literal t v => (v, tt)
+           | Compilers.ident.Nat_succ => tt
+           | Compilers.ident.Nat_pred => tt
+           | Compilers.ident.Nat_max => tt
+           | Compilers.ident.Nat_mul => tt
+           | Compilers.ident.Nat_add => tt
+           | Compilers.ident.Nat_sub => tt
+           | Compilers.ident.Nat_eqb => tt
+           | Compilers.ident.nil t => tt
+           | Compilers.ident.cons t => tt
+           | Compilers.ident.pair A B => tt
+           | Compilers.ident.fst A B => tt
+           | Compilers.ident.snd A B => tt
+           | Compilers.ident.prod_rect A B T => tt
+           | Compilers.ident.bool_rect T => tt
+           | Compilers.ident.nat_rect P => tt
+           | Compilers.ident.nat_rect_arrow P Q => tt
+           | Compilers.ident.list_rect A P => tt
+           | Compilers.ident.list_case A P => tt
+           | Compilers.ident.List_length T => tt
+           | Compilers.ident.List_seq => tt
+           | Compilers.ident.List_firstn A => tt
+           | Compilers.ident.List_skipn A => tt
+           | Compilers.ident.List_repeat A => tt
+           | Compilers.ident.List_combine A B => tt
+           | Compilers.ident.List_map A B => tt
+           | Compilers.ident.List_app A => tt
+           | Compilers.ident.List_rev A => tt
+           | Compilers.ident.List_flat_map A B => tt
+           | Compilers.ident.List_partition A => tt
+           | Compilers.ident.List_fold_right A B => tt
+           | Compilers.ident.List_update_nth T => tt
+           | Compilers.ident.List_nth_default T => tt
+           | Compilers.ident.Z_add => tt
+           | Compilers.ident.Z_mul => tt
+           | Compilers.ident.Z_pow => tt
+           | Compilers.ident.Z_sub => tt
+           | Compilers.ident.Z_opp => tt
+           | Compilers.ident.Z_div => tt
+           | Compilers.ident.Z_modulo => tt
+           | Compilers.ident.Z_log2 => tt
+           | Compilers.ident.Z_log2_up => tt
+           | Compilers.ident.Z_eqb => tt
+           | Compilers.ident.Z_leb => tt
+           | Compilers.ident.Z_ltb => tt
+           | Compilers.ident.Z_geb => tt
+           | Compilers.ident.Z_gtb => tt
+           | Compilers.ident.Z_of_nat => tt
+           | Compilers.ident.Z_to_nat => tt
+           | Compilers.ident.Z_shiftr => tt
+           | Compilers.ident.Z_shiftl => tt
+           | Compilers.ident.Z_land => tt
+           | Compilers.ident.Z_lor => tt
+           | Compilers.ident.Z_min => tt
+           | Compilers.ident.Z_max => tt
+           | Compilers.ident.Z_bneg => tt
+           | Compilers.ident.Z_lnot_modulo => tt
+           | Compilers.ident.Z_mul_split => tt
+           | Compilers.ident.Z_add_get_carry => tt
+           | Compilers.ident.Z_add_with_carry => tt
+           | Compilers.ident.Z_add_with_get_carry => tt
+           | Compilers.ident.Z_sub_get_borrow => tt
+           | Compilers.ident.Z_sub_with_get_borrow => tt
+           | Compilers.ident.Z_zselect => tt
+           | Compilers.ident.Z_add_modulo => tt
+           | Compilers.ident.Z_rshi => tt
+           | Compilers.ident.Z_cc_m => tt
+           | Compilers.ident.Z_cast range => (range, tt)
+           | Compilers.ident.Z_cast2 range => (range, tt)
+           | Compilers.ident.option_Some A => tt
+           | Compilers.ident.option_None A => tt
+           | Compilers.ident.option_rect A P => tt
+           | Compilers.ident.Build_zrange => tt
+           | Compilers.ident.zrange_rect P => tt
+           | Compilers.ident.fancy_add log2wordmax imm => (log2wordmax, (imm, tt))
+           | Compilers.ident.fancy_addc log2wordmax imm => (log2wordmax, (imm, tt))
+           | Compilers.ident.fancy_sub log2wordmax imm => (log2wordmax, (imm, tt))
+           | Compilers.ident.fancy_subb log2wordmax imm => (log2wordmax, (imm, tt))
+           | Compilers.ident.fancy_mulll log2wordmax => (log2wordmax, tt)
+           | Compilers.ident.fancy_mullh log2wordmax => (log2wordmax, tt)
+           | Compilers.ident.fancy_mulhl log2wordmax => (log2wordmax, tt)
+           | Compilers.ident.fancy_mulhh log2wordmax => (log2wordmax, tt)
+           | Compilers.ident.fancy_rshi log2wordmax x => (log2wordmax, (x, tt))
+           | Compilers.ident.fancy_selc => tt
+           | Compilers.ident.fancy_selm log2wordmax => (log2wordmax, tt)
+           | Compilers.ident.fancy_sell => tt
+           | Compilers.ident.fancy_addm => tt
+           end.
+
+      Derive type_of_list_arg_types_beq
+             SuchThat (forall {t idc}, reflect_rel (@eq (type_of_list (@arg_types t idc))) (@type_of_list_arg_types_beq t idc))
+             As reflect_type_of_list_arg_types_beq.
+      Proof.
+        subst type_of_list_arg_types_beq; intros t idc.
+        instantiate (1:=ltac:(intros t idc; destruct idc)); destruct idc; cbn [fold_right arg_types]; try solve [ exact reflect_eq_unit ]; instantiate (1:=ltac:(cbn [fold_right arg_types])); exact _.
+      Qed.
     End ident.
 
     (*===*)
