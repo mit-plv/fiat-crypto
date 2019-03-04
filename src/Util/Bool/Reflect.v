@@ -69,6 +69,7 @@ Ltac beq_to_eq beq bl lb :=
 Existing Class reflect.
 Definition decb (P : Prop) {b : bool} {H : reflect P b} := b.
 Notation reflect_rel P b := (forall x y, reflect (P x y) (b x y)).
+Definition decb_rel {A B} (P : A -> B -> Prop) {b : A -> B -> bool} {H : reflect_rel P b} := b.
 
 Lemma decb_true_iff P {b} {H : reflect P b} : @decb P b H = true <-> P.
 Proof. symmetry; apply reflect_iff, H. Qed.

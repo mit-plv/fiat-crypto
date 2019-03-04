@@ -2,6 +2,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Notations.
 
@@ -97,6 +98,9 @@ Proof.
   cbv [zrange_beq] in *; rewrite Bool.andb_true_iff, !Z.eqb_eq in *.
   subst; split; reflexivity.
 Qed.
+
+Global Instance reflect_zrange_eq : reflect_rel (@eq zrange) zrange_beq | 10.
+Proof. apply reflect_of_beq; auto using zrange_bl, zrange_lb. Qed.
 
 Global Instance zrange_rect_Proper {P}
   : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq) (@zrange_rect (fun _ => P)) | 10.
