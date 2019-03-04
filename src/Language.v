@@ -12,6 +12,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.CPSNotations.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
@@ -324,6 +325,9 @@ Module Compilers.
          | type.zrange => zrange_beq
          end.
 
+    Global Instance reflect_base_interp_eq {t} : reflect_rel (@eq (base_interp t)) (@base_interp_beq t) | 10.
+    Proof. induction t; cbn [base_interp base_interp_beq]; eauto with typeclass_instances. Qed.
+
     Fixpoint interp_beq {t} : interp t -> interp t -> bool
       := match t with
          | type.type_base t => @base_interp_beq t
@@ -331,6 +335,9 @@ Module Compilers.
          | type.list A => list_beq _ (@interp_beq A)
          | type.option A => option_beq (@interp_beq A)
          end.
+
+    Global Instance reflect_interp_eq {t} : reflect_rel (@eq (interp t)) (@interp_beq t) | 10.
+    Proof. induction t; cbn [interp interp_beq]; eauto with typeclass_instances. Qed.
 
     Definition try_make_base_transport_cps
                (P : type.base -> Type) (t1 t2 : type.base)
@@ -1118,6 +1125,7 @@ Module Compilers.
     Notation LiteralBool := (@Literal base.type.bool).
     Notation LiteralNat := (@Literal base.type.nat).
     Notation LiteralZRange := (@Literal base.type.zrange).
+    Definition literal {T} (v : T) := v.
 
     (** TODO: MOVE ME? *)
     Module Thunked.
@@ -1185,6 +1193,9 @@ Module Compilers.
         | Nat.max => then_tac Nat_max
         | Nat.pred => then_tac Nat_pred
         | S => then_tac Nat_succ
+        | @literal ?T
+          => let rT := base.reify T in
+             then_tac (@ident.Literal rT)
         | @Datatypes.nil ?T
           => let rT := base.reify T in
              then_tac (@ident.nil rT)
@@ -1357,7 +1368,7 @@ Module Compilers.
         | Z.add_modulo => then_tac ident.Z_add_modulo
         | Z.rshi => then_tac ident.Z_rshi
         | Z.cc_m => then_tac ident.Z_cc_m
-        | ident.cast _ => then_tac ident.Z_cast
+        | ident.cast _ ?r => then_tac (ident.Z_cast r)
         | @Some ?A
           => let rA := base.reify A in
              then_tac (@ident.Some rA)
