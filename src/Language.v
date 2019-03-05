@@ -1127,34 +1127,6 @@ Module Compilers.
     Notation LiteralZRange := (@Literal base.type.zrange).
     Definition literal {T} (v : T) := v.
 
-    Definition reify_list {var} {t} (ls : list (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.list t))
-      := Datatypes.list_rect
-           (fun _ => _)
-           (expr.Ident ident.nil)
-           (fun x _ xs => expr.Ident ident.cons @ x @ xs)%expr
-           ls.
-
-    Definition reify_option {var} {t} (v : option (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.option t))
-      := Datatypes.option_rect
-           (fun _ => _)
-           (fun x => expr.Ident ident.Some @ x)%expr
-           (expr.Ident ident.None)
-           v.
-
-    Fixpoint smart_Literal {var} {t:base.type} : base.interp t -> @expr.expr base.type ident var (type.base t)
-      := match t with
-         | base.type.type_base t => fun v => expr.Ident (ident.Literal v)
-         | base.type.prod A B
-           => fun '((a, b) : base.interp A * base.interp B)
-              => expr.Ident ident.pair @ (@smart_Literal var A a) @ (@smart_Literal var B b)
-         | base.type.list A
-           => fun v : list (base.interp A)
-              => reify_list (List.map (@smart_Literal var A) v)
-         | base.type.option A
-           => fun v : option (base.interp A)
-              => reify_option (option_map (@smart_Literal var A) v)
-         end%expr.
-
     (** TODO: MOVE ME? *)
     Module Thunked.
       Definition bool_rect P (t f : Datatypes.unit -> P) (b : bool) : P
@@ -1223,7 +1195,7 @@ Module Compilers.
         | S => then_tac Nat_succ
         | @literal ?T
           => let rT := base.reify T in
-             then_tac (@ident.smart_Literal rT)
+             then_tac (@ident.Literal rT)
         | @Datatypes.nil ?T
           => let rT := base.reify T in
              then_tac (@ident.nil rT)
@@ -1407,6 +1379,34 @@ Module Compilers.
         | _ => else_tac ()
         end
       end.
+
+    Definition reify_list {var} {t} (ls : list (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.list t))
+      := Datatypes.list_rect
+           (fun _ => _)
+           (expr.Ident ident.nil)
+           (fun x _ xs => expr.Ident ident.cons @ x @ xs)%expr
+           ls.
+
+    Definition reify_option {var} {t} (v : option (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.option t))
+      := Datatypes.option_rect
+           (fun _ => _)
+           (fun x => expr.Ident ident.Some @ x)%expr
+           (expr.Ident ident.None)
+           v.
+
+    Fixpoint smart_Literal {var} {t:base.type} : base.interp t -> @expr.expr base.type ident var (type.base t)
+      := match t with
+         | base.type.type_base t => fun v => expr.Ident (ident.Literal v)
+         | base.type.prod A B
+           => fun '((a, b) : base.interp A * base.interp B)
+              => expr.Ident ident.pair @ (@smart_Literal var A a) @ (@smart_Literal var B b)
+         | base.type.list A
+           => fun v : list (base.interp A)
+              => reify_list (List.map (@smart_Literal var A) v)
+         | base.type.option A
+           => fun v : option (base.interp A)
+              => reify_option (option_map (@smart_Literal var A) v)
+         end%expr.
 
     Module Export Notations.
       Delimit Scope ident_scope with ident.
