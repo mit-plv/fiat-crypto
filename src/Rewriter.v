@@ -506,6 +506,13 @@ Module Compilers.
                ls
                f args.
 
+        Definition lam_type_of_list {ls K} : (type_of_list ls -> K) -> type_of_list_cps K ls
+          := list_rect
+               (fun ls => (type_of_list ls -> K) -> type_of_list_cps K ls)
+               (fun f => f tt)
+               (fun T Ts rec k t => rec (fun ts => k (t, ts)))
+               ls.
+
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
         Local Notation "e <----- e' ; f" := (splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
 

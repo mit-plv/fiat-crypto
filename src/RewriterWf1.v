@@ -65,6 +65,7 @@ Module Compilers.
         Proof using Type.
           revert t; induction pt;
             repeat first [ progress cbn [pattern.base.subst pattern.base.subst_default]
+                         | progress cbv [pattern.base.lookup_default]
                          | progress cbv [Option.bind option_map]
                          | progress inversion_option
                          | progress subst
@@ -894,13 +895,6 @@ Module Compilers.
         Local Notation with_unification_resultT := (@with_unification_resultT pident pident_arg_types).
         Local Notation unification_resultT' := (@unification_resultT' pident pident_arg_types).
         Local Notation unification_resultT := (@unification_resultT pident pident_arg_types).
-
-        Definition lam_type_of_list {ls K} : (type_of_list ls -> K) -> type_of_list_cps K ls
-          := list_rect
-               (fun ls => (type_of_list ls -> K) -> type_of_list_cps K ls)
-               (fun f => f tt)
-               (fun T Ts rec k t => rec (fun ts => k (t, ts)))
-               ls.
 
         Lemma app_lam_type_of_list
               {K ls f args}
