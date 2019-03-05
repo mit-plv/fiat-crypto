@@ -2303,7 +2303,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                    projT1 projT2
                    cpsbind cpscall cps_option_bind cpsreturn
                    PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
-                   pattern.type.subst_default pattern.base.subst_default
+                   pattern.type.subst_default pattern.base.subst_default pattern.base.lookup_default
                    PositiveMap.add PositiveMap.find PositiveMap.empty
                    PositiveSet.rev PositiveSet.rev_append
                    pattern.ident.arg_types
