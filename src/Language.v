@@ -1158,6 +1158,7 @@ Module Compilers.
       | Datatypes.None => idtac
       | ZRange.Build_zrange ?x ?y
         => require_primitive_const x; require_primitive_const y
+      | literal ?x => idtac
       | ?term => fail 0 "Not a known const:" term
       end.
     Ltac is_primitive_const term :=
@@ -1193,9 +1194,6 @@ Module Compilers.
         | Nat.max => then_tac Nat_max
         | Nat.pred => then_tac Nat_pred
         | S => then_tac Nat_succ
-        | @literal ?T
-          => let rT := base.reify T in
-             then_tac (@ident.Literal rT)
         | @Datatypes.nil ?T
           => let rT := base.reify T in
              then_tac (@ident.nil rT)
