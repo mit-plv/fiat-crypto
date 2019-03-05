@@ -32,6 +32,15 @@ Reserved Infix "=ₙ?" (at level 70, no associativity).
 Reserved Infix "=ℤ?" (at level 70, no associativity).
 Reserved Infix "=ᶻ?" (at level 70, no associativity).
 Reserved Infix "=ⁿ?" (at level 70, no associativity).
+(* to match with ssreflect *)
+Reserved Notation "x \in A"
+  (at level 70, format "'[hv' x '/ '  \in  A ']'", no associativity).
+Reserved Notation "x \notin A"
+  (at level 70, format "'[hv' x '/ '  \notin  A ']'", no associativity).
+Reserved Notation "x ∈ A"
+  (at level 70, format "'[hv' x '/ '  ∈  A ']'", no associativity).
+Reserved Notation "x ∉ A"
+  (at level 70, format "'[hv' x '/ '  ∉  A ']'", no associativity).
 Reserved Notation "x +' y" (at level 50, left associativity).
 Reserved Notation "x -' y" (at level 50, left associativity).
 Reserved Notation "x *' y" (at level 40, left associativity).
