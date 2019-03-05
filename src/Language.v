@@ -998,6 +998,9 @@ Module Compilers.
              else if is_more_pos_than_neg r x
                   then cast_outside_of_range' r x
                   else -cast_outside_of_range' (-r) (-x).
+        Definition cast2 (r : zrange * zrange) (x : BinInt.Z * BinInt.Z)
+          := (cast (Datatypes.fst r) (Datatypes.fst x),
+              cast (Datatypes.snd r) (Datatypes.snd x)).
 
         Local Notation wordmax log2wordmax := (2 ^ log2wordmax).
         Local Notation half_bits log2wordmax := (log2wordmax / 2).
@@ -1367,6 +1370,7 @@ Module Compilers.
         | Z.rshi => then_tac ident.Z_rshi
         | Z.cc_m => then_tac ident.Z_cc_m
         | ident.cast _ ?r => then_tac (ident.Z_cast r)
+        | ident.cast2 _ ?r => then_tac (ident.Z_cast2 r)
         | @Some ?A
           => let rA := base.reify A in
              then_tac (@ident.Some rA)
