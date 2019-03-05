@@ -140,17 +140,32 @@ Module Compilers.
     Section with_var2.
       Context {base_type : Type}.
       Local Notation type := (type base_type).
-      Context {ident1 var1 ident2 var2 : type -> Type}
-              (f : forall t, @expr base_type ident1 var1 t -> @expr base_type ident2 var2 t)
-              (f' : forall t, var2 t -> var1 t)
-              {T : Type}.
+      Context {ident1 var1 ident2 var2 : type -> Type}.
+      Section map.
+        Context (f : forall t, @expr base_type ident1 var1 t -> @expr base_type ident2 var2 t)
+                (f' : forall t, var2 t -> var1 t)
+                {T : Type}.
 
-      Fixpoint map (x : @UnderLets base_type ident1 var1 T) : @UnderLets base_type ident2 var2 T
-        := match x with
-           | UnderLet A x F
-             => UnderLet (f A x) (fun v => map (F (f' A v)))
-           | Base x => Base x
-           end.
+        Fixpoint map (x : @UnderLets base_type ident1 var1 T) : @UnderLets base_type ident2 var2 T
+          := match x with
+             | UnderLet A x F
+               => UnderLet (f A x) (fun v => map (F (f' A v)))
+             | Base x => Base x
+             end.
+      End map.
+
+      Section flat_map.
+        Context (f : forall t, @expr base_type ident1 var1 t -> @UnderLets base_type ident2 var2 (@expr base_type ident2 var2 t))
+                (f' : forall t, var2 t -> var1 t)
+                {T : Type}.
+
+        Fixpoint flat_map (x : @UnderLets base_type ident1 var1 T) : @UnderLets base_type ident2 var2 T
+          := match x with
+             | UnderLet A x F
+               => splice (f A x) (fun v => UnderLet v (fun v => flat_map (F (f' A v))))
+             | Base x => Base x
+             end.
+      End flat_map.
     End with_var2.
 
     Section reify.
