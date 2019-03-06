@@ -973,6 +973,26 @@ Module Compilers.
              | fancy_addm => Datatypes.Some fancy.addm
              | _ => Datatypes.None
              end.
+
+        Definition of_fancy {s d : base.type} (idc : fancy.ident s d) : ident (s -> d)
+          := match idc in fancy.ident s d return ident (s -> d) with
+             | fancy.with_wordmax log2wordmax s d idc
+               => match idc in fancy.ident_with_wordmax s d return ident (s -> d) with
+                  | fancy.add imm => fancy_add log2wordmax imm
+                  | fancy.addc imm => fancy_addc log2wordmax imm
+                  | fancy.sub imm => fancy_sub log2wordmax imm
+                  | fancy.subb imm => fancy_subb log2wordmax imm
+                  | fancy.mulll => fancy_mulll log2wordmax
+                  | fancy.mullh => fancy_mullh log2wordmax
+                  | fancy.mulhl => fancy_mulhl log2wordmax
+                  | fancy.mulhh => fancy_mulhh log2wordmax
+                  | fancy.selm => fancy_selm log2wordmax
+                  | fancy.rshi x => fancy_rshi log2wordmax x
+                  end
+             | fancy.selc => fancy_selc
+             | fancy.sell => fancy_sell
+             | fancy.addm => fancy_addm
+             end.
       End with_scope.
       Notation Some := option_Some.
       Notation None := option_None.
@@ -1378,6 +1398,10 @@ Module Compilers.
           => let rA := base.reify A in
              then_tac (@ident.None rA)
         | ZRange.Build_zrange => then_tac ident.Build_zrange
+        | fancy.interp ?idc
+          => let ridc := (eval cbv [to_fancy] in (to_fancy idc)) in
+             then_tac ridc
+        | @gen_interp _ ?idc => then_tac idc
         | _ => else_tac ()
         end
       end.
