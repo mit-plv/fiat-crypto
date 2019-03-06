@@ -1401,7 +1401,7 @@ Module Compilers.
         | fancy.interp ?idc
           => let ridc := (eval cbv [to_fancy] in (to_fancy idc)) in
              then_tac ridc
-        | @gen_interp _ ?idc => then_tac idc
+        | @gen_interp _ _ ?idc => then_tac idc
         | _ => else_tac ()
         end
       end.
