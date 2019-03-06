@@ -356,9 +356,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v3 <- base.try_make_transport_cps b7 T;
                v4 <- base.try_make_transport_cps T T;
                Datatypes.Some
-                 (fv1 <-- x'4 (x'3 (x'2 (x'1 (x'0 (x' x)))))
-                            (v1 (v (Compile.reflect x2)))
-                            (v2 (v0 (Compile.reflect x1)));
+                 (fv1 <-- (e <-- x'4 (x'3 (x'2 (x'1 (x'0 (x' x)))))
+                                   (v1 (v (Compile.reflect x2)))
+                                   (v2 (v0 (Compile.reflect x1)));
+                           Base e);
                   Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -383,6 +384,43 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun (x x0 : expr unit -> UnderLets (expr T)) (x1 : expr bool) =>
     ((match x1 with
       | @expr.Ident _ _ _ t idc =>
+          (args <- invert_bind_args idc Raw.ident.Literal;
+           match
+             pattern.type.unify_extracted
+               (((((unit -> '1%pbtype) ->
+                   (unit -> '1%pbtype) -> bool -> '1%pbtype) ->
+                  unit -> '1%pbtype) -> unit -> '1%pbtype) -> bool)%ptype
+               (((((unit -> T) -> (unit -> T) -> bool -> T) -> unit -> T) ->
+                 unit -> T) -> (projT1 args))%ptype
+           with
+           | Datatypes.Some
+             (_, _, (_, _, (_, _)), (_, _), (_, b8), _)%zrange =>
+               if
+                type.type_beq base.type base.type.type_beq
+                  (((((unit -> b8) -> (unit -> b8) -> bool -> b8) ->
+                     unit -> b8) -> unit -> b8) -> bool)%ptype
+                  (((((unit -> T) -> (unit -> T) -> bool -> T) -> unit -> T) ->
+                    unit -> T) -> (projT1 args))%ptype
+               then
+                _ <- ident.unify pattern.ident.bool_rect bool_rect;
+                x' <- base.try_make_transport_cps T b8;
+                _ <- base.try_make_transport_cps T b8;
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                x'1 <- base.try_make_transport_cps b8 b8;
+                _ <- base.try_make_transport_cps b8 b8;
+                v <- base.try_make_transport_cps b8 T;
+                v0 <- base.try_make_transport_cps T T;
+                fv0 <- (if let (x2, _) := xv in x2
+                        then
+                         Datatypes.Some
+                           (e <-- x'1 (x' x) (##tt)%expr;
+                            Base e)%under_lets
+                        else Datatypes.None);
+                Datatypes.Some (fv1 <-- fv0;
+                                Base (v0 (v fv1)))%under_lets
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
+           end);;
           args <- invert_bind_args idc Raw.ident.Literal;
           match
             pattern.type.unify_extracted
@@ -402,18 +440,21 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    unit -> T) -> (projT1 args))%ptype
               then
                _ <- ident.unify pattern.ident.bool_rect bool_rect;
-               x' <- base.try_make_transport_cps T b8;
+               _ <- base.try_make_transport_cps T b8;
                x'0 <- base.try_make_transport_cps T b8;
                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-               x'1 <- base.try_make_transport_cps b8 b8;
+               _ <- base.try_make_transport_cps b8 b8;
                x'2 <- base.try_make_transport_cps b8 b8;
                v <- base.try_make_transport_cps b8 T;
                v0 <- base.try_make_transport_cps T T;
-               Datatypes.Some
-                 (fv0 <-- (if let (x2, _) := xv in x2
-                           then x'1 (x' x) (##tt)%expr
-                           else x'2 (x'0 x0) (##tt)%expr);
-                  Base (v0 (v fv0)))%under_lets
+               fv0 <- (if let (x2, _) := xv in x2
+                       then Datatypes.None
+                       else
+                        Datatypes.Some
+                          (e <-- x'2 (x'0 x0) (##tt)%expr;
+                           Base e)%under_lets);
+               Datatypes.Some (fv1 <-- fv0;
+                               Base (v0 (v fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -652,7 +693,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v <- base.try_make_transport_cps b10 P;
                v0 <- base.try_make_transport_cps P P;
                Datatypes.Some
-                 (fv0 <-- x'3 (x' x) (##tt)%expr;
+                 (fv0 <-- (e <-- x'3 (x' x) (##tt)%expr;
+                           Base e);
                   Base (v0 (v fv0)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -704,9 +746,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v3 <- base.try_make_transport_cps b10 P;
                v4 <- base.try_make_transport_cps P P;
                Datatypes.Some
-                 (fv1 <-- x'6 (x'5 (x'4 (x'2 (x'1 (x'0 x0)))))
-                            (v1 (v (Compile.reflect x3)))
-                            (v2 (v0 (Compile.reflect x2)));
+                 (fv1 <-- (e <-- x'6 (x'5 (x'4 (x'2 (x'1 (x'0 x0)))))
+                                   (v1 (v (Compile.reflect x3)))
+                                   (v2 (v0 (Compile.reflect x2)));
+                           Base e);
                   Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -1769,8 +1812,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    xv0 <- ident.unify pattern.ident.Literal ##(projT2 args);
                    Datatypes.Some
                      (Base
-                        (##(Z.shiftr (let (x1, _) := xv in x1)
-                              (let (x1, _) := xv0 in x1)))%expr)
+                        (##((let (x1, _) := xv in x1) >>
+                            (let (x1, _) := xv0 in x1))%Z)%expr)
                   else Datatypes.None
               | Datatypes.None => Datatypes.None
               end
@@ -1801,8 +1844,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    xv0 <- ident.unify pattern.ident.Literal ##(projT2 args);
                    Datatypes.Some
                      (Base
-                        (##(Z.shiftl (let (x1, _) := xv in x1)
-                              (let (x1, _) := xv0 in x1)))%expr)
+                        (##((let (x1, _) := xv in x1) <<
+                            (let (x1, _) := xv0 in x1))%Z)%expr)
                   else Datatypes.None
               | Datatypes.None => Datatypes.None
               end
@@ -1833,8 +1876,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    xv0 <- ident.unify pattern.ident.Literal ##(projT2 args);
                    Datatypes.Some
                      (Base
-                        (##(Z.land (let (x1, _) := xv in x1)
-                              (let (x1, _) := xv0 in x1)))%expr)
+                        (##((let (x1, _) := xv in x1) &'
+                            (let (x1, _) := xv0 in x1))%Z)%expr)
                   else Datatypes.None
               | Datatypes.None => Datatypes.None
               end

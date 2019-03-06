@@ -234,13 +234,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((projT1 args) -> ℤ)%ptype
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                fv <- (x2 <- (if
-                               ((let (x2, _) := xv in x2) =? 0) &&
-                               is_bounded_by_bool (let (x2, _) := xv in x2)
-                                 (ZRange.normalize args0)
-                              then Datatypes.Some x0
-                              else Datatypes.None);
-                       Datatypes.Some (Base x2));
+                fv <- (if
+                        is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                        ((let (x2, _) := xv in x2) =? 0)
+                       then Datatypes.Some (Base x0)
+                       else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
                else Datatypes.None
@@ -267,13 +265,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   (ℤ -> (projT1 args))%ptype
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                fv <- (x2 <- (if
-                               ((let (x2, _) := xv in x2) =? 0) &&
-                               is_bounded_by_bool (let (x2, _) := xv in x2)
-                                 (ZRange.normalize args0)
-                              then Datatypes.Some x
-                              else Datatypes.None);
-                       Datatypes.Some (Base x2));
+                fv <- (if
+                        is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                        ((let (x2, _) := xv in x2) =? 0)
+                       then Datatypes.Some (Base x)
+                       else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
                else Datatypes.None
@@ -294,6 +290,28 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun x x0 : expr ℤ =>
     ((match x with
       | (@expr.Ident _ _ _ t idc @ @expr.Ident _ _ _ t0 idc0)%expr_pat =>
+          (args <- invert_bind_args idc0 Raw.ident.Literal;
+           args0 <- invert_bind_args idc Raw.ident.Z_cast;
+           match
+             pattern.type.unify_extracted (ℤ -> ℤ)%ptype
+               ((projT1 args) -> ℤ)%ptype
+           with
+           | Datatypes.Some (_, _)%zrange =>
+               if
+                type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
+                  ((projT1 args) -> ℤ)%ptype
+               then
+                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
+                fv <- (if
+                        is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                        ((let (x2, _) := xv in x2) =? 0)
+                       then Datatypes.Some (Base (- x0)%expr)
+                       else Datatypes.None);
+                Datatypes.Some (fv0 <-- fv;
+                                Base fv0)%under_lets
+               else Datatypes.None
+           | Datatypes.None => Datatypes.None
+           end);;
           match x0 with
           | (@expr.Ident _ _ _ t1 idc1 @
              (@expr.Ident _ _ _ t2 idc2 @ @expr.App _ _ _ s2 _
@@ -314,18 +332,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   then
                    xv <- ident.unify pattern.ident.Literal ##(projT2 args2);
                    v <- type.try_make_transport_cps s2 ℤ;
-                   fv <- (x5 <- (if
-                                  ((let (x5, _) := xv in x5) =? 0) &&
-                                  (ZRange.normalize args <=?
-                                   - ZRange.normalize args1)%zrange &&
-                                  is_bounded_by_bool
-                                    (let (x5, _) := xv in x5) args3
-                                 then
-                                  Datatypes.Some
-                                    (#(Z_cast args)%expr @
-                                     v (Compile.reflect x4))%expr_pat
-                                 else Datatypes.None);
-                          Datatypes.Some (Base x5));
+                   fv <- (if
+                           (ZRange.normalize args <=?
+                            - ZRange.normalize args1)%zrange &&
+                           is_bounded_by_bool 0 (ZRange.normalize args3) &&
+                           ((let (x5, _) := xv in x5) =? 0)
+                          then
+                           Datatypes.Some
+                             (Base
+                                (#(Z_cast args)%expr @ v (Compile.reflect x4))%expr_pat)
+                          else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
                   else Datatypes.None
@@ -359,30 +375,6 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             (@expr.Ident _ _ _ t1 idc1 @ @expr.LetIn _ _ _ _ _ _ _)%expr_pat =>
               Datatypes.None
           | _ => Datatypes.None
-          end;;
-          args <- invert_bind_args idc0 Raw.ident.Literal;
-          args0 <- invert_bind_args idc Raw.ident.Z_cast;
-          match
-            pattern.type.unify_extracted (ℤ -> ℤ)%ptype
-              ((projT1 args) -> ℤ)%ptype
-          with
-          | Datatypes.Some (_, _)%zrange =>
-              if
-               type.type_beq base.type base.type.type_beq (ℤ -> ℤ)%ptype
-                 ((projT1 args) -> ℤ)%ptype
-              then
-               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-               fv <- (x2 <- (if
-                              ((let (x2, _) := xv in x2) =? 0) &&
-                              is_bounded_by_bool (let (x2, _) := xv in x2)
-                                (ZRange.normalize args0)
-                             then Datatypes.Some (- x0)%expr
-                             else Datatypes.None);
-                      Datatypes.Some (Base x2));
-               Datatypes.Some (fv0 <-- fv;
-                               Base fv0)%under_lets
-              else Datatypes.None
-          | Datatypes.None => Datatypes.None
           end
       | (@expr.Ident _ _ _ t idc @ ($_)%expr)%expr_pat |
         (@expr.Ident _ _ _ t idc @ @expr.Abs _ _ _ _ _ _)%expr_pat |
@@ -407,14 +399,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               if type.type_beq base.type base.type.type_beq ℤ s1
               then
                v <- type.try_make_transport_cps s1 ℤ;
-               fv <- (x3 <- (if
-                              (ZRange.normalize args <=?
-                               - ZRange.normalize args1)%zrange
-                             then
-                              Datatypes.Some
-                                (#(Z_cast args)%expr @ v (Compile.reflect x2))%expr_pat
-                             else Datatypes.None);
-                      Datatypes.Some (Base x3));
+               fv <- (if
+                       (ZRange.normalize args <=? - ZRange.normalize args1)%zrange
+                      then
+                       Datatypes.Some
+                         (Base
+                            (#(Z_cast args)%expr @ v (Compile.reflect x2))%expr_pat)
+                      else Datatypes.None);
                Datatypes.Some (fv0 <-- fv;
                                Base fv0)%under_lets
               else Datatypes.None
@@ -478,13 +469,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 ((projT1 args) -> ℤ)%ptype
              then
               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-              fv <- (x2 <- (if
-                             ((let (x2, _) := xv in x2) =? 0) &&
-                             is_bounded_by_bool (let (x2, _) := xv in x2)
-                               (ZRange.normalize args0)
-                            then Datatypes.Some (##0)%expr
-                            else Datatypes.None);
-                     Datatypes.Some (Base x2));
+              fv <- (if
+                      is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                      ((let (x2, _) := xv in x2) =? 0)
+                     then Datatypes.Some (Base (##0)%expr)
+                     else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
              else Datatypes.None
@@ -521,16 +510,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> (projT1 args)) -> ℤ)%ptype
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                fv <- (x3 <- (if
-                               ((let (x3, _) := xv in x3) =? 0) &&
-                               is_bounded_by_bool (let (x3, _) := xv in x3)
-                                 (ZRange.normalize args0)
-                              then
-                               Datatypes.Some
-                                 (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
-                                 #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat
-                              else Datatypes.None);
-                       Datatypes.Some (Base x3));
+                fv <- (if
+                        is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                        ((let (x3, _) := xv in x3) =? 0)
+                       then
+                        Datatypes.Some
+                          (Base
+                             (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
+                             #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
+                       else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
                else Datatypes.None
@@ -559,17 +547,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> ℤ) -> (projT1 args))%ptype
                    then
                     xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-                    fv <- (x3 <- (if
-                                   ((let (x3, _) := xv in x3) =? 0) &&
-                                   is_bounded_by_bool
-                                     (let (x3, _) := xv in x3)
-                                     (ZRange.normalize args0)
-                                  then
-                                   Datatypes.Some
-                                     (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
-                                     #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat
-                                  else Datatypes.None);
-                           Datatypes.Some (Base x3));
+                    fv <- (if
+                            is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                            ((let (x3, _) := xv in x3) =? 0)
+                           then
+                            Datatypes.Some
+                              (Base
+                                 (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
+                                 #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
+                           else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
                    else Datatypes.None
@@ -603,25 +589,23 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             xv0 <- ident.unify pattern.ident.Literal
                                      ##(projT2 args);
                             v <- type.try_make_transport_cps s ℤ;
-                            fv <- (x5 <- (if
-                                           ((let (x5, _) := xv0 in x5) =? 1) &&
-                                           (ZRange.normalize args3 <=?
-                                            r[0 ~> (let (x5, _) := xv in x5) -
-                                                   1])%zrange &&
-                                           is_bounded_by_bool
-                                             (let (x5, _) := xv in x5)
-                                             (ZRange.normalize args2) &&
-                                           is_bounded_by_bool
-                                             (let (x5, _) := xv0 in x5)
-                                             (ZRange.normalize args0)
-                                          then
-                                           Datatypes.Some
-                                             (#(Z_cast args3)%expr @
-                                              v (Compile.reflect x2),
-                                             #(Z_cast r[0 ~> 0])%expr @
-                                             (##0)%expr)%expr_pat
-                                          else Datatypes.None);
-                                   Datatypes.Some (Base x5));
+                            fv <- (if
+                                    is_bounded_by_bool 1
+                                      (ZRange.normalize args0) &&
+                                    is_bounded_by_bool
+                                      (let (x5, _) := xv in x5)
+                                      (ZRange.normalize args2) &&
+                                    (ZRange.normalize args3 <=?
+                                     r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
+                                    ((let (x5, _) := xv0 in x5) =? 1)
+                                   then
+                                    Datatypes.Some
+                                      (Base
+                                         (#(Z_cast args3)%expr @
+                                          v (Compile.reflect x2),
+                                         #(Z_cast r[0 ~> 0])%expr @
+                                         (##0)%expr)%expr_pat)
+                                   else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
                            else Datatypes.None
@@ -651,25 +635,23 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             v <- type.try_make_transport_cps s1 ℤ;
                             xv0 <- ident.unify pattern.ident.Literal
                                      ##(projT2 args);
-                            fv <- (x5 <- (if
-                                           ((let (x5, _) := xv0 in x5) =? 1) &&
-                                           (ZRange.normalize args0 <=?
-                                            r[0 ~> (let (x5, _) := xv in x5) -
-                                                   1])%zrange &&
-                                           is_bounded_by_bool
-                                             (let (x5, _) := xv in x5)
-                                             (ZRange.normalize args2) &&
-                                           is_bounded_by_bool
-                                             (let (x5, _) := xv0 in x5)
-                                             (ZRange.normalize args3)
-                                          then
-                                           Datatypes.Some
-                                             (#(Z_cast args0)%expr @
-                                              v (Compile.reflect x4),
-                                             #(Z_cast r[0 ~> 0])%expr @
-                                             (##0)%expr)%expr_pat
-                                          else Datatypes.None);
-                                   Datatypes.Some (Base x5));
+                            fv <- (if
+                                    is_bounded_by_bool 1
+                                      (ZRange.normalize args3) &&
+                                    is_bounded_by_bool
+                                      (let (x5, _) := xv in x5)
+                                      (ZRange.normalize args2) &&
+                                    (ZRange.normalize args0 <=?
+                                     r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
+                                    ((let (x5, _) := xv0 in x5) =? 1)
+                                   then
+                                    Datatypes.Some
+                                      (Base
+                                         (#(Z_cast args0)%expr @
+                                          v (Compile.reflect x4),
+                                         #(Z_cast r[0 ~> 0])%expr @
+                                         (##0)%expr)%expr_pat)
+                                   else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
                            else Datatypes.None
@@ -734,28 +716,35 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ##(projT2 args1);
                                xv1 <- ident.unify pattern.ident.Literal
                                         ##(projT2 args);
-                               fv <- (x5 <- (if
-                                              is_bounded_by_bool
-                                                (let (x5, _) := xv in x5)
-                                                (ZRange.normalize args4) &&
-                                              is_bounded_by_bool
-                                                (let (x5, _) := xv0 in x5)
-                                                (ZRange.normalize args2) &&
-                                              is_bounded_by_bool
-                                                (let (x5, _) := xv1 in x5)
-                                                (ZRange.normalize args0)
-                                             then
-                                              Datatypes.Some
-                                                (let
-                                                 '(a1, b1)%zrange :=
-                                                  Z.add_get_carry_full
-                                                    (let (x5, _) := xv in x5)
-                                                    (let (x5, _) := xv0 in x5)
-                                                    (let (x5, _) := xv1 in x5)
-                                                  in
-                                                  ((##a1)%expr, (##b1)%expr)%expr_pat)
-                                             else Datatypes.None);
-                                      Datatypes.Some (Base x5));
+                               fv <- (if
+                                       is_bounded_by_bool
+                                         (let (x5, _) := xv in x5)
+                                         (ZRange.normalize args4) &&
+                                       is_bounded_by_bool
+                                         (let (x5, _) := xv0 in x5)
+                                         (ZRange.normalize args2) &&
+                                       is_bounded_by_bool
+                                         (let (x5, _) := xv1 in x5)
+                                         (ZRange.normalize args0)
+                                      then
+                                       Datatypes.Some
+                                         (Base
+                                            ((##(Datatypes.fst
+                                                   (Z.add_get_carry_full
+                                                      (let (x5, _) := xv in
+                                                       x5)
+                                                      (let (x5, _) := xv0 in
+                                                       x5)
+                                                      (let (x5, _) := xv1 in
+                                                       x5))))%expr,
+                                            (##(Datatypes.snd
+                                                  (Z.add_get_carry_full
+                                                     (let (x5, _) := xv in x5)
+                                                     (let (x5, _) := xv0 in
+                                                      x5)
+                                                     (let (x5, _) := xv1 in
+                                                      x5))))%expr)%expr_pat)
+                                      else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
                                   Base fv0)%under_lets
@@ -784,25 +773,22 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            xv0 <- ident.unify pattern.ident.Literal
                                     ##(projT2 args0);
                            v <- type.try_make_transport_cps s1 ℤ;
-                           fv <- (x5 <- (if
-                                          ((let (x5, _) := xv0 in x5) =? 0) &&
-                                          (ZRange.normalize args <=?
-                                           r[0 ~> (let (x5, _) := xv in x5) -
-                                                  1])%zrange &&
-                                          is_bounded_by_bool
-                                            (let (x5, _) := xv0 in x5)
-                                            (ZRange.normalize args1) &&
-                                          is_bounded_by_bool
-                                            (let (x5, _) := xv in x5)
-                                            (ZRange.normalize args3)
-                                         then
-                                          Datatypes.Some
-                                            (#(Z_cast args)%expr @
-                                             v (Compile.reflect x4),
-                                            #(Z_cast r[0 ~> 0])%expr @
-                                            (##0)%expr)%expr_pat
-                                         else Datatypes.None);
-                                  Datatypes.Some (Base x5));
+                           fv <- (if
+                                   is_bounded_by_bool
+                                     (let (x5, _) := xv in x5)
+                                     (ZRange.normalize args3) &&
+                                   is_bounded_by_bool 0
+                                     (ZRange.normalize args1) &&
+                                   (ZRange.normalize args <=?
+                                    r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
+                                   ((let (x5, _) := xv0 in x5) =? 0)
+                                  then
+                                   Datatypes.Some
+                                     (Base
+                                        (#(Z_cast args)%expr @
+                                         v (Compile.reflect x4),
+                                        #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
+                                  else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
                           else Datatypes.None
@@ -838,23 +824,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        v <- type.try_make_transport_cps s0 ℤ;
                        xv0 <- ident.unify pattern.ident.Literal
                                 ##(projT2 args);
-                       fv <- (x5 <- (if
-                                      ((let (x5, _) := xv0 in x5) =? 0) &&
-                                      (ZRange.normalize args1 <=?
-                                       r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
-                                      is_bounded_by_bool
-                                        (let (x5, _) := xv0 in x5)
-                                        (ZRange.normalize args0) &&
-                                      is_bounded_by_bool
-                                        (let (x5, _) := xv in x5)
-                                        (ZRange.normalize args3)
-                                     then
-                                      Datatypes.Some
-                                        (#(Z_cast args1)%expr @
-                                         v (Compile.reflect x3),
-                                        #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat
-                                     else Datatypes.None);
-                              Datatypes.Some (Base x5));
+                       fv <- (if
+                               is_bounded_by_bool (let (x5, _) := xv in x5)
+                                 (ZRange.normalize args3) &&
+                               is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                               (ZRange.normalize args1 <=?
+                                r[0 ~> (let (x5, _) := xv in x5) - 1])%zrange &&
+                               ((let (x5, _) := xv0 in x5) =? 0)
+                              then
+                               Datatypes.Some
+                                 (Base
+                                    (#(Z_cast args1)%expr @
+                                     v (Compile.reflect x3),
+                                    #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
+                              else Datatypes.None);
                        Datatypes.Some (fv0 <-- fv;
                                        Base fv0)%under_lets
                       else Datatypes.None
@@ -898,13 +881,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 ((ℤ -> ℤ) -> ℤ)%ptype (((projT1 args) -> ℤ) -> ℤ)%ptype
              then
               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-              fv <- (x3 <- (if
-                             ((let (x3, _) := xv in x3) =? 0) &&
-                             is_bounded_by_bool (let (x3, _) := xv in x3)
-                               (ZRange.normalize args0)
-                            then Datatypes.Some (x0 + x1)%expr
-                            else Datatypes.None);
-                     Datatypes.Some (Base x3));
+              fv <- (if
+                      is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                      ((let (x3, _) := xv in x3) =? 0)
+                     then Datatypes.Some (Base (x0 + x1)%expr)
+                     else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
              else Datatypes.None
@@ -961,36 +942,50 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            ##(projT2 args1);
                                   xv2 <- ident.unify pattern.ident.Literal
                                            ##(projT2 args);
-                                  fv <- (x7 <- (if
-                                                 is_bounded_by_bool
-                                                   (let (x7, _) := xv in x7)
-                                                   (ZRange.normalize args6) &&
-                                                 is_bounded_by_bool
-                                                   (let (x7, _) := xv0 in x7)
-                                                   (ZRange.normalize args4) &&
-                                                 is_bounded_by_bool
-                                                   (let (x7, _) := xv1 in x7)
-                                                   (ZRange.normalize args2) &&
-                                                 is_bounded_by_bool
-                                                   (let (x7, _) := xv2 in x7)
-                                                   (ZRange.normalize args0)
-                                                then
-                                                 Datatypes.Some
-                                                   (let
-                                                    '(a2, b2)%zrange :=
-                                                     Z.add_with_get_carry_full
-                                                       (let (x7, _) := xv in
-                                                        x7)
-                                                       (let (x7, _) := xv0 in
-                                                        x7)
-                                                       (let (x7, _) := xv1 in
-                                                        x7)
-                                                       (let (x7, _) := xv2 in
-                                                        x7) in
-                                                     ((##a2)%expr,
-                                                     (##b2)%expr)%expr_pat)
-                                                else Datatypes.None);
-                                         Datatypes.Some (Base x7));
+                                  fv <- (if
+                                          is_bounded_by_bool
+                                            (let (x7, _) := xv in x7)
+                                            (ZRange.normalize args6) &&
+                                          is_bounded_by_bool
+                                            (let (x7, _) := xv0 in x7)
+                                            (ZRange.normalize args4) &&
+                                          is_bounded_by_bool
+                                            (let (x7, _) := xv1 in x7)
+                                            (ZRange.normalize args2) &&
+                                          is_bounded_by_bool
+                                            (let (x7, _) := xv2 in x7)
+                                            (ZRange.normalize args0)
+                                         then
+                                          Datatypes.Some
+                                            (Base
+                                               ((##(Datatypes.fst
+                                                      (Z.add_with_get_carry_full
+                                                         (let (x7, _) :=
+                                                            xv in
+                                                          x7)
+                                                         (let (x7, _) :=
+                                                            xv0 in
+                                                          x7)
+                                                         (let (x7, _) :=
+                                                            xv1 in
+                                                          x7)
+                                                         (let (x7, _) :=
+                                                            xv2 in
+                                                          x7))))%expr,
+                                               (##(Datatypes.snd
+                                                     (Z.add_with_get_carry_full
+                                                        (let (x7, _) := xv in
+                                                         x7)
+                                                        (let (x7, _) :=
+                                                           xv0 in
+                                                         x7)
+                                                        (let (x7, _) :=
+                                                           xv1 in
+                                                         x7)
+                                                        (let (x7, _) :=
+                                                           xv2 in
+                                                         x7))))%expr)%expr_pat)
+                                         else Datatypes.None);
                                   Datatypes.Some
                                     (fv0 <-- fv;
                                      Base fv0)%under_lets
@@ -1026,29 +1021,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                               xv1 <- ident.unify pattern.ident.Literal
                                        ##(projT2 args0);
                               v <- type.try_make_transport_cps s2 ℤ;
-                              fv <- (x7 <- (if
-                                             ((let (x7, _) := xv0 in x7) =? 0) &&
-                                             ((let (x7, _) := xv1 in x7) =? 0) &&
-                                             (ZRange.normalize args <=?
-                                              r[0 ~> (let (x7, _) := xv in x7) -
-                                                     1])%zrange &&
-                                             is_bounded_by_bool
-                                               (let (x7, _) := xv in x7)
-                                               (ZRange.normalize args5) &&
-                                             is_bounded_by_bool
-                                               (let (x7, _) := xv0 in x7)
-                                               (ZRange.normalize args3) &&
-                                             is_bounded_by_bool
-                                               (let (x7, _) := xv1 in x7)
-                                               (ZRange.normalize args1)
-                                            then
-                                             Datatypes.Some
-                                               (#(Z_cast args)%expr @
-                                                v (Compile.reflect x6),
-                                               #(Z_cast r[0 ~> 0])%expr @
-                                               (##0)%expr)%expr_pat
-                                            else Datatypes.None);
-                                     Datatypes.Some (Base x7));
+                              fv <- (if
+                                      is_bounded_by_bool
+                                        (let (x7, _) := xv in x7)
+                                        (ZRange.normalize args5) &&
+                                      is_bounded_by_bool 0
+                                        (ZRange.normalize args3) &&
+                                      is_bounded_by_bool 0
+                                        (ZRange.normalize args1) &&
+                                      (ZRange.normalize args <=?
+                                       r[0 ~> (let (x7, _) := xv in x7) - 1])%zrange &&
+                                      ((let (x7, _) := xv0 in x7) =? 0) &&
+                                      ((let (x7, _) := xv1 in x7) =? 0)
+                                     then
+                                      Datatypes.Some
+                                        (Base
+                                           (#(Z_cast args)%expr @
+                                            v (Compile.reflect x6),
+                                           #(Z_cast r[0 ~> 0])%expr @
+                                           (##0)%expr)%expr_pat)
+                                     else Datatypes.None);
                               Datatypes.Some (fv0 <-- fv;
                                               Base fv0)%under_lets
                              else Datatypes.None
@@ -1091,29 +1083,25 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                           v <- type.try_make_transport_cps s1 ℤ;
                           xv1 <- ident.unify pattern.ident.Literal
                                    ##(projT2 args);
-                          fv <- (x7 <- (if
-                                         ((let (x7, _) := xv0 in x7) =? 0) &&
-                                         ((let (x7, _) := xv1 in x7) =? 0) &&
-                                         (ZRange.normalize args1 <=?
-                                          r[0 ~> (let (x7, _) := xv in x7) -
-                                                 1])%zrange &&
-                                         is_bounded_by_bool
-                                           (let (x7, _) := xv in x7)
-                                           (ZRange.normalize args5) &&
-                                         is_bounded_by_bool
-                                           (let (x7, _) := xv0 in x7)
-                                           (ZRange.normalize args3) &&
-                                         is_bounded_by_bool
-                                           (let (x7, _) := xv1 in x7)
-                                           (ZRange.normalize args0)
-                                        then
-                                         Datatypes.Some
-                                           (#(Z_cast args1)%expr @
-                                            v (Compile.reflect x5),
-                                           #(Z_cast r[0 ~> 0])%expr @
-                                           (##0)%expr)%expr_pat
-                                        else Datatypes.None);
-                                 Datatypes.Some (Base x7));
+                          fv <- (if
+                                  is_bounded_by_bool
+                                    (let (x7, _) := xv in x7)
+                                    (ZRange.normalize args5) &&
+                                  is_bounded_by_bool 0
+                                    (ZRange.normalize args3) &&
+                                  is_bounded_by_bool 0
+                                    (ZRange.normalize args0) &&
+                                  (ZRange.normalize args1 <=?
+                                   r[0 ~> (let (x7, _) := xv in x7) - 1])%zrange &&
+                                  ((let (x7, _) := xv0 in x7) =? 0) &&
+                                  ((let (x7, _) := xv1 in x7) =? 0)
+                                 then
+                                  Datatypes.Some
+                                    (Base
+                                       (#(Z_cast args1)%expr @
+                                        v (Compile.reflect x5),
+                                       #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
+                                 else Datatypes.None);
                           Datatypes.Some (fv0 <-- fv;
                                           Base fv0)%under_lets
                          else Datatypes.None
@@ -1168,12 +1156,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
        | Datatypes.Some _ =>
            if type.type_beq base.type base.type.type_beq ℤ ℤ
            then
-            fv <- (x0 <- (if lower range =? upper range
-                          then
-                           Datatypes.Some
-                             (#(Z_cast range)%expr @ (##(lower range))%expr)%expr_pat
-                          else Datatypes.None);
-                   Datatypes.Some (Base x0));
+            fv <- (if lower range =? upper range
+                   then
+                    Datatypes.Some
+                      (Base
+                         (#(Z_cast range)%expr @ (##(lower range))%expr)%expr_pat)
+                   else Datatypes.None);
             Datatypes.Some (fv0 <-- fv;
                             Base fv0)%under_lets
            else Datatypes.None
@@ -1187,15 +1175,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                if type.type_beq base.type base.type.type_beq ℤ s
                then
                 v <- type.try_make_transport_cps s ℤ;
-                fv <- (x1 <- (if
-                               (ZRange.normalize args <=?
-                                ZRange.normalize range)%zrange
-                              then
-                               Datatypes.Some
-                                 (#(Z_cast args)%expr @
-                                  v (Compile.reflect x0))%expr_pat
-                              else Datatypes.None);
-                       Datatypes.Some (Base x1));
+                fv <- (if
+                        (ZRange.normalize args <=? ZRange.normalize range)%zrange
+                       then
+                        Datatypes.Some
+                          (Base
+                             (#(Z_cast args)%expr @ v (Compile.reflect x0))%expr_pat)
+                       else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
                else Datatypes.None
@@ -1324,21 +1310,21 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   v1 (Compile.reflect x0) @
                                   (#(Z_cast args)%expr @
                                    v0 (Compile.reflect x5))))%expr_pat
-                                (fun vc : var (ℤ * ℤ)%etype =>
+                                (fun v2 : var (ℤ * ℤ)%etype =>
                                  Base
                                    (#(Z_cast (Datatypes.fst range))%expr @
                                     (#(fst)%expr @
                                      (#(Z_cast2
                                           (Datatypes.fst range,
                                           - Datatypes.snd range))%expr @
-                                      ($vc)%expr)),
+                                      ($v2)%expr)),
                                    #(Z_cast (Datatypes.snd range))%expr @
                                    (-
                                     (#(Z_cast (- Datatypes.snd range))%expr @
                                      (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                                           - Datatypes.snd range))%expr @ $v2)))%expr_pat)%expr)%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1408,21 +1394,21 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   v0 (Compile.reflect x1) @
                                   (#(Z_cast args)%expr @
                                    v1 (Compile.reflect x5))))%expr_pat
-                                (fun vc : var (ℤ * ℤ)%etype =>
+                                (fun v2 : var (ℤ * ℤ)%etype =>
                                  Base
                                    (#(Z_cast (Datatypes.fst range))%expr @
                                     (#(fst)%expr @
                                      (#(Z_cast2
                                           (Datatypes.fst range,
                                           - Datatypes.snd range))%expr @
-                                      ($vc)%expr)),
+                                      ($v2)%expr)),
                                    #(Z_cast (Datatypes.snd range))%expr @
                                    (-
                                     (#(Z_cast (- Datatypes.snd range))%expr @
                                      (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                                           - Datatypes.snd range))%expr @ $v2)))%expr_pat)%expr)%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1476,9 +1462,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                    v0 <- type.try_make_transport_cps s ℤ;
                    fv <- (if
-                           ((let (x4, _) := xv in x4) <? 0) &&
                            is_bounded_by_bool (let (x4, _) := xv in x4)
-                             (ZRange.normalize args0)
+                             (ZRange.normalize args0) &&
+                           ((let (x4, _) := xv in x4) <? 0)
                           then
                            Datatypes.Some
                              (UnderLet
@@ -1490,21 +1476,21 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   v0 (Compile.reflect x0) @
                                   (#(Z_cast (- args0))%expr @
                                    (##(- (let (x4, _) := xv in x4))%Z)%expr)))%expr_pat
-                                (fun vc : var (ℤ * ℤ)%etype =>
+                                (fun v1 : var (ℤ * ℤ)%etype =>
                                  Base
                                    (#(Z_cast (Datatypes.fst range))%expr @
                                     (#(fst)%expr @
                                      (#(Z_cast2
                                           (Datatypes.fst range,
                                           - Datatypes.snd range))%expr @
-                                      ($vc)%expr)),
+                                      ($v1)%expr)),
                                    #(Z_cast (Datatypes.snd range))%expr @
                                    (-
                                     (#(Z_cast (- Datatypes.snd range))%expr @
                                      (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                                           - Datatypes.snd range))%expr @ $v1)))%expr_pat)%expr)%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1537,9 +1523,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    v0 <- type.try_make_transport_cps s0 ℤ;
                    xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                    fv <- (if
-                           ((let (x4, _) := xv in x4) <? 0) &&
                            is_bounded_by_bool (let (x4, _) := xv in x4)
-                             (ZRange.normalize args0)
+                             (ZRange.normalize args0) &&
+                           ((let (x4, _) := xv in x4) <? 0)
                           then
                            Datatypes.Some
                              (UnderLet
@@ -1551,21 +1537,21 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   v0 (Compile.reflect x1) @
                                   (#(Z_cast (- args0))%expr @
                                    (##(- (let (x4, _) := xv in x4))%Z)%expr)))%expr_pat
-                                (fun vc : var (ℤ * ℤ)%etype =>
+                                (fun v1 : var (ℤ * ℤ)%etype =>
                                  Base
                                    (#(Z_cast (Datatypes.fst range))%expr @
                                     (#(fst)%expr @
                                      (#(Z_cast2
                                           (Datatypes.fst range,
                                           - Datatypes.snd range))%expr @
-                                      ($vc)%expr)),
+                                      ($v1)%expr)),
                                    #(Z_cast (Datatypes.snd range))%expr @
                                    (-
                                     (#(Z_cast (- Datatypes.snd range))%expr @
                                      (#(snd)%expr @
                                       (#(Z_cast2
                                            (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $vc)))%expr_pat)%expr)%expr_pat))
+                                           - Datatypes.snd range))%expr @ $v1)))%expr_pat)%expr)%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1696,12 +1682,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             v0 <- type.try_make_transport_cps s6 ℤ;
                             v1 <- type.try_make_transport_cps s ℤ;
                             fv <- (if
-                                    ((let (x8, _) := xv in x8) =? 0) &&
+                                    is_bounded_by_bool 0
+                                      (ZRange.normalize args3) &&
                                     (ZRange.normalize args <=?
                                      - ZRange.normalize args1)%zrange &&
-                                    is_bounded_by_bool
-                                      (let (x8, _) := xv in x8)
-                                      (ZRange.normalize args3)
+                                    ((let (x8, _) := xv in x8) =? 0)
                                    then
                                     Datatypes.Some
                                       (UnderLet
@@ -1713,14 +1698,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            v1 (Compile.reflect x0) @
                                            (#(Z_cast args)%expr @
                                             v0 (Compile.reflect x7))))%expr_pat
-                                         (fun vc : var (ℤ * ℤ)%etype =>
+                                         (fun v2 : var (ℤ * ℤ)%etype =>
                                           Base
                                             (#(Z_cast (Datatypes.fst range))%expr @
                                              (#(fst)%expr @
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               ($vc)%expr)),
+                                               ($v2)%expr)),
                                             #(Z_cast (Datatypes.snd range))%expr @
                                             (-
                                              (#(Z_cast
@@ -1729,7 +1714,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                (#(Z_cast2
                                                     (Datatypes.fst range,
                                                     - Datatypes.snd range))%expr @
-                                                $vc)))%expr_pat)%expr)%expr_pat))
+                                                $v2)))%expr_pat)%expr)%expr_pat))
                                    else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
@@ -1761,11 +1746,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            v1 <- type.try_make_transport_cps s ℤ;
                            fv <- (if
                                    ((let (x8, _) := xv in x8) <? 0) &&
-                                   (ZRange.normalize args <=?
-                                    - ZRange.normalize args1)%zrange &&
                                    is_bounded_by_bool
                                      (let (x8, _) := xv in x8)
-                                     (ZRange.normalize args3)
+                                     (ZRange.normalize args3) &&
+                                   (ZRange.normalize args <=?
+                                    - ZRange.normalize args1)%zrange
                                   then
                                    Datatypes.Some
                                      (UnderLet
@@ -1779,14 +1764,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v1 (Compile.reflect x0) @
                                           (#(Z_cast args)%expr @
                                            v0 (Compile.reflect x7))))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v2 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v2)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -1794,7 +1779,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v2)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -1863,12 +1848,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             v0 <- type.try_make_transport_cps s0 ℤ;
                             v1 <- type.try_make_transport_cps s6 ℤ;
                             fv <- (if
-                                    ((let (x8, _) := xv in x8) =? 0) &&
+                                    is_bounded_by_bool 0
+                                      (ZRange.normalize args3) &&
                                     (ZRange.normalize args <=?
                                      - ZRange.normalize args1)%zrange &&
-                                    is_bounded_by_bool
-                                      (let (x8, _) := xv in x8)
-                                      (ZRange.normalize args3)
+                                    ((let (x8, _) := xv in x8) =? 0)
                                    then
                                     Datatypes.Some
                                       (UnderLet
@@ -1880,14 +1864,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            v0 (Compile.reflect x1) @
                                            (#(Z_cast args)%expr @
                                             v1 (Compile.reflect x7))))%expr_pat
-                                         (fun vc : var (ℤ * ℤ)%etype =>
+                                         (fun v2 : var (ℤ * ℤ)%etype =>
                                           Base
                                             (#(Z_cast (Datatypes.fst range))%expr @
                                              (#(fst)%expr @
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               ($vc)%expr)),
+                                               ($v2)%expr)),
                                             #(Z_cast (Datatypes.snd range))%expr @
                                             (-
                                              (#(Z_cast
@@ -1896,7 +1880,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                (#(Z_cast2
                                                     (Datatypes.fst range,
                                                     - Datatypes.snd range))%expr @
-                                                $vc)))%expr_pat)%expr)%expr_pat))
+                                                $v2)))%expr_pat)%expr)%expr_pat))
                                    else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
@@ -1928,11 +1912,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            v1 <- type.try_make_transport_cps s6 ℤ;
                            fv <- (if
                                    ((let (x8, _) := xv in x8) <? 0) &&
-                                   (ZRange.normalize args <=?
-                                    - ZRange.normalize args1)%zrange &&
                                    is_bounded_by_bool
                                      (let (x8, _) := xv in x8)
-                                     (ZRange.normalize args3)
+                                     (ZRange.normalize args3) &&
+                                   (ZRange.normalize args <=?
+                                    - ZRange.normalize args1)%zrange
                                   then
                                    Datatypes.Some
                                      (UnderLet
@@ -1946,14 +1930,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v0 (Compile.reflect x1) @
                                           (#(Z_cast args)%expr @
                                            v1 (Compile.reflect x7))))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v2 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v2)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -1961,7 +1945,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v2)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2051,14 +2035,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v0 (Compile.reflect x0) @
                                           (#(Z_cast (- args0))%expr @
                                            (##(- (let (x6, _) := xv0 in x6))%Z)%expr)))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v1 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v1)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -2066,7 +2050,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v1)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2129,14 +2113,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v0 (Compile.reflect x1) @
                                           (#(Z_cast (- args0))%expr @
                                            (##(- (let (x6, _) := xv0 in x6))%Z)%expr)))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v1 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v1)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -2144,7 +2128,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v1)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2177,9 +2161,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        v0 <- type.try_make_transport_cps s0 ℤ;
                        v1 <- type.try_make_transport_cps s ℤ;
                        fv <- (if
-                               ((let (x5, _) := xv in x5) =? 0) &&
-                               is_bounded_by_bool (let (x5, _) := xv in x5)
-                                 (ZRange.normalize args0)
+                               is_bounded_by_bool 0 (ZRange.normalize args0) &&
+                               ((let (x5, _) := xv in x5) =? 0)
                               then
                                Datatypes.Some
                                  (UnderLet
@@ -2188,14 +2171,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       v (Compile.reflect x3) @
                                       v0 (Compile.reflect x1) @
                                       v1 (Compile.reflect x0)))%expr_pat
-                                    (fun vc : var (ℤ * ℤ)%etype =>
+                                    (fun v2 : var (ℤ * ℤ)%etype =>
                                      Base
                                        (#(Z_cast (Datatypes.fst range))%expr @
                                         (#(fst)%expr @
-                                         (#(Z_cast2 range)%expr @ ($vc)%expr)),
+                                         (#(Z_cast2 range)%expr @ ($v2)%expr)),
                                        #(Z_cast (Datatypes.snd range))%expr @
                                        (#(snd)%expr @
-                                        (#(Z_cast2 range)%expr @ ($vc)%expr)))%expr_pat))
+                                        (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
                               else Datatypes.None);
                        Datatypes.Some (fv0 <-- fv;
                                        Base fv0)%under_lets
@@ -2249,14 +2232,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v2 (Compile.reflect x0) @
                                           (#(Z_cast args)%expr @
                                            v1 (Compile.reflect x9))))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v3 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v3)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -2264,7 +2247,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v3)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2350,14 +2333,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v1 (Compile.reflect x1) @
                                           (#(Z_cast args)%expr @
                                            v2 (Compile.reflect x9))))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v3 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v3)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -2365,7 +2348,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v3)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2433,11 +2416,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            v1 <- type.try_make_transport_cps s ℤ;
                            fv <- (if
                                    ((let (x8, _) := xv in x8) <=? 0) &&
-                                   (ZRange.normalize args1 <=?
-                                    - ZRange.normalize args3)%zrange &&
                                    is_bounded_by_bool
                                      (let (x8, _) := xv in x8)
-                                     (ZRange.normalize args0)
+                                     (ZRange.normalize args0) &&
+                                   (ZRange.normalize args1 <=?
+                                    - ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
                                      (UnderLet
@@ -2451,14 +2434,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v1 (Compile.reflect x0) @
                                           (#(Z_cast (- args0))%expr @
                                            (##(- (let (x8, _) := xv in x8))%Z)%expr)))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v2 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v2)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -2466,7 +2449,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v2)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2507,11 +2490,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                    ##(projT2 args);
                            fv <- (if
                                    ((let (x8, _) := xv in x8) <=? 0) &&
-                                   (ZRange.normalize args1 <=?
-                                    - ZRange.normalize args3)%zrange &&
                                    is_bounded_by_bool
                                      (let (x8, _) := xv in x8)
-                                     (ZRange.normalize args0)
+                                     (ZRange.normalize args0) &&
+                                   (ZRange.normalize args1 <=?
+                                    - ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
                                      (UnderLet
@@ -2525,14 +2508,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           v1 (Compile.reflect x1) @
                                           (#(Z_cast (- args0))%expr @
                                            (##(- (let (x8, _) := xv in x8))%Z)%expr)))%expr_pat
-                                        (fun vc : var (ℤ * ℤ)%etype =>
+                                        (fun v2 : var (ℤ * ℤ)%etype =>
                                          Base
                                            (#(Z_cast (Datatypes.fst range))%expr @
                                             (#(fst)%expr @
                                              (#(Z_cast2
                                                   (Datatypes.fst range,
                                                   - Datatypes.snd range))%expr @
-                                              ($vc)%expr)),
+                                              ($v2)%expr)),
                                            #(Z_cast (Datatypes.snd range))%expr @
                                            (-
                                             (#(Z_cast (- Datatypes.snd range))%expr @
@@ -2540,7 +2523,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast2
                                                    (Datatypes.fst range,
                                                    - Datatypes.snd range))%expr @
-                                               $vc)))%expr_pat)%expr)%expr_pat))
+                                               $v2)))%expr_pat)%expr)%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2604,21 +2587,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                xv1 <- ident.unify pattern.ident.Literal
                                         ##(projT2 args);
                                fv <- (if
-                                       ((let (x8, _) := xv0 in x8) =? 0) &&
-                                       ((let (x8, _) := xv1 in x8) =? 0) &&
+                                       is_bounded_by_bool 0
+                                         (ZRange.normalize args2) &&
+                                       is_bounded_by_bool 0
+                                         (ZRange.normalize args0) &&
                                        (ZRange.normalize args5 <=?
                                         r[0 ~> (let (x8, _) := xv in x8) - 1])%zrange &&
                                        is_bounded_by_bool 0
-                                         (Datatypes.snd range) &&
+                                         (ZRange.normalize
+                                            (Datatypes.snd range)) &&
                                        is_bounded_by_bool
                                          (let (x8, _) := xv in x8)
                                          (ZRange.normalize args4) &&
-                                       is_bounded_by_bool
-                                         (let (x8, _) := xv0 in x8)
-                                         (ZRange.normalize args2) &&
-                                       is_bounded_by_bool
-                                         (let (x8, _) := xv1 in x8)
-                                         (ZRange.normalize args0)
+                                       ((let (x8, _) := xv0 in x8) =? 0) &&
+                                       ((let (x8, _) := xv1 in x8) =? 0)
                                       then
                                        Datatypes.Some
                                          (UnderLet
@@ -2629,16 +2611,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               (#(Z_cast args5)%expr @
                                                v (Compile.reflect x4)) @
                                               (#(Z_cast args2)%expr @
-                                               (##(let (x8, _) := xv0 in x8))%expr) @
+                                               (##0)%expr) @
                                               (#(Z_cast args0)%expr @
-                                               (##(let (x8, _) := xv1 in x8))%expr)))%expr_pat
-                                            (fun vc : var (ℤ * ℤ)%etype =>
+                                               (##0)%expr)))%expr_pat
+                                            (fun v0 : var (ℤ * ℤ)%etype =>
                                              Base
                                                (#(Z_cast
                                                     (Datatypes.fst range))%expr @
                                                 (#(fst)%expr @
                                                  (#(Z_cast2 range)%expr @
-                                                  ($vc)%expr)),
+                                                  ($v0)%expr)),
                                                #(Z_cast r[0 ~> 0])%expr @
                                                (##0)%expr)%expr_pat))
                                       else Datatypes.None);

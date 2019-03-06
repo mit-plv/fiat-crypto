@@ -175,14 +175,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
              if type.type_beq base.type base.type.type_beq ℤ (projT1 args)
              then
               xv <- ident.unify pattern.ident.Literal ##(projT2 args);
-              fv <- (x0 <- (if
-                             is_bounded_by_bool (let (x0, _) := xv in x0)
-                               (ZRange.normalize range)
-                            then
-                             Datatypes.Some
-                               (##(let (x0, _) := xv in x0))%expr
-                            else Datatypes.None);
-                     Datatypes.Some (Base x0));
+              fv <- (if
+                      is_bounded_by_bool (let (x0, _) := xv in x0)
+                        (ZRange.normalize range)
+                     then
+                      Datatypes.Some
+                        (Base (##(let (x0, _) := xv in x0))%expr)
+                     else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
              else Datatypes.None
