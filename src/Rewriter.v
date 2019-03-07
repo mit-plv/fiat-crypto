@@ -2437,6 +2437,26 @@ Module Compilers.
                   ; (forall c x,
                         Z.abs c <= Z.abs max_const_val
                         -> 'c * x = x * 'c)
+
+                  (* transform +- to + *)
+                  ; (forall s y x,
+                        Z.add_get_carry_full s x (- y)
+                        = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+                  ; (forall s y x,
+                        Z.add_get_carry_full s (- y) x
+                        = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+                  ; (forall s y x,
+                        Z.add_with_get_carry_full s 0 x (- y)
+                        = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+                  ; (forall s y x,
+                        Z.add_with_get_carry_full s 0 (- y) x
+                        = dlet vb := Z.sub_get_borrow_full s x y in (fst vb, - snd vb))
+                  ; (forall s c y x,
+                        Z.add_with_get_carry_full s (- c) (- y) x
+                        = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
+                  ; (forall s c y x,
+                        Z.add_with_get_carry_full s (- c) x (- y)
+                        = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
                  ]
                ; reify
                    [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
