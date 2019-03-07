@@ -218,6 +218,15 @@ Section barrett.
         autorewrite with push_Zmul zsimplify zstrip_div.
         auto with lia.
       Qed.
+
+      Theorem barrett_reduction_small_strong
+        : a mod n = if r <? n then r else r-n.
+      Proof using a a_good a_nonneg a_small b base_good epsilon k k_big_enough k_good m m_good n n_good n_large n_pos n_reasonable offset offset_nonneg q r.
+        pose proof r_small_strong. pose proof qn_small.
+        destruct (r <? n) eqn:Hr; try rewrite Hr; Z.ltb_to_lt; try lia.
+        { symmetry; apply (Zmod_unique a n q); subst r; lia. }
+        { symmetry; apply (Zmod_unique a n (q + 1)); subst r; lia. }
+      Qed.
     End StrongerBounds.
   End barrett_algorithm.
 End barrett.
