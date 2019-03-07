@@ -241,12 +241,20 @@ Module Compilers.
              | ident.bool_rect T => fun '(t, (f, ((b, br), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 200) ("if " ++ b 200%nat ++ " then " ++ maybe_wrap_cast with_casts t 200%nat ++ " else " ++ maybe_wrap_cast with_casts f 200%nat), ZRange.type.base.option.None)
              | ident.nat_rect P
                => fun args => (show_application with_casts (fun _ => "nat_rect") args, ZRange.type.base.option.None)
+             | ident.eager_nat_rect P
+               => fun args => (show_application with_casts (fun _ => "eager_nat_rect") args, ZRange.type.base.option.None)
+             | ident.eager_nat_rect_arrow P Q
+               => fun args => (show_application with_casts (fun _ => "eager_nat_rect(→)") args, ZRange.type.base.option.None)
              | ident.nat_rect_arrow P Q
                => fun args => (show_application with_casts (fun _ => "nat_rect(→)") args, ZRange.type.base.option.None)
              | ident.option_rect A P
                => fun args => (show_application with_casts (fun _ => "option_rect") args, ZRange.type.base.option.None)
              | ident.list_rect A P
                => fun args => (show_application with_casts (fun _ => "list_rect") args, ZRange.type.base.option.None)
+             | ident.eager_list_rect A P
+               => fun args => (show_application with_casts (fun _ => "eager_list_rect") args, ZRange.type.base.option.None)
+             | ident.eager_list_rect_arrow A P Q
+               => fun args => (show_application with_casts (fun _ => "eager_list_rect(→)") args, ZRange.type.base.option.None)
              | ident.list_case A P
                => fun args => (show_application with_casts (fun _ => "list_case") args, ZRange.type.base.option.None)
              | ident.List_length T
@@ -381,8 +389,12 @@ Module Compilers.
                 | ident.prod_rect A B T => "prod_rect"
                 | ident.bool_rect T => "bool_rect"
                 | ident.nat_rect P => "nat_rect"
+                | ident.eager_nat_rect P => "eager_nat_rect"
                 | ident.nat_rect_arrow P Q => "nat_rect(→)"
+                | ident.eager_nat_rect_arrow P Q => "eager_nat_rect(→)"
                 | ident.list_rect A P => "list_rect"
+                | ident.eager_list_rect A P => "eager_list_rect"
+                | ident.eager_list_rect_arrow A P Q => "eager_list_rect(→)"
                 | ident.list_case A P => "list_case"
                 | ident.List_length T => "length"
                 | ident.List_seq => "seq"
@@ -1280,11 +1292,15 @@ Module Compilers.
                | ident.prod_rect _ _ _
                | ident.bool_rect _
                | ident.nat_rect _
+               | ident.eager_nat_rect _
                | ident.nat_rect_arrow _ _
+               | ident.eager_nat_rect_arrow _ _
                | ident.Some _
                | ident.None _
                | ident.option_rect _ _
                | ident.list_rect _ _
+               | ident.eager_list_rect _ _
+               | ident.eager_list_rect_arrow _ _ _
                | ident.list_case _ _
                | ident.List_length _
                | ident.List_seq

@@ -354,6 +354,16 @@ Module Compilers.
                                  | specialize (IH ls');
                                    generalize dependent (list_rect P N C); generalize dependent (list_rect P' N' C') ];
                                 intros
+                           | [ H : length ?ls = length ?ls' |- ?R (list_rect ?P ?N ?C ?ls ?x) (list_rect ?P' ?N' ?C' ?ls' ?y) = true ]
+                             => is_var ls; is_var ls'; is_var x; is_var y;
+                                revert dependent y; try revert dependent x;
+                                let IH := fresh "IH" in
+                                revert dependent ls'; induction ls as [|? ls IH]; intros [|? ls']; intros; cbn [list_rect length] in *;
+                                [
+                                | exfalso; discriminate | exfalso; discriminate
+                                | specialize (IH ls');
+                                  generalize dependent (list_rect P N C); generalize dependent (list_rect P' N' C') ];
+                                intros
                            | [ H : forall a b, ?R a b = true -> ?R' (?f a) (?g b) = true |- ?R' (?f _) (?g _) = true ] => apply H; clear H
                            | [ H : forall a b, ?R a b = true -> forall c d, ?R' c d = true -> ?R'' (?f a c) (?g b d) = true |- ?R'' (?f _ _) (?g _ _) = true ]
                              => apply H; clear H
@@ -362,6 +372,9 @@ Module Compilers.
                            | [ H : context[ZRange.type.base.option.is_bounded_by (?f (Some _) (Some _)) (?g _ _) = true]
                                |- ZRange.type.base.option.is_bounded_by (?f (Some _) (Some _)) (?g _ _) = true ]
                              => apply H
+                           | [ H : (forall a b, ?R0 a b = true -> forall c d, ?R1 c d = true -> forall e f, (forall g h, ?R3 g h = true -> ?R4 (e g) (f h) = true) -> forall i j, ?R5 i j = true -> ?R6 (?F _ _ _ _) (?G _ _ _ _) = true)
+                               |- ?R6 (?F _ _ _ _) (?G _ _ _ _) = true ]
+                             => apply H; clear H
                            end ].
 
           Local Lemma mul_by_halves_bounds x y n :

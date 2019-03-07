@@ -221,7 +221,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       destruct idc; cbn [type.eqv ident.gen_interp type.interp base.interp base.base_interp];
         try solve [ typeclasses eauto
                   | cbv [respectful]; repeat intro; subst; destruct_head_hnf bool; destruct_head_hnf prod; destruct_head_hnf option; destruct_head_hnf zrange; eauto
-                  | cbv [respectful]; repeat intro; (apply nat_rect_Proper_nondep || apply list_rect_Proper || apply list_case_Proper); repeat intro; eauto ].
+                  | cbv [respectful]; repeat intro; (apply nat_rect_Proper_nondep || apply list_rect_Proper || apply list_case_Proper || apply list_rect_arrow_Proper); repeat intro; eauto ].
     Qed.
 
     Global Instance eqv_Reflexive_Proper {t} (idc : ident t) : Proper type.eqv (ident.interp idc) | 1.

@@ -509,6 +509,7 @@ Module Compilers.
                    | None => ZRange.type.base.option.None
                    end
              | ident.nat_rect _
+             | ident.eager_nat_rect _
                => fun O_case S_case n
                  => match n with
                    | Some n
@@ -519,6 +520,7 @@ Module Compilers.
                          n
                    | None => ZRange.type.base.option.None
                    end
+             | ident.eager_nat_rect_arrow _ _
              | ident.nat_rect_arrow _ _
                => fun O_case S_case n v
                  => match n with
@@ -531,6 +533,7 @@ Module Compilers.
                          v
                    | None => ZRange.type.base.option.None
                    end
+             | ident.eager_list_rect _ _
              | ident.list_rect _ _
                => fun N C ls
                  => match ls with
@@ -540,6 +543,18 @@ Module Compilers.
                          (N tt)
                          (fun x xs rec => C x (Some xs) rec)
                          ls
+                   | None => ZRange.type.base.option.None
+                   end
+             | ident.eager_list_rect_arrow _ _ _
+               => fun N C ls v
+                 => match ls with
+                   | Some ls
+                     => list_rect
+                         _
+                         N
+                         (fun x xs rec => C x (Some xs) rec)
+                         ls
+                         v
                    | None => ZRange.type.base.option.None
                    end
              | ident.list_case _ _

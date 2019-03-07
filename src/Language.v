@@ -877,7 +877,11 @@ Module Compilers.
         | bool_rect {T:base.type} : ident ((unit -> T) -> (unit -> T) -> bool -> T)
         | nat_rect {P:base.type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
         | nat_rect_arrow {P Q:base.type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
+        | eager_nat_rect {P:base.type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
+        | eager_nat_rect_arrow {P Q:base.type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
         | list_rect {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
+        | eager_list_rect {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
+        | eager_list_rect_arrow {A P Q:base.type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
         | list_case {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P) -> list A -> P)
         | List_length {T} : ident (list T -> nat)
         | List_seq : ident (nat -> nat -> list nat)
@@ -1057,8 +1061,16 @@ Module Compilers.
                => fun O_case S_case => Datatypes.nat_rect _ (O_case tt) S_case
              | nat_rect_arrow P Q
                => fun O_case S_case => Datatypes.nat_rect _ O_case S_case
+             | eager_nat_rect P
+               => fun O_case S_case => Datatypes.nat_rect _ (O_case tt) S_case
+             | eager_nat_rect_arrow P Q
+               => fun O_case S_case => Datatypes.nat_rect _ O_case S_case
              | list_rect A P
                => fun N_case C_case => Datatypes.list_rect _ (N_case tt) C_case
+             | eager_list_rect A P
+               => fun N_case C_case => Datatypes.list_rect _ (N_case tt) C_case
+             | eager_list_rect_arrow A P Q
+               => fun N_case C_case => Datatypes.list_rect _ N_case C_case
              | list_case A P
                => fun N_case C_case => ListUtil.list_case _ (N_case tt) C_case
              | List_length T => @List.length _
@@ -1149,6 +1161,7 @@ Module Compilers.
     Notation LiteralNat := (@Literal base.type.nat).
     Notation LiteralZRange := (@Literal base.type.zrange).
     Definition literal {T} (v : T) := v.
+    Definition eagerly {T} (v : T) := v.
 
     (** TODO: MOVE ME? *)
     Module Thunked.
@@ -1291,6 +1304,25 @@ Module Compilers.
         | @Thunked.nat_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.nat_rect rT)
+        | eagerly (@Datatypes.nat_rect) ?T0 ?P0
+          => lazymatch (eval cbv beta in T0) with
+             | fun _ => _ -> _ => else_tac ()
+             | fun _ => ?T => reify_rec (eagerly (@Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
+             | T0 => else_tac ()
+             | ?T' => reify_rec (eagerly (@Datatypes.nat_rect) T' P0)
+             end
+        | eagerly (@Datatypes.nat_rect) ?T0
+          => lazymatch (eval cbv beta in T0) with
+             | (fun _ => ?P -> ?Q)
+               => let rP := base.reify P in
+                  let rQ := base.reify Q in
+                  then_tac (@ident.eager_nat_rect_arrow rP rQ)
+             | T0 => else_tac ()
+             | ?T' => reify_rec (eagerly (@Datatypes.nat_rect) T')
+            end
+        | eagerly (@Thunked.nat_rect) ?T
+          => let rT := base.reify T in
+             then_tac (@ident.eager_nat_rect rT)
         | @Datatypes.list_rect ?A ?T0 ?Pnil
           => lazymatch (eval cbv beta in T0) with
             | fun _ => ?T => reify_rec (@Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
@@ -1301,6 +1333,27 @@ Module Compilers.
           => let rA := base.reify A in
              let rT := base.reify T in
              then_tac (@ident.list_rect rA rT)
+        | eagerly (@Datatypes.list_rect) ?A ?T0 ?Pnil
+          => lazymatch (eval cbv beta in T0) with
+             | fun _ => _ -> _ => else_tac ()
+             | fun _ => ?T => reify_rec (eagerly (@Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
+             | T0 => else_tac ()
+             | ?T' => reify_rec (eagerly (@Datatypes.list_rect) A T' Pnil)
+             end
+        | eagerly (@Datatypes.list_rect) ?A ?T0
+          => lazymatch (eval cbv beta in T0) with
+             | (fun _ => ?P -> ?Q)
+               => let rA := base.reify A in
+                  let rP := base.reify P in
+                  let rQ := base.reify Q in
+                  then_tac (@ident.eager_list_rect_arrow rA rP rQ)
+             | T0 => else_tac ()
+             | ?T' => reify_rec (eagerly (@Datatypes.list_rect) A T')
+             end
+        | eagerly (@Thunked.list_rect) ?A ?T
+          => let rA := base.reify A in
+             let rT := base.reify T in
+             then_tac (@ident.eager_list_rect rA rT)
         | @ListUtil.list_case ?A ?T0 ?Pnil
           => lazymatch (eval cbv beta in T0) with
             | fun _ => ?T => reify_rec (@Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
@@ -1398,6 +1451,7 @@ Module Compilers.
           => let rA := base.reify A in
              then_tac (@ident.None rA)
         | ZRange.Build_zrange => then_tac ident.Build_zrange
+        | eagerly (?f ?x) => reify_rec (eagerly f x)
         | fancy.interp ?idc
           => let ridc := (eval cbv [to_fancy] in (to_fancy idc)) in
              then_tac ridc

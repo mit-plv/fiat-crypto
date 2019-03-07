@@ -236,6 +236,34 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                           (Compilers.base.type.type_base base.type.nat) ->
                         (fun x : Compilers.base.type => type.base x) P ->
                         (fun x : Compilers.base.type => type.base x) Q)%ptype
+  | eager_nat_rect : forall P : Compilers.base.type,
+                     ident
+                       (((fun x : Compilers.base.type => type.base x)
+                           ()%etype ->
+                         (fun x : Compilers.base.type => type.base x) P) ->
+                        ((fun x : Compilers.base.type => type.base x)
+                           (Compilers.base.type.type_base base.type.nat) ->
+                         (fun x : Compilers.base.type => type.base x) P ->
+                         (fun x : Compilers.base.type => type.base x) P) ->
+                        (fun x : Compilers.base.type => type.base x)
+                          (Compilers.base.type.type_base base.type.nat) ->
+                        (fun x : Compilers.base.type => type.base x) P)%ptype
+  | eager_nat_rect_arrow : forall P Q : Compilers.base.type,
+                           ident
+                             (((fun x : Compilers.base.type => type.base x) P ->
+                               (fun x : Compilers.base.type => type.base x) Q) ->
+                              ((fun x : Compilers.base.type => type.base x)
+                                 (Compilers.base.type.type_base base.type.nat) ->
+                               ((fun x : Compilers.base.type => type.base x)
+                                  P ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  Q) ->
+                               (fun x : Compilers.base.type => type.base x) P ->
+                               (fun x : Compilers.base.type => type.base x) Q) ->
+                              (fun x : Compilers.base.type => type.base x)
+                                (Compilers.base.type.type_base base.type.nat) ->
+                              (fun x : Compilers.base.type => type.base x) P ->
+                              (fun x : Compilers.base.type => type.base x) Q)%ptype
   | list_rect : forall A P : Compilers.base.type,
                 ident
                   (((fun x : Compilers.base.type => type.base x) ()%etype ->
@@ -248,6 +276,41 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                    (fun x : Compilers.base.type => type.base x)
                      (Compilers.base.type.list A) ->
                    (fun x : Compilers.base.type => type.base x) P)%ptype
+  | eager_list_rect : forall A P : Compilers.base.type,
+                      ident
+                        (((fun x : Compilers.base.type => type.base x)
+                            ()%etype ->
+                          (fun x : Compilers.base.type => type.base x) P) ->
+                         ((fun x : Compilers.base.type => type.base x) A ->
+                          (fun x : Compilers.base.type => type.base x)
+                            (Compilers.base.type.list A) ->
+                          (fun x : Compilers.base.type => type.base x) P ->
+                          (fun x : Compilers.base.type => type.base x) P) ->
+                         (fun x : Compilers.base.type => type.base x)
+                           (Compilers.base.type.list A) ->
+                         (fun x : Compilers.base.type => type.base x) P)%ptype
+  | eager_list_rect_arrow : forall A P Q : Compilers.base.type,
+                            ident
+                              (((fun x : Compilers.base.type => type.base x)
+                                  P ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  Q) ->
+                               ((fun x : Compilers.base.type => type.base x)
+                                  A ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  (Compilers.base.type.list A) ->
+                                ((fun x : Compilers.base.type => type.base x)
+                                   P ->
+                                 (fun x : Compilers.base.type => type.base x)
+                                   Q) ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  P ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  Q) ->
+                               (fun x : Compilers.base.type => type.base x)
+                                 (Compilers.base.type.list A) ->
+                               (fun x : Compilers.base.type => type.base x) P ->
+                               (fun x : Compilers.base.type => type.base x) Q)%ptype
   | list_case : forall A P : Compilers.base.type,
                 ident
                   (((fun x : Compilers.base.type => type.base x) ()%etype ->
@@ -799,7 +862,11 @@ show_match_ident = r"""match # with
  | ident.bool_rect T =>
  | ident.nat_rect P =>
  | ident.nat_rect_arrow P Q =>
+ | ident.eager_nat_rect P =>
+ | ident.eager_nat_rect_arrow P Q =>
  | ident.list_rect A P =>
+ | ident.eager_list_rect A P =>
+ | ident.eager_list_rect_arrow A P Q =>
  | ident.list_case A P =>
  | ident.List_length T =>
  | ident.List_seq =>
@@ -876,7 +943,7 @@ remake = False
 if remake:
   assert(os.path.exists('/tmp/pr.out'))
   assert(os.path.exists('/tmp/sm.out'))
-  with open('/tmp/pr.out', 'r') as f: print_ident = re.sub(r'^For.*\n', '', f.read(), flags=re.MULTILINE)
+  with open('/tmp/pr.out', 'r') as f: print_ident = re.sub(r'^For [^ ]*: Argument.*', '', f.read(), flags=re.MULTILINE|re.DOTALL)
   with open('/tmp/sm.out', 'r') as f: show_match_ident = f.read()
 
 prefix = 'Compilers.'
@@ -1405,7 +1472,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
         | bool_rect
         | nat_rect
         | nat_rect_arrow
+        | eager_nat_rect
+        | eager_nat_rect_arrow
         | list_rect
+        | eager_list_rect
+        | eager_list_rect_arrow
         | list_case
         | List_length
         | List_seq
@@ -1495,7 +1566,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | bool_rect => Compilers.base.type
              | nat_rect => Compilers.base.type
              | nat_rect_arrow => Compilers.base.type * Compilers.base.type
+             | eager_nat_rect => Compilers.base.type
+             | eager_nat_rect_arrow => Compilers.base.type * Compilers.base.type
              | list_rect => Compilers.base.type * Compilers.base.type
+             | eager_list_rect => Compilers.base.type * Compilers.base.type
+             | eager_list_rect_arrow => Compilers.base.type * Compilers.base.type * Compilers.base.type
              | list_case => Compilers.base.type * Compilers.base.type
              | List_length => Compilers.base.type
              | List_seq => unit
@@ -1586,7 +1661,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | bool_rect => false
              | nat_rect => false
              | nat_rect_arrow => false
+             | eager_nat_rect => false
+             | eager_nat_rect_arrow => false
              | list_rect => false
+             | eager_list_rect => false
+             | eager_list_rect_arrow => false
              | list_case => false
              | List_length => false
              | List_seq => true
@@ -1677,7 +1756,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | bool_rect, Compilers.ident.bool_rect T => Datatypes.Some T
              | nat_rect, Compilers.ident.nat_rect P => Datatypes.Some P
              | nat_rect_arrow, Compilers.ident.nat_rect_arrow P Q => Datatypes.Some (P, Q)
+             | eager_nat_rect, Compilers.ident.eager_nat_rect P => Datatypes.Some P
+             | eager_nat_rect_arrow, Compilers.ident.eager_nat_rect_arrow P Q => Datatypes.Some (P, Q)
              | list_rect, Compilers.ident.list_rect A P => Datatypes.Some (A, P)
+             | eager_list_rect, Compilers.ident.eager_list_rect A P => Datatypes.Some (A, P)
+             | eager_list_rect_arrow, Compilers.ident.eager_list_rect_arrow A P Q => Datatypes.Some (A, P, Q)
              | list_case, Compilers.ident.list_case A P => Datatypes.Some (A, P)
              | List_length, Compilers.ident.List_length T => Datatypes.Some T
              | List_seq, Compilers.ident.List_seq => Datatypes.Some tt
@@ -1764,7 +1847,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | bool_rect, _
              | nat_rect, _
              | nat_rect_arrow, _
+             | eager_nat_rect, _
+             | eager_nat_rect_arrow, _
              | list_rect, _
+             | eager_list_rect, _
+             | eager_list_rect_arrow, _
              | list_case, _
              | List_length, _
              | List_seq, _
@@ -1856,7 +1943,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | bool_rect => fun T => ((type.base ()%etype -> type.base T) -> (type.base ()%etype -> type.base T) -> type.base (Compilers.base.type.type_base base.type.bool) -> type.base T)%ptype
              | nat_rect => fun P => ((type.base ()%etype -> type.base P) -> (type.base (Compilers.base.type.type_base base.type.nat) -> type.base P -> type.base P) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base P)%ptype
              | nat_rect_arrow => fun arg => let '(P, Q) := eta2 arg in ((type.base P -> type.base Q) -> (type.base (Compilers.base.type.type_base base.type.nat) -> (type.base P -> type.base Q) -> type.base P -> type.base Q) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base P -> type.base Q)%ptype
+             | eager_nat_rect => fun P => ((type.base ()%etype -> type.base P) -> (type.base (Compilers.base.type.type_base base.type.nat) -> type.base P -> type.base P) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base P)%ptype
+             | eager_nat_rect_arrow => fun arg => let '(P, Q) := eta2 arg in ((type.base P -> type.base Q) -> (type.base (Compilers.base.type.type_base base.type.nat) -> (type.base P -> type.base Q) -> type.base P -> type.base Q) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base P -> type.base Q)%ptype
              | list_rect => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (Compilers.base.type.list A) -> type.base P -> type.base P) -> type.base (Compilers.base.type.list A) -> type.base P)%ptype
+             | eager_list_rect => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (Compilers.base.type.list A) -> type.base P -> type.base P) -> type.base (Compilers.base.type.list A) -> type.base P)%ptype
+             | eager_list_rect_arrow => fun arg => let '(A, P, Q) := eta3 arg in ((type.base P -> type.base Q) -> (type.base A -> type.base (Compilers.base.type.list A) -> (type.base P -> type.base Q) -> type.base P -> type.base Q) -> type.base (Compilers.base.type.list A) -> type.base P -> type.base Q)%ptype
              | list_case => fun arg => let '(A, P) := eta2 arg in ((type.base ()%etype -> type.base P) -> (type.base A -> type.base (Compilers.base.type.list A) -> type.base P) -> type.base (Compilers.base.type.list A) -> type.base P)%ptype
              | List_length => fun T => (type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.type_base base.type.nat))%ptype
              | List_seq => fun _ => (type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base (Compilers.base.type.list (Compilers.base.type.type_base base.type.nat)))%ptype
@@ -1947,7 +2038,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | bool_rect => fun T => @Compilers.ident.bool_rect T
              | nat_rect => fun P => @Compilers.ident.nat_rect P
              | nat_rect_arrow => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of nat_rect_arrow arg') with (P, Q) => @Compilers.ident.nat_rect_arrow P Q end
+             | eager_nat_rect => fun P => @Compilers.ident.eager_nat_rect P
+             | eager_nat_rect_arrow => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of eager_nat_rect_arrow arg') with (P, Q) => @Compilers.ident.eager_nat_rect_arrow P Q end
              | list_rect => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of list_rect arg') with (A, P) => @Compilers.ident.list_rect A P end
+             | eager_list_rect => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of eager_list_rect arg') with (A, P) => @Compilers.ident.eager_list_rect A P end
+             | eager_list_rect_arrow => fun arg => match eta3 arg as arg' return Compilers.ident.ident (type_of eager_list_rect_arrow arg') with (A, P, Q) => @Compilers.ident.eager_list_rect_arrow A P Q end
              | list_case => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of list_case arg') with (A, P) => @Compilers.ident.list_case A P end
              | List_length => fun T => @Compilers.ident.List_length T
              | List_seq => fun _ => @Compilers.ident.List_seq
@@ -2045,7 +2140,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.bool_rect T => f _ (@Compilers.ident.bool_rect T)
            | Compilers.ident.nat_rect P => f _ (@Compilers.ident.nat_rect P)
            | Compilers.ident.nat_rect_arrow P Q => f _ (@Compilers.ident.nat_rect_arrow P Q)
+           | Compilers.ident.eager_nat_rect P => f _ (@Compilers.ident.eager_nat_rect P)
+           | Compilers.ident.eager_nat_rect_arrow P Q => f _ (@Compilers.ident.eager_nat_rect_arrow P Q)
            | Compilers.ident.list_rect A P => f _ (@Compilers.ident.list_rect A P)
+           | Compilers.ident.eager_list_rect A P => f _ (@Compilers.ident.eager_list_rect A P)
+           | Compilers.ident.eager_list_rect_arrow A P Q => f _ (@Compilers.ident.eager_list_rect_arrow A P Q)
            | Compilers.ident.list_case A P => f _ (@Compilers.ident.list_case A P)
            | Compilers.ident.List_length T => f _ (@Compilers.ident.List_length T)
            | Compilers.ident.List_seq => f _ Compilers.ident.List_seq
@@ -2135,7 +2234,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | bool_rect {T : base.type} : ident ((type.base ()%pbtype -> type.base T) -> (type.base ()%pbtype -> type.base T) -> type.base (base.type.type_base base.type.bool) -> type.base T)%ptype
       | nat_rect {P : base.type} : ident ((type.base ()%pbtype -> type.base P) -> (type.base (base.type.type_base base.type.nat) -> type.base P -> type.base P) -> type.base (base.type.type_base base.type.nat) -> type.base P)%ptype
       | nat_rect_arrow {P : base.type} {Q : base.type} : ident ((type.base P -> type.base Q) -> (type.base (base.type.type_base base.type.nat) -> (type.base P -> type.base Q) -> type.base P -> type.base Q) -> type.base (base.type.type_base base.type.nat) -> type.base P -> type.base Q)%ptype
+      | eager_nat_rect {P : base.type} : ident ((type.base ()%pbtype -> type.base P) -> (type.base (base.type.type_base base.type.nat) -> type.base P -> type.base P) -> type.base (base.type.type_base base.type.nat) -> type.base P)%ptype
+      | eager_nat_rect_arrow {P : base.type} {Q : base.type} : ident ((type.base P -> type.base Q) -> (type.base (base.type.type_base base.type.nat) -> (type.base P -> type.base Q) -> type.base P -> type.base Q) -> type.base (base.type.type_base base.type.nat) -> type.base P -> type.base Q)%ptype
       | list_rect {A : base.type} {P : base.type} : ident ((type.base ()%pbtype -> type.base P) -> (type.base A -> type.base (base.type.list A) -> type.base P -> type.base P) -> type.base (base.type.list A) -> type.base P)%ptype
+      | eager_list_rect {A : base.type} {P : base.type} : ident ((type.base ()%pbtype -> type.base P) -> (type.base A -> type.base (base.type.list A) -> type.base P -> type.base P) -> type.base (base.type.list A) -> type.base P)%ptype
+      | eager_list_rect_arrow {A : base.type} {P : base.type} {Q : base.type} : ident ((type.base P -> type.base Q) -> (type.base A -> type.base (base.type.list A) -> (type.base P -> type.base Q) -> type.base P -> type.base Q) -> type.base (base.type.list A) -> type.base P -> type.base Q)%ptype
       | list_case {A : base.type} {P : base.type} : ident ((type.base ()%pbtype -> type.base P) -> (type.base A -> type.base (base.type.list A) -> type.base P) -> type.base (base.type.list A) -> type.base P)%ptype
       | List_length {T : base.type} : ident (type.base (base.type.list T) -> type.base (base.type.type_base base.type.nat))%ptype
       | List_seq : ident (type.base (base.type.type_base base.type.nat) -> type.base (base.type.type_base base.type.nat) -> type.base (base.type.list (base.type.type_base base.type.nat)))%ptype
@@ -2225,7 +2328,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @bool_rect T => Raw.ident.bool_rect
            | @nat_rect P => Raw.ident.nat_rect
            | @nat_rect_arrow P Q => Raw.ident.nat_rect_arrow
+           | @eager_nat_rect P => Raw.ident.eager_nat_rect
+           | @eager_nat_rect_arrow P Q => Raw.ident.eager_nat_rect_arrow
            | @list_rect A P => Raw.ident.list_rect
+           | @eager_list_rect A P => Raw.ident.eager_list_rect
+           | @eager_list_rect_arrow A P Q => Raw.ident.eager_list_rect_arrow
            | @list_case A P => Raw.ident.list_case
            | @List_length T => Raw.ident.List_length
            | @List_seq => Raw.ident.List_seq
@@ -2316,7 +2423,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @bool_rect T => []
            | @nat_rect P => []
            | @nat_rect_arrow P Q => []
+           | @eager_nat_rect P => []
+           | @eager_nat_rect_arrow P Q => []
            | @list_rect A P => []
+           | @eager_list_rect A P => []
+           | @eager_list_rect_arrow A P Q => []
            | @list_case A P => []
            | @List_length T => []
            | @List_seq => []
@@ -2407,7 +2518,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @bool_rect T => fun _ => @Compilers.ident.bool_rect _
            | @nat_rect P => fun _ => @Compilers.ident.nat_rect _
            | @nat_rect_arrow P Q => fun _ => @Compilers.ident.nat_rect_arrow _ _
+           | @eager_nat_rect P => fun _ => @Compilers.ident.eager_nat_rect _
+           | @eager_nat_rect_arrow P Q => fun _ => @Compilers.ident.eager_nat_rect_arrow _ _
            | @list_rect A P => fun _ => @Compilers.ident.list_rect _ _
+           | @eager_list_rect A P => fun _ => @Compilers.ident.eager_list_rect _ _
+           | @eager_list_rect_arrow A P Q => fun _ => @Compilers.ident.eager_list_rect_arrow _ _ _
            | @list_case A P => fun _ => @Compilers.ident.list_case _ _
            | @List_length T => fun _ => @Compilers.ident.List_length _
            | @List_seq => fun _ => @Compilers.ident.List_seq
@@ -2502,7 +2617,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @bool_rect T, Compilers.ident.bool_rect T' => Datatypes.Some tt
            | @nat_rect P, Compilers.ident.nat_rect P' => Datatypes.Some tt
            | @nat_rect_arrow P Q, Compilers.ident.nat_rect_arrow P' Q' => Datatypes.Some tt
+           | @eager_nat_rect P, Compilers.ident.eager_nat_rect P' => Datatypes.Some tt
+           | @eager_nat_rect_arrow P Q, Compilers.ident.eager_nat_rect_arrow P' Q' => Datatypes.Some tt
            | @list_rect A P, Compilers.ident.list_rect A' P' => Datatypes.Some tt
+           | @eager_list_rect A P, Compilers.ident.eager_list_rect A' P' => Datatypes.Some tt
+           | @eager_list_rect_arrow A P Q, Compilers.ident.eager_list_rect_arrow A' P' Q' => Datatypes.Some tt
            | @list_case A P, Compilers.ident.list_case A' P' => Datatypes.Some tt
            | @List_length T, Compilers.ident.List_length T' => Datatypes.Some tt
            | @List_seq, Compilers.ident.List_seq => Datatypes.Some tt
@@ -2589,7 +2708,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @bool_rect _, _
            | @nat_rect _, _
            | @nat_rect_arrow _ _, _
+           | @eager_nat_rect _, _
+           | @eager_nat_rect_arrow _ _, _
            | @list_rect _ _, _
+           | @eager_list_rect _ _, _
+           | @eager_list_rect_arrow _ _ _, _
            | @list_case _ _, _
            | @List_length _, _
            | @List_seq, _
@@ -2681,7 +2804,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.bool_rect T => @bool_rect (base.relax T)
            | Compilers.ident.nat_rect P => @nat_rect (base.relax P)
            | Compilers.ident.nat_rect_arrow P Q => @nat_rect_arrow (base.relax P) (base.relax Q)
+           | Compilers.ident.eager_nat_rect P => @eager_nat_rect (base.relax P)
+           | Compilers.ident.eager_nat_rect_arrow P Q => @eager_nat_rect_arrow (base.relax P) (base.relax Q)
            | Compilers.ident.list_rect A P => @list_rect (base.relax A) (base.relax P)
+           | Compilers.ident.eager_list_rect A P => @eager_list_rect (base.relax A) (base.relax P)
+           | Compilers.ident.eager_list_rect_arrow A P Q => @eager_list_rect_arrow (base.relax A) (base.relax P) (base.relax Q)
            | Compilers.ident.list_case A P => @list_case (base.relax A) (base.relax P)
            | Compilers.ident.List_length T => @List_length (base.relax T)
            | Compilers.ident.List_seq => @List_seq
@@ -2772,7 +2899,11 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.bool_rect T => tt
            | Compilers.ident.nat_rect P => tt
            | Compilers.ident.nat_rect_arrow P Q => tt
+           | Compilers.ident.eager_nat_rect P => tt
+           | Compilers.ident.eager_nat_rect_arrow P Q => tt
            | Compilers.ident.list_rect A P => tt
+           | Compilers.ident.eager_list_rect A P => tt
+           | Compilers.ident.eager_list_rect_arrow A P Q => tt
            | Compilers.ident.list_case A P => tt
            | Compilers.ident.List_length T => tt
            | Compilers.ident.List_seq => tt
