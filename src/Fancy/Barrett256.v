@@ -29,26 +29,12 @@ Module Barrett256.
   Lemma barrett_red256_correct :
     COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (expr.Interp (@ident.gen_interp cast_oor) barrett_red256).
   Proof.
-    apply barrett_red_correct with (n:=2%nat) (nout:=2%nat) (machine_wordsize:=machine_wordsize).
+    apply barrett_red_correct with (machine_wordsize:=machine_wordsize).
     { lazy. reflexivity. }
     { apply barrett_red256_eq. }
   Qed.
 
   Definition muLow := Eval lazy in (2 ^ (2 * machine_wordsize) / M) mod (2^machine_wordsize).
-
-  Lemma barrett_reduce_correct_specialized :
-    forall (xLow xHigh : Z),
-      0 <= xLow < 2 ^ machine_wordsize ->
-      0 <= xHigh < M ->
-      BarrettReduction.barrett_reduce machine_wordsize M muLow 2 2 xLow xHigh = (xLow + 2 ^ machine_wordsize * xHigh) mod M.
-  Proof.
-    intros.
-    apply BarrettReduction.barrett_reduce_correct; cbv [machine_wordsize M muLow] in *;
-      try omega;
-      try match goal with
-          | |- context [weight] => intros; cbv [weight]; autorewrite with zsimplify; auto using Z.pow_mul_r with omega
-          end; lazy; try split; congruence.
-  Qed.
 
   Definition barrett_red256_fancy' (xLow xHigh RegMuLow RegMod RegZero error : positive) :=
     of_Expr 6%positive
@@ -136,7 +122,10 @@ Module Barrett256.
              | _ => econstructor
              end. }
     { cbn. cbv [muLow M].
-      repeat (econstructor; [ solve [valid_expr_subgoal] | intros ]).
+      repeat (match goal with
+             | _ => eapply valid_LetInZZ
+             | _ => eapply valid_LetInZ
+              end; [ solve [valid_expr_subgoal] | intros ]).
       econstructor. valid_expr_subgoal. }
     { reflexivity. }
   Qed.
