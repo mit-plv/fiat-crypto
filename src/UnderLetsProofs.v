@@ -520,7 +520,7 @@ Module Compilers.
 
         Lemma list_rect_arrow_interp_related {A B C Pnil Pcons ls x B' C' Pnil' Pcons' ls' x' R}
               {R' : B -> B' -> Prop}
-              (Hnil : forall x x', interp_related R (Pnil x) (Pnil' x'))
+              (Hnil : forall x x', R' x x' -> interp_related R (Pnil x) (Pnil' x'))
               (Hcons : forall x x',
                   expr.interp_related ident_interp x x'
                   -> forall l l',
