@@ -2405,3 +2405,47 @@ Proof using Type.
   intro H; apply remove_duplicates_eq_NoDupA with (R:=eq); eauto; try exact _.
   now apply NoDupA_eq_NoDup.
 Qed.
+
+Lemma eq_repeat_nat_rect {A} x n
+  : @List.repeat A x n
+    = nat_rect _ nil (fun k repeat_k => x :: repeat_k) n.
+Proof using Type. induction n; cbn; f_equal; assumption. Qed.
+
+Lemma eq_firstn_nat_rect {A} n ls
+  : @List.firstn A n ls
+    = nat_rect
+        _
+        (fun _ => nil)
+        (fun n' firstn_n' ls
+         => match ls with
+            | nil => nil
+            | cons x xs => x :: firstn_n' xs
+            end)
+        n ls.
+Proof using Type. revert ls; induction n, ls; cbn; f_equal; auto. Qed.
+
+Lemma eq_skipn_nat_rect {A} n ls
+  : @List.skipn A n ls
+    = nat_rect
+        _
+        (fun ls => ls)
+        (fun n' skipn_n' ls
+         => match ls with
+            | nil => nil
+            | cons x xs => skipn_n' xs
+            end)
+        n ls.
+Proof using Type. revert ls; induction n, ls; cbn; f_equal; auto. Qed.
+
+Lemma eq_combine_list_rect {A B} xs ys
+  : @List.combine A B xs ys
+    = list_rect
+        _
+        (fun _ => nil)
+        (fun x xs combine_xs ys
+         => match ys with
+            | nil => nil
+            | y :: ys => (x, y) :: combine_xs ys
+            end)
+        xs ys.
+Proof using Type. revert ys; induction xs, ys; cbn; f_equal; auto. Qed.
