@@ -450,6 +450,17 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                           (fun x : Compilers.base.type => type.base x)
                             (Compilers.base.type.type_base base.type.nat) ->
                           (fun x : Compilers.base.type => type.base x) T)%ptype
+  | eager_List_nth_default : forall T : Compilers.base.type,
+                             ident
+                               ((fun x : Compilers.base.type => type.base x)
+                                  T ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  (Compilers.base.type.list T) ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  (Compilers.base.type.type_base
+                                     base.type.nat) ->
+                                (fun x : Compilers.base.type => type.base x)
+                                  T)%ptype
   | Z_add : ident
               ((fun x : Compilers.base.type => type.base x)
                  (Compilers.base.type.type_base base.type.Z) ->
@@ -898,6 +909,7 @@ show_match_ident = r"""match # with
  | ident.List_fold_right A B =>
  | ident.List_update_nth T =>
  | ident.List_nth_default T =>
+ | ident.eager_List_nth_default T =>
  | ident.Z_add =>
  | ident.Z_mul =>
  | ident.Z_pow =>
@@ -1509,6 +1521,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
         | List_fold_right
         | List_update_nth
         | List_nth_default
+        | eager_List_nth_default
         | Z_add
         | Z_mul
         | Z_pow
@@ -1604,6 +1617,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | List_fold_right => Compilers.base.type * Compilers.base.type
              | List_update_nth => Compilers.base.type
              | List_nth_default => Compilers.base.type
+             | eager_List_nth_default => Compilers.base.type
              | Z_add => unit
              | Z_mul => unit
              | Z_pow => unit
@@ -1700,6 +1714,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | List_fold_right => false
              | List_update_nth => false
              | List_nth_default => false
+             | eager_List_nth_default => false
              | Z_add => true
              | Z_mul => true
              | Z_pow => true
@@ -1796,6 +1811,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | List_fold_right, Compilers.ident.List_fold_right A B => Datatypes.Some (A, B)
              | List_update_nth, Compilers.ident.List_update_nth T => Datatypes.Some T
              | List_nth_default, Compilers.ident.List_nth_default T => Datatypes.Some T
+             | eager_List_nth_default, Compilers.ident.eager_List_nth_default T => Datatypes.Some T
              | Z_add, Compilers.ident.Z_add => Datatypes.Some tt
              | Z_mul, Compilers.ident.Z_mul => Datatypes.Some tt
              | Z_pow, Compilers.ident.Z_pow => Datatypes.Some tt
@@ -1888,6 +1904,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | List_fold_right, _
              | List_update_nth, _
              | List_nth_default, _
+             | eager_List_nth_default, _
              | Z_add, _
              | Z_mul, _
              | Z_pow, _
@@ -1985,6 +2002,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | List_fold_right => fun arg => let '(A, B) := eta2 arg in ((type.base B -> type.base A -> type.base A) -> type.base A -> type.base (Compilers.base.type.list B) -> type.base A)%ptype
              | List_update_nth => fun T => (type.base (Compilers.base.type.type_base base.type.nat) -> (type.base T -> type.base T) -> type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.list T))%ptype
              | List_nth_default => fun T => (type.base T -> type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base T)%ptype
+             | eager_List_nth_default => fun T => (type.base T -> type.base (Compilers.base.type.list T) -> type.base (Compilers.base.type.type_base base.type.nat) -> type.base T)%ptype
              | Z_add => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_mul => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_pow => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
@@ -2081,6 +2099,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | List_fold_right => fun arg => match eta2 arg as arg' return Compilers.ident.ident (type_of List_fold_right arg') with (A, B) => @Compilers.ident.List_fold_right A B end
              | List_update_nth => fun T => @Compilers.ident.List_update_nth T
              | List_nth_default => fun T => @Compilers.ident.List_nth_default T
+             | eager_List_nth_default => fun T => @Compilers.ident.eager_List_nth_default T
              | Z_add => fun _ => @Compilers.ident.Z_add
              | Z_mul => fun _ => @Compilers.ident.Z_mul
              | Z_pow => fun _ => @Compilers.ident.Z_pow
@@ -2184,6 +2203,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.List_fold_right A B => f _ (@Compilers.ident.List_fold_right A B)
            | Compilers.ident.List_update_nth T => f _ (@Compilers.ident.List_update_nth T)
            | Compilers.ident.List_nth_default T => f _ (@Compilers.ident.List_nth_default T)
+           | Compilers.ident.eager_List_nth_default T => f _ (@Compilers.ident.eager_List_nth_default T)
            | Compilers.ident.Z_add => f _ Compilers.ident.Z_add
            | Compilers.ident.Z_mul => f _ Compilers.ident.Z_mul
            | Compilers.ident.Z_pow => f _ Compilers.ident.Z_pow
@@ -2279,6 +2299,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | List_fold_right {A : base.type} {B : base.type} : ident ((type.base B -> type.base A -> type.base A) -> type.base A -> type.base (base.type.list B) -> type.base A)%ptype
       | List_update_nth {T : base.type} : ident (type.base (base.type.type_base base.type.nat) -> (type.base T -> type.base T) -> type.base (base.type.list T) -> type.base (base.type.list T))%ptype
       | List_nth_default {T : base.type} : ident (type.base T -> type.base (base.type.list T) -> type.base (base.type.type_base base.type.nat) -> type.base T)%ptype
+      | eager_List_nth_default {T : base.type} : ident (type.base T -> type.base (base.type.list T) -> type.base (base.type.type_base base.type.nat) -> type.base T)%ptype
       | Z_add : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_mul : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_pow : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
@@ -2374,6 +2395,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @List_fold_right A B => Raw.ident.List_fold_right
            | @List_update_nth T => Raw.ident.List_update_nth
            | @List_nth_default T => Raw.ident.List_nth_default
+           | @eager_List_nth_default T => Raw.ident.eager_List_nth_default
            | @Z_add => Raw.ident.Z_add
            | @Z_mul => Raw.ident.Z_mul
            | @Z_pow => Raw.ident.Z_pow
@@ -2470,6 +2492,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @List_fold_right A B => []
            | @List_update_nth T => []
            | @List_nth_default T => []
+           | @eager_List_nth_default T => []
            | @Z_add => []
            | @Z_mul => []
            | @Z_pow => []
@@ -2566,6 +2589,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @List_fold_right A B => fun _ => @Compilers.ident.List_fold_right _ _
            | @List_update_nth T => fun _ => @Compilers.ident.List_update_nth _
            | @List_nth_default T => fun _ => @Compilers.ident.List_nth_default _
+           | @eager_List_nth_default T => fun _ => @Compilers.ident.eager_List_nth_default _
            | @Z_add => fun _ => @Compilers.ident.Z_add
            | @Z_mul => fun _ => @Compilers.ident.Z_mul
            | @Z_pow => fun _ => @Compilers.ident.Z_pow
@@ -2666,6 +2690,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @List_fold_right A B, Compilers.ident.List_fold_right A' B' => Datatypes.Some tt
            | @List_update_nth T, Compilers.ident.List_update_nth T' => Datatypes.Some tt
            | @List_nth_default T, Compilers.ident.List_nth_default T' => Datatypes.Some tt
+           | @eager_List_nth_default T, Compilers.ident.eager_List_nth_default T' => Datatypes.Some tt
            | @Z_add, Compilers.ident.Z_add => Datatypes.Some tt
            | @Z_mul, Compilers.ident.Z_mul => Datatypes.Some tt
            | @Z_pow, Compilers.ident.Z_pow => Datatypes.Some tt
@@ -2758,6 +2783,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @List_fold_right _ _, _
            | @List_update_nth _, _
            | @List_nth_default _, _
+           | @eager_List_nth_default _, _
            | @Z_add, _
            | @Z_mul, _
            | @Z_pow, _
@@ -2855,6 +2881,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.List_fold_right A B => @List_fold_right (base.relax A) (base.relax B)
            | Compilers.ident.List_update_nth T => @List_update_nth (base.relax T)
            | Compilers.ident.List_nth_default T => @List_nth_default (base.relax T)
+           | Compilers.ident.eager_List_nth_default T => @eager_List_nth_default (base.relax T)
            | Compilers.ident.Z_add => @Z_add
            | Compilers.ident.Z_mul => @Z_mul
            | Compilers.ident.Z_pow => @Z_pow
@@ -2951,6 +2978,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.List_fold_right A B => tt
            | Compilers.ident.List_update_nth T => tt
            | Compilers.ident.List_nth_default T => tt
+           | Compilers.ident.eager_List_nth_default T => tt
            | Compilers.ident.Z_add => tt
            | Compilers.ident.Z_mul => tt
            | Compilers.ident.Z_pow => tt

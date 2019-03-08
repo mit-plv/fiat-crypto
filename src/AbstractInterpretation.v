@@ -576,6 +576,7 @@ Module Compilers.
                      => fold_right f v ls
                    | None => ZRange.type.base.option.None
                    end
+             | ident.eager_List_nth_default _
              | ident.List_nth_default _
                => fun d ls n
                  => match ls, n with

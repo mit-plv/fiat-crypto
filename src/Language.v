@@ -898,6 +898,7 @@ Module Compilers.
         | List_fold_right {A B:base.type} : ident ((B -> A -> A) -> A -> list B -> A)
         | List_update_nth {T:base.type} : ident (nat -> (T -> T) -> list T -> list T)
         | List_nth_default {T:base.type} : ident (T -> list T -> nat -> T)
+        | eager_List_nth_default {T:base.type} : ident (T -> list T -> nat -> T)
         | Z_add : ident (Z -> Z -> Z)
         | Z_mul : ident (Z -> Z -> Z)
         | Z_pow : ident (Z -> Z -> Z)
@@ -1086,6 +1087,7 @@ Module Compilers.
              | List_fold_right A B => @List.fold_right _ _
              | List_update_nth T => update_nth
              | List_nth_default T => @nth_default _
+             | eager_List_nth_default T => @nth_default _
              | Z_add => Z.add
              | Z_mul => Z.mul
              | Z_pow => Z.pow
@@ -1422,6 +1424,9 @@ Module Compilers.
         | @List.nth_default ?T
           => let rT := base.reify T in
              then_tac (@ident.List_nth_default rT)
+        | ident.eagerly (@List.nth_default) ?T
+          => let rT := base.reify T in
+             then_tac (@ident.eager_List_nth_default rT)
         | Z.add => then_tac ident.Z_add
         | Z.mul => then_tac ident.Z_mul
         | Z.pow => then_tac ident.Z_pow

@@ -285,6 +285,8 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "fold_right") args, ZRange.type.base.option.None)
              | ident.List_update_nth T
                => fun args => (show_application with_casts (fun _ => "update_nth") args, ZRange.type.base.option.None)
+             | ident.eager_List_nth_default T
+               => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[[" ++ i 200%nat ++ "]]"), ZRange.type.base.option.None)
              | ident.List_nth_default T
                => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[" ++ i 200%nat ++ "]"), ZRange.type.base.option.None)
              | ident.Z_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " * " ++ y 39%nat), ZRange.type.base.option.None)
@@ -413,6 +415,7 @@ Module Compilers.
                 | ident.List_fold_right A B => "fold_right"
                 | ident.List_update_nth T => "update_nth"
                 | ident.List_nth_default T => "nth"
+                | ident.eager_List_nth_default T => "eager_nth"
                 | ident.Some _ => "Some"
                 | ident.None _ => "None"
                 | ident.option_rect _ _ => "option_rect"
@@ -1320,6 +1323,7 @@ Module Compilers.
                | ident.List_fold_right _ _
                | ident.List_update_nth _
                | ident.List_nth_default _
+               | ident.eager_List_nth_default _
                | ident.Z_pow
                | ident.Z_div
                | ident.Z_modulo
