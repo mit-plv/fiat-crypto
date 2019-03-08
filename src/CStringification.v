@@ -253,6 +253,8 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "list_rect") args, ZRange.type.base.option.None)
              | ident.eager_list_rect A P
                => fun args => (show_application with_casts (fun _ => "eager_list_rect") args, ZRange.type.base.option.None)
+             | ident.list_rect_arrow A P Q
+               => fun args => (show_application with_casts (fun _ => "list_rect(→)") args, ZRange.type.base.option.None)
              | ident.eager_list_rect_arrow A P Q
                => fun args => (show_application with_casts (fun _ => "eager_list_rect(→)") args, ZRange.type.base.option.None)
              | ident.list_case A P
@@ -394,6 +396,7 @@ Module Compilers.
                 | ident.eager_nat_rect_arrow P Q => "eager_nat_rect(→)"
                 | ident.list_rect A P => "list_rect"
                 | ident.eager_list_rect A P => "eager_list_rect"
+                | ident.list_rect_arrow A P Q => "list_rect(→)"
                 | ident.eager_list_rect_arrow A P Q => "eager_list_rect(→)"
                 | ident.list_case A P => "list_case"
                 | ident.List_length T => "length"
@@ -1300,6 +1303,7 @@ Module Compilers.
                | ident.option_rect _ _
                | ident.list_rect _ _
                | ident.eager_list_rect _ _
+               | ident.list_rect_arrow _ _ _
                | ident.eager_list_rect_arrow _ _ _
                | ident.list_case _ _
                | ident.List_length _
