@@ -2449,3 +2449,35 @@ Lemma eq_combine_list_rect {A B} xs ys
             end)
         xs ys.
 Proof using Type. revert ys; induction xs, ys; cbn; f_equal; auto. Qed.
+
+Lemma eq_length_list_rect {A} xs
+  : @List.length A xs
+    = (list_rect _)
+        0%nat
+        (fun _ xs length_xs => S length_xs)
+        xs.
+Proof using Type. induction xs; cbn; f_equal; auto. Qed.
+
+Lemma eq_rev_list_rect {A} xs
+  : @List.rev A xs
+    = (list_rect _)
+        nil
+        (fun x xs rev_xs => rev_xs ++ [x])
+        xs.
+Proof using Type. induction xs; cbn; f_equal; auto. Qed.
+
+Lemma eq_update_nth_nat_rect {A} n f xs
+  : @update_nth A n f xs
+    = (nat_rect _)
+        (fun xs => match xs with
+                   | nil => nil
+                   | x' :: xs' => f x' :: xs'
+                   end)
+        (fun n' update_nth_n' xs
+         => match xs with
+            | nil => nil
+            | x' :: xs' => x' :: update_nth_n' xs'
+            end)
+        n
+        xs.
+Proof using Type. revert xs; induction n, xs; cbn; f_equal; auto. Qed.
