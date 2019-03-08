@@ -518,6 +518,36 @@ Module Compilers.
                  ls').
         Proof using Type. induction Hls; cbn [list_rect] in *; auto. Qed.
 
+        Lemma list_rect_arrow_interp_related {A B C Pnil Pcons ls x B' C' Pnil' Pcons' ls' x' R}
+              {R' : B -> B' -> Prop}
+              (Hnil : forall x x', interp_related R (Pnil x) (Pnil' x'))
+              (Hcons : forall x x',
+                  expr.interp_related ident_interp x x'
+                  -> forall l l',
+                    List.Forall2 (expr.interp_related ident_interp) l l'
+                    -> forall rec rec',
+                      (forall v v', R' v v' -> interp_related R (rec v) (rec' v'))
+                      -> forall v v',
+                        R' v v'
+                        -> interp_related R (Pcons x l rec v) (Pcons' x' l' rec' v'))
+              (Hls : List.Forall2 (expr.interp_related ident_interp (t:=A)) ls ls')
+              (Hx : R' x x')
+          : interp_related
+              R
+              (list_rect
+                 (fun _ : list _ => B -> UnderLets C)
+                 Pnil
+                 Pcons
+                 ls
+                 x)
+              (list_rect
+                 (fun _ : list _ => B' -> C')
+                 Pnil'
+                 Pcons'
+                 ls'
+                 x').
+        Proof using Type. revert x x' Hx; induction Hls; cbn [list_rect] in *; auto. Qed.
+
         Lemma nat_rect_interp_related {A PO PS n A' PO' PS' n' R}
               (Hnil : interp_related R PO PO')
               (Hcons : forall n rec rec',
