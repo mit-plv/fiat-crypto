@@ -12,6 +12,8 @@ Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Import ListNotations.
+Local Open Scope list_scope.
 
 Scheme Equality for list.
 
