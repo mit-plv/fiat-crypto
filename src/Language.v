@@ -1405,6 +1405,10 @@ Module Compilers.
         | @List.app ?A
           => let rA := base.reify A in
              then_tac (@ident.List_app rA)
+        | @List.map ?A ?B
+          => let rA := base.reify A in
+             let rB := base.reify B in
+             then_tac (@ident.List_map rA rB)
         | @List.rev ?A
           => let rA := base.reify A in
              then_tac (@ident.List_rev rA)
