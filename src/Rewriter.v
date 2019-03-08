@@ -17,6 +17,7 @@ Require Import Crypto.Language.
 Require Import Crypto.UnderLets.
 Require Import Crypto.GENERATEDIdentifiersWithoutTypes.
 Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
@@ -495,7 +496,8 @@ Module Compilers.
         Let type_base (t : base.type) : type := type.base t.
         Coercion type_base : base.type >-> type.
 
-        Context (reify_and_let_binds_base_cps : forall (t : base.type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T).
+        Context (reify_and_let_binds_base_cps : forall (t : base.type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T)
+                (reflect_ident_iota : forall t (idc : ident t), option (value t)).
 
         Definition under_type_of_list_cps {A1 A2 ls}
                    (F : A1 -> A2)
@@ -574,30 +576,36 @@ Module Compilers.
              end.
 
         (** N.B. In order to preserve the (currently unstated)
-        invariant that ensures that the rewriter does enough
-        rewriting, when we reify rewrite rules, we have to perform β
-        on the RHS to ensure that there are no var nodes holding
-        values which show up in the heads of app nodes. *)
-        Fixpoint reflect_expr_beta {t} (e : @expr.expr base.type ident value t)
+              invariant that ensures that the rewriter does enough
+              rewriting, when we reify rewrite rules, we have to
+              perform β on the RHS to ensure that there are no var
+              nodes holding values which show up in the heads of app
+              nodes.  Note that we also perform βιδ on "eager"
+              identifiers, which is what allows us to handle
+              [list_rect] and [nat_rect] recursion rules. *)
+        Fixpoint reflect_expr_beta_iota {t} (e : @expr.expr base.type ident value t)
           : UnderLets (value t)
           := match e in expr.expr t return UnderLets (value t) with
              | expr.Var t v => UnderLets.Base v
-             | expr.Abs s d f => UnderLets.Base (fun x : value s => fx <----- @reflect_expr_beta d (f x); Base_value fx)
+             | expr.Abs s d f => UnderLets.Base (fun x : value s => fx <----- @reflect_expr_beta_iota d (f x); Base_value fx)
              | expr.App s (type.base d) f x
-               => f <-- @reflect_expr_beta _ f;
-                    x <-- @reflect_expr_beta _ x;
+               => f <-- @reflect_expr_beta_iota _ f;
+                    x <-- @reflect_expr_beta_iota _ x;
                     f x
              | expr.App s (type.arrow _ _) f x
-               => f <-- @reflect_expr_beta _ f;
-                    x <-- @reflect_expr_beta _ x;
+               => f <-- @reflect_expr_beta_iota _ f;
+                    x <-- @reflect_expr_beta_iota _ x;
                     UnderLets.Base (f x)
              | expr.LetIn A B x f
-               => x <-- @reflect_expr_beta _ x;
+               => x <-- @reflect_expr_beta_iota _ x;
                     UnderLets.UnderLet
                       (reify x)
-                      (fun xv => @reflect_expr_beta _ (f (reflect (expr.Var xv))))
-             | expr.Ident t idc => UnderLets.Base (reflect (expr.Ident idc))
-             end%under_lets.
+                      (fun xv => @reflect_expr_beta_iota _ (f (reflect (expr.Var xv))))
+             | expr.Ident t idc => UnderLets.Base match reflect_ident_iota t idc with
+                                                  | Some ridc => ridc
+                                                  | None => reflect (expr.Ident idc)
+                                                  end
+             end%under_lets%option.
 
         Definition reify_to_UnderLets {with_lets} {t} : value' with_lets t -> UnderLets (expr t)
           := match t, with_lets return value' with_lets t -> UnderLets (expr t) with
@@ -607,9 +615,9 @@ Module Compilers.
                => fun f => UnderLets.Base (reify f)
              end.
 
-        Definition reify_expr_beta {t} (e : @expr.expr base.type ident value t)
+        Definition reify_expr_beta_iota {t} (e : @expr.expr base.type ident value t)
           : UnderLets (@expr.expr base.type ident var t)
-          := e <-- @reflect_expr_beta t e; reify_to_UnderLets e.
+          := e <-- @reflect_expr_beta_iota t e; reify_to_UnderLets e.
 
         Definition reify_and_let_binds_cps {with_lets} {t} : value' with_lets t -> forall T, (expr t -> UnderLets T) -> UnderLets T
           := match t, with_lets return value' with_lets t -> forall T, (expr t -> UnderLets T) -> UnderLets T with
@@ -1277,6 +1285,164 @@ Module Compilers.
         Local Notation UnderLets := (UnderLets.UnderLets base.type ident var).
         Local Notation reify_and_let_binds_cps := (@Compile.reify_and_let_binds_cps ident var (@UnderLets.reify_and_let_binds_base_cps var)).
         Local Notation reflect := (@Compile.reflect ident var).
+        Let type_base := @type.base base.type.
+        Local Coercion type_base : base.type >-> type.type.
+
+        (* N.B. the [with_lets] argument to [reflect] doesn't matter
+          here because [value' true (_ → _) ≡ value' false (_ → _)] *)
+        Definition reflect_ident_iota {t} (idc : ident t) : option (value t)
+          := Eval cbv [GallinaReify.Reify_as GallinaReify.reify GallinaReify.base.reify ident.smart_Literal] in
+              match idc in ident.ident t return option (value t) with
+              | ident.eager_nat_rect P
+                => Some
+                     (fun (N_case : value base.type.unit -> _) (S_case : value base.type.nat -> value P -> _) (n : expr base.type.nat) (* type annotations present for nicer fixpoint refolding *)
+                      => match invert_Literal n with
+                         | Some n => nat_rect
+                                       (fun _ => UnderLets (expr P))
+                                       (N_case (GallinaReify.Reify tt _))
+                                       (fun n' rec
+                                        => rec <-- rec;
+                                             S_case (GallinaReify.Reify n' _) rec)
+                                       n
+                         | None => reflect (with_lets:=false) (expr.Ident (@ident.nat_rect P)) N_case S_case n
+                         end)
+              | ident.eager_nat_rect_arrow P Q
+                => Some
+                     (fun (N_case : value P -> _) (S_case : value base.type.nat -> (value P -> _) -> _ -> _) (n : expr base.type.nat) (v : expr P) (* type annotations present for nicer fixpoint refolding *)
+                      => match invert_Literal n with
+                         | Some n => nat_rect
+                                       (fun _ => expr P -> UnderLets (expr Q))
+                                       N_case
+                                       (fun n' rec v'
+                                        => S_case (GallinaReify.Reify n' _) rec v')
+                                       n
+                                       v
+                         | None => reflect (with_lets:=false) (expr.Ident (@ident.nat_rect_arrow P Q)) N_case S_case n v
+                         end)
+              | ident.eager_list_rect A P
+                => Some
+                     (fun (N_case : value base.type.unit -> _) (C_case : value A -> _ -> value P -> _) (ls : expr (base.type.list A)) (* type annotations present for nicer fixpoint refolding *)
+                      => match reflect_list ls with
+                         | Some ls => list_rect
+                                        (fun _ => UnderLets (expr P))
+                                        (N_case (GallinaReify.Reify tt _))
+                                        (fun x xs rec
+                                         => rec <-- rec;
+                                              C_case x (reify_list xs) rec)
+                                        ls
+                         | None => reflect (with_lets:=false) (expr.Ident (@ident.list_rect A P)) N_case C_case ls
+                         end)
+              | ident.eager_list_rect_arrow A P Q
+                => Some
+                     (fun (N_case : value P -> _) (C_case : value A -> _ -> (value P -> _) -> value P -> _) (ls : expr (base.type.list A)) (v : value P) (* type annotations present for nicer fixpoint refolding *)
+                      => match reflect_list ls with
+                         | Some ls => list_rect
+                                        (fun _ => expr P -> UnderLets (expr Q))
+                                        N_case
+                                        (fun x xs rec v
+                                         => C_case x (reify_list xs) rec v)
+                                        ls
+                                        v
+                         | None => reflect (with_lets:=false) (expr.Ident (@ident.list_rect_arrow A P Q)) N_case C_case ls v
+                         end)
+              | ident.eager_List_nth_default A
+                => Some
+                     (fun default (ls : expr (base.type.list A)) (n : expr base.type.nat)
+                      => match reflect_list ls, invert_Literal n with
+                         | Some ls, Some n => UnderLets.Base (nth_default default ls n)
+                         | _, _ => reflect (with_lets:=false) (expr.Ident (@ident.List_nth_default A)) default ls n
+                         end)
+              | ident.Literal _ _
+              | ident.Nat_succ
+              | ident.Nat_pred
+              | ident.Nat_max
+              | ident.Nat_mul
+              | ident.Nat_add
+              | ident.Nat_sub
+              | ident.Nat_eqb
+              | ident.nil _
+              | ident.cons _
+              | ident.pair _ _
+              | ident.fst _ _
+              | ident.snd _ _
+              | ident.prod_rect _ _ _
+              | ident.bool_rect _
+              | ident.nat_rect _
+              | ident.nat_rect_arrow _ _
+              | ident.list_rect _ _
+              | ident.list_rect_arrow _ _ _
+              | ident.list_case _ _
+              | ident.List_length _
+              | ident.List_seq
+              | ident.List_firstn _
+              | ident.List_skipn _
+              | ident.List_repeat _
+              | ident.List_combine _ _
+              | ident.List_map _ _
+              | ident.List_app _
+              | ident.List_rev _
+              | ident.List_flat_map _ _
+              | ident.List_partition _
+              | ident.List_fold_right _ _
+              | ident.List_update_nth _
+              | ident.List_nth_default _
+              | ident.Z_add
+              | ident.Z_mul
+              | ident.Z_pow
+              | ident.Z_sub
+              | ident.Z_opp
+              | ident.Z_div
+              | ident.Z_modulo
+              | ident.Z_log2
+              | ident.Z_log2_up
+              | ident.Z_eqb
+              | ident.Z_leb
+              | ident.Z_ltb
+              | ident.Z_geb
+              | ident.Z_gtb
+              | ident.Z_of_nat
+              | ident.Z_to_nat
+              | ident.Z_shiftr
+              | ident.Z_shiftl
+              | ident.Z_land
+              | ident.Z_lor
+              | ident.Z_min
+              | ident.Z_max
+              | ident.Z_bneg
+              | ident.Z_lnot_modulo
+              | ident.Z_mul_split
+              | ident.Z_add_get_carry
+              | ident.Z_add_with_carry
+              | ident.Z_add_with_get_carry
+              | ident.Z_sub_get_borrow
+              | ident.Z_sub_with_get_borrow
+              | ident.Z_zselect
+              | ident.Z_add_modulo
+              | ident.Z_rshi
+              | ident.Z_cc_m
+              | ident.Z_cast _
+              | ident.Z_cast2 _
+              | ident.option_Some _
+              | ident.option_None _
+              | ident.option_rect _ _
+              | ident.Build_zrange
+              | ident.zrange_rect _
+              | ident.fancy_add _ _
+              | ident.fancy_addc _ _
+              | ident.fancy_sub _ _
+              | ident.fancy_subb _ _
+              | ident.fancy_mulll _
+              | ident.fancy_mullh _
+              | ident.fancy_mulhl _
+              | ident.fancy_mulhh _
+              | ident.fancy_rshi _ _
+              | ident.fancy_selc
+              | ident.fancy_selm _
+              | ident.fancy_sell
+              | ident.fancy_addm
+                => None
+              end%expr%under_lets.
+
         Section with_rewrite_head.
           Context (rewrite_head : forall t (idc : ident t), value_with_lets t).
 
@@ -1335,7 +1501,8 @@ Module Compilers.
                 (pident_arg_types : forall t, pident t -> list Type)
                 (pident_type_of_list_arg_types_beq : forall t idc, type_of_list (pident_arg_types t idc) -> type_of_list (pident_arg_types t idc) -> bool)
                 (pident_of_typed_ident : forall t, ident t -> pident (pattern.type.relax t))
-                (pident_arg_types_of_typed_ident : forall t (idc : ident t), type_of_list (pident_arg_types _ (pident_of_typed_ident t idc))).
+                (pident_arg_types_of_typed_ident : forall t (idc : ident t), type_of_list (pident_arg_types _ (pident_of_typed_ident t idc)))
+                (reflect_ident_iota : forall t (idc : ident t), option (@value base.type ident var t)).
 
         Local Notation type := (type.type base.type).
         Local Notation expr := (@expr.expr base.type ident var).
@@ -1344,7 +1511,7 @@ Module Compilers.
         Local Notation value := (@Compile.value base.type ident var).
         Local Notation value_with_lets := (@Compile.value_with_lets base.type ident var).
         Local Notation UnderLets := (UnderLets.UnderLets base.type ident var).
-        Local Notation reify_expr_beta := (@reify_expr_beta ident var).
+        Local Notation reify_expr_beta_iota := (@reify_expr_beta_iota ident var reflect_ident_iota).
         Local Notation unification_resultT' := (@unification_resultT' pident pident_arg_types).
         Local Notation with_unif_rewrite_ruleTP_gen' := (@with_unif_rewrite_ruleTP_gen' ident var pident pident_arg_types value).
         Local Notation lam_unification_resultT' := (@lam_unification_resultT' pident pident_arg_types).
@@ -1373,10 +1540,10 @@ Module Compilers.
 
         Definition expr_value_to_rewrite_rule_replacement (should_do_again : bool) {t} (e : @expr.expr base.type ident value t)
           : UnderLets (expr_maybe_do_again should_do_again t)
-          := (e <-- UnderLets.flat_map (@reify_expr_beta) (fun t v => reflect (expr.Var v)) (UnderLets.of_expr e);
+          := (e <-- UnderLets.flat_map (@reify_expr_beta_iota) (fun t v => reflect (expr.Var v)) (UnderLets.of_expr e);
                 if should_do_again return UnderLets (expr_maybe_do_again should_do_again t)
                 then UnderLets.Base e
-                else reify_expr_beta e)%under_lets.
+                else reify_expr_beta_iota e)%under_lets.
 
         Fixpoint pair'_unification_resultT' {evm t p}
           : @unification_resultT' (fun _ => positive) t p evm -> @unification_resultT' value t p evm -> PositiveMap.t { t : _ & value t } * list bool -> PositiveMap.t { t : _ & value t } * list bool
@@ -1440,7 +1607,7 @@ Module Compilers.
 
 
         Definition expr_to_pattern_and_replacement_unfolded should_do_again evm invalid {t} lhs rhs side_conditions
-          := Eval cbv beta iota delta [expr_to_pattern_and_replacement pattern_of_expr lam_unification_resultT' Pos.succ pair'_unification_resultT' PositiveMap.empty PositiveMap.fold Pos.max expr_pos_to_expr_value expr_value_to_rewrite_rule_replacement fold_left List.rev List.app value PositiveMap.add PositiveMap.xfoldi Pos.compare Pos.compare_cont FMapPositive.append projT1 projT2 PositiveMap.find Base_value (*UnderLets.map reify_expr_beta reflect_expr_beta*) lam_type_of_list fold_right list_rect pattern.type.relax pattern.type.subst_default pattern.type.subst_default_relax pattern.type.unsubst_default_relax option_map unification_resultT' with_unification_resultT' with_unif_rewrite_ruleTP_gen']
+          := Eval cbv beta iota delta [expr_to_pattern_and_replacement pattern_of_expr lam_unification_resultT' Pos.succ pair'_unification_resultT' PositiveMap.empty PositiveMap.fold Pos.max expr_pos_to_expr_value (* expr_value_to_rewrite_rule_replacement*) fold_left List.rev List.app value PositiveMap.add PositiveMap.xfoldi Pos.compare Pos.compare_cont FMapPositive.append projT1 projT2 PositiveMap.find Base_value (*UnderLets.map reify_expr_beta_iota reflect_expr_beta_iota*) lam_type_of_list fold_right list_rect pattern.type.relax pattern.type.subst_default pattern.type.subst_default_relax pattern.type.unsubst_default_relax option_map unification_resultT' with_unification_resultT' with_unif_rewrite_ruleTP_gen']
             in @expr_to_pattern_and_replacement should_do_again evm invalid t lhs rhs side_conditions.
 
         Definition partial_lam_unif_rewrite_ruleTP_gen_unfolded should_do_again {t} p
@@ -1746,13 +1913,13 @@ Module Compilers.
         term.
 
 
-      Ltac reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident type_ctx var should_do_again cur_i term value_ctx :=
+      Ltac reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota type_ctx var should_do_again cur_i term value_ctx :=
         let t := fresh "t" in
         let p := fresh "p" in
-        let reify_rec_gen type_ctx := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident type_ctx var should_do_again in
+        let reify_rec_gen type_ctx := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota type_ctx var should_do_again in
         let var_pos := constr:(fun _ : type base.type => positive) in
         let value := constr:(@value base.type ident var) in
-        let cexpr_to_pattern_and_replacement_unfolded := constr:(@expr_to_pattern_and_replacement_unfolded ident var pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident should_do_again type_ctx) in
+        let cexpr_to_pattern_and_replacement_unfolded := constr:(@expr_to_pattern_and_replacement_unfolded ident var pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident (reflect_ident_iota var) should_do_again type_ctx) in
         let cpartial_lam_unif_rewrite_ruleTP_gen := constr:(@partial_lam_unif_rewrite_ruleTP_gen_unfolded ident var pident pident_arg_types should_do_again) in
         let cwith_unif_rewrite_ruleTP_gen := constr:(fun t p => @with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types value t p should_do_again true true) in
         lazymatch term with
@@ -1788,7 +1955,7 @@ Module Compilers.
              let rB := expr.reify_in_context base.type ident ltac:(base.reify) reify_ident var_pos B value_ctx tt in
              let invalid := fresh "invalid" in
              let res := constr:(fun invalid => cexpr_to_pattern_and_replacement_unfolded invalid _ rA rB side_conditions) in
-             let res := (eval cbv [expr_to_pattern_and_replacement_unfolded pident_arg_types pident_of_typed_ident pident_type_of_list_arg_types_beq pident_arg_types_of_typed_ident] in res) in
+             let res := (eval cbv [expr_to_pattern_and_replacement_unfolded pident_arg_types pident_of_typed_ident pident_type_of_list_arg_types_beq pident_arg_types_of_typed_ident (*reflect_ident_iota*)] in res) in
              let res := (eval cbn [fst snd andb pattern.base.relax pattern.base.subst_default pattern.base.subst_default_relax] in res) in
              let res := change_pattern_base_subst_default_relax res in
              let p := (eval cbv [projT1] in (fun invalid => projT1 (res invalid))) in
@@ -1810,8 +1977,8 @@ Module Compilers.
                                  let res := replace_type_try_transport res in
                                  exact res)
                       end) in
-             let res := (eval cbv [UnderLets.map UnderLets.flat_map reify_expr_beta reflect_expr_beta reify_to_UnderLets] in res) in
-             let res := (eval cbn [reify reflect UnderLets.of_expr UnderLets.to_expr UnderLets.splice value' Base_value] in res) in
+             let res := (eval cbv [UnderLets.map UnderLets.flat_map reify_expr_beta_iota reflect_expr_beta_iota reify_to_UnderLets] in res) in
+             let res := (eval cbn [reify reflect UnderLets.of_expr UnderLets.to_expr UnderLets.splice value' Base_value invert_Literal ident.invert_Literal splice_under_lets_with_value] in res) in
              let res := strip_invalid_or_fail res in
              (* cbv here not strictly needed *)
              let res := (eval cbv [partial_lam_unif_rewrite_ruleTP_gen_unfolded] in
@@ -1830,25 +1997,25 @@ Module Compilers.
              res
         end.
 
-      Ltac reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident var should_do_again lem :=
+      Ltac reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var should_do_again lem :=
         reify_under_forall_types
           lem
           ltac:(
           fun ty_ctx cur_i lem
           => let lem := equation_to_parts lem in
-             let res := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident ty_ctx var should_do_again constr:(1%positive) lem (@expr.var_context.nil base.type (fun _ => positive)) in
+             let res := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota ty_ctx var should_do_again constr:(1%positive) lem (@expr.var_context.nil base.type (fun _ => positive)) in
              res).
 
-      Ltac Reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident should_do_again lem :=
+      Ltac Reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota should_do_again lem :=
         let var := fresh "var" in
         constr:(fun var : Compilers.type.type Compilers.base.type -> Type
-                => ltac:(let res := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident var should_do_again lem in
+                => ltac:(let res := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var should_do_again lem in
                          exact res)).
 
       (* lems is either a list of [Prop]s, or a list of [bool (* should_do_again *) * Prop] *)
-      Ltac reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident var lems :=
-        let reify' := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident var in
-        let reify_list_rec := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident var in
+      Ltac reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var lems :=
+        let reify' := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var in
+        let reify_list_rec := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var in
         lazymatch lems with
         | (?b, ?lem) :: ?lems
           => let rlem := reify' b lem in
@@ -1856,15 +2023,16 @@ Module Compilers.
              constr:(rlem :: rlems)
         | nil => constr:(@nil (@rewrite_ruleT ident var pident pident_arg_types))
         | _
-          => let lems := (eval cbv beta iota delta [List.map] in
-                             (List.map (fun p : Prop => (false, p)) lems)) in
+          => let List_map := (eval cbv delta [List.map] in (@List.map)) in
+             let lems := (eval cbv beta iota in
+                             (List_map _ _ (fun p : Prop => (false, p)) lems)) in
              reify_list_rec lems
         end.
 
-      Ltac Reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident lems :=
+      Ltac Reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota lems :=
         let var := fresh "var" in
         constr:(fun var : Compilers.type.type Compilers.base.type -> Type
-                => ltac:(let res := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident var lems in
+                => ltac:(let res := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var lems in
                          exact res)).
     End Reify.
 
@@ -2139,7 +2307,7 @@ Module Compilers.
       Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var (@pattern.ident.eta_ident_cps) (@pattern.ident) (@pattern.ident.arg_types) (@pattern.ident.unify) pident_unify_unknown pattern.Raw.ident (@pattern.Raw.ident.full_types) (@pattern.Raw.ident.invert_bind_args) invert_bind_args_unknown (@pattern.Raw.ident.type_of) (@pattern.Raw.ident.to_typed) pattern.Raw.ident.is_simple).
 
       Ltac reify lems :=
-        Reify.reify_list ident ident.reify pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_of_list_arg_types_beq) (@pattern.ident.of_typed_ident) (@pattern.ident.arg_types_of_typed_ident) var lems.
+        Reify.reify_list ident ident.reify pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_of_list_arg_types_beq) (@pattern.ident.of_typed_ident) (@pattern.ident.arg_types_of_typed_ident) (@reflect_ident_iota) var lems.
        (* Play games with [match] to get [lems] interpreted as a constr rather than an ident when it's not closed, to get better error messages *)
       Local Notation reify lems
         := (match lems return _ with
@@ -2267,97 +2435,146 @@ Module Compilers.
       Local Notation do_again P := (true, P) (only parsing).
       Local Notation cstZ := (ident.cast ident.cast_outside_of_range).
       Local Notation cstZZ := (ident.cast2 ident.cast_outside_of_range).
+      (* N.B. [ident.eagerly] does not play well with [do_again] *)
       Definition nbe_rewrite_rules : rewrite_rulesT
         := Eval cbv [Make.interp_rewrite_rules myapp myflatten] in
             myapp
               Make.interp_rewrite_rules
               (myflatten
-                 [
-                   (reify
-                      [(forall A B x y, @fst A B (x, y) = x)
-                       ; (forall A B x y, @snd A B (x, y) = y)
-                       ; (forall P t f, @ident.Thunked.bool_rect P t f true = t tt)
-                       ; (forall P t f, @ident.Thunked.bool_rect P t f false = f tt)
-                       ; (forall A B C f x y, @prod_rect A B (fun _ => C) f (x, y) = f x y)
-                   ])
-                   ; [make_rewrite (#(@pattern.ident.List_repeat '1) @ ?? @ #?ℕ) (fun _ x n => reify_list (repeat x n))
-                      ; make_rewriteol (??{list '1} ++ ??{list '1}) (fun _ xs ys => rlist_rect ys (fun x _ xs_ys => x :: xs_ys) xs)
-               ; make_rewriteol
-                   (#(@pattern.ident.List_firstn '1) @ #?ℕ @ ??)
-                   (fun _ n xs => xs <- reflect_list xs; reify_list (List.firstn n xs))
-               ; make_rewriteol
-                   (#(@pattern.ident.List_skipn '1) @ #?ℕ @ ??)
-                   (fun _ n xs => xs <- reflect_list xs; reify_list (List.skipn n xs))
-               ; make_rewriteol
-                   (#(@pattern.ident.List_rev '1) @ ??)
-                   (fun _ xs => xs <- reflect_list xs; reify_list (List.rev xs))
-               ; make_rewriteol_step
-                   (#(@pattern.ident.List_flat_map '1 '2) @ ?? @ ??)
-                   (fun _ _ f xs
-                    => rlist_rect
-                         []
-                         (fun x _ flat_map_tl => fx <-- f x; ($fx ++ flat_map_tl))
-                         xs)
-               ; make_rewriteol_step
-                    (#(@pattern.ident.List_partition '1) @ ?? @ ??)
-                    (fun _ f xs
-                     => rlist_rect
-                          ([], [])
-                          (fun x tl partition_tl
-                           => fx <-- f x;
-                                (#ident.prod_rect
-                                  @ (λ g d, #ident.bool_rect
-                                             @ (λ _, ($x :: $g, $d))
-                                             @ (λ _, ($g, $x :: $d))
-                                             @ $fx)
-                                  @ partition_tl))
-                          xs)
-               ; make_rewriteol
-                    (#(@pattern.ident.List_fold_right '1 '2) @ ?? @ ?? @ ??)
-                    (fun _ _ f init xs => rlist_rect init (fun x _ y => f x y) xs)
-               ; make_rewriteol
-                   (#(@pattern.ident.list_rect '1 '2) @ ?? @ ?? @ ??)
-                   (fun _ _ Pnil Pcons xs
-                    => rlist_rect (Pnil ##tt) (fun x' xs' rec => Pcons x' (reify_list xs') rec) xs) ]
+                 [reify
+                    [(forall A B x y, @fst A B (x, y) = x)
+                     ; (forall A B x y, @snd A B (x, y) = y)
+                     ; (forall P t f, @ident.Thunked.bool_rect P t f true = t tt)
+                     ; (forall P t f, @ident.Thunked.bool_rect P t f false = f tt)
+                     ; (forall A B C f x y, @prod_rect A B (fun _ => C) f (x, y) = f x y)
 
-                   ; (reify
-                        [(forall A P N C, @ident.Thunked.list_case A P N C nil = N tt)
-                         ; (forall A P N C x xs, @ident.Thunked.list_case A P N C (x :: xs) = C x xs)
-                     ])
-                   ; [
-                     make_rewriteol
-                   (#(@pattern.ident.List_map '1 '2) @ ?? @ ??)
-                   (fun _ _ f xs => rlist_rect [] (fun x _ fxs => fx <-- f x; fx :: fxs) xs)
-               ; make_rewriteo
-                   (#(@pattern.ident.List_nth_default '1) @ ?? @ ?? @ #?ℕ)
-                   (fun _ default ls n => ls <- reflect_list ls; nth_default default ls n)
-               ; make_rewritel
-                   (#(@pattern.ident.nat_rect '1) @ ?? @ ?? @ #?ℕ)
-                   (fun _ O_case S_case n
-                    => nat_rect _ (O_case ##tt) (fun n' rec => rec <-- rec; S_case ##n' rec) n)
-               ; make_rewritel
-                   (#(@pattern.ident.nat_rect_arrow '1 '2) @ ?? @ ?? @ #?ℕ @ ??)
-                   (fun _ _ O_case S_case n v
-                    => nat_rect _ O_case (fun n' rec v => S_case ##n' rec v) n v)
-               ; make_rewriteo
-                   (#(@pattern.ident.List_length '1) @ ??)
-                   (fun _ xs => xs <- reflect_list xs; ##(List.length xs))
-               ; make_rewriteo
-                   (#(@pattern.ident.List_combine '1 '2) @ ?? @ ??)
-                   (fun _ _ xs ys
-                    => xs <- reflect_list xs;
-                         ys <- reflect_list ys;
-                         reify_list (List.map (fun '((x, y)%core) => (x, y)) (List.combine xs ys)))
-               ; make_rewriteol
-                   (#(@pattern.ident.List_update_nth '1) @ #?ℕ @ ?? @ ??)
-                   (fun _ n f ls
-                    => ls <---- reflect_list ls;
-                         retv <--- (update_nth
-                                      n
-                                      (fun x => x <-- x; f x)
-                                      (List.map UnderLets.Base ls));
-                         reify_list retv)
-              ] ]).
+                     ; (forall A x n,
+                           @List.repeat A x ('n)
+                           = ident.eagerly (@nat_rect) _ nil (fun k repeat_k => x :: repeat_k) ('n))
+                     ; (forall A xs ys,
+                           xs ++ ys
+                           = ident.eagerly (@list_rect) A _ ys (fun x xs app_xs_ys => x :: app_xs_ys) xs)
+                     ; (forall A B f a ls,
+                           @fold_right A B f a ls
+                           = (ident.eagerly (@list_rect) _ _)
+                               a
+                               (fun x xs fold_right_xs => f x fold_right_xs)
+                               ls)
+                     ; (forall A P N C ls,
+                           @ident.Thunked.list_rect A P N C ls
+                           = ident.eagerly (@ident.Thunked.list_rect) A P N C ls)
+                     ; (forall A P Q N C ls v,
+                           @list_rect A (fun _ => P -> Q) N C ls v
+                           = ident.eagerly (@list_rect) A (fun _ => P -> Q) N C ls v)
+                     ; (forall A P N C, @ident.Thunked.list_case A P N C nil = N tt)
+                     ; (forall A P N C x xs, @ident.Thunked.list_case A P N C (x :: xs) = C x xs)
+                     ; (forall A B f ls,
+                           @List.map A B f ls
+                           = (ident.eagerly (@list_rect) _ _)
+                               nil
+                               (fun x xs map_f_xs => f x :: map_f_xs)
+                               ls)
+                     ; (forall P O_case S_case n,
+                           @ident.Thunked.nat_rect P O_case S_case ('n)
+                           = (ident.eagerly (@ident.Thunked.nat_rect) _)
+                               O_case
+                               S_case
+                               ('n))
+                     ; (forall P Q O_case S_case n v,
+                           @nat_rect (fun _ => P -> Q) O_case S_case ('n) v
+                           = (ident.eagerly (@nat_rect) _)
+                               O_case
+                               S_case
+                               ('n)
+                               v)
+                     ; (forall A default ls n,
+                           @List.nth_default A default ls ('n)
+                           = ident.eagerly (@List.nth_default) _ default ls ('n))
+                    ]
+                  ; reify
+                      [do_again
+                         (forall A B xs ys,
+                             @List.combine A B xs ys
+                             = (list_rect _)
+                                 (fun _ => nil)
+                                 (fun x xs combine_xs ys
+                                  => match ys with
+                                     | nil => nil
+                                     | y :: ys => (x, y) :: combine_xs ys
+                                     end)
+                                 xs
+                                 ys)
+                       ; do_again
+                           (forall A n ls,
+                             @List.firstn A ('n) ls
+                             = (nat_rect _)
+                                 (fun _ => nil)
+                                 (fun n' firstn_n' ls
+                                  => match ls with
+                                     | nil => nil
+                                     | cons x xs => x :: firstn_n' xs
+                                     end)
+                                 ('n)
+                                 ls)
+                       ; do_again
+                           (forall A n ls,
+                               @List.skipn A ('n) ls
+                               = (nat_rect _)
+                                   (fun ls => ls)
+                                   (fun n' skipn_n' ls
+                                    => match ls with
+                                       | nil => nil
+                                       | cons x xs => skipn_n' xs
+                                       end)
+                                   ('n)
+                                   ls)
+                       ; do_again
+                           (forall A xs,
+                               @List.length A xs
+                               = (list_rect _)
+                                   0%nat
+                                   (fun _ xs length_xs => S length_xs)
+                                   xs)
+                       ; do_again
+                           (forall A xs,
+                               @List.rev A xs
+                               = (list_rect _)
+                                   nil
+                                   (fun x xs rev_xs => rev_xs ++ [x])
+                                   xs)
+                       ; do_again
+                           (forall A B f xs,
+                               @List.flat_map A B f xs
+                               = (list_rect _)
+                                   nil
+                                   (fun x _ flat_map_tl => f x ++ flat_map_tl)
+                                   xs)
+                       ; do_again
+                           (forall A f xs,
+                               @List.partition A f xs
+                               = (list_rect _)
+                                   ([], [])
+                                   (fun x tl partition_tl
+                                    => let '(g, d) := partition_tl in
+                                       if f x then (x :: g, d) else (g, x :: d))
+                                   xs)
+                       ; do_again
+                           (forall A n f xs,
+                               @update_nth A ('n) f xs
+                               = (nat_rect _)
+                                   (fun xs => match xs with
+                                              | nil => nil
+                                              | x' :: xs' => f x' :: xs'
+                                              end)
+                                   (fun n' update_nth_n' xs
+                                    => match xs with
+                                       | nil => nil
+                                       | x' :: xs' => x' :: update_nth_n' xs'
+                                       end)
+                                   ('n)
+                                   xs)
+                      ]
+              ]).
 
       Definition arith_rewrite_rules (max_const_val : Z) : rewrite_rulesT
         := Eval cbv [Make.interp_rewrite_rules myapp myflatten] in

@@ -119,7 +119,9 @@ Module Compilers.
       Local Ltac do_cbv0 :=
         cbv [id
                Compile.rewrite_rules_interp_goodT_curried
-               Compile.rewrite_rule_data_interp_goodT_curried Compile.under_with_unification_resultT_relation_hetero Compile.under_with_unification_resultT'_relation_hetero Compile.wf_with_unification_resultT Compile.under_type_of_list_relation_cps Compile.under_type_of_list_relation1_cps pattern.pattern_of_anypattern pattern.type_of_anypattern Compile.rew_replacement Compile.rew_should_do_again Compile.rew_with_opt Compile.rew_under_lets Compile.wf_with_unification_resultT Compile.pattern_default_interp pattern.type.under_forall_vars_relation pattern.type.under_forall_vars_relation1 Compile.deep_rewrite_ruleTP_gen Compile.with_unification_resultT' pattern.ident.arg_types pattern.type.lam_forall_vars Compilers.pattern.type.lam_forall_vars_gen Compile.pattern_default_interp' pattern.collect_vars PositiveMap.empty pattern.type.collect_vars PositiveSet.elements PositiveSet.union pattern.base.collect_vars PositiveSet.empty PositiveSet.xelements Compile.lam_type_of_list id pattern.ident.to_typed Compile.under_type_of_list_relation_cps Compile.deep_rewrite_ruleTP_gen_good_relation Compile.normalize_deep_rewrite_rule pattern.type.subst_default PositiveSet.add PositiveSet.rev PositiveSet.rev_append PositiveMap.add Compile.option_bind' Compile.wf_value Compile.value pattern.base.subst_default pattern.base.lookup_default PositiveMap.find Compile.rewrite_ruleTP ident.smart_Literal Compile.value_interp_related].
+               Compile.rewrite_rule_data_interp_goodT_curried Compile.under_with_unification_resultT_relation_hetero Compile.under_with_unification_resultT'_relation_hetero Compile.wf_with_unification_resultT Compile.under_type_of_list_relation_cps Compile.under_type_of_list_relation1_cps pattern.pattern_of_anypattern pattern.type_of_anypattern Compile.rew_replacement Compile.rew_should_do_again Compile.rew_with_opt Compile.rew_under_lets Compile.wf_with_unification_resultT Compile.pattern_default_interp pattern.type.under_forall_vars_relation pattern.type.under_forall_vars_relation1 Compile.deep_rewrite_ruleTP_gen Compile.with_unification_resultT' pattern.ident.arg_types pattern.type.lam_forall_vars Compilers.pattern.type.lam_forall_vars_gen Compile.pattern_default_interp' pattern.collect_vars PositiveMap.empty pattern.type.collect_vars PositiveSet.elements PositiveSet.union pattern.base.collect_vars PositiveSet.empty PositiveSet.xelements Compile.lam_type_of_list id pattern.ident.to_typed Compile.under_type_of_list_relation_cps Compile.deep_rewrite_ruleTP_gen_good_relation Compile.normalize_deep_rewrite_rule pattern.type.subst_default PositiveSet.add PositiveSet.rev PositiveSet.rev_append PositiveMap.add Compile.option_bind' Compile.wf_value Compile.value pattern.base.subst_default pattern.base.lookup_default PositiveMap.find Compile.rewrite_ruleTP ident.smart_Literal Compile.value_interp_related
+               Reify.expr_value_to_rewrite_rule_replacement UnderLets.flat_map Compile.reify_expr_beta_iota Compile.reflect_expr_beta_iota Compile.reflect_ident_iota Compile.reify_to_UnderLets UnderLets.of_expr Compile.Base_value];
+        cbn [UnderLets.splice Compile.reflect invert_expr.invert_Literal invert_expr.ident.invert_Literal Compile.splice_under_lets_with_value].
       Local Ltac do_cbv :=
         do_cbv0;
         cbv [List.map List.fold_right List.rev list_rect orb List.app].
@@ -183,10 +185,47 @@ Module Compilers.
              end;
              progress cbn [ident_interp fst snd]
         | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else (progress subst)
+        | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else reflexivity
         | [ |- ?x = ?x ] => tryif has_evar x then fail else reflexivity
         | [ |- ?ev = _ ] => is_evar ev; reflexivity
         | [ |- _ = ?ev ] => is_evar ev; reflexivity
         end.
+
+      (* TODO: MOVE ME? *)
+      Local Ltac recursive_match_to_list_case term :=
+        lazymatch term with
+        | context G[match ?ls with nil => ?N | cons x xs => @?C x xs end]
+          => let T := type of N in
+             let term := context G[list_case (fun _ => T) N C ls] in
+             recursive_match_to_list_case term
+        | context[match _ with nil => _ | _ => _ end]
+          => let G_f
+                 := match term with
+                    | context G[fun x : ?T => @?f x]
+                      => lazymatch f with
+                         | context[match _ with nil => _ | _ => _ end]
+                           => let f' := fresh in
+                              let T' := type of f in
+                              constr:(((fun f' : T' => ltac:(let G' := context G[f'] in exact G')),
+                                       f))
+                         end
+                    end in
+             lazymatch G_f with
+             | ((fun f' => ?G), (fun x : ?T => ?f))
+               => let x' := fresh in
+                  let rep := constr:(fun x' : T
+                                     => ltac:(let f := constr:(match x' with x => f end) in
+                                              let f := recursive_match_to_list_case f in
+                                              exact f)) in
+                  let term := constr:(match rep with f' => G end) in
+                  recursive_match_to_list_case term
+             end
+        | _ => term
+        end.
+      Local Ltac recursive_match_to_list_case_in_goal :=
+        let G := match goal with |- ?G => G end in
+        let G := recursive_match_to_list_case G in
+        change G.
 
       Local Ltac interp_good_t_step_related :=
         first [ lazymatch goal with
@@ -199,10 +238,123 @@ Module Compilers.
                 (*| [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
                 | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand*)
                 end
+              | match goal with
+                | [ |- UnderLets.interp_related ?ii ?R (UnderLets.Base (#ident.list_rect @ _ @ _ @ _)%expr) (@list_rect ?A (fun _ => ?P) ?N ?C ?ls) ]
+                  => progress change (@list_rect A (fun _ => P) N C ls) with (@ident.Thunked.list_rect A P (fun _ => N) C ls)
+                | [ |- expr.interp_related_gen ?ii ?R (#ident.list_rect @ _ @ _ @ _)%expr (@list_rect ?A (fun _ => ?P) ?N ?C ?ls) ]
+                  => progress change (@list_rect A (fun _ => P) N C ls) with (@ident.Thunked.list_rect A P (fun _ => N) C ls)
+                | [ |- expr.interp_related_gen ?ii ?R (#ident.list_case @ _ @ _ @ _)%expr (@list_case ?A (fun _ => ?P) ?N ?C ?ls) ]
+                  => progress change (@list_case A (fun _ => P) N C ls) with (@ident.Thunked.list_case A P (fun _ => N) C ls)
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (List.app ?ls1 ?ls2) ]
+                  => rewrite (eq_app_list_rect ls1 ls2)
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@flat_map ?A ?B ?f ?ls) ]
+                  => rewrite (@eq_flat_map_list_rect A B f ls)
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@partition ?A ?f ?ls) ]
+                  => rewrite (@eq_partition_list_rect A f ls)
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@List.map ?A ?B ?f ?ls) ]
+                  => rewrite (@eq_map_list_rect A B f ls)
+                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _ _) (@List.combine ?A ?B ?xs ?ys) ]
+                  => rewrite (@eq_combine_list_rect A B xs ys)
+                | [ |- UnderLets.interp_related _ _ (nat_rect _ _ _ _) (List.repeat ?x ?n) ]
+                  => rewrite (eq_repeat_nat_rect x n)
+                | [ |- ?R (nat_rect _ _ _ _ _) (@List.firstn ?A ?n ?ls) ]
+                  => rewrite (@eq_firstn_nat_rect A n ls)
+                | [ |- ?R (nat_rect _ _ _ _ _) (@List.skipn ?A ?n ?ls) ]
+                  => rewrite (@eq_skipn_nat_rect A n ls)
+                | [ |- ?R (list_rect _ _ _ _) (@List.rev ?A ?xs) ]
+                  => rewrite (@eq_rev_list_rect A xs)
+                | [ |- ?R (list_rect _ _ _ _) (@List.length ?A ?xs) ]
+                  => rewrite (@eq_length_list_rect A xs)
+                | [ |- ?R (list_rect _ _ _ _) (@List.flat_map ?A ?B ?f ?xs) ]
+                  => rewrite (@eq_flat_map_list_rect A B f xs)
+                | [ |- ?R (list_rect _ _ _ _) (@List.partition ?A ?f ?xs) ]
+                  => rewrite (@eq_partition_list_rect A f xs)
+                | [ |- ?R (nat_rect _ _ _ _ _) (@update_nth ?A ?n ?f ?xs) ]
+                  => rewrite (@eq_update_nth_nat_rect A n f xs)
+
+                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (#ident.list_rect @ _ @ _ @ _)%expr) (List.app ?ls1 ?ls2) ]
+                  => rewrite (eq_app_list_rect ls1 ls2)
+                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (#ident.list_rect @ _ @ _ @ _)%expr) (List.app ?ls1 ?ls2) ]
+                  => rewrite (eq_app_list_rect ls1 ls2)
+                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (#ident.list_rect @ _ @ _ @ _)%expr) (@flat_map ?A ?B ?f ?ls) ]
+                  => rewrite (@eq_flat_map_list_rect A B f ls)
+                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (#ident.list_rect @ _ @ _ @ _)%expr) (@partition ?A ?f ?ls) ]
+                  => rewrite (@eq_partition_list_rect A f ls)
+                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (#ident.list_rect @ _ @ _ @ _)%expr) (@List.map ?A ?B ?f ?ls) ]
+                  => rewrite (@eq_map_list_rect A B f ls)
+                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (#ident.list_rect_arrow @ _ @ _ @ _ @ _)%expr) (@List.combine ?A ?B ?xs ?ys) ]
+                  => rewrite (@eq_combine_list_rect A B xs ys)
+                | [ |- UnderLets.interp_related _ _ _ (@fold_right ?A ?B ?f ?v ?ls) ]
+                  => rewrite (@eq_fold_right_list_rect A B f v ls)
+                | [ |- ?R (#ident.nat_rect_arrow @ _ @ _ @ _ @ _)%expr (@List.firstn ?A ?n ?ls) ]
+                  => rewrite (@eq_firstn_nat_rect A n ls)
+                | [ |- ?R (#ident.nat_rect_arrow @ _ @ _ @ _ @ _)%expr (@List.skipn ?A ?n ?ls) ]
+                  => rewrite (@eq_skipn_nat_rect A n ls)
+                | [ |- ?R (#ident.list_rect @ _ @ _ @ _)%expr (@List.rev ?A ?xs) ]
+                  => rewrite (@eq_rev_list_rect A xs)
+                | [ |- ?R (#ident.list_rect @ _ @ _ @ _)%expr (@List.length ?A ?xs) ]
+                  => rewrite (@eq_length_list_rect A xs)
+                | [ |- ?R (#ident.list_rect @ _ @ _ @ _)%expr (@List.flat_map ?A ?B ?f ?xs) ]
+                  => rewrite (@eq_flat_map_list_rect A B f xs)
+                | [ |- ?R (#ident.list_rect @ _ @ _ @ _)%expr (@List.partition ?A ?f ?xs) ]
+                  => rewrite (@eq_partition_list_rect A f xs)
+                | [ |- ?R (#ident.nat_rect_arrow @ _ @ _ @ _ @ _)%expr (@update_nth ?A ?n ?f ?xs) ]
+                  => rewrite (@eq_update_nth_nat_rect A n f xs)
+                | [ |- ?R (#ident.list_rect_arrow @ _ @ _ @ _ @ _)%expr (@List.combine ?A ?B ?xs ?ys) ]
+                  => rewrite (@eq_combine_list_rect A B xs ys)
+
+
+                | [ |- expr.interp_related_gen _ _ (#ident.list_rect @ _ @ _ @ _)%expr (ident.Thunked.list_rect _ _ _ _) ]
+                  => recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                     [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                       [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                         [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ]
+                         | ]
+                       | ]
+                     | ]
+                | [ |- expr.interp_related_gen _ _ (#ident.list_rect_arrow @ _ @ _ @ _ @ _)%expr (list_rect _ _ _ _ _) ]
+                  => recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                     [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                       [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                         [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                           [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ]
+                           | ]
+                         | ]
+                       | ]
+                     | ]
+                | [ |- expr.interp_related_gen _ _ (#ident.nat_rect @ _ @ _ @ _)%expr (ident.Thunked.nat_rect _ _ _ _) ]
+                  => recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                     [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                       [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                         [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ]
+                         | ]
+                       | ]
+                     | ]
+                | [ |- expr.interp_related_gen _ _ (#ident.nat_rect_arrow @ _ @ _ @ _ @ _)%expr (nat_rect _ _ _ _ _) ]
+                  => recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                     [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                       [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                         [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                           [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ]
+                           | ]
+                         | ]
+                       | ]
+                     | ]
+                | [ |- expr.interp_related_gen _ _ (#ident.list_case @ _ @ _ @ _)%expr (ident.Thunked.list_case _ _ _ _) ]
+                  => recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                     [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                       [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ];
+                         [ recurse_interp_related_step; [ recurse_interp_related_step | reflexivity ]
+                         | ]
+                       | ]
+                     | ]
+                | [ |- context[match _ with nil => _ | _ => _ end] ] => progress recursive_match_to_list_case_in_goal
+                end
               | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr bool_rect UnderLets.interp_related type.related] in *
               | progress cbv [Compile.option_bind' respectful expr.interp_related] in *
               | progress fold (@type.interp _ base.interp)
               | progress fold (@base.interp)
+              | progress change S with Nat.succ
               | match goal with
                 | [ |- context[List.map _ (Lists.List.repeat _ _)] ] => rewrite map_repeat
                 | [ |- context[List.map _ (List.map _ _)] ] => rewrite map_map
@@ -220,20 +372,13 @@ Module Compilers.
                 | [ |- context[UnderLets.interp _ (list_rect _ _ _ _)] ] => rewrite UnderLets_interp_list_rect
                 | [ |- context[UnderLets.interp _ (UnderLets.splice _ _)] ] => rewrite UnderLets.interp_splice
                 | [ |- context[list_rect _ _ _ (List.map _ _)] ] => rewrite list_rect_map
-                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (List.app ?ls1 ?ls2) ]
-                  =>  rewrite (eq_app_list_rect ls1 ls2)
-                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@flat_map ?A ?B ?f ?ls) ]
-                  =>  rewrite (@eq_flat_map_list_rect A B f ls)
-                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@partition ?A ?f ?ls) ]
-                  =>  rewrite (@eq_partition_list_rect A f ls)
-                | [ |- UnderLets.interp_related _ _ (list_rect _ _ _ _) (@List.map ?A ?B ?f ?ls) ]
-                  => rewrite (@eq_map_list_rect A B f ls)
-                | [ |- UnderLets.interp_related _ _ _ (@fold_right ?A ?B ?f ?v ?ls) ]
-                  =>  rewrite (@eq_fold_right_list_rect A B f v ls)
                 | [ |- context[expr.interp_related_gen _ _ (reify_list _)] ]
                   => rewrite expr.reify_list_interp_related_gen_iff
                 | [ H : context[expr.interp_related_gen _ _ (reify_list _)] |- _ ]
                   => rewrite expr.reify_list_interp_related_gen_iff in H
+                | [ |- expr.interp_related_gen ?ident_interp _ (UnderLets.to_expr ?x) ?y ]
+                  => change (expr.interp_related ident_interp (UnderLets.to_expr x) y);
+                     rewrite <- UnderLets.to_expr_interp_related_iff
                 | [ |- context[Forall2 _ (List.map _ _) _] ] => rewrite Forall2_map_l_iff
                 | [ |- context[Forall2 _ _ (List.map _ _)] ] => rewrite Forall2_map_r_iff
                 | [ |- context[Forall2 _ (List.repeat _ _) (List.repeat _ _)] ] => rewrite Forall2_repeat_iff
@@ -266,6 +411,21 @@ Module Compilers.
                             ?Pcons'
                             ?ls') ]
                   => apply (@UnderLets.list_rect_interp_related _ _ _ ident_interp A B Pnil Pcons ls B' Pnil' Pcons' ls' R)
+                | [ |- UnderLets.interp_related
+                         ?ident_interp ?R
+                         (list_rect
+                            (fun _ : list (expr ?A) => ?B -> UnderLets.UnderLets _ _ _ ?C)
+                            ?Pnil
+                            ?Pcons
+                            ?ls
+                            ?x)
+                         (list_rect
+                            (fun _ : list _ => ?B' -> ?C')
+                            ?Pnil'
+                            ?Pcons'
+                            ?ls'
+                            ?x') ]
+                  => apply (@UnderLets.list_rect_arrow_interp_related _ _ _ ident_interp A B C Pnil Pcons ls x B' C' Pnil' Pcons' ls' x' R (expr.interp_related ident_interp))
                 | [ |- UnderLets.interp_related _ _ (nat_rect _ _ _ _) (nat_rect _ _ _ _) ]
                   => apply UnderLets.nat_rect_interp_related
                 | [ |- UnderLets.interp_related _ _ (nat_rect _ _ _ _ _) (nat_rect _ _ _ _ _) ]
@@ -338,6 +498,7 @@ Module Compilers.
               | assumption
               | progress inversion_option
               | progress destruct_head'_and
+              | progress destruct_head'_unit
               | progress split_andb
               | match goal with
                 | [ |- Lists.List.repeat _ _ = Lists.List.repeat _ _ ] => apply f_equal2
@@ -463,6 +624,8 @@ Module Compilers.
                 | [ H : forall x1 x2, ?R1 x1 x2 -> forall y1 y2, ?R2 y1 y2 -> ?R3 (?f1 x1 y1) (?f2 x2 y2) |- ?R3 (?f1 _ _) (?f2 _ _) ]
                   => apply H
                 | [ H : forall x x', ?Rx x x' -> forall y y', _ -> forall z z', ?Rz z z' -> ?R (?f x y z) (?f' x' y' z') |- ?R (?f _ _ _) (?f' _ _ _) ]
+                  => apply H; clear H
+                | [ H : forall x x', _ -> forall y y', _ -> forall z z', _ -> forall w w', _ -> ?R (?f x y z w) (?f' x' y' z' w') |- ?R (?f _ _ _ _) (?f' _ _ _ _) ]
                   => apply H; clear H
                 end
               | progress cbv [Option.bind] in *

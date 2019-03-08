@@ -27,6 +27,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Sigma.Related.
 Require Import Crypto.Util.ListUtil.SetoidList.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Logic.ExistsEqAnd.
@@ -2569,5 +2570,304 @@ Module Compilers.
         End with_interp.
       End with_var.
     End Compile.
+
+    Module Reify.
+      Import Compile.
+      Import Rewriter.Compilers.RewriteRules.Compile.
+      Import Rewriter.Compilers.RewriteRules.Reify.
+
+      Local Notation type := (type.type base.type).
+      Local Notation expr := (@expr.expr base.type ident).
+      Local Notation value := (@value base.type ident).
+      Local Notation UnderLets := (@UnderLets.UnderLets base.type ident).
+
+      Ltac wf_ctors :=
+        repeat first [ match goal with
+                       | [ |- UnderLets.wf _ _ (UnderLets.Base _) (UnderLets.Base _) ] => constructor
+                       | [ |- expr.wf _ (_ @ _) (_ @ _) ] => constructor
+                       | [ |- expr.wf ?seg (#_) (#_) ]
+                         => (tryif is_evar seg then instantiate (1:=nil) else idtac);
+                            constructor
+                       | [ |- expr.wf _ ($_) ($_) ] => constructor
+                       | [ |- expr.wf _ (expr.Abs _) (expr.Abs _) ] => constructor; intros
+                       | [ |- expr.wf _ (UnderLets.to_expr _) (UnderLets.to_expr _) ] => apply UnderLets.wf_to_expr
+                       | [ H : expr.wf ?G ?x ?y |- expr.wf ?seg ?x ?y ] => first [ is_evar seg | constr_eq G seg ]; exact H
+                       | [ H : List.Forall2 (expr.wf _) ?x ?y |- List.Forall2 (expr.wf _) ?x ?y ]
+                         => eapply Forall2_Proper_impl; [ | reflexivity | reflexivity | exact H ]; repeat intro
+                       | [ H : List.Forall2 (expr.wf ?G) ?x ?y |- List.Forall2 (expr.wf ?seg) ?x ?y ]
+                         => first [ is_evar seg | constr_eq seg G ]; exact H
+                       | [ H : List.Forall2 ?P ?x ?y |- List.Forall2 ?Pe ?x ?y ]
+                         => first [ is_evar Pe | constr_eq Pe P ]; exact H
+                       | [ H : forall x y, List.In (x, y) ?G -> expr.wf ?G' x y, H' : List.In (?v1, ?v2) ?G |- expr.wf ?seg ?v1 ?v2 ]
+                         => first [ is_evar seg | constr_eq seg G' ]; exact (H _ _ H')
+                       | [ |- expr.wf _ (reify_list _) (reify_list _) ]
+                         => rewrite expr.wf_reify_list
+                       | [ H : expr.wf _ (reify_list ?xs) (reify_list ?ys) |- List.Forall2 _ ?xs ?xy ]
+                         => rewrite expr.wf_reify_list in H
+                       | [ |- ?G ] => tryif has_evar G then fail else solve [ destruct_head'_ex; subst; wf_t ]
+                       end ].
+      Ltac handle_wf_rec do_try :=
+        let tac _
+            := solve
+                 [ repeat
+                     first
+                     [ progress wf_ctors
+                     | handle_wf_rec do_try
+                     | match goal with
+                       | [ |- List.In ?v ?seg ] => is_evar seg; unify seg (cons v nil)
+                       | [ |- List.In ?v (?seg1 ++ ?seg2) ]
+                         => rewrite in_app_iff;
+                            first [ is_evar seg1; left
+                                  | is_evar seg2; right ]
+                       (*| [ |- ?x ++ ?y = ?x ++ ?z ] => apply f_equal2*)
+                       | [ |- ?x = ?y ]
+                         => is_evar x; tryif has_evar y then fail else reflexivity
+                       | [ |- forall t v1 v2, List.In (existT _ t (v1, v2)) (?x ++ ?G1) -> List.In (existT _ t (v1, v2)) (?x ++ ?G2) ]
+                         => is_evar G2;
+                            tryif first [ has_evar x | has_evar G1 ] then fail else (do 3 intro; exact id)
+                       end ] ] in
+        match goal with
+        | [ H : expr.wf ?segv ?x1 ?x2
+            |- UnderLets.wf _ ?Gv (nat_rect _ _ _ _ ?x1) (nat_rect _ _ _ _ ?x2) ]
+          => unshelve
+               (eapply UnderLets.wf_Proper_list;
+                [ | | eapply @UnderLets.wf_nat_rect_arrow with (R' := fun G' => expr.wf G') (seg:=segv) (G:=Gv); intros ];
+                [ try (intros; subst; match goal with |- expr.wf _ _ _ => shelve end).. ];
+                [ try (intros; subst; match goal with |- UnderLets.wf _ _ _ _ => shelve end).. ];
+                [ try match goal with |- _ = _ => shelve end.. ]);
+             shelve_unifiable;
+             do_try tac
+        | [ H : expr.wf ?segv ?x1 ?x2
+            |- UnderLets.wf _ ?Gv (list_rect _ _ _ _ ?x1) (list_rect _ _ _ _ ?x2) ]
+          => unshelve
+               (eapply UnderLets.wf_Proper_list;
+                [ | | eapply @UnderLets.wf_list_rect_arrow with (R' := fun G' => expr.wf G') (seg:=segv) (G:=Gv); intros ];
+                [ try (intros; subst; match goal with |- expr.wf _ _ _ => shelve end).. ];
+                [ try (intros; subst; match goal with |- UnderLets.wf _ _ _ _ => shelve end).. ];
+                [ try match goal with |- _ = _ => shelve end.. ]);
+             shelve_unifiable;
+             do_try tac
+        | [ |- UnderLets.wf _ _ ?x ?y ]
+          => let f := head x in
+             let g := head y in
+             is_var f; is_var g;
+             unshelve
+               (lazymatch goal with
+                | [ H : context[UnderLets.wf _ _ (f _) (g _)] |- _ ]
+                  => eapply UnderLets.wf_Proper_list; [ | | eapply H ]
+                | [ H : context[UnderLets.wf _ _ (f _ _) (g _ _)] |- _ ]
+                  => eapply UnderLets.wf_Proper_list; [ | | eapply H ]
+                | [ H : context[UnderLets.wf _ _ (f _ _ _) (g _ _ _)] |- _ ]
+                  => eapply UnderLets.wf_Proper_list; [ | | eapply H ]
+                | [ H : context[UnderLets.wf _ _ (f _ _ _ _) (g _ _ _ _)] |- _ ]
+                  => eapply UnderLets.wf_Proper_list; [ | | eapply H ]
+                end;
+                [ try (intros; subst; match goal with |- expr.wf _ _ _ => shelve end).. ];
+                [ try (intros; subst; match goal with |- UnderLets.wf _ _ _ _ => shelve end).. ];
+                [ try match goal with |- _ = _ => shelve end.. ]);
+             shelve_unifiable;
+             do_try tac
+        end.
+
+      Ltac reify_wf_t_step :=
+        first [ progress subst
+              | match goal with
+                | [ H : invert_expr.reflect_list ?v = Some _, H' : invert_expr.reflect_list ?v' = None |- _ ]
+                  => first [ erewrite <- expr.wf_reflect_list in H' by eassumption
+                           | erewrite -> expr.wf_reflect_list in H' by eassumption ];
+                     exfalso; clear -H H'; congruence
+                end
+              | progress inversion_option
+              | progress destruct_head'_False
+              | progress intros
+              | progress cbn [invert_expr.invert_Literal invert_expr.ident.invert_Literal value' type.interp base.interp base.base_interp] in *
+              | match goal with
+                | [ H : ident.Literal _ = ident.Literal _ |- _ ]
+                  => pose proof (f_equal invert_expr.ident.invert_Literal H); clear H
+                end
+              | progress expr.inversion_wf_constr
+              | break_innermost_match_hyps_step
+              | progress expr.inversion_wf_one_constr
+              | progress expr.invert_subst
+              | progress expr.inversion_expr
+              | progress expr.invert_match
+              | progress wf_ctors
+              | match goal with
+                | [ |- UnderLets.wf _ _ (nat_rect _ _ _ _) (nat_rect _ _ _ _) ]
+                  => apply UnderLets.wf_nat_rect; intros
+                | [ |- UnderLets.wf _ ?G (list_rect _ _ _ _) (list_rect _ _ _ _) ]
+                  => apply @UnderLets.wf_list_rect with (RA := expr.wf G)
+                | [ |- UnderLets.wf _ _ (UnderLets.splice _ _) (UnderLets.splice _ _) ]
+                  => apply @UnderLets.wf_splice with (P := fun G => expr.wf G); intros; subst
+                | [ H : expr.wf _ (reify_list ?l1) (reify_list ?l2)
+                    |- expr.wf ?G (nth_default ?d1 ?l1 ?n) (nth_default ?d2 ?l2 ?n) ]
+                  => cut (List.Forall2 (expr.wf G) l1 l2 /\ expr.wf G d1 d2);
+                     [ rewrite Forall2_forall_iff'';
+                       let H := fresh in intro H; apply H
+                     | split ]
+                | [ |- ?x = ?x ] => reflexivity
+                end
+              | progress handle_wf_rec ltac:(fun tac => try tac (); tac ()) ].
+      Ltac reify_wf_t := repeat reify_wf_t_step.
+
+      Section with_var.
+        Context {var1 var2 : type -> Type}.
+
+        Lemma wf_reflect_ident_iota G {t} (idc : ident t)
+          : option_eq
+              (wf_value G)
+              (@reflect_ident_iota var1 t idc)
+              (@reflect_ident_iota var2 t idc).
+        Proof using Type.
+          destruct idc; cbv [reflect_ident_iota option_eq]; try reflexivity.
+          all: cbv [wf_value wf_value']; intros; subst; break_innermost_match; cbn [reify reflect] in *;
+            lazymatch goal with
+            | [ H : invert_expr.reflect_list ?v = Some _, H' : invert_expr.reflect_list ?v' = None |- _ ]
+              => first [ erewrite <- expr.wf_reflect_list in H' by eassumption
+                       | erewrite -> expr.wf_reflect_list in H' by eassumption ];
+                   exfalso; clear -H H'; congruence
+            | _ => idtac
+            end;
+            expr.invert_subst; subst.
+          all: reify_wf_t.
+        Qed.
+
+        Lemma wf_reflect_expr_beta_iota
+              {ident}
+              {reflect_ident_iota1 reflect_ident_iota2}
+              (Hwf_reflect_ident_iota
+               : forall G {t} (idc : ident t),
+                  option_eq
+                    (@wf_value _ ident var1 var2 G _)
+                    (@reflect_ident_iota1 t idc)
+                    (@reflect_ident_iota2 t idc))
+              G G'
+              (HG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> wf_value G v1 v2)
+              {t} e1 e2
+              (Hwf : expr.wf G' e1 e2)
+          : UnderLets.wf
+              (fun G'' => wf_value G'')
+              G
+              (@reflect_expr_beta_iota ident var1 reflect_ident_iota1 t e1)
+              (@reflect_expr_beta_iota ident var2 reflect_ident_iota2 t e2).
+        Proof using Type.
+          revert G HG'; induction Hwf; cbn [reflect_expr_beta_iota]; intros.
+          all: repeat first [ match goal with
+                              | [ |- UnderLets.wf _ _ _ _ ] => constructor
+                              | [ |- expr.wf _ _ _ ] => constructor
+                              | [ |- wf_value' _ (UnderLets.Base _) (UnderLets.Base _) ] => constructor
+                              | [ Hwf_reflect_ident_iota : forall G t' idc', option_eq (wf_value G) (?reflect_ident_iota1 t' idc') (?reflect_ident_iota2 t' idc'),
+                                    H1 : ?reflect_ident_iota1 ?t ?idc = _, H2 : ?reflect_ident_iota2 ?t ?idc = _ |- _ ]
+                                => let H' := fresh in
+                                   pose proof (fun G => Hwf_reflect_ident_iota G t idc) as H';
+                                   rewrite H1, H2 in H'; clear H1 H2; cbv [option_eq] in H'
+                              | [ H : list _ -> ?T |- _ ] => specialize (H nil)
+                              | [ |- UnderLets.wf ?Pv ?Gv (UnderLets.splice _ _) (UnderLets.splice _ _) ]
+                                => apply @UnderLets.wf_splice with (P:=fun G => wf_value G); intros; subst
+                              | [ H : context[reflect_expr_beta_iota] |- UnderLets.wf _ _ (reflect_expr_beta_iota _ _) (reflect_expr_beta_iota _ _) ]
+                                => apply H; intros
+                              | [ |- wf_value _ (fun x => _) (fun y => _) ] => hnf; intros; subst
+                              | [ |- wf_value' _ (splice_under_lets_with_value _ _) (splice_under_lets_with_value _ _) ]
+                                => apply wf_splice_under_lets_with_value
+                              | [ |- UnderLets.wf (fun G a1 a2 => wf_value_with_lets G (Base_value a1) (Base_value a2)) ?G' ?x ?y ]
+                                => cut (UnderLets.wf (fun G => wf_value G) G' x y);
+                                   [ apply UnderLets.wf_Proper_list_impl; cbv [wf_value_with_lets Base_value]
+                                   | ]
+                              end
+                            | progress destruct_head'_False
+                            | progress inversion_option
+                            | solve [ auto ]
+                            | break_innermost_match_step
+                            | apply wf_reflect
+                            | apply wf_reify
+                            | progress intros
+                            | progress cbn [List.In eq_rect fst snd] in *
+                            | progress destruct_head'_or
+                            | progress inversion_sigma
+                            | progress subst
+                            | progress inversion_prod
+                            | cbn [wf_value wf_value'] in *;
+                              handle_wf_rec ltac:(fun tac => try tac (); try eassumption; tac ())
+                            | eapply wf_value'_Proper_list; [ | match goal with H : _ |- _ => now eapply H end ]; solve [ destruct_head'_ex; subst; wf_t ]
+                            | match goal with
+                              | [ H : wf_value _ ?f ?g |- wf_value _ (?f _) (?g _) ]
+                                => eapply wf_value'_Proper_list; revgoals; [ hnf in H; eapply H; revgoals | ]; try eassumption; try reflexivity; now destruct_head'_ex; subst; wf_t
+                              end ].
+        Qed.
+
+        Lemma wf_reify_expr_beta_iota
+              {ident}
+              {reflect_ident_iota1 reflect_ident_iota2}
+              (Hwf_reflect_ident_iota
+               : forall G {t} (idc : ident t),
+                  option_eq
+                    (@wf_value _ ident var1 var2 G _)
+                    (@reflect_ident_iota1 t idc)
+                    (@reflect_ident_iota2 t idc))
+              G G'
+              (HG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> wf_value G v1 v2)
+              {t} e1 e2
+              (Hwf : expr.wf G' e1 e2)
+          : UnderLets.wf
+              (fun G'' => expr.wf G'')
+              G
+              (@reify_expr_beta_iota ident var1 reflect_ident_iota1 t e1)
+              (@reify_expr_beta_iota ident var2 reflect_ident_iota2 t e2).
+        Proof using Type.
+          cbv [reify_expr_beta_iota reify_to_UnderLets].
+          eapply @UnderLets.wf_splice with (P := fun G => wf_value G);
+            intros; destruct_head'_ex; subst.
+          all: repeat first [ break_innermost_match_step
+                            | progress cbn [reflect reify] in *
+                            | progress fold (@reflect ident var1) (@reflect ident var2)
+                            | progress fold (@reify ident var1) (@reify ident var2)
+                            | progress intros
+                            | assumption
+                            | apply wf_reify
+                            | apply wf_reflect
+                            | eapply wf_reflect_expr_beta_iota
+                            | match goal with
+                              | [ |- List.In ?x ?seg ] => is_evar seg; unify seg (cons x nil); left
+                              end
+                            | constructor
+                            | match goal with H : _ |- _ => eapply H; revgoals; clear H end ].
+        Qed.
+
+        Lemma wf_expr_value_to_rewrite_rule_replacement
+              {ident}
+              {reflect_ident_iota1 reflect_ident_iota2}
+              (Hwf_reflect_ident_iota
+               : forall G {t} (idc : ident t),
+                  option_eq
+                    (@wf_value _ ident var1 var2 G _)
+                    (@reflect_ident_iota1 t idc)
+                    (@reflect_ident_iota2 t idc))
+              (should_do_again : bool)
+              G {t} e1 e2
+              (Hwf : @wf_maybe_do_again_expr ident var1 var2 t true true G e1 e2)
+          : UnderLets.wf
+              (fun G' => @wf_maybe_do_again_expr ident var1 var2 t should_do_again should_do_again G')
+              G
+              (@expr_value_to_rewrite_rule_replacement ident var1 reflect_ident_iota1 should_do_again t e1)
+              (@expr_value_to_rewrite_rule_replacement ident var2 reflect_ident_iota2 should_do_again t e2).
+        Proof using Type.
+          cbv [expr_value_to_rewrite_rule_replacement].
+          eapply @UnderLets.wf_splice with (P := @wf_maybe_do_again_expr ident var1 var2 _ true true); intros; destruct_head'_ex; subst.
+          { destruct Hwf as [G' [HG' Hwf] ].
+            eapply UnderLets.wf_flat_map;
+              cbv [wf_value] in *;
+              eauto using wf_value'_Proper_list, UnderLets.wf_of_expr, wf_reify_expr_beta_iota.
+            { intros; eapply wf_reflect; now repeat constructor. } }
+          { repeat first [ progress cbv [wf_maybe_do_again_expr] in *
+                         | break_innermost_match_step
+                         | progress destruct_head'_ex
+                         | progress destruct_head'_and
+                         | progress subst
+                         | eapply wf_reify_expr_beta_iota; try eassumption
+                         | constructor
+                         | solve [ eauto ] ]. }
+        Qed.
+      End with_var.
+    End Reify.
   End RewriteRules.
 End Compilers.
