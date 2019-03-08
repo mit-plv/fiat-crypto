@@ -1235,6 +1235,9 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
             | [ H : context[List.In _ (_ ++ _)%list] |- _ ] => rewrite in_app_iff in H
             | [ H : context[expr.wf _ _ _] |- expr.wf _ _ _ ]
               => eapply H; clear H; eauto with nocore; solve [ repeat wf_safe_t_step ]
+            end
+          | match goal with
+            | [ |- _ \/ _ ] => constructor; solve [ repeat wf_safe_t_step ]
             end ].
   Ltac wf_unsafe_t_step :=
     first [ solve [ eauto with nocore ]
