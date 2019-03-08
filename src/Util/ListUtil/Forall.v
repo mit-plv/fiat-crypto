@@ -200,3 +200,13 @@ Proof using Type.
                       end
                     | lia ].
 Qed.
+
+Lemma Forall2_forall_In_combine_iff {A B} R xs ys
+  : @List.Forall2 A B R xs ys
+    <-> (List.length xs = List.length ys
+         /\ forall x y, List.In (x, y) (List.combine xs ys) -> R x y).
+Proof using Type.
+  split; revert ys; induction xs as [|x xs IHxs], ys as [|y ys]; cbn in *; intro H.
+  all: inversion_clear H; split_and;
+    try solve [ repeat constructor; intuition (congruence + eauto) ].
+Qed.
