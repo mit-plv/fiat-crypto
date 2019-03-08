@@ -189,28 +189,38 @@ Module Compilers.
                     (@rlist_rect var2 A P (@Compile.value _ ident var2) N2 C2 ls2).
       Proof using Type. apply wf_rlist_rect_gen; assumption. Qed.
 
-      Lemma wf_nat_rect {A}
-            G O1 O2 S1 S2 n
-            (HO : UnderLets.wf (fun G' => expr.wf G') G O1 O2)
-            (HS : forall n rec1 rec2,
-                UnderLets.wf (fun G' => expr.wf G') G rec1 rec2
-                -> UnderLets.wf (fun G' => expr.wf G') G (S1 n rec1) (S2 n rec2))
-        : UnderLets.wf (fun G' => expr.wf G') G
-                       (nat_rect (fun _ => UnderLets.UnderLets base.type ident var1 (expr (type.base A))) O1 S1 n)
-                       (nat_rect (fun _ => UnderLets.UnderLets base.type ident var2 (expr (type.base A))) O2 S2 n).
-      Proof. induction n; cbn [nat_rect]; auto. Qed.
-
-      Lemma wf_nat_rect_arrow {A B}
-            G O1 O2 S1 S2 n
-            (HO : Compile.wf_value G O1 O2)
-            (HS : forall n rec1 rec2,
-                Compile.wf_value G rec1 rec2
-                -> Compile.wf_value G (S1 n rec1) (S2 n rec2))
+      Lemma wf_list_rect {T A}
+            G N1 N2 C1 C2 ls1 ls2
+            (HN : Compile.wf_value G N1 N2)
+            (HC : forall G' x1 x2 xs1 xs2 rec1 rec2,
+                (exists seg, G' = (seg ++ G)%list)
+                -> Compile.wf_value G x1 x2
+                -> List.Forall2 (Compile.wf_value G) xs1 xs2
+                -> Compile.wf_value G' rec1 rec2
+                -> Compile.wf_value G' (C1 x1 xs1 rec1) (C2 x2 xs2 rec2))
+            (Hls : List.Forall2 (Compile.wf_value G) ls1 ls2)
         : Compile.wf_value
             G
-            (nat_rect (fun _ => @Compile.value base.type ident var1 (type.base A -> type.base B)) O1 S1 n)
-            (nat_rect (fun _ => @Compile.value base.type ident var2 (type.base A -> type.base B)) O2 S2 n).
-      Proof. induction n; cbn [nat_rect]; auto. Qed.
+            (list_rect (fun _ : list (@Compile.value base.type ident var1 (type.base T))
+                        => @Compile.value base.type ident var1 A)
+                       N1 C1 ls1)
+            (list_rect (fun _ : list (@Compile.value base.type ident var2 (type.base T))
+                        => @Compile.value base.type ident var2 A)
+                       N2 C2 ls2).
+      Proof. induction Hls; cbn [list_rect]; try eapply HC; eauto using (ex_intro _ nil). Qed.
+
+      Lemma wf_nat_rect {A}
+            G O1 O2 S1 S2 n
+            (HO : Compile.wf_value_with_lets G O1 O2)
+            (HS : forall G' n rec1 rec2,
+                (exists seg, G' = (seg ++ G)%list)
+                -> Compile.wf_value_with_lets G' rec1 rec2
+                -> Compile.wf_value_with_lets G' (S1 n rec1) (S2 n rec2))
+        : Compile.wf_value_with_lets
+            G
+            (nat_rect (fun _ => @Compile.value_with_lets base.type ident var1 A) O1 S1 n)
+            (nat_rect (fun _ => @Compile.value_with_lets base.type ident var2 A) O2 S2 n).
+      Proof. induction n; cbn [nat_rect]; try eapply HS; eauto using (ex_intro _ nil). Qed.
 
       Local Ltac start_good :=
         apply Compile.rewrite_rules_goodT_by_curried;
@@ -229,170 +239,88 @@ Module Compilers.
                        end
                      | progress cbn [eq_rect] in * ].
 
-      Local Ltac good_t_step :=
-        first [ progress subst
-              | progress cbn [eq_rect Compile.value' option_eq projT1 projT2 fst snd base.interp In combine Option.bind Option.sequence Option.sequence_return UnderLets.splice] in *
-              | progress destruct_head'_unit
-              | progress destruct_head'_sigT
-              | progress destruct_head'_prod
-              | progress eliminate_hprop_eq
-              | progress destruct_head'_and
-              | progress destruct_head'_sig
-              | progress inversion_option
-              | progress destruct_head'_ex
-              | progress cbn [pattern.ident.arg_types] in *
-              | progress cbn [fst snd projT1 projT2] in *
-              | progress intros
-              | progress cbv [id pattern.ident.arg_types Compile.value cpsbind cpscall cpsreturn cps_option_bind type_base ident.smart_Literal rwhen rwhenl nth_default SubstVarLike.is_var_fst_snd_pair_opp_cast] in *
-              | progress cbv [Compile.option_bind'] in *
-              | progress type_beq_to_eq
-              | progress type.inversion_type
-              | progress rewrite_type_transport_correct
-              | progress specialize_by exact eq_refl
-              | match goal with
-                | [ |- context[invert_expr.reflect_list ?v] ] => destruct (invert_expr.reflect_list v) eqn:?
-                end
-              | break_innermost_match_step
-              | wf_safe_t_step
-              | rewrite !expr.reflect_list_cps_id
-              | congruence
-              | match goal with
-                | [ H : nth_error ?l1 ?n = Some _, H' : nth_error ?l2 ?n = None |- _ ]
-                  => let H0 := fresh in
-                    assert (H0 : length l1 = length l2) by congruence;
-                    apply nth_error_error_length in H';
-                    apply nth_error_value_length in H;
-                    exfalso; clear -H0 H H'; lia
-                | [ |- expr.wf _ (reify_list _) (reify_list _) ] => rewrite expr.wf_reify_list
-                | [ |- option_eq _ (rlist_rect _ _ _) (rlist_rect _ _ _) ]
-                  => first [ apply wf_rlist_rect | apply wf_rlist_rectv ]
-                | [ |- context[length ?ls] ] => tryif is_var ls then fail else (progress autorewrite with distr_length)
-                | [ H : context[length ?ls] |- _ ] => tryif is_var ls then fail else (progress autorewrite with distr_length in H)
-                | [ |- @ex (_ = _) _ ] => (exists eq_refl)
-                | [ |- ex _ ] => eexists
-                | [ |- UnderLets.wf _ _ _ _ ] => constructor
-                | [ |- UnderLets.wf _ _ (UnderLets.splice _ _) (UnderLets.splice _ _) ]
-                  => eapply UnderLets.wf_splice; [ eapply UnderLets.wf_Proper_list; [ | | solve [ repeat good_t_step ] ] | ]
-                | [ |- UnderLets.wf _ _ (UnderLets.splice _ _) (UnderLets.splice _ _) ] => eapply UnderLets.wf_splice
-                | [ |- UnderLets.wf _ _ (UnderLets.splice_list _ _) (UnderLets.splice_list _ _) ]
-                  => apply @UnderLets.wf_splice_list_no_order with (P:=fun G' => expr.wf G')
-                | [ |- ?x = ?x /\ _ ] => split; [ reflexivity | ]
-                | [ H : invert_expr.reflect_list ?v = Some _, H' : invert_expr.reflect_list ?v' = None |- _ ]
-                  => first [ erewrite <- expr.wf_reflect_list in H' by eassumption
-                           | erewrite -> expr.wf_reflect_list in H' by eassumption ];
-                    exfalso; clear -H H'; congruence
-                | [ H : Compile.wf_value _ (reify_list _) (reify_list _) |- _ ]
-                  => hnf in H; rewrite expr.wf_reify_list in H
-                | [ |- List.Forall2 _ ?x ?x ] => rewrite Forall2_Forall; cbv [Proper]
-                | [ |- List.Forall2 _ (List.map _ _) (List.map _ _) ] => rewrite Forall2_map_map_iff
-                | [ |- List.Forall2 _ (List.repeat _ _) (List.repeat _ _) ]
-                  => rewrite Forall2_repeat_iff
-                | [ |- List.Forall2 _ (List.rev _) (List.rev _) ]
-                  => rewrite Forall2_rev_iff
-                | [ |- List.Forall _ (seq _ _) ] => rewrite Forall_seq
-                | [ |- List.Forall2 _ (firstn _ _) (firstn _ _) ]
-                  => now apply Forall2_firstn
-                | [ |- List.Forall2 _ (skipn _ _) (skipn _ _) ]
-                  => now apply Forall2_skipn
-                | [ |- List.Forall2 _ (List.combine _ _) (List.combine _ _) ]
-                  => eapply Forall2_combine; [ intros | eassumption | eassumption ]
-                | [ |- List.Forall2 _ (update_nth _ _ _) (update_nth _ _ _) ]
-                  => apply Forall2_update_nth; intros
-                | [ H : List.Forall2 _ ?x ?y |- context[@List.length ?T ?y] ]
-                  => rewrite <- (@eq_length_Forall2 _ T _ x y H)
-                | [ H : Forall2 (expr.wf ?G) ?xs ?ys |- Forall2 (fun a b => UnderLets.wf (fun G' => expr.wf G') ?G _ _) ?xs ?ys ]
-                  => eapply Forall2_Proper_impl; [ .. | exact H ]; try reflexivity; repeat intro
-                | [ H : Forall2 ?P ?xs ?ys, Hx : nth_error ?xs ?n = _, Hy : nth_error ?ys ?n = _ |- _ ]
-                  => let H' := fresh in
-                     pose proof H as H';
-                     rewrite Forall2_forall_iff_nth_error in H'; specialize (H' n); rewrite Hx, Hy in H'; clear n Hx Hy
-                | [ H : length ?l = length ?l' |- context[length ?l] ] => rewrite H
-                | [ H : context[combine (firstn ?n _) (firstn ?n _)] |- _ ] => rewrite <- firstn_combine in H
-                | [ H : context[combine (skipn ?n _) (skipn ?n _)] |- _ ] => rewrite <- skipn_combine in H
-                | [ H : context[In _ (firstn _ _)] |- _ ] => solve [ eauto using In_firstn ]
-                | [ H : context[In _ (skipn _ _)] |- _ ] => solve [ eauto using In_skipn ]
-                | [ H : context[combine (repeat _ _) (repeat _ _)] |- _ ] => rewrite combine_repeat in H
-                | [ H : context[combine (Lists.List.repeat _ _) (Lists.List.repeat _ _)] |- _ ] => rewrite combine_repeat in H
-                | [ H : In _ (repeat _ _) |- _ ] => apply repeat_spec in H
-                | [ H : In _ (Lists.List.repeat _ _) |- _ ] => apply repeat_spec in H
-                | [ H : context[combine (rev ?l1) (rev ?l2)] |- _ ] => rewrite (@combine_rev_rev_samelength _ _ l1 l2) in H by congruence
-                | [ H : In _ (rev _) |- _ ] => rewrite <- in_rev in H
-                | [ H : forall e1' e2', In (e1', e2') (combine ?l1 ?l2) -> _, H1 : nth_error ?l1 ?n = Some ?e1, H2 : nth_error ?l2 ?n = Some ?e2 |- _ ]
-                  => specialize (fun pf => H e1 e2 (@nth_error_In _ _ n _ pf))
-                | [ H : context[nth_error (combine _ _) _] |- _ ] => rewrite nth_error_combine in H
-                | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
-                | [ H : ?x = None, H' : context[?x] |- _ ] => rewrite H in H'
-                | [ H : context[combine (map _ _) (map _ _)] |- _ ] => rewrite combine_map_map in H
-                | [ H : context[nth_error (update_nth _ _ _) _] |- _ ] => rewrite nth_update_nth in H
-                | [ H : nth_error (map _ _) _ = Some _ |- _ ] => apply nth_error_map in H
-                | [ H : In _ (map _ _) |- _ ] => rewrite in_map_iff in H
-                | [ H : In _ (combine _ _) |- _ ] => apply In_nth_error_value in H
-                | [ |- expr.wf ?G (fold_right _ _ (map _ (seq ?a ?b))) (fold_right _ _ (map _ (seq ?a ?b))) ]
-                  => induction (seq a b); cbn [fold_right map]
-                | [ Hwf : Compile.wf_value _ ?x _, H : context[SubstVarLike.is_recursively_var_or_ident _ ?x] |- _ ] => erewrite SubstVarLike.wfT_is_recursively_var_or_ident in H by exact Hwf
-                | [ |- UnderLets.wf _ _ (nat_rect _ _ _ _) (nat_rect _ _ _ _) ] => apply wf_nat_rect
-                | [ |- UnderLets.wf _ _ (nat_rect _ _ _ _ _) (nat_rect _ _ _ _ _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply wf_nat_rect_arrow; [ | | reflexivity | ]; cycle 1 ]; revgoals; hnf
-                | [ H : Compile.wf_value _ ?e1 ?e2 |- UnderLets.wf _ _ (?e1 _) (?e2 _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply H; [ reflexivity | ] ]; revgoals
-                | [ H : Compile.wf_value _ ?e1 ?e2 |- UnderLets.wf _ _ (?e1 _ _) (?e2 _ _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply H; [ reflexivity | | reflexivity | ] ]; revgoals
-                | [ H : Compile.wf_value _ ?e1 ?e2 |- UnderLets.wf _ _ (?e1 _ _ _) (?e2 _ _ _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply H; [ reflexivity | | reflexivity | | reflexivity | ]; cycle 1 ]; revgoals
-                | [ H : Compile.wf_value _ ?e1 ?e2 |- Compile.wf_value' _ (?e1 _) (?e2 _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply H; [ reflexivity | ] ]; revgoals
-                | [ H : Compile.wf_value _ ?e1 ?e2 |- Compile.wf_value' _ (?e1 _ _) (?e2 _ _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply H; [ reflexivity | | reflexivity | ] ]; revgoals
-                | [ H : Compile.wf_value _ ?e1 ?e2 |- Compile.wf_value' _ (?e1 _ _ _) (?e2 _ _ _) ]
-                  => eapply UnderLets.wf_Proper_list; [ | | eapply H; [ reflexivity | | reflexivity | | reflexivity | ]; cycle 1 ]; revgoals
-                | [ |- Compile.wf_value _ (fun _ => _) (fun _ => _) ] => hnf
-                | [ H : Compile.wf_value _ ?f ?g |- UnderLets.wf _ _ (?f _) (?g _) ] => eapply UnderLets.wf_Proper_list; [ | | eapply H; solve [ eauto ] ]; solve [ repeat good_t_step ]
-                | [ H : Compile.wf_value _ ?f ?g |- UnderLets.wf _ _ (?f _ _) (?g _ _) ] => eapply UnderLets.wf_Proper_list; [ | | eapply H; solve [ eauto ] ]; solve [ repeat good_t_step ]
-                | [ H : Compile.wf_value _ ?f ?g |- UnderLets.wf _ _ (?f _ _ _) (?g _ _ _) ] => eapply UnderLets.wf_Proper_list; [ | | eapply H; solve [ eauto ] ]; solve [ repeat good_t_step ]
-                | [ H : Compile.wf_value ?G ?e1 ?e2 |- UnderLets.wf _ ?G (?e1 _) (?e2 _) ] => eapply (H nil)
-                | [ H : ?R ?G ?a ?b |- expr.wf ?G ?a ?b ]
-                  => is_evar R; revert H; instantiate (1:=fun G' => expr.wf G'); solve [ auto ]
-                | [ H : expr.wf ?G ?a ?b |- ?R ?G ?a ?b ]
-                  => is_evar R; instantiate (1:=fun G' => expr.wf G'); solve [ auto ]
-                | [ |- (forall t v1 v2, In _ _ -> _) /\ expr.wf _ _ _ ] => apply conj; revgoals
-                | [ H : expr.wf _ ?x ?y |- Compile.wf_value _ ?x ?y ] => hnf
-                | [ |- Compile.wf_value _ ?x ?y ] => eapply Compile.wf_value'_Proper_list; [ | solve [ cbv [Compile.wf_value] in *; eauto ] ]; solve [ wf_t ]
-                | [ |- In ?x ?ls ] => is_evar ls; refine (or_introl eq_refl : In x (x :: _)); shelve
-                | [ |- or (_ = _) ?G ] => first [ left; reflexivity | has_evar G; right ]
-                | [ H : @In ?A _ ?ls |- _ ] => is_evar ls; unify ls (@nil A); cbn [In] in H
-                end
-              | progress expr.invert_subst
-              | solve [ wf_t ]
-              | break_match_hyps_step ltac:(fun v => let h := head v in constr_eq h (@nth_error))
-              | break_match_hyps_step ltac:(fun v => match v with Nat.eq_dec _ _ => idtac end)
-              | progress cbv [option_map] in * ].
+      Local Ltac fin_wf :=
+        repeat first [ progress intros
+                     | match goal with
+                       | [ |- expr.wf _ (_ @ _) (_ @ _) ] => constructor
+                       | [ |- expr.wf _ (#_) (#_) ] => constructor
+                       | [ |- expr.wf _ ($_) ($_) ] => constructor
+                       | [ |- expr.wf _ (expr.Abs _) (expr.Abs _) ] => constructor; intros
+                       | [ H : @List.In ?T _ ?ls |- _ ] => is_evar ls; unify ls (@nil T); cbn [List.In] in H
+                       | [ |- List.In ?v ?ls ] => is_evar ls; instantiate (1:=cons v _)
+                       end
+                     | progress subst
+                     | progress destruct_head'_or
+                     | progress destruct_head'_False
+                     | progress inversion_sigma
+                     | progress inversion_prod
+                     | assumption
+                     | esplit; revgoals; solve [ fin_wf ]
+                     | econstructor; solve [ fin_wf ]
+                     | progress cbn [List.In fst snd eq_rect] in * ].
+
+      Local Ltac handle_reified_rewrite_rules :=
+        repeat
+          first [ match goal with
+                  | [ |- option_eq _ ?x ?y ]
+                    => lazymatch x with Some _ => idtac | None => idtac end;
+                       lazymatch y with Some _ => idtac | None => idtac end;
+                       progress cbn [option_eq]
+                  | [ |- UnderLets.wf _ _ (Reify.expr_value_to_rewrite_rule_replacement ?rii1 ?sda _) (Reify.expr_value_to_rewrite_rule_replacement ?rii2 ?sda _) ]
+                    => apply (fun H => @Reify.wf_expr_value_to_rewrite_rule_replacement _ _ _ rii1 rii2 H sda); intros
+                  | [ |- option_eq _ (Compile.reflect_ident_iota _) (Compile.reflect_ident_iota _) ]
+                    => apply Reify.wf_reflect_ident_iota
+                  | [ |- ?x = ?x ] => reflexivity
+                  end
+                | break_innermost_match_step
+                | progress cbv [Compile.wf_maybe_do_again_expr] in *
+                | progress fin_wf ].
+
+      Local Ltac handle_extra_nbe :=
+        repeat first [ match goal with
+                       | [ |- expr.wf _ (reify_list _) (reify_list _) ] => rewrite expr.wf_reify_list
+                       | [ |- List.Forall2 _ ?x ?x ] => rewrite Forall2_Forall; cbv [Proper]
+                       | [ |- List.Forall2 _ (List.map _ _) (List.map _ _) ] => rewrite Forall2_map_map_iff
+                       | [ |- List.Forall _ (seq _ _) ] => rewrite Forall_seq
+                       end
+                     | progress intros
+                     | progress fin_wf ].
 
       Lemma nbe_rewrite_rules_good
         : rewrite_rules_goodT nbe_rewrite_rules nbe_rewrite_rules.
       Proof using Type.
         Time start_good.
-        Time all: repeat repeat good_t_step.
+        Time all: handle_reified_rewrite_rules; handle_extra_nbe.
       Qed.
+
+      Local Ltac handle_extra_arith_rules :=
+        repeat first [ progress cbv [rwhenl option_eq SubstVarLike.is_var_fst_snd_pair_opp_cast]
+                     | break_innermost_match_step
+                     | match goal with
+                       | [ Hwf : Compile.wf_value _ ?x _, H : context[SubstVarLike.is_recursively_var_or_ident _ ?x] |- _ ] => erewrite SubstVarLike.wfT_is_recursively_var_or_ident in H by exact Hwf
+                       end
+                     | congruence
+                     | progress fin_wf ].
 
       Lemma arith_rewrite_rules_good max_const
         : rewrite_rules_goodT (arith_rewrite_rules max_const) (arith_rewrite_rules max_const).
       Proof using Type.
         Time start_good.
-        Time all: repeat good_t_step.
+        Time all: handle_reified_rewrite_rules; handle_extra_arith_rules.
       Qed.
 
       Lemma arith_with_casts_rewrite_rules_good
         : rewrite_rules_goodT arith_with_casts_rewrite_rules arith_with_casts_rewrite_rules.
       Proof using Type.
         Time start_good.
-        Time all: repeat good_t_step.
+        Time all: handle_reified_rewrite_rules.
       Qed.
 
       Lemma strip_literal_casts_rewrite_rules_good
         : rewrite_rules_goodT strip_literal_casts_rewrite_rules strip_literal_casts_rewrite_rules.
       Proof using Type.
         Time start_good.
-        Time all: repeat good_t_step.
+        Time all: handle_reified_rewrite_rules.
       Qed.
 
       Lemma fancy_rewrite_rules_good
@@ -402,9 +330,7 @@ Module Compilers.
         : rewrite_rules_goodT fancy_rewrite_rules fancy_rewrite_rules.
       Proof using Type.
         Time start_good.
-        Time all: repeat good_t_step.
-        all: cbv [Option.bind].
-        Time all: repeat good_t_step.
+        Time all: handle_reified_rewrite_rules.
       Qed.
 
       Lemma fancy_with_casts_rewrite_rules_good
@@ -415,9 +341,7 @@ Module Compilers.
         : rewrite_rules_goodT (fancy_with_casts_rewrite_rules invert_low invert_high value_range flag_range) (fancy_with_casts_rewrite_rules invert_low invert_high value_range flag_range).
       Proof using Type.
         Time start_good.
-        Time all: repeat good_t_step.
-        all: cbv [Option.bind].
-        Time all: repeat good_t_step.
+        Time all: handle_reified_rewrite_rules.
       Qed.
     End good.
   End RewriteRules.

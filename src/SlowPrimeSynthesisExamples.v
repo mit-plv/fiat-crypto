@@ -25,6 +25,114 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
+Module debugging_rewriting.
+  Section __.
+    Context (n : nat := 2%nat)
+            (s : Z := 2^127)
+            (c : list (Z * Z) := [(1,1)])
+            (machine_wordsize : Z := 64).
+
+    Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
+    Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
+
+    Definition possible_values_of_machine_wordsize
+      := [0; machine_wordsize; 2 * machine_wordsize]%Z.
+
+    Let possible_values := possible_values_of_machine_wordsize.
+
+
+    Let prime_upperbound_list : list Z
+      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    Let tight_upperbounds : list Z
+      := List.map
+           (fun v : Z => Qceiling (11/10 * v))
+           prime_upperbound_list.
+    Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
+      := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
+    Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
+      := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
+
+
+    Let limbwidth_num := Eval vm_compute in Qnum limbwidth.
+    Let limbwidth_den := Eval vm_compute in QDen limbwidth.
+
+    Compute
+      (Pipeline.BoundsPipeline
+         true None [64; 128]
+         ltac:(let r := Reify (fun f g
+                               => (  (addmod limbwidth_num limbwidth_den n f g)
+                              )) in
+               exact r)
+                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+                ZRange.type.base.option.None).
+
+    Compute
+      (Pipeline.BoundsPipeline
+         true None [64; 128]
+         ltac:(let r := Reify (fun f g
+                               => (  (add (weight limbwidth_num limbwidth_den) n f g)
+                              )) in
+               exact r)
+                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+                ZRange.type.base.option.None).
+
+    Compute
+      (Pipeline.BoundsPipeline
+         true None [64; 128]
+         ltac:(let r := Reify (fun f g
+                               => let a_a := to_associational (weight limbwidth_num limbwidth_den) n f in
+                                  let b_a := to_associational (weight limbwidth_num limbwidth_den) n g in from_associational (weight limbwidth_num limbwidth_den) n (a_a ++ b_a)
+                              ) in
+               exact r)
+                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+                ZRange.type.base.option.None).
+
+    Compute
+      (Pipeline.BoundsPipeline
+         true None [64; 128]
+         ltac:(let r := Reify (fun f (g : list Z)
+                               => let a_a := to_associational (weight limbwidth_num limbwidth_den) n f in
+                                  a_a) in
+               exact r)
+                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+                ZRange.type.base.option.None).
+
+    Compute
+      (Pipeline.BoundsPipeline
+         true None [64; 128]
+         ltac:(let r := Reify (fun (f g : list Z)
+                               => let a_a := combine (map (weight limbwidth_num limbwidth_den) (seq 0 n)) f in
+                                  a_a) in
+               exact r)
+                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
+                ZRange.type.base.option.None).
+
+    Definition foo := (Pipeline.BoundsPipeline
+                         true None [64; 128]
+                         ltac:(let r := Reify (combine [1; 2] [1; 2]) in
+                               exact r)
+                                tt
+                                ZRange.type.base.option.None).
+
+  (*
+  Goal True.
+    pose foo as X; cbv [foo] in X.
+    clear -X.
+    cbv [Pipeline.BoundsPipeline LetIn.Let_In] in X.
+    set (Y := (PartialEvaluateWithListInfoFromBounds _ _)) in (value of X).
+    vm_compute in Y.
+    subst Y; set (Y := (Rewriter.Compilers.PartialEvaluate _)) in (value of X).
+    cbv [Rewriter.Compilers.PartialEvaluate Rewriter.Compilers.RewriteRules.RewriteNBE Rewriter.Compilers.RewriteRules.Compile.Rewrite Rewriter.Compilers.RewriteRules.Compile.rewrite] in Y.
+    clear -Y.
+    change (Rewriter.Compilers.RewriteRules.nbe_default_fuel) with (S (pred Rewriter.Compilers.RewriteRules.nbe_default_fuel)) in (value of Y).
+    cbn [Rewriter.Compilers.RewriteRules.Compile.repeat_rewrite] in Y.
+    cbv [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in Y.
+    Print Rewriter.Compilers.RewriteRules.nbe_rewrite_head.
+  Abort.
+   *)
+  End __.
+End debugging_rewriting.
+
 Section debugging_p448.
   Context (n : nat := 8%nat)
           (s : Z := 2^448)
