@@ -1056,6 +1056,28 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                        | progress subst
                        | solve [ eauto ] ].
         Qed.
+
+        Lemma wf_smart_Literal {t v G}
+          : expr.wf G (@ident.smart_Literal var1 t v) (@ident.smart_Literal var2 t v).
+        Proof using Type.
+          induction t; cbn; eta_expand; repeat constructor; auto.
+          all: rewrite wf_reify_list + rewrite wf_reify_option.
+          all: repeat first [ rewrite map_length
+                            | progress cbv [option_map option_eq]
+                            | apply conj
+                            | reflexivity
+                            | progress intros
+                            | progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | progress inversion_prod
+                            | progress subst
+                            | break_innermost_match_step
+                            | progress rewrite combine_map_map in *
+                            | progress rewrite combine_same in *
+                            | progress rewrite map_map in *
+                            | progress rewrite in_map_iff in *
+                            | solve [ auto ] ].
+        Qed.
       End with_var2.
 
       Lemma Wf_Reify_as {t} v : expr.Wf (@GallinaReify.base.Reify_as t v).
