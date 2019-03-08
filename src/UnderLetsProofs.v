@@ -318,6 +318,83 @@ Module Compilers.
                              => rewrite ListUtil.nth_error_combine in H
                            end ].
         Qed.
+
+        Lemma wf_list_rect {A B Pnil Pcons ls A' B' Pnil' Pcons' ls'} {RA : A -> A' -> Prop} {RB G}
+              (Hnil : wf RB G Pnil Pnil')
+              (Hcons : forall x x',
+                  RA x x'
+                  -> forall l l',
+                    List.Forall2 RA l l'
+                    -> forall rec rec',
+                      wf RB G rec rec'
+                      -> wf RB G (Pcons x l rec) (Pcons' x' l' rec'))
+              (Hls : List.Forall2 RA ls ls')
+          : wf RB G
+               (list_rect
+                  (fun _ : list _ => @UnderLets var1 B)
+                  Pnil
+                  Pcons
+                  ls)
+               (list_rect
+                  (fun _ : list _ => @UnderLets var2 B')
+                  Pnil'
+                  Pcons'
+                  ls').
+        Proof using Type. induction Hls; cbn [list_rect] in *; auto. Qed.
+
+        Lemma wf_list_rect_arrow {A B C Pnil Pcons ls x A' B' C' Pnil' Pcons' ls' x'} {RA : A -> A' -> Prop} {RB : B -> B' -> Prop} {RC} {G}
+              (Hnil : forall x x', RB x x' -> wf RC G (Pnil x) (Pnil' x'))
+              (Hcons : forall x x',
+                  RA x x'
+                  -> forall l l',
+                    List.Forall2 RA l l'
+                    -> forall rec rec',
+                      (forall x x', RB x x' -> wf RC G (rec x) (rec' x'))
+                      -> forall v v',
+                        RB v v'
+                        -> wf RC G (Pcons x l rec v) (Pcons' x' l' rec' v'))
+              (Hls : List.Forall2 RA ls ls')
+              (Hx : RB x x')
+          : wf RC G
+               (list_rect
+                  (fun _ : list _ => B -> @UnderLets var1 C)
+                  Pnil
+                  Pcons
+                  ls
+                  x)
+               (list_rect
+                  (fun _ : list _ => B' -> @UnderLets var2 C')
+                  Pnil'
+                  Pcons'
+                  ls'
+                  x').
+        Proof using Type. revert x x' Hx; induction Hls; cbn [list_rect] in *; auto. Qed.
+
+        Lemma wf_nat_rect {A PO PS n A' PO' PS' n' R G}
+              (Hnil : wf R G PO PO')
+              (Hcons : forall n rec rec',
+                  wf R G rec rec'
+                  -> wf R G (PS n rec) (PS' n rec'))
+              (Hn : n = n')
+          : wf R G
+               (nat_rect (fun _ => @UnderLets var1 A) PO PS n)
+               (nat_rect (fun _ => @UnderLets var2 A') PO' PS' n').
+        Proof using Type. subst n'; induction n; cbn [nat_rect] in *; auto. Qed.
+
+        Lemma wf_nat_rect_arrow {A B PO PS n x A' B' PO' PS' n' x' R}
+              {R' : A -> A' -> Prop} {G}
+              (Hnil : forall x x', R' x x' -> wf R G (PO x) (PO' x'))
+              (Hcons : forall n rec rec',
+                  (forall x x', R' x x' -> wf R G (rec x) (rec' x'))
+                  -> forall x x',
+                    R' x x'
+                    -> wf R G (PS n rec x) (PS' n rec' x'))
+              (Hn : n = n')
+              (Hx : R' x x')
+          : wf R G
+               (nat_rect (fun _ => A -> @UnderLets var1 B) PO PS n x)
+               (nat_rect (fun _ => A' -> @UnderLets var2 B') PO' PS' n' x').
+        Proof using Type. subst n'; revert x x' Hx; induction n; cbn [nat_rect] in *; auto. Qed.
       End with_var.
 
       Section for_interp.
