@@ -1082,7 +1082,6 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         Lemma wf_smart_Literal_eq {t v1 v2 G}
           : v1 = v2 -> expr.wf G (@ident.smart_Literal var1 t v1) (@ident.smart_Literal var2 t v2).
         Proof using Type. intro; subst; apply wf_smart_Literal. Qed.
-        Qed.
       End with_var2.
 
       Lemma Wf_Reify_as {t} v : expr.Wf (@GallinaReify.base.Reify_as t v).
