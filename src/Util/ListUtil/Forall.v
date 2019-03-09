@@ -217,3 +217,22 @@ Proof using Type.
   all: inversion_clear H; split_and;
     try solve [ repeat constructor; intuition (congruence + eauto) ].
 Qed.
+
+Global Instance Forall2_Proper_impl {A B}
+  : Proper (pointwise_relation _ (pointwise_relation _ Basics.impl) ==> eq ==> eq ==> Basics.impl)
+           (@List.Forall2 A B) | 10.
+Proof.
+  cbv [Basics.impl respectful pointwise_relation].
+  repeat intro; subst; rewrite Forall2_forall_In_combine_iff in *.
+  destruct_head'_and; split; eauto.
+Qed.
+
+Global Instance Forall2_Proper_iff {A B}
+  : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff)
+           (@List.Forall2 A B) | 10.
+Proof.
+  cbv [respectful pointwise_relation].
+  repeat intro; subst; rewrite !Forall2_forall_In_combine_iff in *.
+  split_iff.
+  repeat (split || destruct_head'_and); eauto.
+Qed.
