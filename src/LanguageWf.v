@@ -24,6 +24,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Logic.ProdForall.
@@ -932,10 +933,9 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         Local Notation expr1 := (@expr.expr base.type ident.ident var1).
         Local Notation expr2 := (@expr.expr base.type ident.ident var2).
 
-        Lemma wf_reify_list G {t} e1 e2
+        Lemma wf_reify_list_Forall2 G {t} e1 e2
           : @wf _ _ var1 var2 G _ (reify_list (t:=t) e1) (reify_list (t:=t) e2)
-            <-> (List.length e1 = List.length e2
-               /\ forall e1' e2', List.In (e1', e2') (List.combine e1 e2) -> wf G e1' e2').
+            <-> List.Forall2 (wf G) e1 e2.
         Proof.
           revert e2; induction e1 as [|e1 e1s IHe1s], e2 as [|e2 e2s];
             rewrite ?expr.reify_list_cons, ?expr.reify_list_nil; cbn [length combine];
@@ -952,8 +952,20 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                            | progress inversion_wf_constr
                            | rewrite IHe1s in *
                            | progress destruct_head'_or
+                           | match goal with
+                             | [ H : Forall2 _ ?xs ?ys |- _ ]
+                               => match xs with nil => idtac | _::_ => idtac end;
+                                  match ys with nil => idtac | _::_ => idtac end;
+                                  inversion H; clear H
+                             end
                            | solve [ eauto ] ].
         Qed.
+
+        Lemma wf_reify_list G {t} e1 e2
+          : @wf _ _ var1 var2 G _ (reify_list (t:=t) e1) (reify_list (t:=t) e2)
+            <-> (List.length e1 = List.length e2
+               /\ forall e1' e2', List.In (e1', e2') (List.combine e1 e2) -> wf G e1' e2').
+        Proof. now rewrite wf_reify_list_Forall2, Forall2_forall_In_combine_iff. Qed.
 
         Lemma wf_reflect_list G {t} e1 e2
            : @wf _ _ var1 var2 G (type.base (base.type.list t)) e1 e2
