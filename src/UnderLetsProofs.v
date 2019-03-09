@@ -370,33 +370,42 @@ Module Compilers.
                   ls').
         Proof using Type. induction Hls; cbn [list_rect] in *; auto. Qed.
 
-        Lemma wf_list_rect_arrow {A B C Pnil Pcons ls x A' B' C' Pnil' Pcons' ls' x'} {RA : A -> A' -> Prop} {RB : B -> B' -> Prop} {RC} {G}
-              (Hnil : forall x x', RB x x' -> wf RC G (Pnil x) (Pnil' x'))
-              (Hcons : forall x x',
-                  RA x x'
-                  -> forall l l',
-                    List.Forall2 RA l l'
-                    -> forall rec rec',
-                      (forall x x', RB x x' -> wf RC G (rec x) (rec' x'))
-                      -> forall v v',
-                        RB v v'
-                        -> wf RC G (Pcons x l rec v) (Pcons' x' l' rec' v'))
-              (Hls : List.Forall2 RA ls ls')
-              (Hx : RB x x')
-          : wf RC G
-               (list_rect
-                  (fun _ : list _ => B -> @UnderLets var1 C)
-                  Pnil
-                  Pcons
-                  ls
-                  x)
-               (list_rect
-                  (fun _ : list _ => B' -> @UnderLets var2 C')
-                  Pnil'
-                  Pcons'
-                  ls'
-                  x').
-        Proof using Type. revert x x' Hx; induction Hls; cbn [list_rect] in *; auto. Qed.
+        Lemma wf_list_rect_arrow {T A B PN PC l v T' A' B' PN' PC' l' v' R}
+              {RT : T -> T' -> Prop}
+              {R' : _ -> A -> A' -> Prop} {G seg G'}
+              (Hnil : forall seg G' x x',
+                  G' = seg ++ G
+                  -> R' seg x x'
+                  -> wf R G' (PN x) (PN' x'))
+              (Hcons : forall seg G' x x' xs xs' rec rec',
+                  G' = seg ++ G
+                  -> RT x x'
+                  -> List.Forall2 RT xs xs'
+                  -> (forall seg' G'' v v',
+                         G'' = seg' ++ G'
+                         -> R' seg' v v'
+                         -> wf R G'' (rec v) (rec' v'))
+                  -> forall v v',
+                      R' seg v v'
+                      -> wf R G' (PC x xs rec v) (PC' x' xs' rec' v'))
+              (HR : forall G1 G2,
+                  (forall t v1 v2, In (existT _ t (v1, v2)) G1 -> In (existT _ t (v1, v2)) G2)
+                  -> forall v1 v2, R G1 v1 v2 -> R G2 v1 v2)
+              (Hl : List.Forall2 RT l l')
+              (HG : G' = seg ++ G)
+              (Hx : R' seg v v')
+          : wf
+              R G'
+              (list_rect (fun _ : list T => A -> @UnderLets var1 B) PN PC l v)
+              (list_rect (fun _ : list T' => A' -> @UnderLets var2 B') PN' PC' l' v').
+        Proof using Type.
+          revert seg G' HG v v' Hx.
+          induction Hl as [|x x' xs xs' Hx Hxs IHxs]; cbn [list_rect] in *; eauto.
+          intros; subst; eapply Hcons; try eassumption; eauto.
+          intros; subst; eapply wf_Proper_list; revgoals; try assumption.
+          { eapply IHxs; try eassumption; reflexivity. }
+          { wf_t. }
+        Qed.
 
         Lemma wf_nat_rect {A PO PS n A' PO' PS' n' R G}
               (Hnil : wf R G PO PO')
@@ -410,19 +419,37 @@ Module Compilers.
         Proof using Type. subst n'; induction n; cbn [nat_rect] in *; auto. Qed.
 
         Lemma wf_nat_rect_arrow {A B PO PS n x A' B' PO' PS' n' x' R}
-              {R' : A -> A' -> Prop} {G}
-              (Hnil : forall x x', R' x x' -> wf R G (PO x) (PO' x'))
-              (Hcons : forall n rec rec',
-                  (forall x x', R' x x' -> wf R G (rec x) (rec' x'))
+              {R' : _ -> A -> A' -> Prop} {G seg G'}
+              (Hnil : forall seg G' x x',
+                  G' = seg ++ G
+                  -> R' seg x x'
+                  -> wf R G' (PO x) (PO' x'))
+              (Hcons : forall seg G' n rec rec',
+                  G' = seg ++ G
+                  -> (forall seg' G'' x x',
+                         G'' = seg' ++ G'
+                         -> R' seg' x x'
+                         -> wf R G'' (rec x) (rec' x'))
                   -> forall x x',
-                    R' x x'
-                    -> wf R G (PS n rec x) (PS' n rec' x'))
+                      R' seg x x'
+                      -> wf R G' (PS n rec x) (PS' n rec' x'))
+              (HR : forall G1 G2,
+                  (forall t v1 v2, In (existT _ t (v1, v2)) G1 -> In (existT _ t (v1, v2)) G2)
+                  -> forall v1 v2, R G1 v1 v2 -> R G2 v1 v2)
               (Hn : n = n')
-              (Hx : R' x x')
-          : wf R G
+              (HG : G' = seg ++ G)
+              (Hx : R' seg x x')
+          : wf R G'
                (nat_rect (fun _ => A -> @UnderLets var1 B) PO PS n x)
                (nat_rect (fun _ => A' -> @UnderLets var2 B') PO' PS' n' x').
-        Proof using Type. subst n'; revert x x' Hx; induction n; cbn [nat_rect] in *; auto. Qed.
+        Proof using Type.
+          subst n'; revert seg G' HG x x' Hx.
+          induction n as [|n IHn]; cbn [nat_rect] in *; eauto.
+          intros; subst; eapply Hcons; try eassumption; eauto.
+          intros; subst; eapply wf_Proper_list; revgoals; try assumption.
+          { eapply IHn; try eassumption; reflexivity. }
+          { wf_t. }
+        Qed.
       End with_var.
 
       Section for_interp.
