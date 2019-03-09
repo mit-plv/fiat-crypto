@@ -79,6 +79,13 @@ Proof using Type.
   revert ls2; induction ls1 as [|l ls IHls], ls2 as [|l' ls'];
     t_Forall2.
 Qed.
+Lemma Forall2_map_map_iff {A A' B B' R f g ls1 ls2}
+  : @List.Forall2 A' B' R (List.map f ls1) (List.map g ls2)
+    <-> @List.Forall2 A B (fun x y => R (f x) (g y)) ls1 ls2.
+Proof using Type.
+  revert ls2; induction ls1 as [|l ls IHls], ls2 as [|l' ls'];
+    t_Forall2.
+Qed.
 Lemma Forall2_Forall {A R ls}
   : @List.Forall2 A A R ls ls
     <-> @List.Forall A (Proper R) ls.
