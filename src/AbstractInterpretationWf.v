@@ -10,6 +10,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -314,12 +315,33 @@ Module Compilers.
                 {bottom'_Proper : forall t, Proper (abstract_domain'_R t) (bottom' t)}
                 {is_annotated_for_Proper : forall t t', Proper (eq ==> abstract_domain'_R _ ==> eq) (@is_annotated_for t t')}
                 (extract_list_state_length : forall t v1 v2, abstract_domain'_R _ v1 v2 -> option_map (@length _) (extract_list_state t v1) = option_map (@length _) (extract_list_state t v2))
-                (extract_list_state_rel : forall t v1 v2, abstract_domain'_R _ v1 v2 -> forall l1 l2, extract_list_state t v1 = Some l1 -> extract_list_state t v2 = Some l2 -> forall vv1 vv2, List.In (vv1, vv2) (List.combine l1 l2) -> @abstract_domain'_R t vv1 vv2)
+                (extract_list_state_rel : forall t v1 v2, abstract_domain'_R _ v1 v2 -> forall l1 l2, extract_list_state t v1 = Some l1 -> extract_list_state t v2 = Some l2 -> List.Forall2 (@abstract_domain'_R t) l1 l2)
                 (extract_option_state_rel : forall t v1 v2, abstract_domain'_R _ v1 v2 -> option_eq (option_eq (abstract_domain'_R _)) (extract_option_state t v1) (extract_option_state t v2)).
 
         Local Instance abstract_interp_ident_Proper_arrow s d
           : Proper (eq ==> abstract_domain'_R s ==> abstract_domain'_R d) (abstract_interp_ident (type.arrow s d))
           := abstract_interp_ident_Proper (type.arrow s d).
+
+        Local Ltac handle_Forall2_step :=
+          first [ match goal with
+                  | [ |- List.Forall2 _ ?x ?x ] => rewrite Forall2_Forall; cbv [Proper]
+                  | [ |- List.Forall2 _ (List.map _ _) (List.map _ _) ] => rewrite Forall2_map_map_iff
+                  | [ |- List.Forall2 _ (List.combine _ _) (List.combine _ _) ]
+                    => eapply Forall2_combine; [ intros | eassumption | eassumption ]
+                  | [ |- List.Forall2 _ (List.combine ?x _) (List.combine ?x _) ]
+                    => eapply Forall2_combine;
+                       [ intros
+                       | instantiate (1:=fun a b => a = b /\ List.In a x);
+                         rewrite Forall2_Forall, Forall_forall; cbv [Proper]; auto
+                       | eassumption ]
+                  | [ H : expr.wf _ ?d1 ?d2, H' : List.Forall2 (expr.wf _) ?xs ?ys
+                      |- expr.wf ?G (nth_default ?d1 ?xs ?n) (nth_default ?d2 ?ys ?n) ]
+                    => cut (List.Forall2 (expr.wf G) xs ys /\ expr.wf G d1 d2);
+                       [ rewrite Forall2_forall_iff'';
+                         let H := fresh in intros [? H]; apply H
+                       | ]
+                  end ].
+
 
         Section with_var2.
           Context {var1 var2 : type -> Type}.
@@ -472,7 +494,9 @@ Module Compilers.
                                                                                                                                                   |- ?R ?a1 ?a2 ]
                                   => apply H
                                 | [ H : List.nth_error ?l ?n' = Some ?v |- List.In (?v, _) (List.combine ?l _) ] => apply nth_error_In with (n:=n')
+                                | [ H : length ?x = length ?y |- context[length ?x] ] => rewrite H
                                 end
+                              | handle_Forall2_step
                               | break_innermost_match_step
                               | break_innermost_match_hyps_step
                               | progress expr.invert_match
@@ -580,6 +604,7 @@ Module Compilers.
                            | progress expr.invert_subst
                            | progress expr.inversion_wf_constr
                            | progress expr.inversion_expr
+                           | handle_Forall2_step
                            | wf_safe_t_step
                            | progress destruct_head' (@partial.wf_value)
                            | solve [ eapply wf_annotate; wf_t; try apply DefaultValue.expr.base.wf_default
@@ -734,11 +759,10 @@ Module Compilers.
         intros; subst; cbv [option_map extract_list_state]; break_innermost_match; reflexivity.
       Qed.
       Lemma extract_list_state_rel
-        : forall t v1 v2, abstract_domain'_R _ v1 v2 -> forall l1 l2, extract_list_state t v1 = Some l1 -> extract_list_state t v2 = Some l2 -> forall vv1 vv2, List.In (vv1, vv2) (List.combine l1 l2) -> @abstract_domain'_R t vv1 vv2.
+        : forall t v1 v2, abstract_domain'_R _ v1 v2 -> forall l1 l2, extract_list_state t v1 = Some l1 -> extract_list_state t v2 = Some l2 -> List.Forall2 (@abstract_domain'_R t) l1 l2.
       Proof.
         intros; cbv [extract_list_state] in *; subst; inversion_option; subst.
-        rewrite combine_same, List.in_map_iff in *.
-        destruct_head'_ex; destruct_head'_and; inversion_prod; subst; reflexivity.
+        now rewrite Forall2_Forall, Forall_forall; cbv [Proper].
       Qed.
 
       Lemma extract_option_state_rel

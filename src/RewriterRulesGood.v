@@ -20,6 +20,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.ForallIn.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
@@ -282,6 +283,29 @@ Module Compilers.
                     exfalso; clear -H H'; congruence
                 | [ H : Compile.wf_value _ (reify_list _) (reify_list _) |- _ ]
                   => hnf in H; rewrite expr.wf_reify_list in H
+                | [ |- List.Forall2 _ ?x ?x ] => rewrite Forall2_Forall; cbv [Proper]
+                | [ |- List.Forall2 _ (List.map _ _) (List.map _ _) ] => rewrite Forall2_map_map_iff
+                | [ |- List.Forall2 _ (List.repeat _ _) (List.repeat _ _) ]
+                  => rewrite Forall2_repeat_iff
+                | [ |- List.Forall2 _ (List.rev _) (List.rev _) ]
+                  => rewrite Forall2_rev_iff
+                | [ |- List.Forall _ (seq _ _) ] => rewrite Forall_seq
+                | [ |- List.Forall2 _ (firstn _ _) (firstn _ _) ]
+                  => now apply Forall2_firstn
+                | [ |- List.Forall2 _ (skipn _ _) (skipn _ _) ]
+                  => now apply Forall2_skipn
+                | [ |- List.Forall2 _ (List.combine _ _) (List.combine _ _) ]
+                  => eapply Forall2_combine; [ intros | eassumption | eassumption ]
+                | [ |- List.Forall2 _ (update_nth _ _ _) (update_nth _ _ _) ]
+                  => apply Forall2_update_nth; intros
+                | [ H : List.Forall2 _ ?x ?y |- context[@List.length ?T ?y] ]
+                  => rewrite <- (@eq_length_Forall2 _ T _ x y H)
+                | [ H : Forall2 (expr.wf ?G) ?xs ?ys |- Forall2 (fun a b => UnderLets.wf (fun G' => expr.wf G') ?G _ _) ?xs ?ys ]
+                  => eapply Forall2_Proper_impl; [ .. | exact H ]; try reflexivity; repeat intro
+                | [ H : Forall2 ?P ?xs ?ys, Hx : nth_error ?xs ?n = _, Hy : nth_error ?ys ?n = _ |- _ ]
+                  => let H' := fresh in
+                     pose proof H as H';
+                     rewrite Forall2_forall_iff_nth_error in H'; specialize (H' n); rewrite Hx, Hy in H'; clear n Hx Hy
                 | [ H : length ?l = length ?l' |- context[length ?l] ] => rewrite H
                 | [ H : context[combine (firstn ?n _) (firstn ?n _)] |- _ ] => rewrite <- firstn_combine in H
                 | [ H : context[combine (skipn ?n _) (skipn ?n _)] |- _ ] => rewrite <- skipn_combine in H

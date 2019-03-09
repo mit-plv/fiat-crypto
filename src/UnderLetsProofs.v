@@ -8,10 +8,12 @@ Require Import Crypto.UnderLets.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Import Coq.Lists.List ListNotations. Local Open Scope list_scope.
 
 Import EqNotations.
@@ -285,7 +287,7 @@ Module Compilers.
             { eapply He; eauto; rewrite ?app_assoc; eauto. } }
         Qed.
 
-        Lemma wf_splice_list_no_order {A1 B1 A2 B2}
+        Lemma wf_splice_list_no_order_nth_error {A1 B1 A2 B2}
               {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
               {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
               G
@@ -317,6 +319,32 @@ Module Compilers.
                            | [ H : context[nth_error (combine _ _) _] |- _ ]
                              => rewrite ListUtil.nth_error_combine in H
                            end ].
+        Qed.
+
+        Lemma wf_splice_list_no_order {A1 B1 A2 B2}
+              {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
+              {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
+              G
+              (x1 : list (@UnderLets var1 A1)) (x2 : list (@UnderLets var2 A2))
+              (P_Proper_list : forall G1 G2 a1 a2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                  -> P G1 a1 a2 -> P G2 a1 a2)
+              (Hx : List.Forall2 (wf P G) x1 x2)
+              (e1 : list A1 -> @UnderLets var1 B1) (e2 : list A2 -> @UnderLets var2 B2)
+              (He : forall G' a1 a2, (exists seg, G' = seg ++ G)
+                                     -> length a1 = length x1
+                                     -> length a2 = length x2
+                                     -> List.Forall2 (P G') a1 a2
+                                     -> @wf _ _ Q G' (e1 a1) (e2 a2))
+          : @wf _ _ Q G (splice_list x1 e1) (splice_list x2 e2).
+        Proof.
+          setoid_rewrite Forall2_forall_In_combine_iff in He.
+          apply @wf_splice_list_no_order_nth_error with (P:=P); try assumption;
+            eauto using eq_length_Forall2.
+          { intro n; rewrite Forall2_forall_iff_nth_error in Hx; specialize (Hx n).
+            intros; cbv [option_eq] in *; break_innermost_match_hyps; inversion_option; subst; assumption. }
+          { rewrite Forall2_forall_In_combine_iff in Hx; destruct Hx.
+            intros; eapply He; try apply conj; eauto; congruence. }
         Qed.
 
         Lemma wf_list_rect {A B Pnil Pcons ls A' B' Pnil' Pcons' ls'} {RA : A -> A' -> Prop} {RB G}
@@ -707,6 +735,10 @@ Module Compilers.
                          | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e2 = Some _, H'' : reflect_list ?e1 = None |- _ ]
                            => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
                          | [ H : expr.wf _ (reify_list _) (reify_list _) |- _ ] => apply expr.wf_reify_list in H
+                         | [ H : List.Forall2 _ ?xs ?ys |- _ ]
+                           => match xs with nil => idtac | _::_ => idtac end;
+                              match ys with nil => idtac | _::_ => idtac end;
+                              inversion H; clear H
                          end
                        | progress subst
                        | progress destruct_head' False
@@ -739,6 +771,8 @@ Module Compilers.
                        | match goal with |- wf _ _ _ _ => constructor end
                        | match goal with
                          | [ H : context[wf _ _ _ _] |- wf _ _ _ _ ] => apply H; eauto with nocore
+                         | [ H : Forall2 (expr.wf _) ?xs ?ys |- Forall2 (expr.wf _) ?xs ?ys ]
+                           => eapply Forall2_Proper_impl; [ .. | exact H ]; repeat intro; try reflexivity
                          end
                        | progress wf_unsafe_t_step
                        | match goal with
@@ -765,7 +799,7 @@ Module Compilers.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.
           all: lazymatch goal with
-               | [ H : length ?l1 = length ?l2 |- _ ]
+               | [ |- context[List.Forall2 _ ?l1 ?l2] ]
                  => is_var l1; is_var l2; revert dependent l2; induction l1; intro l2; destruct l2; intros
                end;
             wf_reify_and_let_binds_base_cps_t Hk.
@@ -899,6 +933,10 @@ Module Compilers.
                            => pose proof (fun x y pf => H x y (or_introl pf));
                               pose proof (fun x y pf => H x y (or_intror pf));
                               clear H
+                         | [ H : List.Forall2 _ ?xs ?ys |- _ ]
+                           => match xs with nil => idtac | _::_ => idtac end;
+                              match ys with nil => idtac | _::_ => idtac end;
+                              inversion H; clear H
                          end
                        | progress interp_unsafe_t_step
                        | match goal with
@@ -938,7 +976,7 @@ Module Compilers.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.
           all: lazymatch goal with
-               | [ H : length ?l1 = length ?l2 |- _ ]
+               | [ |- context[List.Forall2 _ ?l1 ?l2 ] ]
                  => is_var l1; is_var l2; revert dependent l2; induction l1; intro l2; destruct l2; intros
                end;
             interp_to_expr_reify_and_let_binds_base_cps_t Hk.
