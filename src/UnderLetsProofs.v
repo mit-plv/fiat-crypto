@@ -228,6 +228,13 @@ Module Compilers.
           intro Hwf; induction Hwf; cbn [to_expr]; [ assumption | constructor; auto ].
         Qed.
 
+        Lemma wf_of_expr {t} (x : @expr var1 t) (y : @expr var2 t)
+              G
+          : expr.wf G x y -> wf (fun G => expr.wf G) G (of_expr x) (of_expr y).
+        Proof.
+          intro Hwf; induction Hwf; cbn [of_expr]; repeat constructor; auto.
+        Qed.
+
         Lemma wf_splice {A1 B1 A2 B2}
               {P : list { t : type & var1 t * var2 t }%type -> A1 -> A2 -> Prop}
               {Q : list { t : type & var1 t * var2 t }%type -> B1 -> B2 -> Prop}
