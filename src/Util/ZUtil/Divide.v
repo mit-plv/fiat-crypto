@@ -33,4 +33,11 @@ Module Z.
       apply Zmod_divide; omega || auto.
     }
   Qed.
+
+  Lemma divide_pow_le b n m : 0 <= n <= m -> (b ^ n | b ^ m).
+  Proof.
+    intros. replace m with (n + (m - n)) by ring.
+    rewrite Z.pow_add_r by lia.
+    apply Z.divide_factor_l.
+  Qed.
 End Z.
