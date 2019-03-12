@@ -41,4 +41,28 @@ Module Z.
   Lemma two_p_two_eq_four : 2^(2) = 4.
   Proof. reflexivity. Qed.
   Hint Rewrite <- two_p_two_eq_four : push_Zpow.
+
+  Lemma pow_pos_le a b : 0 < a -> 0 < b -> a <= a ^ b.
+  Proof.
+    intros; transitivity (a ^ 1).
+    { rewrite Z.pow_1_r; reflexivity. }
+    { apply Z.pow_le_mono; auto with zarith. }
+  Qed.
+  Hint Resolve pow_pos_le : zarith.
+
+  Lemma pow_pos_lt a b : 1 < a -> 1 < b -> a < a ^ b.
+  Proof.
+    intros; eapply Z.le_lt_trans with (m:=a ^ 1).
+    { rewrite Z.pow_1_r; reflexivity. }
+    { apply Z.pow_lt_mono_r; auto with zarith. }
+  Qed.
+  Hint Resolve pow_pos_lt : zarith.
+
+  Lemma pow_div_base a b : a <> 0 -> 0 < b -> a ^ b / a = a ^ (b - 1).
+  Proof. intros; rewrite Z.pow_sub_r, Z.pow_1_r; lia. Qed.
+  Hint Rewrite pow_div_base using zutil_arith : pull_Zpow.
+
+  Lemma pow_mul_base a b : 0 <= b -> a * a ^ b = a ^ (b + 1).
+  Proof. intros; rewrite <-Z.pow_succ_r, <-Z.add_1_r by lia; reflexivity. Qed.
+  Hint Rewrite pow_mul_base using zutil_arith : pull_Zpow.
 End Z.
