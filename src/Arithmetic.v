@@ -3656,6 +3656,13 @@ Module UniformWeight.
       push_Zmod. autorewrite with zsimplify. reflexivity. }
     { f_equal; lia. }
   Qed.
+
+  Lemma mod_mod_uweight lgr (Hr : 0 < lgr) a i j :
+    (i <= j)%nat -> (a mod (uweight lgr j)) mod (uweight lgr i) = a mod (uweight lgr i).
+  Proof.
+    intros. rewrite <-Znumtheory.Zmod_div_mod; auto using uwprops; [ ].
+    rewrite !uweight_eq_alt'. apply Divide.Z.divide_pow_le. nia.
+  Qed.
 End UniformWeight.
 
 Module WordByWordMontgomery.
@@ -5088,23 +5095,6 @@ Module BarrettReduction.
 
       Section Proofs.
 
-        (* TODO: move *)
-        Lemma divides_pow_le b n m : 0 <= n <= m -> (b ^ n | b ^ m).
-        Proof.
-          intros. replace m with (n + (m - n)) by ring.
-          rewrite Z.pow_add_r by lia.
-          apply Z.divide_factor_l.
-        Qed.
-
-        (* TODO: move to UW or Weight *)
-        Lemma mod_mod_weight a i j :
-          (i <= j)%nat -> (a mod (w j)) mod (w i) = a mod (w i).
-        Proof.
-          intros. rewrite <-Znumtheory.Zmod_div_mod; auto; [ ].
-          rewrite !UniformWeight.uweight_eq_alt'.
-          apply divides_pow_le. nia.
-        Qed.
-
         Lemma shiftr'_correct m n :
           forall t tn,
             (m <= tn)%nat -> 0 <= t < w tn -> 0 <= n < width ->
@@ -5135,7 +5125,7 @@ Module BarrettReduction.
             rewrite <-Znumtheory.Zmod_div_mod by
                 (try solve [Z.zero_bounds];
                  rewrite <-!Z.pow_add_r by auto with zarith;
-                 auto using Z.mul_divide_mono_r, divides_pow_le with zarith).
+                 auto using Z.mul_divide_mono_r, Divide.Z.divide_pow_le with zarith).
             rewrite Z.div_div_comm by auto with zarith.
             repeat (f_equal; try ring). }
         Qed.
@@ -5258,35 +5248,6 @@ Module BarrettReduction.
                  end.
         Qed.
 
-        (* TODO: move *)
-        Lemma pow_pos_le a b : 0 < a -> 0 < b -> a <= a ^ b.
-        Proof.
-          intros; transitivity (a ^ 1).
-          { rewrite Z.pow_1_r; reflexivity. }
-          { apply Z.pow_le_mono; auto with zarith. }
-        Qed.
-        Hint Resolve pow_pos_le : zarith.
-
-        (* TODO: move *)
-        Lemma pow_pos_lt a b : 1 < a -> 1 < b -> a < a ^ b.
-        Proof.
-          intros; eapply Z.le_lt_trans with (m:=a ^ 1).
-          { rewrite Z.pow_1_r; reflexivity. }
-          { apply Z.pow_lt_mono_r; auto with zarith. }
-        Qed.
-        Hint Resolve pow_pos_lt : zarith.
-
-        (* TODO: move *)
-        Lemma pow_div_base a b : a <> 0 -> 0 < b -> a ^ b / a = a ^ (b - 1).
-        Proof. intros; rewrite Z.pow_sub_r, Z.pow_1_r; lia. Qed.
-        Hint Rewrite pow_div_base using zutil_arith : pull_Zpow.
-
-        (* TODO: move *)
-        Lemma pow_mul_base a b : 0 <= b -> a * a ^ b = a ^ (b + 1).
-        Proof. intros; rewrite <-Z.pow_succ_r, <-Z.add_1_r by lia; reflexivity. Qed.
-        Hint Rewrite pow_mul_base using zutil_arith : pull_Zpow.
-
-
         (* improved! *)
         Ltac zero_bounds' :=
               repeat match goal with
@@ -5406,22 +5367,11 @@ Module BarrettReduction.
         Qed.
         Hint Rewrite cond_subM_correct : pull_partition.
 
-        (* TODO: unused?*)
         Lemma w_eq_22k : w (sz * 2) = 2 ^ (2 * k).
         Proof.
           replace (sz * 2)%nat with (sz + sz)%nat by lia.
           rewrite UniformWeight.uweight_sum_indices, w_eq_2k, <-Z.pow_add_r by lia.
           f_equal; lia.
-        Qed.
-
-        (* TODO: unused?*)
-        Lemma q3M_eq x q3 (b:bool) :
-          0 <= x < M * 2 ^ k ->
-          q3 = x / M + (if b then -1 else 0) ->
-          q3 * M = x - x mod M - (if b then M else 0).
-        Proof.
-          intros. assert (0 < 2^(k-1)) by Z.zero_bounds. rewrite Z.mod_eq by lia.
-          subst q3. break_innermost_match; ring.
         Qed.
 
         (* TODO: move *)
@@ -5538,7 +5488,7 @@ Module BarrettReduction.
                 rewrite <-Z.mod_pull_div by Z.zero_bounds.
                 autorewrite with zsimplify. reflexivity. }
           cbv [fancy_reduce' reduce q1 q3 shiftr r cond_subM].
-          autorewrite with natsimplify. (* TODO: maybe need to get rid of hd 0? *)
+          autorewrite with natsimplify.
           cbv [shiftr' seq]. autorewrite with push_map push_nth_default.
           subst fancy_reduce; reflexivity.
         Qed.
