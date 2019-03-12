@@ -533,8 +533,6 @@ Module Weight.
             (weight_multiples : forall i, weight (S i) mod weight i = 0)
             (weight_divides : forall i : nat, 0 < weight (S i) / weight i).
 
-    Local Hint Resolve Z.positive_is_nonzero Z.lt_gt Nat2Z.is_nonneg.
-
     Lemma weight_multiples_full' j : forall i, weight (i+j) mod weight i = 0.
     Proof using weight_positive weight_multiples.
       induction j; intros;
@@ -542,7 +540,7 @@ Module Weight.
                | _ => rewrite Nat.add_succ_r
                | _ => rewrite IHj
                | |- context [weight (S ?x) mod weight _] =>
-                 rewrite (Z.div_mod (weight (S x)) (weight x)), weight_multiples by auto
+                 rewrite (Z.div_mod (weight (S x)) (weight x)), weight_multiples by auto with zarith
                | _ => progress autorewrite with push_Zmod natsimplify zsimplify_fast
                | _ => reflexivity
                end.
@@ -555,10 +553,10 @@ Module Weight.
     Qed.
 
     Lemma weight_divides_full j i : (i <= j)%nat -> 0 < weight j / weight i.
-    Proof using weight_positive weight_multiples. auto using Z.gt_lt, Z.div_positive_gt_0, weight_multiples_full. Qed.
+    Proof using weight_positive weight_multiples. auto using Z.gt_lt, Z.div_positive_gt_0, weight_multiples_full with zarith. Qed.
 
     Lemma weight_div_mod j i : (i <= j)%nat -> weight j = weight i * (weight j / weight i).
-    Proof using weight_positive weight_multiples. intros. apply Z.div_exact; auto using weight_multiples_full. Qed.
+    Proof using weight_positive weight_multiples. intros. apply Z.div_exact; auto using weight_multiples_full with zarith. Qed.
 
     Lemma weight_mod_pull_div n x :
       x mod weight (S n) / weight n =
@@ -567,11 +565,11 @@ Module Weight.
       replace (weight (S n)) with (weight n * (weight (S n) / weight n));
       repeat match goal with
              | _ => progress autorewrite with zsimplify_fast
-             | _ => rewrite Z.mul_div_eq_full by auto
-             | _ => rewrite Z.mul_div_eq' by auto
+             | _ => rewrite Z.mul_div_eq_full by auto with zarith
+             | _ => rewrite Z.mul_div_eq' by auto with zarith
              | _ => rewrite Z.mod_pull_div
-             | _ => rewrite weight_multiples by auto
-             | _ => solve [auto using Z.lt_le_incl]
+             | _ => rewrite weight_multiples by auto with zarith
+             | _ => solve [auto with zarith]
              end.
     Qed.
 
@@ -582,11 +580,11 @@ Module Weight.
       replace (weight (S n)) with (weight n * (weight (S n) / weight n));
       repeat match goal with
              | _ => progress autorewrite with zdiv_to_mod zsimplify_fast
-             | _ => rewrite Z.mul_div_eq_full by auto
-             | _ => rewrite Z.mul_div_eq' by auto
-             | _ => rewrite Z.div_div by auto
+             | _ => rewrite Z.mul_div_eq_full by auto with zarith
+             | _ => rewrite Z.mul_div_eq' by auto with zarith
+             | _ => rewrite Z.div_div by auto with zarith
              | _ => rewrite weight_multiples by assumption
-             | _ => solve [auto using Z.lt_le_incl]
+             | _ => solve [auto with zarith]
              end.
     Qed.
   End Weight.
@@ -1547,7 +1545,6 @@ Section mod_ops.
   Local Hint Immediate (weight_positive wprops).
   Local Hint Immediate (weight_multiples wprops).
   Local Hint Immediate (weight_divides wprops).
-  Local Hint Resolve Z.positive_is_nonzero Z.lt_gt.
 
   Local Lemma weight_1_gt_1 : weight 1 > 1.
   Proof using limbwidth_good.
@@ -1580,10 +1577,10 @@ Section mod_ops.
          As eval_carry_mulmod.
   Proof.
     intros.
-    rewrite <-eval_mulmod with (s:=s) (c:=c) by auto.
+    rewrite <-eval_mulmod with (s:=s) (c:=c) by auto with zarith.
     etransitivity;
       [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
-          by auto; reflexivity ].
+          by auto with zarith; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carry_mulmod; reflexivity.
   Qed.
@@ -1596,10 +1593,10 @@ Section mod_ops.
          As eval_carry_squaremod.
   Proof.
     intros.
-    rewrite <-eval_squaremod with (s:=s) (c:=c) by auto.
+    rewrite <-eval_squaremod with (s:=s) (c:=c) by auto with zarith.
     etransitivity;
       [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
-          by auto; reflexivity ].
+          by auto with zarith; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carry_squaremod; reflexivity.
   Qed.
@@ -1613,12 +1610,12 @@ Section mod_ops.
   Proof.
     intros.
     push_Zmod.
-    rewrite <-eval_encode with (s:=s) (c:=c) (x:=x) (weight:=weight) (n:=n) by auto.
+    rewrite <-eval_encode with (s:=s) (c:=c) (x:=x) (weight:=weight) (n:=n) by auto with zarith.
     pull_Zmod.
-    rewrite<-eval_mulmod with (s:=s) (c:=c) by (auto; distr_length).
+    rewrite<-eval_mulmod with (s:=s) (c:=c) by (auto with zarith; distr_length).
     etransitivity;
       [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
-          by auto; reflexivity ].
+          by auto with zarith; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carry_scmulmod; reflexivity.
   Qed.
@@ -1633,7 +1630,7 @@ Section mod_ops.
     intros.
     etransitivity;
       [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
-          by auto; reflexivity ].
+          by auto with zarith; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carrymod; reflexivity.
   Qed.
@@ -1647,7 +1644,7 @@ Section mod_ops.
          As eval_addmod.
   Proof.
     intros.
-    rewrite <-eval_add by auto.
+    rewrite <-eval_add by auto with zarith.
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst addmod; reflexivity.
   Qed.
@@ -1662,7 +1659,7 @@ Section mod_ops.
          As eval_submod.
   Proof.
     intros.
-    rewrite <-eval_sub with (coef:=coef) by auto.
+    rewrite <-eval_sub with (coef:=coef) by auto with zarith.
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst submod; reflexivity.
   Qed.
@@ -1676,7 +1673,7 @@ Section mod_ops.
          As eval_oppmod.
   Proof.
     intros.
-    rewrite <-eval_opp with (coef:=coef) by auto.
+    rewrite <-eval_opp with (coef:=coef) by auto with zarith.
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst oppmod; reflexivity.
   Qed.
@@ -1689,7 +1686,7 @@ Section mod_ops.
   Proof.
     intros.
     etransitivity.
-    2:rewrite <-@eval_encode with (weight:=weight) (n:=n) by auto; reflexivity.
+    2:rewrite <-@eval_encode with (weight:=weight) (n:=n) by auto with zarith; reflexivity.
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst encodemod; reflexivity.
   Qed.
@@ -1906,7 +1903,6 @@ Module Columns.
   Import Saturated. Import Partition. Import Weight.
   Section Columns.
     Context weight {wprops : @weight_properties weight}.
-    Hint Resolve Z.positive_is_nonzero Z.lt_gt.
 
     Definition eval n (x : list (list Z)) : Z := Positional.eval weight n (map sum x).
 
@@ -1918,8 +1914,6 @@ Module Columns.
       cbv [eval]; intros; subst. rewrite map_app. simpl map.
       apply Positional.eval_snoc; distr_length.
     Qed. Hint Rewrite eval_snoc using (solve [distr_length]) : push_eval.
-
-    Hint Rewrite <- Z.div_add' using omega : pull_Zdiv.
 
     Ltac cases :=
       match goal with
@@ -1966,7 +1960,7 @@ Module Columns.
                | |- context [list_rect _ _ _ ?ls] => rewrite single_list_rect_to_match; destruct ls
                | _ => progress (unfold flatten_step in *; fold flatten_step in * )
                | _ => rewrite Nat.add_1_r
-               | _ => rewrite Z.mul_div_eq_full by (auto; omega)
+               | _ => rewrite Z.mul_div_eq_full by (auto with zarith; omega)
                | _ => rewrite weight_multiples
                | _ => reflexivity
                | _ => solve [repeat (f_equal; try ring)]
@@ -1995,16 +1989,18 @@ Module Columns.
       Lemma flatten_column_div fw (xs : list Z) (fw_nz : fw <> 0) :
         snd (flatten_column fw xs)  = sum xs / fw.
       Proof using Type.
+        (* this hint is already in the database but Z.div_add_l' is triggered first and that screws things up *)
+        Hint Rewrite <- Z.div_add' using zutil_arith : pull_Zdiv.
         induction xs; simpl flatten_column; cbv [Let_In];
           repeat match goal with
                  | _ => rewrite IHxs
+                 | _ => rewrite <-Z.div_add' by zutil_arith
                  | _ => rewrite Z.mul_div_eq_full by omega
                  | _ => progress push
                  end.
       Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
 
       Hint Rewrite Positional.eval_nil : push_eval.
-      Hint Resolve Z.gt_lt.
 
       Lemma length_flatten_step digit state :
         length (fst (flatten_step digit state)) = S (length (fst state)).
@@ -2111,7 +2107,7 @@ Module Columns.
       Lemma eval_from_associational n p (n_nonzero:n<>0%nat\/p=nil) :
         eval n (from_associational n p) = Associational.eval p.
       Proof using wprops.
-        erewrite <-Positional.eval_from_associational by eauto.
+        erewrite <-Positional.eval_from_associational by eauto with zarith.
         induction p; [ autorewrite with push_eval; solve [auto] |].
         cbv [from_associational Positional.from_associational]; autorewrite with push_fold_right.
         fold (from_associational n p); fold (Positional.from_associational weight n p).
@@ -4927,7 +4923,6 @@ Module WordByWordMontgomery.
   End modops.
 End WordByWordMontgomery.
 
-Hint Rewrite Z2Nat.inj_succ using omega : push_Zto_nat. (* TODO: put in PullPush *)
 Module BarrettReduction.
   Import Partition.
   Section Generic.
@@ -5103,11 +5098,6 @@ Module BarrettReduction.
         cond_subM rt.
 
       Section Proofs.
-
-        (* TODO: move these? *)
-        Local Hint Resolve Z.lt_gt : zarith.
-        Hint Rewrite Z.div_add' using solve [auto with zarith] : zsimplify.
-
         Lemma shiftr'_correct m n :
           forall t tn,
             (m <= tn)%nat -> 0 <= t < w tn -> 0 <= n < width ->
@@ -5378,9 +5368,6 @@ Module BarrettReduction.
           rewrite UniformWeight.uweight_sum_indices, w_eq_2k, <-Z.pow_add_r by lia.
           f_equal; lia.
         Qed.
-
-        (* TODO: move *)
-        Hint Resolve Z.positive_is_nonzero Z.lt_gt : zarith.
 
         Lemma r_idea x q3 (b:bool) :
           0 <= x < M * 2 ^ k ->

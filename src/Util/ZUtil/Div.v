@@ -45,10 +45,10 @@ Module Z.
 
   Lemma div_add' a b c : c <> 0 -> (a + c * b) / c = a / c + b.
   Proof. intro; rewrite <- Z.div_add, (Z.mul_comm c); try lia. Qed.
-
   Lemma div_add_l' a b c : b <> 0 -> (b * a + c) / b = a + c / b.
   Proof. intro; rewrite <- Z.div_add_l, (Z.mul_comm b); lia. Qed.
-
+  Hint Rewrite Z.div_add' Z.div_add_l' using zutil_arith : push_Zdiv.
+  Hint Rewrite <- Z.div_add' Z.div_add_l' using zutil_arith : pull_Zdiv.
   Hint Rewrite div_add_l' div_add' using zutil_arith : zsimplify.
 
   Lemma div_sub a b c : c <> 0 -> (a - b * c) / c = a / c - b.
