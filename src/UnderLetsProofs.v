@@ -459,6 +459,48 @@ Module Compilers.
         Qed.
       End with_var.
 
+      Section with_var2.
+        Context {var1 var2 var1' var2' : type -> Type}.
+
+        Lemma wf_flat_map {T1 T2 e1 e2 f1 f2 f'1 f'2 G G'}
+              (R : forall t, list _ -> var1' t -> var2' t -> Prop)
+              (P : list _ -> T1 -> T2 -> Prop)
+              (HR : forall G1 G2,
+                  (forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)
+                  -> forall t e1 e2, R t G1 e1 e2 -> R t G2 e1 e2)
+              (Hwf : wf P G' e1 e2)
+              (Hf : forall G G',
+                  (forall t v1 v2,
+                      In (existT _ t (v1, v2)) G' -> R t G v1 v2)
+                  -> forall t e1 e2,
+                    expr.wf G' e1 e2
+                    -> wf (fun G' => expr.wf G') G (f1 t e1) (f2 t e2))
+              (Hf' : forall t' G' (v1 : var1 t') (v2 : var2 t'),
+                  R t' (existT _ t' (v1, v2) :: G') (f'1 t' v1) (f'2 t' v2))
+              (HG : forall t' v1' v2',
+                  In (existT _ t' (v1', v2')) G'
+                  -> R t' G v1' v2')
+          : wf
+              (fun G e1 e2
+               => exists G',
+                   (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> R t G v1 v2)
+                   /\ P G' e1 e2)
+              G
+              (@UnderLets.flat_map _ ident var1' ident var1 f1 f'1 T1 e1)
+              (@UnderLets.flat_map _ ident var2' ident var2 f2 f'2 T2 e2).
+        Proof using Type.
+          revert dependent G; induction Hwf; cbn [UnderLets.flat_map]; intros.
+          { constructor; hnf; eauto. }
+          { eapply @wf_splice; [ eapply Hf; eassumption | ].
+            intros; constructor; auto; intros.
+            match goal with H : _ |- _ => eapply H end.
+            cbn [List.In]; intros; destruct_head'_or; inversion_sigma; inversion_prod; subst; cbn [eq_rect fst snd] in *.
+            { apply Hf'. }
+            { destruct_head'_ex; subst.
+              eapply HR; revgoals; [ eapply HG | ]; wf_t. } }
+        Qed.
+      End with_var2.
+
       Section for_interp.
         Context {base_interp : base_type -> Type}
                 (ident_interp : forall t, ident t -> type.interp base_interp t).
