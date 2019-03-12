@@ -42,7 +42,7 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Section rmontred.
-  Context (N R N' : Z) (n nout : nat)
+  Context (N R N' : Z) (n : nat)
           (machine_wordsize : Z).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
@@ -92,14 +92,12 @@ Section rmontred.
             ((R' =? 0)%Z, Pipeline.No_modular_inverse "R⁻¹ mod N" R N);
             (negb ((R * R') mod N =? 1 mod N)%Z, Pipeline.Values_not_provably_equalZ "(R * R') mod N ≠ 1 mod N" ((R * R') mod N) (1 mod N));
             (negb ((N * N') mod R =? (-1) mod R)%Z, Pipeline.Values_not_provably_equalZ "(N * N') mod R ≠ (-1) mod R" ((N * N') mod R) ((-1) mod R));
-            (negb (nout =? 2)%nat, Pipeline.Values_not_provably_equalZ "nout ≠ 2" (Z.of_nat nout) 2);
-            (negb (n =? 2)%nat, Pipeline.Values_not_provably_equalZ "n ≠ 2" (Z.of_nat n) 2);
             (negb (2 ^ machine_wordsize =? R)%Z, Pipeline.Values_not_provably_equalZ "2^machine_wordsize ≠ R" (2^machine_wordsize) R);
             ((negb (0 <? N))%Z, Pipeline.Value_not_ltZ "N ≤ 0" 0 N);
             ((negb (N <? R))%Z, Pipeline.Value_not_ltZ "R ≤ N" R N);
             ((negb (0 <=? N'))%Z, Pipeline.Value_not_leZ "N' < 0" 0 N');
             ((negb (N' <? R))%Z, Pipeline.Value_not_ltZ "R ≤ N'" R N');
-            ((negb (Z.of_nat n <=? machine_wordsize))%Z, Pipeline.Value_not_leZ "machine_wordsize < n" (Z.of_nat n) machine_wordsize)].
+            ((negb (2 <=? machine_wordsize))%Z, Pipeline.Value_not_leZ "machine_wordsize < 2" 2 machine_wordsize)].
 
   Local Arguments Z.mul !_ !_.
   Local Ltac use_curve_good_t :=
@@ -123,10 +121,8 @@ Section rmontred.
       /\ EquivModulo.Z.equiv_modulo R (N * N') (-1)
       /\ EquivModulo.Z.equiv_modulo N (R * R') 1
       /\ n <> 0%nat
-      /\ Z.of_nat n <= machine_wordsize
-      /\ 2 ^ machine_wordsize = R
-      /\ n = 2%nat
-      /\ nout = 2%nat.
+      /\ 2 <= machine_wordsize
+      /\ 2 ^ machine_wordsize = R.
   Proof using curve_good.
     clear -curve_good.
     cbv [check_args fold_right] in curve_good.
@@ -147,8 +143,6 @@ Section rmontred.
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
   Qed.
 
   Definition montred
@@ -157,7 +151,7 @@ Section rmontred.
          fancy_args (* fancy *)
          possible_values
          (reified_montred_gen
-            @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 2%nat @ GallinaReify.Reify 2%nat)
+            @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify machine_wordsize)
          (bound, (bound, tt))
          bound.
 
@@ -178,13 +172,13 @@ Section rmontred.
            | progress Z.rewrite_mod_small ].
 
   Local Strategy -100 [montred]. (* needed for making Qed not take forever *)
+  Local Strategy -100 [montred' reified_montred_gen]. (* needed for making prove_correctness not take forever *)
   Lemma montred_correct res (Hres : montred = Success res)
     : montred_correct N R R' (expr.Interp (@ident.gen_interp cast_oor) res).
-  Proof using n nout curve_good.
+  Proof using n curve_good.
     cbv [montred_correct]; intros.
-    rewrite <- MontgomeryReduction.montred'_correct with (R:=R) (N':=N') (Zlog2R:=machine_wordsize) (n:=n) (nout:=nout) (lo:=lo) (hi:=hi) by solve_montred_preconditions.
+    rewrite <- MontgomeryReduction.montred'_correct with (R:=R) (N':=N') (Zlog2R:=machine_wordsize) (n:=n) (lo:=lo) (hi:=hi) by solve_montred_preconditions.
     prove_correctness' ltac:(fun _ => idtac) use_curve_good.
-    { congruence. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower].
       rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower].

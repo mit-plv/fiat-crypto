@@ -31,7 +31,7 @@ Module Montgomery256.
   Lemma montred256_correct :
     COperationSpecifications.MontgomeryReduction.montred_correct N R R' (expr.Interp (@ident.gen_interp cast_oor) montred256).
   Proof.
-    apply montred_correct with (n:=2%nat) (nout:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N').
+    apply montred_correct with (n:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N').
     { lazy. reflexivity. }
     { apply montred256_eq. }
   Qed.
@@ -39,10 +39,10 @@ Module Montgomery256.
   Lemma montred'_correct_specialized R' (R'_correct : Z.equiv_modulo N (R * R') 1) :
     forall (lo hi : Z),
       0 <= lo < R -> 0 <= hi < R -> 0 <= lo + R * hi < R * N ->
-      MontgomeryReduction.montred' N R N' (Z.log2 R) 2 2 lo hi = ((lo + R * hi) * R') mod N.
+      MontgomeryReduction.montred' N R N' (Z.log2 R) lo hi = ((lo + R * hi) * R') mod N.
   Proof.
     intros.
-    apply MontgomeryReduction.montred'_correct with (T:=lo + R * hi) (R':=R');
+    apply MontgomeryReduction.montred'_correct with (T:=lo + R * hi) (R':=R') (n:=2%nat);
       try match goal with
             | |- context[R'] => assumption
             | |- context [lo] =>
