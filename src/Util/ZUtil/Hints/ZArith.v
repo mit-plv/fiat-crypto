@@ -8,3 +8,5 @@ Hint Resolve (fun n m => proj1 (Z.pred_le_mono n m)) : zarith.
 Hint Resolve (fun a b => proj2 (Z.lor_nonneg a b)) : zarith.
 
 Hint Resolve Zmult_le_compat_r Zmult_le_compat_l Z_div_le Z.add_le_mono Z.sub_le_mono : zarith.
+Hint Resolve Z.lt_gt Z.lt_le_incl : zarith.
+Hint Resolve Nat2Z.is_nonneg : zarith.

@@ -14,6 +14,8 @@ Hint Rewrite Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_dis
 Hint Rewrite <- Z.mul_add_distr_l Z.mul_add_distr_r Z.mul_sub_distr_l Z.mul_sub_distr_r : pull_Zmul.
 Hint Rewrite Z.div_div using zutil_arith : pull_Zdiv.
 Hint Rewrite <- Z.div_div using zutil_arith : push_Zdiv.
+Hint Rewrite Z.div_add Z.div_add_l using zutil_arith : push_Zdiv.
+Hint Rewrite <- Z.div_add Z.div_add_l using zutil_arith : pull_Zdiv.
 Hint Rewrite <- Z.mul_mod Z.add_mod Zminus_mod using zutil_arith : pull_Zmod.
 Hint Rewrite Zminus_mod_idemp_l Zminus_mod_idemp_r : pull_Zmod.
 Hint Rewrite Z_mod_nz_opp_full using zutil_arith : push_Zmod.
@@ -21,6 +23,7 @@ Hint Rewrite Z_mod_same_full : push_Zmod.
 Hint Rewrite Nat2Z.id : push_Zof_nat.
 Hint Rewrite N2Z.id : push_Zto_N.
 Hint Rewrite N2Z.id : pull_Zof_N.
+Hint Rewrite Z2Nat.id Z2Nat.inj_succ using zutil_arith : push_Zto_nat.
 Hint Rewrite N2Z.inj_pos N2Z.inj_abs_N N2Z.inj_add N2Z.inj_mul N2Z.inj_sub_max N2Z.inj_succ N2Z.inj_pred_max N2Z.inj_min N2Z.inj_max N2Z.inj_div N2Z.inj_quot N2Z.inj_rem N2Z.inj_div2 N2Z.inj_pow N2Z.inj_0 nat_N_Z : push_Zof_N.
 Hint Rewrite N2Z.inj_compare N2Z.inj_testbit : pull_Zof_N.
 Hint Rewrite <- N2Z.inj_abs_N N2Z.inj_add N2Z.inj_mul N2Z.inj_sub_max N2Z.inj_succ N2Z.inj_pred_max N2Z.inj_min N2Z.inj_max N2Z.inj_div N2Z.inj_quot N2Z.inj_rem N2Z.inj_div2 N2Z.inj_pow : pull_Zof_N.
