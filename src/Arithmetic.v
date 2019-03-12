@@ -5243,20 +5243,6 @@ Module BarrettReduction.
                  end.
         Qed.
 
-        (* improved! *)
-        Ltac zero_bounds' :=
-              repeat match goal with
-                     | |- ?a <> 0 => apply Z.positive_is_nonzero
-                     | |- ?a > 0 => apply Z.lt_gt 
-                     | |- ?a >= 0 => apply Z.le_ge
-                     end;
-              try match goal with
-                  | |- 0 < ?a => Z.zero_bounds
-                  | |- 0 <= ?a => Z.zero_bounds
-                  end.
-        
-        Ltac zutil_arith ::= solve [ omega | Psatz.lia | auto with nocore | solve [zero_bounds'] ].
-
         Hint Rewrite UniformWeight.uweight_S UniformWeight.uweight_eq_alt' using lia : weight_to_pow.
         Hint Rewrite <-UniformWeight.uweight_S UniformWeight.uweight_eq_alt' using lia : pow_to_weight.
 
@@ -5270,6 +5256,9 @@ Module BarrettReduction.
           autorewrite with weight_to_pow pull_Zpow.
           apply Z.pow_le_mono_r; lia.
         Qed.
+
+        (* use zero_bounds in zutil_arith *)
+        Local Ltac zutil_arith ::= solve [ omega | Psatz.lia | auto with nocore | solve [Z.zero_bounds] ].
 
         Lemma muSelect_correct x :
           0 <= x < w (sz * 2) ->
@@ -5286,8 +5275,7 @@ Module BarrettReduction.
                    end.
           replace (x / (w (sz * 2 - 1)) / (2 ^ width / 2)) with (x / (2 ^ (k - 1)) / w sz) by
               (autorewrite with weight_to_pow pull_Zpow pull_Zdiv; do 2 f_equal; nia).
-
-          rewrite Z.div_between_0_if with (a:=x / 2^(k-1)) by (zero_bounds'; auto using q1_range).
+          rewrite Z.div_between_0_if with (a:=x / 2^(k-1)) by (Z.zero_bounds; auto using q1_range).
           break_innermost_match; try lia; autorewrite with zsimplify_fast; [ | ].
           { apply partition_eq_mod; auto with zarith. }
           { rewrite partition_0; reflexivity. }
