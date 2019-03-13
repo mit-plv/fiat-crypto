@@ -37,8 +37,10 @@ src/MiscCompilerPassesProofs.v
 src/Rewriter.v
 src/RewriterInterpProofs1.v
 src/RewriterProofs.v
+src/RewriterRules.v
 src/RewriterRulesGood.v
 src/RewriterRulesInterpGood.v
+src/RewriterRulesProofs.v
 src/RewriterWf1.v
 src/RewriterWf2.v
 src/SlowPrimeSynthesisExamples.v
