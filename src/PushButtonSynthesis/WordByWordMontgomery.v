@@ -33,7 +33,8 @@ Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.CStringification.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.

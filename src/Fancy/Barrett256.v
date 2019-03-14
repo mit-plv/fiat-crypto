@@ -2,7 +2,6 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.derive.Derive.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Crypto.Arithmetic.
 Require Import Crypto.COperationSpecifications. Import COperationSpecifications.BarrettReduction.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.

@@ -11,7 +11,7 @@ Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.UniquePose.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Core.
 Local Open Scope Z_scope. Local Open Scope bool_scope.
 
 (** These Imports are only needed for the ring proof *)

@@ -1,7 +1,7 @@
 (** * Push-Button Synthesis of Unsaturated Solinas: Reification Cache *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 

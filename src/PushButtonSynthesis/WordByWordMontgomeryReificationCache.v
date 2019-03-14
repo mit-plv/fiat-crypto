@@ -2,7 +2,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Language.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.

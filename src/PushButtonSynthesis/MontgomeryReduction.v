@@ -14,7 +14,8 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.FancyMongomeryReduction.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Fancy.Compiler.
@@ -35,7 +36,7 @@ Import COperationSpecifications.Primitives.
 
 Import COperationSpecifications.MontgomeryReduction.
 
-Import Associational Positional Arithmetic.MontgomeryReduction.
+Import Associational Positional MontgomeryReduction.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
