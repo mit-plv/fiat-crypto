@@ -5467,34 +5467,35 @@ Module BarrettReduction.
           end.
         Qed.
 
-        Axiom admit : forall {T}, T.
-        Derive fancy_reduce
-               SuchThat (
-                 forall xLow xHigh,
-                   0 <= xLow < 2 ^ k ->
-                   0 <= xHigh < M ->
-                   2 * (2 ^ (2 * k) mod M) <= 2 ^ (k + 1) - mu ->
-                   fancy_reduce xLow xHigh = (xLow + 2^k * xHigh) mod M)
-               As fancy_reduce_correct.
+        Definition fancy_reduce xLow xHigh := hd 0 (fancy_reduce' [xLow;xHigh]).
+
+        Lemma partition_2 xLow xHigh :
+          0 <= xLow < 2 ^ k ->
+          0 <= xHigh < M ->
+          partition w 2 (xLow + 2^k * xHigh) = [xLow;xHigh].
         Proof.
-          intros. pose proof w_eq_22k. assert (k = width) as width_eq_k by nia.
-          assert (0 < 2 ^ (width - 1)) by Z.zero_bounds.
-          pose proof (Z.mod_pos_bound (xLow + 2^width * xHigh) M ltac:(lia)).
-          transitivity (hd 0 (partition w sz ((xLow + 2^k * xHigh) mod M)));
-            [ | rewrite sz_eq_1; rewrite width_eq_k in *; cbv [Partition.partition map seq hd];
-                rewrite !UniformWeight.uweight_S, !weight_0 by auto with zarith lia;
-                autorewrite with zsimplify; reflexivity ].
-          rewrite <-fancy_reduce'_correct by nia.
-          replace (sz*2)%nat with 2%nat by (subst sz; lia).
-          rewrite width_eq_k in *. cbn [Partition.partition map seq].
+          replace k with width in M_range |- * by nia; intros. cbv [partition map seq].
           rewrite !UniformWeight.uweight_S, !weight_0 by auto with zarith lia.
           autorewrite with zsimplify.
           rewrite <-Z.mod_pull_div by Z.zero_bounds.
-          autorewrite with zsimplify.
-          cbv [fancy_reduce' reduce q1 q3 shiftr r cond_subM].
-          autorewrite with natsimplify.
-          cbv [shiftr' seq]. autorewrite with push_map push_nth_default.
-          subst fancy_reduce; reflexivity.
+          autorewrite with zsimplify. reflexivity.
+        Qed.
+
+        Lemma fancy_reduce_correct xLow xHigh :
+          0 <= xLow < 2 ^ k ->
+          0 <= xHigh < M ->
+          2 * (2 ^ (2 * k) mod M) <= 2 ^ (k + 1) - mu ->
+          fancy_reduce xLow xHigh = (xLow + 2^k * xHigh) mod M.
+        Proof.
+          assert (M < 2^width) by  (replace width with k by nia; lia).
+          assert (0 < 2 ^ (k - 1)) by Z.zero_bounds.
+          pose proof (Z.mod_pos_bound (xLow + 2^k * xHigh) M ltac:(lia)).
+          intros. cbv [fancy_reduce]. rewrite <-partition_2 by lia.
+          replace 2%nat with (sz*2)%nat by lia.
+          rewrite fancy_reduce'_correct by nia.
+          rewrite sz_eq_1; cbv [partition map seq hd].
+          rewrite !UniformWeight.uweight_S, !weight_0 by auto with zarith lia.
+          autorewrite with zsimplify. reflexivity.
         Qed.
       End Def.
     End Fancy.
