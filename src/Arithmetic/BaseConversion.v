@@ -215,14 +215,14 @@ Module BaseConversion.
     Lemma widemul_correct a b :
       length a = m ->
       length b = m ->
-      widemul a b = Partition.partition sw nout (seval m a * seval m b). 
+      widemul a b = partition sw nout (seval m a * seval m b). 
     Proof. apply mul_converted_partitions; auto with zarith. Qed.
 
     Derive widemul_inlined
            SuchThat (forall a b,
                         length a = m ->
                         length b = m ->
-                        widemul_inlined a b = Partition.partition sw nout (seval m a * seval m b))
+                        widemul_inlined a b = partition sw nout (seval m a * seval m b))
            As widemul_inlined_correct.
     Proof.
       intros.
@@ -238,7 +238,7 @@ Module BaseConversion.
            SuchThat (forall a b,
                         length a = m ->
                         length b = m ->
-                        widemul_inlined_reverse a b = Partition.partition sw nout (seval m a * seval m b))
+                        widemul_inlined_reverse a b = partition sw nout (seval m a * seval m b))
            As widemul_inlined_reverse_correct.
     Proof.
       intros.

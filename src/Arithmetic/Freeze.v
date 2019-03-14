@@ -3,6 +3,7 @@ Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
 Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ListUtil.
@@ -77,7 +78,7 @@ Module Freeze.
                    | rewrite Rows.conditional_add_partitions
                    | rewrite Rows.sub_partitions
                    | rewrite Rows.sub_div
-                   | rewrite Partition.eval_partition
+                   | rewrite eval_partition
                    | progress distr_length
                    | progress pull_Zmod (*
                    | progress break_innermost_match_step
@@ -115,7 +116,7 @@ Module Freeze.
           (Hp : 0 <= Positional.eval weight n p < 2*modulus)
           (Hplen : length p = n)
           (Hmlen : length m = n)
-      : @freeze n mask m p = Partition.partition weight n (Positional.eval weight n p mod modulus).
+      : @freeze n mask m p = partition weight n (Positional.eval weight n p mod modulus).
     Proof using wprops.
       pose proof (@weight_positive weight wprops n).
       pose proof (fun v => Z.mod_pos_bound v (weight n) ltac:(lia)).
@@ -124,7 +125,7 @@ Module Freeze.
       erewrite <- eval_freeze by eassumption.
       cbv [freeze]; eta_expand.
       rewrite Rows.conditional_add_partitions by (auto; rewrite Rows.sub_partitions; auto; distr_length).
-      rewrite !Partition.eval_partition by assumption.
+      rewrite !eval_partition by assumption.
       apply Partition.partition_Proper; [ assumption .. | ].
       cbv [Z.equiv_modulo].
       pull_Zmod; reflexivity.
@@ -251,7 +252,7 @@ Section freeze_mod_ops.
     : forall (f : list Z)
              (Hf : length f = n)
              (Hf_small : 0 <= eval weight n f < weight n),
-      to_bytes f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f).
+      to_bytes f = partition bytes_weight bytes_n (Positional.eval weight n f).
   Proof using Hn_nz limbwidth_good.
     clear -Hn_nz limbwidth_good.
     intros; cbv [to_bytes].
@@ -264,7 +265,7 @@ Section freeze_mod_ops.
              (Hf : length f = n)
              (Hf_small : 0 <= eval weight n f < weight n),
       eval bytes_weight bytes_n (to_bytesmod f) = eval weight n f
-      /\ to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f).
+      /\ to_bytesmod f = partition bytes_weight bytes_n (Positional.eval weight n f).
   Proof using Hn_nz limbwidth_good.
     split; apply eval_to_bytes || apply to_bytes_partitions; assumption.
   Qed.
@@ -274,7 +275,7 @@ Section freeze_mod_ops.
         (Hf : length f = n)
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
       (eval bytes_weight bytes_n (freeze_to_bytesmod f)) = (eval weight n f) mod m
-      /\ freeze_to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f mod m).
+      /\ freeze_to_bytesmod f = partition bytes_weight bytes_n (Positional.eval weight n f mod m).
   Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
     clear -m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
     intros; subst m s.
@@ -298,7 +299,7 @@ Section freeze_mod_ops.
     : forall (f : list Z)
         (Hf : length f = n)
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
-      freeze_to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f mod m).
+      freeze_to_bytesmod f = partition bytes_weight bytes_n (Positional.eval weight n f mod m).
   Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
     intros; now apply eval_freeze_to_bytesmod_and_partitions.
   Qed.
@@ -319,7 +320,7 @@ Section freeze_mod_ops.
   Lemma from_bytes_partitions
     : forall (f : list Z)
              (Hf_small : 0 <= eval bytes_weight bytes_n f < weight n),
-      from_bytes f = Partition.partition weight n (Positional.eval bytes_weight bytes_n f).
+      from_bytes f = partition weight n (Positional.eval bytes_weight bytes_n f).
   Proof using limbwidth_good.
     clear -limbwidth_good.
     intros; cbv [from_bytes].
@@ -336,7 +337,7 @@ Section freeze_mod_ops.
   Lemma from_bytesmod_partitions
     : forall (f : list Z)
              (Hf_small : 0 <= eval bytes_weight bytes_n f < weight n),
-      from_bytesmod f = Partition.partition weight n (Positional.eval bytes_weight bytes_n f).
+      from_bytesmod f = partition weight n (Positional.eval bytes_weight bytes_n f).
   Proof using limbwidth_good. apply from_bytes_partitions. Qed.
 
   Lemma eval_from_bytesmod_and_partitions
@@ -344,7 +345,7 @@ Section freeze_mod_ops.
              (Hf : length f = bytes_n)
              (Hf_small : 0 <= eval bytes_weight bytes_n f < weight n),
       eval weight n (from_bytesmod f) = eval bytes_weight bytes_n f
-      /\ from_bytesmod f = Partition.partition weight n (Positional.eval bytes_weight bytes_n f).
+      /\ from_bytesmod f = partition weight n (Positional.eval bytes_weight bytes_n f).
   Proof using limbwidth_good Hn_nz.
     now (split; [ apply eval_from_bytesmod | apply from_bytes_partitions ]).
   Qed.

@@ -30,7 +30,7 @@ Import Compilers.defaults.
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.BarrettReduction.
 
-Import Associational Positional Arithmetic.BarrettReduction.
+Import Associational Positional.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
@@ -71,12 +71,12 @@ Section rbarrett_red.
 
   Lemma mut_correct :
     0 < machine_wordsize ->
-    Partition.partition (UniformWeight.uweight machine_wordsize) (1 + 1) (muLow + 2 ^ machine_wordsize) = [muLow; 1].
+    partition (uweight machine_wordsize) (1 + 1) (muLow + 2 ^ machine_wordsize) = [muLow; 1].
   Proof.
     intros; cbn. subst muLow.
     assert (0 < 2^machine_wordsize) by ZeroBounds.Z.zero_bounds.
     pose proof (Z.mod_pos_bound mu (2^machine_wordsize) ltac:(lia)).
-    rewrite !UniformWeight.uweight_S, weight_0; auto using UniformWeight.uwprops with lia.
+    rewrite !uweight_S, weight_0; auto using uwprops with lia.
     autorewrite with zsimplify.
     Modulo.push_Zmod. autorewrite with zsimplify. Modulo.pull_Zmod.
     rewrite <-Modulo.Z.mod_pull_div by lia.
@@ -86,10 +86,10 @@ Section rbarrett_red.
   Lemma Mt_correct :
     0 < machine_wordsize ->
     2^(machine_wordsize - 1) < M < 2^machine_wordsize ->
-    Partition.partition (UniformWeight.uweight machine_wordsize) 1 M = [M].
+    partition (uweight machine_wordsize) 1 M = [M].
   Proof.
     intros; cbn. assert (0 < 2^(machine_wordsize-1)) by ZeroBounds.Z.zero_bounds.
-    rewrite !UniformWeight.uweight_S, weight_0; auto using UniformWeight.uwprops with lia.
+    rewrite !uweight_S, weight_0; auto using uwprops with lia.
     autorewrite with zsimplify. RewriteModSmall.Z.rewrite_mod_small.
     reflexivity.
   Qed.
@@ -177,7 +177,7 @@ Section rbarrett_red.
                  | progress cbv [weight]
                  | rewrite mut_correct
                  | rewrite Mt_correct
-                 | rewrite UniformWeight.uweight_eq_alt'
+                 | rewrite uweight_eq_alt'
                  | rewrite Z.pow_mul_r by lia ].
 
   Local Strategy -100 [barrett_red]. (* needed for making Qed not take forever *)
