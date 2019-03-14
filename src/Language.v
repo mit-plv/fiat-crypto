@@ -16,6 +16,7 @@ Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
+Require Import Crypto.Util.Tactics.ConstrFail.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Module Compilers.
@@ -64,10 +65,10 @@ Module Compilers.
     Ltac debug_leave_reify_in_context_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac reify_in_context e ret).
     Ltac debug_leave_reify_in_context_failure e
       := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_in_context e) in
-         constr:(I : I).
+         constr_fail.
     Ltac debug_leave_reify_base_type_failure e
       := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_base_type e) in
-         constr:(I : I).
+         constr_fail.
     Tactic Notation "idtac_reify_in_context_case" ident(case) :=
       idtac "reify_in_context:" case.
     Ltac debug_reify_in_context_case tac :=
@@ -392,10 +393,7 @@ Module Compilers.
       | zrange => type.zrange
       | interp (type.type_base ?T) => T
       | @einterp type interp (@Compilers.type.base type (type.type_base ?T)) => T
-      | _ => let __ := match goal with
-                      | _ => fail 1 "Unrecognized type:" ty
-                      end in
-            constr:(I : I)
+      | _ => constr_fail_with ltac:(fun _ => fail 1 "Unrecognized type:" ty)
       end.
     Ltac reify ty :=
       let __ := Reify.debug_enter_reify_base_type ty in
@@ -648,10 +646,7 @@ Module Compilers.
              lazymatch rb with
              | @Abs _ _ _ ?s ?d ?f
                => constr:(@LetIn base_type ident var s d ra f)
-             | ?rb => let __ := match goal with
-                                | _ => fail 1 "Invalid non-Abs function reification of" b "to" rb
-                                end in
-                      constr:(I : I)
+             | ?rb => constr_fail_with ltac:(fun _ => fail 1 "Invalid non-Abs function reification of" b "to" rb)
              end
         | (fun x : ?T => ?f)
           =>
@@ -697,10 +692,7 @@ Module Compilers.
                     remain.  However, if this does come up, having a
                     distinctive error message is much more useful for
                     debugging than the generic "no matching clause" *)
-              let __ := match goal with
-                        | _ => fail 1 "Failure to eliminate functional dependencies of" rf0
-                        end in
-              constr:(I : I)
+              constr_fail_with ltac:(fun _ => fail 1 "Failure to eliminate functional dependencies of" rf0)
             end
           end
         | _
@@ -738,7 +730,7 @@ Module Compilers.
                                       => let __ := match goal with
                                                    | _ => fail 2 "Unrecognized term:" term'
                                                    end in
-                                         constr:(I : I)
+                                         constr_fail
                                     end in
                              match constr:(Set) with
                              | _ => reify_rec term
@@ -746,7 +738,7 @@ Module Compilers.
                                               | _ => idtac "Error: Failed to reify" term' "via unfolding";
                                                      fail 2 "Failed to reify" term' "via unfolding"
                                               end in
-                                    constr:(I : I)
+                                    constr_fail
                              end)
               end)
         end

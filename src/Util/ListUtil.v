@@ -12,6 +12,7 @@ Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
+Require Import Crypto.Util.Tactics.ConstrFail.
 Import ListNotations.
 Local Open Scope list_scope.
 
@@ -1910,8 +1911,7 @@ Ltac expand_lists _ :=
   let default_for A :=
       match goal with
       | _ => (eval lazy in (_ : pointed A))
-      | _ => let __ := match goal with _ => idtac "Warning: could not infer a default value for list type" A end in
-             constr:(I : I)
+      | _ => constr_fail_with ltac:(fun _ => idtac "Warning: could not infer a default value for list type" A)
       end in
   let T := lazymatch goal with |- _ = _ :> ?T => T end in
   let v := fresh in
