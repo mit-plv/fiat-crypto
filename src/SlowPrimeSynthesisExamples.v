@@ -5,7 +5,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.CStringification.
 Require Import Crypto.BoundsPipeline.

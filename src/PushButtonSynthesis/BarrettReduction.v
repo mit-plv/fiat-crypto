@@ -10,7 +10,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.COperationSpecifications.

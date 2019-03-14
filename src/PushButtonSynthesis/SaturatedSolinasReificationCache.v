@@ -1,11 +1,9 @@
 (** * Push-Button Synthesis of Saturated Solinas: Reification Cache *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
-
-Import Associational Positional.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 

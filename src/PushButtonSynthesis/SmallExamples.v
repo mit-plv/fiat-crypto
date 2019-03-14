@@ -5,7 +5,7 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.BoundsPipeline.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope.

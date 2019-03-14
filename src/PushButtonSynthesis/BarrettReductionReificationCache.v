@@ -3,11 +3,11 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ListUtil.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 
-Import Associational Positional Arithmetic.BarrettReduction.
+Import BarrettReduction.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 

@@ -20,7 +20,7 @@ Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
-Require Import Crypto.Arithmetic.
+Require Import Crypto.Arithmetic.Primitives.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
