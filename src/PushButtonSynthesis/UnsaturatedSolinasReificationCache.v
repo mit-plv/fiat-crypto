@@ -2,6 +2,8 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Freeze.
+Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 

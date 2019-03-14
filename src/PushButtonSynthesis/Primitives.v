@@ -20,7 +20,12 @@ Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Primitives.
+Require Import Crypto.Arithmetic.WordByWordMontgomery.
+Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
@@ -429,7 +434,7 @@ Module CorrectnessStringification.
          | eval (weight 8 1) _ ?v
            => let sv := recurse v 9 in
               maybe_parenthesize (("bytes_eval " ++ sv)%string) 10 lvl
-         | UniformWeight.uweight ?machine_wordsize ?v
+         | uweight ?machine_wordsize ?v
            => recurse (2^(machine_wordsize * Z.of_nat v)) lvl
          | weight 8 1 ?i
            => recurse (2^(8 * Z.of_nat i)) lvl
@@ -569,7 +574,7 @@ Module CorrectnessStringification.
   Ltac stringify ctx correctness fname arg_var_data out_var_data :=
     let G := match goal with |- ?G => G end in
     let correctness := (eval hnf in correctness) in
-    let correctness := (eval cbv [Partition.partition Arithmetic.WordByWordMontgomery.valid Arithmetic.WordByWordMontgomery.small] in correctness) in
+    let correctness := (eval cbv [partition WordByWordMontgomery.valid WordByWordMontgomery.small] in correctness) in
     let correctness := strip_bounds_info correctness in
     let arg_var_names := constr:(type.map_for_each_lhs_of_arrow (@ToString.C.OfPHOAS.names_of_var_data) arg_var_data) in
     let out_var_names := constr:(ToString.C.OfPHOAS.names_of_base_var_data out_var_data) in
@@ -739,10 +744,10 @@ Section __.
 
   Hint Rewrite
        eval_select
-       Arithmetic.mulx_correct
-       Arithmetic.addcarryx_correct
-       Arithmetic.subborrowx_correct
-       Arithmetic.cmovznz_correct
+       Arithmetic.Primitives.mulx_correct
+       Arithmetic.Primitives.addcarryx_correct
+       Arithmetic.Primitives.subborrowx_correct
+       Arithmetic.Primitives.cmovznz_correct
        Z.zselect_correct
        using solve [ auto | congruence | solve_extra_bounds_side_conditions ] : push_eval.
 
