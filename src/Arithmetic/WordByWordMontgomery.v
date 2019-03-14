@@ -34,7 +34,7 @@ Module WordByWordMontgomery.
   Section with_args.
     Context (lgr : Z)
             (m : Z).
-    Local Notation weight := (UniformWeight.uweight lgr).
+    Local Notation weight := (uweight lgr).
     Let T (n : nat) := list Z.
     Let r := (2^lgr).
     Definition eval {n} : T n -> Z := Positional.eval weight n.
@@ -138,7 +138,7 @@ Module WordByWordMontgomery.
 
     Local Lemma r_big : r > 1.
     Proof using lgr_big. clear -lgr_big; subst r. auto with zarith. Qed.
-    Local Notation wprops := (@UniformWeight.uwprops lgr lgr_big).
+    Local Notation wprops := (@uwprops lgr lgr_big).
 
     Local Hint Immediate (wprops).
     Local Hint Immediate (weight_0 wprops).
@@ -155,8 +155,8 @@ Module WordByWordMontgomery.
     Lemma R_plusR_le : R + R <= weight (S R_numlimbs).
     Proof using lgr_big.
       clear - lgr_big.
-      etransitivity; [ | apply UniformWeight.uweight_double_le; omega ].
-      rewrite UniformWeight.uweight_eq_alt by omega.
+      etransitivity; [ | apply uweight_double_le; omega ].
+      rewrite uweight_eq_alt by omega.
       subst r R; omega.
     Qed.
 
@@ -165,7 +165,7 @@ Module WordByWordMontgomery.
     Proof using lgr_big.
       clear - lgr_big. cbv [partition].
       rewrite map_map. apply map_ext; intros.
-      rewrite UniformWeight.uweight_S by omega.
+      rewrite uweight_S by omega.
       rewrite <-Z.mod_pull_div by auto with zarith.
       replace (r - 1) with (Z.ones lgr) by (rewrite Z.ones_equiv; subst r; reflexivity).
       rewrite <-Z.land_comm, Z.land_ones by omega.
@@ -226,7 +226,7 @@ Module WordByWordMontgomery.
               | [ H : small ?v |- context[length ?v] ] => erewrite length_small by eassumption
               end
             | rewrite Positional.eval_cons by distr_length
-            | progress rewrite ?weight_0, ?UniformWeight.uweight_1 by auto;
+            | progress rewrite ?weight_0, ?uweight_1 by auto;
               autorewrite with zsimplify_fast
             | rewrite (weight_0 wprops)
             | rewrite <- Z.div_mod'' by auto with omega
@@ -257,7 +257,7 @@ Module WordByWordMontgomery.
              | _ => progress cbn [recursive_partition]
              | H : small _ |- _ => rewrite H; clear H
              | _ => rewrite recursive_partition_equiv by auto using wprops
-             | _ => rewrite UniformWeight.uweight_eval_shift by distr_length
+             | _ => rewrite uweight_eval_shift by distr_length
              | _ => progress push
              end.
 
@@ -280,7 +280,7 @@ Module WordByWordMontgomery.
       clear - r_big lgr_big. intros; autounfold with loc.
       push_recursive_partition. cbn [Rows.divmod fst tl].
       rewrite <-recursive_partition_equiv by auto.
-      rewrite <-UniformWeight.uweight_recursive_partition_equiv with (i:=1%nat) by omega.
+      rewrite <-uweight_recursive_partition_equiv with (i:=1%nat) by omega.
       push.
       apply Partition.partition_Proper; [ solve [auto] | ].
       cbv [Z.equiv_modulo]. autorewrite with zsimplify.
@@ -319,7 +319,7 @@ Module WordByWordMontgomery.
         rewrite weight_0 by auto.
         autorewrite with push_eval zsimplify_fast.
         split; [reflexivity | ].
-        rewrite UniformWeight.uweight_S, UniformWeight.uweight_eq_alt by omega.
+        rewrite uweight_S, uweight_eq_alt by omega.
         subst r; nia. }
     Qed.
 
@@ -331,7 +331,7 @@ Module WordByWordMontgomery.
       clear -lgr_big Ha Hb.
       autounfold with loc; destruct (zerop n); subst.
       { destruct a, b; cbn; try omega; split; auto with zarith. }
-      { pose proof (UniformWeight.uweight_double_le lgr ltac:(omega) n).
+      { pose proof (uweight_double_le lgr ltac:(omega) n).
         eta_expand; split; [ | lia ].
         rewrite Rows.add_partitions, Rows.add_div by auto.
         rewrite partition_step.
@@ -345,7 +345,7 @@ Module WordByWordMontgomery.
       autounfold with loc in *; subst; intros.
       rewrite Rows.add_partitions by auto using Positional.length_extend_to_length.
       autorewrite with push_eval.
-      split; try apply partition_eq_mod; auto; rewrite UniformWeight.uweight_eq_alt by omega; subst r; Z.rewrite_mod_small; auto with zarith.
+      split; try apply partition_eq_mod; auto; rewrite uweight_eq_alt by omega; subst r; Z.rewrite_mod_small; auto with zarith.
     Qed.
 
     Local Lemma conditional_sub_correct : forall v, small v -> 0 <= eval v < eval N + R -> canon_rep (eval v + if eval N <=? eval v then -eval N else 0) (conditional_sub v N).
@@ -356,12 +356,12 @@ Module WordByWordMontgomery.
       repeat match goal with H : small _ |- _ =>
                              rewrite H; clear H end.
       autorewrite with push_eval.
-      assert (weight R_numlimbs < weight (S R_numlimbs)) by (rewrite !UniformWeight.uweight_eq_alt by omega; autorewrite with push_Zof_nat; auto with zarith).
+      assert (weight R_numlimbs < weight (S R_numlimbs)) by (rewrite !uweight_eq_alt by omega; autorewrite with push_Zof_nat; auto with zarith).
       assert (eval N mod weight R_numlimbs < weight (S R_numlimbs)) by (pose proof (Z.mod_pos_bound (eval N) (weight R_numlimbs) ltac:(auto)); omega).
       rewrite Rows.conditional_sub_partitions by (repeat (autorewrite with distr_length push_eval; auto using partition_eq_mod with zarith)).
       rewrite drop_high_to_length_partition by omega.
       autorewrite with push_eval.
-      assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst R; reflexivity).
+      assert (weight R_numlimbs = R) by (rewrite uweight_eq_alt by omega; subst R; reflexivity).
       Z.rewrite_mod_small.
       break_match; autorewrite with zsimplify_fast; Z.ltb_to_lt.
       { split; [ reflexivity | ].
@@ -379,7 +379,7 @@ Module WordByWordMontgomery.
                              rewrite H; clear H end.
       rewrite Rows.sub_then_maybe_add_partitions by (autorewrite with push_eval distr_length; auto with zarith).
       autorewrite with push_eval.
-      assert (weight R_numlimbs = R) by (rewrite UniformWeight.uweight_eq_alt by omega; subst r R; reflexivity).
+      assert (weight R_numlimbs = R) by (rewrite uweight_eq_alt by omega; subst r R; reflexivity).
       Z.rewrite_mod_small.
       split; [ reflexivity | ].
       break_match; Z.ltb_to_lt; lia.
@@ -972,7 +972,7 @@ Module WordByWordMontgomery.
             (n : nat)
             (m : Z).
     Let r := 2^bitwidth.
-    Local Notation weight := (UniformWeight.uweight bitwidth).
+    Local Notation weight := (uweight bitwidth).
     Local Notation eval := (@eval bitwidth n).
     Let m_enc := partition weight n m.
     Local Coercion Z.of_nat : nat >-> Z.
@@ -985,7 +985,7 @@ Module WordByWordMontgomery.
             (n_nz : n <> 0%nat)
             (m_small : m < r^n).
 
-    Local Notation wprops := (@UniformWeight.uwprops bitwidth bitwidth_big).
+    Local Notation wprops := (@uwprops bitwidth bitwidth_big).
     Local Notation small := (@small bitwidth n).
 
     Local Hint Immediate (wprops).
@@ -998,7 +998,7 @@ Module WordByWordMontgomery.
     Proof using m_small m_big bitwidth_big.
       clear -m_small m_big bitwidth_big.
       cbv [eval m_enc]; autorewrite with push_eval; auto.
-      rewrite UniformWeight.uweight_eq_alt by omega.
+      rewrite uweight_eq_alt by omega.
       Z.rewrite_mod_small; reflexivity.
     Qed.
     Local Lemma r'_pow_correct : (r'^n * r^n) mod (eval m_enc) = 1.
@@ -1012,7 +1012,7 @@ Module WordByWordMontgomery.
     Proof using m_small m_big bitwidth_big.
       clear -m_small m_big bitwidth_big.
       cbv [m_enc small eval]; autorewrite with push_eval; auto.
-      rewrite UniformWeight.uweight_eq_alt by omega.
+      rewrite uweight_eq_alt by omega.
       Z.rewrite_mod_small; reflexivity.
     Qed.
 
@@ -1029,7 +1029,7 @@ Module WordByWordMontgomery.
              | _ => exact small_m_enc
              | [ H : small ?x |- context[eval ?x] ]
                => rewrite H; cbv [eval]; rewrite eval_partition by auto
-             | [ |- context[weight _] ] => rewrite UniformWeight.uweight_eq_alt by auto with omega
+             | [ |- context[weight _] ] => rewrite uweight_eq_alt by auto with omega
              | _=> progress Z.rewrite_mod_small
              | _ => progress Z.zero_bounds
              | [ |- _ mod ?x < ?x ] => apply Z.mod_pos_bound
@@ -1142,7 +1142,7 @@ Module WordByWordMontgomery.
     Local Ltac t_valid v :=
       cbv [valid]; repeat apply conj;
       auto; cbv [small eval]; autorewrite with push_eval; auto;
-      rewrite ?UniformWeight.uweight_eq_alt by omega;
+      rewrite ?uweight_eq_alt by omega;
       Z.rewrite_mod_small;
       rewrite ?(Z.mod_small (_ mod m)) by (subst r; Z.div_mod_to_quot_rem; lia);
       rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia);
@@ -1155,7 +1155,7 @@ Module WordByWordMontgomery.
         [ | now t_valid v.. ].
       push_Zmod; rewrite !eval_from_montgomerymod; [ | now t_valid v.. ].
       cbv [eval]; autorewrite with push_eval; auto.
-      rewrite ?UniformWeight.uweight_eq_alt by omega.
+      rewrite ?uweight_eq_alt by omega.
       rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia).
       rewrite ?(Z.mod_small (_ mod m)) by (subst r; Z.div_mod_to_quot_rem; lia).
       pull_Zmod.
@@ -1258,16 +1258,16 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma to_bytesmod_correct
-      : (forall a (_ : valid a), Positional.eval (UniformWeight.uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
+      : (forall a (_ : valid a), Positional.eval (uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
                                  = eval a mod m)
-        /\ (forall a (_ : valid a), to_bytesmod a = partition (UniformWeight.uweight 8) (bytes_n bitwidth 1 n) (eval a mod m)).
+        /\ (forall a (_ : valid a), to_bytesmod a = partition (uweight 8) (bytes_n bitwidth 1 n) (eval a mod m)).
     Proof using n_nz m_small bitwidth_big.
       clear -n_nz m_small bitwidth_big.
       generalize (@length_small bitwidth n);
         cbv [valid small to_bytesmod eval]; split; intros; (etransitivity; [ apply eval_to_bytesmod | ]);
-          fold weight in *; fold (UniformWeight.uweight 8) in *; subst r;
+          fold weight in *; fold (uweight 8) in *; subst r;
           try solve [ intuition eauto with omega ].
-      all: repeat first [ rewrite UniformWeight.uweight_eq_alt by omega
+      all: repeat first [ rewrite uweight_eq_alt by omega
                         | omega
                         | reflexivity
                         | progress Z.rewrite_mod_small ].
@@ -1275,7 +1275,7 @@ Module WordByWordMontgomery.
 
     Lemma eval_to_bytesmod
       : (forall a (_ : valid a),
-            Positional.eval (UniformWeight.uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
+            Positional.eval (uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
             = eval a mod m).
     Proof. apply to_bytesmod_correct. Qed.
   End modops.

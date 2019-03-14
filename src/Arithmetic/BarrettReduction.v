@@ -61,7 +61,7 @@ Section Generic.
   Local Lemma M_pos : 0 < M.
   Proof. assert (0 <= b ^ (k - 1)) by Z.zero_bounds. lia. Qed.
   Local Lemma M_upper : M < weight n.
-  Proof. rewrite UniformWeight.uweight_eq_alt'. lia. Qed.
+  Proof. rewrite uweight_eq_alt'. lia. Qed.
   Local Lemma x_upper : x < b ^ (2 * k).
   Proof.
     assert (0 < b ^ k) by Z.zero_bounds.
@@ -115,15 +115,15 @@ Module Fancy.
             (k_pos : 0 < k) (* this can be inferred from other arguments but is easier to put here for tactics *)
             (k_eq : k = width * Z.of_nat sz).
     (* sz = 1, width = k = 256 *)
-    Local Notation w := (UniformWeight.uweight width). Local Notation eval := (Positional.eval w).
+    Local Notation w := (uweight width). Local Notation eval := (Positional.eval w).
     Context (mut Mt : list Z) (mut_correct : mut = partition w (sz+1) mu) (Mt_correct : Mt = partition w sz M).
     Context (mu_eq : mu = 2 ^ (2 * k) / M) (muHigh_one : mu / w sz = 1) (M_range : 2^(k-1) < M < 2^k).
 
-    Local Lemma wprops : @weight_properties w. Proof. apply UniformWeight.uwprops; auto with lia. Qed.
+    Local Lemma wprops : @weight_properties w. Proof. apply uwprops; auto with lia. Qed.
     Local Hint Resolve wprops.
     Hint Rewrite mut_correct Mt_correct : pull_partition.
 
-    Lemma w_eq_2k : w sz = 2^k. Proof. rewrite UniformWeight.uweight_eq_alt' by auto. congruence. Qed.
+    Lemma w_eq_2k : w sz = 2^k. Proof. rewrite uweight_eq_alt' by auto. congruence. Qed.
     Lemma mu_range : 2^k <= mu < 2^(k+1).
     Proof.
       rewrite mu_eq. assert (0 < 2^(k-1)) by Z.zero_bounds.
@@ -140,7 +140,7 @@ Module Fancy.
     Proof.
       pose proof mu_range. assert (0 < 2^k) by auto with zarith.
       assert (2^(k+1) = 2 * w sz); [ | lia].
-      rewrite k_eq, UniformWeight.uweight_eq_alt'.
+      rewrite k_eq, uweight_eq_alt'.
       rewrite Z.pow_add_r, Z.pow_1_r by lia. lia.
     Qed.
     Lemma M_range' : 0 <= M < w sz. (* more convenient form, especially for mod_small *)
@@ -206,20 +206,20 @@ Module Fancy.
         cbv [shiftr']. induction m; intros; [ reflexivity | ].
         rewrite !partition_step, seq_snoc.
         autorewrite with distr_length natsimplify push_map push_nth_default.
-        rewrite IHm, Z.rshi_correct, UniformWeight.uweight_S by auto with zarith.
+        rewrite IHm, Z.rshi_correct, uweight_S by auto with zarith.
         rewrite <-Z.mod_pull_div by auto with zarith.
         destruct (Nat.eq_dec (S m) tn); [subst tn | ]; rewrite !nth_default_partition by omega.
         { rewrite nth_default_out_of_bounds by distr_length.
           autorewrite with zsimplify. Z.rewrite_mod_small.
           rewrite Z.div_div_comm by auto with zarith; reflexivity. }
         { repeat match goal with
-                 | _ => rewrite UniformWeight.uweight_pull_mod by auto with zarith
+                 | _ => rewrite uweight_pull_mod by auto with zarith
                  | _ => rewrite Z.mod_mod_small by auto with zarith
                  | _ => rewrite <-Znumtheory.Zmod_div_mod by (Z.zero_bounds; auto with zarith)
-                 | _ => rewrite UniformWeight.uweight_eq_alt with (n:=1%nat) by auto with zarith
+                 | _ => rewrite uweight_eq_alt with (n:=1%nat) by auto with zarith
                  | |- context [(t / w (S m)) mod 2^width * 2^width] =>
                    replace (t / w (S m)) with (t / w m / 2^width) by
-                       (rewrite UniformWeight.uweight_S, Z.div_div by auto with zarith; f_equal; lia);
+                       (rewrite uweight_S, Z.div_div by auto with zarith; f_equal; lia);
                      rewrite Z.mod_pull_div with (b:=2^width) by auto with zarith;
                      rewrite Z.mul_div_eq' by auto with zarith
                  | _ => progress autorewrite with natsimplify zsimplify_fast zsimplify
@@ -239,11 +239,11 @@ Module Fancy.
         pose proof (Z.mod_pos_bound n width ltac:(omega)).
         assert (t / 2 ^ (n - n mod width) < w (tn - Z.to_nat (n / width))).
         { apply Z.div_lt_upper_bound; [solve [Z.zero_bounds] | ].
-          rewrite UniformWeight.uweight_eq_alt' in *.
+          rewrite uweight_eq_alt' in *.
           rewrite <-Z.pow_add_r, Nat2Z.inj_sub, Z2Nat.id, <-Z.mul_div_eq by auto with zarith.
           autorewrite with push_Zmul zsimplify. auto with zarith. }
         repeat match goal with
-               | _ => progress rewrite ?UniformWeight.uweight_skipn_partition, ?UniformWeight.uweight_eq_alt' by auto with lia
+               | _ => progress rewrite ?uweight_skipn_partition, ?uweight_eq_alt' by auto with lia
                | _ => rewrite Z2Nat.id by Z.zero_bounds
                | _ => rewrite Z.mul_div_eq_full by auto with zarith
                | _ => rewrite shiftr'_correct by auto with zarith
@@ -267,16 +267,16 @@ Module Fancy.
       Qed.
 
       Lemma low_correct n a : (sz <= n)%nat -> low (partition w n a) = partition w sz a.
-      Proof. cbv [low]; auto using UniformWeight.uweight_firstn_partition with lia. Qed.
+      Proof. cbv [low]; auto using uweight_firstn_partition with lia. Qed.
       Lemma high_correct a : high (partition w (sz*2) a) = partition w sz (a / w sz).
-      Proof. cbv [high]. rewrite UniformWeight.uweight_skipn_partition by lia. f_equal; lia. Qed.
+      Proof. cbv [high]. rewrite uweight_skipn_partition by lia. f_equal; lia. Qed.
       Lemma fill_correct n m a :
         (n <= m)%nat ->
         fill m (partition w n a) = partition w m (a mod w n).
       Proof.
         cbv [fill]; intros. distr_length.
         rewrite <-partition_0 with (weight:=w).
-        rewrite UniformWeight.uweight_partition_app by lia.
+        rewrite uweight_partition_app by lia.
         f_equal; lia.
       Qed.
       Hint Rewrite low_correct high_correct fill_correct using lia : pull_partition.
@@ -335,7 +335,7 @@ Module Fancy.
         repeat match goal with
                | _ => progress autorewrite with pull_partition
                | _ => progress rewrite ?Ha, ?Ha0b1
-               | _ => rewrite UniformWeight.uweight_partition_app by lia;
+               | _ => rewrite uweight_partition_app by lia;
                         replace (sz+sz)%nat with (sz*2)%nat by lia
                | _ => rewrite Z.mod_pull_div by auto with zarith
                | _ => progress Z.rewrite_mod_small
@@ -343,8 +343,8 @@ Module Fancy.
                end.
       Qed.
 
-      Hint Rewrite UniformWeight.uweight_S UniformWeight.uweight_eq_alt' using lia : weight_to_pow.
-      Hint Rewrite <-UniformWeight.uweight_S UniformWeight.uweight_eq_alt' using lia : pow_to_weight.
+      Hint Rewrite uweight_S uweight_eq_alt' using lia : weight_to_pow.
+      Hint Rewrite <-uweight_S uweight_eq_alt' using lia : pow_to_weight.
 
       Lemma q1_range x :
         0 <= x < w (sz * 2) ->
@@ -416,7 +416,7 @@ Module Fancy.
         intros; cbv [cond_sub Let_In Z.cc_l]. autorewrite with pull_partition.
         rewrite nth_default_partition by lia.
         rewrite weight_0 by auto. autorewrite with zsimplify_fast.
-        rewrite UniformWeight.uweight_eq_alt' with (n:=1%nat). autorewrite with push_Zof_nat zsimplify.
+        rewrite uweight_eq_alt' with (n:=1%nat). autorewrite with push_Zof_nat zsimplify.
         rewrite <-Znumtheory.Zmod_div_mod by auto using Zpow_facts.Zpower_divide with zarith.
         rewrite Positional.select_eq with (n:=sz) by (distr_length; apply w).
         rewrite Rows.sub_partitions by (break_innermost_match; distr_length; auto).
@@ -452,7 +452,7 @@ Module Fancy.
       Lemma w_eq_22k : w (sz * 2) = 2 ^ (2 * k).
       Proof.
         replace (sz * 2)%nat with (sz + sz)%nat by lia.
-        rewrite UniformWeight.uweight_sum_indices, w_eq_2k, <-Z.pow_add_r by lia.
+        rewrite uweight_sum_indices, w_eq_2k, <-Z.pow_add_r by lia.
         f_equal; lia.
       Qed.
 
@@ -549,7 +549,7 @@ Module Fancy.
         partition w 2 (xLow + 2^k * xHigh) = [xLow;xHigh].
       Proof.
         replace k with width in M_range |- * by nia; intros. cbv [partition map seq].
-        rewrite !UniformWeight.uweight_S, !weight_0 by auto with zarith lia.
+        rewrite !uweight_S, !weight_0 by auto with zarith lia.
         autorewrite with zsimplify.
         rewrite <-Z.mod_pull_div by Z.zero_bounds.
         autorewrite with zsimplify. reflexivity.
@@ -568,7 +568,7 @@ Module Fancy.
         replace 2%nat with (sz*2)%nat by lia.
         rewrite fancy_reduce'_correct by nia.
         rewrite sz_eq_1; cbv [partition map seq hd].
-        rewrite !UniformWeight.uweight_S, !weight_0 by auto with zarith lia.
+        rewrite !uweight_S, !weight_0 by auto with zarith lia.
         autorewrite with zsimplify. reflexivity.
       Qed.
     End Def.

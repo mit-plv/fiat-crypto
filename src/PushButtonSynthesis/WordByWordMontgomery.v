@@ -99,7 +99,7 @@ Section __.
             end.
   Let n_bytes := bytes_n machine_wordsize 1 n.
   Let prime_upperbound_list : list Z
-    := Partition.partition (UniformWeight.uweight machine_wordsize) n (s-1).
+    := Partition.partition (uweight machine_wordsize) n (s-1).
   Let prime_bytes_upperbound_list : list Z
     := Partition.partition (weight 8 1) n_bytes (s-1).
   Let upperbounds : list Z := prime_upperbound_list.
@@ -140,8 +140,8 @@ Section __.
             (negb ((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1);
             (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
             (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
-            (negb (s <=? UniformWeight.uweight machine_wordsize n), Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (UniformWeight.uweight machine_wordsize n));
-            (negb (UniformWeight.uweight machine_wordsize n =? UniformWeight.uweight 8 n_bytes), Pipeline.Values_not_provably_equalZ "weight n ≠ bytes_weight n_bytes (needed for from_bytes)" (UniformWeight.uweight machine_wordsize n) (UniformWeight.uweight 8 n_bytes))].
+            (negb (s <=? uweight machine_wordsize n), Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n));
+            (negb (uweight machine_wordsize n =? uweight 8 n_bytes), Pipeline.Values_not_provably_equalZ "weight n ≠ bytes_weight n_bytes (needed for from_bytes)" (uweight machine_wordsize n) (uweight 8 n_bytes))].
 
   Local Arguments Z.mul !_ !_.
   Local Ltac use_curve_good_t :=
@@ -179,9 +179,9 @@ Section __.
       /\ 1 < m
       /\ m < r^n
       /\ s = 2^Z.log2 s
-      /\ s <= UniformWeight.uweight machine_wordsize n
-      /\ s <= UniformWeight.uweight 8 n_bytes
-      /\ UniformWeight.uweight machine_wordsize n = UniformWeight.uweight 8 n_bytes.
+      /\ s <= uweight machine_wordsize n
+      /\ s <= uweight 8 n_bytes
+      /\ uweight machine_wordsize n = uweight 8 n_bytes.
   Proof.
     clear -curve_good.
     cbv [check_args fold_right] in curve_good.
@@ -520,10 +520,10 @@ Section __.
     { cbv [Partition.partition seq map In]; tauto. }
     { intros *; rewrite Partition.partition_step, in_app_iff; cbn [List.In].
       intros; destruct_head'_or; subst *; eauto; try tauto; [].
-      rewrite UniformWeight.uweight_S by lia.
-      assert (0 < UniformWeight.uweight machine_wordsize n') by now apply UniformWeight.uwprops.
+      rewrite uweight_S by lia.
+      assert (0 < uweight machine_wordsize n') by now apply uwprops.
       assert (0 < 2 ^ machine_wordsize) by auto with zarith.
-      assert (0 < 2 ^ machine_wordsize * UniformWeight.uweight machine_wordsize n') by nia.
+      assert (0 < 2 ^ machine_wordsize * uweight machine_wordsize n') by nia.
       rewrite <- Z.mod_pull_div by lia.
       rewrite Z.le_sub_1_iff.
       auto with zarith. }
@@ -533,9 +533,9 @@ Section __.
   Lemma bounded_by_prime_bounds_of_valid_gen lgr n' x
         (Hlgr : 0 < lgr)
         (Hs : s = 2^Z.log2 s)
-        (Hs' : s <= UniformWeight.uweight lgr n')
+        (Hs' : s <= uweight lgr n')
         (H : WordByWordMontgomery.valid lgr n' m x)
-    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some (List.map (fun v => Some r[0~>v]%zrange) (Partition.partition (UniformWeight.uweight lgr) n' (s-1)))) x = true.
+    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some (List.map (fun v => Some r[0~>v]%zrange) (Partition.partition (uweight lgr) n' (s-1)))) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
     clear -H use_curve_good curve_good Hlgr Hs Hs'.
@@ -567,13 +567,13 @@ Section __.
     assert (1 < 2^Z.log2 s) by auto with zarith.
     generalize dependent (Z.log2 s); intro lgs; intros.
 
-    edestruct (UniformWeight.uwprops lgr); try lia.
-    assert (forall i : nat, 0 <= UniformWeight.uweight lgr i) by (intro z; specialize (weight_positive z); lia).
+    edestruct (uwprops lgr); try lia.
+    assert (forall i : nat, 0 <= uweight lgr i) by (intro z; specialize (weight_positive z); lia).
     apply Bool.andb_true_intro; split; apply OrdersEx.Z_as_OT.leb_le;
       [apply Z.div_nonneg | apply Z.div_le_mono_nonneg]; trivial.
     apply Z.mod_pos_bound; trivial.
 
-    cbv [UniformWeight.uweight].
+    cbv [uweight].
     cbv [weight].
     rewrite Z.div_1_r.
     rewrite Z.opp_involutive.
@@ -632,12 +632,12 @@ Section __.
     cbv [bytes_valid] in H.
     destruct H as [_ H].
     pose proof use_curve_good.
-    cbv [UniformWeight.uweight] in *; destruct_head'_and; lia.
+    cbv [uweight] in *; destruct_head'_and; lia.
   Qed.
 
   Local Ltac solve_extra_bounds_side_conditions :=
     solve [ cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia
-          | cbv [valid small eval UniformWeight.uweight n_bytes] in *; destruct_head'_and; auto
+          | cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto
           | now apply weight_bounded_of_bytes_valid
           | eapply length_of_valid; eassumption ].
 
@@ -702,7 +702,7 @@ Section __.
                  | progress autorewrite with interp interp_gen_cache push_eval
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
-                 | solve [ cbv [valid small eval UniformWeight.uweight n_bytes] in *; destruct_head'_and; auto ] ].
+                 | solve [ cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto ] ].
 
   (** TODO: DESIGN DECISION:
 
