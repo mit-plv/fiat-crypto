@@ -1,64 +1,13 @@
-
-(* TODO: prune these *)
-Require Import Crypto.Algebra.Nsatz.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition. (* For MontgomeryReduction *)
-Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs. (* For MontgomeryReduction *)
-Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
-Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
-Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.Lists.List.
+Require Import Coq.Structures.Orders.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
-Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.Tactics.RunTacticAsConstr.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.OptionList.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Sum.
-Require Import Crypto.Util.Bool.
-Require Import Crypto.Util.Sigma.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
-Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.ZUtil.Modulo.PullPush.
-Require Import Crypto.Util.ZUtil.Opp.
-Require Import Crypto.Util.ZUtil.Log2.
-Require Import Crypto.Util.ZUtil.Le.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.Sorting.
-Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.CPSNotations.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.SetEvars.
-Import Coq.Lists.List ListNotations. Local Open Scope Z_scope.
+Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 
-Import Weight.
+Require Import Crypto.Util.Notations.
+Import ListNotations Weight. Local Open Scope Z_scope.
 
 Section Partition.
   Context weight {wprops : @weight_properties weight}.
@@ -82,8 +31,8 @@ Section Partition.
   Proof using wprops.
     induction n; intros.
     { cbn. rewrite (weight_0); auto with zarith. }
-    { rewrite (Z.div_mod (x mod weight (S n)) (weight n)) by auto.
-      rewrite <-Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto).
+    { rewrite (Z.div_mod (x mod weight (S n)) (weight n)) by auto with zarith.
+      rewrite <-Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto with zarith).
       rewrite partition_step, Positional.eval_snoc with (n:=n) by distr_length.
       omega. }
   Qed.
@@ -96,11 +45,11 @@ Section Partition.
     { reflexivity. }
     { assert (Hxyn : x mod weight n = y mod weight n).
       { erewrite (Znumtheory.Zmod_div_mod _ (weight (S n)) x), (Znumtheory.Zmod_div_mod _ (weight (S n)) y), Hxy
-          by (try apply Z.mod_divide; auto);
+          by (try apply Z.mod_divide; auto with zarith);
           reflexivity. }
       rewrite !partition_step, IHn by eauto.
-      rewrite (Z.div_mod (x mod weight (S n)) (weight n)), (Z.div_mod (y mod weight (S n)) (weight n)) by auto.
-      rewrite <-!Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto).
+      rewrite (Z.div_mod (x mod weight (S n)) (weight n)), (Z.div_mod (y mod weight (S n)) (weight n)) by auto with zarith.
+      rewrite <-!Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto with zarith).
       rewrite Hxy, Hxyn; reflexivity. }
   Qed.
 
@@ -135,8 +84,8 @@ Section Partition.
     pose proof (@weight_divides _ wprops j).
     f_equal;
       repeat match goal with
-             | _ => rewrite Z.mod_pull_div by auto using Z.lt_le_incl
-             | _ => rewrite weight_multiples by auto
+             | _ => rewrite Z.mod_pull_div by auto with zarith 
+             | _ => rewrite weight_multiples by auto with zarith
              | _ => progress autorewrite with zsimplify_fast zdiv_to_mod pull_Zdiv
              | _ => reflexivity
              end.

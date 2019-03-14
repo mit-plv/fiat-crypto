@@ -1,147 +1,109 @@
-
-(* TODO: prune these *)
-Require Import Crypto.Algebra.Nsatz.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
-Require Import Coq.Sorting.Permutation.
-Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition. (* For MontgomeryReduction *)
-Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs. (* For MontgomeryReduction *)
-Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
-Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
-Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
-Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
-Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.Tactics.RunTacticAsConstr.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.OptionList.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
+Require Import Coq.Lists.List.
+Require Import Crypto.Algebra.Ring.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Partition.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Sum.
-Require Import Crypto.Util.Bool.
-Require Import Crypto.Util.Sigma.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
-Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.ZUtil.Modulo.PullPush.
-Require Import Crypto.Util.ZUtil.Opp.
-Require Import Crypto.Util.ZUtil.Log2.
-Require Import Crypto.Util.ZUtil.Le.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Notations.
+Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.Sorting.
-Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.CPSNotations.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.SetEvars.
-Import Coq.Lists.List ListNotations. Local Open Scope Z_scope.
+Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 
-Module Saturated.
-  Module Associational.
-    Section Associational.
+Require Import Crypto.Util.Notations.
+Import ListNotations. Local Open Scope Z_scope.
 
-      Definition sat_multerm s (t t' : (Z * Z)) : list (Z * Z) :=
-        dlet_nd xy := Z.mul_split s (snd t) (snd t') in
-              [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
+Module Associational.
+  Section Associational.
 
-      Definition sat_mul s (p q : list (Z * Z)) : list (Z * Z) :=
-        flat_map (fun t => flat_map (fun t' => sat_multerm s t t') q) p.
+    Definition sat_multerm s (t t' : (Z * Z)) : list (Z * Z) :=
+      dlet_nd xy := Z.mul_split s (snd t) (snd t') in
+      [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
 
-      Lemma eval_map_sat_multerm s a q (s_nonzero:s<>0):
-        Associational.eval (flat_map (sat_multerm s a) q) = fst a * snd a * Associational.eval q.
-      Proof using Type.
-        cbv [sat_multerm Let_In]; induction q;
-          repeat match goal with
-                 | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
-                 | _ => progress simpl flat_map
-                 | _ => rewrite IHq
-                 | _ => rewrite Z.mod_eq by assumption
-                 | _ => ring_simplify; omega
-                 end.
-      Qed.
-      Hint Rewrite eval_map_sat_multerm using (omega || assumption) : push_eval.
+    Definition sat_mul s (p q : list (Z * Z)) : list (Z * Z) :=
+      flat_map (fun t => flat_map (fun t' => sat_multerm s t t') q) p.
 
-      Lemma eval_sat_mul s p q (s_nonzero:s<>0):
-        Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
-      Proof using Type.
-        cbv [sat_mul]; induction p; [reflexivity|].
+    Lemma eval_map_sat_multerm s a q (s_nonzero:s<>0):
+      Associational.eval (flat_map (sat_multerm s a) q) = fst a * snd a * Associational.eval q.
+    Proof using Type.
+      cbv [sat_multerm Let_In]; induction q;
         repeat match goal with
-               | _ => progress (autorewrite with push_flat_map push_eval in * )
-               | _ => rewrite IHp
+               | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
+               | _ => progress simpl flat_map
+               | _ => rewrite IHq
+               | _ => rewrite Z.mod_eq by assumption
                | _ => ring_simplify; omega
                end.
-      Qed.
-      Hint Rewrite eval_sat_mul : push_eval.
+    Qed.
+    Hint Rewrite eval_map_sat_multerm using (omega || assumption) : push_eval.
 
-      Definition sat_multerm_const s (t t' : (Z * Z)) : list (Z * Z) :=
-        if snd t =? 1
-        then [(fst t * fst t', snd t')]
-        else if snd t =? -1
-             then [(fst t * fst t', - snd t')]
-             else if snd t =? 0
-                  then nil
-                  else dlet_nd xy := Z.mul_split s (snd t) (snd t') in
-              [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
+    Lemma eval_sat_mul s p q (s_nonzero:s<>0):
+      Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
+    Proof using Type.
+      cbv [sat_mul]; induction p; [reflexivity|].
+      repeat match goal with
+             | _ => progress (autorewrite with push_flat_map push_eval in * )
+             | _ => rewrite IHp
+             | _ => ring_simplify; omega
+             end.
+    Qed.
+    Hint Rewrite eval_sat_mul : push_eval.
 
-      Definition sat_mul_const s (p q : list (Z * Z)) : list (Z * Z) :=
-        flat_map (fun t => flat_map (fun t' => sat_multerm_const s t t') q) p.
+    Definition sat_multerm_const s (t t' : (Z * Z)) : list (Z * Z) :=
+      if snd t =? 1
+      then [(fst t * fst t', snd t')]
+      else if snd t =? -1
+           then [(fst t * fst t', - snd t')]
+           else if snd t =? 0
+                then nil
+                else dlet_nd xy := Z.mul_split s (snd t) (snd t') in
+            [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
 
-      Lemma eval_map_sat_multerm_const s a q (s_nonzero:s<>0):
-        Associational.eval (flat_map (sat_multerm_const s a) q) = fst a * snd a * Associational.eval q.
-      Proof using Type.
-        cbv [sat_multerm_const Let_In]; induction q;
-          repeat match goal with
-                 | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
-                 | _ => progress simpl flat_map
-                 | H : _ = 1 |- _ => rewrite H
-                 | H : _ = -1 |- _ => rewrite H
-                 | H : _ = 0 |- _ => rewrite H
-                 | _ => progress break_match; Z.ltb_to_lt
-                 | _ => rewrite IHq
-                 | _ => rewrite Z.mod_eq by assumption
-                 | _ => ring_simplify; omega
-                 end.
-      Qed.
-      Hint Rewrite eval_map_sat_multerm_const using (omega || assumption) : push_eval.
+    Definition sat_mul_const s (p q : list (Z * Z)) : list (Z * Z) :=
+      flat_map (fun t => flat_map (fun t' => sat_multerm_const s t t') q) p.
 
-      Lemma eval_sat_mul_const s p q (s_nonzero:s<>0):
-        Associational.eval (sat_mul_const s p q) = Associational.eval p * Associational.eval q.
-      Proof using Type.
-        cbv [sat_mul_const]; induction p; [reflexivity|].
+    Lemma eval_map_sat_multerm_const s a q (s_nonzero:s<>0):
+      Associational.eval (flat_map (sat_multerm_const s a) q) = fst a * snd a * Associational.eval q.
+    Proof using Type.
+      cbv [sat_multerm_const Let_In]; induction q;
         repeat match goal with
-               | _ => progress (autorewrite with push_flat_map push_eval in * )
-               | _ => rewrite IHp
+               | _ => progress autorewrite with cancel_pair push_eval to_div_mod in *
+               | _ => progress simpl flat_map
+               | H : _ = 1 |- _ => rewrite H
+               | H : _ = -1 |- _ => rewrite H
+               | H : _ = 0 |- _ => rewrite H
+               | _ => progress break_match; Z.ltb_to_lt
+               | _ => rewrite IHq
+               | _ => rewrite Z.mod_eq by assumption
                | _ => ring_simplify; omega
                end.
-      Qed.
-      Hint Rewrite eval_sat_mul_const : push_eval.
-    End Associational.
+    Qed.
+    Hint Rewrite eval_map_sat_multerm_const using (omega || assumption) : push_eval.
+
+    Lemma eval_sat_mul_const s p q (s_nonzero:s<>0):
+      Associational.eval (sat_mul_const s p q) = Associational.eval p * Associational.eval q.
+    Proof using Type.
+      cbv [sat_mul_const]; induction p; [reflexivity|].
+      repeat match goal with
+             | _ => progress (autorewrite with push_flat_map push_eval in * )
+             | _ => rewrite IHp
+             | _ => ring_simplify; omega
+             end.
+    Qed.
+    Hint Rewrite eval_sat_mul_const : push_eval.
   End Associational.
-End Saturated.
+End Associational.
 
 Module Columns.
-  Import Saturated. Import Partition. Import Weight.
+  Import Weight.
   Section Columns.
     Context weight {wprops : @weight_properties weight}.
 
@@ -375,10 +337,9 @@ Module Columns.
 End Columns.
 
 Module Rows.
-  Import Saturated. Import Partition. Import Weight.
+  Import Weight.
   Section Rows.
     Context weight {wprops : @weight_properties weight}.
-    Hint Resolve Z.positive_is_nonzero Z.lt_gt.
     Local Notation rows := (list (list Z)) (only parsing).
     Local Notation cols := (list (list Z)) (only parsing).
 
@@ -714,7 +675,7 @@ Module Rows.
                    | _ => rewrite partition_step by auto
                    | _ => rewrite weight_div_pull_div by auto
                    | _ => rewrite weight_mod_pull_div by auto
-                   | _ => rewrite <-Z.div_add' by auto
+                   | _ => rewrite <-Z.div_add' by auto with zarith
                    | _ => progress push
                    end.
           f_equal; push; [ ].
@@ -802,9 +763,9 @@ Module Rows.
                  | _ => rewrite IHinp by push; clear IHinp
                  | |- pair _ _ = pair _ _ => f_equal
                  | _ => apply (@partition_eq_mod _ wprops)
-                 | _ => rewrite <-Z.div_add_l' by auto
+                 | _ => rewrite <-Z.div_add_l' by auto with zarith
                  | _ => rewrite Z.mod_add'_full by omega
-                 | _ => rewrite Z.mul_div_eq_full by auto
+                 | _ => rewrite Z.mul_div_eq_full by auto with zarith
                  | _ => progress (push_Zmod; pull_Zmod)
                  | _ => progress push
                  end.
@@ -980,7 +941,7 @@ Module Rows.
         rewrite Z.div_sub_small, Z.ltb_antisym by omega.
         destruct (Positional.eval weight n q <=? Positional.eval weight n p);
           cbn [negb]; autorewrite with zsimplify_fast;
-            break_match; congruence.
+            break_match; try lia; congruence.
       Qed.
 
       Let sub_then_maybe_add_Z a b c :=
@@ -1028,7 +989,7 @@ Module Rows.
         cbv [adjust_s]; rewrite fold_right_map; generalize (List.rev (seq 0 fuel)); intro ls; induction ls as [|l ls IHls];
           cbn.
         { rewrite Z.mod_same by assumption; auto. }
-        { break_match; cbn in *; auto. }
+        { break_match; cbn in *; auto with zarith. }
       Qed.
 
       Lemma eval_sat_reduce base s c n p :
@@ -1064,7 +1025,7 @@ Module Rows.
       Proof using wprops.
         solver. cbn [fst snd].
         rewrite eval_partition by auto.
-        rewrite <-Z.div_mod'' by auto.
+        rewrite <-Z.div_mod'' by auto with zarith.
         autorewrite with push_eval; reflexivity.
       Qed.
 

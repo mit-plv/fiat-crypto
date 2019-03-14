@@ -1,61 +1,29 @@
-(* TODO: prune these *)
-Require Import Crypto.Algebra.Nsatz.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
-Require Import Coq.Sorting.Permutation.
 Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition. (* For MontgomeryReduction *)
-Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs. (* For MontgomeryReduction *)
-Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
-Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
-Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
-Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
+Require Import Coq.Lists.List.
+Require Import Crypto.Algebra.Ring.
+Require Import Crypto.Arithmetic.BaseConversion.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.Tactics.RunTacticAsConstr.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.OptionList.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Sum.
-Require Import Crypto.Util.Bool.
-Require Import Crypto.Util.Sigma.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
-Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.ZUtil.Modulo.PullPush.
-Require Import Crypto.Util.ZUtil.Opp.
-Require Import Crypto.Util.ZUtil.Log2.
-Require Import Crypto.Util.ZUtil.Le.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Util.Notations.
+Require Import Crypto.Arithmetic.Saturated.
+Require Import Crypto.Arithmetic.UniformWeight.
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.Sorting.
+Require Import Crypto.Util.ZUtil.AddModulo.
 Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.CPSNotations.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.SetEvars.
-Import Coq.Lists.List ListNotations. Local Open Scope Z_scope.
+Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+
+Require Import Crypto.Util.Notations.
+Import ListNotations. Local Open Scope Z_scope.
 
 Section Generic.
   Context (b k M mu width : Z) (n : nat)
@@ -66,8 +34,8 @@ Section Generic.
           (mu_eq : mu = b ^ (2 * k) / M)
           (width_pos : 0 < width)
           (strong_bound : b ^ 1 * (b ^ (2 * k) mod M) <= b ^ (k + 1) - mu).
-  Local Notation weight := (UniformWeight.uweight width).
-  Local Notation partition := (Partition.partition weight).
+  Local Notation weight := (uweight width).
+  Local Notation partition := (partition weight).
   Context (q1 : list Z -> list Z)
           (q1_correct :
              forall x,
@@ -389,9 +357,6 @@ Module Fancy.
         apply Z.pow_le_mono_r; lia.
       Qed.
 
-      (* use zero_bounds in zutil_arith *)
-      Local Ltac zutil_arith ::= solve [ omega | Psatz.lia | auto with nocore | solve [Z.zero_bounds] ].
-
       Lemma muSelect_correct x :
         0 <= x < w (sz * 2) ->
         muSelect (partition w (sz*2) x) = partition w sz (mu mod (w sz) * (x / 2 ^ (k - 1) / (w sz))).
@@ -406,7 +371,8 @@ Module Fancy.
                  | H : 0 <= ?x < ?m |- context [?x mod ?m] => rewrite (Z.mod_small x m) by auto with zarith
                  end.
         replace (x / (w (sz * 2 - 1)) / (2 ^ width / 2)) with (x / (2 ^ (k - 1)) / w sz) by
-            (autorewrite with weight_to_pow pull_Zpow pull_Zdiv; do 2 f_equal; nia).
+            (autorewrite with weight_to_pow pull_Zpow;
+             rewrite !Z.div_div, <-!Z.pow_add_r by (Core.zutil_arith || Z.zero_bounds); do 2 f_equal; nia).
         rewrite Z.div_between_0_if with (a:=x / 2^(k-1)) by (Z.zero_bounds; auto using q1_range).
         break_innermost_match; try lia; autorewrite with zsimplify_fast; [ | ].
         { apply partition_eq_mod; auto with zarith. }
@@ -437,6 +403,7 @@ Module Fancy.
              break_innermost_match; autorewrite with zsimplify; reflexivity).
         rewrite shiftr_correct by (rewrite ?Z.div_small, ?Z2Nat.inj_0 by lia; auto with zarith lia).
         autorewrite with weight_to_pow pull_Zpow pull_Zdiv.
+        rewrite !Z.div_div, <-!Z.pow_add_r by (Core.zutil_arith || Z.zero_bounds).
         congruence.
       Qed.
 

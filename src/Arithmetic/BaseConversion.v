@@ -1,66 +1,19 @@
-
-(* TODO: prune these *)
-Require Import Crypto.Algebra.Nsatz.
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Algebra.Nsatz.
-Require Import Coq.Sorting.Mergesort Coq.Structures.Orders.
-Require Import Coq.Sorting.Permutation.
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
-Require Import Crypto.Arithmetic.MontgomeryReduction.Definition. (* For MontgomeryReduction *)
-Require Import Crypto.Arithmetic.MontgomeryReduction.Proofs. (* For MontgomeryReduction *)
-Require Import Crypto.Util.Tactics.UniquePose Crypto.Util.Decidable.
-Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
-Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
-Require Import QArith.QArith_base QArith.Qround Crypto.Util.QUtil.
-Require Import Crypto.Algebra.Ring Crypto.Util.Decidable.Bool2Prop.
-Require Import Crypto.Arithmetic.BarrettReduction.Generalized.
-Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
-Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.Tactics.RunTacticAsConstr.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.OptionList.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.Sum.
-Require Import Crypto.Util.Bool.
-Require Import Crypto.Util.Sigma.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Util.ZUtil.Tactics.PeelLe.
-Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
-Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
-Require Import Crypto.Util.ZUtil.Modulo.PullPush.
-Require Import Crypto.Util.ZUtil.Opp.
-Require Import Crypto.Util.ZUtil.Log2.
-Require Import Crypto.Util.ZUtil.Le.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
-Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SubstEvars.
+Require Import Coq.Lists.List.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Partition.
+Require Import Crypto.Arithmetic.Saturated.
+Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ListUtil.
+
 Require Import Crypto.Util.Notations.
-Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.ZUtil.Sorting.
-Require Import Crypto.Util.ZUtil.CC Crypto.Util.ZUtil.Rshi.
-Require Import Crypto.Util.ZUtil.Zselect Crypto.Util.ZUtil.AddModulo.
-Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
-Require Import Crypto.Util.ZUtil.Hints.Core.
-Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
-Require Import Crypto.Util.ZUtil.Hints.PullPush.
-Require Import Crypto.Util.ZUtil.EquivModulo.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.CPSNotations.
-Require Import Crypto.Util.Equality.
-Require Import Crypto.Util.Tactics.SetEvars.
-Import Coq.Lists.List ListNotations. Local Open Scope Z_scope.
+Local Open Scope Z_scope.
 
 Module BaseConversion.
-  Import Positional. Import Partition.
+  Import Positional.
   Section BaseConversion.
-    Hint Resolve Z.positive_is_nonzero Z.lt_gt Z.gt_lt.
     Context (sw dw : nat -> Z) (* source/destination weight functions *)
             {swprops : @weight_properties sw}
             {dwprops : @weight_properties dw}.
@@ -74,8 +27,8 @@ Module BaseConversion.
       eval dw dn (convert_bases sn dn p) = eval sw sn p.
     Proof using dwprops.
       cbv [convert_bases]; intros.
-      rewrite eval_chained_carries_no_reduce by auto.
-      rewrite eval_from_associational; auto.
+      rewrite eval_chained_carries_no_reduce by auto with zarith.
+      rewrite eval_from_associational; auto with zarith.
     Qed.
 
     Lemma length_convert_bases sn dn p
@@ -109,7 +62,7 @@ Module BaseConversion.
          @Associational.eval_mul
          @Positional.eval_to_associational
          Associational.eval_carryterm
-         @eval_convert_bases using solve [auto using Z.positive_is_nonzero] : push_eval.
+         @eval_convert_bases using solve [auto with zarith] : push_eval.
 
     Ltac push_eval := intros; autorewrite with push_eval; auto with zarith.
 
@@ -132,7 +85,7 @@ Module BaseConversion.
         autorewrite with push_fold_right. break_match; push_eval.
       Qed.
     End reorder.
-    Hint Rewrite eval_reordering_carry using solve [auto using Z.positive_is_nonzero] : push_eval.
+    Hint Rewrite eval_reordering_carry using solve [auto with zarith] : push_eval.
 
     (* carry at specified indices in dw, then use Rows.flatten to convert to Positional with sw *)
     Definition from_associational idxs n (p : list (Z * Z)) : list Z :=
@@ -256,8 +209,6 @@ Module BaseConversion.
     Let swprops : @weight_properties sw := wprops log2base 1 base_bounds.
     Local Notation deval := (Positional.eval dw).
     Local Notation seval := (Positional.eval sw).
-
-    Hint Resolve Z.gt_lt Z.positive_is_nonzero Nat2Z.is_nonneg.
 
     Definition widemul a b := mul_converted sw dw m m mn mn nout (aligned_carries n nout) a b.
 
