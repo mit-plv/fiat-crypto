@@ -16,6 +16,7 @@ Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
@@ -210,8 +211,8 @@ Module CorrectnessStringification.
                                              exact v)
                                end)
     | ?T
-      => let __ := match goal with _ => idtac "Unrecognized bounds component:" T end in
-         constr:(I : I)
+      => constr_fail_with ltac:(fun _ => idtac "Unrecognized bounds component:" T;
+                                         fail 1 "Unrecognized bounds component:" T)
     end.
 
   Ltac with_assoc_list ctx correctness arg_var_names out_var_names cont :=
@@ -339,8 +340,8 @@ Module CorrectnessStringification.
                        exact (" " ++ xn ++ res))
                 end) with
          | fun _ => ?f => f
-         | ?F => let __ := match goal with _ => idtac "Failed to eliminate functional dependencies in" F end in
-                 constr:(I : I)
+         | ?F => constr_fail_with ltac:(fun _ => idtac "Failed to eliminate functional dependencies in" F;
+                                                 fail 1 "Failed to eliminate functional dependencies in" F)
          end
     | ?v => let res := stringify_body ctx v in
             constr:(", " ++ res)
@@ -422,8 +423,8 @@ Module CorrectnessStringification.
               | prod ?A ?B
                 => let v := (eval cbn [fst snd] in (fst x = fst y /\ snd x = snd y)) in
                    recurse v lvl
-              | ?T' => let __ := match goal with _ => idtac "Error: Unrecognized type for equality:" T' end in
-                       constr:(I : I)
+              | ?T' => constr_fail_with ltac:(fun _ => idtac "Error: Unrecognized type for equality:" T';
+                                                       fail 1 "Error: Unrecognized type for equality:" T')
               end
          | eval (weight 8 1) _ ?v
            => let sv := recurse v 9 in
@@ -500,12 +501,12 @@ Module CorrectnessStringification.
                    | Z => show_Z ()
                    | nat => show_nat ()
                    | _
-                     => let __ := match goal with _ => idtac "Error: Unrecognized var:" v " in " ctx end in
-                        constr:(I : I)
+                     => constr_fail_with ltac:(fun _ => idtac "Error: Unrecognized var:" v " in " ctx;
+                                                        fail 1 "Error: Unrecognized var:" v " in " ctx)
                    end
               | false
-                => let __ := match goal with _ => idtac "Error: Unrecognized term:" v " in " ctx end in
-                   constr:(I : I)
+                => constr_fail_with ltac:(fun _ => idtac "Error: Unrecognized term:" v " in " ctx;
+                                                   fail 1 "Error: Unrecognized term:" v " in " ctx)
               end
          end
     end.

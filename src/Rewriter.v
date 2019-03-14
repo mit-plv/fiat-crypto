@@ -10,6 +10,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.Tactics.ConstrFail.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.
@@ -1450,8 +1451,8 @@ Module Compilers.
       Ltac strip_functional_dependency term :=
         lazymatch term with
         | fun _ => ?P => P
-        | _ => let __ := match goal with _ => idtac "Cannot eliminate functional dependencies of" term; fail 1 "Cannot eliminate functional dependencies of" term end in
-               constr:(I : I)
+        | _ => constr_fail_with ltac:(fun _ => idtac "Cannot eliminate functional dependencies of" term;
+                                               fail 1 "Cannot eliminate functional dependencies of" term)
         end.
 
       Ltac reify_under_forall_types' ty_ctx cur_i lem cont :=
@@ -1505,8 +1506,7 @@ Module Compilers.
                   end)
         | @eq ?T ?A ?B
           => constr:((@eq T A B, side_conditions))
-        | ?T => let __ := match goal with _ => fail 1 "Invalid type of equation:" T end in
-                constr:(I : I)
+        | ?T => constr_fail_with ltac:(fun _ => fail 1 "Invalid type of equation:" T)
         end.
       Ltac equation_to_parts lem :=
         equation_to_parts' lem (@nil bool).
@@ -1781,10 +1781,7 @@ Module Compilers.
              lazymatch rf0 with
              | (fun _ => ?f) => f
              | _
-               => let __ := match goal with
-                            | _ => fail 1 "Failure to eliminate functional dependencies of" rf0
-                            end in
-                  constr:(I : I)
+               => constr_fail_with ltac:(fun _ => fail 1 "Failure to eliminate functional dependencies of" rf0)
              end
         | (@eq ?T ?A ?B, ?side_conditions)
           => let rA := expr.reify_in_context base.type ident ltac:(base.reify) reify_ident var_pos A value_ctx tt in
@@ -2089,7 +2086,7 @@ Module Compilers.
           let next := match body with
                       | context[@id ?t ?v]
                         => lazymatch so_far with
-                           | context[cons (existT _ _ v) _] => constr:(I : I)
+                           | context[cons (existT _ _ v) _] => constr_fail
                            | _ => constr:(@Some _ v)
                            end
                       | _ => constr:(@None unit)

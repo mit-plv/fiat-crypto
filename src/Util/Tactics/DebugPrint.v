@@ -1,3 +1,5 @@
+Require Import Crypto.Util.Tactics.ConstrFail.
+
 Ltac debuglevel := constr:(0%nat).
 
 Ltac solve_debugfail tac :=
@@ -36,7 +38,7 @@ Ltac constr_run_tac_fail tac :=
   let dummy := match goal with
                | _ => tac ()
                end in
-  constr:(I : I).
+  constr_fail.
 
 Ltac cidtac msg :=
   constr_run_tac ltac:(fun _ => idtac msg).
