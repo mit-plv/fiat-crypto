@@ -2,6 +2,10 @@
 (** The specifications for the various operations to be synthesized. *)
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Partition.
+Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -11,7 +15,6 @@ Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.UniquePose.
-Require Import Crypto.Arithmetic.Core.
 Local Open Scope Z_scope. Local Open Scope bool_scope.
 
 (** These Imports are only needed for the ring proof *)

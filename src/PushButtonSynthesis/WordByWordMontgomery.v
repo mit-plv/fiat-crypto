@@ -34,7 +34,11 @@ Require Import Crypto.Language.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.CStringification.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Freeze.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
+Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
@@ -55,7 +59,7 @@ Import COperationSpecifications.Solinas.
 Import COperationSpecifications.WordByWordMontgomery.
 
 Import Associational Positional.
-Import Arithmetic.WordByWordMontgomery.
+Import Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
 
 Import WordByWordMontgomeryReificationCache.WordByWordMontgomery.
 
@@ -99,9 +103,9 @@ Section __.
             end.
   Let n_bytes := bytes_n machine_wordsize 1 n.
   Let prime_upperbound_list : list Z
-    := Partition.partition (uweight machine_wordsize) n (s-1).
+    := partition (uweight machine_wordsize) n (s-1).
   Let prime_bytes_upperbound_list : list Z
-    := Partition.partition (weight 8 1) n_bytes (s-1).
+    := partition (weight 8 1) n_bytes (s-1).
   Let upperbounds : list Z := prime_upperbound_list.
   Definition prime_bound : ZRange.type.option.interp (base.type.Z)
     := Some r[0~>m-1]%zrange.
@@ -223,9 +227,8 @@ Section __.
     { use_curve_good_t. }
   Qed.
 
-
-  Local Notation valid := (Arithmetic.WordByWordMontgomery.valid machine_wordsize n m).
-  Local Notation bytes_valid := (Arithmetic.WordByWordMontgomery.valid 8 n_bytes m).
+  Local Notation valid := (valid machine_wordsize n m).
+  Local Notation bytes_valid := (WordByWordMontgomery.valid 8 n_bytes m).
 
   Local Notation from_montgomery_res := (from_montgomerymod machine_wordsize n m m').
 
@@ -654,15 +657,15 @@ Section __.
        using solve [ eauto using length_of_valid | congruence | solve_extra_bounds_side_conditions ] : push_eval.
   (* needed for making [autorewrite] fast enough *)
   Local Opaque
-        Arithmetic.WordByWordMontgomery.onemod
-        Arithmetic.WordByWordMontgomery.from_montgomerymod
-        Arithmetic.WordByWordMontgomery.mulmod
-        Arithmetic.WordByWordMontgomery.squaremod
-        Arithmetic.WordByWordMontgomery.encodemod
-        Arithmetic.WordByWordMontgomery.addmod
-        Arithmetic.WordByWordMontgomery.submod
-        Arithmetic.WordByWordMontgomery.oppmod
-        Arithmetic.WordByWordMontgomery.to_bytesmod.
+        WordByWordMontgomery.WordByWordMontgomery.onemod
+        WordByWordMontgomery.WordByWordMontgomery.from_montgomerymod
+        WordByWordMontgomery.WordByWordMontgomery.mulmod
+        WordByWordMontgomery.WordByWordMontgomery.squaremod
+        WordByWordMontgomery.WordByWordMontgomery.encodemod
+        WordByWordMontgomery.WordByWordMontgomery.addmod
+        WordByWordMontgomery.WordByWordMontgomery.submod
+        WordByWordMontgomery.WordByWordMontgomery.oppmod
+        WordByWordMontgomery.WordByWordMontgomery.to_bytesmod.
   Hint Unfold eval zeromod onemod : push_eval.
 
   Local Ltac prove_correctness op_correct :=

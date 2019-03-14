@@ -2,6 +2,9 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Freeze.
+Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Language.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
@@ -17,7 +20,7 @@ Import Associational Positional.
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
 Module Export WordByWordMontgomery.
-  Import Arithmetic.WordByWordMontgomery.
+  Import WordByWordMontgomery.WordByWordMontgomery.
 
   Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
   Definition onemod bitwidth n m m' := encodemod bitwidth n m m' 1.

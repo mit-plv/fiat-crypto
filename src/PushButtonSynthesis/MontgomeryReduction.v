@@ -15,7 +15,7 @@ Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.FancyMongomeryReduction.
+Require Import Crypto.Arithmetic.MongomeryReduction.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Fancy.Compiler.
