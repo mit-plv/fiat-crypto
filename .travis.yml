@@ -45,16 +45,10 @@ jobs:
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
       script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
     - stage: some-early util printlite lite
-      env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
-    - stage: some-early util printlite lite
       env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
       script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
     - stage: some-early util printlite lite
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
-    - stage: some-early util printlite lite
-      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: CUR=early ./etc/ci/travis.sh some-early util printlite lite
 
     - stage: pre-standalone print-nobigmem nobigmem
@@ -67,16 +61,10 @@ jobs:
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
       script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
     - stage: pre-standalone print-nobigmem nobigmem
-      env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
-    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
     - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
-    - stage: pre-standalone print-nobigmem nobigmem
-      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh pre-standalone print-nobigmem nobigmem
 
     - stage: coq
@@ -89,16 +77,10 @@ jobs:
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
     - stage: coq
-      env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
-    - stage: coq
       env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
     - stage: coq
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
-    - stage: coq
-      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh coq
 
     - stage: standalone-ocaml
@@ -106,9 +88,6 @@ jobs:
       script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh standalone-ocaml c-files test-c-files CC=gcc
     - stage: standalone-ocaml
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh standalone-ocaml c-files test-c-files CC=gcc
-    - stage: standalone-ocaml
-      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
       script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh standalone-ocaml c-files test-c-files CC=gcc
 
 #    - stage: selected-test selected-bench
