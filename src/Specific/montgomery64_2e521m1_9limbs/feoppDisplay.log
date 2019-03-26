@@ -1,0 +1,35 @@
+λ x : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x15, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint64_t x18, uint8_t/*bool*/ x19 = subborrow_u64(0x0, 0x0, x2);
+ uint64_t x21, uint8_t/*bool*/ x22 = subborrow_u64(x19, 0x0, x4);
+ uint64_t x24, uint8_t/*bool*/ x25 = subborrow_u64(x22, 0x0, x6);
+ uint64_t x27, uint8_t/*bool*/ x28 = subborrow_u64(x25, 0x0, x8);
+ uint64_t x30, uint8_t/*bool*/ x31 = subborrow_u64(x28, 0x0, x10);
+ uint64_t x33, uint8_t/*bool*/ x34 = subborrow_u64(x31, 0x0, x12);
+ uint64_t x36, uint8_t/*bool*/ x37 = subborrow_u64(x34, 0x0, x14);
+ uint64_t x39, uint8_t/*bool*/ x40 = subborrow_u64(x37, 0x0, x16);
+ uint64_t x42, uint8_t/*bool*/ x43 = subborrow_u64(x40, 0x0, x15);
+ uint64_t x44 = cmovznz64(x43, 0x0, 0xffffffffffffffffL);
+ uint64_t x45 = (x44 & 0xffffffffffffffffL);
+ uint64_t x47, uint8_t/*bool*/ x48 = addcarryx_u64(0x0, x18, x45);
+ uint64_t x49 = (x44 & 0xffffffffffffffffL);
+ uint64_t x51, uint8_t/*bool*/ x52 = addcarryx_u64(x48, x21, x49);
+ uint64_t x53 = (x44 & 0xffffffffffffffffL);
+ uint64_t x55, uint8_t/*bool*/ x56 = addcarryx_u64(x52, x24, x53);
+ uint64_t x57 = (x44 & 0xffffffffffffffffL);
+ uint64_t x59, uint8_t/*bool*/ x60 = addcarryx_u64(x56, x27, x57);
+ uint64_t x61 = (x44 & 0xffffffffffffffffL);
+ uint64_t x63, uint8_t/*bool*/ x64 = addcarryx_u64(x60, x30, x61);
+ uint64_t x65 = (x44 & 0xffffffffffffffffL);
+ uint64_t x67, uint8_t/*bool*/ x68 = addcarryx_u64(x64, x33, x65);
+ uint64_t x69 = (x44 & 0xffffffffffffffffL);
+ uint64_t x71, uint8_t/*bool*/ x72 = addcarryx_u64(x68, x36, x69);
+ uint64_t x73 = (x44 & 0xffffffffffffffffL);
+ uint64_t x75, uint8_t/*bool*/ x76 = addcarryx_u64(x72, x39, x73);
+ uint64_t x77 = (x44 & 0x1ff);
+ uint64_t x79, uint8_t/*bool*/ _ = addcarryx_u64(x76, x42, x77);
+ (Return x79, Return x75, Return x71, Return x67, Return x63, Return x59, Return x55, Return x51, Return x47))
+x
+     : word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t * uint64_t)

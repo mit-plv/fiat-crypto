@@ -1,0 +1,44 @@
+static void feopp(uint64_t out[8], const uint64_t in1[8]) {
+  { const uint64_t x13 = in1[7];
+  { const uint64_t x14 = in1[6];
+  { const uint64_t x12 = in1[5];
+  { const uint64_t x10 = in1[4];
+  { const uint64_t x8 = in1[3];
+  { const uint64_t x6 = in1[2];
+  { const uint64_t x4 = in1[1];
+  { const uint64_t x2 = in1[0];
+  { uint64_t x16; uint8_t/*bool*/ x17 = _subborrow_u64(0x0, 0x0, x2, &x16);
+  { uint64_t x19; uint8_t/*bool*/ x20 = _subborrow_u64(x17, 0x0, x4, &x19);
+  { uint64_t x22; uint8_t/*bool*/ x23 = _subborrow_u64(x20, 0x0, x6, &x22);
+  { uint64_t x25; uint8_t/*bool*/ x26 = _subborrow_u64(x23, 0x0, x8, &x25);
+  { uint64_t x28; uint8_t/*bool*/ x29 = _subborrow_u64(x26, 0x0, x10, &x28);
+  { uint64_t x31; uint8_t/*bool*/ x32 = _subborrow_u64(x29, 0x0, x12, &x31);
+  { uint64_t x34; uint8_t/*bool*/ x35 = _subborrow_u64(x32, 0x0, x14, &x34);
+  { uint64_t x37; uint8_t/*bool*/ x38 = _subborrow_u64(x35, 0x0, x13, &x37);
+  { uint64_t x39 = cmovznz64(x38, 0x0, 0xffffffffffffffffL);
+  { uint64_t x40 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x42; uint8_t/*bool*/ x43 = _addcarryx_u64(0x0, x16, x40, &x42);
+  { uint64_t x44 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x46; uint8_t/*bool*/ x47 = _addcarryx_u64(x43, x19, x44, &x46);
+  { uint64_t x48 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x50; uint8_t/*bool*/ x51 = _addcarryx_u64(x47, x22, x48, &x50);
+  { uint64_t x52 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x54; uint8_t/*bool*/ x55 = _addcarryx_u64(x51, x25, x52, &x54);
+  { uint64_t x56 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x58; uint8_t/*bool*/ x59 = _addcarryx_u64(x55, x28, x56, &x58);
+  { uint64_t x60 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x62; uint8_t/*bool*/ x63 = _addcarryx_u64(x59, x31, x60, &x62);
+  { uint64_t x64 = (x39 & 0xffffffffffffffffL);
+  { uint64_t x66; uint8_t/*bool*/ x67 = _addcarryx_u64(x63, x34, x64, &x66);
+  { uint64_t x68 = (x39 & 0xfe14ffffffffffffL);
+  { uint64_t x70; uint8_t/*bool*/ _ = _addcarryx_u64(x67, x37, x68, &x70);
+  out[0] = x42;
+  out[1] = x46;
+  out[2] = x50;
+  out[3] = x54;
+  out[4] = x58;
+  out[5] = x62;
+  out[6] = x66;
+  out[7] = x70;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+}
