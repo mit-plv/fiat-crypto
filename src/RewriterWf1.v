@@ -2830,6 +2830,7 @@ Module Compilers.
                               | [ |- List.In ?x ?seg ] => is_evar seg; unify seg (cons x nil); left
                               end
                             | constructor
+                            | progress (cbv [wf_value] in *; cbn [wf_value'] in * )
                             | match goal with H : _ |- _ => eapply H; revgoals; clear H end ].
         Qed.
 
