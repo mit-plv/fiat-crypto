@@ -1297,7 +1297,7 @@ Module Compilers.
             "evaluated" in Gallina (e.g., [eager_list_rect] turns into
             [list_rect] over a concrete list of cons cells holding
             PHOAS expressions), and the result of this evaluation is
-            returned."  *)
+            returned. *)
         (* N.B. the [with_lets] argument to [reflect] doesn't matter
           here because [value' true (_ → _) ≡ value' false (_ → _)] *)
         Definition reflect_ident_iota {t} (idc : ident t) : option (value t)
