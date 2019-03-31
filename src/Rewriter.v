@@ -1288,6 +1288,16 @@ Module Compilers.
         Let type_base := @type.base base.type.
         Local Coercion type_base : base.type >-> type.type.
 
+        (** This definition takes in an identifier. If the identifier
+            is not meant to be evaluated eagerly, [None] is
+            returned. Otherwise, a value-thunk is returned. This
+            value-thunk takes in all of the arguments to which the
+            identifer will eventually be applied.  If there is enough
+            structure for eager evaluation, then the identifier is
+            "evaluated" in Gallina (e.g., [eager_list_rect] turns into
+            [list_rect] over a concrete list of cons cells holding
+            PHOAS expressions), and the result of this evaluation is
+            returned."  *)
         (* N.B. the [with_lets] argument to [reflect] doesn't matter
           here because [value' true (_ → _) ≡ value' false (_ → _)] *)
         Definition reflect_ident_iota {t} (idc : ident t) : option (value t)

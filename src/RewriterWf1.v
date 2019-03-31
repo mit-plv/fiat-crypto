@@ -2571,6 +2571,9 @@ Module Compilers.
       End with_var.
     End Compile.
 
+    (** Now we prove the [wf] properties about definitions used only
+       in reification of rewrite rules, which are used to make proving
+       [wf] of concrete rewrite rules easier. *)
     Module Reify.
       Import Compile.
       Import Rewriter.Compilers.RewriteRules.Compile.
