@@ -108,8 +108,8 @@ src/PushButtonSynthesis/BarrettReduction.v
 src/PushButtonSynthesis/BarrettReductionReificationCache.v
 src/PushButtonSynthesis/InvertHighLow.v
 src/PushButtonSynthesis/LegacySynthesisTactics.v
-src/PushButtonSynthesis/MontgomeryReduction.v
-src/PushButtonSynthesis/MontgomeryReductionReificationCache.v
+src/PushButtonSynthesis/FancyMontgomeryReduction.v
+src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.v
 src/PushButtonSynthesis/Primitives.v
 src/PushButtonSynthesis/ReificationCache.v
 src/PushButtonSynthesis/SaturatedSolinas.v

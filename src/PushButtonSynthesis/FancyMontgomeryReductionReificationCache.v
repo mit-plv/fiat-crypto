@@ -1,11 +1,12 @@
-(** * Push-Button Synthesis of Saturated Solinas: Reification Cache *)
+(** * Push-Button Snthesis of fancy mongomery reduction : Reification Cache *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
+Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 
-Import Associational Positional Arithmetic.MontgomeryReduction.
+Import Associational Positional.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 

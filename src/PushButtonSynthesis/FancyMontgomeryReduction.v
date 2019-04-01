@@ -21,7 +21,7 @@ Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
-Require Import Crypto.PushButtonSynthesis.MontgomeryReductionReificationCache.
+Require Import Crypto.PushButtonSynthesis.FancyMontgomeryReductionReificationCache.
 Require Import Crypto.PushButtonSynthesis.InvertHighLow.
 Require Import Crypto.PushButtonSynthesis.LegacySynthesisTactics.
 Import ListNotations.
