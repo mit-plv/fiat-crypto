@@ -7,6 +7,7 @@ Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Language. Import Language.Compilers.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.PushButtonSynthesis.FancyMontgomeryReduction.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.EquivModulo.

@@ -7,6 +7,7 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 
 Import Associational Positional.
+Import FancyMontgomeryReduction.MontgomeryReduction.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
