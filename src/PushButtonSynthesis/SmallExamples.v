@@ -6,6 +6,8 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Language.
 Require Import Crypto.CStringification.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Primitives.
 Require Import Crypto.BoundsPipeline.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope.
@@ -45,7 +47,7 @@ Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_mulx_u64"
         true None [64; 128]
-        ltac:(let r := Reify (Arithmetic.mulx 64) in
+        ltac:(let r := Reify (mulx 64) in
               exact r)
                (fun _ _ => [])
                (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt))%zrange
@@ -55,7 +57,7 @@ Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_addcarryx_u64"
         true None [1; 64; 128]
-        ltac:(let r := Reify (Arithmetic.addcarryx 64) in
+        ltac:(let r := Reify (addcarryx 64) in
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
@@ -65,7 +67,7 @@ Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_addcarryx_u51"
         true None [1; 64; 128]
-        ltac:(let r := Reify (Arithmetic.addcarryx 51) in
+        ltac:(let r := Reify (addcarryx 51) in
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
@@ -75,7 +77,7 @@ Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_subborrowx_u64"
         true None [1; 64; 128]
-        ltac:(let r := Reify (Arithmetic.subborrowx 64) in
+        ltac:(let r := Reify (subborrowx 64) in
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
@@ -84,7 +86,7 @@ Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_subborrowx_u51"
         true None [1; 64; 128]
-        ltac:(let r := Reify (Arithmetic.subborrowx 51) in
+        ltac:(let r := Reify (subborrowx 51) in
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
@@ -94,7 +96,7 @@ Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_cmovznz64"
         true None [1; 64; 128]
-        ltac:(let r := Reify (Arithmetic.cmovznz 64) in
+        ltac:(let r := Reify (cmovznz 64) in
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
