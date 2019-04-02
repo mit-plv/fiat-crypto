@@ -60,7 +60,7 @@ REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
-  src/Arithmetic.vo \
+  src/Arithmetic/Core.vo \
   src/Rewriter.vo
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
