@@ -339,6 +339,8 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "Z.rshi") args, ZRange.type.base.option.None)
              | ident.Z_cc_m
                => fun args => (show_application with_casts (fun _ => "Z.cc_m") args, ZRange.type.base.option.None)
+             | ident.Z_combine_at_bitwidth
+               => fun args => (show_application with_casts (fun _ => "Z.combine_at_bitwidth") args, ZRange.type.base.option.None)
              | ident.Z_cast range
                => fun '((x, xr), tt) => (x, Some range)
              | ident.Z_cast2 (r1, r2)
@@ -453,6 +455,7 @@ Module Compilers.
                 | ident.Z_add_modulo => "Z.add_modulo"
                 | ident.Z_rshi => "Z.rshi"
                 | ident.Z_cc_m => "Z.cc_m"
+                | ident.Z_combine_at_bitwidth => "Z.combine_at_bitwidth"
                 | ident.Z_cast range => "(" ++ show_range_or_ctype range ++ ")"
                 | ident.Z_cast2 (r1, r2) => "(" ++ show_range_or_ctype r1 ++ ", " ++ show_range_or_ctype r2 ++ ")"
                 | ident.Build_zrange => "Build_zrange"
@@ -1348,6 +1351,7 @@ Module Compilers.
                | ident.Z_add_modulo
                | ident.Z_rshi
                | ident.Z_cc_m
+               | ident.Z_combine_at_bitwidth
                | ident.Z_cast _
                | ident.Z_cast2 _
                | ident.Build_zrange

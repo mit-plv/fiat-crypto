@@ -22,6 +22,7 @@ Require Import Crypto.Util.ZUtil.CC.
 Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Rshi.
 Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Combine.
 Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.

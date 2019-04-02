@@ -716,6 +716,15 @@ print_ident = r"""Inductive ident : defaults.type -> Set :=
                   (Compilers.base.type.type_base base.type.Z) ->
                 (fun x : Compilers.base.type => type.base x)
                   (Compilers.base.type.type_base base.type.Z))%ptype
+  | Z_combine_at_bitwidth : ident
+                              ((fun x : Compilers.base.type => type.base x)
+                                 (Compilers.base.type.type_base base.type.Z) ->
+                               (fun x : Compilers.base.type => type.base x)
+                                 (Compilers.base.type.type_base base.type.Z) ->
+                               (fun x : Compilers.base.type => type.base x)
+                                 (Compilers.base.type.type_base base.type.Z) ->
+                               (fun x : Compilers.base.type => type.base x)
+                                 (Compilers.base.type.type_base base.type.Z))%ptype
   | Z_cast : zrange ->
              ident
                ((fun x : Compilers.base.type => type.base x)
@@ -944,6 +953,7 @@ show_match_ident = r"""match # with
  | ident.Z_add_modulo =>
  | ident.Z_rshi =>
  | ident.Z_cc_m =>
+ | ident.Z_combine_at_bitwidth =>
  | ident.Z_cast range =>
  | ident.Z_cast2 range =>
  | ident.option_Some A =>
@@ -1556,6 +1566,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
         | Z_add_modulo
         | Z_rshi
         | Z_cc_m
+        | Z_combine_at_bitwidth
         | Z_cast
         | Z_cast2
         | option_Some
@@ -1652,6 +1663,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_add_modulo => unit
              | Z_rshi => unit
              | Z_cc_m => unit
+             | Z_combine_at_bitwidth => unit
              | Z_cast => zrange
              | Z_cast2 => zrange * zrange
              | option_Some => Compilers.base.type
@@ -1749,6 +1761,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_add_modulo => true
              | Z_rshi => true
              | Z_cc_m => true
+             | Z_combine_at_bitwidth => true
              | Z_cast => true
              | Z_cast2 => true
              | option_Some => false
@@ -1846,6 +1859,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_add_modulo, Compilers.ident.Z_add_modulo => Datatypes.Some tt
              | Z_rshi, Compilers.ident.Z_rshi => Datatypes.Some tt
              | Z_cc_m, Compilers.ident.Z_cc_m => Datatypes.Some tt
+             | Z_combine_at_bitwidth, Compilers.ident.Z_combine_at_bitwidth => Datatypes.Some tt
              | Z_cast, Compilers.ident.Z_cast range => Datatypes.Some range
              | Z_cast2, Compilers.ident.Z_cast2 range => Datatypes.Some range
              | option_Some, Compilers.ident.option_Some A => Datatypes.Some A
@@ -1939,6 +1953,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_add_modulo, _
              | Z_rshi, _
              | Z_cc_m, _
+             | Z_combine_at_bitwidth, _
              | Z_cast, _
              | Z_cast2, _
              | option_Some, _
@@ -2037,6 +2052,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_add_modulo => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_rshi => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_cc_m => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
+             | Z_combine_at_bitwidth => fun _ => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_cast => fun range => (type.base (Compilers.base.type.type_base base.type.Z) -> type.base (Compilers.base.type.type_base base.type.Z))%ptype
              | Z_cast2 => fun range => (type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype -> type.base (Compilers.base.type.type_base base.type.Z * Compilers.base.type.type_base base.type.Z)%etype)%ptype
              | option_Some => fun A => (type.base A -> type.base (Compilers.base.type.option A))%ptype
@@ -2134,6 +2150,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
              | Z_add_modulo => fun _ => @Compilers.ident.Z_add_modulo
              | Z_rshi => fun _ => @Compilers.ident.Z_rshi
              | Z_cc_m => fun _ => @Compilers.ident.Z_cc_m
+             | Z_combine_at_bitwidth => fun _ => @Compilers.ident.Z_combine_at_bitwidth
              | Z_cast => fun range => @Compilers.ident.Z_cast range
              | Z_cast2 => fun range => @Compilers.ident.Z_cast2 range
              | option_Some => fun A => @Compilers.ident.option_Some A
@@ -2238,6 +2255,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_add_modulo => f _ Compilers.ident.Z_add_modulo
            | Compilers.ident.Z_rshi => f _ Compilers.ident.Z_rshi
            | Compilers.ident.Z_cc_m => f _ Compilers.ident.Z_cc_m
+           | Compilers.ident.Z_combine_at_bitwidth => f _ Compilers.ident.Z_combine_at_bitwidth
            | Compilers.ident.Z_cast range => f _ (@Compilers.ident.Z_cast range)
            | Compilers.ident.Z_cast2 range => f _ (@Compilers.ident.Z_cast2 range)
            | Compilers.ident.option_Some A => f _ (@Compilers.ident.option_Some A)
@@ -2334,6 +2352,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
       | Z_add_modulo : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_rshi : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_cc_m : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
+      | Z_combine_at_bitwidth : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_cast : ident (type.base (base.type.type_base base.type.Z) -> type.base (base.type.type_base base.type.Z))%ptype
       | Z_cast2 : ident (type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype -> type.base (base.type.type_base base.type.Z * base.type.type_base base.type.Z)%pbtype)%ptype
       | option_Some {A : base.type} : ident (type.base A -> type.base (base.type.option A))%ptype
@@ -2430,6 +2449,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_add_modulo => Raw.ident.Z_add_modulo
            | @Z_rshi => Raw.ident.Z_rshi
            | @Z_cc_m => Raw.ident.Z_cc_m
+           | @Z_combine_at_bitwidth => Raw.ident.Z_combine_at_bitwidth
            | @Z_cast => Raw.ident.Z_cast
            | @Z_cast2 => Raw.ident.Z_cast2
            | @option_Some A => Raw.ident.option_Some
@@ -2527,6 +2547,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_add_modulo => []
            | @Z_rshi => []
            | @Z_cc_m => []
+           | @Z_combine_at_bitwidth => []
            | @Z_cast => [zrange : Type]
            | @Z_cast2 => [zrange * zrange : Type]
            | @option_Some A => []
@@ -2624,6 +2645,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_add_modulo => fun _ => @Compilers.ident.Z_add_modulo
            | @Z_rshi => fun _ => @Compilers.ident.Z_rshi
            | @Z_cc_m => fun _ => @Compilers.ident.Z_cc_m
+           | @Z_combine_at_bitwidth => fun _ => @Compilers.ident.Z_combine_at_bitwidth
            | @Z_cast => fun arg => let '(range, _) := eta2r arg in @Compilers.ident.Z_cast range
            | @Z_cast2 => fun arg => let '(range, _) := eta2r arg in @Compilers.ident.Z_cast2 range
            | @option_Some A => fun _ => @Compilers.ident.option_Some _
@@ -2725,6 +2747,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_add_modulo, Compilers.ident.Z_add_modulo => Datatypes.Some tt
            | @Z_rshi, Compilers.ident.Z_rshi => Datatypes.Some tt
            | @Z_cc_m, Compilers.ident.Z_cc_m => Datatypes.Some tt
+           | @Z_combine_at_bitwidth, Compilers.ident.Z_combine_at_bitwidth => Datatypes.Some tt
            | @Z_cast, Compilers.ident.Z_cast range' => Datatypes.Some (range', tt)
            | @Z_cast2, Compilers.ident.Z_cast2 range' => Datatypes.Some (range', tt)
            | @option_Some A, Compilers.ident.option_Some A' => Datatypes.Some tt
@@ -2818,6 +2841,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | @Z_add_modulo, _
            | @Z_rshi, _
            | @Z_cc_m, _
+           | @Z_combine_at_bitwidth, _
            | @Z_cast, _
            | @Z_cast2, _
            | @option_Some _, _
@@ -2916,6 +2940,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_add_modulo => @Z_add_modulo
            | Compilers.ident.Z_rshi => @Z_rshi
            | Compilers.ident.Z_cc_m => @Z_cc_m
+           | Compilers.ident.Z_combine_at_bitwidth => @Z_combine_at_bitwidth
            | Compilers.ident.Z_cast range => @Z_cast
            | Compilers.ident.Z_cast2 range => @Z_cast2
            | Compilers.ident.option_Some A => @option_Some (base.relax A)
@@ -3013,6 +3038,7 @@ with open('GENERATEDIdentifiersWithoutTypes.v', 'w') as f:
            | Compilers.ident.Z_add_modulo => tt
            | Compilers.ident.Z_rshi => tt
            | Compilers.ident.Z_cc_m => tt
+           | Compilers.ident.Z_combine_at_bitwidth => tt
            | Compilers.ident.Z_cast range => (range, tt)
            | Compilers.ident.Z_cast2 range => (range, tt)
            | Compilers.ident.option_Some A => tt

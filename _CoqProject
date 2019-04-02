@@ -273,6 +273,7 @@ src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/AddModulo.v
 src/Util/ZUtil/CC.v
 src/Util/ZUtil/CPS.v
+src/Util/ZUtil/Combine.v
 src/Util/ZUtil/Definitions.v
 src/Util/ZUtil/DistrIf.v
 src/Util/ZUtil/Div.v

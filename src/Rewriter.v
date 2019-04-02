@@ -1431,6 +1431,7 @@ Module Compilers.
               | ident.Z_add_modulo
               | ident.Z_rshi
               | ident.Z_cc_m
+              | ident.Z_combine_at_bitwidth
               | ident.Z_cast _
               | ident.Z_cast2 _
               | ident.option_Some _

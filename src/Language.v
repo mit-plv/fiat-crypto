@@ -925,6 +925,7 @@ Module Compilers.
         | Z_add_modulo : ident (Z -> Z -> Z -> Z)
         | Z_rshi : ident (Z -> Z -> Z -> Z -> Z)
         | Z_cc_m : ident (Z -> Z -> Z)
+        | Z_combine_at_bitwidth : ident (Z -> Z -> Z -> Z)
         | Z_cast (range : ZRange.zrange) : ident (Z -> Z)
         | Z_cast2 (range : ZRange.zrange * ZRange.zrange) : ident ((Z * Z) -> (Z * Z))
         | option_Some {A:base.type} : ident (A -> option A)
@@ -1114,6 +1115,7 @@ Module Compilers.
              | Z_lnot_modulo => Z.lnot_modulo
              | Z_rshi => Z.rshi
              | Z_cc_m => Z.cc_m
+             | Z_combine_at_bitwidth => Z.combine_at_bitwidth
              | Z_cast r => cast r
              | Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
              | Some A => @Datatypes.Some _
@@ -1453,6 +1455,7 @@ Module Compilers.
         | Z.add_modulo => then_tac ident.Z_add_modulo
         | Z.rshi => then_tac ident.Z_rshi
         | Z.cc_m => then_tac ident.Z_cc_m
+        | Z.combine_at_bitwidth => then_tac ident.Z_combine_at_bitwidth
         | ident.cast _ ?r => then_tac (ident.Z_cast r)
         | ident.cast2 _ ?r => then_tac (ident.Z_cast2 r)
         | @Some ?A

@@ -685,6 +685,12 @@ Module Compilers.
                               (ZRange.four_corners Z.add x y)
                               (ZRange.eight_corners (fun x y m => Z.max 0 (x + y - m))
                                                     x y m)))
+             | ident.Z_combine_at_bitwidth as idc
+               => fun bitwidth lo hi
+                  => bitwidth <- to_literal bitwidth;
+                       lo <- lo;
+                       hi <- hi;
+                       Some (ZRange.four_corners (ident.interp idc bitwidth) lo hi)
              | ident.Z_cast range
                => fun r : option zrange
                   => interp_Z_cast range r
