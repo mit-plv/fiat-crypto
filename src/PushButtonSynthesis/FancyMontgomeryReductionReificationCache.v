@@ -1,4 +1,4 @@
-(** * Push-Button Snthesis of fancy mongomery reduction : Reification Cache *)
+(** * Push-Button Synthesis of fancy mongomery reduction : Reification Cache *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Arithmetic.Core.
