@@ -80,7 +80,7 @@ Proof using Type.
   erewrite IHn. reflexivity.
 Qed.
 Lemma uweight_recursive_partition_equiv lgr (Hr : 0 < lgr) n i x:
-  partition (uweight lgr) n x =
+  Partition.partition (uweight lgr) n x =
   recursive_partition (uweight lgr) n i x.
 Proof using Type.
   rewrite recursive_partition_equiv by auto using uwprops.
@@ -88,9 +88,9 @@ Proof using Type.
 Qed.
 
 Lemma uweight_firstn_partition lgr (Hr : 0 < lgr) n x m (Hm : (m <= n)%nat) :
-  firstn m (partition (uweight lgr) n x) = partition (uweight lgr) m x.
+  firstn m (Partition.partition (uweight lgr) n x) = Partition.partition (uweight lgr) m x.
 Proof.
-  cbv [partition];
+  cbv [Partition.partition];
     repeat match goal with
            | _ => progress intros
            | _ => progress autorewrite with push_firstn natsimplify zsimplify_fast
@@ -101,9 +101,9 @@ Proof.
 Qed.
 
 Lemma uweight_skipn_partition lgr (Hr : 0 < lgr) n x m :
-  skipn m (partition (uweight lgr) n x) = partition (uweight lgr) (n - m) (x / uweight lgr m).
+  skipn m (Partition.partition (uweight lgr) n x) = Partition.partition (uweight lgr) (n - m) (x / uweight lgr m).
 Proof.
-  cbv [partition];
+  cbv [Partition.partition];
     repeat match goal with
            | _ => progress intros
            | _ => progress autorewrite with push_skipn natsimplify zsimplify_fast
@@ -116,7 +116,7 @@ Qed.
 
 Lemma uweight_partition_unique lgr (Hr : 0 < lgr) n ls :
   length ls = n -> (forall x, List.In x ls -> 0 <= x <= 2^lgr - 1) ->
-  ls = partition (uweight lgr) n (Positional.eval (uweight lgr) n ls).
+  ls = Partition.partition (uweight lgr) n (Positional.eval (uweight lgr) n ls).
 Proof using Type.
   intro; subst n.
   rewrite uweight_recursive_partition_equiv with (i:=0%nat) by assumption.
@@ -169,8 +169,8 @@ Lemma uweight_eval_app lgr (Hr : 0 <= lgr) n m x y :
 Proof using Type. intros. subst m. apply uweight_eval_app'; lia. Qed.
 
 Lemma uweight_partition_app lgr (Hr : 0 < lgr) n m a b :
-  partition (uweight lgr) n a ++ partition (uweight lgr) m b
-  = partition (uweight lgr) (n+m) (a mod uweight lgr n + b * uweight lgr n).
+ Partition.partition (uweight lgr) n a ++ Partition.partition (uweight lgr) m b
+  = Partition.partition (uweight lgr) (n+m) (a mod uweight lgr n + b * uweight lgr n).
 Proof.
   assert (0 < uweight lgr n) by auto using uwprops.
   match goal with |- _ = ?rhs => rewrite <-(firstn_skipn n rhs) end.

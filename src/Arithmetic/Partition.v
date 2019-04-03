@@ -9,11 +9,15 @@ Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.Notations.
 Import ListNotations Weight. Local Open Scope Z_scope.
 
-Section Partition.
-  Context weight {wprops : @weight_properties weight}.
-
-  Definition partition n x :=
+(* extra name wrapper so partition won't be confused with List.partition *)
+Module Partition.
+  Definition partition (weight : nat -> Z) n x :=
     map (fun i => (x mod weight (S i)) / weight i) (seq 0 n).
+End Partition.
+
+Section PartitionProofs.
+  Context weight {wprops : @weight_properties weight}.
+  Local Notation partition := (Partition.partition weight).
 
   Lemma partition_step n x :
     partition (S n) x = partition n x ++ [(x mod weight (S n)) / weight n].
@@ -124,6 +128,6 @@ Section Partition.
     autorewrite with zsimplify; reflexivity.
   Qed.
 
-End Partition.
+End PartitionProofs.
 Hint Rewrite length_partition length_recursive_partition : distr_length.
 Hint Rewrite eval_partition using (solve [auto; distr_length]) : push_eval.

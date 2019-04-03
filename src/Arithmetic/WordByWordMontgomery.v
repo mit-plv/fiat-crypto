@@ -126,7 +126,7 @@ Module WordByWordMontgomery.
     Let R := (r^Z.of_nat R_numlimbs).
     Transparent T.
     Definition small {n} (v : T n) : Prop
-      := v = partition weight n (eval v).
+      := v = Partition.partition weight n (eval v).
     Context (small_N : small N)
             (N_lt_R : eval N < R)
             (N_nz : 0 < eval N)
@@ -161,9 +161,9 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma mask_r_sub1 n x :
-      map (Z.land (r - 1)) (partition weight n x) = partition weight n x.
+      map (Z.land (r - 1)) (Partition.partition weight n x) = Partition.partition weight n x.
     Proof using lgr_big.
-      clear - lgr_big. cbv [partition].
+      clear - lgr_big. cbv [Partition.partition].
       rewrite map_map. apply map_ext; intros.
       rewrite uweight_S by omega.
       rewrite <-Z.mod_pull_div by auto with zarith.
@@ -248,7 +248,7 @@ Module WordByWordMontgomery.
     Qed.
     Local Lemma small_zero : forall n, small (@zero n).
     Proof using Type.
-      etransitivity; [ eapply Positional.zeros_ext_map | rewrite eval_zero ]; cbv [partition]; cbn; try reflexivity; autorewrite with distr_length; reflexivity.
+      etransitivity; [ eapply Positional.zeros_ext_map | rewrite eval_zero ]; cbv [Partition.partition]; cbn; try reflexivity; autorewrite with distr_length; reflexivity.
     Qed.
     Local Hint Immediate small_zero.
 
@@ -288,7 +288,7 @@ Module WordByWordMontgomery.
     Qed.
 
     Definition canon_rep {n} x (v : T n) : Prop :=
-      (v = partition weight n x) /\ (0 <= x < weight n).
+      (v = Partition.partition weight n x) /\ (0 <= x < weight n).
     Lemma eval_canon_rep n x v : @canon_rep n x v -> eval v = x.
     Proof using lgr_big.
       clear - lgr_big.
@@ -974,7 +974,7 @@ Module WordByWordMontgomery.
     Let r := 2^bitwidth.
     Local Notation weight := (uweight bitwidth).
     Local Notation eval := (@eval bitwidth n).
-    Let m_enc := partition weight n m.
+    Let m_enc := Partition.partition weight n m.
     Local Coercion Z.of_nat : nat >-> Z.
     Context (r' : Z)
             (m' : Z)
@@ -1059,7 +1059,7 @@ Module WordByWordMontgomery.
         t_fin.
     Qed.
 
-    Definition onemod : list Z := partition weight n 1.
+    Definition onemod : list Z := Partition.partition weight n 1.
 
     Definition onemod_correct : eval onemod = 1 /\ valid onemod.
     Proof using n_nz m_big bitwidth_big.
@@ -1070,7 +1070,7 @@ Module WordByWordMontgomery.
     Lemma eval_onemod : eval onemod = 1.
     Proof. apply onemod_correct. Qed.
 
-    Definition R2mod : list Z := partition weight n ((r^n * r^n) mod m).
+    Definition R2mod : list Z := Partition.partition weight n ((r^n * r^n) mod m).
 
     Definition R2mod_correct : eval R2mod mod m = (r^n*r^n) mod m /\ valid R2mod.
     Proof using n_nz m_small m_big m'_correct bitwidth_big.
@@ -1137,7 +1137,7 @@ Module WordByWordMontgomery.
     Proof. apply squaremod_correct. Qed.
 
     Definition encodemod (v : Z) : list Z
-      := mulmod (partition weight n v) R2mod.
+      := mulmod (Partition.partition weight n v) R2mod.
 
     Local Ltac t_valid v :=
       cbv [valid]; repeat apply conj;
@@ -1260,7 +1260,7 @@ Module WordByWordMontgomery.
     Lemma to_bytesmod_correct
       : (forall a (_ : valid a), Positional.eval (uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
                                  = eval a mod m)
-        /\ (forall a (_ : valid a), to_bytesmod a = partition (uweight 8) (bytes_n bitwidth 1 n) (eval a mod m)).
+        /\ (forall a (_ : valid a), to_bytesmod a = Partition.partition (uweight 8) (bytes_n bitwidth 1 n) (eval a mod m)).
     Proof using n_nz m_small bitwidth_big.
       clear -n_nz m_small bitwidth_big.
       generalize (@length_small bitwidth n);

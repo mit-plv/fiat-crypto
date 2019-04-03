@@ -91,7 +91,7 @@ Module MontgomeryReduction.
       autorewrite with widemul.
       rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; omega).
       (* rewrite R_two_pow. *)
-      cbv [partition seq].
+      cbv [Partition.partition seq].
       repeat match goal with
                | _ => progress rewrite ?eval1, ?eval2
                | _ => progress rewrite ?Z.zselect_correct, ?Z.add_modulo_correct

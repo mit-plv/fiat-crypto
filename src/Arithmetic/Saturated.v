@@ -219,7 +219,7 @@ Module Columns.
       Lemma flatten_correct inp:
         forall n,
           length inp = n ->
-          flatten inp = (partition weight n (eval n inp),
+          flatten inp = (Partition.partition weight n (eval n inp),
                          eval n inp / (weight n)).
       Proof using wprops.
         induction inp using rev_ind; intros;
@@ -654,10 +654,10 @@ Module Rows.
             nm = (n + m)%nat ->
             let eval := Positional.eval weight in
             snd (fst start_state) = (eval m row1' + eval m row2') / weight m ->
-            (fst (fst start_state) = partition weight m (eval m row1' + eval m row2')) ->
+            (fst (fst start_state) = Partition.partition weight m (eval m row1' + eval m row2')) ->
             let sum := eval nm (row1' ++ row1) + eval nm (row2' ++ row2) in
             sum_rows' start_state row1 row2
-            = (partition weight nm sum, sum / weight nm, nm) .
+            = (Partition.partition weight nm sum, sum / weight nm, nm) .
         Proof using wprops.
           destruct start_state as [ [acc rem] m].
           cbn [fst snd]. revert acc rem m.
@@ -687,7 +687,7 @@ Module Rows.
         Lemma sum_rows_correct row1: forall row2 n,
             length row1 = n -> length row2 = n ->
             let sum := Positional.eval weight n row1 + Positional.eval weight n row2 in
-            sum_rows row1 row2 = (partition weight n sum, sum / weight n).
+            sum_rows row1 row2 = (Partition.partition weight n sum, sum / weight n).
         Proof using wprops.
           cbv [sum_rows]; intros.
           erewrite sum_rows'_correct with (nm:=n) (row1':=nil) (row2':=nil)by (cbn; distr_length; reflexivity).
@@ -755,7 +755,7 @@ Module Rows.
         (forall row, In row inp -> length row = n) ->
         inp <> nil ->
         let sum := Positional.eval weight n (fst start_state) + eval n inp + weight n * snd start_state in
-        flatten' start_state inp = (partition weight n sum, sum / weight n).
+        flatten' start_state inp = (Partition.partition weight n sum, sum / weight n).
       Proof using wprops.
         induction inp using rev_ind; push. subst sum.
         destruct (dec (inp = nil)); [ subst inp; cbn | ];
@@ -776,7 +776,7 @@ Module Rows.
 
       Lemma flatten_correct inp n :
         (forall row, In row inp -> length row = n) ->
-        flatten n inp = (partition weight n (eval n inp), eval n inp / weight n).
+        flatten n inp = (Partition.partition weight n (eval n inp), eval n inp / weight n).
       Proof using wprops.
         intros; cbv [flatten].
         destruct inp; [|destruct inp]; cbn [hd tl];
@@ -877,7 +877,7 @@ Module Rows.
 
       Lemma add_partitions n p q :
         length p = n -> length q = n ->
-        fst (add n p q) = partition weight n (Positional.eval weight n p + Positional.eval weight n q).
+        fst (add n p q) = Partition.partition weight n (Positional.eval weight n p + Positional.eval weight n q).
       Proof using wprops. solver. Qed.
 
       Lemma add_div n p q :
@@ -888,7 +888,7 @@ Module Rows.
       Lemma conditional_add_partitions n mask cond p q :
         length p = n -> length q = n -> map (Z.land mask) q = q ->
         fst (conditional_add n mask cond p q)
-        = partition weight n (Positional.eval weight n p + if dec (cond = 0) then 0 else Positional.eval weight n q).
+        = Partition.partition weight n (Positional.eval weight n p + if dec (cond = 0) then 0 else Positional.eval weight n q).
       Proof using wprops.
         cbv [conditional_add]; intros; rewrite add_partitions by (distr_length; auto).
         autorewrite with push_eval; reflexivity.
@@ -917,7 +917,7 @@ Module Rows.
 
       Lemma sub_partitions n p q :
         length p = n -> length q = n ->
-        fst (sub n p q) = partition weight n (Positional.eval weight n p - Positional.eval weight n q).
+        fst (sub n p q) = Partition.partition weight n (Positional.eval weight n p - Positional.eval weight n q).
       Proof using wprops. solver. Qed.
 
       Lemma sub_div n p q :
@@ -926,10 +926,10 @@ Module Rows.
       Proof using wprops. solver. Qed.
 
       Lemma conditional_sub_partitions n p q
-        (Hp : p = partition weight n (Positional.eval weight n p)) :
+        (Hp : p = Partition.partition weight n (Positional.eval weight n p)) :
         length q = n ->
         0 <= Positional.eval weight n q < weight n ->
-        conditional_sub n p q = partition weight n (if Positional.eval weight n q <=? Positional.eval weight n p then Positional.eval weight n p - Positional.eval weight n q else Positional.eval weight n p).
+        conditional_sub n p q = Partition.partition weight n (if Positional.eval weight n q <=? Positional.eval weight n p then Positional.eval weight n p - Positional.eval weight n q else Positional.eval weight n p).
       Proof using wprops.
         cbv [conditional_sub]; intros.
         rewrite (surjective_pairing (sub _ _ _)).
@@ -952,7 +952,7 @@ Module Rows.
         map (Z.land mask) r = r ->
         0 <= Positional.eval weight n p < weight n ->
         0 <= Positional.eval weight n q < weight n ->
-        fst (sub_then_maybe_add n mask p q r) = partition weight n (sub_then_maybe_add_Z (Positional.eval weight n p) (Positional.eval weight n q) (Positional.eval weight n r)).
+        fst (sub_then_maybe_add n mask p q r) = Partition.partition weight n (sub_then_maybe_add_Z (Positional.eval weight n p) (Positional.eval weight n q) (Positional.eval weight n r)).
       Proof using wprops.
         cbv [sub_then_maybe_add]. subst sub_then_maybe_add_Z.
         intros.
@@ -969,7 +969,7 @@ Module Rows.
 
       Lemma mul_partitions base n m p q :
         base <> 0 -> m <> 0%nat -> length p = n -> length q = n ->
-        fst (mul base n m p q) = partition weight m (Positional.eval weight n p * Positional.eval weight n q).
+        fst (mul base n m p q) = Partition.partition weight m (Positional.eval weight n p * Positional.eval weight n q).
       Proof using wprops. solver. Qed.
 
       Lemma mul_div base n m p q :

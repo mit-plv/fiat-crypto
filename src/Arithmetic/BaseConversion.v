@@ -41,13 +41,13 @@ Module BaseConversion.
     Lemma convert_bases_partitions sn dn p
           (dw_unique : forall i j : nat, (i <= dn)%nat -> (j <= dn)%nat -> dw i = dw j -> i = j)
           (p_bounded : 0 <= eval sw sn p < dw dn)
-      : convert_bases sn dn p = partition dw dn (eval sw sn p).
+      : convert_bases sn dn p = Partition.partition dw dn (eval sw sn p).
     Proof using dwprops.
       apply list_elementwise_eq; intro i.
       destruct (lt_dec i dn); [ | now rewrite !nth_error_length_error by distr_length ].
       erewrite !(@nth_error_Some_nth_default _ _ 0) by (break_match; distr_length).
       apply f_equal.
-      cbv [convert_bases partition].
+      cbv [convert_bases Partition.partition].
       unshelve erewrite map_nth_default, nth_default_chained_carries_no_reduce_pred;
         repeat first [ progress autorewrite with distr_length push_eval
                      | rewrite eval_from_associational, eval_to_associational
@@ -117,7 +117,7 @@ Module BaseConversion.
     Hint Rewrite eval_from_associational using solve [push_eval; distr_length] : push_eval.
 
     Lemma from_associational_partitions n idxs p  (_:n<>0%nat):
-      from_associational idxs n p = partition sw n (Associational.eval p).
+      from_associational idxs n p = Partition.partition sw n (Associational.eval p).
     Proof using dwprops swprops.
       intros. cbv [from_associational].
       rewrite Rows.flatten_correct with (n:=n) by eauto using Rows.length_from_associational.
@@ -181,7 +181,7 @@ Module BaseConversion.
 
       Lemma mul_converted_partitions n1 n2 m1 m2 n3 idxs p1 p2  (_:n3<>0%nat) (_:m1<>0%nat) (_:m2<>0%nat):
         length p1 = n1 -> length p2 = n2 ->
-        mul_converted n1 n2 m1 m2 n3 idxs p1 p2 = partition sw n3 (Positional.eval sw n1 p1 * Positional.eval sw n2 p2).
+        mul_converted n1 n2 m1 m2 n3 idxs p1 p2 = Partition.partition sw n3 (Positional.eval sw n1 p1 * Positional.eval sw n2 p2).
       Proof using dwprops swprops.
         intros; cbv [mul_converted].
         rewrite from_associational_partitions by auto. push_eval.
@@ -215,14 +215,14 @@ Module BaseConversion.
     Lemma widemul_correct a b :
       length a = m ->
       length b = m ->
-      widemul a b = partition sw nout (seval m a * seval m b). 
+      widemul a b = Partition.partition sw nout (seval m a * seval m b). 
     Proof. apply mul_converted_partitions; auto with zarith. Qed.
 
     Derive widemul_inlined
            SuchThat (forall a b,
                         length a = m ->
                         length b = m ->
-                        widemul_inlined a b = partition sw nout (seval m a * seval m b))
+                        widemul_inlined a b = Partition.partition sw nout (seval m a * seval m b))
            As widemul_inlined_correct.
     Proof.
       intros.
@@ -238,7 +238,7 @@ Module BaseConversion.
            SuchThat (forall a b,
                         length a = m ->
                         length b = m ->
-                        widemul_inlined_reverse a b = partition sw nout (seval m a * seval m b))
+                        widemul_inlined_reverse a b = Partition.partition sw nout (seval m a * seval m b))
            As widemul_inlined_reverse_correct.
     Proof.
       intros.
