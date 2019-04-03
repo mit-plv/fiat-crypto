@@ -455,52 +455,6 @@ Module Compilers.
           subst; reflexivity.
         Qed.
 
-        Lemma interp_Base_value {t v1 v2}
-          : value_interp_related v1 v2
-            -> value_interp_related (@Base_value t v1) v2.
-        Proof using Type.
-          cbv [Base_value]; destruct t; exact id.
-        Qed.
-
-        Lemma interp_splice_under_lets_with_value_of_ex {T T' t R e f v}
-          : (exists fv (xv : T'),
-                UnderLets.interp_related ident_interp R e xv
-                /\ (forall x1 x2,
-                       R x1 x2
-                       -> value_interp_related (f x1) (fv x2))
-                /\ fv xv = v)
-            -> value_interp_related (@splice_under_lets_with_value T t e f) v.
-        Proof using Type.
-          induction t as [|s IHs d IHd].
-          all: repeat first [ progress cbn [value_interp_related splice_under_lets_with_value] in *
-                            | progress intros
-                            | progress destruct_head'_ex
-                            | progress destruct_head'_and
-                            | progress subst
-                            | eassumption
-                            | solve [ eauto ]
-                            | now (eapply UnderLets.splice_interp_related_of_ex; eauto)
-                            | match goal with
-                              | [ H : _ |- _ ] => eapply H; clear H
-                              | [ |- exists fv xv, _ /\ _ /\ _ ]
-                                => do 2 eexists; repeat apply conj; [ eassumption | | ]
-                              end ].
-        Qed.
-
-        Lemma interp_splice_value_with_lets_of_ex {t t' e f v}
-          : (exists fv xv,
-                value_interp_related e xv
-                /\ (forall x1 x2,
-                       value_interp_related x1 x2
-                       -> value_interp_related (f x1) (fv x2))
-                /\ fv xv = v)
-            -> value_interp_related (@splice_value_with_lets t t' e f) v.
-        Proof using Type.
-          cbv [splice_value_with_lets]; break_innermost_match.
-          { apply interp_splice_under_lets_with_value_of_ex. }
-          { intros; destruct_head'_ex; destruct_head'_and; subst; eauto. }
-        Qed.
-
         Lemma interp_reify_and_let_binds {with_lets t v1 v}
           : value_interp_related v1 v
             -> UnderLets_interp_related (@reify_and_let_binds_cps with_lets t v1 _ UnderLets.Base) v.

@@ -19,6 +19,8 @@ Require Import Crypto.UnderLets.
 Require Import Crypto.GENERATEDIdentifiersWithoutTypes.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.CacheTerm.
+Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
@@ -1240,6 +1242,7 @@ Module Compilers.
                  end
              end%option.
 
+        (* only returns [None] if the fuel runs out *)
         Fixpoint compile_rewrites' (fuel : nat) (pattern_matrix : list (nat * list rawpattern))
           : option decision_tree
           := match fuel with
@@ -1277,6 +1280,28 @@ Module Compilers.
       Global Arguments rew_with_opt        {_ _ _ _ _ _} _.
       Global Arguments rew_under_lets      {_ _ _ _ _ _} _.
       Global Arguments rew_replacement     {_ _ _ _ _ _} _.
+
+      Ltac compute_with_fuel f fuel :=
+        lazymatch (eval compute in (f fuel)) with
+        | Some ?res => res
+        | None => compute_with_fuel f (10 + fuel * 10)%nat
+        | ?res => fail 0 "Invalid result of computing" f "with fuel" fuel ":" res
+        end.
+
+      Ltac compile_rewrites ident var pident pident_arg_types raw_pident strip_types raw_pident_beq ps
+        := compute_with_fuel (fun fuel : nat => @compile_rewrites ident var pident pident_arg_types raw_pident strip_types raw_pident_beq fuel ps) 100%nat (* initial value of depth of patterns; doesn't matter too much *).
+      Ltac CompileRewrites ident pident pident_arg_types raw_pident strip_types raw_pident_beq ps :=
+        let var := fresh "var" in
+        let res
+            := lazymatch constr:(
+                           fun var : Compilers.type.type Compilers.base.type -> Type
+                           => ltac:(let res := compile_rewrites ident var pident pident_arg_types raw_pident strip_types raw_pident_beq (ps var) in
+                                    exact res))
+               with
+               | fun _ => ?res => res
+               end in
+        let dtree := fresh "dtree" in
+        cache_term res dtree.
 
       Section full.
         Context {var : type.type base.type -> Type}.
@@ -1557,15 +1582,15 @@ Module Compilers.
                 then UnderLets.Base e
                 else reify_expr_beta_iota e)%under_lets.
 
-        Fixpoint pair'_unification_resultT' {evm t p}
-          : @unification_resultT' (fun _ => positive) t p evm -> @unification_resultT' value t p evm -> PositiveMap.t { t : _ & value t } * list bool -> PositiveMap.t { t : _ & value t } * list bool
-          := match p return @unification_resultT' (fun _ => positive) _ p evm -> @unification_resultT' value _ p evm -> PositiveMap.t { t : _ & value t } * list bool -> PositiveMap.t { t : _ & value t } * list bool with
+        Fixpoint pair'_unification_resultT' {A evm t p}
+          : @unification_resultT' (fun _ => positive) t p evm -> @unification_resultT' value t p evm -> PositiveMap.t { t : _ & value t } * (A -> list bool) -> PositiveMap.t { t : _ & value t } * (A -> list bool)
+          := match p return @unification_resultT' (fun _ => positive) _ p evm -> @unification_resultT' value _ p evm -> PositiveMap.t { t : _ & value t } * (A -> list bool) -> PositiveMap.t { t : _ & value t } * (A -> list bool) with
              | pattern.Wildcard t => fun p v '(m, l) => (PositiveMap.add p (existT value _ v) m, l)
-             | pattern.Ident t idc => fun v1 v2 '(m, l) => (m, pident_type_of_list_arg_types_beq t idc v2 v1 :: l)
+             | pattern.Ident t idc => fun v1 v2 '(m, l) => (m, fun a => pident_type_of_list_arg_types_beq t idc v2 v1 :: l a)
              | pattern.App _ _ F X
                => fun x y '(m, l)
-                  => let '(m, l) := @pair'_unification_resultT' _ _ F (fst x) (fst y) (m, l) in
-                     let '(m, l) := @pair'_unification_resultT' _ _ X (snd x) (snd y) (m, l) in
+                  => let '(m, l) := @pair'_unification_resultT' _ _ _ F (fst x) (fst y) (m, l) in
+                     let '(m, l) := @pair'_unification_resultT' _ _ _ X (snd x) (snd y) (m, l) in
                      (m, l)
              end.
 
@@ -1592,11 +1617,32 @@ Module Compilers.
                              (fun v => @expr_pos_to_expr_value invalid _ (f cur_i) (PositiveMap.add cur_i (existT value _ v) m) (Pos.succ cur_i))
              end.
 
+        Inductive lookup_gets_inlined_error_messages :=
+        | NO_SUCH_EXPRESSION_TO_CHECK (p : positive) (m : PositiveMap.t { t : _ & value t })
+        | TYPE_IS_NOT_BASE (p : positive) (m : PositiveMap.t { t : _ & value t }) (t : type).
+
+        Definition lookup_expr_gets_inlined
+                   (invalid : forall A B, A -> B)
+                   (gets_inlined : forall t, value (type.base t) -> bool)
+                   (m : PositiveMap.t { t : _ & value t })
+                   (p : positive)
+          : bool
+          := Eval cbv -[value] in
+              match PositiveMap.find p m with
+              | Some (existT t e)
+                => match t return value t -> _ with
+                   | type.base t => gets_inlined t
+                   | _ => invalid _ _ (TYPE_IS_NOT_BASE p m t)
+                   end e
+              | None => invalid _ _ (NO_SUCH_EXPRESSION_TO_CHECK p m)
+              end.
+
         Definition expr_to_pattern_and_replacement
+                   (gets_inlined : forall t, value (type.base t) -> bool)
                    (should_do_again : bool) evm
                    (invalid : forall A B, A -> B)
                    {t} (lhs rhs : @expr.expr base.type ident (fun _ => positive) t)
-                   (side_conditions : list bool)
+                   (side_conditions : (positive -> bool) -> list bool)
           : { p : pattern (pattern.type.relax t) & @with_unif_rewrite_ruleTP_gen' _ p should_do_again true true evm }
           := let (p, unif_data_lhs) := @pattern_of_expr evm (fun _ => invalid _ _) t lhs in
              existT
@@ -1610,6 +1656,7 @@ Module Compilers.
                   (lam_unification_resultT'
                      (fun unif_data_new
                       => let '(value_map, side_conditions) := pair'_unification_resultT' unif_data_lhs unif_data_new (PositiveMap.empty _, side_conditions) in
+                         let side_conditions := side_conditions (lookup_expr_gets_inlined invalid gets_inlined value_map) in
                          let start_i := Pos.succ (PositiveMap.fold (fun k _ max => Pos.max k max) value_map 1%positive) in
                          let replacement := expr_pos_to_expr_value (fun _ => invalid _ _) rhs value_map start_i in
                          let replacement := expr_value_to_rewrite_rule_replacement should_do_again replacement in
@@ -1618,9 +1665,9 @@ Module Compilers.
                          else None))).
 
 
-        Definition expr_to_pattern_and_replacement_unfolded should_do_again evm invalid {t} lhs rhs side_conditions
-          := Eval cbv beta iota delta [expr_to_pattern_and_replacement pattern_of_expr lam_unification_resultT' Pos.succ pair'_unification_resultT' PositiveMap.empty PositiveMap.fold Pos.max expr_pos_to_expr_value (* expr_value_to_rewrite_rule_replacement*) fold_left List.rev List.app value PositiveMap.add PositiveMap.xfoldi Pos.compare Pos.compare_cont FMapPositive.append projT1 projT2 PositiveMap.find Base_value (*UnderLets.map reify_expr_beta_iota reflect_expr_beta_iota*) lam_type_of_list fold_right list_rect pattern.type.relax pattern.type.subst_default pattern.type.subst_default_relax pattern.type.unsubst_default_relax option_map unification_resultT' with_unification_resultT' with_unif_rewrite_ruleTP_gen']
-            in @expr_to_pattern_and_replacement should_do_again evm invalid t lhs rhs side_conditions.
+        Definition expr_to_pattern_and_replacement_unfolded gets_inlined should_do_again evm invalid {t} lhs rhs side_conditions
+          := Eval cbv beta iota delta [expr_to_pattern_and_replacement lookup_expr_gets_inlined pattern_of_expr lam_unification_resultT' Pos.succ pair'_unification_resultT' PositiveMap.empty PositiveMap.fold Pos.max expr_pos_to_expr_value (* expr_value_to_rewrite_rule_replacement*) fold_left List.rev List.app value PositiveMap.add PositiveMap.xfoldi Pos.compare Pos.compare_cont FMapPositive.append projT1 projT2 PositiveMap.find Base_value (*UnderLets.map reify_expr_beta_iota reflect_expr_beta_iota*) lam_type_of_list fold_right list_rect pattern.type.relax pattern.type.subst_default pattern.type.subst_default_relax pattern.type.unsubst_default_relax option_map unification_resultT' with_unification_resultT' with_unif_rewrite_ruleTP_gen']
+            in @expr_to_pattern_and_replacement gets_inlined should_do_again evm invalid t lhs rhs side_conditions.
 
         Definition partial_lam_unif_rewrite_ruleTP_gen_unfolded should_do_again {t} p
           := Eval cbv beta iota delta [partial_lam_unif_rewrite_ruleTP_gen pattern.collect_vars pattern.type.lam_forall_vars partial_lam_unification_resultT pattern.type.collect_vars pattern.base.collect_vars PositiveSet.union PositiveSet.add PositiveSet.empty pattern.type.lam_forall_vars_gen List.rev PositiveSet.elements PositiveSet.xelements PositiveSet.rev PositiveSet.rev_append List.app orb fold_right PositiveMap.add PositiveMap.empty]
@@ -1809,31 +1856,39 @@ Module Compilers.
         | _ => term
         end.
 
-      Ltac under_binders term cont ctx :=
+      Ltac under_binders payload term cont ctx :=
         lazymatch term with
         | (fun x : ?T => ?f)
           => let ctx' := fresh in
              let f' := fresh in
-             constr:(fun x : T
-                     => match f, dyncons x ctx return _ with
-                        | f', ctx'
-                          => ltac:(let ctx := (eval cbv delta [ctx'] in ctx') in
-                                   let f := (eval cbv delta [f'] in f') in
-                                   clear f' ctx';
-                                   let res := under_binders f cont ctx in
-                                   exact res)
-                        end)
-        | ?term => cont ctx term
+             let payload' := fresh in (* COQBUG(https://github.com/coq/coq/issues/7210#issuecomment-470009463) *)
+             constr:(match payload return _ with
+                     | payload'
+                       => fun x : T
+                          => match f, dyncons x ctx return _ with
+                             | f', ctx'
+                               => ltac:(let ctx := (eval cbv delta [ctx'] in ctx') in
+                                        let f := (eval cbv delta [f'] in f') in
+                                        let payload := (eval cbv delta [payload'] in payload') in
+                                        clear f' ctx' payload';
+                                        let res := under_binders payload f cont ctx in
+                                        exact res)
+                             end
+                     end)
+        | ?term => cont payload ctx term
         end.
       Ltac substitute_with term x y :=
         lazymatch (eval pattern y in term) with
         | (fun z => ?term) _ => constr:(match x return _ with z => term end)
         end.
-      Ltac substitute_beq_with full_ctx term beq x :=
+      Ltac substitute_beq_with only_eliminate_in_ctx full_ctx term beq x :=
         let is_good y :=
             lazymatch full_ctx with
             | context[dyncons y _] => fail
-            | _ => is_var y
+            | _ => is_var y;
+                   lazymatch only_eliminate_in_ctx with
+                   | context[y] => idtac
+                   end
             end in
         let y := match term with
                  | context term' [beq x ?y]
@@ -1888,7 +1943,7 @@ Module Compilers.
         | _ => term
         end.
 
-      Ltac substitute_beq full_ctx ctx term :=
+      Ltac substitute_beq only_eliminate_in_ctx full_ctx ctx term :=
         lazymatch ctx with
         | dynnil
           => let term := (eval cbv [base.interp_beq base.base_interp_beq] in term) in
@@ -1897,41 +1952,59 @@ Module Compilers.
              let term := adjust_if_negb term in
              term
         | dyncons ?v ?ctx
-          => let term := substitute_beq_with full_ctx term zrange_beq v in
-             let term := substitute_beq_with full_ctx term Z.eqb v in
+          => let term := substitute_beq_with only_eliminate_in_ctx full_ctx term zrange_beq v in
+             let term := substitute_beq_with only_eliminate_in_ctx full_ctx term Z.eqb v in
              let term := match constr:(Set) with
                          | _ => let T := type of v in
                                 let beq := (eval cbv beta delta [Reflect.decb_rel] in (Reflect.decb_rel (@eq T))) in
-                                substitute_beq_with full_ctx term beq v
+                                substitute_beq_with only_eliminate_in_ctx full_ctx term beq v
                          | _ => term
                          end in
-             substitute_beq full_ctx ctx term
+             substitute_beq only_eliminate_in_ctx full_ctx ctx term
         end.
 
-      Ltac deep_substitute_beq term :=
+      Ltac deep_substitute_beq only_eliminate_in_ctx term :=
         lazymatch term with
         | context term'[@Build_rewrite_rule_data ?ident ?var ?pident ?pident_arg_types ?t ?p ?sda ?wo ?ul ?subterm]
-          => let subterm := under_binders subterm ltac:(fun ctx term => substitute_beq ctx ctx term) dynnil in
+          => let subterm := under_binders only_eliminate_in_ctx subterm ltac:(fun only_eliminate_in_ctx ctx term => substitute_beq only_eliminate_in_ctx ctx ctx term) dynnil in
              let term := context term'[@Build_rewrite_rule_data ident var pident pident_arg_types t p sda wo ul subterm] in
              term
         end.
 
-      Ltac clean_beq term :=
+      Ltac clean_beq only_eliminate_in_ctx term :=
         let term := (eval cbn [Prod.prod_beq] in term) in
         let term := (eval cbv [ident.literal] in term) in
-        let term := deep_substitute_beq term in
+        let term := deep_substitute_beq only_eliminate_in_ctx term in
         let term := (eval cbv [base.interp_beq base.base_interp_beq] in term) in
         let term := remove_andb_true term in
         term.
 
+      Ltac adjust_side_conditions_for_gets_inlined' value_ctx side_conditions lookup_gets_inlined :=
+        lazymatch side_conditions with
+        | context sc[ident.gets_inlined _ ?x]
+          => lazymatch value_ctx with
+             | context[expr.var_context.cons x ?p _]
+               => let rep := constr:(lookup_gets_inlined p) in
+                  let side_conditions := context sc[rep] in
+                  adjust_side_conditions_for_gets_inlined' value_ctx side_conditions lookup_gets_inlined
+             | _ => constr_fail_with ltac:(fun _ => fail 1 "Could not find an expression corresponding to" x "in context" value_ctx)
+             end
+        | _ => side_conditions
+        end.
 
-      Ltac reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota type_ctx var should_do_again cur_i term value_ctx :=
+      Ltac adjust_side_conditions_for_gets_inlined value_ctx side_conditions :=
+        let lookup_gets_inlined := fresh in
+        constr:(fun lookup_gets_inlined : positive -> bool
+                => ltac:(let v := adjust_side_conditions_for_gets_inlined' value_ctx side_conditions lookup_gets_inlined in
+                         exact v)).
+
+      Ltac reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota type_ctx var gets_inlined should_do_again cur_i term value_ctx :=
         let t := fresh "t" in
         let p := fresh "p" in
-        let reify_rec_gen type_ctx := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota type_ctx var should_do_again in
+        let reify_rec_gen type_ctx := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota type_ctx var gets_inlined should_do_again in
         let var_pos := constr:(fun _ : type base.type => positive) in
         let value := constr:(@value base.type ident var) in
-        let cexpr_to_pattern_and_replacement_unfolded := constr:(@expr_to_pattern_and_replacement_unfolded ident var pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident (reflect_ident_iota var) should_do_again type_ctx) in
+        let cexpr_to_pattern_and_replacement_unfolded := constr:(@expr_to_pattern_and_replacement_unfolded ident var pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident (reflect_ident_iota var) gets_inlined should_do_again type_ctx) in
         let cpartial_lam_unif_rewrite_ruleTP_gen := constr:(@partial_lam_unif_rewrite_ruleTP_gen_unfolded ident var pident pident_arg_types should_do_again) in
         let cwith_unif_rewrite_ruleTP_gen := constr:(fun t p => @with_unif_rewrite_ruleTP_gen ident var pident pident_arg_types value t p should_do_again true true) in
         lazymatch term with
@@ -1965,6 +2038,7 @@ Module Compilers.
         | (@eq ?T ?A ?B, ?side_conditions)
           => let rA := expr.reify_in_context base.type ident ltac:(base.reify) reify_ident var_pos A value_ctx tt in
              let rB := expr.reify_in_context base.type ident ltac:(base.reify) reify_ident var_pos B value_ctx tt in
+             let side_conditions := adjust_side_conditions_for_gets_inlined value_ctx side_conditions in
              let invalid := fresh "invalid" in
              let res := constr:(fun invalid => cexpr_to_pattern_and_replacement_unfolded invalid _ rA rB side_conditions) in
              let res := (eval cbv [expr_to_pattern_and_replacement_unfolded pident_arg_types pident_of_typed_ident pident_type_of_list_arg_types_beq pident_arg_types_of_typed_ident (*reflect_ident_iota*)] in res) in
@@ -2005,29 +2079,29 @@ Module Compilers.
                                (@rewrite_ruleTP ident var pident pident_arg_types)
                                {| pattern.pattern_of_anypattern := projT1 res |}
                                {| rew_replacement := projT2 res |})) in
-             let res := clean_beq res in
+             let res := clean_beq value_ctx res in
              res
         end.
 
-      Ltac reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var should_do_again lem :=
+      Ltac reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var gets_inlined should_do_again lem :=
         reify_under_forall_types
           lem
           ltac:(
           fun ty_ctx cur_i lem
           => let lem := equation_to_parts lem in
-             let res := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota ty_ctx var should_do_again constr:(1%positive) lem (@expr.var_context.nil base.type (fun _ => positive)) in
+             let res := reify_to_pattern_and_replacement_in_context ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota ty_ctx var gets_inlined should_do_again constr:(1%positive) lem (@expr.var_context.nil base.type (fun _ => positive)) in
              res).
 
-      Ltac Reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota should_do_again lem :=
+      Ltac Reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota gets_inlined should_do_again lem :=
         let var := fresh "var" in
         constr:(fun var : Compilers.type.type Compilers.base.type -> Type
-                => ltac:(let res := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var should_do_again lem in
+                => ltac:(let res := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var (gets_inlined var) should_do_again lem in
                          exact res)).
 
       (* lems is either a list of [Prop]s, or a list of [bool (* should_do_again *) * Prop] *)
-      Ltac reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var lems :=
-        let reify' := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var in
-        let reify_list_rec := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var in
+      Ltac reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var gets_inlined lems :=
+        let reify' := reify ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var gets_inlined in
+        let reify_list_rec := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var gets_inlined in
         lazymatch (eval hnf in lems) with
         | (?b, ?lem) :: ?lems
           => let rlem := reify' b lem in
@@ -2041,10 +2115,10 @@ Module Compilers.
              reify_list_rec lems
         end.
 
-      Ltac Reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota lems :=
+      Ltac Reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota gets_inlined lems :=
         let var := fresh "var" in
         constr:(fun var : Compilers.type.type Compilers.base.type -> Type
-                => ltac:(let res := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var lems in
+                => ltac:(let res := reify_list ident reify_ident pident pident_arg_types pident_type_of_list_arg_types_beq pident_of_typed_ident pident_arg_types_of_typed_ident reflect_ident_iota var (gets_inlined var) lems in
                          exact res)).
     End Reify.
 
@@ -2292,245 +2366,293 @@ Module Compilers.
           := Eval cbv [interp_rewrite_rules' ident.interp ident.gen_interp ident.smart_Literal] in
               interp_rewrite_rules'.
       End make_rewrite_rules.
-    End Make.
 
-    Section with_var.
-      Import Compile.
-      Context {var : type.type base.type -> Type}.
-      Local Notation type := (type.type base.type).
-      Local Notation expr := (@expr.expr base.type ident var).
-      Local Notation value := (@value base.type ident var).
-      Local Notation pattern := (@pattern.pattern pattern.ident).
-      Local Notation UnderLets := (@UnderLets.UnderLets base.type ident var).
-      Local Notation ptype := (type.type pattern.base.type).
-      Let type_base (t : base.type) : type := type.base t.
-      Let ptype_base (t : pattern.base.type) : ptype := type.base t.
-      Let ptype_base' (t : base.type.base) : ptype := @type.base pattern.base.type t.
-      Coercion ptype_base' : base.type.base >-> ptype.
-      Coercion type_base : base.type >-> type.
-      Coercion ptype_base : pattern.base.type >-> ptype.
-      Local Notation Build_rewrite_rule_data := (@Build_rewrite_rule_data ident var pattern.ident (@pattern.ident.arg_types)).
-      Local Notation Build_anypattern := (@pattern.Build_anypattern pattern.ident).
-      Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types)).
-      Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pattern.ident (@pattern.ident.arg_types)).
-      Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pattern.ident (@pattern.ident.arg_types)).
+      Module Import AdjustRewriteRulesForReduction.
+        Import PrimitiveHList.
+        (* N.B. The [combine_hlist] call MUST eta-expand
+           [pr2_rewrite_rules].  That is, it MUST NOT block reduction
+           of the resulting list of cons cells on the pair-structure
+           of [pr2_rewrite_rules].  This is required so that we can
+           use [cbv -] to unfold the entire decision tree
+           evaluation, including choosing which rewrite rule to apply
+           and binding its arguments, without unfolding any of the
+           identifiers used to define the replacement value.  (The
+           symptom of messing this up is that the [cbv -] will run out
+           of memory when trying to reduce things.)  We accomplish
+           this by making [hlist] based on a primitive [prod] type
+           with judgmental η, so that matching on its structure never
+           blocks reduction. *)
+        Ltac make_split_rewrite_rules rewrite_rules :=
+          let split_rewrite_rules := fresh "split_rewrite_rules" in
+          let v := constr:(fun var => split_list (rewrite_rules var)) in
+          let h := head rewrite_rules in
+          let do_reduce_rules := lazymatch h with
+                                 | @cons => false
+                                 | @nil => false
+                                 | _ => true
+                                 end in
+          let v := lazymatch do_reduce_rules with
+                   | true => (eval cbv [split_list projT1 projT2 h] in v)
+                   | false => (eval cbv [split_list projT1 projT2] in v)
+                   end in
+          cache_term v split_rewrite_rules.
+        Ltac make_pr1_rewrite_rules split_rewrite_rules :=
+          let var := fresh "var" in
+          constr:(fun var => ltac:(let v := (eval hnf in (projT1 (split_rewrite_rules var))) in
+                                   exact v)).
+        Ltac make_pr2_rewrite_rules split_rewrite_rules :=
+          let pr2_rewrite_rules := fresh "pr2_rewrite_rules" in
+          let var := fresh "var" in
+          let v :=
+              constr:(fun var
+                      => ltac:(let v := (eval hnf in (projT2 (split_rewrite_rules var))) in
+                               exact v)) in
+          cache_term v pr2_rewrite_rules.
+
+        Ltac make_all_rewrite_rules pr1_rewrite_rules pr2_rewrite_rules :=
+          let all_rewrite_rules := fresh "all_rewrite_rules" in
+          let var := fresh "var" in
+          cache_term
+            (fun var
+             => combine_hlist (P:=@Compile.rewrite_ruleTP ident var pattern.ident (@pattern.ident.arg_types)) (pr1_rewrite_rules var) (pr2_rewrite_rules var))
+            all_rewrite_rules.
+      End AdjustRewriteRulesForReduction.
+
+      Ltac rewriter_assembly_debug_level := constr:(1%nat).
+
+      Ltac check_debug_level_then_Set _ :=
+        let lvl := rewriter_assembly_debug_level in
+        lazymatch type of lvl with
+        | nat => constr:(Set)
+        | ?T => constr_run_tac ltac:(fun _ => idtac "Error: rewriter_assembly_debug_level should have type nat but instead has type" T)
+        end.
+      Ltac debug0 tac :=
+        constr_run_tac tac.
+      Ltac debug1 tac :=
+        let lvl := rewriter_assembly_debug_level in
+        lazymatch lvl with
+        | S _ => constr_run_tac tac
+        | _ => check_debug_level_then_Set ()
+        end.
+
+      Module Export GoalType.
+        Record rewriter_dataT :=
+          Build_rewriter_dataT'
+            {
+              rewrite_rules_specs : list (bool * Prop);
+              dummy_count : nat;
+
+              rewrite_rules : forall var, @Compile.rewrite_rulesT ident var pattern.ident (@pattern.ident.arg_types) ;
+              all_rewrite_rules (* adjusted version *) : _;
+              all_rewrite_rules_eq : all_rewrite_rules = rewrite_rules;
+
+              default_fuel : nat;
+
+              rewrite_head0 : forall var (do_again : forall t, @defaults.expr (@Compile.value _ ident var) (type.base t) -> @UnderLets.UnderLets _ ident var (@defaults.expr var (type.base t)))
+                                     t (idc : ident t), @Compile.value_with_lets base.type ident var t;
+              rewrite_head (* adjusted version *) : _;
+              rewrite_head_eq : rewrite_head = rewrite_head0
+            }.
+      End GoalType.
+      Definition Rewrite (data : rewriter_dataT) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
+        := @Compile.Rewrite (rewrite_head data) (default_fuel data) t e.
+
+      Ltac Reify include_interp specs :=
+        let lems := Reify.Reify_list ident ident.reify pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_of_list_arg_types_beq) (@pattern.ident.of_typed_ident) (@pattern.ident.arg_types_of_typed_ident) (@Compile.reflect_ident_iota) (fun var t => @SubstVarLike.is_var_fst_snd_pair_opp_cast var (type.base t)) specs in
+        lazymatch include_interp with
+        | true
+          => let myapp := (eval cbv [List.app] in (@List.app)) in
+             let res := (eval cbv [interp_rewrite_rules] in
+                            (fun var => myapp _ (@interp_rewrite_rules var) (lems var))) in
+             let len := lazymatch (eval compute in (fun var => List.length (@interp_rewrite_rules var))) with (fun _ => ?n) => n end in
+             let adjusted_specs := (eval cbv [List.app List.repeat] in
+                                       (List.app
+                                          (List.repeat (false, forall A (x : A), x = x) len))) in
+             constr:((len, adjusted_specs specs, res))
+        | false => constr:((O, specs, lems))
+        | _ => constr_fail_with ltac:(fun _ => fail 1 "Invalid value for include_interp (must be either true or false):" include_interp)
+        end.
+
       Definition pident_unify_unknown := @pattern.ident.unify.
       Definition invert_bind_args_unknown := @pattern.Raw.ident.invert_bind_args.
-      Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var (@pattern.ident.eta_ident_cps) (@pattern.ident) (@pattern.ident.arg_types) (@pattern.ident.unify) pident_unify_unknown pattern.Raw.ident (@pattern.Raw.ident.full_types) (@pattern.Raw.ident.invert_bind_args) invert_bind_args_unknown (@pattern.Raw.ident.type_of) (@pattern.Raw.ident.to_typed) pattern.Raw.ident.is_simple).
 
-      Ltac reify lems :=
-        Reify.reify_list ident ident.reify pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_of_list_arg_types_beq) (@pattern.ident.of_typed_ident) (@pattern.ident.arg_types_of_typed_ident) (@reflect_ident_iota) var lems.
-       (* Play games with [match] to get [lems] interpreted as a constr rather than an ident when it's not closed, to get better error messages *)
-      Local Notation reify lems
-        := (match lems return _ with
-            | _LEMS => ltac:(let LEMS := (eval cbv delta [_LEMS] in _LEMS) in let res := reify LEMS in exact res)
-            end) (only parsing).
+      Ltac make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
+        let rewrite_head1
+            := (eval cbv -[pr2_rewrite_rules
+                             base.interp base.try_make_transport_cps
+                             type.try_make_transport_cps
+                             pattern.type.unify_extracted
+                             Compile.option_type_type_beq
+                             Let_In Option.sequence Option.sequence_return
+                             UnderLets.splice UnderLets.to_expr
+                             Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
+                             Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
+                             Compile.value'
+                             SubstVarLike.is_var_fst_snd_pair_opp_cast
+                          ] in rewrite_head0) in
+        let rewrite_head1
+            := (eval cbn [type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps]
+                 in rewrite_head1) in
+        rewrite_head1.
+      Ltac timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
+        constr:(ltac:(time (idtac; let v := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in exact v))).
+      Ltac make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
+        (eval cbv [id
+                     pr2_rewrite_rules
+                     projT1 projT2
+                     cpsbind cpscall cps_option_bind cpsreturn
+                     PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
+                     pattern.type.subst_default pattern.base.subst_default pattern.base.lookup_default
+                     PositiveMap.add PositiveMap.find PositiveMap.empty
+                     PositiveSet.rev PositiveSet.rev_append
+                     pattern.ident.arg_types
+                     Compile.eval_decision_tree
+                     Compile.eval_rewrite_rules
+                     Compile.expr_of_rawexpr
+                     Compile.normalize_deep_rewrite_rule
+                     Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
+                     (*Compile.reflect*)
+                     (*Compile.reify*)
+                     Compile.reveal_rawexpr_cps
+                     Compile.reveal_rawexpr_cps_gen
+                     Compile.rew_should_do_again
+                     Compile.rew_with_opt
+                     Compile.rew_under_lets
+                     Compile.rew_replacement
+                     Compile.rValueOrExpr
+                     Compile.swap_list
+                     Compile.type_of_rawexpr
+                     Compile.option_type_type_beq
+                     Compile.value
+                     (*Compile.value'*)
+                     Compile.value_of_rawexpr
+                     Compile.value_with_lets
+                     ident.smart_Literal
+                     type.try_transport_cps
+                     (*rlist_rect rwhen rwhenl*)
+                  ] in rewrite_head1).
+      Ltac timed_make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
+        constr:(ltac:(time (idtac; let v := make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in exact v))).
+      Ltac make_rewrite_head3 rewrite_head2 :=
+        (eval cbn [id
+                     cpsbind cpscall cps_option_bind cpsreturn
+                     Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
+                     Option.sequence Option.sequence_return Option.bind
+                     UnderLets.reify_and_let_binds_base_cps
+                     UnderLets.splice UnderLets.splice_list UnderLets.to_expr
+                     base.interp base.base_interp
+                     base.type.base_beq option_beq
+                     type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
+                     Datatypes.fst Datatypes.snd
+                  ] in rewrite_head2).
+      Ltac timed_make_rewrite_head3 rewrite_head2 :=
+        constr:(ltac:(time (idtac; let v := make_rewrite_head3 rewrite_head2 in exact v))).
+      Ltac make_rewrite_head' rewrite_head0 pr2_rewrite_rules :=
+        let rewrite_head1 := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in
+        let rewrite_head2 := make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in
+        let rewrite_head3 := make_rewrite_head3 rewrite_head2 in
+        rewrite_head3.
+      Ltac timed_make_rewrite_head' rewrite_head0 pr2_rewrite_rules :=
+        let rewrite_head1 := timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in
+        let rewrite_head2 := timed_make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in
+        let rewrite_head3 := timed_make_rewrite_head3 rewrite_head2 in
+        rewrite_head3.
 
-      Delimit Scope rewrite_scope with rewrite.
-      Delimit Scope rewrite_opt_scope with rewrite_opt.
-      Delimit Scope rewrite_lets_scope with rewrite_lets.
-      Local Open Scope rewrite_opt_scope.
-      Local Open Scope rewrite_lets_scope.
-      Local Open Scope rewrite_scope.
+      Ltac make_rewrite_head rewrite_head0 pr2_rewrite_rules :=
+        let rewrite_head := fresh "rewrite_head" in
+        let lvl := rewriter_assembly_debug_level in
+        let var := fresh "var" in
+        let do_again := fresh "do_again" in
+        let t := fresh "t" in
+        let idc := fresh "idc" in
+        let v :=
+            constr:(
+              fun var (do_again : forall t, @defaults.expr (@Compile.value _ ident var) (type.base t) -> @UnderLets.UnderLets _ ident var (@defaults.expr var (type.base t)))
+                  t (idc : ident t)
+              => ltac:(
+                   let rewrite_head0 := constr:(rewrite_head0 var do_again t idc) in
+                   let pr2_rewrite_rules := head pr2_rewrite_rules in
+                   let v := lazymatch lvl with
+                            | O => make_rewrite_head' rewrite_head0 pr2_rewrite_rules
+                            | S _ => timed_make_rewrite_head' rewrite_head0 pr2_rewrite_rules
+                            end in
+                   exact v)) in
+        cache_term v rewrite_head.
 
-      Notation make_rewrite_gen should_do_again with_opt under_lets p f
-        := (existT
-              rewrite_ruleTP
-              (@Build_anypattern _ p%pattern)
-              (@Build_rewrite_rule_data _ p%pattern should_do_again with_opt under_lets f)).
-      (* %cps%option%under_lets *)
-      Notation make_rewrite p f
-        := (make_rewrite_gen false false false p f%rewrite%expr%list%Z%bool).
-      Notation make_rewritel p f
-        := (make_rewrite_gen false false true p f%rewrite_lets%rewrite%expr%list%Z%bool%under_lets).
-      Notation make_rewriteo p f
-        := (make_rewrite_gen false true false p f%rewrite_opt%rewrite%expr%list%Z%bool).
-      Notation make_rewriteol p f
-        := (make_rewrite_gen false true true p f%rewrite_lets%rewrite_opt%rewrite%expr%list%Z%bool%under_lets).
-      Notation make_rewrite_step p f
-        := (make_rewrite_gen true false false p f%rewrite%expr%list%Z%bool).
-      Notation make_rewritel_step p f
-        := (make_rewrite_gen true false true p f%rewrite_lets%rewrite%expr%list%Z%bool%under_lets).
-      Notation make_rewriteo_step p f
-        := (make_rewrite_gen true true false p f%rewrite_opt%rewrite%expr%list%Z%bool).
-      Notation make_rewriteol_step p f
-        := (make_rewrite_gen true true true p f%rewrite_lets%rewrite_opt%rewrite%expr%list%Z%bool%under_lets).
-      Let UnderLetsExpr {btype bident ivar} t := @UnderLets.UnderLets base.type ident var (@expr.expr btype bident ivar t).
-      Let OptExpr {btype bident ivar} t := option (@expr.expr btype bident ivar t).
-      Let OptUnderLetsExpr {btype bident ivar} t := option (@UnderLets.UnderLets base.type ident var (@expr.expr btype bident ivar t)).
-      Let BaseExpr {btype ident ivar t} : @expr.expr btype ident ivar t -> @UnderLetsExpr btype ident ivar t := UnderLets.Base.
-      Let SomeExpr {btype ident ivar t} : @expr.expr btype ident ivar t -> @OptExpr btype ident ivar t := Some.
-      Let SomeUnderLetsExpr {btype ident ivar t} : @UnderLetsExpr btype ident ivar t -> @OptUnderLetsExpr btype ident ivar t := Some.
-      Coercion BaseExpr : expr >-> UnderLetsExpr.
-      Coercion SomeExpr : expr >-> OptExpr.
-      Coercion SomeUnderLetsExpr : UnderLetsExpr >-> OptUnderLetsExpr.
+      Ltac Build_rewriter_dataT include_interp specs :=
+        let __ := debug1 ltac:(fun _ => idtac "Reifying...") in
+        let specs_lems := Reify include_interp specs in
+        let dummy_count := lazymatch specs_lems with (?n, ?specs, ?lems) => n end in
+        let specs := lazymatch specs_lems with (?n, ?specs, ?lems) => specs end in
+        let rewrite_rules := lazymatch specs_lems with (?n, ?specs, ?lems) => lems end in
+        let rewrite_rules_names := fresh "rewrite_rules" in
+        let rewrite_rules := cache_term rewrite_rules rewrite_rules_names in
+        let __ := debug1 ltac:(fun _ => idtac "Compiling decision tree...") in
+        let dtree := Compile.CompileRewrites ident pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq rewrite_rules in
+        let default_fuel := (eval compute in (List.length specs)) in
+        let __ := debug1 ltac:(fun _ => idtac "Splitting rewrite rules...") in
+        let split_rewrite_rules := make_split_rewrite_rules rewrite_rules in
+        let pr1_rewrite_rules := make_pr1_rewrite_rules split_rewrite_rules in
+        let pr2_rewrite_rules := make_pr2_rewrite_rules split_rewrite_rules in
+        let all_rewrite_rules := make_all_rewrite_rules pr1_rewrite_rules pr2_rewrite_rules in
+        let __ := debug1 ltac:(fun _ => idtac "Assembling rewrite_head...") in
+        let rewrite_head0 := fresh "rewrite_head0" in
+        let var := fresh "var" in
+        let rewrite_head0
+            := cache_term
+                 (fun var
+                  => @Compile.assemble_identifier_rewriters ident var (@pattern.ident.eta_ident_cps) (@pattern.ident) (@pattern.ident.arg_types) (@pattern.ident.unify) pident_unify_unknown pattern.Raw.ident (@pattern.Raw.ident.full_types) (@pattern.Raw.ident.invert_bind_args) invert_bind_args_unknown (@pattern.Raw.ident.type_of) (@pattern.Raw.ident.to_typed) pattern.Raw.ident.is_simple dtree (all_rewrite_rules var))
+                 rewrite_head0 in
+        let __ := debug1 ltac:(fun _ => idtac "Reducing rewrite_head...") in
+        let rewrite_head := make_rewrite_head rewrite_head0 pr2_rewrite_rules in
+        refine (@Build_rewriter_dataT'
+                  specs dummy_count
+                  rewrite_rules all_rewrite_rules eq_refl
+                  default_fuel
+                  rewrite_head0 rewrite_head eq_refl).
 
-      Local Notation "x <- y ; f" := (Compile.option_bind' y%rewrite_lets%rewrite_opt%rewrite (fun x => f%rewrite_lets%rewrite_opt%rewrite : OptUnderLetsExpr _)) : rewrite_lets_scope.
-      Local Notation "x <- y ; f" := (Compile.option_bind' y%rewrite_opt%rewrite (fun x => f%rewrite_opt%rewrite : OptExpr _)) : rewrite_opt_scope.
-      Local Notation "x <-- y ; f" := (UnderLets.splice y%rewrite_lets%rewrite (fun x => (f%rewrite_lets%rewrite : UnderLetsExpr _))) : rewrite_lets_scope.
-      Local Notation "x <--- y ; f" := (UnderLets.splice_list y%rewrite_lets%rewrite (fun x => (f%rewrite_lets%rewrite : UnderLetsExpr _))) : rewrite_lets_scope.
-      Local Notation "x <---- y ; f" := (Compile.option_bind' y%rewrite_lets%rewrite_opt%rewrite (fun x => (f%rewrite_lets%rewrite : UnderLetsExpr _) : OptUnderLetsExpr _)) : rewrite_lets_scope.
-      Local Notation "'llet' x := y 'in' f" := (UnderLets.UnderLet y%rewrite_lets%rewrite (fun x => (f%rewrite_lets%rewrite : UnderLetsExpr _))) : rewrite_lets_scope.
+      Module Export Tactic.
+        Global Arguments base.try_make_base_transport_cps _ !_ !_.
+        Global Arguments base.try_make_transport_cps _ !_ !_.
+        Global Arguments type.try_make_transport_cps _ _ _ !_ !_.
+        Global Arguments Option.sequence A !v1 v2.
+        Global Arguments Option.sequence_return A !v1 v2.
+        Global Arguments Option.bind A B !_ _.
+        Global Arguments pattern.Raw.ident.invert_bind_args t !_ !_.
+        Global Arguments base.type.base_beq !_ !_.
+        Global Arguments id / .
 
-      Definition rlist_rect {A P}
-                 {ivar}
-                 (Pnil : @UnderLetsExpr base.type ident ivar (type.base P))
-                 (Pcons : expr (type.base A) -> list (expr (type.base A)) -> @expr.expr base.type ident ivar (type.base P) -> @UnderLetsExpr base.type ident ivar (type.base P))
-                 (e : expr (type.base (base.type.list A)))
-        : @OptUnderLetsExpr base.type ident ivar P
-        := (ls <- reflect_list e;
-              list_rect
-                (fun _ => UnderLetsExpr (type.base P))
-                Pnil
-                (fun x xs rec => rec' <-- rec; Pcons x xs rec')
-                ls).
+        Tactic Notation "make_rewriter_data" constr(include_interp) constr(specs) :=
+          Build_rewriter_dataT include_interp specs.
+      End Tactic.
+    End Make.
+    Export Make.GoalType.
+    Import Make.Tactic.
 
-      Definition rwhen {ivar t} (v : @OptExpr base.type ident ivar t) (cond : bool)
-        : @OptExpr base.type ident ivar t
-        := if cond then v else None.
-      Definition rwhenl {ivar t} (v : @OptUnderLetsExpr base.type ident ivar t) (cond : bool)
-        : @OptUnderLetsExpr base.type ident ivar t
-        := if cond then v else None.
+    Definition nbe_rewriter_data : rewriter_dataT.
+    Proof. make_rewriter_data true nbe_rewrite_rulesT. Defined.
 
-      Local Notation "e 'when' cond" := (rwhen e%rewrite_opt%rewrite cond) (only parsing, at level 100) : rewrite_opt_scope.
-      Local Notation "e 'owhen' cond" := (rwhenl e%rewrite_lets%rewrite_opt%rewrite cond) (only parsing, at level 100) : rewrite_lets_scope.
-      Local Notation "e 'when' cond" := (rwhenl (e%rewrite_lets%rewrite : UnderLetsExpr _)  cond) (only parsing, at level 100) : rewrite_lets_scope.
+    Definition arith_rewriter_data (max_const_val : Z) : rewriter_dataT.
+    Proof. make_rewriter_data false (arith_rewrite_rulesT max_const_val). Defined.
 
-      Local Notation ℤ := base.type.Z.
-      Local Notation ℕ := base.type.nat.
-      Local Notation bool := base.type.bool.
-      Local Notation list := pattern.base.type.list.
-      Local Notation "' x" := (ident.literal x).
+    Definition arith_with_casts_rewriter_data : rewriter_dataT.
+    Proof. make_rewriter_data false arith_with_casts_rewrite_rulesT. Defined.
 
-      Local Arguments pattern.anypattern : clear implicits.
-      Local Arguments Make.interp_rewrite_rules / .
-      Let myapp {A} := Eval cbv [List.app] in @List.app A.
-      Let myflatten {A} := Eval cbv in List.fold_right myapp (@nil A).
-      Definition nbe_rewrite_rules : rewrite_rulesT
-        := Eval cbv [Make.interp_rewrite_rules myapp myflatten] in
-            myflatten
-              [Make.interp_rewrite_rules
-               ; reify nbe_rewrite_rulesT
-              ].
+    Definition strip_literal_casts_rewriter_data : rewriter_dataT.
+    Proof. make_rewriter_data false strip_literal_casts_rewrite_rulesT. Defined.
 
-      Definition arith_rewrite_rules (max_const_val : Z) : rewrite_rulesT
-        := Eval cbv [Make.interp_rewrite_rules myapp myflatten] in
-            myflatten
-              [reify (arith_rewrite_rulesT max_const_val)
-               ; [
-                 make_rewriteol (-??) (fun e => (llet v := e in -$v)  when  negb (SubstVarLike.is_var_fst_snd_pair_opp_cast e)) (* inline negation when the rewriter wouldn't already inline it *)
-              ] ].
+    Definition fancy_rewriter_data
+               (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
+      : rewriter_dataT.
+    Proof. make_rewriter_data false fancy_rewrite_rulesT. Defined.
 
-      Definition arith_with_casts_rewrite_rules : rewrite_rulesT
-        := reify arith_with_casts_rewrite_rulesT.
+    Definition fancy_with_casts_rewriter_data
+               (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
+               (value_range flag_range : zrange)
+      : rewriter_dataT.
+    Proof. make_rewriter_data false (fancy_with_casts_rewrite_rulesT invert_low invert_high value_range flag_range). Defined.
 
-      Definition strip_literal_casts_rewrite_rules : rewrite_rulesT
-        := reify strip_literal_casts_rewrite_rulesT.
-
-
-      Definition nbe_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 nbe_rewrite_rules.
-      Definition arith_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 (arith_rewrite_rules 0%Z (* dummy val *)).
-      Definition arith_with_casts_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 arith_with_casts_rewrite_rules.
-      Definition strip_literal_casts_dtree'
-        := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 strip_literal_casts_rewrite_rules.
-      Definition nbe_dtree : decision_tree
-        := Eval compute in Option.invert_Some nbe_dtree'.
-      Definition arith_dtree : decision_tree
-        := Eval compute in Option.invert_Some arith_dtree'.
-      Definition arith_with_casts_dtree : decision_tree
-        := Eval compute in Option.invert_Some arith_with_casts_dtree'.
-      Definition strip_literal_casts_dtree : decision_tree
-        := Eval compute in Option.invert_Some strip_literal_casts_dtree'.
-
-      Definition nbe_default_fuel := Eval compute in List.length nbe_rewrite_rules.
-      Definition arith_default_fuel := Eval compute in List.length (arith_rewrite_rules 0%Z (* dummy val *)).
-      Definition arith_with_casts_default_fuel := Eval compute in List.length arith_with_casts_rewrite_rules.
-      Definition strip_literal_casts_default_fuel := Eval compute in List.length strip_literal_casts_rewrite_rules.
-
-      Import PrimitiveHList.
-      (* N.B. The [combine_hlist] call MUST eta-expand
-         [pr2_rewrite_rules].  That is, it MUST NOT block reduction of
-         the resulting list of cons cells on the pair-structure of
-         [pr2_rewrite_rules].  This is required so that we can use
-         [cbv -] to unfold the entire discrimination tree evaluation,
-         including choosing which rewrite rule to apply and binding
-         its arguments, without unfolding any of the identifiers used
-         to define the replacement value.  (The symptom of messing
-         this up is that the [cbv -] will run out of memory when
-         trying to reduce things.)  We accomplish this by making
-         [hlist] based on a primitive [prod] type with judgmental η,
-         so that matching on its structure never blocks reduction. *)
-      Definition nbe_split_rewrite_rules := Eval cbv [split_list projT1 projT2 nbe_rewrite_rules] in split_list nbe_rewrite_rules.
-      Definition nbe_pr1_rewrite_rules := Eval hnf in projT1 nbe_split_rewrite_rules.
-      Definition nbe_pr2_rewrite_rules := Eval hnf in projT2 nbe_split_rewrite_rules.
-      Definition nbe_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) nbe_pr1_rewrite_rules nbe_pr2_rewrite_rules.
-
-      Definition arith_split_rewrite_rules max_const_val := Eval cbv [split_list projT1 projT2 arith_rewrite_rules] in split_list (arith_rewrite_rules max_const_val).
-      Definition arith_pr1_rewrite_rules max_const_val := Eval hnf in projT1 (arith_split_rewrite_rules max_const_val).
-      Definition arith_pr2_rewrite_rules max_const_val := Eval hnf in projT2 (arith_split_rewrite_rules max_const_val).
-      Definition arith_all_rewrite_rules max_const_val := combine_hlist (P:=rewrite_ruleTP) (arith_pr1_rewrite_rules max_const_val) (arith_pr2_rewrite_rules max_const_val).
-      Definition arith_with_casts_split_rewrite_rules := Eval cbv [split_list projT1 projT2 arith_with_casts_rewrite_rules] in split_list arith_with_casts_rewrite_rules.
-      Definition arith_with_casts_pr1_rewrite_rules := Eval hnf in projT1 arith_with_casts_split_rewrite_rules.
-      Definition arith_with_casts_pr2_rewrite_rules := Eval hnf in projT2 arith_with_casts_split_rewrite_rules.
-      Definition arith_with_casts_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) (arith_with_casts_pr1_rewrite_rules) arith_with_casts_pr2_rewrite_rules.
-      Definition strip_literal_casts_split_rewrite_rules := Eval cbv [split_list projT1 projT2 strip_literal_casts_rewrite_rules] in split_list strip_literal_casts_rewrite_rules.
-      Definition strip_literal_casts_pr1_rewrite_rules := Eval hnf in projT1 strip_literal_casts_split_rewrite_rules.
-      Definition strip_literal_casts_pr2_rewrite_rules := Eval hnf in projT2 strip_literal_casts_split_rewrite_rules.
-      Definition strip_literal_casts_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) (strip_literal_casts_pr1_rewrite_rules) strip_literal_casts_pr2_rewrite_rules.
-      Definition nbe_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
-        := @assemble_identifier_rewriters nbe_dtree nbe_all_rewrite_rules do_again t idc.
-      Definition arith_rewrite_head0 max_const_val do_again {t} (idc : ident t) : value_with_lets t
-        := @assemble_identifier_rewriters arith_dtree (arith_all_rewrite_rules max_const_val) do_again t idc.
-      Definition arith_with_casts_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
-        := @assemble_identifier_rewriters arith_with_casts_dtree arith_with_casts_all_rewrite_rules do_again t idc.
-      Definition strip_literal_casts_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
-        := @assemble_identifier_rewriters strip_literal_casts_dtree strip_literal_casts_all_rewrite_rules do_again t idc.
-
-      Section fancy.
-        Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
-                (value_range flag_range : zrange).
-        Definition fancy_rewrite_rules : rewrite_rulesT
-          := reify fancy_rewrite_rulesT.
-
-        Definition fancy_with_casts_rewrite_rules : rewrite_rulesT
-          := reify (fancy_with_casts_rewrite_rulesT invert_low invert_high value_range flag_range).
-
-        Definition fancy_dtree'
-          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_rewrite_rules.
-        Definition fancy_dtree : decision_tree
-          := Eval compute in Option.invert_Some fancy_dtree'.
-        Definition fancy_with_casts_dtree'
-          := Eval compute in @compile_rewrites ident var pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq 100 fancy_with_casts_rewrite_rules.
-        Definition fancy_with_casts_dtree : decision_tree
-          := Eval compute in Option.invert_Some fancy_with_casts_dtree'.
-        Definition fancy_default_fuel := Eval compute in List.length fancy_rewrite_rules.
-        Definition fancy_with_casts_default_fuel := Eval compute in List.length fancy_with_casts_rewrite_rules.
-        Import PrimitiveHList.
-        Definition fancy_split_rewrite_rules := Eval cbv [split_list projT1 projT2 fancy_rewrite_rules] in split_list fancy_rewrite_rules.
-        Definition fancy_pr1_rewrite_rules := Eval hnf in projT1 fancy_split_rewrite_rules.
-        Definition fancy_pr2_rewrite_rules := Eval hnf in projT2 fancy_split_rewrite_rules.
-        Definition fancy_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) fancy_pr1_rewrite_rules fancy_pr2_rewrite_rules.
-        Definition fancy_with_casts_split_rewrite_rules := Eval cbv [split_list projT1 projT2 fancy_with_casts_rewrite_rules] in split_list fancy_with_casts_rewrite_rules.
-        Definition fancy_with_casts_pr1_rewrite_rules := Eval hnf in projT1 fancy_with_casts_split_rewrite_rules.
-        Definition fancy_with_casts_pr2_rewrite_rules := Eval hnf in projT2 fancy_with_casts_split_rewrite_rules.
-        Definition fancy_with_casts_all_rewrite_rules := combine_hlist (P:=rewrite_ruleTP) fancy_with_casts_pr1_rewrite_rules fancy_with_casts_pr2_rewrite_rules.
-        Definition fancy_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
-          := @assemble_identifier_rewriters fancy_dtree fancy_all_rewrite_rules do_again t idc.
-        Definition fancy_with_casts_rewrite_head0 do_again {t} (idc : ident t) : value_with_lets t
-          := @assemble_identifier_rewriters fancy_with_casts_dtree fancy_with_casts_all_rewrite_rules do_again t idc.
-      End fancy.
-    End with_var.
     Module RewriterPrintingNotations.
-      Arguments base.try_make_base_transport_cps _ !_ !_.
-      Arguments base.try_make_transport_cps _ !_ !_.
-      Arguments type.try_make_transport_cps _ _ _ !_ !_.
-      Arguments Option.sequence {A} !v1 v2.
-      Arguments Option.sequence_return {A} !v1 v2.
-      Arguments Option.bind {A B} !_ _.
-      Arguments pattern.Raw.ident.invert_bind_args {t} !_ !_.
       Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
       Arguments type.try_make_transport_cps {base_type _ P} t1 t2 {_} _.
       Export pattern.Raw.ident.
@@ -2546,104 +2668,9 @@ Module Compilers.
       Notation "x <- 'base.try_make_transport_cps' t1 t2 ; f" := (base.try_make_transport_cps t1 t2 (fun y => match y with Datatypes.Some x => f | Datatypes.None => Datatypes.None end)) (at level 70, t1 at next level, t2 at next level, right associativity, format "'[v' x  <-  'base.try_make_transport_cps'  t1  t2 ; '/' f ']'").
     End RewriterPrintingNotations.
 
-    Ltac make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
-      let rewrite_head1
-          := (eval cbv -[pr2_rewrite_rules
-                           base.interp base.try_make_transport_cps
-                           type.try_make_transport_cps
-                           pattern.type.unify_extracted
-                           Compile.option_type_type_beq
-                           Let_In Option.sequence Option.sequence_return
-                           UnderLets.splice UnderLets.to_expr
-                           Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                           Compile.reflect UnderLets.reify_and_let_binds_base_cps Compile.reify Compile.reify_and_let_binds_cps
-                           Compile.value'
-                           SubstVarLike.is_var_fst_snd_pair_opp_cast
-                        ] in rewrite_head0) in
-      let rewrite_head1
-          := (eval cbn [type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps]
-               in rewrite_head1) in
-      rewrite_head1.
-    Ltac timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules :=
-      constr:(ltac:(time (idtac; let v := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in exact v))).
-    Ltac make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
-      (eval cbv [id
-                   pr2_rewrite_rules
-                   projT1 projT2
-                   cpsbind cpscall cps_option_bind cpsreturn
-                   PrimitiveProd.Primitive.fst PrimitiveProd.Primitive.snd
-                   pattern.type.subst_default pattern.base.subst_default pattern.base.lookup_default
-                   PositiveMap.add PositiveMap.find PositiveMap.empty
-                   PositiveSet.rev PositiveSet.rev_append
-                   pattern.ident.arg_types
-                   Compile.eval_decision_tree
-                   Compile.eval_rewrite_rules
-                   Compile.expr_of_rawexpr
-                   Compile.normalize_deep_rewrite_rule
-                   Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                   (*Compile.reflect*)
-                   (*Compile.reify*)
-                   Compile.reveal_rawexpr_cps
-                   Compile.reveal_rawexpr_cps_gen
-                   Compile.rew_should_do_again
-                   Compile.rew_with_opt
-                   Compile.rew_under_lets
-                   Compile.rew_replacement
-                   Compile.rValueOrExpr
-                   Compile.swap_list
-                   Compile.type_of_rawexpr
-                   Compile.option_type_type_beq
-                   Compile.value
-                   (*Compile.value'*)
-                   Compile.value_of_rawexpr
-                   Compile.value_with_lets
-                   ident.smart_Literal
-                   type.try_transport_cps
-                   rlist_rect rwhen rwhenl
-                ] in rewrite_head1).
-    Ltac timed_make_rewrite_head2 rewrite_head1 pr2_rewrite_rules :=
-      constr:(ltac:(time (idtac; let v := make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in exact v))).
-    Ltac make_rewrite_head3 rewrite_head2 :=
-      (eval cbn [id
-                   cpsbind cpscall cps_option_bind cpsreturn
-                   Compile.reify Compile.reify_and_let_binds_cps Compile.reflect Compile.value'
-                   Option.sequence Option.sequence_return Option.bind
-                   UnderLets.reify_and_let_binds_base_cps
-                   UnderLets.splice UnderLets.splice_list UnderLets.to_expr
-                   base.interp base.base_interp
-                   base.type.base_beq option_beq
-                   type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
-                   Datatypes.fst Datatypes.snd
-                ] in rewrite_head2).
-    Ltac timed_make_rewrite_head3 rewrite_head2 :=
-      constr:(ltac:(time (idtac; let v := make_rewrite_head3 rewrite_head2 in exact v))).
-    Ltac make_rewrite_head rewrite_head0 pr2_rewrite_rules :=
-      let rewrite_head1 := make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in
-      let rewrite_head2 := make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in
-      let rewrite_head3 := make_rewrite_head3 rewrite_head2 in
-      rewrite_head3.
-    Ltac timed_make_rewrite_head rewrite_head0 pr2_rewrite_rules :=
-      let rewrite_head1 := timed_make_rewrite_head1 rewrite_head0 pr2_rewrite_rules in
-      let rewrite_head2 := timed_make_rewrite_head2 rewrite_head1 pr2_rewrite_rules in
-      let rewrite_head3 := timed_make_rewrite_head3 rewrite_head2 in
-      rewrite_head3.
-    Notation make_rewrite_head rewrite_head0 pr2_rewrite_rules
-      := (ltac:(let v := timed_make_rewrite_head rewrite_head0 pr2_rewrite_rules in
-                exact v)) (only parsing).
-
-    (* For reduction *)
-    Local Arguments base.try_make_base_transport_cps _ !_ !_.
-    Local Arguments base.try_make_transport_cps _ !_ !_.
-    Local Arguments type.try_make_transport_cps _ _ _ !_ !_.
-    Local Arguments Option.sequence {A} !v1 v2.
-    Local Arguments Option.sequence_return {A} !v1 v2.
-    Local Arguments Option.bind {A B} !_ _.
-    Local Arguments pattern.Raw.ident.invert_bind_args {t} !_ !_.
+    (* For printing *)
     Local Arguments base.try_make_transport_cps {P} t1 t2 {_} _.
     Local Arguments type.try_make_transport_cps {base_type _ P} t1 t2 {_} _.
-    Local Arguments base.type.base_beq !_ !_.
-    Local Arguments id / .
-    (* For printing *)
     Local Arguments option {_}.
     Local Arguments UnderLets.UnderLets {_ _ _}.
     Local Arguments expr.expr {_ _ _}.
@@ -2655,18 +2682,10 @@ Module Compilers.
     Local Notation "x" := (type.base x) (only printing, at level 9).
 
     Section red_fancy.
-      Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
-              {var : type.type base.type -> Type}
-              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
-              {t} (idc : ident t).
+      Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z).
 
-      Time Definition fancy_rewrite_head
-        := make_rewrite_head (@fancy_rewrite_head0 var do_again t idc) (@fancy_pr2_rewrite_rules).
-      (* Tactic call ran for 0.19 secs (0.187u,0.s) (success)
-         Tactic call ran for 10.297 secs (10.3u,0.s) (success)
-         Tactic call ran for 1.746 secs (1.747u,0.s) (success)
-         Finished transaction in 12.402 secs (12.4u,0.s) (successful) *)
+      Local Definition fancy_rewrite_head
+        := Eval hnf in rewrite_head (fancy_rewriter_data invert_low invert_high).
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2675,17 +2694,10 @@ Module Compilers.
     End red_fancy.
     Section red_fancy_with_casts.
       Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
-              (value_range flag_range : zrange)
-              {var : type.type base.type -> Type}
-              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
-              {t} (idc : ident t).
-      Time Definition fancy_with_casts_rewrite_head
-        := make_rewrite_head (@fancy_with_casts_rewrite_head0 var invert_low invert_high value_range flag_range do_again t idc) (@fancy_with_casts_pr2_rewrite_rules).
-      (* Tactic call ran for 4.142 secs (4.143u,0.s) (success)
-         Tactic call ran for 80.563 secs (80.56u,0.s) (success)
-         Tactic call ran for 0.154 secs (0.156u,0.s) (success)
-         Finished transaction in 85.431 secs (85.427u,0.s) (successful) *)
+              (value_range flag_range : zrange).
+
+      Local Definition fancy_with_casts_rewrite_head
+        := Eval hnf in rewrite_head (fancy_with_casts_rewriter_data invert_low invert_high value_range flag_range).
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2693,16 +2705,8 @@ Module Compilers.
       Redirect "fancy_with_casts_rewrite_head" Print fancy_with_casts_rewrite_head.
     End red_fancy_with_casts.
     Section red_nbe.
-      Context {var : type.type base.type -> Type}
-              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
-              {t} (idc : ident t).
-      Time Definition nbe_rewrite_head
-        := make_rewrite_head (@nbe_rewrite_head0 var do_again t idc) (@nbe_pr2_rewrite_rules).
-      (* Tactic call ran for 0.232 secs (0.235u,0.s) (success)
-         Tactic call ran for 29.061 secs (29.04u,0.004s) (success)
-         Tactic call ran for 1.605 secs (1.604u,0.s) (success)
-         Finished transaction in 31.203 secs (31.183u,0.004s) (successful) *)
+      Local Definition nbe_rewrite_head
+        := Eval hnf in rewrite_head nbe_rewriter_data.
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2711,18 +2715,10 @@ Module Compilers.
     End red_nbe.
 
     Section red_arith.
-      Context (max_const_val : Z)
-              {var : type.type base.type -> Type}
-              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
-              {t} (idc : ident t).
+      Context (max_const_val : Z).
 
-      Time Definition arith_rewrite_head
-        := make_rewrite_head (@arith_rewrite_head0 var max_const_val do_again t idc) (@arith_pr2_rewrite_rules).
-      (* Tactic call ran for 0.283 secs (0.284u,0.s) (success)
-         Tactic call ran for 79.61 secs (79.612u,0.008s) (success)
-         Tactic call ran for 3.574 secs (3.576u,0.s) (success)
-         Finished transaction in 83.677 secs (83.68u,0.008s) (successful) *)
+      Local Definition arith_rewrite_head
+        := Eval hnf in rewrite_head (arith_rewriter_data max_const_val).
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2731,13 +2727,8 @@ Module Compilers.
     End red_arith.
 
     Section red_arith_with_casts.
-      Context {var : type.type base.type -> Type}
-              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
-              {t} (idc : ident t).
-
-      Time Definition arith_with_casts_rewrite_head
-        := make_rewrite_head (@arith_with_casts_rewrite_head0 var do_again t idc) (@arith_with_casts_pr2_rewrite_rules).
+      Local Definition arith_with_casts_rewrite_head
+        := Eval hnf in rewrite_head arith_with_casts_rewriter_data.
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2746,13 +2737,8 @@ Module Compilers.
     End red_arith_with_casts.
 
     Section red_strip_literal_casts.
-      Context {var : type.type base.type -> Type}
-              (do_again : forall t : base.type, @expr base.type ident (@Compile.value base.type ident var) (type.base t)
-                                                -> @UnderLets.UnderLets base.type ident var (@expr base.type ident var (type.base t)))
-              {t} (idc : ident t).
-
-      Time Definition strip_literal_casts_rewrite_head
-        := make_rewrite_head (@strip_literal_casts_rewrite_head0 var do_again t idc) (@strip_literal_casts_pr2_rewrite_rules).
+      Local Definition strip_literal_casts_rewrite_head
+        := Eval hnf in rewrite_head strip_literal_casts_rewriter_data.
 
       Local Set Printing Depth 1000000.
       Local Set Printing Width 200.
@@ -2760,23 +2746,43 @@ Module Compilers.
       Redirect "strip_literal_casts_rewrite_head" Print strip_literal_casts_rewrite_head.
     End red_strip_literal_casts.
 
+    Local Ltac unfold_Rewrite Rewrite :=
+      let h := head Rewrite in
+      let Rewrite := (eval cbv [h] in Rewrite) in
+      let data := lazymatch Rewrite with context[@Make.Rewrite ?data] => head data end in
+      (eval cbv [Make.Rewrite rewrite_head default_fuel data] in Rewrite).
+    Local Notation unfold_Rewrite Rewrite :=
+      (ltac:(let v := unfold_Rewrite Rewrite in
+             exact v)) (only parsing).
+
+    Definition RewriteNBE_folded := @Make.Rewrite nbe_rewriter_data.
     Definition RewriteNBE {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (@nbe_rewrite_head) nbe_default_fuel t e.
+      := unfold_Rewrite (@RewriteNBE_folded t e).
+    Definition RewriteArith_folded (max_const_val : Z) := @Make.Rewrite (arith_rewriter_data max_const_val).
     Definition RewriteArith (max_const_val : Z) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var do_again => @arith_rewrite_head max_const_val var) arith_default_fuel t e.
+      := unfold_Rewrite (@RewriteArith_folded max_const_val t e).
+    Definition RewriteArithWithCasts_folded := @Make.Rewrite arith_with_casts_rewriter_data.
     Definition RewriteArithWithCasts {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (@arith_with_casts_rewrite_head) arith_with_casts_default_fuel t e.
+      := unfold_Rewrite (@RewriteArithWithCasts_folded t e).
+    Definition RewriteStripLiteralCasts_folded := @Make.Rewrite strip_literal_casts_rewriter_data.
     Definition RewriteStripLiteralCasts {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var do_again => @strip_literal_casts_rewrite_head var) strip_literal_casts_default_fuel t e.
+      := unfold_Rewrite (@RewriteStripLiteralCasts_folded t e).
+    Definition RewriteToFancy_folded
+               (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
+      := @Make.Rewrite (fancy_rewriter_data invert_low invert_high).
     Definition RewriteToFancy
                (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var _ => @fancy_rewrite_head var) fancy_default_fuel t e.
+      := unfold_Rewrite (@RewriteToFancy_folded invert_low invert_high t e).
+    Definition RewriteToFancyWithCasts_folded
+               (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
+               (value_range flag_range : zrange)
+      := @Make.Rewrite (fancy_with_casts_rewriter_data invert_low invert_high value_range flag_range).
     Definition RewriteToFancyWithCasts
                (invert_low invert_high : Z (*log2wordmax*) -> Z -> @option Z)
                (value_range flag_range : zrange)
                {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (fun var _ => @fancy_with_casts_rewrite_head invert_low invert_high value_range flag_range var) fancy_with_casts_default_fuel t e.
+      := unfold_Rewrite (@RewriteToFancyWithCasts_folded invert_low invert_high value_range flag_range t e).
   End RewriteRules.
 
   Import defaults.
