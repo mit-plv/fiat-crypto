@@ -318,6 +318,9 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
             ; (forall s c y x,
                   Z.add_with_get_carry_full s (- c) x (- y)
                   = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
+            ; (forall b x, (* inline negation when the rewriter wouldn't already inline it *)
+                  ident.gets_inlined b x = false
+                  -> -x = dlet v := x in -v)
            ]
         ].
 
