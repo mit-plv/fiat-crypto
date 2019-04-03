@@ -35,7 +35,7 @@ Section Generic.
           (width_pos : 0 < width)
           (strong_bound : b ^ 1 * (b ^ (2 * k) mod M) <= b ^ (k + 1) - mu).
   Local Notation weight := (uweight width).
-  Local Notation partition := (partition weight).
+  Local Notation partition := (Partition.partition weight).
   Context (q1 : list Z -> list Z)
           (q1_correct :
              forall x,
@@ -116,7 +116,7 @@ Module Fancy.
             (k_eq : k = width * Z.of_nat sz).
     (* sz = 1, width = k = 256 *)
     Local Notation w := (uweight width). Local Notation eval := (Positional.eval w).
-    Context (mut Mt : list Z) (mut_correct : mut = partition w (sz+1) mu) (Mt_correct : Mt = partition w sz M).
+    Context (mut Mt : list Z) (mut_correct : mut = Partition.partition w (sz+1) mu) (Mt_correct : Mt = Partition.partition w sz M).
     Context (mu_eq : mu = 2 ^ (2 * k) / M) (muHigh_one : mu / w sz = 1) (M_range : 2^(k-1) < M < 2^k).
 
     Local Lemma wprops : @weight_properties w. Proof. apply uwprops; auto with lia. Qed.
@@ -201,7 +201,7 @@ Module Fancy.
       Lemma shiftr'_correct m n :
         forall t tn,
           (m <= tn)%nat -> 0 <= t < w tn -> 0 <= n < width ->
-          shiftr' m (partition w tn t) n = partition w m (t / 2 ^ n).
+          shiftr' m (Partition.partition w tn t) n = Partition.partition w m (t / 2 ^ n).
       Proof.
         cbv [shiftr']. induction m; intros; [ reflexivity | ].
         rewrite !partition_step, seq_snoc.
@@ -232,7 +232,7 @@ Module Fancy.
         forall t tn,
           (Z.to_nat (n / width) <= tn)%nat ->
           (m <= tn - Z.to_nat (n / width))%nat -> 0 <= t < w tn -> 0 <= n ->
-          shiftr m (partition w tn t) n = partition w m (t / 2 ^ n).
+          shiftr m (Partition.partition w tn t) n = Partition.partition w m (t / 2 ^ n).
       Proof.
         cbv [shiftr]; intros.
         break_innermost_match; [ | solve [auto using shiftr'_correct with zarith] ].
@@ -256,7 +256,7 @@ Module Fancy.
       (* 2 ^ (k + 1) bits fit in sz + 1 limbs because we know 2^k bits fit in sz and 1 <= width *)
       Lemma q1_correct x :
         0 <= x < w (sz * 2) ->
-        q1 (partition w (sz*2)%nat x) = partition w (sz+1)%nat (x / 2 ^ (k - 1)).
+        q1 (Partition.partition w (sz*2)%nat x) = Partition.partition w (sz+1)%nat (x / 2 ^ (k - 1)).
       Proof.
         cbv [q1]; intros. assert (1 <= Z.of_nat sz) by (destruct sz; lia).
         assert (Z.to_nat ((k-1) / width) < sz)%nat. {
@@ -266,13 +266,13 @@ Module Fancy.
         autorewrite with pull_partition. reflexivity.
       Qed.
 
-      Lemma low_correct n a : (sz <= n)%nat -> low (partition w n a) = partition w sz a.
+      Lemma low_correct n a : (sz <= n)%nat -> low (Partition.partition w n a) = Partition.partition w sz a.
       Proof. cbv [low]; auto using uweight_firstn_partition with lia. Qed.
-      Lemma high_correct a : high (partition w (sz*2) a) = partition w sz (a / w sz).
+      Lemma high_correct a : high (Partition.partition w (sz*2) a) = Partition.partition w sz (a / w sz).
       Proof. cbv [high]. rewrite uweight_skipn_partition by lia. f_equal; lia. Qed.
       Lemma fill_correct n m a :
         (n <= m)%nat ->
-        fill m (partition w n a) = partition w m (a mod w n).
+        fill m (Partition.partition w n a) = Partition.partition w m (a mod w n).
       Proof.
         cbv [fill]; intros. distr_length.
         rewrite <-partition_0 with (weight:=w).
@@ -282,21 +282,21 @@ Module Fancy.
       Hint Rewrite low_correct high_correct fill_correct using lia : pull_partition.
 
       Lemma wideadd_correct a b :
-        wideadd (partition w (sz*2) a) (partition w (sz*2) b) = partition w (sz*2) (a + b).
+        wideadd (Partition.partition w (sz*2) a) (Partition.partition w (sz*2) b) = Partition.partition w (sz*2) (a + b).
       Proof.
         cbv [wideadd]. rewrite Rows.add_partitions by (distr_length; auto).
         autorewrite with push_eval.
         apply partition_eq_mod; auto with zarith.
       Qed.
       Lemma widesub_correct a b :
-        widesub (partition w (sz*2) a) (partition w (sz*2) b) = partition w (sz*2) (a - b).
+        widesub (Partition.partition w (sz*2) a) (Partition.partition w (sz*2) b) = Partition.partition w (sz*2) (a - b).
       Proof.
         cbv [widesub]. rewrite Rows.sub_partitions by (distr_length; auto).
         autorewrite with push_eval.
         apply partition_eq_mod; auto with zarith.
       Qed.
       Lemma widemul_correct a b :
-        widemul (partition w sz a) (partition w sz b) = partition w (sz*2) ((a mod w sz) * (b mod w sz)).
+        widemul (Partition.partition w sz a) (Partition.partition w sz b) = Partition.partition w (sz*2) ((a mod w sz) * (b mod w sz)).
       Proof.
         cbv [widemul]. rewrite BaseConversion.widemul_inlined_correct; (distr_length; auto).
         autorewrite with push_eval. reflexivity.
@@ -327,8 +327,8 @@ Module Fancy.
       Lemma mul_high_correct a b
             (Ha : a / w sz = 1)
             a0b1 (Ha0b1 : a0b1 = a mod w sz * (b / w sz)) :
-        mul_high (partition w (sz*2) a) (partition w (sz*2) b) (partition w (sz*2) a0b1) =
-        partition w (sz*2) (a * b / w sz).
+        mul_high (Partition.partition w (sz*2) a) (Partition.partition w (sz*2) b) (Partition.partition w (sz*2) a0b1) =
+        Partition.partition w (sz*2) (a * b / w sz).
       Proof.
         cbv [mul_high Let_In].
         erewrite mul_high_idea by auto using Z.div_mod with zarith.
@@ -359,7 +359,7 @@ Module Fancy.
 
       Lemma muSelect_correct x :
         0 <= x < w (sz * 2) ->
-        muSelect (partition w (sz*2) x) = partition w sz (mu mod (w sz) * (x / 2 ^ (k - 1) / (w sz))).
+        muSelect (Partition.partition w (sz*2) x) = Partition.partition w sz (mu mod (w sz) * (x / 2 ^ (k - 1) / (w sz))).
       Proof.
         cbv [muSelect]; intros;
           repeat match goal with
@@ -391,7 +391,7 @@ Module Fancy.
       Qed.
 
       Lemma q3_correct x (Hx : 0 <= x < w (sz * 2)) q1 (Hq1 : q1 = x / 2 ^ (k - 1)) :
-        q3 (partition w (sz*2) x) (partition w (sz+1) q1) = partition w (sz+1) ((mu*q1) / 2 ^ (k + 1)).
+        q3 (Partition.partition w (sz*2) x) (Partition.partition w (sz+1) q1) = Partition.partition w (sz+1) ((mu*q1) / 2 ^ (k + 1)).
       Proof.
         cbv [q3 Let_In]. intros. pose proof mu_q1_range x ltac:(lia).
         pose proof mu_range'. pose proof q1_range x ltac:(lia).
@@ -408,8 +408,8 @@ Module Fancy.
       Qed.
 
       Lemma cond_sub_correct a b :
-        cond_sub (partition w (sz*2) a) (partition w sz b)
-        = partition w sz (if dec ((a / w sz) mod 2 = 0)
+        cond_sub (Partition.partition w (sz*2) a) (Partition.partition w sz b)
+        = Partition.partition w sz (if dec ((a / w sz) mod 2 = 0)
                           then a
                           else a - b).
       Proof.
@@ -425,8 +425,8 @@ Module Fancy.
       Qed.
       Hint Rewrite cond_sub_correct : pull_partition.
       Lemma cond_subM_correct a :
-        cond_subM (partition w sz a)
-        = partition w sz (if dec (a mod w sz < M)
+        cond_subM (Partition.partition w sz a)
+        = Partition.partition w sz (if dec (a mod w sz < M)
                           then a
                           else a - M).
       Proof.
@@ -479,7 +479,7 @@ Module Fancy.
         0 <= x < M * 2 ^ k ->
         0 <= q3 ->
         (exists b : bool, q3 = x / M + (if b then -1 else 0)) ->
-        r (partition w (sz*2) x) (partition w (sz+1) q3) = partition w sz (x mod M).
+        r (Partition.partition w (sz*2) x) (Partition.partition w (sz+1) q3) = Partition.partition w sz (x mod M).
       Proof.
         intros; cbv [r Let_In]. pose proof M_range'. assert (0 < 2^(k-1)) by Z.zero_bounds.
         autorewrite with pull_partition. Z.rewrite_mod_small.
@@ -515,7 +515,7 @@ Module Fancy.
       Lemma fancy_reduce_muSelect_first_correct x :
         0 <= x < M * 2^k ->
         2 * (2 ^ (2 * k) mod M) <= 2 ^ (k + 1) - mu ->
-        fancy_reduce_muSelect_first (partition w (sz*2) x) = partition w sz (x mod M).
+        fancy_reduce_muSelect_first (Partition.partition w (sz*2) x) = Partition.partition w sz (x mod M).
       Proof.
         intros. pose proof w_eq_22k.
         erewrite <-reduce_correct with (b:=2) (k:=k) (mu:=mu) by
@@ -528,7 +528,7 @@ Module Fancy.
                forall x,
                  0 <= x < M * 2^k ->
                  2 * (2 ^ (2 * k) mod M) <= 2 ^ (k + 1) - mu ->
-                 fancy_reduce' (partition w (sz*2) x) = partition w sz (x mod M))
+                 fancy_reduce' (Partition.partition w (sz*2) x) = Partition.partition w sz (x mod M))
              As fancy_reduce'_correct.
       Proof.
         intros. assert (k = width) as width_eq_k by nia.
@@ -546,9 +546,9 @@ Module Fancy.
       Lemma partition_2 xLow xHigh :
         0 <= xLow < 2 ^ k ->
         0 <= xHigh < M ->
-        partition w 2 (xLow + 2^k * xHigh) = [xLow;xHigh].
+        Partition.partition w 2 (xLow + 2^k * xHigh) = [xLow;xHigh].
       Proof.
-        replace k with width in M_range |- * by nia; intros. cbv [partition map seq].
+        replace k with width in M_range |- * by nia; intros. cbv [Partition.partition map seq].
         rewrite !uweight_S, !weight_0 by auto with zarith lia.
         autorewrite with zsimplify.
         rewrite <-Z.mod_pull_div by Z.zero_bounds.
@@ -567,7 +567,7 @@ Module Fancy.
         intros. cbv [fancy_reduce]. rewrite <-partition_2 by lia.
         replace 2%nat with (sz*2)%nat by lia.
         rewrite fancy_reduce'_correct by nia.
-        rewrite sz_eq_1; cbv [partition map seq hd].
+        rewrite sz_eq_1; cbv [Partition.partition map seq hd].
         rewrite !uweight_S, !weight_0 by auto with zarith lia.
         autorewrite with zsimplify. reflexivity.
       Qed.

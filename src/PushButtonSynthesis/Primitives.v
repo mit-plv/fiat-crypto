@@ -574,7 +574,7 @@ Module CorrectnessStringification.
   Ltac stringify ctx correctness fname arg_var_data out_var_data :=
     let G := match goal with |- ?G => G end in
     let correctness := (eval hnf in correctness) in
-    let correctness := (eval cbv [partition WordByWordMontgomery.valid WordByWordMontgomery.small] in correctness) in
+    let correctness := (eval cbv [Partition.partition WordByWordMontgomery.valid WordByWordMontgomery.small] in correctness) in
     let correctness := strip_bounds_info correctness in
     let arg_var_names := constr:(type.map_for_each_lhs_of_arrow (@ToString.C.OfPHOAS.names_of_var_data) arg_var_data) in
     let out_var_names := constr:(ToString.C.OfPHOAS.names_of_base_var_data out_var_data) in

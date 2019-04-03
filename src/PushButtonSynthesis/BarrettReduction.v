@@ -75,7 +75,7 @@ Section rbarrett_red.
 
   Lemma mut_correct :
     0 < machine_wordsize ->
-    partition (uweight machine_wordsize) (1 + 1) (muLow + 2 ^ machine_wordsize) = [muLow; 1].
+    Partition.partition (uweight machine_wordsize) (1 + 1) (muLow + 2 ^ machine_wordsize) = [muLow; 1].
   Proof.
     intros; cbn. subst muLow.
     assert (0 < 2^machine_wordsize) by ZeroBounds.Z.zero_bounds.
@@ -90,7 +90,7 @@ Section rbarrett_red.
   Lemma Mt_correct :
     0 < machine_wordsize ->
     2^(machine_wordsize - 1) < M < 2^machine_wordsize ->
-    partition (uweight machine_wordsize) 1 M = [M].
+    Partition.partition (uweight machine_wordsize) 1 M = [M].
   Proof.
     intros; cbn. assert (0 < 2^(machine_wordsize-1)) by ZeroBounds.Z.zero_bounds.
     rewrite !uweight_S, weight_0; auto using uwprops with lia.

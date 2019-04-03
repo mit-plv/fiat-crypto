@@ -103,9 +103,9 @@ Section __.
             end.
   Let n_bytes := bytes_n machine_wordsize 1 n.
   Let prime_upperbound_list : list Z
-    := partition (uweight machine_wordsize) n (s-1).
+    := Partition.partition (uweight machine_wordsize) n (s-1).
   Let prime_bytes_upperbound_list : list Z
-    := partition (weight 8 1) n_bytes (s-1).
+    := Partition.partition (weight 8 1) n_bytes (s-1).
   Let upperbounds : list Z := prime_upperbound_list.
   Definition prime_bound : ZRange.type.option.interp (base.type.Z)
     := Some r[0~>m-1]%zrange.
