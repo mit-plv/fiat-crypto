@@ -527,6 +527,24 @@ Module Compilers.
           reflexivity.
         Qed.
 
+        Lemma of_expr_interp_related_gen_iff (R : forall t, var t -> type.interp base_interp t -> Prop) {t e v}
+          : interp_related_gen R (expr.interp_related_gen ident_interp R (t:=t)) (UnderLets.of_expr e) v
+            <-> expr.interp_related_gen ident_interp R e v.
+        Proof using Type.
+          revert v; induction e; cbn [UnderLets.of_expr interp_related_gen expr.interp_related_gen]; try reflexivity.
+          setoid_rewrite H.
+          reflexivity.
+        Qed.
+
+        Global Instance interp_related_gen_Proper_impl {T1 T2 R}
+          : Proper (pointwise_relation _ (pointwise_relation _ Basics.impl) ==> eq ==> eq ==> Basics.impl) (@interp_related_gen T1 T2 R) | 10.
+        Proof using Type.
+          cbv [pointwise_relation respectful Proper].
+          intros R1 R2 HR x y ? x' y' H'; subst y y'.
+          revert x'; induction x; [ apply HR | ]; cbn [interp_related_gen].
+          setoid_rewrite H; reflexivity.
+        Qed.
+
         Global Instance interp_related_gen_Proper_iff {T1 T2 R}
           : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@interp_related_gen T1 T2 R) | 10.
         Proof using Type.
@@ -787,6 +805,15 @@ Module Compilers.
           : interp_related (expr.interp_related ident_interp (t:=t)) e v
             <-> expr.interp_related ident_interp (UnderLets.to_expr e) v.
         Proof using Type. apply to_expr_interp_related_gen_iff. Qed.
+
+        Lemma of_expr_interp_related_iff {t e v}
+          : interp_related (expr.interp_related ident_interp (t:=t)) (UnderLets.of_expr e) v
+            <-> expr.interp_related ident_interp e v.
+        Proof using Type. apply of_expr_interp_related_gen_iff. Qed.
+
+        Global Instance interp_related_Proper_impl {T1 T2}
+          : Proper (pointwise_relation _ (pointwise_relation _ Basics.impl) ==> eq ==> eq ==> Basics.impl) (@interp_related T1 T2) | 10.
+        Proof using Type. apply interp_related_gen_Proper_impl. Qed.
 
         Global Instance interp_related_Proper_iff {T1 T2}
           : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@interp_related T1 T2) | 10.
