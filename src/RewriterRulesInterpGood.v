@@ -144,7 +144,7 @@ Module Compilers.
                        | [ |- _ /\ _ ] => split; [ intros; exact I | ]
                        end
                      | progress cbn [eq_rect] in * ];
-        cbn [fst snd base.interp base.base_interp type.interp projT1 projT2 UnderLets.interp expr.interp type.related ident.gen_interp UnderLets.interp_related] in *.
+        cbn [fst snd base.interp base.base_interp type.interp projT1 projT2 UnderLets.interp expr.interp type.related ident.gen_interp UnderLets.interp_related UnderLets.interp_related_gen] in *.
 
       Ltac recurse_interp_related_step :=
         let do_replace v :=
@@ -350,7 +350,7 @@ Module Compilers.
                      | ]
                 | [ |- context[match _ with nil => _ | _ => _ end] ] => progress recursive_match_to_list_case_in_goal
                 end
-              | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr bool_rect UnderLets.interp_related type.related] in *
+              | progress cbn [expr.interp ident.gen_interp fst snd Compile.reify Compile.reflect Compile.wf_value' Compile.value' Option.bind UnderLets.interp list_case type.interp base.interp base.base_interp ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax Compile.reify_expr bool_rect UnderLets.interp_related UnderLets.interp_related_gen type.related] in *
               | progress cbv [Compile.option_bind' respectful expr.interp_related] in *
               | progress fold (@type.interp _ base.interp)
               | progress fold (@base.interp)

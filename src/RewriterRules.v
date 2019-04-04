@@ -46,6 +46,49 @@ Local Notation "x <= y" := (is_tighter_than_bool (ZRange.normalize x) y = true) 
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
 
+Local Ltac generalize_cast' force_progress term :=
+  let default _ := lazymatch force_progress with
+                   | false => term
+                   end in
+  lazymatch type of term with
+  | Prop => lazymatch term with
+            | context[ident.cast_outside_of_range]
+              => lazymatch (eval pattern ident.cast_outside_of_range in term) with
+                 | (fun x : ?T => ?f) _
+                   => constr:(forall x : T, f)
+                 end
+            | _ => default ()
+            end
+  | _
+    => lazymatch term with
+       | context[ident.cast_outside_of_range]
+         => let term := match term with
+                        | context F[@cons Prop ?x]
+                          => let x := generalize_cast' true x in
+                             let term := context F[@cons Prop x] in
+                             term
+                        | context F[@cons (?T * Prop) (?b, ?x)]
+                          => let x := generalize_cast' true x in
+                             let term := context F[@cons (T * Prop) (b, x)] in
+                             term
+                        end in
+            generalize_cast' false term
+       | _ => default ()
+       end
+  end.
+Local Ltac generalize_cast term := generalize_cast' false term.
+
+(* Play tricks/games with [match] to get [term] interpreted as a constr rather than an ident when it's not closed, to get better error messages *)
+Local Notation generalize_cast term
+  := (match term return _ with
+      | _TERM => ltac:(let TERM := (eval cbv delta [_TERM] in _TERM) in
+                       let res := generalize_cast TERM in
+                       exact res)
+      end) (only parsing).
+
+Local Notation myflatten_generalize_cast x
+  := (myflatten (generalize_cast x)) (only parsing).
+
 (* N.B. [ident.eagerly] does not play well with [do_again] *)
 Definition nbe_rewrite_rulesT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
@@ -276,16 +319,11 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
                   Z.add_with_get_carry_full s (- c) x (- y)
                   = dlet vb := Z.sub_with_get_borrow_full s c x y in (fst vb, - snd vb))
            ]
-         ; mymap
-             do_again
-             [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
-               (forall r x y, cstZZ r (x, y) = (cstZ (fst r) x, cstZ (snd r) y))
-             ]
         ].
 
 Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
-      myflatten
+      myflatten_generalize_cast
         [mymap
            dont_do_again
            [(forall A B x y, @fst A B (x, y) = x)
@@ -470,7 +508,7 @@ Section fancy.
 
   Definition fancy_with_casts_rewrite_rulesT : list (bool * Prop)
     := Eval cbv [myapp mymap myflatten] in
-        myflatten
+        myflatten_generalize_cast
           [mymap
              dont_do_again
              [(*

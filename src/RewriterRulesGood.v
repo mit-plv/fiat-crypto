@@ -52,7 +52,7 @@ Module Compilers.
         = @fancy_rewrite_head0.
     Proof. reflexivity. Qed.
 
-    Lemma arith_rewrite_head_eq max_const_val : @arith_rewrite_head max_const_val = (fun var => @arith_rewrite_head0 var max_const_val).
+    Lemma arith_rewrite_head_eq max_const_val : (fun var do_again => @arith_rewrite_head max_const_val var) = (fun var => @arith_rewrite_head0 var max_const_val).
     Proof. reflexivity. Qed.
 
     Lemma fancy_with_casts_rewrite_head_eq invert_low invert_high value_range flag_range

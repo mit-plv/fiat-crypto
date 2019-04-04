@@ -47,7 +47,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b3 A;
                v4 <- base.try_make_transport_cps A A;
-               Datatypes.Some (Base (v4 (v3 (v1 (v (Compile.reflect x1))))))
+               Datatypes.Some
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($(v1 (v (Compile.reflect x1))));
+                  Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -100,7 +104,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v2 <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b2 B;
                v4 <- base.try_make_transport_cps B B;
-               Datatypes.Some (Base (v4 (v3 (v2 (v0 (Compile.reflect x0))))))
+               Datatypes.Some
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($(v2 (v0 (Compile.reflect x0))));
+                  Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -151,6 +159,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         to_expr
           (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
        x1 @ x2)%expr_pat
+| @eager_nat_rect P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr ℕ -> expr P -> UnderLets (expr P)) (x1 : expr ℕ) =>
+    Base
+      (#(eager_nat_rect)%expr @ (λ x2 : var unit,
+                                 to_expr (x ($x2)))%expr @
+       (λ (x2 : var ℕ)(x3 : var P),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @eager_nat_rect_arrow P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr ℕ ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr ℕ) (x2 : expr P) =>
+    Base
+      (#(eager_nat_rect_arrow)%expr @ (λ x3 : var P,
+                                       to_expr (x ($x3)))%expr @
+       (λ (x3 : var ℕ)(x4 : var (P -> Q)%ptype)(x5 : var P),
+        to_expr
+          (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+       x1 @ x2)%expr_pat
 | @list_rect A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
@@ -160,6 +188,43 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             to_expr (x ($x2)))%expr @
        (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
         to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(list_rect_arrow)%expr @ (λ x3 : var P,
+                                  to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
+| @eager_list_rect A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(eager_list_rect)%expr @ (λ x2 : var unit,
+                                  to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
+        to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @eager_list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(eager_list_rect_arrow)%expr @ (λ x3 : var P,
+                                        to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
 | @list_case A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> UnderLets (expr P))
@@ -218,6 +283,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | @List_nth_default T =>
     fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
     Base (#(List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+| @eager_List_nth_default T =>
+    fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
+    Base (#(eager_List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add =>
     fun x x0 : expr ℤ =>
     (((match x with
@@ -237,7 +305,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv <- (if
                         is_bounded_by_bool 0 (ZRange.normalize args0) &&
                         ((let (x2, _) := xv in x2) =? 0)
-                       then Datatypes.Some (Base x0)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x0))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -268,7 +340,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv <- (if
                         is_bounded_by_bool 0 (ZRange.normalize args0) &&
                         ((let (x2, _) := xv in x2) =? 0)
-                       then Datatypes.Some (Base x)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -305,7 +381,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv <- (if
                         is_bounded_by_bool 0 (ZRange.normalize args0) &&
                         ((let (x2, _) := xv in x2) =? 0)
-                       then Datatypes.Some (Base (- x0)%expr)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             (- $x0))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -339,8 +419,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            ((let (x5, _) := xv in x5) =? 0)
                           then
                            Datatypes.Some
-                             (Base
-                                (#(Z_cast args)%expr @ v (Compile.reflect x4))%expr_pat)
+                             (Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                (#(Z_cast args)%expr @
+                                 ($(v (Compile.reflect x4)))%expr)%expr_pat)
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -403,8 +485,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        (ZRange.normalize args <=? - ZRange.normalize args1)%zrange
                       then
                        Datatypes.Some
-                         (Base
-                            (#(Z_cast args)%expr @ v (Compile.reflect x2))%expr_pat)
+                         (Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (#(Z_cast args)%expr @
+                             ($(v (Compile.reflect x2)))%expr)%expr_pat)
                       else Datatypes.None);
                Datatypes.Some (fv0 <-- fv;
                                Base fv0)%under_lets
@@ -472,7 +556,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               fv <- (if
                       is_bounded_by_bool 0 (ZRange.normalize args0) &&
                       ((let (x2, _) := xv in x2) =? 0)
-                     then Datatypes.Some (Base (##0)%expr)
+                     then
+                      Datatypes.Some
+                        (Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false ##0)
                      else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
@@ -515,7 +602,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         ((let (x3, _) := xv in x3) =? 0)
                        then
                         Datatypes.Some
-                          (Base
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
                              (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
                              #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
                        else Datatypes.None);
@@ -552,7 +640,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             ((let (x3, _) := xv in x3) =? 0)
                            then
                             Datatypes.Some
-                              (Base
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
                                  (#(Z_cast r[0 ~> 0])%expr @ (##0)%expr,
                                  #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
                            else Datatypes.None);
@@ -600,9 +689,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ((let (x5, _) := xv0 in x5) =? 1)
                                    then
                                     Datatypes.Some
-                                      (Base
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
                                          (#(Z_cast args3)%expr @
-                                          v (Compile.reflect x2),
+                                          ($(v (Compile.reflect x2)))%expr,
                                          #(Z_cast r[0 ~> 0])%expr @
                                          (##0)%expr)%expr_pat)
                                    else Datatypes.None);
@@ -646,9 +737,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ((let (x5, _) := xv0 in x5) =? 1)
                                    then
                                     Datatypes.Some
-                                      (Base
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
                                          (#(Z_cast args0)%expr @
-                                          v (Compile.reflect x4),
+                                          ($(v (Compile.reflect x4)))%expr,
                                          #(Z_cast r[0 ~> 0])%expr @
                                          (##0)%expr)%expr_pat)
                                    else Datatypes.None);
@@ -728,7 +821,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                          (ZRange.normalize args0)
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             ((##(Datatypes.fst
                                                    (Z.add_get_carry_full
                                                       (let (x5, _) := xv in
@@ -784,9 +879,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                    ((let (x5, _) := xv0 in x5) =? 0)
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast args)%expr @
-                                         v (Compile.reflect x4),
+                                         ($(v (Compile.reflect x4)))%expr,
                                         #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
@@ -833,9 +930,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                ((let (x5, _) := xv0 in x5) =? 0)
                               then
                                Datatypes.Some
-                                 (Base
+                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                    (@Compile.reflect_ident_iota var) false
                                     (#(Z_cast args1)%expr @
-                                     v (Compile.reflect x3),
+                                     ($(v (Compile.reflect x3)))%expr,
                                     #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
                               else Datatypes.None);
                        Datatypes.Some (fv0 <-- fv;
@@ -884,7 +982,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               fv <- (if
                       is_bounded_by_bool 0 (ZRange.normalize args0) &&
                       ((let (x3, _) := xv in x3) =? 0)
-                     then Datatypes.Some (Base (x0 + x1)%expr)
+                     then
+                      Datatypes.Some
+                        (Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           ($x0 + $x1))
                      else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
@@ -957,7 +1059,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                             (ZRange.normalize args0)
                                          then
                                           Datatypes.Some
-                                            (Base
+                                            (Reify.expr_value_to_rewrite_rule_replacement
+                                               (@Compile.reflect_ident_iota
+                                                  var) false
                                                ((##(Datatypes.fst
                                                       (Z.add_with_get_carry_full
                                                          (let (x7, _) :=
@@ -1035,9 +1139,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                       ((let (x7, _) := xv1 in x7) =? 0)
                                      then
                                       Datatypes.Some
-                                        (Base
+                                        (Reify.expr_value_to_rewrite_rule_replacement
+                                           (@Compile.reflect_ident_iota var)
+                                           false
                                            (#(Z_cast args)%expr @
-                                            v (Compile.reflect x6),
+                                            ($(v (Compile.reflect x6)))%expr,
                                            #(Z_cast r[0 ~> 0])%expr @
                                            (##0)%expr)%expr_pat)
                                      else Datatypes.None);
@@ -1097,9 +1203,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                   ((let (x7, _) := xv1 in x7) =? 0)
                                  then
                                   Datatypes.Some
-                                    (Base
+                                    (Reify.expr_value_to_rewrite_rule_replacement
+                                       (@Compile.reflect_ident_iota var)
+                                       false
                                        (#(Z_cast args1)%expr @
-                                        v (Compile.reflect x5),
+                                        ($(v (Compile.reflect x5)))%expr,
                                        #(Z_cast r[0 ~> 0])%expr @ (##0)%expr)%expr_pat)
                                  else Datatypes.None);
                           Datatypes.Some (fv0 <-- fv;
@@ -1150,6 +1258,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun x x0 x1 x2 : expr ℤ =>
     Base (#(Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
 | Z_cc_m => fun x x0 : expr ℤ => Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat
+| Z_combine_at_bitwidth =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_combine_at_bitwidth)%expr @ x @ x0 @ x1)%expr_pat
 | Z_cast range =>
     fun x : expr ℤ =>
     (((match pattern.type.unify_extracted ℤ ℤ with
@@ -1159,7 +1270,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
             fv <- (if lower range =? upper range
                    then
                     Datatypes.Some
-                      (Base
+                      (Reify.expr_value_to_rewrite_rule_replacement
+                         (@Compile.reflect_ident_iota var) false
                          (#(Z_cast range)%expr @ (##(lower range))%expr)%expr_pat)
                    else Datatypes.None);
             Datatypes.Some (fv0 <-- fv;
@@ -1179,8 +1291,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (ZRange.normalize args <=? ZRange.normalize range)%zrange
                        then
                         Datatypes.Some
-                          (Base
-                             (#(Z_cast args)%expr @ v (Compile.reflect x0))%expr_pat)
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             (#(Z_cast args)%expr @
+                              ($(v (Compile.reflect x0)))%expr)%expr_pat)
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1204,12 +1318,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 v0 <- type.try_make_transport_cps s0 ℤ;
                 v1 <- type.try_make_transport_cps s ℤ;
                 Datatypes.Some
-                  (UnderLet
-                     (#(Z_cast range)%expr @
-                      (#(Z_add_with_carry)%expr @ v (Compile.reflect x2) @
-                       v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                     (fun v2 : var ℤ =>
-                      Base (#(Z_cast range)%expr @ ($v2)%expr)%expr_pat))
+                  (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (expr_let v2 := (#(Z_cast range)%expr @
+                                             (#(Z_add_with_carry)%expr @
+                                              ($(v (Compile.reflect x2)))%expr @
+                                              ($(v0 (Compile.reflect x1)))%expr @
+                                              ($(v1 (Compile.reflect x0)))%expr))%expr_pat in
+                             (#(Z_cast range)%expr @ $v2)%expr_pat);
+                   Base fv)%under_lets
                else Datatypes.None
            | Datatypes.None => Datatypes.None
            end
@@ -1264,12 +1381,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v <- type.try_make_transport_cps s0 ℤ;
               v0 <- type.try_make_transport_cps s ℤ;
               Datatypes.Some
-                (fv0 <-- do_again (ℤ * ℤ)
+                (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) true
                            (#(Z_cast (Datatypes.fst range))%expr @
                             ($(v (Compile.reflect x1)))%expr,
                            #(Z_cast (Datatypes.snd range))%expr @
                            ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
-                 Base fv0)%under_lets
+                 fv1 <-- do_again (ℤ * ℤ) fv0;
+                 Base fv1)%under_lets
              else Datatypes.None
          | Datatypes.None => Datatypes.None
          end
@@ -1301,30 +1420,28 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             - ZRange.normalize args1)%zrange
                           then
                            Datatypes.Some
-                             (UnderLet
-                                (#(Z_cast2
-                                     (Datatypes.fst range,
-                                     - Datatypes.snd range))%expr @
-                                 (#(Z_sub_get_borrow)%expr @
-                                  v (Compile.reflect x2) @
-                                  v1 (Compile.reflect x0) @
-                                  (#(Z_cast args)%expr @
-                                   v0 (Compile.reflect x5))))%expr_pat
-                                (fun v2 : var (ℤ * ℤ)%etype =>
-                                 Base
-                                   (#(Z_cast (Datatypes.fst range))%expr @
-                                    (#(fst)%expr @
-                                     (#(Z_cast2
-                                          (Datatypes.fst range,
-                                          - Datatypes.snd range))%expr @
-                                      ($v2)%expr)),
-                                   #(Z_cast (Datatypes.snd range))%expr @
-                                   (-
-                                    (#(Z_cast (- Datatypes.snd range))%expr @
-                                     (#(snd)%expr @
-                                      (#(Z_cast2
-                                           (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $v2)))%expr_pat)%expr)%expr_pat))
+                             (Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                (expr_let v2 := (#(Z_cast2
+                                                     (Datatypes.fst range,
+                                                     - Datatypes.snd range))%expr @
+                                                 (#(Z_sub_get_borrow)%expr @
+                                                  ($(v (Compile.reflect x2)))%expr @
+                                                  ($(v1 (Compile.reflect x0)))%expr @
+                                                  (#(Z_cast args)%expr @
+                                                   ($(v0 (Compile.reflect x5)))%expr)))%expr_pat in
+                                 (#(Z_cast (Datatypes.fst range))%expr @
+                                  (#(fst)%expr @
+                                   (#(Z_cast2
+                                        (Datatypes.fst range,
+                                        - Datatypes.snd range))%expr @ $v2)),
+                                 #(Z_cast (Datatypes.snd range))%expr @
+                                 (-
+                                  (#(Z_cast (- Datatypes.snd range))%expr @
+                                   (#(snd)%expr @
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @ $v2)))%expr_pat))%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1385,30 +1502,28 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             - ZRange.normalize args1)%zrange
                           then
                            Datatypes.Some
-                             (UnderLet
-                                (#(Z_cast2
-                                     (Datatypes.fst range,
-                                     - Datatypes.snd range))%expr @
-                                 (#(Z_sub_get_borrow)%expr @
-                                  v (Compile.reflect x2) @
-                                  v0 (Compile.reflect x1) @
-                                  (#(Z_cast args)%expr @
-                                   v1 (Compile.reflect x5))))%expr_pat
-                                (fun v2 : var (ℤ * ℤ)%etype =>
-                                 Base
-                                   (#(Z_cast (Datatypes.fst range))%expr @
-                                    (#(fst)%expr @
-                                     (#(Z_cast2
-                                          (Datatypes.fst range,
-                                          - Datatypes.snd range))%expr @
-                                      ($v2)%expr)),
-                                   #(Z_cast (Datatypes.snd range))%expr @
-                                   (-
-                                    (#(Z_cast (- Datatypes.snd range))%expr @
-                                     (#(snd)%expr @
-                                      (#(Z_cast2
-                                           (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $v2)))%expr_pat)%expr)%expr_pat))
+                             (Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                (expr_let v2 := (#(Z_cast2
+                                                     (Datatypes.fst range,
+                                                     - Datatypes.snd range))%expr @
+                                                 (#(Z_sub_get_borrow)%expr @
+                                                  ($(v (Compile.reflect x2)))%expr @
+                                                  ($(v0 (Compile.reflect x1)))%expr @
+                                                  (#(Z_cast args)%expr @
+                                                   ($(v1 (Compile.reflect x5)))%expr)))%expr_pat in
+                                 (#(Z_cast (Datatypes.fst range))%expr @
+                                  (#(fst)%expr @
+                                   (#(Z_cast2
+                                        (Datatypes.fst range,
+                                        - Datatypes.snd range))%expr @ $v2)),
+                                 #(Z_cast (Datatypes.snd range))%expr @
+                                 (-
+                                  (#(Z_cast (- Datatypes.snd range))%expr @
+                                   (#(snd)%expr @
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @ $v2)))%expr_pat))%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1467,30 +1582,30 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            ((let (x4, _) := xv in x4) <? 0)
                           then
                            Datatypes.Some
-                             (UnderLet
-                                (#(Z_cast2
-                                     (Datatypes.fst range,
-                                     - Datatypes.snd range))%expr @
-                                 (#(Z_sub_get_borrow)%expr @
-                                  v (Compile.reflect x2) @
-                                  v0 (Compile.reflect x0) @
-                                  (#(Z_cast (- args0))%expr @
-                                   (##(- (let (x4, _) := xv in x4))%Z)%expr)))%expr_pat
-                                (fun v1 : var (ℤ * ℤ)%etype =>
-                                 Base
-                                   (#(Z_cast (Datatypes.fst range))%expr @
-                                    (#(fst)%expr @
-                                     (#(Z_cast2
-                                          (Datatypes.fst range,
-                                          - Datatypes.snd range))%expr @
-                                      ($v1)%expr)),
-                                   #(Z_cast (Datatypes.snd range))%expr @
-                                   (-
-                                    (#(Z_cast (- Datatypes.snd range))%expr @
-                                     (#(snd)%expr @
-                                      (#(Z_cast2
-                                           (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $v1)))%expr_pat)%expr)%expr_pat))
+                             (Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                (expr_let v1 := (#(Z_cast2
+                                                     (Datatypes.fst range,
+                                                     - Datatypes.snd range))%expr @
+                                                 (#(Z_sub_get_borrow)%expr @
+                                                  ($(v (Compile.reflect x2)))%expr @
+                                                  ($(v0 (Compile.reflect x0)))%expr @
+                                                  (#(Z_cast (- args0))%expr @
+                                                   (##(-
+                                                       (let (x4, _) := xv in
+                                                        x4))%Z)%expr)))%expr_pat in
+                                 (#(Z_cast (Datatypes.fst range))%expr @
+                                  (#(fst)%expr @
+                                   (#(Z_cast2
+                                        (Datatypes.fst range,
+                                        - Datatypes.snd range))%expr @ $v1)),
+                                 #(Z_cast (Datatypes.snd range))%expr @
+                                 (-
+                                  (#(Z_cast (- Datatypes.snd range))%expr @
+                                   (#(snd)%expr @
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @ $v1)))%expr_pat))%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1528,30 +1643,30 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                            ((let (x4, _) := xv in x4) <? 0)
                           then
                            Datatypes.Some
-                             (UnderLet
-                                (#(Z_cast2
-                                     (Datatypes.fst range,
-                                     - Datatypes.snd range))%expr @
-                                 (#(Z_sub_get_borrow)%expr @
-                                  v (Compile.reflect x2) @
-                                  v0 (Compile.reflect x1) @
-                                  (#(Z_cast (- args0))%expr @
-                                   (##(- (let (x4, _) := xv in x4))%Z)%expr)))%expr_pat
-                                (fun v1 : var (ℤ * ℤ)%etype =>
-                                 Base
-                                   (#(Z_cast (Datatypes.fst range))%expr @
-                                    (#(fst)%expr @
-                                     (#(Z_cast2
-                                          (Datatypes.fst range,
-                                          - Datatypes.snd range))%expr @
-                                      ($v1)%expr)),
-                                   #(Z_cast (Datatypes.snd range))%expr @
-                                   (-
-                                    (#(Z_cast (- Datatypes.snd range))%expr @
-                                     (#(snd)%expr @
-                                      (#(Z_cast2
-                                           (Datatypes.fst range,
-                                           - Datatypes.snd range))%expr @ $v1)))%expr_pat)%expr)%expr_pat))
+                             (Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                (expr_let v1 := (#(Z_cast2
+                                                     (Datatypes.fst range,
+                                                     - Datatypes.snd range))%expr @
+                                                 (#(Z_sub_get_borrow)%expr @
+                                                  ($(v (Compile.reflect x2)))%expr @
+                                                  ($(v0 (Compile.reflect x1)))%expr @
+                                                  (#(Z_cast (- args0))%expr @
+                                                   (##(-
+                                                       (let (x4, _) := xv in
+                                                        x4))%Z)%expr)))%expr_pat in
+                                 (#(Z_cast (Datatypes.fst range))%expr @
+                                  (#(fst)%expr @
+                                   (#(Z_cast2
+                                        (Datatypes.fst range,
+                                        - Datatypes.snd range))%expr @ $v1)),
+                                 #(Z_cast (Datatypes.snd range))%expr @
+                                 (-
+                                  (#(Z_cast (- Datatypes.snd range))%expr @
+                                   (#(snd)%expr @
+                                    (#(Z_cast2
+                                         (Datatypes.fst range,
+                                         - Datatypes.snd range))%expr @ $v1)))%expr_pat))%expr_pat))
                           else Datatypes.None);
                    Datatypes.Some (fv0 <-- fv;
                                    Base fv0)%under_lets
@@ -1579,16 +1694,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v0 <- type.try_make_transport_cps s0 ℤ;
                v1 <- type.try_make_transport_cps s ℤ;
                Datatypes.Some
-                 (UnderLet
-                    (#(Z_cast2 range)%expr @
-                     (#(Z_add_get_carry)%expr @ v (Compile.reflect x2) @
-                      v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                    (fun v2 : var (ℤ * ℤ)%etype =>
-                     Base
-                       (#(Z_cast (Datatypes.fst range))%expr @
-                        (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
-                       #(Z_cast (Datatypes.snd range))%expr @
-                       (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (expr_let v2 := (#(Z_cast2 range)%expr @
+                                            (#(Z_add_get_carry)%expr @
+                                             ($(v (Compile.reflect x2)))%expr @
+                                             ($(v0 (Compile.reflect x1)))%expr @
+                                             ($(v1 (Compile.reflect x0)))%expr))%expr_pat in
+                            (#(Z_cast (Datatypes.fst range))%expr @
+                             (#(fst)%expr @ (#(Z_cast2 range)%expr @ $v2)),
+                            #(Z_cast (Datatypes.snd range))%expr @
+                            (#(snd)%expr @ (#(Z_cast2 range)%expr @ $v2)))%expr_pat);
+                  Base fv)%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end);;
@@ -1606,16 +1723,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v0 <- type.try_make_transport_cps s0 ℤ;
                v1 <- type.try_make_transport_cps s ℤ;
                Datatypes.Some
-                 (UnderLet
-                    (#(Z_cast2 range)%expr @
-                     (#(Z_sub_get_borrow)%expr @ v (Compile.reflect x2) @
-                      v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                    (fun v2 : var (ℤ * ℤ)%etype =>
-                     Base
-                       (#(Z_cast (Datatypes.fst range))%expr @
-                        (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
-                       #(Z_cast (Datatypes.snd range))%expr @
-                       (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (expr_let v2 := (#(Z_cast2 range)%expr @
+                                            (#(Z_sub_get_borrow)%expr @
+                                             ($(v (Compile.reflect x2)))%expr @
+                                             ($(v0 (Compile.reflect x1)))%expr @
+                                             ($(v1 (Compile.reflect x0)))%expr))%expr_pat in
+                            (#(Z_cast (Datatypes.fst range))%expr @
+                             (#(fst)%expr @ (#(Z_cast2 range)%expr @ $v2)),
+                            #(Z_cast (Datatypes.snd range))%expr @
+                            (#(snd)%expr @ (#(Z_cast2 range)%expr @ $v2)))%expr_pat);
+                  Base fv)%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end);;
@@ -1633,16 +1752,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v0 <- type.try_make_transport_cps s0 ℤ;
               v1 <- type.try_make_transport_cps s ℤ;
               Datatypes.Some
-                (UnderLet
-                   (#(Z_cast2 range)%expr @
-                    (#(Z_mul_split)%expr @ v (Compile.reflect x2) @
-                     v0 (Compile.reflect x1) @ v1 (Compile.reflect x0)))%expr_pat
-                   (fun v2 : var (ℤ * ℤ)%etype =>
-                    Base
-                      (#(Z_cast (Datatypes.fst range))%expr @
-                       (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)),
-                      #(Z_cast (Datatypes.snd range))%expr @
-                      (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
+                (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                          (@Compile.reflect_ident_iota var) false
+                          (expr_let v2 := (#(Z_cast2 range)%expr @
+                                           (#(Z_mul_split)%expr @
+                                            ($(v (Compile.reflect x2)))%expr @
+                                            ($(v0 (Compile.reflect x1)))%expr @
+                                            ($(v1 (Compile.reflect x0)))%expr))%expr_pat in
+                           (#(Z_cast (Datatypes.fst range))%expr @
+                            (#(fst)%expr @ (#(Z_cast2 range)%expr @ $v2)),
+                           #(Z_cast (Datatypes.snd range))%expr @
+                           (#(snd)%expr @ (#(Z_cast2 range)%expr @ $v2)))%expr_pat);
+                 Base fv)%under_lets
              else Datatypes.None
          | Datatypes.None => Datatypes.None
          end
@@ -1689,32 +1810,40 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ((let (x8, _) := xv in x8) =? 0)
                                    then
                                     Datatypes.Some
-                                      (UnderLet
-                                         (#(Z_cast2
-                                              (Datatypes.fst range,
-                                              - Datatypes.snd range))%expr @
-                                          (#(Z_sub_get_borrow)%expr @
-                                           v (Compile.reflect x3) @
-                                           v1 (Compile.reflect x0) @
-                                           (#(Z_cast args)%expr @
-                                            v0 (Compile.reflect x7))))%expr_pat
-                                         (fun v2 : var (ℤ * ℤ)%etype =>
-                                          Base
-                                            (#(Z_cast (Datatypes.fst range))%expr @
-                                             (#(fst)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               ($v2)%expr)),
-                                            #(Z_cast (Datatypes.snd range))%expr @
-                                            (-
-                                             (#(Z_cast
-                                                  (- Datatypes.snd range))%expr @
-                                              (#(snd)%expr @
-                                               (#(Z_cast2
-                                                    (Datatypes.fst range,
-                                                    - Datatypes.snd range))%expr @
-                                                $v2)))%expr_pat)%expr)%expr_pat))
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
+                                         (expr_let v2 := (#(Z_cast2
+                                                              (Datatypes.fst
+                                                                 range,
+                                                              -
+                                                              Datatypes.snd
+                                                                range))%expr @
+                                                          (#(Z_sub_get_borrow)%expr @
+                                                           ($(v
+                                                                (Compile.reflect
+                                                                   x3)))%expr @
+                                                           ($(v1
+                                                                (Compile.reflect
+                                                                   x0)))%expr @
+                                                           (#(Z_cast args)%expr @
+                                                            ($(v0
+                                                                 (Compile.reflect
+                                                                    x7)))%expr)))%expr_pat in
+                                          (#(Z_cast (Datatypes.fst range))%expr @
+                                           (#(fst)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v2)),
+                                          #(Z_cast (Datatypes.snd range))%expr @
+                                          (-
+                                           (#(Z_cast (- Datatypes.snd range))%expr @
+                                            (#(snd)%expr @
+                                             (#(Z_cast2
+                                                  (Datatypes.fst range,
+                                                  - Datatypes.snd range))%expr @
+                                              $v2)))%expr_pat))%expr_pat))
                                    else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
@@ -1753,33 +1882,46 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     - ZRange.normalize args1)%zrange
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast (- args3))%expr @
-                                           (##(- (let (x8, _) := xv in x8))%Z)%expr) @
-                                          v1 (Compile.reflect x0) @
-                                          (#(Z_cast args)%expr @
-                                           v0 (Compile.reflect x7))))%expr_pat
-                                        (fun v2 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v2)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v2)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v2 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast (- args3))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x8, _) :=
+                                                                  xv in
+                                                                x8))%Z)%expr) @
+                                                          ($(v1
+                                                               (Compile.reflect
+                                                                  x0)))%expr @
+                                                          (#(Z_cast args)%expr @
+                                                           ($(v0
+                                                                (Compile.reflect
+                                                                   x7)))%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v2)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v2)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -1855,32 +1997,40 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ((let (x8, _) := xv in x8) =? 0)
                                    then
                                     Datatypes.Some
-                                      (UnderLet
-                                         (#(Z_cast2
-                                              (Datatypes.fst range,
-                                              - Datatypes.snd range))%expr @
-                                          (#(Z_sub_get_borrow)%expr @
-                                           v (Compile.reflect x3) @
-                                           v0 (Compile.reflect x1) @
-                                           (#(Z_cast args)%expr @
-                                            v1 (Compile.reflect x7))))%expr_pat
-                                         (fun v2 : var (ℤ * ℤ)%etype =>
-                                          Base
-                                            (#(Z_cast (Datatypes.fst range))%expr @
-                                             (#(fst)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               ($v2)%expr)),
-                                            #(Z_cast (Datatypes.snd range))%expr @
-                                            (-
-                                             (#(Z_cast
-                                                  (- Datatypes.snd range))%expr @
-                                              (#(snd)%expr @
-                                               (#(Z_cast2
-                                                    (Datatypes.fst range,
-                                                    - Datatypes.snd range))%expr @
-                                                $v2)))%expr_pat)%expr)%expr_pat))
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
+                                         (expr_let v2 := (#(Z_cast2
+                                                              (Datatypes.fst
+                                                                 range,
+                                                              -
+                                                              Datatypes.snd
+                                                                range))%expr @
+                                                          (#(Z_sub_get_borrow)%expr @
+                                                           ($(v
+                                                                (Compile.reflect
+                                                                   x3)))%expr @
+                                                           ($(v0
+                                                                (Compile.reflect
+                                                                   x1)))%expr @
+                                                           (#(Z_cast args)%expr @
+                                                            ($(v1
+                                                                 (Compile.reflect
+                                                                    x7)))%expr)))%expr_pat in
+                                          (#(Z_cast (Datatypes.fst range))%expr @
+                                           (#(fst)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v2)),
+                                          #(Z_cast (Datatypes.snd range))%expr @
+                                          (-
+                                           (#(Z_cast (- Datatypes.snd range))%expr @
+                                            (#(snd)%expr @
+                                             (#(Z_cast2
+                                                  (Datatypes.fst range,
+                                                  - Datatypes.snd range))%expr @
+                                              $v2)))%expr_pat))%expr_pat))
                                    else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
@@ -1919,33 +2069,46 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     - ZRange.normalize args1)%zrange
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast (- args3))%expr @
-                                           (##(- (let (x8, _) := xv in x8))%Z)%expr) @
-                                          v0 (Compile.reflect x1) @
-                                          (#(Z_cast args)%expr @
-                                           v1 (Compile.reflect x7))))%expr_pat
-                                        (fun v2 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v2)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v2)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v2 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast (- args3))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x8, _) :=
+                                                                  xv in
+                                                                x8))%Z)%expr) @
+                                                          ($(v0
+                                                               (Compile.reflect
+                                                                  x1)))%expr @
+                                                          (#(Z_cast args)%expr @
+                                                           ($(v1
+                                                                (Compile.reflect
+                                                                   x7)))%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v2)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v2)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2024,33 +2187,48 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (ZRange.normalize args2)
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast (- args2))%expr @
-                                           (##(- (let (x6, _) := xv in x6))%Z)%expr) @
-                                          v0 (Compile.reflect x0) @
-                                          (#(Z_cast (- args0))%expr @
-                                           (##(- (let (x6, _) := xv0 in x6))%Z)%expr)))%expr_pat
-                                        (fun v1 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v1)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v1)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v1 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast (- args2))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x6, _) :=
+                                                                  xv in
+                                                                x6))%Z)%expr) @
+                                                          ($(v0
+                                                               (Compile.reflect
+                                                                  x0)))%expr @
+                                                          (#(Z_cast (- args0))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x6, _) :=
+                                                                  xv0 in
+                                                                x6))%Z)%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v1)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v1)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2102,33 +2280,48 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      (ZRange.normalize args2)
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast (- args2))%expr @
-                                           (##(- (let (x6, _) := xv in x6))%Z)%expr) @
-                                          v0 (Compile.reflect x1) @
-                                          (#(Z_cast (- args0))%expr @
-                                           (##(- (let (x6, _) := xv0 in x6))%Z)%expr)))%expr_pat
-                                        (fun v1 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v1)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v1)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v1 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast (- args2))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x6, _) :=
+                                                                  xv in
+                                                                x6))%Z)%expr) @
+                                                          ($(v0
+                                                               (Compile.reflect
+                                                                  x1)))%expr @
+                                                          (#(Z_cast (- args0))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x6, _) :=
+                                                                  xv0 in
+                                                                x6))%Z)%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v1)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v1)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2165,20 +2358,25 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                ((let (x5, _) := xv in x5) =? 0)
                               then
                                Datatypes.Some
-                                 (UnderLet
-                                    (#(Z_cast2 range)%expr @
-                                     (#(Z_add_get_carry)%expr @
-                                      v (Compile.reflect x3) @
-                                      v0 (Compile.reflect x1) @
-                                      v1 (Compile.reflect x0)))%expr_pat
-                                    (fun v2 : var (ℤ * ℤ)%etype =>
-                                     Base
-                                       (#(Z_cast (Datatypes.fst range))%expr @
-                                        (#(fst)%expr @
-                                         (#(Z_cast2 range)%expr @ ($v2)%expr)),
-                                       #(Z_cast (Datatypes.snd range))%expr @
-                                       (#(snd)%expr @
-                                        (#(Z_cast2 range)%expr @ ($v2)%expr)))%expr_pat))
+                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                    (@Compile.reflect_ident_iota var) false
+                                    (expr_let v2 := (#(Z_cast2 range)%expr @
+                                                     (#(Z_add_get_carry)%expr @
+                                                      ($(v
+                                                           (Compile.reflect
+                                                              x3)))%expr @
+                                                      ($(v0
+                                                           (Compile.reflect
+                                                              x1)))%expr @
+                                                      ($(v1
+                                                           (Compile.reflect
+                                                              x0)))%expr))%expr_pat in
+                                     (#(Z_cast (Datatypes.fst range))%expr @
+                                      (#(fst)%expr @
+                                       (#(Z_cast2 range)%expr @ $v2)),
+                                     #(Z_cast (Datatypes.snd range))%expr @
+                                     (#(snd)%expr @
+                                      (#(Z_cast2 range)%expr @ $v2)))%expr_pat))
                               else Datatypes.None);
                        Datatypes.Some (fv0 <-- fv;
                                        Base fv0)%under_lets
@@ -2221,33 +2419,44 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     - ZRange.normalize args4)%zrange
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast args2)%expr @
-                                           v0 (Compile.reflect x6)) @
-                                          v2 (Compile.reflect x0) @
-                                          (#(Z_cast args)%expr @
-                                           v1 (Compile.reflect x9))))%expr_pat
-                                        (fun v3 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v3)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v3)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v3 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast args2)%expr @
+                                                           ($(v0
+                                                                (Compile.reflect
+                                                                   x6)))%expr) @
+                                                          ($(v2
+                                                               (Compile.reflect
+                                                                  x0)))%expr @
+                                                          (#(Z_cast args)%expr @
+                                                           ($(v1
+                                                                (Compile.reflect
+                                                                   x9)))%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v3)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v3)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2322,33 +2531,44 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     - ZRange.normalize args4)%zrange
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast args2)%expr @
-                                           v0 (Compile.reflect x6)) @
-                                          v1 (Compile.reflect x1) @
-                                          (#(Z_cast args)%expr @
-                                           v2 (Compile.reflect x9))))%expr_pat
-                                        (fun v3 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v3)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v3)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v3 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast args2)%expr @
+                                                           ($(v0
+                                                                (Compile.reflect
+                                                                   x6)))%expr) @
+                                                          ($(v1
+                                                               (Compile.reflect
+                                                                  x1)))%expr @
+                                                          (#(Z_cast args)%expr @
+                                                           ($(v2
+                                                                (Compile.reflect
+                                                                   x9)))%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v3)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v3)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2423,33 +2643,46 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     - ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast args1)%expr @
-                                           v0 (Compile.reflect x6)) @
-                                          v1 (Compile.reflect x0) @
-                                          (#(Z_cast (- args0))%expr @
-                                           (##(- (let (x8, _) := xv in x8))%Z)%expr)))%expr_pat
-                                        (fun v2 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v2)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v2)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v2 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast args1)%expr @
+                                                           ($(v0
+                                                                (Compile.reflect
+                                                                   x6)))%expr) @
+                                                          ($(v1
+                                                               (Compile.reflect
+                                                                  x0)))%expr @
+                                                          (#(Z_cast (- args0))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x8, _) :=
+                                                                  xv in
+                                                                x8))%Z)%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v2)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v2)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2497,33 +2730,46 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     - ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
-                                     (UnderLet
-                                        (#(Z_cast2
-                                             (Datatypes.fst range,
-                                             - Datatypes.snd range))%expr @
-                                         (#(Z_sub_with_get_borrow)%expr @
-                                          v (Compile.reflect x3) @
-                                          (#(Z_cast args1)%expr @
-                                           v0 (Compile.reflect x6)) @
-                                          v1 (Compile.reflect x1) @
-                                          (#(Z_cast (- args0))%expr @
-                                           (##(- (let (x8, _) := xv in x8))%Z)%expr)))%expr_pat
-                                        (fun v2 : var (ℤ * ℤ)%etype =>
-                                         Base
-                                           (#(Z_cast (Datatypes.fst range))%expr @
-                                            (#(fst)%expr @
-                                             (#(Z_cast2
-                                                  (Datatypes.fst range,
-                                                  - Datatypes.snd range))%expr @
-                                              ($v2)%expr)),
-                                           #(Z_cast (Datatypes.snd range))%expr @
-                                           (-
-                                            (#(Z_cast (- Datatypes.snd range))%expr @
-                                             (#(snd)%expr @
-                                              (#(Z_cast2
-                                                   (Datatypes.fst range,
-                                                   - Datatypes.snd range))%expr @
-                                               $v2)))%expr_pat)%expr)%expr_pat))
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
+                                        (expr_let v2 := (#(Z_cast2
+                                                             (Datatypes.fst
+                                                                range,
+                                                             -
+                                                             Datatypes.snd
+                                                               range))%expr @
+                                                         (#(Z_sub_with_get_borrow)%expr @
+                                                          ($(v
+                                                               (Compile.reflect
+                                                                  x3)))%expr @
+                                                          (#(Z_cast args1)%expr @
+                                                           ($(v0
+                                                                (Compile.reflect
+                                                                   x6)))%expr) @
+                                                          ($(v1
+                                                               (Compile.reflect
+                                                                  x1)))%expr @
+                                                          (#(Z_cast (- args0))%expr @
+                                                           (##(-
+                                                               (let
+                                                                  (x8, _) :=
+                                                                  xv in
+                                                                x8))%Z)%expr)))%expr_pat in
+                                         (#(Z_cast (Datatypes.fst range))%expr @
+                                          (#(fst)%expr @
+                                           (#(Z_cast2
+                                                (Datatypes.fst range,
+                                                - Datatypes.snd range))%expr @
+                                            $v2)),
+                                         #(Z_cast (Datatypes.snd range))%expr @
+                                         (-
+                                          (#(Z_cast (- Datatypes.snd range))%expr @
+                                           (#(snd)%expr @
+                                            (#(Z_cast2
+                                                 (Datatypes.fst range,
+                                                 - Datatypes.snd range))%expr @
+                                             $v2)))%expr_pat))%expr_pat))
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -2603,26 +2849,29 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                        ((let (x8, _) := xv1 in x8) =? 0)
                                       then
                                        Datatypes.Some
-                                         (UnderLet
-                                            (#(Z_cast2 range)%expr @
-                                             (#(Z_add_with_get_carry)%expr @
-                                              (#(Z_cast args4)%expr @
-                                               (##(let (x8, _) := xv in x8))%expr) @
-                                              (#(Z_cast args5)%expr @
-                                               v (Compile.reflect x4)) @
-                                              (#(Z_cast args2)%expr @
-                                               (##0)%expr) @
-                                              (#(Z_cast args0)%expr @
-                                               (##0)%expr)))%expr_pat
-                                            (fun v0 : var (ℤ * ℤ)%etype =>
-                                             Base
-                                               (#(Z_cast
-                                                    (Datatypes.fst range))%expr @
-                                                (#(fst)%expr @
-                                                 (#(Z_cast2 range)%expr @
-                                                  ($v0)%expr)),
-                                               #(Z_cast r[0 ~> 0])%expr @
-                                               (##0)%expr)%expr_pat))
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
+                                            (expr_let v0 := (#(Z_cast2 range)%expr @
+                                                             (#(Z_add_with_get_carry)%expr @
+                                                              (#(Z_cast args4)%expr @
+                                                               (##(let
+                                                                    (x8,
+                                                                    _) :=
+                                                                    xv in
+                                                                   x8))%expr) @
+                                                              (#(Z_cast args5)%expr @
+                                                               ($(v
+                                                                    (Compile.reflect
+                                                                    x4)))%expr) @
+                                                              (#(Z_cast args2)%expr @
+                                                               (##0)%expr) @
+                                                              (#(Z_cast args0)%expr @
+                                                               (##0)%expr)))%expr_pat in
+                                             (#(Z_cast (Datatypes.fst range))%expr @
+                                              (#(fst)%expr @
+                                               (#(Z_cast2 range)%expr @ $v0)),
+                                             #(Z_cast r[0 ~> 0])%expr @ ##0)%expr_pat))
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -2672,17 +2921,19 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v1 <- type.try_make_transport_cps s0 ℤ;
                v2 <- type.try_make_transport_cps s ℤ;
                Datatypes.Some
-                 (UnderLet
-                    (#(Z_cast2 range)%expr @
-                     (#(Z_add_with_get_carry)%expr @ v (Compile.reflect x3) @
-                      v0 (Compile.reflect x2) @ v1 (Compile.reflect x1) @
-                      v2 (Compile.reflect x0)))%expr_pat
-                    (fun v3 : var (ℤ * ℤ)%etype =>
-                     Base
-                       (#(Z_cast (Datatypes.fst range))%expr @
-                        (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)),
-                       #(Z_cast (Datatypes.snd range))%expr @
-                       (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (expr_let v3 := (#(Z_cast2 range)%expr @
+                                            (#(Z_add_with_get_carry)%expr @
+                                             ($(v (Compile.reflect x3)))%expr @
+                                             ($(v0 (Compile.reflect x2)))%expr @
+                                             ($(v1 (Compile.reflect x1)))%expr @
+                                             ($(v2 (Compile.reflect x0)))%expr))%expr_pat in
+                            (#(Z_cast (Datatypes.fst range))%expr @
+                             (#(fst)%expr @ (#(Z_cast2 range)%expr @ $v3)),
+                            #(Z_cast (Datatypes.snd range))%expr @
+                            (#(snd)%expr @ (#(Z_cast2 range)%expr @ $v3)))%expr_pat);
+                  Base fv)%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end);;
@@ -2701,17 +2952,19 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v1 <- type.try_make_transport_cps s0 ℤ;
               v2 <- type.try_make_transport_cps s ℤ;
               Datatypes.Some
-                (UnderLet
-                   (#(Z_cast2 range)%expr @
-                    (#(Z_sub_with_get_borrow)%expr @ v (Compile.reflect x3) @
-                     v0 (Compile.reflect x2) @ v1 (Compile.reflect x1) @
-                     v2 (Compile.reflect x0)))%expr_pat
-                   (fun v3 : var (ℤ * ℤ)%etype =>
-                    Base
-                      (#(Z_cast (Datatypes.fst range))%expr @
-                       (#(fst)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)),
-                      #(Z_cast (Datatypes.snd range))%expr @
-                      (#(snd)%expr @ (#(Z_cast2 range)%expr @ ($v3)%expr)))%expr_pat))
+                (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                          (@Compile.reflect_ident_iota var) false
+                          (expr_let v3 := (#(Z_cast2 range)%expr @
+                                           (#(Z_sub_with_get_borrow)%expr @
+                                            ($(v (Compile.reflect x3)))%expr @
+                                            ($(v0 (Compile.reflect x2)))%expr @
+                                            ($(v1 (Compile.reflect x1)))%expr @
+                                            ($(v2 (Compile.reflect x0)))%expr))%expr_pat in
+                           (#(Z_cast (Datatypes.fst range))%expr @
+                            (#(fst)%expr @ (#(Z_cast2 range)%expr @ $v3)),
+                           #(Z_cast (Datatypes.snd range))%expr @
+                           (#(snd)%expr @ (#(Z_cast2 range)%expr @ $v3)))%expr_pat);
+                 Base fv)%under_lets
              else Datatypes.None
          | Datatypes.None => Datatypes.None
          end

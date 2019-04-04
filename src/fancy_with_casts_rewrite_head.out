@@ -47,6 +47,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         to_expr
           (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
        x1 @ x2)%expr_pat
+| @eager_nat_rect P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr ℕ -> expr P -> UnderLets (expr P)) (x1 : expr ℕ) =>
+    Base
+      (#(eager_nat_rect)%expr @ (λ x2 : var unit,
+                                 to_expr (x ($x2)))%expr @
+       (λ (x2 : var ℕ)(x3 : var P),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @eager_nat_rect_arrow P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr ℕ ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr ℕ) (x2 : expr P) =>
+    Base
+      (#(eager_nat_rect_arrow)%expr @ (λ x3 : var P,
+                                       to_expr (x ($x3)))%expr @
+       (λ (x3 : var ℕ)(x4 : var (P -> Q)%ptype)(x5 : var P),
+        to_expr
+          (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+       x1 @ x2)%expr_pat
 | @list_rect A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
@@ -56,6 +76,43 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             to_expr (x ($x2)))%expr @
        (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
         to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(list_rect_arrow)%expr @ (λ x3 : var P,
+                                  to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
+| @eager_list_rect A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(eager_list_rect)%expr @ (λ x2 : var unit,
+                                  to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
+        to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @eager_list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(eager_list_rect_arrow)%expr @ (λ x3 : var P,
+                                        to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
 | @list_case A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> UnderLets (expr P))
@@ -114,6 +171,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | @List_nth_default T =>
     fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
     Base (#(List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+| @eager_List_nth_default T =>
+    fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
+    Base (#(eager_List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add => fun x x0 : expr ℤ => Base (x + x0)%expr
 | Z_mul => fun x x0 : expr ℤ => Base (x * x0)%expr
 | Z_pow => fun x x0 : expr ℤ => Base (#(Z_pow)%expr @ x @ x0)%expr_pat
@@ -169,7 +229,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
           type.type_beq base.type base.type.type_beq ((ℤ -> ℤ) -> ℤ)%ptype
             ((ℤ -> ℤ) -> ℤ)%ptype
          then
-          Datatypes.Some (Base (#(fancy_addm)%expr @ (x, x0, x1))%expr_pat)
+          Datatypes.Some
+            (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                      (@Compile.reflect_ident_iota var) false
+                      (#(fancy_addm)%expr @
+                       (($x)%expr, ($x0)%expr, ($x1)%expr))%expr_pat;
+             Base fv)%under_lets
          else Datatypes.None
      | Datatypes.None => Datatypes.None
      end;;;
@@ -178,6 +243,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun x x0 x1 x2 : expr ℤ =>
     Base (#(Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
 | Z_cc_m => fun x x0 : expr ℤ => Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat
+| Z_combine_at_bitwidth =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_combine_at_bitwidth)%expr @ x @ x0 @ x1)%expr_pat
 | Z_cast range =>
     fun x : expr ℤ =>
     ((match x with
@@ -241,7 +309,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast range)%expr @
                                          (#(fancy_mulll
                                               (2 *
@@ -259,7 +329,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               | Datatypes.None => 0
                                               end)%expr,
                                           #(Z_cast args1)%expr @
-                                          v (Compile.reflect x6))))%expr_pat)
+                                          ($(v (Compile.reflect x6)))%expr)))%expr_pat)
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -320,7 +390,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      ZRange.normalize args3)%zrange
                                    then
                                     Datatypes.Some
-                                      (Base
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
                                          (#(Z_cast range)%expr @
                                           (#(fancy_mulll
                                                (2 *
@@ -338,7 +410,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                | Datatypes.None => 0
                                                end)%expr,
                                            #(Z_cast args0)%expr @
-                                           v (Compile.reflect x7))))%expr_pat)
+                                           ($(v (Compile.reflect x7)))%expr)))%expr_pat)
                                    else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
@@ -395,7 +467,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast range)%expr @
                                          (#(fancy_mulhl
                                               (2 *
@@ -413,7 +487,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               | Datatypes.None => 0
                                               end)%expr,
                                           #(Z_cast args0)%expr @
-                                          v (Compile.reflect x7))))%expr_pat)
+                                          ($(v (Compile.reflect x7)))%expr)))%expr_pat)
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -474,7 +548,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ZRange.normalize args3)%zrange
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast range)%expr @
                                          (#(fancy_mulhl
                                               (2 *
@@ -492,7 +568,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                               | Datatypes.None => 0
                                               end)%expr,
                                           #(Z_cast args1)%expr @
-                                          v (Compile.reflect x6))))%expr_pat)
+                                          ($(v (Compile.reflect x6)))%expr)))%expr_pat)
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -558,7 +634,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  ZRange.normalize args3)%zrange
                                then
                                 Datatypes.Some
-                                  (Base
+                                  (Reify.expr_value_to_rewrite_rule_replacement
+                                     (@Compile.reflect_ident_iota var) false
                                      (#(Z_cast range)%expr @
                                       (#(fancy_mullh
                                            (2 * (let (x8, _) := xv0 in x8)))%expr @
@@ -572,7 +649,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            | Datatypes.None => 0
                                            end)%expr,
                                        #(Z_cast args1)%expr @
-                                       v (Compile.reflect x6))))%expr_pat)
+                                       ($(v (Compile.reflect x6)))%expr)))%expr_pat)
                                else Datatypes.None);
                         Datatypes.Some (fv0 <-- fv;
                                         Base fv0)%under_lets
@@ -619,7 +696,8 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                 ZRange.normalize args3)%zrange
                               then
                                Datatypes.Some
-                                 (Base
+                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                    (@Compile.reflect_ident_iota var) false
                                     (#(Z_cast range)%expr @
                                      (#(fancy_mulhh
                                           (2 * (let (x8, _) := xv0 in x8)))%expr @
@@ -632,7 +710,7 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           | Datatypes.None => 0
                                           end)%expr,
                                       #(Z_cast args1)%expr @
-                                      v (Compile.reflect x6))))%expr_pat)
+                                      ($(v (Compile.reflect x6)))%expr)))%expr_pat)
                               else Datatypes.None);
                        Datatypes.Some (fv0 <-- fv;
                                        Base fv0)%under_lets
@@ -790,14 +868,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args5)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mulll
                                                   (2 *
                                                    Z.log2_up
                                                      (let (x8, _) := xv in x8)))%expr @
                                               (#(Z_cast args1)%expr @
-                                               v (Compile.reflect x6),
+                                               ($(v (Compile.reflect x6)))%expr,
                                               (##match
                                                    invert_low
                                                      (2 *
@@ -891,14 +971,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args5)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mulll
                                                   (2 *
                                                    Z.log2_up
                                                      (let (x8, _) := xv in x8)))%expr @
                                               (#(Z_cast args3)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               (##match
                                                    invert_low
                                                      (2 *
@@ -984,14 +1066,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args5)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mullh
                                                   (2 *
                                                    Z.log2_up
                                                      (let (x8, _) := xv in x8)))%expr @
                                               (#(Z_cast args2)%expr @
-                                               v (Compile.reflect x6),
+                                               ($(v (Compile.reflect x6)))%expr,
                                               (##match
                                                    invert_high
                                                      (2 *
@@ -1077,14 +1161,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args5)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mullh
                                                   (2 *
                                                    Z.log2_up
                                                      (let (x8, _) := xv in x8)))%expr @
                                               (#(Z_cast args3)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               (##match
                                                    invert_high
                                                      (2 *
@@ -1182,7 +1268,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args3)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mulll
                                                   (2 *
@@ -1190,9 +1278,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                      (let (x12, _) := xv in
                                                       x12)))%expr @
                                               (#(Z_cast args5)%expr @
-                                               v (Compile.reflect x6),
+                                               ($(v (Compile.reflect x6)))%expr,
                                               #(Z_cast args)%expr @
-                                              v0 (Compile.reflect x11))))%expr_pat)
+                                              ($(v0 (Compile.reflect x11)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -1360,7 +1448,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args3)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mulll
                                                   (2 *
@@ -1368,9 +1458,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                      (let (x12, _) := xv in
                                                       x12)))%expr @
                                               (#(Z_cast args6)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               #(Z_cast args)%expr @
-                                              v0 (Compile.reflect x11))))%expr_pat)
+                                              ($(v0 (Compile.reflect x11)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -1537,7 +1627,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args3)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mulll
                                                   (2 *
@@ -1545,9 +1637,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                      (let (x12, _) := xv in
                                                       x12)))%expr @
                                               (#(Z_cast args5)%expr @
-                                               v (Compile.reflect x6),
+                                               ($(v (Compile.reflect x6)))%expr,
                                               #(Z_cast args1)%expr @
-                                              v0 (Compile.reflect x10))))%expr_pat)
+                                              ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -1712,7 +1804,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args3)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mulll
                                                   (2 *
@@ -1720,9 +1814,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                      (let (x12, _) := xv in
                                                       x12)))%expr @
                                               (#(Z_cast args6)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               #(Z_cast args1)%expr @
-                                              v0 (Compile.reflect x10))))%expr_pat)
+                                              ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -1879,16 +1973,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args3)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mullh
                                                   (2 *
                                                    (let (x12, _) := xv0 in
                                                     x12)))%expr @
                                               (#(Z_cast args5)%expr @
-                                               v (Compile.reflect x6),
+                                               ($(v (Compile.reflect x6)))%expr,
                                               #(Z_cast args1)%expr @
-                                              v0 (Compile.reflect x10))))%expr_pat)
+                                              ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -2045,16 +2141,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         ZRange.normalize args3)%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast range)%expr @
                                              (#(fancy_mullh
                                                   (2 *
                                                    (let (x12, _) := xv0 in
                                                     x12)))%expr @
                                               (#(Z_cast args6)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               #(Z_cast args1)%expr @
-                                              v0 (Compile.reflect x10))))%expr_pat)
+                                              ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -2212,12 +2310,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      ZRange.normalize args5)%zrange
                                    then
                                     Datatypes.Some
-                                      (Base
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
                                          (#(Z_cast range)%expr @
                                           (#(fancy_mulhl
                                                (2 * (let (x8, _) := xv in x8)))%expr @
                                            (#(Z_cast args3)%expr @
-                                            v (Compile.reflect x5),
+                                            ($(v (Compile.reflect x5)))%expr,
                                            (##match
                                                 invert_low
                                                   (2 *
@@ -2276,12 +2376,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     ZRange.normalize args5)%zrange
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast range)%expr @
                                          (#(fancy_mulhh
                                               (2 * (let (x8, _) := xv in x8)))%expr @
                                           (#(Z_cast args3)%expr @
-                                           v (Compile.reflect x5),
+                                           ($(v (Compile.reflect x5)))%expr,
                                           (##match
                                                invert_high
                                                  (2 *
@@ -2375,7 +2477,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                 ZRange.normalize args3)%zrange
                                               then
                                                Datatypes.Some
-                                                 (Base
+                                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                                    (@Compile.reflect_ident_iota
+                                                       var) false
                                                     (#(Z_cast range)%expr @
                                                      (#(fancy_mulhl
                                                           (2 *
@@ -2383,10 +2487,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                               xv in
                                                             x12)))%expr @
                                                       (#(Z_cast args6)%expr @
-                                                       v (Compile.reflect x5),
+                                                       ($(v
+                                                            (Compile.reflect
+                                                               x5)))%expr,
                                                       #(Z_cast args)%expr @
-                                                      v0
-                                                        (Compile.reflect x11))))%expr_pat)
+                                                      ($(v0
+                                                           (Compile.reflect
+                                                              x11)))%expr)))%expr_pat)
                                               else Datatypes.None);
                                        Datatypes.Some
                                          (fv0 <-- fv;
@@ -2462,16 +2569,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                             ZRange.normalize args3)%zrange
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast range)%expr @
                                                  (#(fancy_mulhl
                                                       (2 *
                                                        (let (x12, _) := xv in
                                                         x12)))%expr @
                                                   (#(Z_cast args6)%expr @
-                                                   v (Compile.reflect x5),
+                                                   ($(v (Compile.reflect x5)))%expr,
                                                   #(Z_cast args1)%expr @
-                                                  v0 (Compile.reflect x10))))%expr_pat)
+                                                  ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -2551,16 +2660,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                             ZRange.normalize args3)%zrange
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast range)%expr @
                                                  (#(fancy_mulhh
                                                       (2 *
                                                        (let (x12, _) := xv in
                                                         x12)))%expr @
                                                   (#(Z_cast args6)%expr @
-                                                   v (Compile.reflect x5),
+                                                   ($(v (Compile.reflect x5)))%expr,
                                                   #(Z_cast args1)%expr @
-                                                  v0 (Compile.reflect x10))))%expr_pat)
+                                                  ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -2718,7 +2829,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                             ZRange.normalize args5)%zrange
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast range)%expr @
                                                  (#(fancy_selm
                                                       (Z.log2
@@ -2726,11 +2839,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                             xv in
                                                           x10)))%expr @
                                                   (#(Z_cast args1)%expr @
-                                                   v (Compile.reflect x7),
+                                                   ($(v (Compile.reflect x7)))%expr,
                                                   #(Z_cast args0)%expr @
-                                                  v0 (Compile.reflect x8),
+                                                  ($(v0 (Compile.reflect x8)))%expr,
                                                   #(Z_cast args)%expr @
-                                                  v1 (Compile.reflect x9))))%expr_pat)
+                                                  ($(v1 (Compile.reflect x9)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -2821,15 +2934,23 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                 1)
                                               then
                                                Datatypes.Some
-                                                 (Base
+                                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                                    (@Compile.reflect_ident_iota
+                                                       var) false
                                                     (#(Z_cast range)%expr @
                                                      (#(fancy_sell)%expr @
                                                       (#(Z_cast args1)%expr @
-                                                       v (Compile.reflect x7),
+                                                       ($(v
+                                                            (Compile.reflect
+                                                               x7)))%expr,
                                                       #(Z_cast args0)%expr @
-                                                      v0 (Compile.reflect x8),
+                                                      ($(v0
+                                                           (Compile.reflect
+                                                              x8)))%expr,
                                                       #(Z_cast args)%expr @
-                                                      v1 (Compile.reflect x9))))%expr_pat)
+                                                      ($(v1
+                                                           (Compile.reflect
+                                                              x9)))%expr)))%expr_pat)
                                               else Datatypes.None);
                                        Datatypes.Some
                                          (fv0 <-- fv;
@@ -2902,15 +3023,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                            ((let (x10, _) := xv in x10) =? 1)
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast range)%expr @
                                                  (#(fancy_sell)%expr @
                                                   (#(Z_cast args3)%expr @
-                                                   v (Compile.reflect x6),
+                                                   ($(v (Compile.reflect x6)))%expr,
                                                   #(Z_cast args0)%expr @
-                                                  v0 (Compile.reflect x8),
+                                                  ($(v0 (Compile.reflect x8)))%expr,
                                                   #(Z_cast args)%expr @
-                                                  v1 (Compile.reflect x9))))%expr_pat)
+                                                  ($(v1 (Compile.reflect x9)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -2972,11 +3095,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v0 <- type.try_make_transport_cps s0 ℤ;
                v1 <- type.try_make_transport_cps s ℤ;
                Datatypes.Some
-                 (Base
-                    (#(Z_cast range)%expr @
-                     (#(fancy_selc)%expr @
-                      (v (Compile.reflect x2), v0 (Compile.reflect x1),
-                      v1 (Compile.reflect x0))))%expr_pat)
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (#(Z_cast range)%expr @
+                            (#(fancy_selc)%expr @
+                             (($(v (Compile.reflect x2)))%expr,
+                             ($(v0 (Compile.reflect x1)))%expr,
+                             ($(v1 (Compile.reflect x0)))%expr)))%expr_pat;
+                  Base fv)%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -3018,12 +3144,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         2 ^ Z.log2 (let (x8, _) := xv in x8))
                       then
                        Datatypes.Some
-                         (Base
+                         (Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
                             (#(Z_cast range)%expr @
                              (#(fancy_rshi (Z.log2 (let (x8, _) := xv in x8))
                                   (let (x8, _) := xv0 in x8))%expr @
-                              (#(Z_cast args2)%expr @ v (Compile.reflect x5),
-                              #(Z_cast args1)%expr @ v0 (Compile.reflect x6))))%expr_pat)
+                              (#(Z_cast args2)%expr @
+                               ($(v (Compile.reflect x5)))%expr,
+                              #(Z_cast args1)%expr @
+                              ($(v0 (Compile.reflect x6)))%expr)))%expr_pat)
                       else Datatypes.None);
                Datatypes.Some (fv0 <-- fv;
                                Base fv0)%under_lets
@@ -3304,7 +3433,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (range <=? value_range)%zrange
                    || (range <=? flag_range)%zrange
                   then
-                   Datatypes.Some (Base (#(Z_cast range)%expr @ x)%expr_pat)
+                   Datatypes.Some
+                     (Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) false
+                        (#(Z_cast range)%expr @ ($x)%expr)%expr_pat)
                   else Datatypes.None);
            Datatypes.Some (fv0 <-- fv;
                            Base fv0)%under_lets
@@ -3402,7 +3534,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                           Z.log2 (let (x14, _) := xv in x14)))
                                        then
                                         Datatypes.Some
-                                          (Base
+                                          (Reify.expr_value_to_rewrite_rule_replacement
+                                             (@Compile.reflect_ident_iota var)
+                                             false
                                              (#(Z_cast2 range)%expr @
                                               (#(fancy_add
                                                    (Z.log2
@@ -3411,9 +3545,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (let (x14, _) := xv1 in
                                                     x14))%expr @
                                                (#(Z_cast args8)%expr @
-                                                v (Compile.reflect x4),
+                                                ($(v (Compile.reflect x4)))%expr,
                                                #(Z_cast args3)%expr @
-                                               v0 (Compile.reflect x11))))%expr_pat)
+                                               ($(v0 (Compile.reflect x11)))%expr)))%expr_pat)
                                        else Datatypes.None);
                                 Datatypes.Some
                                   (fv0 <-- fv;
@@ -3490,7 +3624,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                1])%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast2 range)%expr @
                                              (#(fancy_add
                                                   (Z.log2
@@ -3498,9 +3634,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                       x14))
                                                   (let (x14, _) := xv1 in x14))%expr @
                                               (#(Z_cast args8)%expr @
-                                               v (Compile.reflect x4),
+                                               ($(v (Compile.reflect x4)))%expr,
                                               #(Z_cast args3)%expr @
-                                              v0 (Compile.reflect x11))))%expr_pat)
+                                              ($(v0 (Compile.reflect x11)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -3801,7 +3937,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                          Z.log2 (let (x14, _) := xv in x14)))
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast2 range)%expr @
                                              (#(fancy_add
                                                   (Z.log2
@@ -3809,9 +3947,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                       x14))
                                                   (let (x14, _) := xv1 in x14))%expr @
                                               (#(Z_cast args7)%expr @
-                                               v0 (Compile.reflect x5),
+                                               ($(v0 (Compile.reflect x5)))%expr,
                                               #(Z_cast args3)%expr @
-                                              v (Compile.reflect x11))))%expr_pat)
+                                              ($(v (Compile.reflect x11)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -4084,7 +4222,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                1])%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast2 range)%expr @
                                              (#(fancy_add
                                                   (Z.log2
@@ -4094,9 +4234,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (let (x10, _) := xv0 in
                                                     x10)))%expr @
                                               (#(Z_cast args4)%expr @
-                                               v (Compile.reflect x4),
+                                               ($(v (Compile.reflect x4)))%expr,
                                               #(Z_cast args1)%expr @
-                                              v0 (Compile.reflect x8))))%expr_pat)
+                                              ($(v0 (Compile.reflect x8)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -4206,7 +4346,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                1])%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast2 range)%expr @
                                              (#(fancy_add
                                                   (Z.log2
@@ -4216,9 +4358,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (let (x10, _) := xv0 in
                                                     x10)))%expr @
                                               (#(Z_cast args3)%expr @
-                                               v0 (Compile.reflect x5),
+                                               ($(v0 (Compile.reflect x5)))%expr,
                                               #(Z_cast args1)%expr @
-                                              v (Compile.reflect x8))))%expr_pat)
+                                              ($(v (Compile.reflect x8)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -4305,15 +4447,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     r[0 ~> (let (x6, _) := xv in x6) - 1])%zrange
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast2 range)%expr @
                                          (#(fancy_add
                                               (Z.log2
                                                  (let (x6, _) := xv in x6)) 0)%expr @
                                           (#(Z_cast args0)%expr @
-                                           v (Compile.reflect x4),
+                                           ($(v (Compile.reflect x4)))%expr,
                                           #(Z_cast args)%expr @
-                                          v0 (Compile.reflect x5))))%expr_pat)
+                                          ($(v0 (Compile.reflect x5)))%expr)))%expr_pat)
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -4453,7 +4597,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    (let (x14, _) := xv in x14)))
                                               then
                                                Datatypes.Some
-                                                 (Base
+                                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                                    (@Compile.reflect_ident_iota
+                                                       var) false
                                                     (#(Z_cast2 range)%expr @
                                                      (#(fancy_sub
                                                           (Z.log2
@@ -4464,10 +4610,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                              xv1 in
                                                            x14))%expr @
                                                       (#(Z_cast args8)%expr @
-                                                       v (Compile.reflect x4),
+                                                       ($(v
+                                                            (Compile.reflect
+                                                               x4)))%expr,
                                                       #(Z_cast args3)%expr @
-                                                      v0
-                                                        (Compile.reflect x11))))%expr_pat)
+                                                      ($(v0
+                                                           (Compile.reflect
+                                                              x11)))%expr)))%expr_pat)
                                               else Datatypes.None);
                                        Datatypes.Some
                                          (fv0 <-- fv;
@@ -4642,7 +4791,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                         x10) - 1])%zrange
                                               then
                                                Datatypes.Some
-                                                 (Base
+                                                 (Reify.expr_value_to_rewrite_rule_replacement
+                                                    (@Compile.reflect_ident_iota
+                                                       var) false
                                                     (#(Z_cast2 range)%expr @
                                                      (#(fancy_sub
                                                           (Z.log2
@@ -4654,9 +4805,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                               xv0 in
                                                             x10)))%expr @
                                                       (#(Z_cast args4)%expr @
-                                                       v (Compile.reflect x4),
+                                                       ($(v
+                                                            (Compile.reflect
+                                                               x4)))%expr,
                                                       #(Z_cast args1)%expr @
-                                                      v0 (Compile.reflect x8))))%expr_pat)
+                                                      ($(v0
+                                                           (Compile.reflect
+                                                              x8)))%expr)))%expr_pat)
                                               else Datatypes.None);
                                        Datatypes.Some
                                          (fv0 <-- fv;
@@ -4709,15 +4864,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                     r[0 ~> (let (x6, _) := xv in x6) - 1])%zrange
                                   then
                                    Datatypes.Some
-                                     (Base
+                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                        (@Compile.reflect_ident_iota var)
+                                        false
                                         (#(Z_cast2 range)%expr @
                                          (#(fancy_sub
                                               (Z.log2
                                                  (let (x6, _) := xv in x6)) 0)%expr @
                                           (#(Z_cast args0)%expr @
-                                           v (Compile.reflect x4),
+                                           ($(v (Compile.reflect x4)))%expr,
                                           #(Z_cast args)%expr @
-                                          v0 (Compile.reflect x5))))%expr_pat)
+                                          ($(v0 (Compile.reflect x5)))%expr)))%expr_pat)
                                   else Datatypes.None);
                            Datatypes.Some (fv0 <-- fv;
                                            Base fv0)%under_lets
@@ -4844,7 +5001,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                (let (x16, _) := xv in x16)))
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast2 range)%expr @
                                                  (#(fancy_addc
                                                       (Z.log2
@@ -4854,11 +5013,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                       (let (x16, _) := xv1 in
                                                        x16))%expr @
                                                   (#(Z_cast args9)%expr @
-                                                   v (Compile.reflect x5),
+                                                   ($(v (Compile.reflect x5)))%expr,
                                                   #(Z_cast args8)%expr @
-                                                  v0 (Compile.reflect x6),
+                                                  ($(v0 (Compile.reflect x6)))%expr,
                                                   #(Z_cast args3)%expr @
-                                                  v1 (Compile.reflect x13))))%expr_pat)
+                                                  ($(v1 (Compile.reflect x13)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -5180,7 +5339,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                (let (x16, _) := xv in x16)))
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast2 range)%expr @
                                                  (#(fancy_addc
                                                       (Z.log2
@@ -5190,11 +5351,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                       (let (x16, _) := xv1 in
                                                        x16))%expr @
                                                   (#(Z_cast args9)%expr @
-                                                   v (Compile.reflect x5),
+                                                   ($(v (Compile.reflect x5)))%expr,
                                                   #(Z_cast args7)%expr @
-                                                  v1 (Compile.reflect x7),
+                                                  ($(v1 (Compile.reflect x7)))%expr,
                                                   #(Z_cast args3)%expr @
-                                                  v0 (Compile.reflect x13))))%expr_pat)
+                                                  ($(v0 (Compile.reflect x13)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -5482,7 +5643,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    1])%zrange
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast2 range)%expr @
                                                  (#(fancy_addc
                                                       (Z.log2
@@ -5494,11 +5657,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                           xv0 in
                                                         x12)))%expr @
                                                   (#(Z_cast args5)%expr @
-                                                   v (Compile.reflect x5),
+                                                   ($(v (Compile.reflect x5)))%expr,
                                                   #(Z_cast args4)%expr @
-                                                  v0 (Compile.reflect x6),
+                                                  ($(v0 (Compile.reflect x6)))%expr,
                                                   #(Z_cast args1)%expr @
-                                                  v1 (Compile.reflect x10))))%expr_pat)
+                                                  ($(v1 (Compile.reflect x10)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -5616,7 +5779,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                    1])%zrange
                                           then
                                            Datatypes.Some
-                                             (Base
+                                             (Reify.expr_value_to_rewrite_rule_replacement
+                                                (@Compile.reflect_ident_iota
+                                                   var) false
                                                 (#(Z_cast2 range)%expr @
                                                  (#(fancy_addc
                                                       (Z.log2
@@ -5628,11 +5793,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                           xv0 in
                                                         x12)))%expr @
                                                   (#(Z_cast args5)%expr @
-                                                   v (Compile.reflect x5),
+                                                   ($(v (Compile.reflect x5)))%expr,
                                                   #(Z_cast args3)%expr @
-                                                  v1 (Compile.reflect x7),
+                                                  ($(v1 (Compile.reflect x7)))%expr,
                                                   #(Z_cast args1)%expr @
-                                                  v0 (Compile.reflect x10))))%expr_pat)
+                                                  ($(v0 (Compile.reflect x10)))%expr)))%expr_pat)
                                           else Datatypes.None);
                                    Datatypes.Some
                                      (fv0 <-- fv;
@@ -5725,18 +5890,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         r[0 ~> (let (x8, _) := xv in x8) - 1])%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast2 range)%expr @
                                              (#(fancy_addc
                                                   (Z.log2
                                                      (let (x8, _) := xv in x8))
                                                   0)%expr @
                                               (#(Z_cast args1)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               #(Z_cast args0)%expr @
-                                              v0 (Compile.reflect x6),
+                                              ($(v0 (Compile.reflect x6)))%expr,
                                               #(Z_cast args)%expr @
-                                              v1 (Compile.reflect x7))))%expr_pat)
+                                              ($(v1 (Compile.reflect x7)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;
@@ -5905,7 +6072,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                         x16)))
                                                   then
                                                    Datatypes.Some
-                                                     (Base
+                                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                                        (@Compile.reflect_ident_iota
+                                                           var) false
                                                         (#(Z_cast2 range)%expr @
                                                          (#(fancy_subb
                                                               (Z.log2
@@ -5919,17 +6088,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                  xv1 in
                                                                x16))%expr @
                                                           (#(Z_cast args9)%expr @
-                                                           v
-                                                             (Compile.reflect
-                                                                x5),
+                                                           ($(v
+                                                                (Compile.reflect
+                                                                   x5)))%expr,
                                                           #(Z_cast args8)%expr @
-                                                          v0
-                                                            (Compile.reflect
-                                                               x6),
+                                                          ($(v0
+                                                               (Compile.reflect
+                                                                  x6)))%expr,
                                                           #(Z_cast args3)%expr @
-                                                          v1
-                                                            (Compile.reflect
-                                                               x13))))%expr_pat)
+                                                          ($(v1
+                                                               (Compile.reflect
+                                                                  x13)))%expr)))%expr_pat)
                                                   else Datatypes.None);
                                            Datatypes.Some
                                              (fv0 <-- fv;
@@ -6120,7 +6289,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                             x12) - 1])%zrange
                                                   then
                                                    Datatypes.Some
-                                                     (Base
+                                                     (Reify.expr_value_to_rewrite_rule_replacement
+                                                        (@Compile.reflect_ident_iota
+                                                           var) false
                                                         (#(Z_cast2 range)%expr @
                                                          (#(fancy_subb
                                                               (Z.log2
@@ -6135,17 +6306,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                                                   xv0 in
                                                                 x12)))%expr @
                                                           (#(Z_cast args5)%expr @
-                                                           v
-                                                             (Compile.reflect
-                                                                x5),
+                                                           ($(v
+                                                                (Compile.reflect
+                                                                   x5)))%expr,
                                                           #(Z_cast args4)%expr @
-                                                          v0
-                                                            (Compile.reflect
-                                                               x6),
+                                                          ($(v0
+                                                               (Compile.reflect
+                                                                  x6)))%expr,
                                                           #(Z_cast args1)%expr @
-                                                          v1
-                                                            (Compile.reflect
-                                                               x10))))%expr_pat)
+                                                          ($(v1
+                                                               (Compile.reflect
+                                                                  x10)))%expr)))%expr_pat)
                                                   else Datatypes.None);
                                            Datatypes.Some
                                              (fv0 <-- fv;
@@ -6205,18 +6376,20 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                         r[0 ~> (let (x8, _) := xv in x8) - 1])%zrange
                                       then
                                        Datatypes.Some
-                                         (Base
+                                         (Reify.expr_value_to_rewrite_rule_replacement
+                                            (@Compile.reflect_ident_iota var)
+                                            false
                                             (#(Z_cast2 range)%expr @
                                              (#(fancy_subb
                                                   (Z.log2
                                                      (let (x8, _) := xv in x8))
                                                   0)%expr @
                                               (#(Z_cast args1)%expr @
-                                               v (Compile.reflect x5),
+                                               ($(v (Compile.reflect x5)))%expr,
                                               #(Z_cast args0)%expr @
-                                              v0 (Compile.reflect x6),
+                                              ($(v0 (Compile.reflect x6)))%expr,
                                               #(Z_cast args)%expr @
-                                              v1 (Compile.reflect x7))))%expr_pat)
+                                              ($(v1 (Compile.reflect x7)))%expr)))%expr_pat)
                                       else Datatypes.None);
                                Datatypes.Some
                                  (fv0 <-- fv;

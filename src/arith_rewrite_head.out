@@ -47,7 +47,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b3 A;
                v4 <- base.try_make_transport_cps A A;
-               Datatypes.Some (Base (v4 (v3 (v1 (v (Compile.reflect x1))))))
+               Datatypes.Some
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($(v1 (v (Compile.reflect x1))));
+                  Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -100,7 +104,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v2 <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b2 B;
                v4 <- base.try_make_transport_cps B B;
-               Datatypes.Some (Base (v4 (v3 (v2 (v0 (Compile.reflect x0))))))
+               Datatypes.Some
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($(v2 (v0 (Compile.reflect x0))));
+                  Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -151,6 +159,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         to_expr
           (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
        x1 @ x2)%expr_pat
+| @eager_nat_rect P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr ℕ -> expr P -> UnderLets (expr P)) (x1 : expr ℕ) =>
+    Base
+      (#(eager_nat_rect)%expr @ (λ x2 : var unit,
+                                 to_expr (x ($x2)))%expr @
+       (λ (x2 : var ℕ)(x3 : var P),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @eager_nat_rect_arrow P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr ℕ ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr ℕ) (x2 : expr P) =>
+    Base
+      (#(eager_nat_rect_arrow)%expr @ (λ x3 : var P,
+                                       to_expr (x ($x3)))%expr @
+       (λ (x3 : var ℕ)(x4 : var (P -> Q)%ptype)(x5 : var P),
+        to_expr
+          (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+       x1 @ x2)%expr_pat
 | @list_rect A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
@@ -160,6 +188,43 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             to_expr (x ($x2)))%expr @
        (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
         to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(list_rect_arrow)%expr @ (λ x3 : var P,
+                                  to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
+| @eager_list_rect A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(eager_list_rect)%expr @ (λ x2 : var unit,
+                                  to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
+        to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @eager_list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(eager_list_rect_arrow)%expr @ (λ x3 : var P,
+                                        to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
 | @list_case A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> UnderLets (expr P))
@@ -218,6 +283,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | @List_nth_default T =>
     fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
     Base (#(List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+| @eager_List_nth_default T =>
+    fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
+    Base (#(eager_List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add =>
     fun x x0 : expr ℤ =>
     (((match x with
@@ -234,7 +302,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 0
-                       then Datatypes.Some (Base x0)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x0))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -257,7 +329,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 0
-                       then Datatypes.Some (Base x)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -280,9 +356,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     v <- type.try_make_transport_cps s0 ℤ;
                     v0 <- type.try_make_transport_cps s ℤ;
                     Datatypes.Some
-                      (Base
-                         (-
-                          (v (Compile.reflect x2) + v0 (Compile.reflect x1)))%expr)
+                      (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                (-
+                                 ($(v (Compile.reflect x2)) +
+                                  $(v0 (Compile.reflect x1))));
+                       Base fv)%under_lets
                    else Datatypes.None
                | Datatypes.None => Datatypes.None
                end
@@ -309,7 +388,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   (s -> ℤ)%ptype
                then
                 v <- type.try_make_transport_cps s ℤ;
-                Datatypes.Some (Base (x0 - v (Compile.reflect x1))%expr)
+                Datatypes.Some
+                  (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($x0 - $(v (Compile.reflect x1)));
+                   Base fv)%under_lets
                else Datatypes.None
            | Datatypes.None => Datatypes.None
            end
@@ -338,9 +421,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      fv <- (if (let (x2, _) := xv in x2) >? 0
                             then
                              Datatypes.Some
-                               (Base
+                               (Reify.expr_value_to_rewrite_rule_replacement
+                                  (@Compile.reflect_ident_iota var) false
                                   (##(let (x2, _) := xv in x2) -
-                                   v (Compile.reflect x1))%expr)
+                                   $(v (Compile.reflect x1))))
                             else Datatypes.None);
                      Datatypes.Some (fv0 <-- fv;
                                      Base fv0)%under_lets
@@ -363,10 +447,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     fv <- (if (let (x2, _) := xv in x2) <? 0
                            then
                             Datatypes.Some
-                              (Base
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
                                  (-
-                                  (v (Compile.reflect x1) +
-                                   ##(- (let (x2, _) := xv in x2))%Z))%expr)
+                                  ($(v (Compile.reflect x1)) +
+                                   ##(- (let (x2, _) := xv in x2))%Z)))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -390,7 +475,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (ℤ -> s)%ptype
                 then
                  v <- type.try_make_transport_cps s ℤ;
-                 Datatypes.Some (Base (x - v (Compile.reflect x1))%expr)
+                 Datatypes.Some
+                   (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             ($x - $(v (Compile.reflect x1)));
+                    Base fv)%under_lets
                 else Datatypes.None
             | Datatypes.None => Datatypes.None
             end);;
@@ -412,9 +501,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      fv <- (if (let (x2, _) := xv in x2) >? 0
                             then
                              Datatypes.Some
-                               (Base
+                               (Reify.expr_value_to_rewrite_rule_replacement
+                                  (@Compile.reflect_ident_iota var) false
                                   (##(let (x2, _) := xv in x2) -
-                                   v (Compile.reflect x1))%expr)
+                                   $(v (Compile.reflect x1))))
                             else Datatypes.None);
                      Datatypes.Some (fv0 <-- fv;
                                      Base fv0)%under_lets
@@ -437,10 +527,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     fv <- (if (let (x2, _) := xv in x2) <? 0
                            then
                             Datatypes.Some
-                              (Base
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
                                  (-
                                   (##(- (let (x2, _) := xv in x2))%Z +
-                                   v (Compile.reflect x1)))%expr)
+                                   $(v (Compile.reflect x1)))))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -472,7 +563,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 0
-                       then Datatypes.Some (Base (##0)%expr)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false ##0)
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -495,7 +589,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 0
-                       then Datatypes.Some (Base (##0)%expr)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false ##0)
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -518,7 +615,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 1
-                       then Datatypes.Some (Base x0)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x0))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -541,7 +642,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 then
                  xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                  fv <- (if (let (x1, _) := xv in x1) =? 1
-                        then Datatypes.Some (Base x)
+                        then
+                         Datatypes.Some
+                           (Reify.expr_value_to_rewrite_rule_replacement
+                              (@Compile.reflect_ident_iota var) false 
+                              ($x))
                         else Datatypes.None);
                  Datatypes.Some (fv0 <-- fv;
                                  Base fv0)%under_lets
@@ -565,7 +670,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
                     fv <- (if (let (x2, _) := xv in x2) =? -1
                            then
-                            Datatypes.Some (Base (v (Compile.reflect x1)))
+                            Datatypes.Some
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
+                                 ($(v (Compile.reflect x1))))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -596,7 +704,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     v <- type.try_make_transport_cps s ℤ;
                     fv <- (if (let (x2, _) := xv in x2) =? -1
                            then
-                            Datatypes.Some (Base (v (Compile.reflect x1)))
+                            Datatypes.Some
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
+                                 ($(v (Compile.reflect x1))))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -624,7 +735,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? -1
-                       then Datatypes.Some (Base (- x0)%expr)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             (- $x0))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -647,7 +762,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? -1
-                       then Datatypes.Some (Base (- x)%expr)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             (- $x))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -670,8 +789,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     v <- type.try_make_transport_cps s0 ℤ;
                     v0 <- type.try_make_transport_cps s ℤ;
                     Datatypes.Some
-                      (Base
-                         (v (Compile.reflect x2) * v0 (Compile.reflect x1))%expr)
+                      (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                ($(v (Compile.reflect x2)) *
+                                 $(v0 (Compile.reflect x1)));
+                       Base fv)%under_lets
                    else Datatypes.None
                | Datatypes.None => Datatypes.None
                end
@@ -698,7 +820,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   (s -> ℤ)%ptype
                then
                 v <- type.try_make_transport_cps s ℤ;
-                Datatypes.Some (Base (- (v (Compile.reflect x1) * x0))%expr)
+                Datatypes.Some
+                  (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (- ($(v (Compile.reflect x1)) * $x0));
+                   Base fv)%under_lets
                else Datatypes.None
            | Datatypes.None => Datatypes.None
            end
@@ -725,9 +851,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                     xv0 <- ident.unify pattern.ident.Literal ##(projT2 args0);
                     Datatypes.Some
-                      (Base
-                         (##((let (x1, _) := xv in x1) *
-                             (let (x1, _) := xv0 in x1))%Z)%expr)
+                      (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                ##((let (x1, _) := xv in x1) *
+                                   (let (x1, _) := xv0 in x1));
+                       Base fv)%under_lets
                    else Datatypes.None
                | Datatypes.None => Datatypes.None
                end
@@ -744,7 +872,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   (ℤ -> s)%ptype
                then
                 v <- type.try_make_transport_cps s ℤ;
-                Datatypes.Some (Base (- (x * v (Compile.reflect x1)))%expr)
+                Datatypes.Some
+                  (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (- ($x * $(v (Compile.reflect x1))));
+                   Base fv)%under_lets
                else Datatypes.None
            | Datatypes.None => Datatypes.None
            end
@@ -769,8 +901,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv <- (if (let (x1, _) := xv in x1) <? 0
                        then
                         Datatypes.Some
-                          (Base
-                             (- (##(- (let (x1, _) := xv in x1))%Z * x0))%expr)
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             (- (##(- (let (x1, _) := xv in x1))%Z * $x0)))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -795,8 +928,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                  fv <- (if (let (x1, _) := xv in x1) <? 0
                         then
                          Datatypes.Some
-                           (Base
-                              (- (x * ##(- (let (x1, _) := xv in x1))%Z))%expr)
+                           (Reify.expr_value_to_rewrite_rule_replacement
+                              (@Compile.reflect_ident_iota var) false
+                              (- ($x * ##(- (let (x1, _) := xv in x1))%Z)))
                         else Datatypes.None);
                  Datatypes.Some (fv0 <-- fv;
                                  Base fv0)%under_lets
@@ -820,8 +954,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         negb ((let (x1, _) := xv in x1) =? 2)
                        then
                         Datatypes.Some
-                          (Base
-                             (x << ##(Z.log2 (let (x1, _) := xv in x1)))%expr)
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             ($x << ##(Z.log2 (let (x1, _) := xv in x1))))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -849,8 +984,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                          negb ((let (x1, _) := xv in x1) =? 2)
                         then
                          Datatypes.Some
-                           (Base
-                              (x0 << ##(Z.log2 (let (x1, _) := xv in x1)))%expr)
+                           (Reify.expr_value_to_rewrite_rule_replacement
+                              (@Compile.reflect_ident_iota var) false
+                              ($x0 << ##(Z.log2 (let (x1, _) := xv in x1))))
                         else Datatypes.None);
                  Datatypes.Some (fv0 <-- fv;
                                  Base fv0)%under_lets
@@ -894,11 +1030,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                      Z.abs max_const_val)
                                    then
                                     Datatypes.Some
-                                      (Base
-                                         (v (Compile.reflect x4) *
-                                          (v0 (Compile.reflect x3) *
+                                      (Reify.expr_value_to_rewrite_rule_replacement
+                                         (@Compile.reflect_ident_iota var)
+                                         false
+                                         ($(v (Compile.reflect x4)) *
+                                          ($(v0 (Compile.reflect x3)) *
                                            (##(let (x5, _) := xv in x5) *
-                                            ##(let (x5, _) := xv0 in x5))))%expr)
+                                            ##(let (x5, _) := xv0 in x5)))))
                                    else Datatypes.None);
                             Datatypes.Some (fv0 <-- fv;
                                             Base fv0)%under_lets
@@ -951,11 +1089,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  Z.abs max_const_val)
                                then
                                 Datatypes.Some
-                                  (Base
-                                     (v (Compile.reflect x2) *
-                                      (v0 (Compile.reflect x4) *
+                                  (Reify.expr_value_to_rewrite_rule_replacement
+                                     (@Compile.reflect_ident_iota var) false
+                                     ($(v (Compile.reflect x2)) *
+                                      ($(v0 (Compile.reflect x4)) *
                                        (##(let (x5, _) := xv in x5) *
-                                        ##(let (x5, _) := xv0 in x5))))%expr)
+                                        ##(let (x5, _) := xv0 in x5)))))
                                else Datatypes.None);
                         Datatypes.Some (fv0 <-- fv;
                                         Base fv0)%under_lets
@@ -996,10 +1135,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             Z.abs max_const_val
                            then
                             Datatypes.Some
-                              (Base
-                                 (v (Compile.reflect x2) *
-                                  (v0 (Compile.reflect x1) *
-                                   ##(let (x3, _) := xv in x3)))%expr)
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
+                                 ($(v (Compile.reflect x2)) *
+                                  ($(v0 (Compile.reflect x1)) *
+                                   ##(let (x3, _) := xv in x3))))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -1034,7 +1174,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         Z.abs max_const_val
                        then
                         Datatypes.Some
-                          (Base (x0 * ##(let (x1, _) := xv in x1))%expr)
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             ($x0 * ##(let (x1, _) := xv in x1)))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1067,7 +1209,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     v <- type.try_make_transport_cps s ℤ;
                     fv <- (if (let (x2, _) := xv in x2) =? 0
                            then
-                            Datatypes.Some (Base (v (Compile.reflect x1)))
+                            Datatypes.Some
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
+                                 ($(v (Compile.reflect x1))))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -1092,7 +1237,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 0
-                       then Datatypes.Some (Base (- x0)%expr)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             (- $x0))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1115,7 +1264,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 0
-                       then Datatypes.Some (Base x)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1138,8 +1291,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     v <- type.try_make_transport_cps s0 ℤ;
                     v0 <- type.try_make_transport_cps s ℤ;
                     Datatypes.Some
-                      (Base
-                         (v0 (Compile.reflect x1) - v (Compile.reflect x2))%expr)
+                      (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                                (@Compile.reflect_ident_iota var) false
+                                ($(v0 (Compile.reflect x1)) -
+                                 $(v (Compile.reflect x2)));
+                       Base fv)%under_lets
                    else Datatypes.None
                | Datatypes.None => Datatypes.None
                end
@@ -1166,7 +1322,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                   (s -> ℤ)%ptype
                then
                 v <- type.try_make_transport_cps s ℤ;
-                Datatypes.Some (Base (- (v (Compile.reflect x1) + x0))%expr)
+                Datatypes.Some
+                  (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (- ($(v (Compile.reflect x1)) + $x0));
+                   Base fv)%under_lets
                else Datatypes.None
            | Datatypes.None => Datatypes.None
            end
@@ -1187,7 +1347,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                    (ℤ -> s)%ptype
                 then
                  v <- type.try_make_transport_cps s ℤ;
-                 Datatypes.Some (Base (x + v (Compile.reflect x1))%expr)
+                 Datatypes.Some
+                   (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             ($x + $(v (Compile.reflect x1)));
+                    Base fv)%under_lets
                 else Datatypes.None
             | Datatypes.None => Datatypes.None
             end);;
@@ -1209,9 +1373,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      fv <- (if (let (x2, _) := xv in x2) >? 0
                             then
                              Datatypes.Some
-                               (Base
+                               (Reify.expr_value_to_rewrite_rule_replacement
+                                  (@Compile.reflect_ident_iota var) false
                                   (##(let (x2, _) := xv in x2) +
-                                   v (Compile.reflect x1))%expr)
+                                   $(v (Compile.reflect x1))))
                             else Datatypes.None);
                      Datatypes.Some (fv0 <-- fv;
                                      Base fv0)%under_lets
@@ -1234,9 +1399,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     fv <- (if (let (x2, _) := xv in x2) <? 0
                            then
                             Datatypes.Some
-                              (Base
-                                 (v (Compile.reflect x1) -
-                                  ##(- (let (x2, _) := xv in x2))%Z)%expr)
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
+                                 ($(v (Compile.reflect x1)) -
+                                  ##(- (let (x2, _) := xv in x2))%Z))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -1266,8 +1432,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv <- (if (let (x1, _) := xv in x1) <? 0
                        then
                         Datatypes.Some
-                          (Base
-                             (- (##(- (let (x1, _) := xv in x1))%Z + x0))%expr)
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             (- (##(- (let (x1, _) := xv in x1))%Z + $x0)))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1293,10 +1460,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                      fv <- (if (let (x2, _) := xv in x2) >? 0
                             then
                              Datatypes.Some
-                               (Base
+                               (Reify.expr_value_to_rewrite_rule_replacement
+                                  (@Compile.reflect_ident_iota var) false
                                   (-
-                                   (v (Compile.reflect x1) +
-                                    ##(let (x2, _) := xv in x2)))%expr)
+                                   ($(v (Compile.reflect x1)) +
+                                    ##(let (x2, _) := xv in x2))))
                             else Datatypes.None);
                      Datatypes.Some (fv0 <-- fv;
                                      Base fv0)%under_lets
@@ -1319,9 +1487,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                     fv <- (if (let (x2, _) := xv in x2) <? 0
                            then
                             Datatypes.Some
-                              (Base
+                              (Reify.expr_value_to_rewrite_rule_replacement
+                                 (@Compile.reflect_ident_iota var) false
                                  (##(- (let (x2, _) := xv in x2))%Z -
-                                  v (Compile.reflect x1))%expr)
+                                  $(v (Compile.reflect x1))))
                            else Datatypes.None);
                     Datatypes.Some (fv0 <-- fv;
                                     Base fv0)%under_lets
@@ -1351,7 +1520,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv <- (if (let (x1, _) := xv in x1) <? 0
                        then
                         Datatypes.Some
-                          (Base (x + ##(- (let (x1, _) := xv in x1))%Z)%expr)
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             ($x + ##(- (let (x1, _) := xv in x1))%Z))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1364,38 +1535,41 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
      Base (x - x0)%expr)%option
 | Z_opp =>
     fun x : expr ℤ =>
-    (((match x with
-       | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x0 =>
-           _ <- invert_bind_args idc Raw.ident.Z_opp;
-           match pattern.type.unify_extracted ℤ s with
-           | Datatypes.Some _ =>
-               if type.type_beq base.type base.type.type_beq ℤ s
-               then
-                v <- type.try_make_transport_cps s ℤ;
-                Datatypes.Some (Base (v (Compile.reflect x0)))
-               else Datatypes.None
-           | Datatypes.None => Datatypes.None
-           end
-       | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
-         (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
-         @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
-       | _ => Datatypes.None
-       end;;
-       match pattern.type.unify_extracted ℤ ℤ with
-       | Datatypes.Some _ =>
-           if type.type_beq base.type base.type.type_beq ℤ ℤ
-           then
-            fv <- (if negb (SubstVarLike.is_var_fst_snd_pair_opp_cast x)
-                   then
-                    Datatypes.Some
-                      (UnderLet x (fun v : var ℤ => Base (- $v)%expr))
-                   else Datatypes.None);
-            Datatypes.Some (fv0 <-- fv;
-                            Base fv0)%under_lets
-           else Datatypes.None
-       | Datatypes.None => Datatypes.None
-       end);;
-      Datatypes.None);;;
+    ((match x with
+      | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x0 =>
+          _ <- invert_bind_args idc Raw.ident.Z_opp;
+          match pattern.type.unify_extracted ℤ s with
+          | Datatypes.Some _ =>
+              if type.type_beq base.type base.type.type_beq ℤ s
+              then
+               v <- type.try_make_transport_cps s ℤ;
+               Datatypes.Some
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           ($(v (Compile.reflect x0)));
+                  Base fv)%under_lets
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
+          end
+      | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+        (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
+        @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+      | _ => Datatypes.None
+      end;;
+      match pattern.type.unify_extracted ℤ ℤ with
+      | Datatypes.Some _ =>
+          if type.type_beq base.type base.type.type_beq ℤ ℤ
+          then
+           fv <- (if negb (SubstVarLike.is_var_fst_snd_pair_opp_cast x)
+                  then
+                   Datatypes.Some
+                     (UnderLet x (fun v : var ℤ => Base (- $v)%expr))
+                  else Datatypes.None);
+           Datatypes.Some (fv0 <-- fv;
+                           Base fv0)%under_lets
+          else Datatypes.None
+      | Datatypes.None => Datatypes.None
+      end);;;
      Base (- x)%expr)%option
 | Z_div =>
     fun x x0 : expr ℤ =>
@@ -1413,7 +1587,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                then
                 xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                 fv <- (if (let (x1, _) := xv in x1) =? 1
-                       then Datatypes.Some (Base x)
+                       then
+                        Datatypes.Some
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false 
+                             ($x))
                        else Datatypes.None);
                 Datatypes.Some (fv0 <-- fv;
                                 Base fv0)%under_lets
@@ -1436,8 +1614,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        2 ^ Z.log2 (let (x1, _) := xv in x1)
                       then
                        Datatypes.Some
-                         (Base
-                            (x >> ##(Z.log2 (let (x1, _) := xv in x1)))%expr)
+                         (Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($x >> ##(Z.log2 (let (x1, _) := xv in x1))))
                       else Datatypes.None);
                Datatypes.Some (fv0 <-- fv;
                                Base fv0)%under_lets
@@ -1464,7 +1643,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               then
                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                fv <- (if (let (x1, _) := xv in x1) =? 1
-                      then Datatypes.Some (Base (##0)%expr)
+                      then
+                       Datatypes.Some
+                         (Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false ##0)
                       else Datatypes.None);
                Datatypes.Some (fv0 <-- fv;
                                Base fv0)%under_lets
@@ -1487,7 +1669,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                       2 ^ Z.log2 (let (x1, _) := xv in x1)
                      then
                       Datatypes.Some
-                        (Base (x &' ##((let (x1, _) := xv in x1) - 1)%Z)%expr)
+                        (Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           ($x &' ##((let (x1, _) := xv in x1) - 1)%Z))
                      else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
@@ -1524,7 +1708,10 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               then
                xv <- ident.unify pattern.ident.Literal ##(projT2 args);
                fv <- (if (let (x1, _) := xv in x1) =? 0
-                      then Datatypes.Some (Base (##0)%expr)
+                      then
+                       Datatypes.Some
+                         (Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false ##0)
                       else Datatypes.None);
                Datatypes.Some (fv0 <-- fv;
                                Base fv0)%under_lets
@@ -1545,13 +1732,229 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun x x0 x1 : expr ℤ => Base (#(Z_mul_split)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add_get_carry =>
     fun x x0 x1 : expr ℤ =>
-    Base (#(Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat
+    ((match x1 with
+      | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x2 =>
+          _ <- invert_bind_args idc Raw.ident.Z_opp;
+          match
+            pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
+              ((ℤ -> ℤ) -> s)%ptype
+          with
+          | Datatypes.Some (_, _, _)%zrange =>
+              if
+               type.type_beq base.type base.type.type_beq
+                 ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> ℤ) -> s)%ptype
+              then
+               v <- type.try_make_transport_cps s ℤ;
+               Datatypes.Some
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (expr_let v0 := (#(Z_sub_get_borrow)%expr @
+                                            ($x)%expr @ ($x0)%expr @
+                                            ($(v (Compile.reflect x2)))%expr)%expr_pat in
+                            (#(fst)%expr @ $v0,
+                            - (#(snd)%expr @ $v0)%expr_pat)%expr_pat);
+                  Base fv)%under_lets
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
+          end
+      | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+        (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
+        @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+      | _ => Datatypes.None
+      end;;
+      match x0 with
+      | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x2 =>
+          _ <- invert_bind_args idc Raw.ident.Z_opp;
+          match
+            pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
+              ((ℤ -> s) -> ℤ)%ptype
+          with
+          | Datatypes.Some (_, _, _)%zrange =>
+              if
+               type.type_beq base.type base.type.type_beq
+                 ((ℤ -> ℤ) -> ℤ)%ptype ((ℤ -> s) -> ℤ)%ptype
+              then
+               v <- type.try_make_transport_cps s ℤ;
+               Datatypes.Some
+                 (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (expr_let v0 := (#(Z_sub_get_borrow)%expr @
+                                            ($x)%expr @ ($x1)%expr @
+                                            ($(v (Compile.reflect x2)))%expr)%expr_pat in
+                            (#(fst)%expr @ $v0,
+                            - (#(snd)%expr @ $v0)%expr_pat)%expr_pat);
+                  Base fv)%under_lets
+              else Datatypes.None
+          | Datatypes.None => Datatypes.None
+          end
+      | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+        (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
+        @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+      | _ => Datatypes.None
+      end);;;
+     Base (#(Z_add_get_carry)%expr @ x @ x0 @ x1)%expr_pat)%option
 | Z_add_with_carry =>
     fun x x0 x1 : expr ℤ =>
     Base (#(Z_add_with_carry)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add_with_get_carry =>
     fun x x0 x1 x2 : expr ℤ =>
-    Base (#(Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat
+    (match x0 with
+     | @expr.Ident _ _ _ t idc =>
+         match x2 with
+         | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t0 idc0) x3 =>
+             _ <- invert_bind_args idc0 Raw.ident.Z_opp;
+             args0 <- invert_bind_args idc Raw.ident.Literal;
+             match
+               pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                 (((ℤ -> (projT1 args0)) -> ℤ) -> s)%ptype
+             with
+             | Datatypes.Some (_, _, _, _)%zrange =>
+                 if
+                  type.type_beq base.type base.type.type_beq
+                    (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                    (((ℤ -> (projT1 args0)) -> ℤ) -> s)%ptype
+                 then
+                  xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                  v <- type.try_make_transport_cps s ℤ;
+                  fv <- (if (let (x4, _) := xv in x4) =? 0
+                         then
+                          Datatypes.Some
+                            (Reify.expr_value_to_rewrite_rule_replacement
+                               (@Compile.reflect_ident_iota var) false
+                               (expr_let v0 := (#(Z_sub_get_borrow)%expr @
+                                                ($x)%expr @ ($x1)%expr @
+                                                ($(v (Compile.reflect x3)))%expr)%expr_pat in
+                                (#(fst)%expr @ $v0,
+                                - (#(snd)%expr @ $v0)%expr_pat)%expr_pat))
+                         else Datatypes.None);
+                  Datatypes.Some (fv0 <-- fv;
+                                  Base fv0)%under_lets
+                 else Datatypes.None
+             | Datatypes.None => Datatypes.None
+             end
+         | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+           (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
+           _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
+             Datatypes.None
+         | _ => Datatypes.None
+         end;;
+         match x1 with
+         | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t0 idc0) x3 =>
+             _ <- invert_bind_args idc0 Raw.ident.Z_opp;
+             args0 <- invert_bind_args idc Raw.ident.Literal;
+             match
+               pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                 (((ℤ -> (projT1 args0)) -> s) -> ℤ)%ptype
+             with
+             | Datatypes.Some (_, _, _, _)%zrange =>
+                 if
+                  type.type_beq base.type base.type.type_beq
+                    (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                    (((ℤ -> (projT1 args0)) -> s) -> ℤ)%ptype
+                 then
+                  xv <- ident.unify pattern.ident.Literal ##(projT2 args0);
+                  v <- type.try_make_transport_cps s ℤ;
+                  fv <- (if (let (x4, _) := xv in x4) =? 0
+                         then
+                          Datatypes.Some
+                            (Reify.expr_value_to_rewrite_rule_replacement
+                               (@Compile.reflect_ident_iota var) false
+                               (expr_let v0 := (#(Z_sub_get_borrow)%expr @
+                                                ($x)%expr @ ($x2)%expr @
+                                                ($(v (Compile.reflect x3)))%expr)%expr_pat in
+                                (#(fst)%expr @ $v0,
+                                - (#(snd)%expr @ $v0)%expr_pat)%expr_pat))
+                         else Datatypes.None);
+                  Datatypes.Some (fv0 <-- fv;
+                                  Base fv0)%under_lets
+                 else Datatypes.None
+             | Datatypes.None => Datatypes.None
+             end
+         | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+           (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat
+           _ | @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
+             Datatypes.None
+         | _ => Datatypes.None
+         end
+     | @expr.App _ _ _ s _ (@expr.Ident _ _ _ t idc) x3 =>
+         match x1 with
+         | @expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 =>
+             _ <- invert_bind_args idc0 Raw.ident.Z_opp;
+             _ <- invert_bind_args idc Raw.ident.Z_opp;
+             match
+               pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                 (((ℤ -> s) -> s0) -> ℤ)%ptype
+             with
+             | Datatypes.Some (_, _, _, _)%zrange =>
+                 if
+                  type.type_beq base.type base.type.type_beq
+                    (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                    (((ℤ -> s) -> s0) -> ℤ)%ptype
+                 then
+                  v <- type.try_make_transport_cps s ℤ;
+                  v0 <- type.try_make_transport_cps s0 ℤ;
+                  Datatypes.Some
+                    (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                              (@Compile.reflect_ident_iota var) false
+                              (expr_let v1 := (#(Z_sub_with_get_borrow)%expr @
+                                               ($x)%expr @
+                                               ($(v (Compile.reflect x3)))%expr @
+                                               ($x2)%expr @
+                                               ($(v0 (Compile.reflect x4)))%expr)%expr_pat in
+                               (#(fst)%expr @ $v1,
+                               - (#(snd)%expr @ $v1)%expr_pat)%expr_pat);
+                     Base fv)%under_lets
+                 else Datatypes.None
+             | Datatypes.None => Datatypes.None
+             end
+         | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
+           (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _ (_ @ _)%expr_pat
+           _ | @expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
+             Datatypes.None
+         | _ => Datatypes.None
+         end;;
+         match x2 with
+         | @expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t0 idc0) x4 =>
+             _ <- invert_bind_args idc0 Raw.ident.Z_opp;
+             _ <- invert_bind_args idc Raw.ident.Z_opp;
+             match
+               pattern.type.unify_extracted (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                 (((ℤ -> s) -> ℤ) -> s0)%ptype
+             with
+             | Datatypes.Some (_, _, _, _)%zrange =>
+                 if
+                  type.type_beq base.type base.type.type_beq
+                    (((ℤ -> ℤ) -> ℤ) -> ℤ)%ptype
+                    (((ℤ -> s) -> ℤ) -> s0)%ptype
+                 then
+                  v <- type.try_make_transport_cps s ℤ;
+                  v0 <- type.try_make_transport_cps s0 ℤ;
+                  Datatypes.Some
+                    (fv <-- Reify.expr_value_to_rewrite_rule_replacement
+                              (@Compile.reflect_ident_iota var) false
+                              (expr_let v1 := (#(Z_sub_with_get_borrow)%expr @
+                                               ($x)%expr @
+                                               ($(v (Compile.reflect x3)))%expr @
+                                               ($x1)%expr @
+                                               ($(v0 (Compile.reflect x4)))%expr)%expr_pat in
+                               (#(fst)%expr @ $v1,
+                               - (#(snd)%expr @ $v1)%expr_pat)%expr_pat);
+                     Base fv)%under_lets
+                 else Datatypes.None
+             | Datatypes.None => Datatypes.None
+             end
+         | @expr.App _ _ _ s0 _ ($_)%expr _ | @expr.App _ _ _ s0 _
+           (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s0 _ (_ @ _)%expr_pat
+           _ | @expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _ =>
+             Datatypes.None
+         | _ => Datatypes.None
+         end
+     | @expr.App _ _ _ s _ ($_)%expr _ | @expr.App _ _ _ s _
+       (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s _ (_ @ _)%expr_pat _ |
+       @expr.App _ _ _ s _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
+     | _ => Datatypes.None
+     end;;;
+     Base (#(Z_add_with_get_carry)%expr @ x @ x0 @ x1 @ x2)%expr_pat)%option
 | Z_sub_get_borrow =>
     fun x x0 x1 : expr ℤ =>
     Base (#(Z_sub_get_borrow)%expr @ x @ x0 @ x1)%expr_pat
@@ -1567,54 +1970,12 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun x x0 x1 x2 : expr ℤ =>
     Base (#(Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
 | Z_cc_m => fun x x0 : expr ℤ => Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat
+| Z_combine_at_bitwidth =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_combine_at_bitwidth)%expr @ x @ x0 @ x1)%expr_pat
 | Z_cast range => fun x : expr ℤ => Base (#(Z_cast range)%expr @ x)%expr_pat
 | Z_cast2 range =>
-    fun x : expr (ℤ * ℤ)%etype =>
-    (match x with
-     | @expr.App _ _ _ s _
-       (@expr.App _ _ _ s0 _ (@expr.Ident _ _ _ t idc) x1) x0 =>
-         args <- invert_bind_args idc Raw.ident.pair;
-         match
-           pattern.type.unify_extracted
-             (((ℤ -> ℤ -> (ℤ * ℤ)%pbtype) -> ℤ) -> ℤ)%ptype
-             ((((let (x2, _) := args in x2) ->
-                (let (_, y) := args in y) ->
-                ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-               s0) -> s)%ptype
-         with
-         | Datatypes.Some (_, (_, (_, _)), _, _)%zrange =>
-             if
-              type.type_beq base.type base.type.type_beq
-                (((ℤ -> ℤ -> (ℤ * ℤ)%etype) -> ℤ) -> ℤ)%ptype
-                ((((let (x2, _) := args in x2) ->
-                   (let (_, y) := args in y) ->
-                   ((let (x2, _) := args in x2) * (let (_, y) := args in y))%etype) ->
-                  s0) -> s)%ptype
-             then
-              _ <- ident.unify pattern.ident.pair pair;
-              v <- type.try_make_transport_cps s0 ℤ;
-              v0 <- type.try_make_transport_cps s ℤ;
-              Datatypes.Some
-                (fv0 <-- do_again (ℤ * ℤ)
-                           (#(Z_cast (Datatypes.fst range))%expr @
-                            ($(v (Compile.reflect x1)))%expr,
-                           #(Z_cast (Datatypes.snd range))%expr @
-                           ($(v0 (Compile.reflect x0)))%expr)%expr_pat;
-                 Base fv0)%under_lets
-             else Datatypes.None
-         | Datatypes.None => Datatypes.None
-         end
-     | @expr.App _ _ _ s _ (@expr.App _ _ _ s0 _ ($_)%expr _) _ | @expr.App _
-       _ _ s _ (@expr.App _ _ _ s0 _ (@expr.Abs _ _ _ _ _ _) _) _ | @expr.App
-       _ _ _ s _ (@expr.App _ _ _ s0 _ (_ @ _)%expr_pat _) _ | @expr.App _ _
-       _ s _ (@expr.App _ _ _ s0 _ (@expr.LetIn _ _ _ _ _ _ _) _) _ =>
-         Datatypes.None
-     | @expr.App _ _ _ s _ #(_)%expr_pat _ | @expr.App _ _ _ s _ ($_)%expr
-       _ | @expr.App _ _ _ s _ (@expr.Abs _ _ _ _ _ _) _ | @expr.App _ _ _ s
-       _ (@expr.LetIn _ _ _ _ _ _ _) _ => Datatypes.None
-     | _ => Datatypes.None
-     end;;;
-     Base (#(Z_cast2 range)%expr @ x)%expr_pat)%option
+    fun x : expr (ℤ * ℤ)%etype => Base (#(Z_cast2 range)%expr @ x)%expr_pat
 | Some A => fun x : expr A => Base (#(Some)%expr @ x)%expr_pat
 | None A => Base #(None)%expr
 | @option_rect A P =>

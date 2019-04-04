@@ -2763,7 +2763,7 @@ Module Compilers.
     Definition RewriteNBE {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (@nbe_rewrite_head) nbe_default_fuel t e.
     Definition RewriteArith (max_const_val : Z) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-      := @Compile.Rewrite (@arith_rewrite_head max_const_val) arith_default_fuel t e.
+      := @Compile.Rewrite (fun var do_again => @arith_rewrite_head max_const_val var) arith_default_fuel t e.
     Definition RewriteArithWithCasts {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
       := @Compile.Rewrite (@arith_with_casts_rewrite_head) arith_with_casts_default_fuel t e.
     Definition RewriteStripLiteralCasts {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t

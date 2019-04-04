@@ -1157,6 +1157,7 @@ Module Compilers.
     Notation LiteralZRange := (@Literal base.type.zrange).
     Definition literal {T} (v : T) := v.
     Definition eagerly {T} (v : T) := v.
+    Definition gets_inlined (real_val : bool) {T} (v : T) : bool := real_val.
 
     (** TODO: MOVE ME? *)
     Module Thunked.

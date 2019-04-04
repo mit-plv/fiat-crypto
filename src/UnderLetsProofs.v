@@ -501,6 +501,252 @@ Module Compilers.
         Qed.
       End with_var2.
 
+      Section for_interp2.
+        Context {base_interp : base_type -> Type}
+                (ident_interp : forall t, ident t -> type.interp base_interp t)
+                {var : type -> Type}.
+
+        Fixpoint interp_related_gen {T1 T2} (R' : forall t, var t -> type.interp base_interp t -> Prop) (R : T1 -> T2 -> Prop) (e : @UnderLets var T1) (v2 : T2) : Prop
+          := match e with
+             | Base v1 => R v1 v2
+             | UnderLet t e f (* combine the App rule with the Abs rule *)
+               => exists fv ev,
+                  expr.interp_related_gen ident_interp R' e ev
+                  /\ (forall x1 x2,
+                         R' _ x1 x2
+                         -> @interp_related_gen T1 T2 R' R (f x1) (fv x2))
+                  /\ fv ev = v2
+             end.
+
+        Lemma to_expr_interp_related_gen_iff (R : forall t, var t -> type.interp base_interp t -> Prop) {t e v}
+          : interp_related_gen R (expr.interp_related_gen ident_interp R (t:=t)) e v
+            <-> expr.interp_related_gen ident_interp R (UnderLets.to_expr e) v.
+        Proof using Type.
+          revert v; induction e; cbn [UnderLets.to_expr interp_related_gen expr.interp_related_gen]; try reflexivity.
+          setoid_rewrite H.
+          reflexivity.
+        Qed.
+
+        Global Instance interp_related_gen_Proper_iff {T1 T2 R}
+          : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@interp_related_gen T1 T2 R) | 10.
+        Proof using Type.
+          cbv [pointwise_relation respectful Proper].
+          intros R1 R2 HR x y ? x' y' H'; subst y y'.
+          revert x'; induction x; [ apply HR | ]; cbn [interp_related_gen].
+          setoid_rewrite H; reflexivity.
+        Qed.
+
+        Lemma splice_interp_related_gen_iff {A B T R' R x e} {v : T}
+          : interp_related_gen R' R (@UnderLets.splice _ ident _ A B x e) v
+            <-> interp_related_gen
+                  R'
+                  (fun xv => interp_related_gen R' R (e xv))
+                  x v.
+        Proof using Type.
+          revert v; induction x; cbn [UnderLets.splice interp_related_gen]; [ reflexivity | ].
+          match goal with H : _ |- _ => setoid_rewrite H end.
+          reflexivity.
+        Qed.
+
+        Lemma splice_list_interp_related_gen_iff_gen {A B T R' R x e1 e2 base} {v : T}
+              (He1e2 : forall ls', e1 ls' = e2 (base ++ ls'))
+          : interp_related_gen R' R (@UnderLets.splice_list _ ident _ A B x e1) v
+            <-> list_rect
+                  (fun _ => list _ -> _ -> Prop)
+                  (fun ls v => interp_related_gen R' R (e2 ls) v)
+                  (fun x xs recP ls v
+                   => interp_related_gen
+                        R'
+                        (fun x' v => recP (ls ++ [x']) v)
+                        x
+                        v)
+                  x
+                  base
+                  v.
+        Proof using Type.
+          revert base v e1 e2 He1e2; induction x as [|? ? IHx]; cbn [UnderLets.splice_list interp_related_gen list_rect]; intros.
+          { intros; rewrite He1e2, ?app_nil_r; reflexivity. }
+          { setoid_rewrite splice_interp_related_gen_iff.
+            apply interp_related_gen_Proper_iff; [ | reflexivity.. ]; cbv [pointwise_relation]; intros.
+            specialize (fun v => IHx (base ++ [v])).
+            setoid_rewrite IHx; [ reflexivity | ].
+            intros; rewrite He1e2, <- ?app_assoc; reflexivity. }
+        Qed.
+
+        Lemma splice_list_interp_related_gen_iff {A B T R' R x e} {v : T}
+          : interp_related_gen R' R (@UnderLets.splice_list _ ident _ A B x e) v
+            <-> list_rect
+                  (fun _ => list _ -> _ -> Prop)
+                  (fun ls v => interp_related_gen R' R (e ls) v)
+                  (fun x xs recP ls v
+                   => interp_related_gen
+                        R'
+                        (fun x' v => recP (ls ++ [x']) v)
+                        x
+                        v)
+                  x
+                  nil
+                  v.
+        Proof using Type.
+          apply splice_list_interp_related_gen_iff_gen; reflexivity.
+        Qed.
+
+        Lemma splice_interp_related_gen_of_ex {A B T T' R' RA RB x e} {v : T}
+          : (exists ev (xv : T'),
+                interp_related_gen R' RA x xv
+                /\ (forall x1 x2,
+                       RA x1 x2
+                       -> interp_related_gen R' RB (e x1) (ev x2))
+                /\ ev xv = v)
+            -> interp_related_gen R' RB (@UnderLets.splice _ ident _ A B x e) v.
+        Proof using Type.
+          revert e v; induction x; cbn [interp_related_gen UnderLets.splice]; intros.
+          all: repeat first [ progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | progress subst
+                            | reflexivity
+                            | match goal with
+                              | [ H : _ |- _ ] => apply H; clear H
+                              end ].
+          do 2 eexists; repeat apply conj; [ eassumption | | ]; intros.
+          { match goal with H : _ |- _ => apply H; clear H end.
+            do 2 eexists; repeat apply conj; try now eauto. }
+          { reflexivity. }
+        Qed.
+
+        Lemma splice_list_interp_related_gen_of_ex {A B T T' R' RA RB x e} {v : T}
+          : (exists ev (xv : list T'),
+                    List.Forall2 (interp_related_gen R' RA) x xv
+                    /\ (forall x1 x2,
+                           List.length x2 = List.length xv
+                           -> List.Forall2 RA x1 x2
+                           -> interp_related_gen R' RB (e x1) (ev x2))
+                    /\ ev xv = v)
+            -> interp_related_gen R' RB (@UnderLets.splice_list _ ident _ A B x e) v.
+        Proof using Type.
+          revert e v; induction x as [|x xs IHxs]; cbn [interp_related_gen UnderLets.splice_list]; intros.
+          all: repeat first [ progress destruct_head'_ex
+                            | progress destruct_head'_and
+                            | progress cbn [List.length] in *
+                            | progress subst
+                            | reflexivity
+                            | match goal with
+                              | [ H : List.Forall2 _ nil ?x |- _ ] => is_var x; inversion H; clear H
+                              | [ H : List.Forall2 _ (cons _ _) ?x |- _ ] => is_var x; inversion H; clear H
+                              | [ |- List.Forall2 _ _ _ ] => constructor
+                              | [ H : _ |- _ ] => apply H; clear H
+                              end ].
+          lazymatch goal with
+          | [ H : forall l1 l2, length l2 = S (length _) -> Forall2 _ l1 l2 -> _ |- _ ]
+            => specialize (fun l ls l' ls' (pf0 : length _ = _) pf1 pf2 => H (cons l ls) (cons l' ls') (f_equal S pf0) (Forall2_cons _ _ pf1 pf2))
+          end.
+          eapply splice_interp_related_gen_of_ex; do 2 eexists; repeat apply conj;
+            intros; [ eassumption | | ].
+          { eapply IHxs.
+            do 2 eexists; repeat apply conj; intros;
+              [ eassumption | | ].
+            { match goal with H : _ |- _ => eapply H; clear H end; eassumption. }
+            { reflexivity. } }
+          { reflexivity. }
+        Qed.
+
+        Lemma list_rect_interp_related_gen {A B Pnil Pcons ls B' Pnil' Pcons' ls' R' R}
+              (Hnil : interp_related_gen R' R Pnil Pnil')
+              (Hcons : forall x x',
+                  expr.interp_related_gen ident_interp R' x x'
+                  -> forall l l',
+                    List.Forall2 (expr.interp_related_gen ident_interp R') l l'
+                    -> forall rec rec',
+                      interp_related_gen R' R rec rec'
+                      -> interp_related_gen R' R (Pcons x l rec) (Pcons' x' l' rec'))
+              (Hls : List.Forall2 (expr.interp_related_gen ident_interp R' (t:=A)) ls ls')
+          : interp_related_gen
+              R' R
+              (list_rect
+                 (fun _ : list _ => UnderLets _ B)
+                 Pnil
+                 Pcons
+                 ls)
+              (list_rect
+                 (fun _ : list _ => B')
+                 Pnil'
+                 Pcons'
+                 ls').
+        Proof using Type. induction Hls; cbn [list_rect] in *; auto. Qed.
+
+        Lemma list_rect_arrow_interp_related_gen {A B C Pnil Pcons ls x B' C' Pnil' Pcons' ls' x' R'' R}
+              {R' : B -> B' -> Prop}
+              (Hnil : forall x x', R' x x' -> interp_related_gen R'' R (Pnil x) (Pnil' x'))
+              (Hcons : forall x x',
+                  expr.interp_related_gen ident_interp R'' x x'
+                  -> forall l l',
+                    List.Forall2 (expr.interp_related_gen ident_interp R'') l l'
+                    -> forall rec rec',
+                      (forall v v', R' v v' -> interp_related_gen R'' R (rec v) (rec' v'))
+                      -> forall v v',
+                        R' v v'
+                        -> interp_related_gen R'' R (Pcons x l rec v) (Pcons' x' l' rec' v'))
+              (Hls : List.Forall2 (expr.interp_related_gen ident_interp R'' (t:=A)) ls ls')
+              (Hx : R' x x')
+          : interp_related_gen
+              R'' R
+              (list_rect
+                 (fun _ : list _ => B -> UnderLets _ C)
+                 Pnil
+                 Pcons
+                 ls
+                 x)
+              (list_rect
+                 (fun _ : list _ => B' -> C')
+                 Pnil'
+                 Pcons'
+                 ls'
+                 x').
+        Proof using Type. revert x x' Hx; induction Hls; cbn [list_rect] in *; auto. Qed.
+
+        Lemma nat_rect_interp_related_gen {A PO PS n A' PO' PS' n' R' R}
+              (Hnil : interp_related_gen R' R PO PO')
+              (Hcons : forall n rec rec',
+                  interp_related_gen R' R rec rec'
+                  -> interp_related_gen R' R (PS n rec) (PS' n rec'))
+              (Hn : n = n')
+          : interp_related_gen
+              R' R
+              (nat_rect (fun _ => UnderLets _ A) PO PS n)
+              (nat_rect (fun _ => A') PO' PS' n').
+        Proof using Type. subst n'; induction n; cbn [nat_rect] in *; auto. Qed.
+
+        Lemma nat_rect_arrow_interp_related_gen {A B PO PS n x A' B' PO' PS' n' x' R'' R}
+              {R' : A -> A' -> Prop}
+              (Hnil : forall x x', R' x x' -> interp_related_gen R'' R (PO x) (PO' x'))
+              (Hcons : forall n rec rec',
+                  (forall x x', R' x x' -> interp_related_gen R'' R (rec x) (rec' x'))
+                  -> forall x x',
+                    R' x x'
+                    -> interp_related_gen R'' R (PS n rec x) (PS' n rec' x'))
+              (Hn : n = n')
+              (Hx : R' x x')
+          : interp_related_gen
+              R'' R
+              (nat_rect (fun _ => A -> UnderLets _ B) PO PS n x)
+              (nat_rect (fun _ => A' -> B') PO' PS' n' x').
+        Proof using Type. subst n'; revert x x' Hx; induction n; cbn [nat_rect] in *; auto. Qed.
+
+        Lemma interp_related_gen_Proper_impl_same_UnderLets {A B B' R' R1 R2 e v f}
+              (HR : forall e v, (R1 e v : Prop) -> (R2 e (f v) : Prop))
+          : @interp_related_gen A B R' R1 e v
+            -> @interp_related_gen A B' R' R2 e (f v).
+        Proof using Type.
+          revert f v HR; induction e; cbn [interp_related_gen]; [ now eauto | ]; intros F v HR H'.
+          destruct H' as [fv H']; exists (fun ev => F (fv ev)).
+          repeat first [ let x := fresh "x" in destruct H' as [x H']; exists x
+                       | let x := fresh "x" in intro x; specialize (H' x)
+                       | let H := fresh "H" in destruct H' as [H H']; split; [ exact H || now subst | ]
+                       | let H := fresh "H" in destruct H' as [H' H]; split; [ | exact H || now subst ] ].
+          auto.
+        Qed.
+      End for_interp2.
+
       Section for_interp.
         Context {base_interp : base_type -> Type}
                 (ident_interp : forall t, ident t -> type.interp base_interp t).
@@ -514,17 +760,8 @@ Module Compilers.
                                  @interp _ (f xv)
              end.
 
-        Fixpoint interp_related {T1 T2} (R : T1 -> T2 -> Prop) (e : UnderLets T1) (v2 : T2) : Prop
-          := match e with
-             | Base v1 => R v1 v2
-             | UnderLet t e f (* combine the App rule with the Abs rule *)
-               => exists fv ev,
-                  expr.interp_related ident_interp e ev
-                  /\ (forall x1 x2,
-                         x1 == x2
-                         -> @interp_related T1 T2 R (f x1) (fv x2))
-                  /\ fv ev = v2
-             end.
+        Definition interp_related {T1 T2} (R : T1 -> T2 -> Prop) (e : UnderLets T1) (v2 : T2) : Prop
+          := @interp_related_gen base_interp ident_interp _ T1 T2 (fun t => type.eqv) R e v2.
 
         Lemma interp_splice {A B} (x : UnderLets A) (e : A -> UnderLets B)
           : interp (splice x e) = interp (e (interp x)).
@@ -549,31 +786,18 @@ Module Compilers.
         Lemma to_expr_interp_related_iff {t e v}
           : interp_related (expr.interp_related ident_interp (t:=t)) e v
             <-> expr.interp_related ident_interp (UnderLets.to_expr e) v.
-        Proof using Type.
-          revert v; induction e; cbn [UnderLets.to_expr interp_related expr.interp_related]; try reflexivity.
-          setoid_rewrite H.
-          reflexivity.
-        Qed.
+        Proof using Type. apply to_expr_interp_related_gen_iff. Qed.
 
         Global Instance interp_related_Proper_iff {T1 T2}
           : Proper (pointwise_relation _ (pointwise_relation _ iff) ==> eq ==> eq ==> iff) (@interp_related T1 T2) | 10.
-        Proof using Type.
-          cbv [pointwise_relation respectful Proper].
-          intros R1 R2 HR x y ? x' y' H'; subst y y'.
-          revert x'; induction x; [ apply HR | ]; cbn [interp_related].
-          setoid_rewrite H; reflexivity.
-        Qed.
+        Proof using Type. apply interp_related_gen_Proper_iff. Qed.
 
         Lemma splice_interp_related_iff {A B T R x e} {v : T}
           : interp_related R (@UnderLets.splice _ ident _ A B x e) v
             <-> interp_related
                   (fun xv => interp_related R (e xv))
                   x v.
-        Proof using Type.
-          revert v; induction x; cbn [UnderLets.splice interp_related]; [ reflexivity | ].
-          match goal with H : _ |- _ => setoid_rewrite H end.
-          reflexivity.
-        Qed.
+        Proof using Type. apply splice_interp_related_gen_iff. Qed.
 
         Lemma splice_list_interp_related_iff_gen {A B T R x e1 e2 base} {v : T}
               (He1e2 : forall ls', e1 ls' = e2 (base ++ ls'))
@@ -589,15 +813,7 @@ Module Compilers.
                   x
                   base
                   v.
-        Proof using Type.
-          revert base v e1 e2 He1e2; induction x as [|? ? IHx]; cbn [UnderLets.splice_list interp_related list_rect]; intros.
-          { intros; rewrite He1e2, ?app_nil_r; reflexivity. }
-          { setoid_rewrite splice_interp_related_iff.
-            apply interp_related_Proper_iff; [ | reflexivity.. ]; cbv [pointwise_relation]; intros.
-            specialize (fun v => IHx (base ++ [v])).
-            setoid_rewrite IHx; [ reflexivity | ].
-            intros; rewrite He1e2, <- ?app_assoc; reflexivity. }
-        Qed.
+        Proof using Type. now apply splice_list_interp_related_gen_iff_gen. Qed.
 
         Lemma splice_list_interp_related_iff {A B T R x e} {v : T}
           : interp_related R (@UnderLets.splice_list _ ident _ A B x e) v
@@ -612,9 +828,7 @@ Module Compilers.
                   x
                   nil
                   v.
-        Proof using Type.
-          apply splice_list_interp_related_iff_gen; reflexivity.
-        Qed.
+        Proof using Type. apply splice_list_interp_related_gen_iff. Qed.
 
         Lemma splice_interp_related_of_ex {A B T T' RA RB x e} {v : T}
           : (exists ev (xv : T'),
@@ -624,20 +838,7 @@ Module Compilers.
                        -> interp_related RB (e x1) (ev x2))
                 /\ ev xv = v)
             -> interp_related RB (@UnderLets.splice _ ident _ A B x e) v.
-        Proof using Type.
-          revert e v; induction x; cbn [interp_related UnderLets.splice]; intros.
-          all: repeat first [ progress destruct_head'_ex
-                            | progress destruct_head'_and
-                            | progress subst
-                            | reflexivity
-                            | match goal with
-                              | [ H : _ |- _ ] => apply H; clear H
-                              end ].
-          do 2 eexists; repeat apply conj; [ eassumption | | ]; intros.
-          { match goal with H : _ |- _ => apply H; clear H end.
-            do 2 eexists; repeat apply conj; now eauto. }
-          { reflexivity. }
-        Qed.
+        Proof using Type. apply splice_interp_related_gen_of_ex. Qed.
 
         Lemma splice_list_interp_related_of_ex {A B T T' RA RB x e} {v : T}
           : (exists ev (xv : list T'),
@@ -648,32 +849,7 @@ Module Compilers.
                            -> interp_related RB (e x1) (ev x2))
                     /\ ev xv = v)
             -> interp_related RB (@UnderLets.splice_list _ ident _ A B x e) v.
-        Proof using Type.
-          revert e v; induction x as [|x xs IHxs]; cbn [interp_related UnderLets.splice_list]; intros.
-          all: repeat first [ progress destruct_head'_ex
-                            | progress destruct_head'_and
-                            | progress cbn [List.length] in *
-                            | progress subst
-                            | reflexivity
-                            | match goal with
-                              | [ H : List.Forall2 _ nil ?x |- _ ] => is_var x; inversion H; clear H
-                              | [ H : List.Forall2 _ (cons _ _) ?x |- _ ] => is_var x; inversion H; clear H
-                              | [ |- List.Forall2 _ _ _ ] => constructor
-                              | [ H : _ |- _ ] => apply H; clear H
-                              end ].
-          lazymatch goal with
-          | [ H : forall l1 l2, length l2 = S (length _) -> Forall2 _ l1 l2 -> _ |- _ ]
-            => specialize (fun l ls l' ls' (pf0 : length _ = _) pf1 pf2 => H (cons l ls) (cons l' ls') (f_equal S pf0) (Forall2_cons _ _ pf1 pf2))
-          end.
-          eapply splice_interp_related_of_ex; do 2 eexists; repeat apply conj;
-            intros; [ eassumption | | ].
-          { eapply IHxs.
-            do 2 eexists; repeat apply conj; intros;
-              [ eassumption | | ].
-            { match goal with H : _ |- _ => eapply H; clear H end; eassumption. }
-            { reflexivity. } }
-          { reflexivity. }
-        Qed.
+        Proof using Type. apply splice_list_interp_related_gen_of_ex. Qed.
 
         Lemma list_rect_interp_related {A B Pnil Pcons ls B' Pnil' Pcons' ls' R}
               (Hnil : interp_related R Pnil Pnil')
@@ -697,7 +873,7 @@ Module Compilers.
                  Pnil'
                  Pcons'
                  ls').
-        Proof using Type. induction Hls; cbn [list_rect] in *; auto. Qed.
+        Proof using Type. now apply list_rect_interp_related_gen. Qed.
 
         Lemma list_rect_arrow_interp_related {A B C Pnil Pcons ls x B' C' Pnil' Pcons' ls' x' R}
               {R' : B -> B' -> Prop}
@@ -727,7 +903,7 @@ Module Compilers.
                  Pcons'
                  ls'
                  x').
-        Proof using Type. revert x x' Hx; induction Hls; cbn [list_rect] in *; auto. Qed.
+        Proof using Type. eapply list_rect_arrow_interp_related_gen; now eauto. Qed.
 
         Lemma nat_rect_interp_related {A PO PS n A' PO' PS' n' R}
               (Hnil : interp_related R PO PO')
@@ -739,7 +915,7 @@ Module Compilers.
               R
               (nat_rect (fun _ => UnderLets A) PO PS n)
               (nat_rect (fun _ => A') PO' PS' n').
-        Proof using Type. subst n'; induction n; cbn [nat_rect] in *; auto. Qed.
+        Proof using Type. now apply nat_rect_interp_related_gen. Qed.
 
         Lemma nat_rect_arrow_interp_related {A B PO PS n x A' B' PO' PS' n' x' R}
               {R' : A -> A' -> Prop}
@@ -755,21 +931,13 @@ Module Compilers.
               R
               (nat_rect (fun _ => A -> UnderLets B) PO PS n x)
               (nat_rect (fun _ => A' -> B') PO' PS' n' x').
-        Proof using Type. subst n'; revert x x' Hx; induction n; cbn [nat_rect] in *; auto. Qed.
+        Proof using Type. eapply nat_rect_arrow_interp_related_gen; now eauto. Qed.
 
         Lemma interp_related_Proper_impl_same_UnderLets {A B B' R1 R2 e v f}
               (HR : forall e v, (R1 e v : Prop) -> (R2 e (f v) : Prop))
           : @interp_related A B R1 e v
             -> @interp_related A B' R2 e (f v).
-        Proof using Type.
-          revert f v HR; induction e; cbn [interp_related]; [ now eauto | ]; intros F v HR H'.
-          destruct H' as [fv H']; exists (fun ev => F (fv ev)).
-          repeat first [ let x := fresh "x" in destruct H' as [x H']; exists x
-                       | let x := fresh "x" in intro x; specialize (H' x)
-                       | let H := fresh "H" in destruct H' as [H H']; split; [ exact H || now subst | ]
-                       | let H := fresh "H" in destruct H' as [H' H]; split; [ | exact H || now subst ] ].
-          auto.
-        Qed.
+        Proof using Type. now apply interp_related_gen_Proper_impl_same_UnderLets. Qed.
       End for_interp.
 
       Section for_interp2.
@@ -790,6 +958,37 @@ Module Compilers.
           eassumption.
         Qed.
       End for_interp2.
+
+      Section with_var2_for_interp.
+        Context {base_interp : base_type -> Type}
+                {ident_interp : forall t, ident t -> type.interp base_interp t}
+                {var1 var2 : type -> Type}.
+
+        Lemma flat_map_interp_related_iff
+              {T1 T2} f f' R'' R' R e v
+              (Hf : forall t e v, expr.interp_related_gen ident_interp R'' e v -> interp_related_gen ident_interp R' (expr.interp_related_gen ident_interp R') (f t e) v)
+              (Hf' : forall t e v, R' t e v -> R'' t (f' t e) v)
+              (He : @interp_related_gen _ ident_interp _ _ _ R'' R e v)
+          : @interp_related_gen
+              _ ident_interp _ _ T2 R' R
+              (@flat_map _ ident var1 ident var2 f f' T1 e)
+              v.
+        Proof using Type.
+          revert dependent v; induction e as [|? ? ? IHe]; cbn [flat_map interp_related_gen] in *; intros; [ assumption | ].
+          repeat first [ progress destruct_head'_ex
+                       | progress destruct_head'_and
+                       | progress subst
+                       | eapply splice_interp_related_gen_of_ex; do 2 eexists; repeat apply conj;
+                         [ eapply Hf | | reflexivity ]
+                       | solve [ auto ]
+                       | progress intros
+                       | match goal with
+                         | [ |- interp_related_gen _ _ _ (UnderLet _ _) _ ]
+                           => cbn [interp_related_gen]; do 2 eexists; repeat apply conj;
+                              [ | | reflexivity ]
+                         end ].
+        Qed.
+      End with_var2_for_interp.
     End with_ident.
 
     Section reify.

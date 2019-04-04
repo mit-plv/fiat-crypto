@@ -238,7 +238,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                _ <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b3 A;
                v4 <- base.try_make_transport_cps A A;
-               Datatypes.Some (Base (v4 (v3 (v1 (v (Compile.reflect x1))))))
+               Datatypes.Some
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($(v1 (v (Compile.reflect x1))));
+                  Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -291,7 +295,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v2 <- base.try_make_transport_cps b2 b2;
                v3 <- base.try_make_transport_cps b2 B;
                v4 <- base.try_make_transport_cps B B;
-               Datatypes.Some (Base (v4 (v3 (v2 (v0 (Compile.reflect x0))))))
+               Datatypes.Some
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            ($(v2 (v0 (Compile.reflect x0))));
+                  Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -356,10 +364,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v3 <- base.try_make_transport_cps b7 T;
                v4 <- base.try_make_transport_cps T T;
                Datatypes.Some
-                 (fv1 <-- (e <-- x'4 (x'3 (x'2 (x'1 (x'0 (x' x)))))
-                                   (v1 (v (Compile.reflect x2)))
-                                   (v2 (v0 (Compile.reflect x1)));
-                           Base e);
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (($(x'4 (x'3 (x'2 (x'1 (x'0 (x' x)))))))%expr @
+                             ($(v1 (v (Compile.reflect x2))))%expr @
+                             ($(v2 (v0 (Compile.reflect x1))))%expr)%expr_pat;
                   Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -413,8 +422,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                 fv0 <- (if let (x2, _) := xv in x2
                         then
                          Datatypes.Some
-                           (e <-- x'1 (x' x) (##tt)%expr;
-                            Base e)%under_lets
+                           (Reify.expr_value_to_rewrite_rule_replacement
+                              (@Compile.reflect_ident_iota var) false
+                              (($(x'1 (x' x)))%expr @ (##tt)%expr)%expr_pat)
                         else Datatypes.None);
                 Datatypes.Some (fv1 <-- fv0;
                                 Base (v0 (v fv1)))%under_lets
@@ -451,8 +461,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                        then Datatypes.None
                        else
                         Datatypes.Some
-                          (e <-- x'2 (x'0 x0) (##tt)%expr;
-                           Base e)%under_lets);
+                          (Reify.expr_value_to_rewrite_rule_replacement
+                             (@Compile.reflect_ident_iota var) false
+                             (($(x'2 (x'0 x0)))%expr @ (##tt)%expr)%expr_pat));
                Datatypes.Some (fv1 <-- fv0;
                                Base (v0 (v fv1)))%under_lets
               else Datatypes.None
@@ -500,13 +511,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v <- base.try_make_transport_cps b10 P;
                v0 <- base.try_make_transport_cps P P;
                Datatypes.Some
-                 (fv0 <-- Datatypes.nat_rect
-                            (fun _ : nat => UnderLets (expr b10))
-                            (x'2 (x' x) (##tt)%expr)
-                            (fun (n' : nat) (rec : UnderLets (expr b10)) =>
-                             rec0 <-- rec;
-                             x'4 (x'3 (x'1 (x'0 x0))) (##n')%expr rec0)
-                            (let (x2, _) := xv in x2);
+                 (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (#(eager_nat_rect)%expr @ ($(x'2 (x' x)))%expr @
+                             ($(x'4 (x'3 (x'1 (x'0 x0)))))%expr @
+                             (##(let (x2, _) := xv in x2))%expr)%expr_pat;
                   Base (v0 (v fv0)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -568,15 +577,14 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v1 <- base.try_make_transport_cps b16 Q;
               v2 <- base.try_make_transport_cps Q Q;
               Datatypes.Some
-                (fv0 <-- Datatypes.nat_rect
-                           (fun _ : nat => expr b -> UnderLets (expr b16))
-                           (x'6 (x'5 (x'0 (x' x))))
-                           (fun (n' : nat)
-                              (rec : expr b -> UnderLets (expr b16))
-                              (v3 : expr b) =>
-                            x'10 (x'9 (x'8 (x'7 (x'4 (x'3 (x'2 (x'1 x0)))))))
-                              (##n')%expr rec v3) (let (x3, _) := xv in x3)
-                           (v0 (v x2));
+                (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           (#(eager_nat_rect_arrow)%expr @
+                            ($(x'6 (x'5 (x'0 (x' x)))))%expr @
+                            ($(x'10
+                                 (x'9 (x'8 (x'7 (x'4 (x'3 (x'2 (x'1 x0)))))))))%expr @
+                            (##(let (x3, _) := xv in x3))%expr @
+                            ($(v0 (v x2)))%expr)%expr_pat;
                  Base (v2 (v1 fv0)))%under_lets
              else Datatypes.None
          | Datatypes.None => Datatypes.None
@@ -590,6 +598,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          to_expr
            (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
         x1 @ x2)%expr_pat)%option
+| @eager_nat_rect P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr ℕ -> expr P -> UnderLets (expr P)) (x1 : expr ℕ) =>
+    Base
+      (#(eager_nat_rect)%expr @ (λ x2 : var unit,
+                                 to_expr (x ($x2)))%expr @
+       (λ (x2 : var ℕ)(x3 : var P),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @eager_nat_rect_arrow P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr ℕ ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr ℕ) (x2 : expr P) =>
+    Base
+      (#(eager_nat_rect_arrow)%expr @ (λ x3 : var P,
+                                       to_expr (x ($x3)))%expr @
+       (λ (x3 : var ℕ)(x4 : var (P -> Q)%ptype)(x5 : var P),
+        to_expr
+          (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+       x1 @ x2)%expr_pat
 | @list_rect A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
@@ -631,18 +659,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            v0 <- base.try_make_transport_cps b b;
            v1 <- base.try_make_transport_cps b12 P;
            v2 <- base.try_make_transport_cps P P;
-           fv0 <- (ls <- reflect_list (v0 (v x1));
-                   Datatypes.Some
-                     (Datatypes.list_rect
-                        (fun _ : Datatypes.list (expr b) =>
-                         UnderLets (expr b12)) (x'4 (x' x) (##tt)%expr)
-                        (fun (x2 : expr b) (xs : Datatypes.list (expr b))
-                           (rec : UnderLets (expr b12)) =>
-                         (rec' <-- rec;
-                          x'8 (x'7 (x'6 (x'5 (x'3 (x'2 (x'1 (x'0 x0))))))) x2
-                            (Compilers.reify_list xs) rec')%under_lets) ls));
-           Datatypes.Some (fv1 <-- fv0;
-                           Base (v2 (v1 fv1)))%under_lets
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) false
+                        (#(eager_list_rect)%expr @ ($(x'4 (x' x)))%expr @
+                         ($(x'8 (x'7 (x'6 (x'5 (x'3 (x'2 (x'1 (x'0 x0)))))))))%expr @
+                         ($(v0 (v x1)))%expr)%expr_pat;
+              Base (v2 (v1 fv0)))%under_lets
           else Datatypes.None
       | Datatypes.None => Datatypes.None
       end;;
@@ -652,6 +675,117 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                              to_expr (x ($x2)))%expr @
         (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
          to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat)%option
+| @list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    ((match
+        pattern.type.unify_extracted
+          (((((('2%pbtype -> '3%pbtype) ->
+               ('1%pbtype ->
+                (pattern.base.type.list '1) ->
+                ('2%pbtype -> '3%pbtype) -> '2%pbtype -> '3%pbtype) ->
+               (pattern.base.type.list '1) -> '2%pbtype -> '3%pbtype) ->
+              '2%pbtype -> '3%pbtype) ->
+             '1%pbtype ->
+             (pattern.base.type.list '1) ->
+             ('2%pbtype -> '3%pbtype) -> '2%pbtype -> '3%pbtype) ->
+            (pattern.base.type.list '1)) -> '2%pbtype)%ptype
+          ((((((P -> Q) ->
+               (A -> (list A) -> (P -> Q) -> P -> Q) -> (list A) -> P -> Q) ->
+              P -> Q) -> A -> (list A) -> (P -> Q) -> P -> Q) -> (list A)) ->
+           P)%ptype
+      with
+      | Datatypes.Some
+        (_, _, (_, (_, (_, _, (_, _))), (_, (_, _))), (_, _),
+        (_, (_, (_, _, (_, b18)))), b0, b)%zrange =>
+          if
+           type.type_beq base.type base.type.type_beq
+             ((((((b -> b18) ->
+                  (b0 -> (list b0) -> (b -> b18) -> b -> b18) ->
+                  (list b0) -> b -> b18) -> b -> b18) ->
+                b0 -> (list b0) -> (b -> b18) -> b -> b18) -> (list b0)) -> b)%ptype
+             ((((((P -> Q) ->
+                  (A -> (list A) -> (P -> Q) -> P -> Q) -> (list A) -> P -> Q) ->
+                 P -> Q) -> A -> (list A) -> (P -> Q) -> P -> Q) -> (list A)) ->
+              P)%ptype
+          then
+           _ <- ident.unify pattern.ident.list_rect_arrow list_rect_arrow;
+           x' <- base.try_make_transport_cps P b;
+           x'0 <- base.try_make_transport_cps Q b18;
+           x'1 <- base.try_make_transport_cps A b0;
+           x'2 <- base.try_make_transport_cps A b0;
+           x'3 <- base.try_make_transport_cps P b;
+           x'4 <- base.try_make_transport_cps Q b18;
+           x'5 <- base.try_make_transport_cps P b;
+           x'6 <- base.try_make_transport_cps Q b18;
+           v <- base.try_make_transport_cps A b0;
+           v0 <- base.try_make_transport_cps P b;
+           x'7 <- base.try_make_transport_cps b b;
+           x'8 <- base.try_make_transport_cps b18 b18;
+           x'9 <- base.try_make_transport_cps b0 b0;
+           x'10 <- base.try_make_transport_cps b0 b0;
+           x'11 <- base.try_make_transport_cps b b;
+           x'12 <- base.try_make_transport_cps b18 b18;
+           x'13 <- base.try_make_transport_cps b b;
+           x'14 <- base.try_make_transport_cps b18 b18;
+           v1 <- base.try_make_transport_cps b0 b0;
+           v2 <- base.try_make_transport_cps b b;
+           v3 <- base.try_make_transport_cps b18 Q;
+           v4 <- base.try_make_transport_cps Q Q;
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) false
+                        (#(eager_list_rect_arrow)%expr @
+                         ($(x'8 (x'7 (x'0 (x' x)))))%expr @
+                         ($(x'14
+                              (x'13
+                                 (x'12
+                                    (x'11
+                                       (x'10
+                                          (x'9
+                                             (x'6
+                                                (x'5
+                                                   (x'4 (x'3 (x'2 (x'1 x0)))))))))))))%expr @
+                         ($(v1 (v x1)))%expr @ ($(v2 (v0 x2)))%expr)%expr_pat;
+              Base (v4 (v3 fv0)))%under_lets
+          else Datatypes.None
+      | Datatypes.None => Datatypes.None
+      end;;
+      Datatypes.None);;;
+     Base
+       (#(list_rect_arrow)%expr @ (λ x3 : var P,
+                                   to_expr (x ($x3)))%expr @
+        (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                    var P),
+         to_expr
+           (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat)
+              ($x6)))%expr @ x1 @ x2)%expr_pat)%option
+| @eager_list_rect A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(eager_list_rect)%expr @ (λ x2 : var unit,
+                                  to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
+        to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @eager_list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(eager_list_rect_arrow)%expr @ (λ x3 : var P,
+                                        to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
 | @list_case A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> UnderLets (expr P))
@@ -693,8 +827,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v <- base.try_make_transport_cps b10 P;
                v0 <- base.try_make_transport_cps P P;
                Datatypes.Some
-                 (fv0 <-- (e <-- x'3 (x' x) (##tt)%expr;
-                           Base e);
+                 (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (($(x'3 (x' x)))%expr @ (##tt)%expr)%expr_pat;
                   Base (v0 (v fv0)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -746,10 +881,11 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v3 <- base.try_make_transport_cps b10 P;
                v4 <- base.try_make_transport_cps P P;
                Datatypes.Some
-                 (fv1 <-- (e <-- x'6 (x'5 (x'4 (x'2 (x'1 (x'0 x0)))))
-                                   (v1 (v (Compile.reflect x3)))
-                                   (v2 (v0 (Compile.reflect x2)));
-                           Base e);
+                 (fv1 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (($(x'6 (x'5 (x'4 (x'2 (x'1 (x'0 x0)))))))%expr @
+                             ($(v1 (v (Compile.reflect x3))))%expr @
+                             ($(v2 (v0 (Compile.reflect x2))))%expr)%expr_pat;
                   Base (v4 (v3 fv1)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
@@ -773,28 +909,34 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
          to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat)%option
 | @List_length T =>
     fun x : expr (list T) =>
-    (match
-       pattern.type.unify_extracted
-         (((pattern.base.type.list '1) -> ℕ) -> (pattern.base.type.list '1))%ptype
-         (((list T) -> ℕ) -> (list T))%ptype
-     with
-     | Datatypes.Some (_, _, b)%zrange =>
-         if
-          type.type_beq base.type base.type.type_beq
-            (((list b) -> ℕ) -> (list b))%ptype
-            (((list T) -> ℕ) -> (list T))%ptype
-         then
-          _ <- ident.unify pattern.ident.List_length List_length;
-          v <- base.try_make_transport_cps T b;
-          v0 <- base.try_make_transport_cps b b;
-          fv0 <- (x0 <- (xs <- reflect_list (v0 (v x));
-                         Datatypes.Some (##(length xs))%expr);
-                  Datatypes.Some (Base x0));
-          Datatypes.Some (fv1 <-- fv0;
-                          Base fv1)%under_lets
-         else Datatypes.None
-     | Datatypes.None => Datatypes.None
-     end;;;
+    ((match
+        pattern.type.unify_extracted
+          (((pattern.base.type.list '1) -> ℕ) -> (pattern.base.type.list '1))%ptype
+          (((list T) -> ℕ) -> (list T))%ptype
+      with
+      | Datatypes.Some (_, _, b)%zrange =>
+          if
+           type.type_beq base.type base.type.type_beq
+             (((list b) -> ℕ) -> (list b))%ptype
+             (((list T) -> ℕ) -> (list T))%ptype
+          then
+           _ <- ident.unify pattern.ident.List_length List_length;
+           v <- base.try_make_transport_cps T b;
+           v0 <- base.try_make_transport_cps b b;
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) true
+                        (#(list_rect)%expr @ (λ _ : expr unit,
+                                              ##0%nat)%expr @
+                         (λ (_ : expr b)(_ : expr (list b))(v3 : expr ℕ),
+                          (#(Nat_succ)%expr @ $v3)%expr_pat)%expr @
+                         ($(v0 (v x)))%expr)%expr_pat;
+              fv1 <-- do_again ℕ fv0;
+              Base fv1)%under_lets
+          else Datatypes.None
+      | Datatypes.None => Datatypes.None
+      end;;
+      Datatypes.None);;;
      Base (#(List_length)%expr @ x)%expr_pat)%option
 | List_seq =>
     fun x x0 : expr ℕ =>
@@ -854,13 +996,24 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v0 <- base.try_make_transport_cps b b;
                v1 <- base.try_make_transport_cps b A;
                v2 <- base.try_make_transport_cps A A;
-               fv0 <- (xs <- reflect_list (v0 (v x0));
-                       Datatypes.Some
-                         (Base
-                            (Compilers.reify_list
-                               (firstn (let (x1, _) := xv in x1) xs))));
-               Datatypes.Some (fv1 <-- fv0;
-                               Base (v2 (v1 fv1)))%under_lets
+               Datatypes.Some
+                 (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) true
+                            (#(nat_rect_arrow)%expr @
+                             (λ _ : expr (list b),
+                              []%expr_pat)%expr @
+                             (λ (_ : expr ℕ)(v4 : expr (list b) ->
+                                                  UnderLets (expr (list b)))
+                              (v5 : expr (list b)),
+                              (#(list_case)%expr @
+                               (λ _ : expr unit,
+                                []%expr_pat) @
+                               (λ (v6 : expr b)(v7 : expr (list b)),
+                                ($v6 :: $v4 @ $v7)%expr_pat) @ $v5)%expr_pat)%expr @
+                             (##(let (x1, _) := xv in x1))%expr @
+                             ($(v0 (v x0)))%expr)%expr_pat;
+                  fv1 <-- do_again (list A) (v1 fv0);
+                  Base (v2 fv1))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -892,13 +1045,24 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v0 <- base.try_make_transport_cps b b;
                v1 <- base.try_make_transport_cps b A;
                v2 <- base.try_make_transport_cps A A;
-               fv0 <- (xs <- reflect_list (v0 (v x0));
-                       Datatypes.Some
-                         (Base
-                            (Compilers.reify_list
-                               (skipn (let (x1, _) := xv in x1) xs))));
-               Datatypes.Some (fv1 <-- fv0;
-                               Base (v2 (v1 fv1)))%under_lets
+               Datatypes.Some
+                 (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) true
+                            (#(nat_rect_arrow)%expr @
+                             (λ v3 : expr (list b),
+                              $v3)%expr @
+                             (λ (_ : expr ℕ)(v4 : expr (list b) ->
+                                                  UnderLets (expr (list b)))
+                              (v5 : expr (list b)),
+                              (#(list_case)%expr @
+                               (λ _ : expr unit,
+                                []%expr_pat) @
+                               (λ (_ : expr b)(v7 : expr (list b)),
+                                ($v4 @ $v7)%expr_pat) @ $v5)%expr_pat)%expr @
+                             (##(let (x1, _) := xv in x1))%expr @
+                             ($(v0 (v x0)))%expr)%expr_pat;
+                  fv1 <-- do_again (list A) (v1 fv0);
+                  Base (v2 fv1))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -929,11 +1093,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v1 <- base.try_make_transport_cps b0 A;
                v2 <- base.try_make_transport_cps A A;
                Datatypes.Some
-                 (Base
-                    (v2
-                       (v1
-                          (Compilers.reify_list
-                             (repeat (v0 (v x)) (let (x1, _) := xv in x1))))))
+                 (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (#(eager_nat_rect)%expr @
+                             (λ _ : expr unit,
+                              []%expr_pat)%expr @
+                             (λ (_ : expr ℕ)(v4 : expr (list b0)),
+                              ($(v0 (v x)) :: $v4)%expr_pat)%expr @
+                             (##(let (x1, _) := xv in x1))%expr)%expr_pat;
+                  Base (v2 (v1 fv0)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -943,44 +1111,55 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
      Base (#(List_repeat)%expr @ x @ x0)%expr_pat)%option
 | @List_combine A B =>
     fun (x : expr (list A)) (x0 : expr (list B)) =>
-    (match
-       pattern.type.unify_extracted
-         ((((pattern.base.type.list '1) ->
-            (pattern.base.type.list '2) -> (pattern.base.type.list ('1 * '2))) ->
-           (pattern.base.type.list '1)) -> (pattern.base.type.list '2))%ptype
-         ((((list A) -> (list B) -> (list (A * B))) -> (list A)) -> (list B))%ptype
-     with
-     | Datatypes.Some (_, (_, (_, _)), b0, b)%zrange =>
-         if
-          type.type_beq base.type base.type.type_beq
-            ((((list b0) -> (list b) -> (list (b0 * b))) -> (list b0)) ->
-             (list b))%ptype
-            ((((list A) -> (list B) -> (list (A * B))) -> (list A)) ->
-             (list B))%ptype
-         then
-          _ <- ident.unify pattern.ident.List_combine List_combine;
-          v <- base.try_make_transport_cps A b0;
-          v0 <- base.try_make_transport_cps B b;
-          v1 <- base.try_make_transport_cps b0 b0;
-          v2 <- base.try_make_transport_cps b b;
-          x' <- base.try_make_transport_cps b0 A;
-          x'0 <- base.try_make_transport_cps b B;
-          x'1 <- base.try_make_transport_cps A A;
-          x'2 <- base.try_make_transport_cps B B;
-          fv0 <- (x1 <- (xs <- reflect_list (v1 (v x));
-                         ys <- reflect_list (v2 (v0 x0));
-                         Datatypes.Some
-                           (Compilers.reify_list
-                              (List.map
-                                 (fun '(x1, y)%zrange => (x1, y)%expr_pat)
-                                 (List.combine xs ys))));
-                  Datatypes.Some (Base x1));
-          Datatypes.Some
-            (fv1 <-- fv0;
-             Base (x'2 (x'1 (x'0 (x' fv1)))))%under_lets
-         else Datatypes.None
-     | Datatypes.None => Datatypes.None
-     end;;;
+    ((match
+        pattern.type.unify_extracted
+          ((((pattern.base.type.list '1) ->
+             (pattern.base.type.list '2) ->
+             (pattern.base.type.list ('1 * '2))) ->
+            (pattern.base.type.list '1)) -> (pattern.base.type.list '2))%ptype
+          ((((list A) -> (list B) -> (list (A * B))) -> (list A)) -> (list B))%ptype
+      with
+      | Datatypes.Some (_, (_, (_, _)), b0, b)%zrange =>
+          if
+           type.type_beq base.type base.type.type_beq
+             ((((list b0) -> (list b) -> (list (b0 * b))) -> (list b0)) ->
+              (list b))%ptype
+             ((((list A) -> (list B) -> (list (A * B))) -> (list A)) ->
+              (list B))%ptype
+          then
+           _ <- ident.unify pattern.ident.List_combine List_combine;
+           v <- base.try_make_transport_cps A b0;
+           v0 <- base.try_make_transport_cps B b;
+           v1 <- base.try_make_transport_cps b0 b0;
+           v2 <- base.try_make_transport_cps b b;
+           x' <- base.try_make_transport_cps b0 A;
+           x'0 <- base.try_make_transport_cps b B;
+           x'1 <- base.try_make_transport_cps A A;
+           x'2 <- base.try_make_transport_cps B B;
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) true
+                        (#(list_rect_arrow)%expr @
+                         (λ _ : expr (list b),
+                          []%expr_pat)%expr @
+                         (λ (v3 : expr b0)(_ : expr (list b0))(v5 : expr
+                                                                    (list b) ->
+                                                                    UnderLets
+                                                                    (expr
+                                                                    (list
+                                                                    (b0 * b))))
+                          (v6 : expr (list b)),
+                          (#(list_case)%expr @ (λ _ : expr unit,
+                                                []%expr_pat) @
+                           (λ (v7 : expr b)(v8 : expr (list b)),
+                            (($v3, $v7) :: $v5 @ $v8)%expr_pat) @ $v6)%expr_pat)%expr @
+                         ($(v1 (v x)))%expr @ ($(v2 (v0 x0)))%expr)%expr_pat;
+              fv1 <-- do_again (list (A * B)) (x'0 (x' fv0));
+              Base (x'2 (x'1 fv1)))%under_lets
+          else Datatypes.None
+      | Datatypes.None => Datatypes.None
+      end;;
+      Datatypes.None);;;
      Base (#(List_combine)%expr @ x @ x0)%expr_pat)%option
 | @List_map A B =>
     fun (x : expr A -> UnderLets (expr B)) (x0 : expr (list A)) =>
@@ -1006,18 +1185,17 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            v0 <- base.try_make_transport_cps b b;
            v1 <- base.try_make_transport_cps b4 B;
            v2 <- base.try_make_transport_cps B B;
-           fv0 <- (ls <- reflect_list (v0 (v x0));
-                   Datatypes.Some
-                     (Datatypes.list_rect
-                        (fun _ : Datatypes.list (expr b) =>
-                         UnderLets (expr (list b4))) (Base []%expr_pat)
-                        (fun (x1 : expr b) (_ : Datatypes.list (expr b))
-                           (rec : UnderLets (expr (list b4))) =>
-                         (rec' <-- rec;
-                          fx <-- x'2 (x'1 (x'0 (x' x))) x1;
-                          Base (fx :: rec')%expr_pat)%under_lets) ls));
-           Datatypes.Some (fv1 <-- fv0;
-                           Base (v2 (v1 fv1)))%under_lets
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) false
+                        (#(eager_list_rect)%expr @
+                         (λ _ : expr unit,
+                          []%expr_pat)%expr @
+                         (λ (v3 : expr b)(_ : expr (list b))(v5 : expr
+                                                                    (list b4)),
+                          ($(x'2 (x'1 (x'0 (x' x)))) @ $v3 :: $v5)%expr_pat)%expr @
+                         ($(v0 (v x0)))%expr)%expr_pat;
+              Base (v2 (v1 fv0)))%under_lets
           else Datatypes.None
       | Datatypes.None => Datatypes.None
       end;;
@@ -1047,17 +1225,15 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            v2 <- base.try_make_transport_cps b b;
            v3 <- base.try_make_transport_cps b A;
            v4 <- base.try_make_transport_cps A A;
-           fv0 <- (ls <- reflect_list (v1 (v x));
-                   Datatypes.Some
-                     (Datatypes.list_rect
-                        (fun _ : Datatypes.list (expr b) =>
-                         UnderLets (expr (list b))) (Base (v2 (v0 x0)))
-                        (fun (x1 : expr b) (_ : Datatypes.list (expr b))
-                           (rec : UnderLets (expr (list b))) =>
-                         (rec' <-- rec;
-                          Base (x1 :: rec')%expr_pat)%under_lets) ls));
-           Datatypes.Some (fv1 <-- fv0;
-                           Base (v4 (v3 fv1)))%under_lets
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) false
+                        (#(eager_list_rect)%expr @
+                         (λ _ : expr unit,
+                          $(v2 (v0 x0)))%expr @
+                         (λ (v5 : expr b)(_ v7 : expr (list b)),
+                          ($v5 :: $v7)%expr_pat)%expr @ ($(v1 (v x)))%expr)%expr_pat;
+              Base (v4 (v3 fv0)))%under_lets
           else Datatypes.None
       | Datatypes.None => Datatypes.None
       end;;
@@ -1065,31 +1241,36 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
      Base (x ++ x0)%expr)%option
 | @List_rev A =>
     fun x : expr (list A) =>
-    ((match
-        pattern.type.unify_extracted
-          (((pattern.base.type.list '1) -> (pattern.base.type.list '1)) ->
-           (pattern.base.type.list '1))%ptype
-          (((list A) -> (list A)) -> (list A))%ptype
-      with
-      | Datatypes.Some (_, _, b)%zrange =>
-          if
-           type.type_beq base.type base.type.type_beq
-             (((list b) -> (list b)) -> (list b))%ptype
-             (((list A) -> (list A)) -> (list A))%ptype
-          then
-           _ <- ident.unify pattern.ident.List_rev List_rev;
-           v <- base.try_make_transport_cps A b;
-           v0 <- base.try_make_transport_cps b b;
-           v1 <- base.try_make_transport_cps b A;
-           v2 <- base.try_make_transport_cps A A;
-           fv0 <- (xs <- reflect_list (v0 (v x));
-                   Datatypes.Some (Base (Compilers.reify_list (rev xs))));
-           Datatypes.Some (fv1 <-- fv0;
-                           Base (v2 (v1 fv1)))%under_lets
-          else Datatypes.None
-      | Datatypes.None => Datatypes.None
-      end;;
-      Datatypes.None);;;
+    (match
+       pattern.type.unify_extracted
+         (((pattern.base.type.list '1) -> (pattern.base.type.list '1)) ->
+          (pattern.base.type.list '1))%ptype
+         (((list A) -> (list A)) -> (list A))%ptype
+     with
+     | Datatypes.Some (_, _, b)%zrange =>
+         if
+          type.type_beq base.type base.type.type_beq
+            (((list b) -> (list b)) -> (list b))%ptype
+            (((list A) -> (list A)) -> (list A))%ptype
+         then
+          _ <- ident.unify pattern.ident.List_rev List_rev;
+          v <- base.try_make_transport_cps A b;
+          v0 <- base.try_make_transport_cps b b;
+          v1 <- base.try_make_transport_cps b A;
+          v2 <- base.try_make_transport_cps A A;
+          Datatypes.Some
+            (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                       (@Compile.reflect_ident_iota var) true
+                       (#(list_rect)%expr @
+                        (λ _ : expr unit,
+                         []%expr_pat)%expr @
+                        (λ (v3 : expr b)(_ v5 : expr (list b)),
+                         $v5 ++ [$v3])%expr @ ($(v0 (v x)))%expr)%expr_pat;
+             fv1 <-- do_again (list A) (v1 fv0);
+             Base (v2 fv1))%under_lets
+         else Datatypes.None
+     | Datatypes.None => Datatypes.None
+     end;;;
      Base (#(List_rev)%expr @ x)%expr_pat)%option
 | @List_flat_map A B =>
     fun (x : expr A -> UnderLets (expr (list B))) (x0 : expr (list A)) =>
@@ -1119,20 +1300,18 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            v0 <- base.try_make_transport_cps b b;
            v1 <- base.try_make_transport_cps b4 B;
            v2 <- base.try_make_transport_cps B B;
-           fv0 <- (ls <- reflect_list (v0 (v x0));
-                   Datatypes.Some
-                     (Datatypes.list_rect
-                        (fun _ : Datatypes.list (expr b) =>
-                         UnderLets (expr (list b4))) (Base []%expr_pat)
-                        (fun (x1 : expr b) (_ : Datatypes.list (expr b))
-                           (rec : UnderLets (expr (list b4))) =>
-                         (rec' <-- rec;
-                          fx <-- x'2 (x'1 (x'0 (x' x))) x1;
-                          Base ($fx ++ rec')%expr)%under_lets) ls));
            Datatypes.Some
-             (fv1 <-- fv0;
-              fv2 <-- do_again (list B) (v1 fv1);
-              Base (v2 fv2))%under_lets
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) true
+                        (#(list_rect)%expr @
+                         (λ _ : expr unit,
+                          []%expr_pat)%expr @
+                         (λ (v3 : expr b)(_ : expr (list b))(v5 : expr
+                                                                    (list b4)),
+                          ($(x'2 (x'1 (x'0 (x' x)))) @ $v3)%expr_pat ++ $v5)%expr @
+                         ($(v0 (v x0)))%expr)%expr_pat;
+              fv1 <-- do_again (list B) (v1 fv0);
+              Base (v2 fv1))%under_lets
           else Datatypes.None
       | Datatypes.None => Datatypes.None
       end;;
@@ -1142,60 +1321,55 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                                  to_expr (x ($x1)))%expr @ x0)%expr_pat)%option
 | @List_partition A =>
     fun (x : expr A -> UnderLets (expr bool)) (x0 : expr (list A)) =>
-    ((match
-        pattern.type.unify_extracted
-          (((('1%pbtype -> bool) ->
-             (pattern.base.type.list '1) ->
-             (pattern.base.type.list '1 * pattern.base.type.list '1)%pbtype) ->
-            '1%pbtype -> bool) -> (pattern.base.type.list '1))%ptype
-          ((((A -> bool) -> (list A) -> (list A * list A)%etype) -> A -> bool) ->
-           (list A))%ptype
-      with
-      | Datatypes.Some (_, _, (_, (_, _)), (_, _), b)%zrange =>
-          if
-           type.type_beq base.type base.type.type_beq
-             ((((b -> bool) -> (list b) -> (list b * list b)%etype) ->
-               b -> bool) -> (list b))%ptype
-             ((((A -> bool) -> (list A) -> (list A * list A)%etype) ->
-               A -> bool) -> (list A))%ptype
-          then
-           _ <- ident.unify pattern.ident.List_partition List_partition;
-           x' <- base.try_make_transport_cps A b;
-           v <- base.try_make_transport_cps A b;
-           x'0 <- base.try_make_transport_cps b b;
-           v0 <- base.try_make_transport_cps b b;
-           x'1 <- base.try_make_transport_cps b A;
-           x'2 <- base.try_make_transport_cps b A;
-           x'3 <- base.try_make_transport_cps A A;
-           x'4 <- base.try_make_transport_cps A A;
-           fv0 <- (ls <- reflect_list (v0 (v x0));
-                   Datatypes.Some
-                     (Datatypes.list_rect
-                        (fun _ : Datatypes.list (expr b) =>
-                         UnderLets (expr (list b * list b)%etype))
-                        (Base ([], [])%expr_pat)
-                        (fun (x1 : expr b) (_ : Datatypes.list (expr b))
-                           (rec : UnderLets (expr (list b * list b)%etype))
-                         =>
-                         (rec' <-- rec;
-                          fx <-- x'0 (x' x) x1;
-                          Base
-                            (#(prod_rect)%expr @
-                             (λ g d : expr (list b),
-                              (#(bool_rect)%expr @
-                               (λ _ : expr unit,
-                                ($x1 :: $g, $d)%expr_pat) @
-                               (λ _ : expr unit,
-                                ($g, $x1 :: $d)%expr_pat) @ $fx)%expr_pat)%expr @
-                             rec')%expr_pat)%under_lets) ls));
-           Datatypes.Some
-             (fv1 <-- fv0;
-              fv2 <-- do_again (list A * list A) (x'2 (x'1 fv1));
-              Base (x'4 (x'3 fv2)))%under_lets
-          else Datatypes.None
-      | Datatypes.None => Datatypes.None
-      end;;
-      Datatypes.None);;;
+    (match
+       pattern.type.unify_extracted
+         (((('1%pbtype -> bool) ->
+            (pattern.base.type.list '1) ->
+            (pattern.base.type.list '1 * pattern.base.type.list '1)%pbtype) ->
+           '1%pbtype -> bool) -> (pattern.base.type.list '1))%ptype
+         ((((A -> bool) -> (list A) -> (list A * list A)%etype) -> A -> bool) ->
+          (list A))%ptype
+     with
+     | Datatypes.Some (_, _, (_, (_, _)), (_, _), b)%zrange =>
+         if
+          type.type_beq base.type base.type.type_beq
+            ((((b -> bool) -> (list b) -> (list b * list b)%etype) ->
+              b -> bool) -> (list b))%ptype
+            ((((A -> bool) -> (list A) -> (list A * list A)%etype) ->
+              A -> bool) -> (list A))%ptype
+         then
+          _ <- ident.unify pattern.ident.List_partition List_partition;
+          x' <- base.try_make_transport_cps A b;
+          v <- base.try_make_transport_cps A b;
+          x'0 <- base.try_make_transport_cps b b;
+          v0 <- base.try_make_transport_cps b b;
+          x'1 <- base.try_make_transport_cps b A;
+          x'2 <- base.try_make_transport_cps b A;
+          x'3 <- base.try_make_transport_cps A A;
+          x'4 <- base.try_make_transport_cps A A;
+          Datatypes.Some
+            (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                       (@Compile.reflect_ident_iota var) true
+                       (#(list_rect)%expr @
+                        (λ _ : expr unit,
+                         ([], [])%expr_pat)%expr @
+                        (λ (v1 : expr b)(_ : expr (list b))(v3 : expr
+                                                                   (list b *
+                                                                    list b)%etype),
+                         (#(prod_rect)%expr @
+                          (λ v4 v5 : expr (list b),
+                           (#(bool_rect)%expr @
+                            (λ _ : expr unit,
+                             ($v1 :: $v4, $v5)%expr_pat) @
+                            (λ _ : expr unit,
+                             ($v4, $v1 :: $v5)%expr_pat) @
+                            ($(x'0 (x' x)) @ $v1))%expr_pat) @ $v3)%expr_pat)%expr @
+                        ($(v0 (v x0)))%expr)%expr_pat;
+             fv1 <-- do_again (list A * list A) (x'2 (x'1 fv0));
+             Base (x'4 (x'3 fv1)))%under_lets
+         else Datatypes.None
+     | Datatypes.None => Datatypes.None
+     end;;;
      Base
        (#(List_partition)%expr @ (λ x1 : var A,
                                   to_expr (x ($x1)))%expr @ x0)%expr_pat)%option
@@ -1232,18 +1406,16 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
            v2 <- base.try_make_transport_cps b b;
            v3 <- base.try_make_transport_cps b0 A;
            v4 <- base.try_make_transport_cps A A;
-           fv0 <- (ls <- reflect_list (v2 (v0 x1));
-                   Datatypes.Some
-                     (Datatypes.list_rect
-                        (fun _ : Datatypes.list (expr b) =>
-                         UnderLets (expr b0)) (Base (v1 (v x0)))
-                        (fun (x2 : expr b) (_ : Datatypes.list (expr b))
-                           (rec : UnderLets (expr b0)) =>
-                         (rec' <-- rec;
-                          x'4 (x'3 (x'2 (x'1 (x'0 (x' x))))) x2 rec')%under_lets)
-                        ls));
-           Datatypes.Some (fv1 <-- fv0;
-                           Base (v4 (v3 fv1)))%under_lets
+           Datatypes.Some
+             (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                        (@Compile.reflect_ident_iota var) false
+                        (#(eager_list_rect)%expr @
+                         (λ _ : expr unit,
+                          $(v1 (v x0)))%expr @
+                         (λ (v5 : expr b)(_ : expr (list b))(v7 : expr b0),
+                          ($(x'4 (x'3 (x'2 (x'1 (x'0 (x' x)))))) @ $v5 @ $v7)%expr_pat)%expr @
+                         ($(v2 (v0 x1)))%expr)%expr_pat;
+              Base (v4 (v3 fv0)))%under_lets
           else Datatypes.None
       | Datatypes.None => Datatypes.None
       end;;
@@ -1285,16 +1457,29 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
               v0 <- base.try_make_transport_cps b b;
               v1 <- base.try_make_transport_cps b T;
               v2 <- base.try_make_transport_cps T T;
-              fv0 <- (ls <- reflect_list (v0 (v x1));
-                      Datatypes.Some
-                        (retv <---- update_nth (let (x2, _) := xv in x2)
-                                      (fun x2 : UnderLets (expr b) =>
-                                       x3 <-- x2;
-                                       x'2 (x'1 (x'0 (x' x0))) x3)
-                                      (List.map Base ls);
-                         Base (Compilers.reify_list retv))%under_lets);
-              Datatypes.Some (fv1 <-- fv0;
-                              Base (v2 (v1 fv1)))%under_lets
+              Datatypes.Some
+                (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) true
+                           (#(nat_rect_arrow)%expr @
+                            (λ v3 : expr (list b),
+                             (#(list_case)%expr @
+                              (λ _ : expr unit,
+                               []%expr_pat) @
+                              (λ (v4 : expr b)(v5 : expr (list b)),
+                               ($(x'2 (x'1 (x'0 (x' x0)))) @ $v4 :: $v5)%expr_pat) @
+                              $v3)%expr_pat)%expr @
+                            (λ (_ : expr ℕ)(v4 : expr (list b) ->
+                                                 UnderLets (expr (list b)))
+                             (v5 : expr (list b)),
+                             (#(list_case)%expr @
+                              (λ _ : expr unit,
+                               []%expr_pat) @
+                              (λ (v6 : expr b)(v7 : expr (list b)),
+                               ($v6 :: $v4 @ $v7)%expr_pat) @ $v5)%expr_pat)%expr @
+                            (##(let (x2, _) := xv in x2))%expr @
+                            ($(v0 (v x1)))%expr)%expr_pat;
+                 fv1 <-- do_again (list T) (v1 fv0);
+                 Base (v2 fv1))%under_lets
              else Datatypes.None
          | Datatypes.None => Datatypes.None
          end
@@ -1331,13 +1516,13 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                v2 <- base.try_make_transport_cps b0 b0;
                v3 <- base.try_make_transport_cps b0 T;
                v4 <- base.try_make_transport_cps T T;
-               fv0 <- (x2 <- (ls <- reflect_list (v2 (v0 x0));
-                              Datatypes.Some
-                                (nth_default (v1 (v x)) ls
-                                   (let (x2, _) := xv in x2)));
-                       Datatypes.Some (Base x2));
-               Datatypes.Some (fv1 <-- fv0;
-                               Base (v4 (v3 fv1)))%under_lets
+               Datatypes.Some
+                 (fv0 <-- Reify.expr_value_to_rewrite_rule_replacement
+                            (@Compile.reflect_ident_iota var) false
+                            (#(eager_List_nth_default)%expr @
+                             ($(v1 (v x)))%expr @ ($(v2 (v0 x0)))%expr @
+                             (##(let (x2, _) := xv in x2))%expr)%expr_pat;
+                  Base (v4 (v3 fv0)))%under_lets
               else Datatypes.None
           | Datatypes.None => Datatypes.None
           end
@@ -1345,6 +1530,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
       end;;
       Datatypes.None);;;
      Base (#(List_nth_default)%expr @ x @ x0 @ x1)%expr_pat)%option
+| @eager_List_nth_default T =>
+    fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
+    Base (#(eager_List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add =>
     fun x x0 : expr ℤ =>
     ((match x with
@@ -2503,6 +2691,50 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
       end;;
       Datatypes.None);;;
      Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat)%option
+| Z_combine_at_bitwidth =>
+    fun x x0 x1 : expr ℤ =>
+    ((match x with
+      | @expr.Ident _ _ _ t idc =>
+          match x0 with
+          | @expr.Ident _ _ _ t0 idc0 =>
+              match x1 with
+              | @expr.Ident _ _ _ t1 idc1 =>
+                  args <- invert_bind_args idc1 Raw.ident.Literal;
+                  args0 <- invert_bind_args idc0 Raw.ident.Literal;
+                  args1 <- invert_bind_args idc Raw.ident.Literal;
+                  match
+                    pattern.type.unify_extracted ((ℤ -> ℤ) -> ℤ)%ptype
+                      (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
+                  with
+                  | Datatypes.Some (_, _, _)%zrange =>
+                      if
+                       type.type_beq base.type base.type.type_beq
+                         ((ℤ -> ℤ) -> ℤ)%ptype
+                         (((projT1 args1) -> (projT1 args0)) -> (projT1 args))%ptype
+                      then
+                       xv <- ident.unify pattern.ident.Literal
+                               ##(projT2 args1);
+                       xv0 <- ident.unify pattern.ident.Literal
+                                ##(projT2 args0);
+                       xv1 <- ident.unify pattern.ident.Literal
+                                ##(projT2 args);
+                       Datatypes.Some
+                         (Base
+                            (##(Z.combine_at_bitwidth
+                                  (let (x2, _) := xv in x2)
+                                  (let (x2, _) := xv0 in x2)
+                                  (let (x2, _) := xv1 in x2)))%expr)
+                      else Datatypes.None
+                  | Datatypes.None => Datatypes.None
+                  end
+              | _ => Datatypes.None
+              end
+          | _ => Datatypes.None
+          end
+      | _ => Datatypes.None
+      end;;
+      Datatypes.None);;;
+     Base (#(Z_combine_at_bitwidth)%expr @ x @ x0 @ x1)%expr_pat)%option
 | Z_cast range => fun x : expr ℤ => Base (#(Z_cast range)%expr @ x)%expr_pat
 | Z_cast2 range =>
     fun x : expr (ℤ * ℤ)%etype => Base (#(Z_cast2 range)%expr @ x)%expr_pat

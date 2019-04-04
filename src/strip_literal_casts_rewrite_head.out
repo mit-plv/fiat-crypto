@@ -47,6 +47,26 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
         to_expr
           (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
        x1 @ x2)%expr_pat
+| @eager_nat_rect P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr ℕ -> expr P -> UnderLets (expr P)) (x1 : expr ℕ) =>
+    Base
+      (#(eager_nat_rect)%expr @ (λ x2 : var unit,
+                                 to_expr (x ($x2)))%expr @
+       (λ (x2 : var ℕ)(x3 : var P),
+        to_expr (x0 ($x2) ($x3)))%expr @ x1)%expr_pat
+| @eager_nat_rect_arrow P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr ℕ ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr ℕ) (x2 : expr P) =>
+    Base
+      (#(eager_nat_rect_arrow)%expr @ (λ x3 : var P,
+                                       to_expr (x ($x3)))%expr @
+       (λ (x3 : var ℕ)(x4 : var (P -> Q)%ptype)(x5 : var P),
+        to_expr
+          (x0 ($x3) (fun x6 : expr P => Base ($x4 @ x6)%expr_pat) ($x5)))%expr @
+       x1 @ x2)%expr_pat
 | @list_rect A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
@@ -56,6 +76,43 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                             to_expr (x ($x2)))%expr @
        (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
         to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(list_rect_arrow)%expr @ (λ x3 : var P,
+                                  to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
+| @eager_list_rect A P =>
+    fun (x : expr unit -> UnderLets (expr P))
+      (x0 : expr A -> expr (list A) -> expr P -> UnderLets (expr P))
+      (x1 : expr (list A)) =>
+    Base
+      (#(eager_list_rect)%expr @ (λ x2 : var unit,
+                                  to_expr (x ($x2)))%expr @
+       (λ (x2 : var A)(x3 : var (list A))(x4 : var P),
+        to_expr (x0 ($x2) ($x3) ($x4)))%expr @ x1)%expr_pat
+| @eager_list_rect_arrow A P Q =>
+    fun (x : expr P -> UnderLets (expr Q))
+      (x0 : expr A ->
+            expr (list A) ->
+            (expr P -> UnderLets (expr Q)) -> expr P -> UnderLets (expr Q))
+      (x1 : expr (list A)) (x2 : expr P) =>
+    Base
+      (#(eager_list_rect_arrow)%expr @ (λ x3 : var P,
+                                        to_expr (x ($x3)))%expr @
+       (λ (x3 : var A)(x4 : var (list A))(x5 : var (P -> Q)%ptype)(x6 : 
+                                                                   var P),
+        to_expr
+          (x0 ($x3) ($x4) (fun x7 : expr P => Base ($x5 @ x7)%expr_pat) ($x6)))%expr @
+       x1 @ x2)%expr_pat
 | @list_case A P =>
     fun (x : expr unit -> UnderLets (expr P))
       (x0 : expr A -> expr (list A) -> UnderLets (expr P))
@@ -114,6 +171,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
 | @List_nth_default T =>
     fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
     Base (#(List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
+| @eager_List_nth_default T =>
+    fun (x : expr T) (x0 : expr (list T)) (x1 : expr ℕ) =>
+    Base (#(eager_List_nth_default)%expr @ x @ x0 @ x1)%expr_pat
 | Z_add => fun x x0 : expr ℤ => Base (x + x0)%expr
 | Z_mul => fun x x0 : expr ℤ => Base (x * x0)%expr
 | Z_pow => fun x x0 : expr ℤ => Base (#(Z_pow)%expr @ x @ x0)%expr_pat
@@ -165,6 +225,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
     fun x x0 x1 x2 : expr ℤ =>
     Base (#(Z_rshi)%expr @ x @ x0 @ x1 @ x2)%expr_pat
 | Z_cc_m => fun x x0 : expr ℤ => Base (#(Z_cc_m)%expr @ x @ x0)%expr_pat
+| Z_combine_at_bitwidth =>
+    fun x x0 x1 : expr ℤ =>
+    Base (#(Z_combine_at_bitwidth)%expr @ x @ x0 @ x1)%expr_pat
 | Z_cast range =>
     fun x : expr ℤ =>
     (match x with
@@ -180,7 +243,9 @@ match idc in (Compilers.ident t) return (Compile.value' true t) with
                         (ZRange.normalize range)
                      then
                       Datatypes.Some
-                        (Base (##(let (x0, _) := xv in x0))%expr)
+                        (Reify.expr_value_to_rewrite_rule_replacement
+                           (@Compile.reflect_ident_iota var) false
+                           ##(let (x0, _) := xv in x0))
                      else Datatypes.None);
               Datatypes.Some (fv0 <-- fv;
                               Base fv0)%under_lets
