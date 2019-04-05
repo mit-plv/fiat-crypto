@@ -481,7 +481,7 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
         ].
 
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
-  := [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
+  := generalize_cast [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
 
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
