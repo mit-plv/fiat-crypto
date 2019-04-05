@@ -108,3 +108,9 @@ Lemma ex_bool_iff_or P : @ex bool P <-> (or (P true) (P false)).
 Proof.
   split; [ intros [ [] ? ] | intros [?|?]; eexists ]; eauto.
 Qed.
+
+Lemma eqb_true_l x : Bool.eqb x true = x. Proof. now destruct x. Qed.
+Lemma eqb_true_r x : Bool.eqb true x = x. Proof. now destruct x. Qed.
+Lemma eqb_false_l x : Bool.eqb x false = negb x. Proof. now destruct x. Qed.
+Lemma eqb_false_r x : Bool.eqb false x = negb x. Proof. now destruct x. Qed.
+Hint Rewrite eqb_true_l eqb_true_r eqb_false_l eqb_false_r : boolsimplify.
