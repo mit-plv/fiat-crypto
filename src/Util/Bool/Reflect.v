@@ -161,6 +161,7 @@ Proof. exact _. Qed.
 
 (** Disallow infinite loops of reflect_not *)
 Hint Extern 0 (reflect (~?A) _) => eapply (@reflect_not A) : typeclass_instances.
+Hint Extern 0 (reflect _ (negb ?b)) => eapply (@reflect_not _ b) : typeclass_instances.
 
 Global Instance reflect_eq_unit : reflect_rel (@eq unit) (fun _ _ => true) | 10. exact _. Qed.
 Global Instance reflect_eq_bool : reflect_rel (@eq bool) Bool.eqb | 10. exact _. Qed.
