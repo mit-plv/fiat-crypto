@@ -234,11 +234,16 @@ Global Instance reflect_match_pair {A B} {P : A -> B -> Prop} {Pb : A -> B -> bo
   : reflect (let '(a, b) := x in P a b) (let '(a, b) := x in Pb a b) | 1.
 Proof. edestruct (_ : _ * _); assumption. Qed.
 
-Global Instance reflect_if_bool {x : bool} {A B a b} {HA : reflect A a} {HB : reflect B b}
-  : reflect (if x then A else B) (if x then a else b) | 10
+Definition reflect_if_bool {x : bool} {A B a b} {HA : reflect A a} {HB : reflect B b}
+  : reflect (if x then A else B) (if x then a else b)
   := if x return reflect (if x then A else B) (if x then a else b)
      then HA
      else HB.
+
+Hint Extern 1 (reflect _ (match ?x with true => ?a | false => ?b end))
+=> eapply (@reflect_if_bool x _ _ a b) : typeclass_instances.
+Hint Extern 1 (reflect (match ?x with true => ?A | false => ?B end) _)
+=> eapply (@reflect_if_bool x A B) : typeclass_instances.
 
 Global Instance reflect_ex_forall_not : forall T (P:T->Prop) (exPb:bool) {d:reflect (exists b, P b) exPb}, reflect (forall b, ~ P b) (negb exPb).
 Proof.
