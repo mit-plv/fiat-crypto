@@ -977,7 +977,7 @@ Module Compilers.
         Qed.
       End for_interp.
 
-      Section for_interp2.
+      Section for_interp2'.
         Context {base_interp1 base_interp2 : base_type -> Type}
                 {ident_interp1 : forall t, ident t -> type.interp base_interp1 t}
                 {ident_interp2 : forall t, ident t -> type.interp base_interp2 t}.
@@ -994,7 +994,7 @@ Module Compilers.
           rewrite <- List.app_assoc; cbn [List.app].
           eassumption.
         Qed.
-      End for_interp2.
+      End for_interp2'.
 
       Section with_var2_for_interp.
         Context {base_interp : base_type -> Type}
