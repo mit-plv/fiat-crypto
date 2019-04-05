@@ -1083,7 +1083,19 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       Section interp.
         Import defaults.
         Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
-        Local Notation interp := (expr.interp (@ident.gen_interp cast_outside_of_range)).
+        Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
+        Local Notation interp := (expr.interp (@ident_interp)).
+        Local Notation expr_interp_related := (@expr.interp_related _ _ _ (@ident_interp)).
+
+        Lemma reify_list_interp_related {t} ls1 ls2
+              (H : List.Forall2 expr_interp_related ls1 ls2)
+          : expr_interp_related (reify_list (t:=t) ls1) ls2.
+        Proof using Type.
+          cbv [reify_list]; induction H;
+            cbn [list_rect expr_interp_related expr.interp_related_gen type.related ident_interp];
+            repeat esplit; cbv [respectful]; intros; subst; eauto.
+        Qed.
+
         Lemma interp_reify_list {t} ls : interp (reify_list (t:=t) ls) = List.map interp ls.
         Proof.
           cbv [reify_list]; induction ls as [|l ls IHls]; [ reflexivity | ];
@@ -1094,20 +1106,44 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         Lemma interp_reify_option {t} v : interp (reify_option (t:=t) v) = Option.map interp v.
         Proof. destruct v; reflexivity. Qed.
 
+        Lemma smart_Literal_interp_related {t} v
+          : expr.interp_related (@ident_interp) (@ident.smart_Literal _ t v) v.
+        Proof using Type.
+          cbv [expr.interp_related]; induction t;
+            repeat first [ progress cbn [ident.smart_Literal ident_interp expr.interp_related expr.interp_related_gen type.related] in *
+                         | progress cbv [reify_option option_map expr.interp_related]
+                         | break_innermost_match_step
+                         | reflexivity
+                         | esplit
+                         | solve [ eauto ]
+                         | apply reify_list_interp_related
+                         | rewrite Forall2_map_l_iff, Forall2_Forall, Forall_forall; cbv [Proper]; intros ].
+        Qed.
+
         Lemma interp_smart_Literal {t} v : interp (@ident.smart_Literal _ t v) = v.
         Proof.
-          cbv [ident.interp]; induction t; cbn [ident.smart_Literal expr.interp ident.gen_interp];
-            break_innermost_match; cbn [expr.interp ident.gen_interp]; cbv [option_map]; break_innermost_match; cbn; rewrite ?IHt; try reflexivity.
-          { apply f_equal2; auto. }
-          { etransitivity; [ rewrite interp_reify_list, map_map | apply map_id ].
-            apply map_ext; auto. }
+          pose proof (@smart_Literal_interp_related t v) as H.
+          eapply eqv_of_interp_related in H; assumption.
+        Qed.
+
+        Lemma reify_interp_related {t} v
+          : expr_interp_related (GallinaReify.base.reify (t:=t) v) v.
+        Proof using Type.
+          cbv [expr.interp_related]; induction t;
+            repeat first [ progress cbn [GallinaReify.base.reify ident_interp expr.interp_related expr.interp_related_gen type.related] in *
+                         | progress cbv [reify_option option_map expr.interp_related]
+                         | break_innermost_match_step
+                         | reflexivity
+                         | esplit
+                         | solve [ eauto ]
+                         | apply reify_list_interp_related
+                         | rewrite Forall2_map_l_iff, Forall2_Forall, Forall_forall; cbv [Proper]; intros ].
         Qed.
 
         Lemma interp_reify {t} v : interp (GallinaReify.base.reify (t:=t) v) = v.
         Proof.
-          induction t; cbn [GallinaReify.base.reify]; cbv [option_map]; break_innermost_match; cbn; f_equal;
-            rewrite ?interp_reify_list, ?map_map; auto.
-          { etransitivity; [ | apply map_id ]; apply map_ext; auto. }
+          pose proof (@reify_interp_related t v) as H.
+          eapply eqv_of_interp_related in H; assumption.
         Qed.
 
         Lemma interp_reify_as_interp {t} v1 v2
@@ -1116,6 +1152,10 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           induction t as [|s IHs d IHd]; cbn [GallinaReify.reify_as_interp type.related interp]; cbv [respectful]; eauto.
           intro; subst; apply interp_reify.
         Qed.
+
+        Lemma Reify_as_interp_related {t} v
+          : expr_interp_related (GallinaReify.base.Reify_as t v _) v.
+        Proof. apply reify_interp_related. Qed.
 
         Lemma Interp_Reify_as {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (GallinaReify.base.Reify_as t v) = v.
         Proof. apply interp_reify. Qed.

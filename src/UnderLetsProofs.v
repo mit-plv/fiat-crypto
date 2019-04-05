@@ -965,6 +965,16 @@ Module Compilers.
           : @interp_related A B R1 e v
             -> @interp_related A B' R2 e (f v).
         Proof using Type. now apply interp_related_gen_Proper_impl_same_UnderLets. Qed.
+
+        Lemma eqv_of_interp_related {t e v}
+          : interp_related (expr.interp_related (@ident_interp)) e v
+            -> @type.eqv t (expr.interp ident_interp (interp e)) v.
+        Proof using Type.
+          induction e; cbn [interp_related interp_related_gen interp type.related]; intros; destruct_head'_ex; destruct_head'_and; subst.
+          { now apply expr.eqv_of_interp_related. }
+          { repeat match goal with H : _ |- _ => apply H end.
+            now apply expr.eqv_of_interp_related. }
+        Qed.
       End for_interp.
 
       Section for_interp2.
