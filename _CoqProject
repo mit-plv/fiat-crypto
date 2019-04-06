@@ -33,7 +33,9 @@ src/LanguageInversion.v
 src/LanguageWf.v
 src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
+src/PreLanguage.v
 src/Rewriter.v
+src/RewriterFull.v
 src/RewriterInterpProofs1.v
 src/RewriterProofs.v
 src/RewriterRules.v

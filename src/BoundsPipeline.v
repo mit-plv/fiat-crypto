@@ -24,6 +24,7 @@ Require Crypto.Language.
 Require Crypto.UnderLets.
 Require Crypto.AbstractInterpretation.
 Require Crypto.Rewriter.
+Require Crypto.RewriterFull.
 Require Crypto.MiscCompilerPasses.
 Require Crypto.CStringification.
 Require Crypto.LanguageWf.
@@ -46,6 +47,7 @@ Import
   Crypto.UnderLets
   Crypto.AbstractInterpretation
   Crypto.Rewriter
+  Crypto.RewriterFull
   Crypto.MiscCompilerPasses
   Crypto.CStringification.
 
@@ -60,6 +62,7 @@ Import
   UnderLets.Compilers
   AbstractInterpretation.Compilers
   Rewriter.Compilers
+  RewriterFull.Compilers
   MiscCompilerPasses.Compilers
   CStringification.Compilers.
 

@@ -1,33 +1,17 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Lia.
-Require Import Coq.Lists.List.
-Require Import Coq.Classes.Morphisms.
-Require Import Coq.MSets.MSetPositive.
-Require Import Coq.FSets.FMapPositive.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageInversion.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.UnderLetsProofs.
 Require Import Crypto.GENERATEDIdentifiersWithoutTypesProofs.
 Require Import Crypto.Rewriter.
+Require Import Crypto.RewriterFull.
 Require Import Crypto.RewriterWf1.
 Require Import Crypto.RewriterWf2.
 Require Import Crypto.RewriterInterpProofs1.
 Require Import Crypto.RewriterRulesProofs.
 Require Import Crypto.RewriterRulesGood.
 Require Import Crypto.RewriterRulesInterpGood.
-Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Crypto.Util.Tactics.SplitInContext.
-Require Import Crypto.Util.Tactics.SpecializeAllWays.
-Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Util.Tactics.RewriteHyp.
-Require Import Crypto.Util.Tactics.Head.
-Require Import Crypto.Util.Prod.
-Require Import Crypto.Util.ListUtil.
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.CPSNotations.
-Require Import Crypto.Util.HProp.
-Require Import Crypto.Util.Decidable.
 Import Coq.Lists.List ListNotations. Local Open Scope list_scope.
 Local Open Scope Z_scope.
 
@@ -39,6 +23,7 @@ Module Compilers.
   Import UnderLetsProofs.Compilers.
   Import GENERATEDIdentifiersWithoutTypesProofs.Compilers.
   Import Rewriter.Compilers.
+  Import RewriterFull.Compilers.
   Import RewriterWf1.Compilers.
   Import RewriterWf2.Compilers.
   Import RewriterInterpProofs1.Compilers.
@@ -47,131 +32,117 @@ Module Compilers.
   Import expr.Notations.
   Import defaults.
   Import Rewriter.Compilers.RewriteRules.
+  Import RewriterFull.Compilers.RewriteRules.
   Import RewriterWf1.Compilers.RewriteRules.
   Import RewriterWf2.Compilers.RewriteRules.
   Import RewriterInterpProofs1.Compilers.RewriteRules.
   Import RewriterRulesGood.Compilers.RewriteRules.
   Import RewriterRulesInterpGood.Compilers.RewriteRules.
+  Import RewriterWf1.Compilers.RewriteRules.GoalType.
+  Import RewriterWf1.Compilers.RewriteRules.WfTactics.GoalType.
+  Import RewriterWf1.Compilers.RewriteRules.InterpTactics.GoalType.
+  Import RewriterWf1.Compilers.RewriteRules.GoalType.
+  Import RewriterWf1.Compilers.RewriteRules.WfTactics.Tactic.
+  Import RewriterWf1.Compilers.RewriteRules.InterpTactics.Tactic.
 
   Module Import RewriteRules.
+    Module Export Tactics.
+      Definition VerifiedRewriter_of_Rewriter
+                 (R : RewriterT)
+                 (RWf : Wf_GoalT R)
+                 (RInterp : Interp_GoalT R)
+                 (RProofs : PrimitiveHList.hlist
+                              (@snd bool Prop)
+                              (List.skipn (dummy_count (Rewriter_data R)) (rewrite_rules_specs (Rewriter_data R))))
+      : VerifiedRewriter.
+      Proof.
+        simple refine
+               (let HWf := _ in
+                let HInterp_gen := _ in
+                @Build_VerifiedRewriter R RWf RInterp HWf HInterp_gen (HInterp_gen _));
+          [ | clear HWf ]; intros.
+        all: abstract (
+                 rewrite Rewrite_eq; cbv [Make.Rewrite]; rewrite rewrite_head_eq, all_rewrite_rules_eq;
+                 first [ apply Compile.Wf_Rewrite; [ | assumption ];
+                         let wf_do_again := fresh "wf_do_again" in
+                         (intros ? ? ? ? wf_do_again ? ?);
+                         eapply @Compile.wf_assemble_identifier_rewriters;
+                         eauto using
+                               pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct
+                           with nocore;
+                         try reflexivity
+                       | eapply Compile.InterpRewrite; [ | assumption ];
+                         intros; eapply Compile.interp_assemble_identifier_rewriters with (pident_to_typed:=@pattern.ident.to_typed);
+                         eauto using
+                               pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct, pattern.ident.unify_to_typed,
+                         @ident.gen_interp_Proper, eq_refl
+                           with nocore ]).
+      Defined.
+    End Tactics.
 
-    Local Ltac start_Wf_or_interp_proof Rewrite_folded :=
-      let Rewrite := lazymatch goal with
-                     | [ |- Wf ?e ] => head e
-                     | [ |- expr.Interp _ ?e == _ ] => head e
-                     end in
-      progress change Rewrite with Rewrite_folded; cbv [Rewrite_folded];
-      let data := lazymatch goal with |- context[Make.Rewrite ?data] => data end in
-      let data_head := head data in
-      cbv [Make.Rewrite];
-      rewrite (rewrite_head_eq data);
-      let lem := fresh in
-      pose proof (all_rewrite_rules_eq data) as lem;
-      cbv [data_head rewrite_head0 default_fuel all_rewrite_rules rewrite_rules];
-      unfold data_head at 1 in lem;
-      cbv [all_rewrite_rules] in lem;
-      let h := lazymatch goal with |- context[Compile.Rewrite ?rewrite_head] => head rewrite_head end in
-      cbv [h]; rewrite lem; clear lem.
-    Local Ltac start_Wf_proof Rewrite_folded :=
-      start_Wf_or_interp_proof Rewrite_folded;
-      apply Compile.Wf_Rewrite; [ | assumption ];
-      let wf_do_again := fresh "wf_do_again" in
-      (intros ? ? ? ? wf_do_again ? ?);
-      eapply @Compile.wf_assemble_identifier_rewriters;
-      eauto using
-            pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct
-        with nocore;
-      try reflexivity.
-    Local Ltac start_Interp_proof Rewrite_folded :=
-      start_Wf_or_interp_proof Rewrite_folded;
-      eapply Compile.InterpRewrite; [ | assumption ];
-      intros; eapply Compile.interp_assemble_identifier_rewriters with (pident_to_typed:=@pattern.ident.to_typed);
-      eauto using
-            pattern.Raw.ident.to_typed_invert_bind_args, pattern.ident.eta_ident_cps_correct, pattern.ident.unify_to_typed,
-      @ident.gen_interp_Proper, eq_refl
-        with nocore.
+    Definition VerifiedRewriterNBE : VerifiedRewriter
+      := @VerifiedRewriter_of_Rewriter RewriterNBE RewriterRulesNBEWf RewriterRulesNBEInterp nbe_rewrite_rules_proofs.
+    Definition VerifiedRewriterArith (max_const_val : Z) : VerifiedRewriter
+      := @VerifiedRewriter_of_Rewriter (RewriterArith max_const_val) (RewriterRulesArithWf max_const_val) (RewriterRulesArithInterp max_const_val) (arith_rewrite_rules_proofs max_const_val).
+    Definition VerifiedRewriterArithWithCasts : VerifiedRewriter
+      := @VerifiedRewriter_of_Rewriter RewriterArithWithCasts RewriterRulesArithWithCastsWf RewriterRulesArithWithCastsInterp arith_with_casts_rewrite_rules_proofs.
+    Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter
+      := @VerifiedRewriter_of_Rewriter RewriterStripLiteralCasts RewriterRulesStripLiteralCastsWf RewriterRulesStripLiteralCastsInterp strip_literal_casts_rewrite_rules_proofs.
+    Definition VerifiedRewriterToFancy (invert_low invert_high : Z -> Z -> option Z)
+               (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+      : VerifiedRewriter
+      := @VerifiedRewriter_of_Rewriter (RewriterToFancy invert_low invert_high) (RewriterRulesToFancyWf invert_low invert_high Hlow Hhigh) (RewriterRulesToFancyInterp invert_low invert_high Hlow Hhigh) fancy_rewrite_rules_proofs.
+    Definition VerifiedRewriterToFancyWithCasts (invert_low invert_high : Z -> Z -> option Z)
+               (value_range flag_range : ZRange.zrange)
+               (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
+               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
+      : VerifiedRewriter
+      := @VerifiedRewriter_of_Rewriter (RewriterToFancyWithCasts invert_low invert_high value_range flag_range) (RewriterRulesToFancyWithCastsWf invert_low invert_high value_range flag_range Hlow Hhigh) (RewriterRulesToFancyWithCastsInterp invert_low invert_high value_range flag_range Hlow Hhigh) (fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh).
 
     Lemma Wf_RewriteNBE {t} e (Hwf : Wf e) : Wf (@RewriteNBE t e).
-    Proof.
-      start_Wf_proof RewriteNBE_folded.
-      apply nbe_rewrite_rules_good.
-    Qed.
+    Proof. now apply VerifiedRewriterNBE. Qed.
     Lemma Wf_RewriteArith (max_const_val : Z) {t} e (Hwf : Wf e) : Wf (@RewriteArith max_const_val t e).
-    Proof.
-      start_Wf_proof RewriteArith_folded.
-      apply arith_rewrite_rules_good.
-    Qed.
+    Proof. now apply VerifiedRewriterArith. Qed.
     Lemma Wf_RewriteArithWithCasts {t} e (Hwf : Wf e) : Wf (@RewriteArithWithCasts t e).
-    Proof.
-      start_Wf_proof RewriteArithWithCasts_folded.
-      apply arith_with_casts_rewrite_rules_good.
-    Qed.
+    Proof. now apply VerifiedRewriterArithWithCasts. Qed.
     Lemma Wf_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : Wf (@RewriteStripLiteralCasts t e).
-    Proof.
-      start_Wf_proof RewriteStripLiteralCasts_folded.
-      apply strip_literal_casts_rewrite_rules_good.
-    Qed.
+    Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
     Lemma Wf_RewriteToFancy (invert_low invert_high : Z -> Z -> option Z)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
             {t} e (Hwf : Wf e) : Wf (@RewriteToFancy invert_low invert_high t e).
-    Proof.
-      start_Wf_proof RewriteToFancy_folded.
-      apply fancy_rewrite_rules_good; assumption.
-    Qed.
-
+    Proof. unshelve eapply VerifiedRewriterToFancy; multimatch goal with H : _ |- _ => refine H end. Qed.
     Lemma Wf_RewriteToFancyWithCasts (invert_low invert_high : Z -> Z -> option Z)
             (value_range flag_range : ZRange.zrange)
             (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
             (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
             {t} e (Hwf : Wf e) : Wf (@RewriteToFancyWithCasts invert_low invert_high value_range flag_range t e).
-    Proof.
-      start_Wf_proof RewriteToFancyWithCasts_folded.
-      apply fancy_with_casts_rewrite_rules_good; assumption.
-    Qed.
+    Proof. now unshelve eapply VerifiedRewriterToFancyWithCasts. Qed.
 
     Lemma Interp_gen_RewriteNBE {cast_outside_of_range t} e (Hwf : Wf e)
       : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteNBE t e)
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
-    Proof.
-      start_Interp_proof RewriteNBE_folded.
-      apply nbe_rewrite_rules_interp_good, nbe_rewrite_rules_proofs.
-    Qed.
+    Proof. now apply VerifiedRewriterNBE. Qed.
     Lemma Interp_gen_RewriteArith {cast_outside_of_range} (max_const_val : Z) {t} e (Hwf : Wf e)
       : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteArith max_const_val t e)
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
-    Proof.
-      start_Interp_proof RewriteArith_folded.
-      apply arith_rewrite_rules_interp_good, arith_rewrite_rules_proofs.
-    Qed.
-
+    Proof. now apply VerifiedRewriterArith. Qed.
     Lemma Interp_gen_RewriteArithWithCasts {cast_outside_of_range} {t} e (Hwf : Wf e)
       : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteArithWithCasts t e)
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
-    Proof.
-      start_Interp_proof RewriteArithWithCasts_folded.
-      apply arith_with_casts_rewrite_rules_interp_good, arith_with_casts_rewrite_rules_proofs.
-    Qed.
-
+    Proof. now apply VerifiedRewriterArithWithCasts. Qed.
     Lemma Interp_gen_RewriteStripLiteralCasts {cast_outside_of_range} {t} e (Hwf : Wf e)
       : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteStripLiteralCasts t e)
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
-    Proof.
-      start_Interp_proof RewriteStripLiteralCasts_folded.
-      apply strip_literal_casts_rewrite_rules_interp_good, strip_literal_casts_rewrite_rules_proofs.
-    Qed.
-
+    Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
     Lemma Interp_gen_RewriteToFancy {cast_outside_of_range} (invert_low invert_high : Z -> Z -> option Z)
           (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
           (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2))
           {t} e (Hwf : Wf e)
       : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancy invert_low invert_high t e)
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
-    Proof.
-      start_Interp_proof RewriteToFancy_folded.
-      apply fancy_rewrite_rules_interp_good; try assumption; apply fancy_rewrite_rules_proofs; assumption.
-    Qed.
-
+    Proof. unshelve eapply VerifiedRewriterToFancy; multimatch goal with H : _ |- _ => refine H end. Qed.
     Lemma Interp_gen_RewriteToFancyWithCasts {cast_outside_of_range} (invert_low invert_high : Z -> Z -> option Z)
           (value_range flag_range : ZRange.zrange)
           (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
@@ -179,10 +150,7 @@ Module Compilers.
           {t} e (Hwf : Wf e)
       : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancyWithCasts invert_low invert_high value_range flag_range t e)
         == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
-    Proof.
-      start_Interp_proof RewriteToFancyWithCasts_folded.
-      apply fancy_with_casts_rewrite_rules_interp_good; try assumption; apply fancy_with_casts_rewrite_rules_proofs; assumption.
-    Qed.
+    Proof. now unshelve eapply VerifiedRewriterToFancyWithCasts. Qed.
 
     Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : Interp (@RewriteNBE t e) == Interp e.
     Proof. apply Interp_gen_RewriteNBE; assumption. Qed.

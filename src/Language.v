@@ -3,6 +3,7 @@ Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
+Require Import Crypto.PreLanguage.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
@@ -18,8 +19,10 @@ Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
+Export PreLanguage.
 
 Module Compilers.
+  Export PreLanguage.
   Local Set Boolean Equality Schemes.
   Local Set Decidable Equality Schemes.
   Module Reify.
@@ -1012,27 +1015,9 @@ Module Compilers.
       Section gen.
         Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
 
-        Definition is_more_pos_than_neg (r : zrange) (v : BinInt.Z) : bool
-          := ((Z.abs (lower r) <? Z.abs (upper r)) (* if more of the range is above 0 than below 0 *)
-              || ((lower r =? upper r) && (0 <=? lower r))
-              || ((Z.abs (lower r) =? Z.abs (upper r)) && (0 <=? v))).
-
-        (** We ensure that [ident.cast] is symmetric under [Z.opp], as
-            this makes some rewrite rules much, much easier to
-            prove. *)
-        Let cast_outside_of_range' (r : zrange) (v : BinInt.Z) : BinInt.Z
-          := ((cast_outside_of_range r v - lower r) mod (upper r - lower r + 1)) + lower r.
-
-        Definition cast (r : zrange) (x : BinInt.Z)
-          := let r := ZRange.normalize r in
-             if (lower r <=? x) && (x <=? upper r)
-             then x
-             else if is_more_pos_than_neg r x
-                  then cast_outside_of_range' r x
-                  else -cast_outside_of_range' (-r) (-x).
-        Definition cast2 (r : zrange * zrange) (x : BinInt.Z * BinInt.Z)
-          := (cast (Datatypes.fst r) (Datatypes.fst x),
-              cast (Datatypes.snd r) (Datatypes.snd x)).
+        Local Notation is_more_pos_than_neg := ident.is_more_pos_than_neg.
+        Local Notation cast := (ident.cast cast_outside_of_range).
+        Local Notation cast2 := (ident.cast2 cast_outside_of_range).
 
         Local Notation wordmax log2wordmax := (2 ^ log2wordmax).
         Local Notation half_bits log2wordmax := (log2wordmax / 2).
@@ -1153,39 +1138,20 @@ Module Compilers.
                => fancy.interp (invert_Some (to_fancy idc))
              end.
       End gen.
-
-      Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
-      Proof. exact v. Qed.
     End with_base.
     Notation Some := option_Some.
     Notation None := option_None.
 
     (** Interpret identifiers where [Z_cast] is an opaque identity
         function when the value is not inside the range *)
-    Notation interp := (@gen_interp cast_outside_of_range).
+    Notation interp := (@gen_interp ident.cast_outside_of_range).
     Notation LiteralUnit := (@Literal base.type.unit).
     Notation LiteralZ := (@Literal base.type.Z).
     Notation LiteralBool := (@Literal base.type.bool).
     Notation LiteralNat := (@Literal base.type.nat).
     Notation LiteralZRange := (@Literal base.type.zrange).
-    Definition literal {T} (v : T) := v.
-    Definition eagerly {T} (v : T) := v.
-    Definition gets_inlined (real_val : bool) {T} (v : T) : bool := real_val.
 
     (** TODO: MOVE ME? *)
-    Module Thunked.
-      Definition bool_rect P (t f : Datatypes.unit -> P) (b : bool) : P
-        := Datatypes.bool_rect (fun _ => P) (t tt) (f tt) b.
-      Definition list_rect {A} P (N : Datatypes.unit -> P) (C : A -> list A -> P -> P) (ls : list A) : P
-        := Datatypes.list_rect (fun _ => P) (N tt) C ls.
-      Definition list_case {A} P (N : Datatypes.unit -> P) (C : A -> list A -> P) (ls : list A) : P
-        := ListUtil.list_case (fun _ => P) (N tt) C ls.
-      Definition nat_rect P (O_case : unit -> P) (S_case : nat -> P -> P) (n : nat) : P
-        := Datatypes.nat_rect (fun _ => P) (O_case tt) S_case n.
-      Definition option_rect {A} P (S_case : A -> P) (N_case : unit -> P) (o : option A) : P
-        := Datatypes.option_rect (fun _ => P) S_case (N_case tt) o.
-    End Thunked.
-
     Ltac require_primitive_const term :=
       lazymatch term with
       | S ?n => require_primitive_const n
@@ -1203,7 +1169,7 @@ Module Compilers.
       | Datatypes.None => idtac
       | ZRange.Build_zrange ?x ?y
         => require_primitive_const x; require_primitive_const y
-      | literal ?x => idtac
+      | ident.literal ?x => idtac
       | ?term => fail 0 "Not a known const:" term
       end.
     Ltac is_primitive_const term :=
@@ -1259,20 +1225,20 @@ Module Compilers.
              then_tac (@ident.pair rA rB)
         | @Datatypes.bool_rect ?T0 ?Ptrue ?Pfalse
           => lazymatch (eval cbv beta in T0) with
-            | fun _ => ?T => reify_rec (@Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
+            | fun _ => ?T => reify_rec (@ident.Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
             | T0 => else_tac ()
             | ?T' => reify_rec (@Datatypes.bool_rect T' Ptrue Pfalse)
             end
-        | @Thunked.bool_rect ?T
+        | @ident.Thunked.bool_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.bool_rect rT)
         | @Datatypes.option_rect ?A ?T0 ?PSome ?PNone
           => lazymatch (eval cbv beta in T0) with
-             | fun _ => ?T => reify_rec (@Thunked.option_rect A T PSome (fun _ : Datatypes.unit => PNone))
+             | fun _ => ?T => reify_rec (@ident.Thunked.option_rect A T PSome (fun _ : Datatypes.unit => PNone))
              | T0 => else_tac ()
              | ?T' => reify_rec (@Datatypes.option_rect A T' PSome PNone)
              end
-        | @Thunked.option_rect ?A ?T
+        | @ident.Thunked.option_rect ?A ?T
           => let rA := base.reify A in
              let rT := base.reify T in
              then_tac (@ident.option_rect rA rT)
@@ -1297,7 +1263,7 @@ Module Compilers.
         | @Datatypes.nat_rect ?T0 ?P0
           => lazymatch (eval cbv beta in T0) with
              | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (@Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+             | fun _ => ?T => reify_rec (@ident.Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
              | T0 => else_tac ()
              | ?T' => reify_rec (@Datatypes.nat_rect T' P0)
              end
@@ -1310,32 +1276,32 @@ Module Compilers.
              | T0 => else_tac ()
              | ?T' => reify_rec (@Datatypes.nat_rect T')
              end
-        | @Thunked.nat_rect ?T
+        | @ident.Thunked.nat_rect ?T
           => let rT := base.reify T in
              then_tac (@ident.nat_rect rT)
-        | eagerly (@Datatypes.nat_rect) ?T0 ?P0
+        | ident.eagerly (@Datatypes.nat_rect) ?T0 ?P0
           => lazymatch (eval cbv beta in T0) with
              | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (eagerly (@Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
+             | fun _ => ?T => reify_rec (ident.eagerly (@ident.Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
              | T0 => else_tac ()
-             | ?T' => reify_rec (eagerly (@Datatypes.nat_rect) T' P0)
+             | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T' P0)
              end
-        | eagerly (@Datatypes.nat_rect) ?T0
+        | ident.eagerly (@Datatypes.nat_rect) ?T0
           => lazymatch (eval cbv beta in T0) with
              | (fun _ => ?P -> ?Q)
                => let rP := base.reify P in
                   let rQ := base.reify Q in
                   then_tac (@ident.eager_nat_rect_arrow rP rQ)
              | T0 => else_tac ()
-             | ?T' => reify_rec (eagerly (@Datatypes.nat_rect) T')
+             | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T')
             end
-        | eagerly (@Thunked.nat_rect) ?T
+        | ident.eagerly (@ident.Thunked.nat_rect) ?T
           => let rT := base.reify T in
              then_tac (@ident.eager_nat_rect rT)
         | @Datatypes.list_rect ?A ?T0 ?Pnil
           => lazymatch (eval cbv beta in T0) with
              | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (@Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
+             | fun _ => ?T => reify_rec (@ident.Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
              | T0 => else_tac ()
              | ?T' => reify_rec (@Datatypes.list_rect A T' Pnil)
              end
@@ -1349,18 +1315,18 @@ Module Compilers.
              | T0 => else_tac ()
              | ?T' => reify_rec (@Datatypes.list_rect A T')
              end
-        | @Thunked.list_rect ?A ?T
+        | @ident.Thunked.list_rect ?A ?T
           => let rA := base.reify A in
              let rT := base.reify T in
              then_tac (@ident.list_rect rA rT)
-        | eagerly (@Datatypes.list_rect) ?A ?T0 ?Pnil
+        | ident.eagerly (@Datatypes.list_rect) ?A ?T0 ?Pnil
           => lazymatch (eval cbv beta in T0) with
              | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (eagerly (@Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
+             | fun _ => ?T => reify_rec (ident.eagerly (@ident.Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
              | T0 => else_tac ()
-             | ?T' => reify_rec (eagerly (@Datatypes.list_rect) A T' Pnil)
+             | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T' Pnil)
              end
-        | eagerly (@Datatypes.list_rect) ?A ?T0
+        | ident.eagerly (@Datatypes.list_rect) ?A ?T0
           => lazymatch (eval cbv beta in T0) with
              | (fun _ => ?P -> ?Q)
                => let rA := base.reify A in
@@ -1368,19 +1334,19 @@ Module Compilers.
                   let rQ := base.reify Q in
                   then_tac (@ident.eager_list_rect_arrow rA rP rQ)
              | T0 => else_tac ()
-             | ?T' => reify_rec (eagerly (@Datatypes.list_rect) A T')
+             | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T')
              end
-        | eagerly (@Thunked.list_rect) ?A ?T
+        | ident.eagerly (@ident.Thunked.list_rect) ?A ?T
           => let rA := base.reify A in
              let rT := base.reify T in
              then_tac (@ident.eager_list_rect rA rT)
         | @ListUtil.list_case ?A ?T0 ?Pnil
           => lazymatch (eval cbv beta in T0) with
-            | fun _ => ?T => reify_rec (@Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
+            | fun _ => ?T => reify_rec (@ident.Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
             | T0 => else_tac ()
             | ?T' => reify_rec (@ListUtil.list_case A T' Pnil)
             end
-        | @Thunked.list_case ?A ?T
+        | @ident.Thunked.list_case ?A ?T
           => let rA := base.reify A in
              let rT := base.reify T in
              then_tac (@ident.list_case rA rT)
@@ -1479,9 +1445,9 @@ Module Compilers.
           => let rA := base.reify A in
              then_tac (@ident.None rA)
         | ZRange.Build_zrange => then_tac ident.Build_zrange
-        | eagerly (?f ?x) => reify_rec (eagerly f x)
+        | ident.eagerly (?f ?x) => reify_rec (ident.eagerly f x)
         | fancy.interp ?idc
-          => let ridc := (eval cbv [to_fancy] in (to_fancy idc)) in
+          => let ridc := (eval cbv [of_fancy] in (of_fancy idc)) in
              then_tac ridc
         | @gen_interp _ _ ?idc => then_tac idc
         | _ => else_tac ()
@@ -2047,4 +2013,4 @@ Module Compilers.
       := FromFlat (to_flat e).
   End GeneralizeVar.
 End Compilers.
-Global Opaque Compilers.ident.cast. (* This should never be unfolded except in [LanguageWf] *)
+Global Opaque ident.cast. (* This should never be unfolded except in [LanguageWf] *)
