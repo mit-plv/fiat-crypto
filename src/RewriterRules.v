@@ -6,7 +6,7 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
-Require Import Crypto.Language.
+Require Import Crypto.PreLanguage.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
@@ -16,8 +16,6 @@ Local Definition myapp {A} := Eval cbv in @List.app A.
 Local Definition myflatten {A} := Eval cbv in List.fold_right myapp (@nil A).
 Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
-
-Import Language.Compilers.
 
 Local Notation "' x" := (ident.literal x).
 Local Notation cstZ := (ident.cast ident.cast_outside_of_range).
@@ -76,7 +74,10 @@ Local Ltac generalize_cast' force_progress term :=
        | _ => default ()
        end
   end.
-Local Ltac generalize_cast term := generalize_cast' false term.
+Local Ltac early_unfold_in term := term.
+Local Ltac generalize_cast term :=
+  let term := early_unfold_in term in
+  generalize_cast' false term.
 
 (* Play tricks/games with [match] to get [term] interpreted as a constr rather than an ident when it's not closed, to get better error messages *)
 Local Notation generalize_cast term
@@ -485,6 +486,12 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
 
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
   := generalize_cast [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
+
+(** FIXME Don't use [ident.interp] for the fancy identifier rewrite rules *)
+Require Import Crypto.Language.
+Import Compilers.
+
+Ltac early_unfold_in term ::= (eval cbv [ident.interp ident.to_fancy Option.invert_Some] in term).
 
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
