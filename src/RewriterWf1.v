@@ -3716,16 +3716,14 @@ Module Compilers.
     Module GoalType.
       Record VerifiedRewriter :=
         {
-          Rewriter : RewriterT;
-          RewriterRulesWf : WfTactics.GoalType.Wf_GoalT Rewriter;
-          RewriterRulesInterp : InterpTactics.GoalType.Interp_GoalT Rewriter;
-          Wf_Rewrite : forall {t} e (Hwf : Wf e), Wf (@Rewrite Rewriter t e);
+          Rewrite : forall {t} (e : expr.Expr (ident:=ident) t), expr.Expr (ident:=ident) t;
+          Wf_Rewrite : forall {t} e (Hwf : Wf e), Wf (@Rewrite t e);
           Interp_gen_Rewrite
           : forall {cast_outside_of_range t} e (Hwf : Wf e),
-              expr.Interp (@ident.gen_interp cast_outside_of_range) (@Rewrite Rewriter t e)
+              expr.Interp (@ident.gen_interp cast_outside_of_range) (@Rewrite t e)
               == expr.Interp (@ident.gen_interp cast_outside_of_range) e;
           Interp_Rewrite
-          : forall {t} e (Hwf : Wf e), Interp (@Rewrite Rewriter t e) == Interp e
+          : forall {t} e (Hwf : Wf e), Interp (@Rewrite t e) == Interp e
         }.
     End GoalType.
   End RewriteRules.
