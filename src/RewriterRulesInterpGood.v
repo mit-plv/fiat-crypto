@@ -49,6 +49,26 @@ Module Compilers.
       Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
       Local Notation rewrite_rules_interp_goodT := (@Compile.rewrite_rules_interp_goodT ident pattern.ident (@pattern.ident.arg_types) (@pattern.ident.to_typed) (@ident_interp)).
 
+      (** Coq >= 8.9 is much better at [eapply] than Coq <= Coq 8.8 *)
+      Local Ltac cbv_type_for_Coq88 T :=
+        lazymatch eval hnf in T with
+        | @eq ?T ?A ?B => let A' := (eval cbv [ident.Thunked.bool_rect ident.Thunked.list_case ident.Thunked.list_rect ident.Thunked.nat_rect ident.Thunked.option_rect] in A) in
+                          constr:(@eq T A' B)
+        | forall x : ?A, ?P
+          => let P' := fresh in
+             constr:(forall x : A,
+                        match P return Prop with
+                        | P'
+                          => ltac:(let v := cbv_type_for_Coq88 P' in
+                                   exact v)
+                        end)
+        end.
+      Local Ltac cbv_for_Coq88_in H :=
+        cbv [ident.Thunked.bool_rect ident.Thunked.list_case ident.Thunked.list_rect ident.Thunked.nat_rect ident.Thunked.option_rect];
+        let T := type of H in
+        let T := cbv_type_for_Coq88 T in
+        change T in H.
+
       Local Ltac start_interp_good :=
         cbv [List.skipn] in *;
         lazymatch goal with
@@ -105,6 +125,7 @@ Module Compilers.
             => let v' := open_constr:(_) in
                replace v with v';
                [ | symmetry;
+                   cbv_for_Coq88_in H;
                    unshelve eapply H; shelve_unifiable;
                    try eassumption;
                    try (repeat apply conj; assumption);
