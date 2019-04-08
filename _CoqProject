@@ -35,12 +35,10 @@ src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
 src/PreLanguage.v
 src/Rewriter.v
-src/RewriterFull.v
 src/RewriterInterpProofs1.v
 src/RewriterProofs.v
+src/RewriterProofsTactics.v
 src/RewriterRules.v
-src/RewriterRulesGood.v
-src/RewriterRulesInterpGood.v
 src/RewriterRulesProofs.v
 src/RewriterWf1.v
 src/RewriterWf2.v
@@ -121,6 +119,12 @@ src/PushButtonSynthesis/UnsaturatedSolinas.v
 src/PushButtonSynthesis/UnsaturatedSolinasReificationCache.v
 src/PushButtonSynthesis/WordByWordMontgomery.v
 src/PushButtonSynthesis/WordByWordMontgomeryReificationCache.v
+src/Rewriter/Arith.v
+src/Rewriter/ArithWithCasts.v
+src/Rewriter/NBE.v
+src/Rewriter/StripLiteralCasts.v
+src/Rewriter/ToFancy.v
+src/Rewriter/ToFancyWithCasts.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/Ed25519.v
 src/Spec/EdDSA.v
