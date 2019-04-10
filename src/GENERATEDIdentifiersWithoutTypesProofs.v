@@ -84,7 +84,8 @@ Module Compilers.
         Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.Raw.ident.
         Import Datatypes. (* for Some, None, option *)
 
-        Global Instance eq_ident_Decidable : DecidableRel (@eq ident) := ident_eq_dec.
+        Global Instance eq_ident_Decidable : DecidableRel (@eq ident)
+          := dec_rel_of_bool_dec_rel ident_beq ident_bl ident_lb.
 
         Lemma to_typed_invert_bind_args_gen t idc p f
           : @invert_bind_args t idc p = Some f
@@ -116,30 +117,45 @@ Module Compilers.
           exact (proj2_sig (@to_typed_invert_bind_args_gen t idc p f pf)).
         Defined.
 
+        Lemma invert_bind_args_to_typed p f
+          : invert_bind_args (to_typed p f) p = Some f.
+        Proof.
+          destruct p; cbn in *;
+            repeat first [ reflexivity
+                         | progress destruct_head'_unit
+                         | progress destruct_head'_prod
+                         | progress destruct_head' (@PrimitiveSigma.Primitive.sigT) ].
+        Qed.
+
+        Lemma is_simple_correct0 p
+          : is_simple p = true
+            <-> (forall f1 f2, type_of p f1 = type_of p f2).
+        Proof.
+          destruct p; cbn; split; intro H;
+            try solve [ reflexivity | exfalso; discriminate ].
+          all: repeat first [ match goal with
+                              | [ H : nat -> ?A |- _ ] => specialize (H O)
+                              | [ H : unit -> ?A |- _ ] => specialize (H tt)
+                              | [ H : forall x y : Datatypes.prod _ _, _ |- _ ] => specialize (fun x1 y1 x2 y2 => H (Datatypes.pair x1 x2) (Datatypes.pair y1 y2)); cbn in H
+                              | [ H : forall x y : PrimitiveSigma.Primitive.sigT ?P, _ |- _ ] => specialize (fun x1 y1 x2 y2 => H (PrimitiveSigma.Primitive.existT P x1 x2) (PrimitiveSigma.Primitive.existT P y1 y2)); cbn in H
+                              | [ H : forall x y : Compilers.base.type, _ |- _ ] => specialize (fun x y => H (Compilers.base.type.type_base x) (Compilers.base.type.type_base y))
+                              | [ H : forall x y : Compilers.base.type.base, _ |- _ ] => specialize (H Compilers.base.type.unit Compilers.base.type.nat); try congruence; cbn in H
+                              end
+                            | congruence ].
+        Qed.
+
         Lemma is_simple_correct p
           : is_simple p = true
             <-> (forall t1 idc1 t2 idc2, @invert_bind_args t1 idc1 p <> None -> @invert_bind_args t2 idc2 p <> None -> t1 = t2).
         Proof.
-          split; intro H;
-            [ | specialize (fun f1 f2 => H _ (@to_typed p f1) _ (@to_typed p f2)) ];
-            destruct p; cbn in *; try solve [ reflexivity | exfalso; discriminate ];
-              repeat first [ progress intros *
-                           | match goal with
-                             | [ |- ?x = ?x ] => reflexivity
-                             | [ |- ?x = ?x -> _ ] => intros _
-                             | [ |- None <> None -> ?P ] => exact (@quick_invert_neq_option _ P None None)
-                             | [ |- Some _ <> None -> _ ] => intros _
-                             | [ |- None <> Some _ -> _ ] => intros _
-                             | [ H : forall x y, Some _ <> None -> _ |- _ ] => specialize (fun x y => H x y Some_neq_None)
-                             | [ H : nat -> ?A |- _ ] => specialize (H O)
-                             | [ H : unit -> ?A |- _ ] => specialize (H tt)
-                             | [ H : forall x y : Datatypes.prod _ _, _ |- _ ] => specialize (fun x1 y1 x2 y2 => H (Datatypes.pair x1 x2) (Datatypes.pair y1 y2)); cbn in H
-                             | [ H : forall x y : PrimitiveSigma.Primitive.sigT ?P, _ |- _ ] => specialize (fun x1 y1 x2 y2 => H (PrimitiveSigma.Primitive.existT P x1 x2) (PrimitiveSigma.Primitive.existT P y1 y2)); cbn in H
-                             | [ H : forall x y : Compilers.base.type, _ |- _ ] => specialize (fun x y => H (Compilers.base.type.type_base x) (Compilers.base.type.type_base y))
-                             | [ H : forall x y : Compilers.base.type.base, _ |- _ ] => specialize (H Compilers.base.type.unit Compilers.base.type.nat); try congruence; cbn in H
-                             end
-                           | break_innermost_match_step
-                           | congruence ].
+          rewrite is_simple_correct0; split; intro H.
+          { intros t1 idc1 t2 idc2 H1 H2.
+            destruct (invert_bind_args idc1 p) eqn:?, (invert_bind_args idc2 p) eqn:?; try congruence.
+            erewrite (type_of_invert_bind_args t1), (type_of_invert_bind_args t2) by eassumption.
+            apply H. }
+          { intros f1 f2.
+            apply (H _ (to_typed p f1) _ (to_typed p f2));
+              rewrite invert_bind_args_to_typed; congruence. }
         Qed.
       End ident.
     End Raw.
@@ -151,13 +167,6 @@ Module Compilers.
       Lemma eta_ident_cps_correct T t idc f
         : @eta_ident_cps T t idc f = f t idc.
       Proof. cbv [eta_ident_cps]; break_innermost_match; reflexivity. Qed.
-
-(*
-      Lemma is_simple_strip_types_iff_type_vars_nil {t} idc
-        : Raw.ident.is_simple (@strip_types t idc) = true
-          <-> type_vars idc = List.nil.
-      Proof. destruct idc; cbn; intuition congruence. Qed.
-*)
 
       Lemma unify_to_typed {t t' pidc idc}
         : forall v,
@@ -179,30 +188,6 @@ Module Compilers.
         : unify (@of_typed_ident t idc) idc <> None.
       Proof.
         destruct idc; cbn; break_innermost_match; exact Some_neq_None.
-      Qed.
-
-      Lemma to_typed_of_typed_ident {t idc}
-        : forall v,
-          unify (@of_typed_ident t idc) idc = Some v
-          -> forall evm pf,
-            (rew [Compilers.ident] pf in to_typed (@of_typed_ident t idc) evm v)
-            = idc.
-      Proof.
-        destruct idc.
-        all: repeat first [ break_innermost_match_step
-                          | break_innermost_match_hyps_step
-                          | progress intros
-                          | reflexivity
-                          | progress subst
-                          | progress inversion_option
-                          | progress eliminate_hprop_eq
-                          | progress fold (@base.subst_default)
-                          | progress cbn in *
-                          | lazymatch goal with
-                            | [ H : context[base.subst_default (base.relax ?t) ?evm] |- _ ]
-                              => generalize dependent (base.subst_default (base.relax t) evm)
-                            end
-                          | progress Compilers.type.inversion_type ].
       Qed.
     End ident.
   End pattern.
