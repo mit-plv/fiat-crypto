@@ -1,15 +1,15 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
-Require Import Crypto.RewriterProofsTactics.
+Require Import Crypto.RewriterAllTactics.
 Require Import Crypto.RewriterRulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
   Import Language.Compilers.defaults.
   Import LanguageWf.Compilers.
-  Import RewriterProofsTactics.Compilers.RewriteRules.GoalType.
-  Import RewriterProofsTactics.Compilers.RewriteRules.Tactic.
+  Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
+  Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
 
   Module Import RewriteRules.
     Section __.

@@ -204,7 +204,7 @@ Rewriter.v ←──────────────────────
                                       ↗          ↖
                            RewriterWf2.v   RewriterInterpProofs1.v
                                       ↖        ↗
-RewriterRules.v                 RewriterProofsTactics.v
+RewriterRules.v                 RewriterAllTactics.v
     ↑                                      ↑
 RewriterRulesProofs.v                      │
     ↑                                      │
@@ -218,7 +218,7 @@ RewriterRulesProofs.v                      │
              ↑                          ↑                                                       │
              └───────┬──────────────────┴───────────────────────────────────────────────────────┘
                      │
-                RewriterProofs.v
+                RewriterAll.v
 ```
 
 - RewriterRules.v: Defines the list of types of the rewrite rules that
@@ -265,7 +265,7 @@ RewriterRulesProofs.v                      │
   rewriter, taking in interp-goodness of rewrite rules as a
   hypothesis.
 
-- RewriterProofsTactics.v: Defines the tactic
+- RewriterAllTactics.v: Defines the tactic
   `RewriteRules.Tactic.make_rewriter` (and a similar tactic notation)
   which build the entire `VerifiedRewriter`.  They take in the
   `include_interp` as in Rewriter.v tactics, as well as an hlist of
@@ -274,12 +274,12 @@ RewriterRulesProofs.v                      │
   rewriter from a list of rewrite rules.
 
 - Rewriter/{NBE, Arith, ArithWithCasts, StripLiteralCasts, ToFancy,
-  ToFancyWithCasts}.v: Use the tactic from RewriterProofsTactics.v
+  ToFancyWithCasts}.v: Use the tactic from RewriterAllTactics.v
   together with the proven list of rewrite rules from
   RewriterRulesProofs.v to reify and reduce the corresponding pass and
   generate a rewriter.
 
-- RewriterProofs.v: `Definition`less file that `Export`s the rewriters
+- RewriterAll.v: `Definition`less file that `Export`s the rewriters
   defined in `Rewriter/*.v`
 
 

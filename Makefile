@@ -51,7 +51,7 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/RewriterWf1.vo \
 	src/RewriterWf2.vo \
 	src/RewriterRulesGood.vo \
-	src/RewriterProofs.vo
+	src/RewriterAll.vo
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \

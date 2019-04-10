@@ -5,7 +5,7 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Language.
 Require Import Crypto.UnderLets.
 Require Import Crypto.AbstractInterpretation.
-Require Import Crypto.RewriterProofs.
+Require Import Crypto.RewriterAll.
 Require Import Crypto.MiscCompilerPasses.
 Require Import Crypto.CStringification.
 Import ListNotations. Local Open Scope Z_scope.
@@ -13,7 +13,7 @@ Import ListNotations. Local Open Scope Z_scope.
 Import Language.Compilers.
 Import UnderLets.Compilers.
 Import AbstractInterpretation.Compilers.
-Import RewriterProofs.Compilers.
+Import RewriterAll.Compilers.
 Import MiscCompilerPasses.Compilers.
 Import CStringification.Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
