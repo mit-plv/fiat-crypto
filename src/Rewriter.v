@@ -531,23 +531,6 @@ Module Compilers.
                (fun T Ts rec f1 f2 => forall x, rec (f1 x) (f2 x))
                ls.
 
-        Definition app_type_of_list {K} {ls : list Type} (f : type_of_list_cps K ls) (args : type_of_list ls) : K
-          := list_rect
-               (fun ls
-                => type_of_list_cps K ls -> type_of_list ls -> K)
-               (fun v _ => v)
-               (fun T Ts rec f x
-                => rec (f (fst x)) (snd x))
-               ls
-               f args.
-
-        Definition lam_type_of_list {ls K} : (type_of_list ls -> K) -> type_of_list_cps K ls
-          := list_rect
-               (fun ls => (type_of_list ls -> K) -> type_of_list_cps K ls)
-               (fun f => f tt)
-               (fun T Ts rec k t => rec (fun ts => k (t, ts)))
-               ls.
-
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
         Local Notation "e <----- e' ; f" := (splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
 
@@ -2154,6 +2137,12 @@ Module Compilers.
           := Eval cbv [pattern.ident.of_typed_ident] in
               pattern.Ident (pattern.ident.of_typed_ident (@ident.Literal t DefaultValue.type.base.default)).
 
+        Let pident_pair
+          := ltac:(let v := (eval cbv [pattern.ident.of_typed_ident] in
+                                (fun A B => pattern.ident.of_typed_ident (@ident.pair A B))) in
+                   let h := lazymatch v with fun A B => ?f _ _ => f end in
+                   exact h).
+
         Fixpoint make_Literal_pattern (t : pattern.base.type) : option (pattern t)
           := match t return option (pattern t) with
              | pattern.base.type.var _ => None
@@ -2161,7 +2150,7 @@ Module Compilers.
              | pattern.base.type.prod A B
                => (a <- make_Literal_pattern A;
                     b <- make_Literal_pattern B;
-                    Some ((#pattern.ident.pair @ a @ b)%pattern))
+                    Some ((#(pident_pair _ _) @ a @ b)%pattern))
              | pattern.base.type.list A => None
              | pattern.base.type.option A => None
              end%option%cps.
