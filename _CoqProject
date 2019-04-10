@@ -36,8 +36,8 @@ src/MiscCompilerPassesProofs.v
 src/PreLanguage.v
 src/Rewriter.v
 src/RewriterInterpProofs1.v
-src/RewriterProofs.v
-src/RewriterProofsTactics.v
+src/RewriterAll.v
+src/RewriterAllTactics.v
 src/RewriterRules.v
 src/RewriterRulesProofs.v
 src/RewriterWf1.v

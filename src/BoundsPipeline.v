@@ -29,7 +29,7 @@ Require Crypto.CStringification.
 Require Crypto.LanguageWf.
 Require Crypto.UnderLetsProofs.
 Require Crypto.MiscCompilerPassesProofs.
-Require Crypto.RewriterProofs.
+Require Crypto.RewriterAll.
 Require Crypto.AbstractInterpretationWf.
 Require Crypto.AbstractInterpretationProofs.
 Require Import Crypto.Util.Notations.
@@ -39,7 +39,7 @@ Import
   Crypto.LanguageWf
   Crypto.UnderLetsProofs
   Crypto.MiscCompilerPassesProofs
-  Crypto.RewriterProofs
+  Crypto.RewriterAll
   Crypto.AbstractInterpretationWf
   Crypto.AbstractInterpretationProofs
   Crypto.Language
@@ -53,7 +53,7 @@ Import
   LanguageWf.Compilers
   UnderLetsProofs.Compilers
   MiscCompilerPassesProofs.Compilers
-  RewriterProofs.Compilers
+  RewriterAll.Compilers
   AbstractInterpretationWf.Compilers
   AbstractInterpretationProofs.Compilers
   Language.Compilers
