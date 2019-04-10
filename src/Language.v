@@ -80,6 +80,11 @@ Module Compilers.
     Inductive type {base_type : Type} := base (t : base_type) | arrow (s d : type).
     Global Arguments type : clear implicits.
 
+    Global Instance reflect_type_beq {base_type} {base_beq} {reflect_base_beq : reflect_rel (@eq base_type) base_beq} : reflect_rel (@eq (type base_type)) (@type_beq base_type base_beq) | 10.
+    Proof.
+      apply reflect_of_beq; (apply internal_type_dec_bl + apply internal_type_dec_lb); apply reflect_to_beq; assumption.
+    Defined.
+
     Fixpoint final_codomain {base_type} (t : type base_type) : base_type
       := match t with
          | base t
@@ -301,6 +306,13 @@ Module Compilers.
     End type.
     Global Coercion type.type_base : type.base >-> type.type.
     Notation type := type.type.
+
+    Global Instance reflect_base_beq : reflect_rel (@eq type.base) type.base_beq | 10
+      := reflect_of_beq type.internal_base_dec_bl type.internal_base_dec_lb.
+
+    Global Instance reflect_type_beq : reflect_rel (@eq type) type.type_beq | 10
+      := reflect_of_beq type.internal_type_dec_bl type.internal_type_dec_lb.
+
     Definition base_interp (ty : type.base)
       := match ty with
          | type.unit => Datatypes.unit
@@ -309,6 +321,7 @@ Module Compilers.
          | type.nat => Datatypes.nat
          | type.zrange => zrange
          end.
+
     Fixpoint interp (ty : type)
       := match ty with
          | type.type_base t => base_interp t
