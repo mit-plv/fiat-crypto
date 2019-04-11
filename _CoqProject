@@ -35,9 +35,9 @@ src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
 src/PreLanguage.v
 src/Rewriter.v
-src/RewriterInterpProofs1.v
 src/RewriterAll.v
 src/RewriterAllTactics.v
+src/RewriterInterpProofs1.v
 src/RewriterRules.v
 src/RewriterRulesProofs.v
 src/RewriterWf1.v
@@ -91,12 +91,6 @@ src/Curves/Weierstrass/Affine.v
 src/Curves/Weierstrass/AffineProofs.v
 src/Curves/Weierstrass/Jacobian.v
 src/Curves/Weierstrass/Projective.v
-src/ExtractionHaskell/saturated_solinas.v
-src/ExtractionHaskell/unsaturated_solinas.v
-src/ExtractionHaskell/word_by_word_montgomery.v
-src/ExtractionOCaml/saturated_solinas.v
-src/ExtractionOCaml/unsaturated_solinas.v
-src/ExtractionOCaml/word_by_word_montgomery.v
 src/Fancy/Barrett256.v
 src/Fancy/Compiler.v
 src/Fancy/Montgomery256.v
