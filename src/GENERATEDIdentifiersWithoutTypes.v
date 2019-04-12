@@ -637,7 +637,7 @@ Module Compilers.
                                  (eta_ident_cps_gen
                                     (fun idc
                                      => let ii := ident_infos_of idc in
-                                        match dep_types ii, indep_types ii with
+                                        match dep_types ii, indep_types ii return _ with (* COQBUG(https://github.com/coq/coq/issues/9955) *)
                                         | [], [] => true
                                         | _, _ => false
                                         end))) in
