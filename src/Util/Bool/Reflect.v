@@ -13,6 +13,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Comparison.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Crypto.Util.PrimitiveProd.
 
 Lemma reflect_to_dec_iff {P b1 b2} : reflect P b1 -> (b1 = b2) <-> (if b2 then P else ~P).
 Proof.
@@ -136,6 +137,7 @@ Hint Constructors reflect : typeclass_instances.
 Local Hint Resolve -> Bool.eqb_true_iff : core.
 Local Hint Resolve <- Bool.eqb_true_iff : core.
 Local Hint Resolve internal_prod_dec_bl internal_prod_dec_lb
+      PrimitiveProd.Primitive.prod_dec_bl PrimitiveProd.Primitive.prod_dec_lb
       internal_option_dec_bl internal_option_dec_lb
       internal_list_dec_bl internal_list_dec_lb
       internal_sum_dec_bl internal_sum_dec_lb
@@ -177,6 +179,12 @@ Global Instance reflect_eq_sum {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_
 Global Instance reflect_eq_sigT_hprop {A P eqA} `{reflect_rel (@eq A) eqA, forall a : A, IsHProp (P a)} : reflect_rel (@eq (@sigT A P)) (sigT_beq eqA (fun _ _ _ _ => true)) | 10. exact _. Qed.
 Global Instance reflect_eq_sig_hprop {A eqA} {P : A -> Prop} `{reflect_rel (@eq A) eqA, forall a : A, IsHProp (P a)} : reflect_rel (@eq (@sig A P)) (sig_beq eqA (fun _ _ _ _ => true)) | 10. exact _. Qed.
 Global Instance reflect_eq_comparison : reflect_rel (@eq comparison) comparison_beq | 10. exact _. Qed.
+
+Module Export Primitive.
+  Import PrimitiveProd.
+  Import PrimitiveProd.Primitive.
+  Global Instance reflect_eq_prod {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_rel (@eq B) eqB} : reflect_rel (@eq (A * B)) (@Primitive.prod_beq A B eqA eqB) | 10. exact _. Qed.
+End Primitive.
 
 Module Nat.
   Definition geb_spec0 : reflect_rel ge (fun x y => Nat.leb y x) := fun _ _ => Nat.leb_spec0 _ _.
