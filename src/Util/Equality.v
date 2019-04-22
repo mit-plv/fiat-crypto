@@ -158,3 +158,7 @@ Proof. intros; subst; reflexivity. Defined.
 Lemma fg_equal_rel {A B R} (f g : A -> B) (x y : A)
   : (pointwise_relation _ R) f g -> x = y -> R (f x) (g y).
 Proof. cbv [pointwise_relation]; intros; subst; trivial. Qed.
+
+Lemma push_rew_fun_dep A P Q a b (pf : a = b) f x
+  : (rew [fun x : A => P x -> Q x] pf in f) x = (rew [Q] pf in (f (rew <- [P] pf in x))).
+Proof. subst; reflexivity. Defined.
