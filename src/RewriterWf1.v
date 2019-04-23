@@ -3297,7 +3297,9 @@ Module Compilers.
              let h' := lazymatch type of H with
                        | context[Compile.rewrite_rules_goodT_curried_cps ?pident_arg_types ?rew1] => head rew1
                        end in
-             cbv [h' pident_arg_types Compile.rewrite_rules_goodT_curried_cps] in H;
+             let pident_arg_types' := (eval cbv -[base.interp] in pident_arg_types) in
+             change pident_arg_types with pident_arg_types' in H;
+             cbv [h' Compile.rewrite_rules_goodT_curried_cps] in H;
              (* make [Qed] not take forever by explicitly recording a cast node *)
              let H' := fresh in
              pose proof H as H'; clear H;
@@ -3424,7 +3426,12 @@ Module Compilers.
              cbv [Make.GoalType.rewrite_rules dummy_count rewrite_rules_specs] in * |- ;
              let h' := lazymatch type of H with context[Compile.rewrite_rules_interp_goodT_curried_cps _ _ _ ?v] => head v end in
              unfold h' in H at 1;
-             cbv [Compile.rewrite_rules_interp_goodT_curried_cps pident_arg_types pident_to_typed] in H;
+             let pident_arg_types' := (eval cbv -[base.interp] in pident_arg_types) in
+             change pident_arg_types with pident_arg_types' in H;
+             let pident_to_typed' := (eval cbv -[pattern.type.subst_default pattern.base.subst_default List.fold_right base.interp base.base_interp Datatypes.fst Datatypes.snd] in pident_to_typed) in
+             let pident_to_typed' := (eval cbn [Datatypes.fst Datatypes.snd List.fold_right] in pident_to_typed') in
+             change pident_to_typed with pident_to_typed' in H;
+             cbv [Compile.rewrite_rules_interp_goodT_curried_cps] in H;
              cbn [snd hd tl projT1 projT2] in H;
              (* make [Qed] not take forever by explicitly recording a cast node *)
              let H' := fresh in

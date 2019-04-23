@@ -2138,7 +2138,7 @@ Module Compilers.
               pattern.Ident (pattern.ident.of_typed_ident (@ident.Literal t DefaultValue.type.base.default)).
 
         Let pident_pair
-          := ltac:(let v := (eval cbv [pattern.ident.of_typed_ident] in
+          := ltac:(let v := (eval cbv in
                                 (fun A B => pattern.ident.of_typed_ident (@ident.pair A B))) in
                    let h := lazymatch v with fun A B => ?f _ _ => f end in
                    exact h).
@@ -2456,7 +2456,7 @@ Module Compilers.
         := @Compile.Rewrite (rewrite_head data) (default_fuel data) t e.
 
       Ltac Reify include_interp specs :=
-        let lems := Reify.Reify_list ident ident.reify pattern.ident (@pattern.ident.arg_types) (@pattern.ident.type_of_list_arg_types_beq) (@pattern.ident.of_typed_ident) (@pattern.ident.arg_types_of_typed_ident) (@Compile.reflect_ident_iota) (fun var t => @SubstVarLike.is_var_fst_snd_pair_opp_cast var (type.base t)) specs in
+        let lems := Reify.Reify_list ident ident.reify pattern.ident (@pattern.ident.arg_types_unfolded) (@pattern.ident.type_of_list_arg_types_beq_unfolded) (@pattern.ident.of_typed_ident_unfolded) (@pattern.ident.arg_types_of_typed_ident_unfolded) (@Compile.reflect_ident_iota) (fun var t => @SubstVarLike.is_var_fst_snd_pair_opp_cast var (type.base t)) specs in
         lazymatch include_interp with
         | true
           => let myapp := (eval cbv [List.app] in (@List.app)) in

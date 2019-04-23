@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.Logic.JMeq.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.Lists.List.
@@ -18,6 +17,7 @@ Require Crypto.Util.Tuple.
 Import ListNotations. Local Open Scope list_scope.
 Import PrimitiveSigma.Primitive.
 
+Import EqNotations.
 Module Compilers.
   Set Boolean Equality Schemes.
   Set Decidable Equality Schemes.
@@ -66,8 +66,8 @@ Module Compilers.
        | nil => fun x => x
        | T :: Ts
          => fun v_vs
-            => (F T (Datatypes.fst v_vs),
-                @lift_type_of_list_map A Ts P1 P2 F (Datatypes.snd v_vs))
+            => (F T (fst v_vs),
+                @lift_type_of_list_map A Ts P1 P2 F (snd v_vs))
        end.
 
   Module pattern.
@@ -227,9 +227,27 @@ Module Compilers.
                  | _ => constr_fail_with ltac:(fun _ => fail 1 "Could not find" ctor "from" from_all_idents "(index" n ") in" to_all_idents "(failed to eliminate dependency on dummy default argument in" v ")")
                  end in
         v.
+
+      Ltac make_ident_index ty all_idents :=
+        let all_idents := (eval hnf in all_idents) in
+        let v := (eval cbv [id] in
+                     (ltac:(intros;
+                            let idc := lazymatch goal with idc : _ |- _ => idc end in
+                            let idc' := fresh "idc'" in
+                            pose idc as idc';
+                            destruct idc;
+                            let idc := (eval cbv [idc'] in idc') in
+                            let idc := head idc in
+                            let n := get_ctor_number' idc all_idents in
+                            exact n)
+                      : ty)) in
+        refine v.
     End Tactics.
 
     Definition all_idents : list { T : Type & T } := ltac:(make_all_idents).
+
+    Definition ident_index : forall t, ident t -> nat
+      := ltac:(make_ident_index (forall t, ident t -> nat) all_idents).
 
     Definition eta_ident_cps_gen
                {T : forall t, Compilers.ident.ident t -> Type}
@@ -246,24 +264,33 @@ Module Compilers.
     Definition eta_ident_cps_gen2
                {T0 : forall t, Compilers.ident.ident t -> Type}
                (f0 : forall t idc, T0 t idc)
-               {T1 : forall t (idc : Compilers.ident.ident t), T0 t idc -> Type}
+               {T1 : forall t idc, T0 t idc -> Type}
                (f1 : forall t idc, T1 t idc (f0 t idc))
-      : forall t idc, T1 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc).
-    Proof. intros t idc; cbv [proj1_sig eta_ident_cps_gen]; destruct idc; exact (f1 _ _). Defined.
+      : { f' : forall t idc, T1 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc)
+        | forall t idc,
+            f' t idc = rew [T1 t idc] (eq_sym (proj2_sig (@eta_ident_cps_gen T0 f0) t idc)) in f1 t idc }.
+    Proof. apply eta_ident_cps_gen. Defined.
 
     Definition eta_ident_cps_gen3
                {T0 : forall t, Compilers.ident.ident t -> Type}
                (f0 : forall t idc, T0 t idc)
-               {T1 : forall t (idc : Compilers.ident.ident t), T0 t idc -> Type}
+               {T1 : forall t idc, T0 t idc -> Type}
                (f1 : forall t idc, T1 t idc (f0 t idc))
                {T2 : forall t idc x, T1 t idc x -> Type}
                (f2 : forall t idc, T2 t idc (f0 t idc) (f1 t idc))
-      : forall t idc, T2 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc) (@eta_ident_cps_gen2 T0 f0 T1 f1 t idc).
-    Proof. intros t idc; cbv [proj1_sig eta_ident_cps_gen eta_ident_cps_gen2]; destruct idc; exact (f2 _ _). Defined.
+      : { f' : forall t idc, T2 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc) (proj1_sig (@eta_ident_cps_gen2 T0 f0 T1 f1) t idc)
+        | forall t idc,
+            f' t idc
+            = rew [T2 t idc _] (eq_sym (proj2_sig (@eta_ident_cps_gen2 T0 f0 T1 f1) t idc)) in
+              match eq_sym (proj2_sig (@eta_ident_cps_gen _ f0) t idc) as p return T2 t idc _ (rew [T1 t idc] p in f1 t idc) with
+              | eq_refl => f2 t idc
+              end }.
+    Proof. apply eta_ident_cps_gen. Defined.
 
     Module Raw.
       Module ident.
         Local Unset Decidable Equality Schemes.
+        Local Unset Boolean Equality Schemes.
         Module MakeIdent.
           Import Compilers.ident.
           Ltac map_projT2 tac ls :=
@@ -401,6 +428,23 @@ Module Compilers.
 
         Definition all_idents : list ident := ltac:(make_all_idents).
 
+        Definition ident_index : ident -> nat
+          := ltac:(let idc := fresh "idc" in
+                   let idc' := fresh "idc'" in
+                   let v := (eval cbv [id] in
+                                (ltac:(intro idc;
+                                         pose idc as idc';
+                                         destruct idc;
+                                         let idc := (eval cbv [idc'] in idc') in
+                                         let all_idents := (eval cbv [all_idents] in all_idents) in
+                                         let n := get_ctor_number' idc all_idents in
+                                         exact n)
+                                 : ident -> nat)) in
+                   refine v).
+
+        Lemma ident_index_idempotent idc : List.nth_error all_idents (ident_index idc) = Some idc.
+        Proof. destruct idc; vm_compute; reflexivity. Defined.
+
         Definition eta_ident_cps_gen {T : ident -> Type}
                    (f : forall idc, T idc)
 
@@ -412,8 +456,10 @@ Module Compilers.
                    (f0 : forall idc, T0 idc)
                    {T1 : forall idc, T0 idc -> Type}
                    (f1 : forall idc, T1 idc (f0 idc))
-          : forall idc, T1 idc (proj1_sig (@eta_ident_cps_gen T0 f0) idc).
-        Proof. intros idc; cbv [proj1_sig eta_ident_cps_gen]; destruct idc; exact (f1 _). Defined.
+          : { f' : forall idc, T1 idc (proj1_sig (@eta_ident_cps_gen T0 f0) idc)
+            | forall idc,
+                f' idc = rew [T1 idc] (eq_sym (proj2_sig (@eta_ident_cps_gen T0 f0) idc)) in f1 idc }.
+        Proof. apply eta_ident_cps_gen. Defined.
 
         Definition eta_ident_cps_gen3
                    {T0 : ident -> Type}
@@ -422,29 +468,85 @@ Module Compilers.
                    (f1 : forall idc, T1 idc (f0 idc))
                    {T2 : forall idc x, T1 idc x -> Type}
                    (f2 : forall idc, T2 idc (f0 idc) (f1 idc))
-          : forall idc, T2 idc (proj1_sig (@eta_ident_cps_gen T0 f0) idc) (@eta_ident_cps_gen2 T0 f0 T1 f1 idc).
-        Proof. intros idc; cbv [proj1_sig eta_ident_cps_gen eta_ident_cps_gen2]; destruct idc; exact (f2 _). Defined.
+          : { f' : forall idc, T2 idc (proj1_sig (@eta_ident_cps_gen T0 f0) idc) (proj1_sig (@eta_ident_cps_gen2 T0 f0 T1 f1) idc)
+            | forall idc,
+                f' idc
+                = rew [T2 idc _] (eq_sym (proj2_sig (@eta_ident_cps_gen2 T0 f0 T1 f1) idc)) in
+                  match eq_sym (proj2_sig (@eta_ident_cps_gen _ f0) idc) as p return T2 idc _ (rew [T1 idc] p in f1 idc) with
+                  | eq_refl => f2 idc
+                  end }.
+        Proof. apply eta_ident_cps_gen. Defined.
+
+        Definition ident_beq : ident -> ident -> bool
+          := fun idc1 idc2
+             => proj1_sig
+                  (eta_ident_cps_gen
+                     (fun idc1
+                      => proj1_sig
+                           (eta_ident_cps_gen
+                              (fun idc2
+                               => Nat.eqb (ident_index idc1) (ident_index idc2)))
+                           idc2))
+                  idc1.
+
+        Ltac rew_proj2_sig :=
+          repeat match goal with
+                 | [ |- context[@proj1_sig _ (fun _ => forall x, _ = _) ?p] ]
+                   => rewrite !(proj2_sig p)
+                 | [ |- context[@proj1_sig _ (fun _ => forall x y, _ = _) ?p] ]
+                   => rewrite !(proj2_sig p)
+                 end.
+
+        Definition nat_eqb_refl_transparent (x : nat) : Nat.eqb x x = true.
+        Proof. induction x; cbn; constructor + assumption. Defined.
 
         Definition ident_lb (x y : ident) : x = y -> ident_beq x y = true.
-        Proof. intro H; subst y; destruct x; reflexivity. Defined.
-        Definition ident_beq_if (x y : ident) : if ident_beq x y then x = y else True.
-        Proof. destruct x, y; cbv; constructor. Defined.
+        Proof.
+          intro H; subst y; cbv [ident_beq];
+            rew_proj2_sig; apply nat_eqb_refl_transparent.
+        Defined.
+
+        Lemma ident_index_inj idc1 idc2 : ident_index idc1 = ident_index idc2 -> idc1 = idc2.
+        Proof.
+          intro H.
+          pose proof (ident_index_idempotent idc1) as H1.
+          pose proof (ident_index_idempotent idc2) as H2.
+          rewrite H in H1; rewrite H1 in H2.
+          set (sidc1 := Some idc1) in *.
+          set (sidc2 := Some idc2) in *.
+          change (match sidc1, sidc2 with Some idc1, Some idc2 => idc1 = idc2 | _, _ => True end).
+          clearbody sidc2; subst sidc2 sidc1; reflexivity.
+        Defined.
+
+        Definition nat_eqb_bl_transparent (x y : nat) : Nat.eqb x y = true -> x = y.
+        Proof.
+          revert y; induction x, y; cbn; intro; try apply f_equal; auto using eq_refl with nocore;
+            exfalso; apply Bool.diff_false_true; assumption.
+        Defined.
+
         Definition ident_bl (x y : ident) : ident_beq x y = true -> x = y.
         Proof.
-          generalize (ident_beq_if x y); destruct (ident_beq x y); intros;
-            first [ assumption | exfalso; apply Bool.diff_false_true; assumption ].
+          cbv [ident_beq]; rew_proj2_sig; intro H.
+          apply nat_eqb_bl_transparent in H.
+          apply ident_index_inj in H.
+          exact H.
+        Defined.
+
+        Definition ident_beq_if (x y : ident) : if ident_beq x y then x = y else True.
+        Proof.
+          generalize (ident_beq x y), (ident_bl x y).
+          intros b H; destruct b; exact I + auto using eq_refl with nocore.
         Defined.
 
         Definition ident_transport_opt (P : ident -> Type) {x y : ident} : P x -> Datatypes.option (P y)
-          := Eval cbv [ident_beq ident_beq_if] in
-              fun v
-              => (if ident_beq x y as b return (if b then x = y else True) -> _
-                  then fun pf => Datatypes.Some
-                                   match pf in (_ = y) return P y with
-                                   | eq_refl => v
-                                   end
-                  else fun _ => Datatypes.None)
-                   (@ident_beq_if x y).
+          := fun v
+             => (if ident_beq x y as b return (if b then x = y else True) -> _
+                 then fun pf => Datatypes.Some
+                                  match pf in (_ = y) return P y with
+                                  | eq_refl => v
+                                  end
+                 else fun _ => Datatypes.None)
+                  (@ident_beq_if x y).
 
         Inductive kind_of_type := GallinaType (_ : Type) | BaseBaseType | BaseType.
         Definition Type_of_kind_of_type (T : kind_of_type)
@@ -472,7 +574,10 @@ Module Compilers.
             dep_types_dec_transparent : forall x y : type_of_list (dep_types preinfos), {x = y} + {x <> y};
             indep_args_beq : _;
             indep_args_reflect
-            : forall x, reflect_rel (@eq (type_of_list (indep_args preinfos x))) (indep_args_beq x)
+            : forall x, reflect_rel (@eq (type_of_list (indep_args preinfos x))) (indep_args_beq x);
+            indep_types_beq : _;
+            indep_types_reflect
+            : reflect_rel (@eq (type_of_list_of_kind (indep_types preinfos))) indep_types_beq;
           }.
 
         Definition ident_args (pi : preident_infos)
@@ -481,25 +586,10 @@ Module Compilers.
         Definition assemble_ident {pi} (args : ident_args pi)
           := to_ident pi (projT1 args) (Datatypes.fst (projT2 args)) (Datatypes.snd (projT2 args)).
 
-        Ltac build_ident_to_cident :=
-          let v
-              := (eval cbv [proj1_sig eta_ident_cps_gen List.find List.combine all_idents pattern.all_idents ident_beq] in
-                     (fun default
-                      => proj1_sig
-                           (@eta_ident_cps_gen
-                              (fun _ => { T : Type & T })
-                              (fun idc
-                               => match List.find
-                                          (fun '(idc', v) => ident_beq idc idc')
-                                          (List.combine all_idents pattern.all_idents) with
-                                  | Datatypes.Some (_, v) => v
-                                  | Datatypes.None => default
-                                  end)))) in
-          let v := strip_default v in
-          v.
-        Ltac make_ident_to_cident := let v := build_ident_to_cident in refine v.
-
-        Definition ident_to_cident : ident -> { T : Type & T } := ltac:(make_ident_to_cident).
+        Definition ident_to_cident : ident -> { T : Type & T }
+          := proj1_sig
+               (eta_ident_cps_gen
+                  (fun idc => List.nth_default (@existT Type _ True I) pattern.all_idents (ident_index idc))).
 
         Ltac fun_to_curried_ident_infos f :=
           let type_to_kind T
@@ -555,12 +645,13 @@ Module Compilers.
                       | T
                         => ltac:(destruct idc;
                                  let T := (eval cbv [T ident_to_cident projT2] in (projT2 T)) in
+                                 let T := (eval cbv in T) in
                                  let v := fun_to_curried_ident_infos T in
                                  let v := (eval cbv [type_of_list List.map Type_of_kind_of_type] in v) in
                                  let c := constr:(@Build_ident_infos v) in
                                  let T := type of c in
                                  let T := (eval cbv [dep_types indep_types indep_args type_of_list List.map Type_of_kind_of_type] in T) in
-                                 refine ((c : T) _ _ _);
+                                 refine ((c : T) _ _ _ _ _);
                                  repeat decide equality)
                       end) in
           let v := (eval cbv [dep_types indep_types indep_args type_of_list preinfos List.map Type_of_kind_of_type Datatypes.prod_rect base.type.base_rect unit_rect sumbool_rect prod_rec unit_rec sumbool_rec base.type.base_rec eq_ind_r eq_ind eq_sym eq_rec eq_rect] in v) in
@@ -608,76 +699,99 @@ Module Compilers.
                                  (exists ridc);
                                  cbv [ident_infos_of ident_args type_of_list indep_args dep_types indep_types preinfos assemble_ident to_ident List.map Type_of_kind_of_type];
                                  unshelve (eexists; refine_sigT_and_pair; try constructor);
-                                 repeat esplit)
+                                 cbv [to_type Datatypes.fst];
+                                 try solve [ repeat unshelve esplit ])
                            : { ridc : ident & { args : ident_args (ident_infos_of ridc)
-                                              | JMeq idc (assemble_ident args) } })) in
+                                              | { pf : _ = _
+                                                | idc = rew [Compilers.ident.ident] pf in assemble_ident args } } })) in
           v.
         Ltac make_split_ident_gen := let v := build_split_ident_gen in refine v.
 
         Definition split_ident_gen
           : forall {t} (idc : Compilers.ident.ident t),
             { ridc : ident & { args : ident_args (ident_infos_of ridc)
-                             | JMeq idc (assemble_ident args) } }
+                             | { pf : _ = _
+                               | idc = rew [Compilers.ident.ident] pf in assemble_ident args } } }
           := ltac:(make_split_ident_gen).
 
-        Ltac do_reduce v :=
-          let v := (eval cbv [proj1_sig eta_ident_cps_gen eta_ident_cps_gen2 eta_ident_cps_gen3 ident_args ident_infos_of type_of_list dep_types indep_types indep_args preinfos to_type ident_transport_opt split_ident_gen pattern.eta_ident_cps_gen to_ident to_type List.map Type_of_kind_of_type] in v) in
-          v.
-
+        Definition prefull_types : ident -> Type
+          := fun idc => ident_args (ident_infos_of idc).
         Definition full_types : ident -> Type
-          := ltac:(let v := do_reduce
-                              (proj1_sig
-                                 (eta_ident_cps_gen
-                                    (fun idc
-                                     => ident_args (ident_infos_of idc)))) in
-                   refine v).
+          := proj1_sig (eta_ident_cps_gen prefull_types).
         Definition is_simple : ident -> bool
-          := ltac:(let v := do_reduce
-                              (proj1_sig
-                                 (eta_ident_cps_gen
-                                    (fun idc
-                                     => let ii := ident_infos_of idc in
-                                        match dep_types ii, indep_types ii return _ with (* COQBUG(https://github.com/coq/coq/issues/9955) *)
-                                        | [], [] => true
-                                        | _, _ => false
-                                        end))) in
-                   refine v).
+          := fun idc
+             => let ii := ident_infos_of idc in
+                match dep_types ii, indep_types ii return _ with (* COQBUG(https://github.com/coq/coq/issues/9955) *)
+                | [], [] => true
+                | _, _ => false
+                end.
         Definition type_of : forall (pidc : ident), full_types pidc -> Compilers.type Compilers.base.type
-          := ltac:(let v := do_reduce
-                              (@eta_ident_cps_gen2
-                                 _ (fun idc => ident_args (ident_infos_of idc))
-                                 (fun pidc full_types_pidc
-                                  => full_types_pidc -> Compilers.type Compilers.base.type)
-                                 (fun pidc args
-                                  => to_type (ident_infos_of pidc) (projT1 args) (Datatypes.fst (projT2 args)))) in
-                   refine v).
+          := proj1_sig
+               (@eta_ident_cps_gen2
+                  _ prefull_types
+                  (fun pidc full_types_pidc => full_types_pidc -> Compilers.type Compilers.base.type)
+                  (fun pidc args
+                   => to_type (ident_infos_of pidc) (projT1 args) (Datatypes.fst (projT2 args)))).
+
+        Definition folded_invert_bind_args : forall {t} (idc : Compilers.ident.ident t) (pidc : ident), Datatypes.option (full_types pidc)
+          := fun t idc pidc
+             => proj1_sig
+                  (pattern.eta_ident_cps_gen
+                     (fun t idc
+                      => proj1_sig
+                           (@eta_ident_cps_gen2
+                              _ prefull_types
+                              (fun pidc full_types_pidc => Datatypes.option full_types_pidc)
+                              (fun pidc
+                               => let '(existT ridc (exist args _)) := split_ident_gen idc in
+                                  ident_transport_opt
+                                    (fun idc => ident_args (ident_infos_of idc))
+                                    args))
+                           pidc))
+                  t idc.
         Definition invert_bind_args : forall {t} (idc : Compilers.ident.ident t) (pidc : ident), Datatypes.option (full_types pidc)
-          := ltac:(let v := do_reduce
-                              (fun t idc pidc
-                               => proj1_sig
-                                    (pattern.eta_ident_cps_gen
-                                       (fun t idc
-                                        => @eta_ident_cps_gen2
-                                             _ (fun idc => ident_args (ident_infos_of idc))
-                                             (fun pidc full_types_pidc => Datatypes.option full_types_pidc)
-                                             (fun pidc
-                                              => let '(existT ridc (exist args _)) := split_ident_gen idc in
-                                                 ident_transport_opt
-                                                   (fun idc => ident_args (ident_infos_of idc))
-                                                   args)
-                                             pidc))
-                                    t idc) in
+          := ltac:(let v := (eval cbv [folded_invert_bind_args] in (@folded_invert_bind_args)) in
+                   let v := (eval cbv [pattern.eta_ident_cps_gen proj1_sig eta_ident_cps_gen2 eta_ident_cps_gen proj1_sig proj2_sig eq_rect eq_sym split_ident_gen projT2 ident_transport_opt ident_beq ident_index Nat.eqb ident_beq_if ident_bl eq_ind_r eq_ind nat_eqb_bl_transparent nat_ind ident_index_inj ident_index_idempotent f_equal] in v) in
                    refine v).
+
         Definition to_typed : forall (pidc : ident) (args : full_types pidc), Compilers.ident.ident (type_of pidc args)
-          := ltac:(let v := do_reduce
-                              (@eta_ident_cps_gen3
-                                 _ (fun idc => ident_args (ident_infos_of idc))
-                                 (fun pidc full_types_pidc => full_types_pidc -> Compilers.type Compilers.base.type)
-                                 (fun pidc args => to_type (ident_infos_of pidc) (projT1 args) (Datatypes.fst (projT2 args)))
-                                 (fun pidc full_types_pidc type_of_pidc => forall args : full_types_pidc, Compilers.ident.ident (type_of_pidc args))
-                                 (fun pidc args
-                                  => to_ident _ _ _ (Datatypes.snd (projT2 args)))) in
-                   refine v).
+          := proj1_sig
+               (@eta_ident_cps_gen3
+                  _ prefull_types
+                  (fun pidc full_types_pidc => full_types_pidc -> Compilers.type Compilers.base.type)
+                  (fun pidc args => to_type (ident_infos_of pidc) (projT1 args) (Datatypes.fst (projT2 args)))
+                  (fun pidc full_types_pidc type_of_pidc => forall args : full_types_pidc, Compilers.ident.ident (type_of_pidc args))
+                  (fun pidc args
+                   => to_ident _ _ _ (Datatypes.snd (projT2 args)))).
+
+        Definition try_unify_split_args {ridc1 ridc2 : ident}
+          : forall {dt1 : type_of_list (dep_types (preinfos (ident_infos_of ridc1)))}
+                   {dt2 : type_of_list (dep_types (preinfos (ident_infos_of ridc2)))}
+                   (*(idt1 : type_of_list_of_kind (indep_types (preinfos (ident_infos_of ridc1))))
+                   (idt2 : type_of_list_of_kind (indep_types (preinfos (ident_infos_of ridc2))))*),
+            type_of_list (indep_args _ dt1) -> Datatypes.option (type_of_list (indep_args _ dt2))
+          := (if ident_beq ridc1 ridc2 as b return (if b then ridc1 = ridc2 else True) -> _
+              then fun pf
+                   => match pf in (_ = ridc2) return forall (dt1 : type_of_list (dep_types (preinfos (ident_infos_of ridc1))))
+                                                            (dt2 : type_of_list (dep_types (preinfos (ident_infos_of ridc2))))
+                                                            (*(idt1 : type_of_list_of_kind (indep_types (preinfos (ident_infos_of ridc1))))
+                                                            (idt2 : type_of_list_of_kind (indep_types (preinfos (ident_infos_of ridc2))))*),
+                          type_of_list (indep_args _ dt1) -> Datatypes.option (type_of_list (indep_args _ dt2)) with
+                      | eq_refl
+                        => fun dt1 dt2 (*idt1 idt2*)
+                           => match dep_types_dec_transparent _ dt1 dt2 with
+                              | left pf
+                                => match pf in (_ = dt2) return type_of_list (indep_args _ dt1) -> Datatypes.option (type_of_list (indep_args _ dt2)) with
+                                   | eq_refl
+                                     => (*if indep_types_beq _ idt1 idt2
+                                        then*) Datatypes.Some
+                                                 (*else fun _ => Datatypes.None*)
+                                   end
+                              | right _ => fun _ => Datatypes.None
+                              end
+                      end
+              else fun _ _ _ _ (*_ _*) => Datatypes.None)
+               (ident_beq_if ridc1 ridc2).
       End ident.
       Notation ident := ident.ident.
     End Raw.
@@ -861,18 +975,26 @@ Module Compilers.
                  (f0 : forall t idc, T0 t idc)
                  {T1 : forall t (idc : ident t), T0 t idc -> Type}
                  (f1 : forall t idc, T1 t idc (f0 t idc))
-        : forall t idc, T1 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc).
-      Proof. intros t idc; cbv [proj1_sig eta_ident_cps_gen]; destruct idc; exact (f1 _ _). Defined.
+        : { f' : forall t idc, T1 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc)
+          | forall t idc,
+              f' t idc = rew [T1 t idc] (eq_sym (proj2_sig (@eta_ident_cps_gen T0 f0) t idc)) in f1 t idc }.
+      Proof. apply eta_ident_cps_gen. Defined.
 
       Definition eta_ident_cps_gen3
                  {T0 : forall t, ident t -> Type}
                  (f0 : forall t idc, T0 t idc)
-                 {T1 : forall t (idc : ident t), T0 t idc -> Type}
+                 {T1 : forall t idc, T0 t idc -> Type}
                  (f1 : forall t idc, T1 t idc (f0 t idc))
                  {T2 : forall t idc x, T1 t idc x -> Type}
                  (f2 : forall t idc, T2 t idc (f0 t idc) (f1 t idc))
-        : forall t idc, T2 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc) (@eta_ident_cps_gen2 T0 f0 T1 f1 t idc).
-      Proof. intros t idc; cbv [proj1_sig eta_ident_cps_gen eta_ident_cps_gen2]; destruct idc; exact (f2 _ _). Defined.
+        : { f' : forall t idc, T2 t idc (proj1_sig (@eta_ident_cps_gen T0 f0) t idc) (proj1_sig (@eta_ident_cps_gen2 T0 f0 T1 f1) t idc)
+          | forall t idc,
+              f' t idc
+              = rew [T2 t idc _] (eq_sym (proj2_sig (@eta_ident_cps_gen2 T0 f0 T1 f1) t idc)) in
+                match eq_sym (proj2_sig (@eta_ident_cps_gen _ f0) t idc) as p return T2 t idc _ (rew [T1 t idc] p in f1 t idc) with
+                | eq_refl => f2 t idc
+                end }.
+      Proof. apply eta_ident_cps_gen. Defined.
 
       Definition Type_of_kind_of_type (T : Raw.ident.kind_of_type)
         := match T with
@@ -880,6 +1002,9 @@ Module Compilers.
            | Raw.ident.BaseBaseType => Compilers.base.type.base
            | Raw.ident.BaseType => pattern.base.type.type
            end.
+
+      Notation full_type_of_list_of_kind ls
+        := (type_of_list (List.map Raw.ident.Type_of_kind_of_type ls)).
 
       Notation type_of_list_of_kind ls
         := (type_of_list (List.map Type_of_kind_of_type ls)).
@@ -980,176 +1105,198 @@ Module Compilers.
           { t : _ & { idc : ident t | @split_types _ idc = existT _ ridc (dt, idt) } }
         := ltac:(make_add_types_from_raw_sig (@split_types)).
 
+
+      Definition split_types_subst_default : forall {t} (idc : ident t) (evm : EvarMap), { ridc : Raw.ident & type_of_list (dep_types (preinfos (ident_infos_of ridc))) * full_type_of_list_of_kind (indep_types (preinfos (ident_infos_of ridc))) }%type
+        := fun t idc evm
+           => let res := @split_types t idc in
+              existT _ (projT1 res) (Datatypes.fst (projT2 res),
+                                     lift_type_of_list_map (@subst_default_kind_of_type evm) (Datatypes.snd (projT2 res))).
+
+      Lemma to_type_split_types_subst_default_eq t idc evm
+        : Raw.ident.to_type
+            (preinfos (ident_infos_of (projT1 (@split_types_subst_default t idc evm))))
+            (Datatypes.fst (projT2 (split_types_subst_default idc evm)))
+            (Datatypes.snd (projT2 (split_types_subst_default idc evm)))
+          = type.subst_default t evm.
+      Proof.
+        destruct idc; cbv -[type.subst_default base.subst_default];
+          cbn [type.subst_default base.subst_default]; reflexivity.
+      Defined.
+
+      Lemma projT1_add_types_from_raw_sig_eq t idc
+        : projT1
+            (add_types_from_raw_sig
+               (projT1 (Raw.ident.split_ident_gen idc))
+               (projT1 (proj1_sig (projT2 (Raw.ident.split_ident_gen idc))))
+               (lift_type_of_list_map
+                  (@relax_kind_of_type)
+                  (Datatypes.fst (projT2 (proj1_sig (projT2 (@Raw.ident.split_ident_gen t idc)))))))
+          = type.relax t.
+      Proof.
+        destruct idc; cbv -[type.relax base.relax];
+          cbn [type.relax base.relax]; reflexivity.
+      Defined.
+
       Definition prearg_types : forall {t} (idc : ident t), list Type
         := (fun t idc
             => let st := @split_types t idc in
                let pi := preinfos (ident_infos_of (projT1 st)) in
                indep_args pi (Datatypes.fst (projT2 st))).
 
-      Definition try_unify_split_args {ridc1 ridc2 : Raw.ident.ident}
-        : forall {dt1 : type_of_list (dep_types (preinfos (ident_infos_of ridc1)))}
-                 {dt2 : type_of_list (dep_types (preinfos (ident_infos_of ridc2)))},
-          type_of_list (indep_args _ dt1) -> Datatypes.option (type_of_list (indep_args _ dt2))
-        := (if Raw.ident.ident_beq ridc1 ridc2 as b return (if b then ridc1 = ridc2 else True) -> _
-            then fun pf
-                 => match pf in (_ = ridc2) return forall (dt1 : type_of_list (dep_types (preinfos (ident_infos_of ridc1))))
-                                                          (dt2 : type_of_list (dep_types (preinfos (ident_infos_of ridc2)))),
-                        type_of_list (indep_args _ dt1) -> Datatypes.option (type_of_list (indep_args _ dt2)) with
-                    | eq_refl
-                      => fun dt1 dt2
-                         => match Raw.ident.dep_types_dec_transparent _ dt1 dt2 with
-                            | left pf
-                              => match pf in (_ = dt2) return type_of_list (indep_args _ dt1) -> Datatypes.option (type_of_list (indep_args _ dt2)) with
-                                 | eq_refl => Datatypes.Some
-                                 end
-                            | right _ => fun _ => Datatypes.None
-                            end
-                    end
-            else fun _ _ _ _ => Datatypes.None)
-             (Raw.ident.ident_beq_if ridc1 ridc2).
-
-      Ltac do_reduce v :=
-        let v := (eval cbv [proj1_sig pattern.eta_ident_cps_gen pattern.eta_ident_cps_gen2 eta_ident_cps_gen eta_ident_cps_gen2 eta_ident_cps_gen3 eta_ident_cps_gen_expand_literal pattern.eta_ident_cps_gen_expand_literal split_types projT1 projT2 preinfos dep_types indep_types ident_infos_of split_types add_types_from_raw_sig type_of_list List.map List.app Type_of_kind_of_type indep_args lift_type_of_list_map relax_kind_of_type subst_default_kind_of_type Raw.ident.assemble_ident Raw.ident.to_type prearg_types Raw.ident.Type_of_kind_of_type Raw.ident.to_ident Raw.ident.indep_args_beq Raw.ident.split_ident_gen Raw.ident.dep_types_dec_transparent try_unify_split_args Raw.ident.ident_beq_if Raw.ident.dep_types_dec_transparent Raw.ident.ident_beq] in v) in
-        let v := (eval cbn [Datatypes.fst Datatypes.snd] in v) in
-        v.
-
       Definition strip_types : forall {t} (idc : ident t), Raw.ident
-        := ltac:(let v := do_reduce
-                            (proj1_sig
-                               (eta_ident_cps_gen
-                                  (fun t idc => projT1 (@split_types t idc)))) in
-                 refine v).
+        := proj1_sig
+             (eta_ident_cps_gen
+                (fun t idc => projT1 (@split_types t idc))).
       Definition arg_types : forall {t} (idc : ident t), list Type
-        := ltac:(let v := (eval cbv [prearg_types] in (@prearg_types)) in
-                 let v := do_reduce
-                            (proj1_sig
-                               (eta_ident_cps_gen
-                                  v)) in
-                 refine v).
-      Definition to_typed : forall {t} (idc : ident t) (evm : EvarMap), type_of_list (arg_types idc) -> Compilers.ident.ident (pattern.type.subst_default t evm)
-        := ltac:(let v := constr:
-                          (fun t (idc : ident t) (evm : EvarMap)
-                           => @eta_ident_cps_gen2
-                                _ (@prearg_types)
-                                (fun t idc arg_types_idc
-                                 => forall args : type_of_list arg_types_idc,
-                                     Compilers.ident.ident
-                                       (let st := @split_types _ idc in
-                                        let pi := preinfos (ident_infos_of (projT1 st)) in
-                                        Raw.ident.to_type
-                                          pi
-                                          (Datatypes.fst (projT2 st))
-                                          (lift_type_of_list_map
-                                             (@subst_default_kind_of_type evm)
-                                             (Datatypes.snd (projT2 st)))))
-                                (fun t idc args
-                                 => let st := @split_types _ idc in
-                                    (@Raw.ident.assemble_ident
-                                       (preinfos (ident_infos_of (projT1 (@split_types _ idc))))
-                                       (existT
-                                          _ (Datatypes.fst (projT2 st))
-                                          (lift_type_of_list_map (@subst_default_kind_of_type evm) (Datatypes.snd (projT2 st)), args))))
-                                t idc) in
-                 let V' := fresh "V'" in
-                 let v := constr:(
-                            (fun t (idc : ident t) (evm : EvarMap)
-                             => match v t idc evm return type_of_list (@arg_types _ idc) -> Compilers.ident.ident (pattern.type.subst_default t evm) with
-                                | V'
-                                  => ltac:(destruct idc;
-                                             let v := (eval cbv [V'] in V') in
-                                             clear V';
-                                               let v := do_reduce v in
-                                               refine v)
-                                end)) in
-                 let v := (eval cbv [id] in v) in
-                 refine v).
+        := proj1_sig (eta_ident_cps_gen (@prearg_types)).
+
+      Definition arg_types_unfolded : forall {t} (idc : ident t), list Type
+        := Eval cbv -[base.interp] in @arg_types.
+
+      Definition to_typed : forall {t} (idc : ident t) (evm : EvarMap), type_of_list (arg_types idc) -> Compilers.ident.ident (type.subst_default t evm)
+        := fun t (idc : ident t) (evm : EvarMap)
+           => proj1_sig
+                (@eta_ident_cps_gen2
+                   _ (@prearg_types)
+                   (fun t idc arg_types_idc
+                    => forall args : type_of_list arg_types_idc,
+                        Compilers.ident.ident (type.subst_default t evm)
+                          (*let st := @split_types _ idc in
+                           let pi := preinfos (ident_infos_of (projT1 st)) in
+                           Raw.ident.to_type
+                             pi
+                             (Datatypes.fst (projT2 st))
+                             (lift_type_of_list_map
+                                (@subst_default_kind_of_type evm)
+                                (Datatypes.snd (projT2 st)))*))
+                   (fun t idc args
+                    => rew [Compilers.ident.ident] to_type_split_types_subst_default_eq t idc evm in
+                        let st := @split_types_subst_default _ idc evm in
+                        (@Raw.ident.assemble_ident
+                           (preinfos (ident_infos_of (projT1 (@split_types_subst_default _ idc evm))))
+                           (existT
+                              _ (Datatypes.fst (projT2 st))
+                              (Datatypes.snd (projT2 st), args)))))
+                t idc.
+
+      Definition to_typed_unfolded : forall {t} (idc : ident t) (evm : EvarMap), type_of_list (arg_types_unfolded idc) -> Compilers.ident.ident (type.subst_default t evm)
+        := ltac:(let v := (eval cbv -[type.subst_default base.subst_default arg_types_unfolded type_of_list base.base_interp Datatypes.fst Datatypes.snd] in
+                              (fun t (idc : ident t) (evm : EvarMap)
+                               => proj1_sig
+                                    (@eta_ident_cps_gen
+                                       (fun t idc => type_of_list (arg_types_unfolded idc) -> Compilers.ident.ident (type.subst_default t evm))
+                                       (fun t idc => @to_typed t idc evm))
+                                    t idc)) in
+                 let v := (eval cbn [Datatypes.fst Datatypes.snd type_of_list] in v) in
+                 exact v).
+
       Definition type_of_list_arg_types_beq : forall t idc, type_of_list (@arg_types t idc) -> type_of_list (@arg_types t idc) -> bool
-        := ltac:(let v := do_reduce
-                            (@eta_ident_cps_gen2
-                               _ (@prearg_types)
-                               (fun t idc arg_types_idc => type_of_list arg_types_idc -> type_of_list arg_types_idc -> bool)
-                               (fun t idc
-                                => Raw.ident.indep_args_beq _ _)) in
-                 refine v).
+        := proj1_sig
+             (@eta_ident_cps_gen2
+                _ (@prearg_types)
+                (fun t idc arg_types_idc => type_of_list arg_types_idc -> type_of_list arg_types_idc -> bool)
+                (fun t idc
+                 => Raw.ident.indep_args_beq _ _)).
+
+      Definition type_of_list_arg_types_beq_unfolded : forall t idc, type_of_list (@arg_types_unfolded t idc) -> type_of_list (@arg_types_unfolded t idc) -> bool
+        := Eval cbv -[Prod.prod_beq arg_types_unfolded type_of_list base.interp_beq base.base_interp_beq Z.eqb base.base_interp ZRange.zrange_beq] in
+            proj1_sig
+              (@eta_ident_cps_gen
+                 (fun t idc => type_of_list (@arg_types_unfolded t idc) -> type_of_list (@arg_types_unfolded t idc) -> bool)
+                 (@type_of_list_arg_types_beq)).
+
       Definition reflect_type_of_list_arg_types_beq : forall {t idc}, reflect_rel (@eq (type_of_list (@arg_types t idc))) (@type_of_list_arg_types_beq t idc)
-        := @eta_ident_cps_gen3
-             _ (@prearg_types)
-             (fun t idc arg_types_idc => type_of_list arg_types_idc -> type_of_list arg_types_idc -> bool)
-             (fun t idc => Raw.ident.indep_args_beq _ _)
-             (fun t idc arg_types_idc beq => reflect_rel (@eq (type_of_list arg_types_idc)) beq)
-             (fun t idc => Raw.ident.indep_args_reflect _ _).
-      Definition preof_typed_ident
-        := (fun t (idc : Compilers.ident.ident t)
-            => proj1_sig
+        := proj1_sig
+             (@eta_ident_cps_gen3
+                _ (@prearg_types)
+                (fun t idc arg_types_idc => type_of_list arg_types_idc -> type_of_list arg_types_idc -> bool)
+                (fun t idc => Raw.ident.indep_args_beq _ _)
+                (fun t idc arg_types_idc beq => reflect_rel (@eq (type_of_list arg_types_idc)) beq)
+                (fun t idc => Raw.ident.indep_args_reflect _ _)).
+
+      Definition preof_typed_ident_sig : forall {t} (idc : Compilers.ident.ident t), _
+        := fun t idc
+           => add_types_from_raw_sig
+                (projT1 (Raw.ident.split_ident_gen idc))
+                (projT1 (proj1_sig (projT2 (Raw.ident.split_ident_gen idc))))
+                (lift_type_of_list_map
+                   (@relax_kind_of_type)
+                   (Datatypes.fst (projT2 (proj1_sig (projT2 (Raw.ident.split_ident_gen idc)))))).
+      Definition preof_typed_ident : forall {t} (idc : Compilers.ident.ident t), ident (type.relax t)
+        := fun t idc
+           => rew [ident] projT1_add_types_from_raw_sig_eq t idc in
+               proj1_sig
                  (projT2
-                    (add_types_from_raw_sig
-                       (projT1 (Raw.ident.split_ident_gen idc))
-                       (projT1 (proj1_sig (projT2 (Raw.ident.split_ident_gen idc))))
-                       (lift_type_of_list_map
-                          (@relax_kind_of_type)
-                          (Datatypes.fst (projT2 (proj1_sig (projT2 (Raw.ident.split_ident_gen idc))))))))).
+                    (@preof_typed_ident_sig t idc)).
       Definition of_typed_ident : forall {t} (idc : Compilers.ident.ident t), ident (type.relax t)
-        := ltac:(let v := (eval cbv [preof_typed_ident] in
+        := proj1_sig (pattern.eta_ident_cps_gen (@preof_typed_ident)).
+
+      Definition of_typed_ident_unfolded : forall {t} (idc : Compilers.ident.ident t), ident (type.relax t)
+        := ltac:(let v := (eval cbv -[type.relax base.relax] in @of_typed_ident) in
+                 let v := (eval cbn [type.relax base.relax] in v) in
+                 exact v).
+
+      Definition arg_types_of_typed_ident : forall {t} (idc : Compilers.ident.ident t), type_of_list (arg_types (of_typed_ident idc)).
+      Proof.
+        refine (proj1_sig
+                  (@pattern.eta_ident_cps_gen2
+                     _ (@preof_typed_ident)
+                     (fun t idc of_typed_ident_idc => type_of_list (arg_types of_typed_ident_idc))
+                     (fun t idc
+                      => match projT1_add_types_from_raw_sig_eq t idc as H'
+                               return type_of_list (arg_types (rew [ident] H' in proj1_sig (projT2 (@preof_typed_ident_sig _ idc))))
+                         with
+                         | eq_refl
+                           => rew <- [type_of_list]
+                                  (proj2_sig (eta_ident_cps_gen (@prearg_types))
+                                             (projT1 (preof_typed_ident_sig idc))
+                                             (proj1_sig (projT2 (preof_typed_ident_sig idc)))) in
+                               rew <- [fun k' => type_of_list (indep_args (preinfos (ident_infos_of (projT1 k'))) (Datatypes.fst (projT2 k')))]
+                                   (proj2_sig (projT2 (@preof_typed_ident_sig t idc))) in
+                               _
+                         end))).
+        refine (let st := Raw.ident.split_ident_gen idc in
+                let args := proj1_sig (projT2 st) in
+                Datatypes.snd (projT2 args)).
+      Defined.
+
+      Definition arg_types_of_typed_ident_unfolded : forall {t} (idc : Compilers.ident.ident t), type_of_list (arg_types_unfolded (of_typed_ident_unfolded idc))
+        := ltac:(let v := (eval cbv -[type.relax base.relax type_of_list of_typed_ident arg_types_unfolded of_typed_ident_unfolded base.base_interp] in
                               (proj1_sig
-                                 (pattern.eta_ident_cps_gen
-                                    preof_typed_ident))) in
-                 let V' := fresh "V'" in
-                 let v := constr:(
-                            (fun t (idc : Compilers.ident.ident t)
-                             => match v t idc return ident (type.relax t) with
-                                | V'
-                                  => ltac:(destruct idc;
-                                             let v := (eval cbv [V'] in V') in
-                                             clear V';
-                                               let v := do_reduce v in
-                                               refine v)
-                                end)) in
-                 let v := (eval cbv [id] in v) in
-                 refine v).
-      Definition arg_types_of_typed_ident : forall {t} (idc : Compilers.ident.ident t), type_of_list (arg_types (of_typed_ident idc))
-        := ltac:(let v := constr:(fun t (idc : Compilers.ident.ident t)
-                                  => let st := Raw.ident.split_ident_gen idc in
-                                     let args := proj1_sig (projT2 st) in
-                                     Datatypes.snd (projT2 args)) in
-                 let V' := fresh "V'" in
-                 let v := constr:(
-                            (fun t (idc : Compilers.ident.ident t)
-                             => match v t idc return type_of_list (arg_types (of_typed_ident idc)) with
-                                | V'
-                                  => ltac:(destruct idc;
-                                             let v := (eval cbv [V'] in V') in
-                                             clear V';
-                                               let v := do_reduce v in
-                                               refine v)
-                                end)) in
-                 let v := (eval cbv [id] in v) in
-                 refine v).
+                                 (@pattern.eta_ident_cps_gen
+                                    (fun t idc => type_of_list (arg_types_unfolded (of_typed_ident_unfolded idc)))
+                                    (@arg_types_of_typed_ident)))) in
+                 exact v).
 
-      Definition unify : forall {t t'} (pidc : ident t) (idc : Compilers.ident.ident t'), Datatypes.option (type_of_list (@arg_types t pidc))
-        := ltac:(let v := constr:(fun t t' (pidc : ident t) (idc : Compilers.ident.ident t')
-                                  => proj1_sig
-                                       (eta_ident_cps_gen_expand_literal
-                                          (fun t pidc
-                                           => proj1_sig
-                                                (pattern.eta_ident_cps_gen_expand_literal
-                                                   (fun t' idc
-                                                    => @eta_ident_cps_gen2
-                                                         _ (@prearg_types)
-                                                         (fun _ idc arg_types_idc => type_of_list arg_types_idc -> Datatypes.option (type_of_list (@arg_types t pidc)))
-                                                         (fun t idc
-                                                          => @eta_ident_cps_gen2
-                                                               _ (@prearg_types)
-                                                               (fun _ pidc arg_types_pidc => type_of_list (@prearg_types _ idc) -> Datatypes.option (type_of_list arg_types_pidc))
-                                                               (fun t' pidc
-                                                                => try_unify_split_args)
-                                                               _ pidc)
-                                                         _ (of_typed_ident idc) (@arg_types_of_typed_ident _ idc)))
-                                                _ idc))
-                                       _ pidc) in
-                 let v := (eval cbv [of_typed_ident arg_types_of_typed_ident] in v) in
-                 let v := (eval cbv [pattern.eta_ident_cps_gen_expand_literal proj1_sig eta_ident_cps_gen_expand_literal eta_ident_cps_gen2 split_types projT1 projT2 try_unify_split_args Raw.ident.ident_beq_if Raw.ident.dep_types_dec_transparent Raw.ident.ident_beq Raw.ident.dep_types_dec_transparent ident_infos_of Datatypes.fst Datatypes.snd] in v) in
-                 refine v).
+      Definition folded_unify : forall {t t'} (pidc : ident t) (idc : Compilers.ident.ident t') (*evm : EvarMap*), Datatypes.option (type_of_list (@arg_types t pidc))
+        := fun t t' (pidc : ident t) (idc : Compilers.ident.ident t') (*evm : EvarMap*)
+           => proj1_sig
+                (eta_ident_cps_gen_expand_literal
+                   (fun t pidc
+                    => proj1_sig
+                         (pattern.eta_ident_cps_gen_expand_literal
+                            (fun t' idc
+                             => proj1_sig
+                                  (@eta_ident_cps_gen2
+                                     _ (@prearg_types)
+                                     (fun _ idc arg_types_idc => type_of_list arg_types_idc -> Datatypes.option (type_of_list (@arg_types t pidc)))
+                                     (fun t idc
+                                      => proj1_sig
+                                           (@eta_ident_cps_gen2
+                                              _ (@prearg_types)
+                                              (fun _ pidc arg_types_pidc => type_of_list (@prearg_types _ idc) -> Datatypes.option (type_of_list arg_types_pidc))
+                                              (fun t' pidc idc_indep_args
+                                               => Raw.ident.try_unify_split_args
+                                                    (*(Datatypes.snd (projT2 (@split_types_subst_default _ idc evm)))
+                                                    (Datatypes.snd (projT2 (@split_types_subst_default _ pidc evm)))*)
+                                                    idc_indep_args))
+                                           _ pidc))
+                                  _ (of_typed_ident idc) (@arg_types_of_typed_ident _ idc)))
+                         _ idc))
+                _ pidc.
 
+      Definition unify : forall {t t'} (pidc : ident t) (idc : Compilers.ident.ident t') (*evm : EvarMap*), Datatypes.option (type_of_list (@arg_types t pidc))
+        := Eval vm_compute in @folded_unify.
     End ident.
   End pattern.
 End Compilers.
