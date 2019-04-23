@@ -162,3 +162,17 @@ Proof. cbv [pointwise_relation]; intros; subst; trivial. Qed.
 Lemma push_rew_fun_dep A P Q a b (pf : a = b) f x
   : (rew [fun x : A => P x -> Q x] pf in f) x = (rew [Q] pf in (f (rew <- [P] pf in x))).
 Proof. subst; reflexivity. Defined.
+
+Lemma rew_r_moveL A P x y (pf : x = y :> A) a b
+  : (rew [P] pf in a) = b -> a = (rew <- [P] pf in b).
+Proof. subst; exact id. Defined.
+Lemma rew_moveL A P x y (pf : x = y :> A) a b
+  : (rew <- [P] pf in a) = b -> a = (rew [P] pf in b).
+Proof. subst; exact id. Defined.
+
+Lemma rew_moveR A P x y (pf : x = y :> A) a b
+  : a = (rew <- [P] pf in b) -> (rew [P] pf in a) = b.
+Proof. subst; exact id. Defined.
+Lemma rew_r_moveR A P x y (pf : x = y :> A) a b
+  : a = (rew [P] pf in b) -> (rew <- [P] pf in a) = b.
+Proof. subst; exact id. Defined.
