@@ -182,6 +182,7 @@ Module Compilers.
 
     Module Raw.
       Module ident.
+        Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.Generate.Raw.ident.
         Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.Raw.ident.
         Import Datatypes. (* for Some, None, option *)
 
@@ -217,7 +218,7 @@ Module Compilers.
         Proof. reflexivity. Qed.
 
         Lemma split_ident_to_ident ridc x y z
-          : PrimitiveSigma.Primitive.projT1 (split_ident_gen (to_ident (ident_infos_of ridc) x y z))
+          : PrimitiveSigma.Primitive.projT1 (@split_ident_gen _ (to_ident (ident_infos_of ridc) x y z))
             = ridc.
         Proof. destruct ridc; reflexivity. Defined.
 
@@ -377,6 +378,8 @@ Module Compilers.
     End Raw.
 
     Module ident.
+      Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.Generate.
+      Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.Generate.ident.
       Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.ident.
       Import Datatypes. (* for Some, None, option *)
 
@@ -418,7 +421,7 @@ Module Compilers.
         generalize dependent (type.subst_default t1 evm1);
           generalize dependent (type.subst_default t2 evm2); intros; subst.
         cbv [split_types_subst_default] in *; cbn [Primitive.projT1 Primitive.projT2 fst snd] in *.
-        destruct (split_types idc1), (split_types idc2);
+        destruct (split_types _ idc1), (split_types _ idc2);
           destruct_head'_prod;
           cbn [Primitive.projT1 Primitive.projT2 fst snd] in *;
           subst; cbn [eq_rect eq_rect_r eq_sym].
@@ -473,7 +476,7 @@ Module Compilers.
                          => rewrite <- (@commute_eq_rect _ P (fun x => option (P x)) (fun _ => Some) _ _ pf v)
                        | [ |- iffT (Raw.ident.try_unify_split_args _ (*_ _*) = Some _) _ ]
                          => eapply iffT_trans; [ apply Raw.ident.try_unify_split_args_Some_correct | ]
-                       | [ H : Raw.ident.try_unify_split_args _ (*_ _*) = Some _ |- _ ]
+                       | [ H : pattern.Raw.ident.try_unify_split_args _ (*_ _*) = Some _ |- _ ]
                          => apply Raw.ident.try_unify_split_args_Some_correct in H
                        | [ |- context[to_type_split_types_subst_default_eq ?t ?i ?evm] ]
                          => generalize (to_type_split_types_subst_default_eq t i evm); intro
@@ -484,10 +487,10 @@ Module Compilers.
                      | progress destruct_head'_prod
                      | progress subst
                      | match goal with
-                       | [ |- context[existT _ (Primitive.projT1 (split_types ?x)) _ = _] ]
-                         => destruct (split_types x); clear x
-                       | [ H : context[existT _ (Primitive.projT1 (split_types ?x)) _ = _] |- _ ]
-                         => destruct (split_types x); clear x
+                       | [ |- context[existT _ (Primitive.projT1 (split_types ?t ?x)) _ = _] ]
+                         => destruct (split_types t x); clear x
+                       | [ H : context[existT _ (Primitive.projT1 (split_types ?t ?x)) _ = _] |- _ ]
+                         => destruct (split_types t x); clear x
                        | [ |- context[@eq_trans (type.type ?base_type) ?x ?y ?z ?pf1 ?pf2] ]
                          => generalize (@eq_trans (type.type base_type) x y z pf1 pf2); intro
                        end
@@ -512,7 +515,7 @@ Module Compilers.
                            => rewrite type.eq_subst_default_relax in H
                          | [ H : ?x = ?x |- _ ] => clear H
                          | [ H : type.subst_default ?t ?evm = type.subst_default ?t ?evm'
-                             |- context[lift_type_of_list_map (@subst_default_kind_of_type ?evm) (snd (Primitive.projT2 (split_types ?idc)))] ]
+                             |- context[lift_type_of_list_map (@subst_default_kind_of_type ?evm) (snd (Primitive.projT2 (split_types _ ?idc)))] ]
                            => let H' := fresh in
                               pose proof (@eq_indep_types_of_eq_types t idc idc evm evm' H eq_refl) as H';
                                 cbv [split_types_subst_default] in H';
@@ -547,7 +550,7 @@ Module Compilers.
                             pose proof (@commute_eq_rect _ (fun _ => True) (fun x => option (P x)) (fun _ _ => @None _) _ _ pf I) as H';
                             setoid_rewrite <- H' in H;
                             clear H'
-                       | [ H : @Raw.ident.try_unify_split_args ?a ?b ?c ?d ?e = None |- _ ]
+                       | [ H : @pattern.Raw.ident.try_unify_split_args ?a ?b ?c ?d ?e = None |- _ ]
                          => let H' := fresh in
                             pose proof (@Raw.ident.try_unify_split_args_None_correct a b c d e H) as H';
                             clear H

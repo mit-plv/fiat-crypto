@@ -2584,7 +2584,7 @@ Module Compilers.
         let rewrite_rules_names := fresh "rewrite_rules" in
         let rewrite_rules := cache_term rewrite_rules rewrite_rules_names in
         let __ := debug1 ltac:(fun _ => idtac "Compiling decision tree...") in
-        let dtree := Compile.CompileRewrites ident pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) pattern.Raw.ident.ident_beq rewrite_rules in
+        let dtree := Compile.CompileRewrites ident pattern.ident (@pattern.ident.arg_types) pattern.Raw.ident (@pattern.ident.strip_types) (@pattern.Raw.ident.ident_beq) rewrite_rules in
         let default_fuel := (eval compute in (List.length specs)) in
         let __ := debug1 ltac:(fun _ => idtac "Splitting rewrite rules...") in
         let split_rewrite_rules := make_split_rewrite_rules rewrite_rules in
