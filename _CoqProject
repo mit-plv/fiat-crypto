@@ -128,7 +128,6 @@ src/Util/AdditionChainExponentiation.v
 src/Util/Arg.v
 src/Util/AutoRewrite.v
 src/Util/Bool.v
-src/Util/BoundedWord.v
 src/Util/CPSNotations.v
 src/Util/CPSUtil.v
 src/Util/ChangeInAll.v
@@ -140,8 +139,6 @@ src/Util/Equality.v
 src/Util/ErrorT.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
-src/Util/FixedWordSizes.v
-src/Util/FixedWordSizesEquality.v
 src/Util/FsatzAutoLemmas.v
 src/Util/GlobalSettings.v
 src/Util/HList.v
