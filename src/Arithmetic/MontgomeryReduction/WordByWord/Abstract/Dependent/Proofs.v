@@ -577,6 +577,6 @@ Section WordByWordMontgomery.
     Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.
     Proof. do_clear; generalize eval_sub; break_innermost_match; Z.ltb_to_lt; lia. Qed.
     Lemma opp_bound : 0 <= eval (opp Av) < eval N.
-    Proof. do_clear; generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia. Qed.
+    Proof. clear dependent Bv; do_clear; generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia. Qed.
   End add_sub.
 End WordByWordMontgomery.
