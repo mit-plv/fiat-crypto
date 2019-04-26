@@ -96,7 +96,6 @@ src/Fancy/Compiler.v
 src/Fancy/Montgomery256.v
 src/Fancy/Prod.v
 src/Fancy/Spec.v
-src/Primitives/EdDSARepChange.v
 src/Primitives/MxDHRepChange.v
 src/PushButtonSynthesis/BarrettReduction.v
 src/PushButtonSynthesis/BarrettReductionReificationCache.v
@@ -120,8 +119,6 @@ src/Rewriter/StripLiteralCasts.v
 src/Rewriter/ToFancy.v
 src/Rewriter/ToFancyWithCasts.v
 src/Spec/CompleteEdwardsCurve.v
-src/Spec/Ed25519.v
-src/Spec/EdDSA.v
 src/Spec/ModularArithmetic.v
 src/Spec/MontgomeryCurve.v
 src/Spec/MxDH.v
