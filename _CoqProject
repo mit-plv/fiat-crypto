@@ -151,7 +151,6 @@ src/Util/LetInMonad.v
 src/Util/ListUtil.v
 src/Util/Logic.v
 src/Util/Loops.v
-src/Util/NUtil.v
 src/Util/NatUtil.v
 src/Util/Notations.v
 src/Util/NumTheoryUtil.v
@@ -177,7 +176,6 @@ src/Util/TagList.v
 src/Util/Tower.v
 src/Util/Tuple.v
 src/Util/Unit.v
-src/Util/WordUtil.v
 src/Util/ZBounded.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
