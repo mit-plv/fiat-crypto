@@ -1,9 +1,6 @@
 [submodule "etc/coq-scripts"]
 	path = etc/coq-scripts
 	url = https://github.com/JasonGross/coq-scripts.git
-[submodule "bbv"]
-	path = bbv
-	url = ../../mit-plv/bbv.git
 [submodule "coqprime"]
 	path = coqprime
 	url = https://github.com/thery/coqprime

@@ -1,21 +1,4 @@
 -R src Crypto
--R bbv/theories bbv
-bbv/theories/BinNotation.v
-bbv/theories/BinNotationZ.v
-bbv/theories/DepEq.v
-bbv/theories/DepEqNat.v
-bbv/theories/HexNotation.v
-bbv/theories/HexNotationWord.v
-bbv/theories/HexNotationZ.v
-bbv/theories/NLib.v
-bbv/theories/N_Z_nat_conversions.v
-bbv/theories/NatLib.v
-bbv/theories/Nomega.v
-bbv/theories/ReservedNotations.v
-bbv/theories/Word.v
-bbv/theories/WordScope.v
-bbv/theories/ZHints.v
-bbv/theories/ZLib.v
 src/AbstractInterpretation.v
 src/AbstractInterpretationProofs.v
 src/AbstractInterpretationWf.v
