@@ -3,6 +3,7 @@ Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.RewriterAllTactics.
 Require Import Crypto.RewriterRulesProofs.
+Require Import Crypto.GENERATEDIdentifiersWithoutTypesProofs.
 
 Module Compilers.
   Import Language.Compilers.
@@ -10,6 +11,7 @@ Module Compilers.
   Import LanguageWf.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
   Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
+  Import GENERATEDIdentifiersWithoutTypesProofs.Compilers.pattern.ident.
 
   Module Import RewriteRules.
     Section __.
@@ -18,7 +20,7 @@ Module Compilers.
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
       Definition VerifiedRewriterToFancy : VerifiedRewriter.
-      Proof using All. make_rewriter false fancy_rewrite_rules_proofs. Defined.
+      Proof using All. make_rewriter package_proofs false fancy_rewrite_rules_proofs. Defined.
 
       Definition RewriteToFancy {t} : Expr t -> Expr t.
       Proof using invert_low invert_high.

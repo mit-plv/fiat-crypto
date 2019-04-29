@@ -28,6 +28,8 @@ src/CompilersTestCases.v
 src/Demo.v
 src/GENERATEDIdentifiersWithoutTypes.v
 src/GENERATEDIdentifiersWithoutTypesProofs.v
+src/GenerateIdentifiersWithoutTypes.v
+src/GenerateIdentifiersWithoutTypesProofs.v
 src/Language.v
 src/LanguageInversion.v
 src/LanguageWf.v
@@ -38,9 +40,11 @@ src/Rewriter.v
 src/RewriterAll.v
 src/RewriterAllTactics.v
 src/RewriterInterpProofs1.v
+src/RewriterReify.v
 src/RewriterRules.v
 src/RewriterRulesProofs.v
 src/RewriterWf1.v
+src/RewriterWf1Tactics.v
 src/RewriterWf2.v
 src/SlowPrimeSynthesisExamples.v
 src/StandaloneHaskellMain.v

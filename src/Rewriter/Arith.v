@@ -3,6 +3,7 @@ Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.RewriterAllTactics.
 Require Import Crypto.RewriterRulesProofs.
+Require Import Crypto.GENERATEDIdentifiersWithoutTypesProofs.
 
 Module Compilers.
   Import Language.Compilers.
@@ -10,13 +11,14 @@ Module Compilers.
   Import LanguageWf.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
   Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
+  Import GENERATEDIdentifiersWithoutTypesProofs.Compilers.pattern.ident.
 
   Module Import RewriteRules.
     Section __.
       Context (max_const_val : Z).
 
       Definition VerifiedRewriterArith : VerifiedRewriter.
-      Proof using All. make_rewriter false (arith_rewrite_rules_proofs max_const_val). Defined.
+      Proof using All. make_rewriter package_proofs false (arith_rewrite_rules_proofs max_const_val). Defined.
 
       Definition RewriteArith {t} := Eval hnf in @Rewrite VerifiedRewriterArith t.
 
