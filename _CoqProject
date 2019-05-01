@@ -242,6 +242,7 @@ src/Util/Tactics/DoWithHyp.v
 src/Util/Tactics/ESpecialize.v
 src/Util/Tactics/ETransitivity.v
 src/Util/Tactics/EvarExists.v
+src/Util/Tactics/EvarNormalize.v
 src/Util/Tactics/Forward.v
 src/Util/Tactics/GetGoal.v
 src/Util/Tactics/HasBody.v

@@ -1,4 +1,5 @@
 Require Import Crypto.Util.Tactics.TransparentAssert.
+Require Import Crypto.Util.Tactics.EvarNormalize.
 
 Ltac cache_term_with_type_by_gen ty abstract_tac id :=
   let id' := fresh id in
@@ -24,6 +25,7 @@ Ltac cache_proof_by ty tac id :=
   cache_proof_with_type_by ty tac id.
 Ltac cache_term term id :=
   let ty := type of term in
+  let term := evar_normalize term in (* COQBUG(https://github.com/coq/coq/issues/10044) *)
   cache_term_with_type_by ty ltac:(exact_no_check term) id.
 
 Ltac cache_sig_red_with_type_by ty tac red_tac red_cast_no_check id :=

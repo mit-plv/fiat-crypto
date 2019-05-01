@@ -18,6 +18,7 @@ Require Export Crypto.Util.Tactics.DoWithHyp.
 Require Export Crypto.Util.Tactics.ESpecialize.
 Require Export Crypto.Util.Tactics.ETransitivity.
 Require Export Crypto.Util.Tactics.EvarExists.
+Require Export Crypto.Util.Tactics.EvarNormalize.
 Require Export Crypto.Util.Tactics.Forward.
 Require Export Crypto.Util.Tactics.GetGoal.
 Require Export Crypto.Util.Tactics.HasBody.
