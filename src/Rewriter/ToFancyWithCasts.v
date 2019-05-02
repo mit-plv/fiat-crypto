@@ -4,7 +4,7 @@ Require Import Crypto.LanguageWf.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.RewriterAllTactics.
 Require Import Crypto.RewriterRulesProofs.
-Require Import Crypto.GENERATEDIdentifiersWithoutTypesProofs.
+Require Import Crypto.IdentifiersGENERATEDProofs.
 
 Module Compilers.
   Import Language.Compilers.
@@ -12,7 +12,7 @@ Module Compilers.
   Import LanguageWf.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
   Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
-  Import GENERATEDIdentifiersWithoutTypesProofs.Compilers.pattern.ident.
+  Import IdentifiersGENERATEDProofs.Compilers.pattern.ident.
 
   Module Import RewriteRules.
     Section __.

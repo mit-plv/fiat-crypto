@@ -1,17 +1,17 @@
 Require Import Crypto.Language.
-Require Import Crypto.GenerateIdentifiersWithoutTypes.
+Require Import Crypto.IdentifiersGenerate.
 
 Module Compilers.
   Export Language.Compilers.
-  Export GenerateIdentifiersWithoutTypes.Compilers.
+  Export IdentifiersGenerate.Compilers.
 
   Module pattern.
-    Export GenerateIdentifiersWithoutTypes.Compilers.pattern.
+    Export IdentifiersGenerate.Compilers.pattern.
 
     Module Raw.
-      Export GenerateIdentifiersWithoutTypes.Compilers.pattern.Raw.
+      Export IdentifiersGenerate.Compilers.pattern.Raw.
       Module ident.
-        Export GenerateIdentifiersWithoutTypes.Compilers.pattern.Raw.ident.
+        Export IdentifiersGenerate.Compilers.pattern.Raw.ident.
         Module PrintIdent.
           Import Raw.ident.Tactics.MakeIdent.
           Import Language.Compilers.ident.
@@ -122,7 +122,7 @@ Module Compilers.
     End Raw.
 
     Module ident.
-      Export GenerateIdentifiersWithoutTypes.Compilers.pattern.ident.
+      Export IdentifiersGenerate.Compilers.pattern.ident.
       Module PrintIdent.
         Import ident.Tactics.PrintIdent.
         Import Compilers.ident.

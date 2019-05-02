@@ -14,20 +14,20 @@ Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageInversion.
-Require Import Crypto.GENERATEDIdentifiersWithoutTypes.
-Require Import Crypto.GenerateIdentifiersWithoutTypesProofs.
+Require Import Crypto.IdentifiersGENERATED.
+Require Import Crypto.IdentifiersGenerateProofs.
 Require Import Crypto.Util.FixCoqMistakes.
 
 Import EqNotations.
 Module Compilers.
-  Export GenerateIdentifiersWithoutTypesProofs.Compilers.
-  Import GENERATEDIdentifiersWithoutTypes.Compilers.
+  Export IdentifiersGenerateProofs.Compilers.
+  Import IdentifiersGENERATED.Compilers.
   Module pattern.
-    Export GenerateIdentifiersWithoutTypesProofs.Compilers.pattern.
-    Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.
+    Export IdentifiersGenerateProofs.Compilers.pattern.
+    Import IdentifiersGENERATED.Compilers.pattern.
     Module ident.
-      Export GenerateIdentifiersWithoutTypesProofs.Compilers.pattern.ident.
-      Import GENERATEDIdentifiersWithoutTypes.Compilers.pattern.ident.
+      Export IdentifiersGenerateProofs.Compilers.pattern.ident.
+      Import IdentifiersGENERATED.Compilers.pattern.ident.
 
       Import ProofTactic.Settings.
 

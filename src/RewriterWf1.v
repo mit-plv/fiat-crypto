@@ -9,8 +9,8 @@ Require Import Crypto.Language.
 Require Import Crypto.LanguageInversion.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.UnderLetsProofs.
-Require Import Crypto.GenerateIdentifiersWithoutTypes.
-Require Import Crypto.GenerateIdentifiersWithoutTypesProofs.
+Require Import Crypto.IdentifiersLibrary.
+Require Import Crypto.IdentifiersLibraryProofs.
 Require Import Crypto.Rewriter.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -48,8 +48,8 @@ Module Compilers.
   Import LanguageInversion.Compilers.
   Import LanguageWf.Compilers.
   Import UnderLetsProofs.Compilers.
-  Import GenerateIdentifiersWithoutTypes.Compilers.
-  Import GenerateIdentifiersWithoutTypesProofs.Compilers.
+  Import IdentifiersLibrary.Compilers.
+  Import IdentifiersLibraryProofs.Compilers.
   Import Rewriter.Compilers.
   Import expr.Notations.
   Import defaults.

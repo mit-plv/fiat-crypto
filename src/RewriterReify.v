@@ -15,7 +15,7 @@ Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.
 Require Import Crypto.UnderLets.
-Require Import Crypto.GenerateIdentifiersWithoutTypes.
+Require Import Crypto.IdentifiersLibrary.
 Require Import Crypto.Rewriter.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
@@ -29,7 +29,7 @@ Import EqNotations.
 Module Compilers.
   Export Language.Compilers.
   Export UnderLets.Compilers.
-  Export GenerateIdentifiersWithoutTypes.Compilers.
+  Export IdentifiersLibrary.Compilers.
   Import invert_expr.
   Export Rewriter.Compilers.
 
