@@ -26,10 +26,12 @@ src/COperationSpecifications.v
 src/CStringification.v
 src/CompilersTestCases.v
 src/Demo.v
-src/GENERATEDIdentifiersWithoutTypes.v
-src/GENERATEDIdentifiersWithoutTypesProofs.v
-src/GenerateIdentifiersWithoutTypes.v
-src/GenerateIdentifiersWithoutTypesProofs.v
+src/IdentifiersGENERATED.v
+src/IdentifiersGENERATEDProofs.v
+src/IdentifiersGenerate.v
+src/IdentifiersGenerateProofs.v
+src/IdentifiersLibrary.v
+src/IdentifiersLibraryProofs.v
 src/Language.v
 src/LanguageInversion.v
 src/LanguageWf.v

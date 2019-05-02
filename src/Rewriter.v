@@ -15,7 +15,7 @@ Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Language.
 Require Import Crypto.UnderLets.
-Require Import Crypto.GenerateIdentifiersWithoutTypes.
+Require Import Crypto.IdentifiersLibrary.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.CacheTerm.
@@ -28,15 +28,15 @@ Import EqNotations.
 Module Compilers.
   Export Language.Compilers.
   Export UnderLets.Compilers.
-  Export GenerateIdentifiersWithoutTypes.Compilers.
+  Export IdentifiersLibrary.Compilers.
   Import invert_expr.
 
   Notation EvarMap := (PositiveMap.t Compilers.base.type).
   Module pattern.
-    Export GenerateIdentifiersWithoutTypes.Compilers.pattern.
+    Export IdentifiersLibrary.Compilers.pattern.
 
     Module base.
-      Import GenerateIdentifiersWithoutTypes.Compilers.pattern.base.
+      Import IdentifiersLibrary.Compilers.pattern.base.
 
       Fixpoint partial_subst (ptype : type) (evar_map : EvarMap) : type
         := match ptype with
